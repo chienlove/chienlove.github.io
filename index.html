@@ -1,23 +1,89 @@
 <!DOCTYPE html>
-<html><head>
-<title>Chien Love Repository</title>
-<link rel='stylesheet' type='text/css' href='Info/System/Css/Basic.css'/>
-<meta name='viewport' content='width=320; initial-scale=1.0; maximum-scale=1.0; user-scalable=0;'/>
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
-</head>
-<body>
-<ul><li><a href="cydia://url/https://cydia.saurik.com/api/share#?source=https://chienlove.github.io/">
-<img class="icon" src="/CydiaIcon.png"/>
-Thêm vào Cydia</label></a></li></ul>
+<html>
+  <head>
+    <link rel="stylesheet" href="./main.css" />
+  </head>
+  <head>
+    <meta charset="utf-8" />
+    <meta property="og:title" content="ChienLove Repo" />
+    <meta property="og:image" content="https://chienlove.github.io/cydia/CydiaIcon.png" />
+    <title>ChienLove Repository</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="shortcut icon" href="./CydiaIcon.png" />
+    <link rel="apple-touch-icon" href="./CydiaIcon.png" />
 
-<ul><li><a href="sileo://source/https://cydia.saurik.com/api/share#?source=https://chienlove.github.io/">
-<img class="icon" src="Info/System/Images/Sileo.png"/>
-Thêm vào Sileo</label></a></li></ul>
+    <link rel="stylesheet" href="./main.css" />
+    <noscript>
+      <style>
+        html {
+          background: transparent;
+        }
+        body {
+          margin-top: 0;
+          margin-bottom: 0;
+        }
+        body > header {
+          display: none;
+        }
+        body > header + p {
+          margin-top: -20px;
+        }
+        #about #add-to-cydia {
+          display: none;
+        }
+      </style>
+    </noscript>
+  </head>
+  <body>
+    <header role="banner">
+      <h1>
+        <div class="header-banner">
+          <img src="CydiaIcon.png" width="32" height="32" alt="haoict repo" />  
+          <span>Welcome to Haoict Repository</span>
+        </div>
+      </h1>
+    </header>
 
-<ul><li><a href="https://m.facebook.com/boypink88?ref=bookmarks" target="_blank">
-<img class="icon" src="/Facebook.png"/>
-<label>Theo dõi tôi trên Facebook</label></a></li></ul>
-
-<img class="bg" src="https://chienlove.github.io/CydiaIcon.png"/>
-<ul style="text-align:center; color: #ff0000">Chien Love</ul>
-</body></html>
+    <main id="content" role="main">
+      <div class="head-section">
+        <ul id="about">
+          <li>
+            <a
+              class="add-to"
+              id="add-to-cydia"
+              href="cydia://url/https://cydia.saurik.com/api/share#?source=https://chienlove.github.io/cydia/"
+              role="button"
+            >
+              <div>
+                <img src="images/cydia7.png" alt="Add to cydia" />
+                <p><strong>Add to Cydia</strong></p>
+                <div class="clear"></div></div
+            ></a>
+          </li>
+          <li>
+            <a
+              class="add-to"
+              id="add-to-zebra"
+              href="zbra://sources/add/https://chienlove.github.io/cydia/"
+              role="button"
+            >
+              <div>
+                <img src="images/Zebra.png" alt="Add to zebra" />
+                <p><strong>Add to Zebra</strong></p>
+                <div class="clear"></div></div
+            ></a>
+          </li>
+          <li>
+            <a
+              class="add-to"
+              id="add-to-sileo"
+              href="sileo://source/https://chienlove.github.io/cydia/"
+              role="button"
+            >
+              <div>
+                <img src="images/sileo.png" alt="Add to sileo" />
+                <p><strong>Add to Sileo</strong></p>
+                <div class="clear"></div></div
+            ></a>
+          </li>
+        </ul>
