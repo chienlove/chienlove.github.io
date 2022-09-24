@@ -1,0 +1,24 @@
+Package: HoangDinhPhong.Lynx
+Architecture: iphoneos-arm
+Version: 1.9.5-3
+Section: Tweaks
+Maintainer: Hoàng Đình Phong
+Depends: mobilesubstrate, firmware (>= 12.0), com.spark.libsparkapplist, com.spark.libsparkcolourpicker
+Filename: ./Deb/HoangDinhPhong.Lynx_1.9.5-3_iphoneos-arm.deb
+Size: 1383870
+MD5sum: ca1183f2378f0084939ab8a232b13312
+SHA1: 3e6cb0ac429c60ebf7d8b06626578d87c7e42cbb
+SHA256: 41d916c94f2eca75fc831c96edf981b0f30badd234e27523fcfe4bba8660f132
+SHA512: 603fec0ce2de94d34e49dd8f9a70dc9753a78266acee38e4c8d55ec11a5f68dd0a496ed33bab53c30bb83d531cca5279ad4f96bd7ce11acae8f5a66f0c4232f9
+Description: Tùy chỉnh ẩn các thể loại cho hệ thống
+ - Tinh chỉnh này ẩn mọi thứ cho toàn hệ thống, ứng dụng bên thứ ba. Và thêm nhiều chức năng tuyệt vời khác
+ .
+ + Cập nhật cố định âm thanh sạc. Thêm tùy chọn để đổi tên các biểu tượng trên màn hình chính (iOS 13). Thêm tùy chọn khoá màn hình khi đặt úp máy. Thêm tùy chọn bật tắt rung khi cắm sạc (iOS 13). Đã sửa các lỗi khác nhau trên iOS 12. Cố định đồng hồ không bị ẩn khi cắm sạc
+ .
+ - Ủng hộ tôi để phát triển mạnh hơn 👌
+Name: Lynx Việt Nam
+Author: MTAC
+Depiction: http://hoangdinhphong.github.io/Info/Lynx/?p=info
+SileoDepiction: http://hoangdinhphong.github.io/Info/Lynx/?p=info
+Icon: file:///Applications/Cydia.app/Sections/t.png
+
