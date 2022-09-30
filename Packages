@@ -1,17 +1,35 @@
+Package: chienlove.safaripp
+Architecture: iphoneos-arm
+Version: 1.0.0.1
+Section: Tweaks
+Maintainer: Chien Love
+Installed-Size: 117
+Depends: mobilesubstrate, firmware (>= 10.0)
+Filename: ./Deb/chienlove.safaripp_1.0.0.1_iphoneos-arm.deb
+Size: 3618
+MD5sum: 7ea5f7eade08b61029cb7eb55cdfb7e9
+SHA1: 59d5cfdf40e3eef6b6c426c88e165fce4337ade6
+SHA256: 961cf48f0e8f61c8929a51e509256a63a2495b050ae4a2f4a24486c5160385cf
+SHA512: 383a17e0d94f7ea0be224d45c7989767e4337e7735048fec34c6ca128482be74c5310c4726991c0d1fd4cc97511e72445a5e18520aa68be9d0b17f6b2d21a7cc
+Description: Thêm tính năng chạy nền cho safari.
+Name: Safari++
+Author: SarahH12099
+Sponsor: chienlove.github.io <http://chienlove.github.io>
+
 Package: chienlove.videobg
 Architecture: iphoneos-arm
 Version: 0.6
-Section: Tweak
+Section: Tweaks
 Maintainer: Chien Love <boypink93@gmail.com>
 Installed-Size: 596
 Depends: mobilesubstrate
 Conflicts:
 Filename: ./Deb/chienlove.videobg_0.6_iphoneos-arm.deb
-Size: 273470
-MD5sum: 7ee22897d4ff95b23f23dd49d6f841e7
-SHA1: d2c45ef62b17429eaf51b95d6ef32db6402b4bb5
-SHA256: 39b98db0d23fc751e0ae4172f04076cc433d367ac36b8baf3a3c555f7b43a266
-SHA512: 44345d198dacd9d3c90a803a1df5e9e5b28e5e6db249d4d5d4c9a2c3e7bedf9ce094c54ba8afdcd345d6000c3e9518e4961d29b5f4471460f1c549be72821d84
+Size: 273464
+MD5sum: 2b710b99bd5aa02a60b73e7891a922ef
+SHA1: a2326f2119b392a92250444f19392ffbf3ade149
+SHA256: f13c97566017b917f78a14113c22a928a54ad8ab03f496c9ea1b2969de5794bb
+SHA512: 6f7295fec059b006ab1af8c77cd168df4a31f8eba1d44d13a4bc6537f87413bb68a40333d473078e67062e573e6d51f6331c42f8a4af325ec32da3fd635a855b
 Description: Add videos to iPhone frames.
 Tag: cydia::paid
 Name: VideoBG
