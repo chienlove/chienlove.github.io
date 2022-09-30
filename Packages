@@ -1,24 +1,20 @@
-Package: Chienlove.Lynx
+Package: chienlove.videobg
 Architecture: iphoneos-arm
-Version: 1.9.5-3
-Section: Tweaks
-Maintainer: Hoàng Đình Phong
-Depends: mobilesubstrate, firmware (>= 12.0), com.spark.libsparkapplist, com.spark.libsparkcolourpicker
-Filename: ./Deb/Chienlove.Lynx_1.9.5-3_iphoneos-arm.deb
-Size: 1383874
-MD5sum: 430543629fbf15aa0ece1bf1b3f3a73c
-SHA1: fdc621f1290c7fd70e26fd84be3a32358a1c6e9c
-SHA256: d02a01936e0da1e0f666661d97d64de5591e45f14aed465be789b3321d2d7546
-SHA512: bf1d38e28b2e6a0a444c32097bec5d877921ec47bec1e269f51162552c1cd9d80943b0427fa806406163d5814c1304e45dcf343e13f1df6780b99999c253eeac
-Description: Tùy chỉnh ẩn các thể loại cho hệ thống
- - Tinh chỉnh này ẩn mọi thứ cho toàn hệ thống, ứng dụng bên thứ ba. Và thêm nhiều chức năng tuyệt vời khác
- .
- + Cập nhật cố định âm thanh sạc. Thêm tùy chọn để đổi tên các biểu tượng trên màn hình chính (iOS 13). Thêm tùy chọn khoá màn hình khi đặt úp máy. Thêm tùy chọn bật tắt rung khi cắm sạc (iOS 13). Đã sửa các lỗi khác nhau trên iOS 12. Cố định đồng hồ không bị ẩn khi cắm sạc
- .
- - Ủng hộ tôi để phát triển mạnh hơn 👌
-Name: Lynx Việt Nam
-Author: MTAC
-Depiction: http://chienlove.github.io/Info/Lynx/?p=info
-SileoDepiction: http://chienlove.github.io/Info/Lynx/?p=info
-Icon: file:///Applications/Cydia.app/Sections/t.png
+Version: 0.6
+Section: Tweak
+Maintainer: Chien Love <boypink93@gmail.com>
+Installed-Size: 596
+Depends: mobilesubstrate
+Conflicts:
+Filename: ./Deb/chienlove.videobg_0.6_iphoneos-arm.deb
+Size: 273470
+MD5sum: 7ee22897d4ff95b23f23dd49d6f841e7
+SHA1: d2c45ef62b17429eaf51b95d6ef32db6402b4bb5
+SHA256: 39b98db0d23fc751e0ae4172f04076cc433d367ac36b8baf3a3c555f7b43a266
+SHA512: 44345d198dacd9d3c90a803a1df5e9e5b28e5e6db249d4d5d4c9a2c3e7bedf9ce094c54ba8afdcd345d6000c3e9518e4961d29b5f4471460f1c549be72821d84
+Description: Add videos to iPhone frames.
+Tag: cydia::paid
+Name: VideoBG
+Author: JunesiPhone <junesgraphics@gmail.com>
+Depiction: http://chienlove.github.io/Info/VideoBG/?p=info
 
