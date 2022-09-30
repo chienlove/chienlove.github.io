@@ -10,7 +10,7 @@ function compatible(works_min, works_max, tweak_compatibility) {
         el.innerHTML = "Phiên bản iOS của bạn quá mới đối với công cụ này. Chỉ hoạt động trên" + tweak_compatibility + ".";
         el.classList.add("red")
     } else if(String(currentiOS) != "NaN") {
-        el.innerHTML = "Công cụ hộ trợ thiết bị của bạn";
+        el.innerHTML = "Phiên bản iOS của bạn được hỗ trợ 😊";
         el.classList.add("green")
     }
 
