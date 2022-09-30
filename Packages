@@ -8,15 +8,15 @@ Installed-Size: 236
 Depends: mobilesubstrate, preferenceloader, com.spark.libsparkapplist
 Filename: ./Deb/chienlove.AdFastForward_1.1-1_iphoneos-arm.deb
 Size: 20404
-MD5sum: 58bbd6441cb484c688ab78c26050c044
-SHA1: 509584fc370938037d1da7442d5cf40813b9572f
-SHA256: 007cf7e3e0d4a1020a0d5d457d2a947991673e2babcc7ae42ea464a12fac655d
-SHA512: 04d8a6f740588d54060b9df54339a2baab0aedeefdec146bb404a385b2adf7945973f784024deff23aff6597e5ba55e8f9374a966da5975f17571656d900b460
+MD5sum: 598b41a8e0a30d4427ae706f98b8d03b
+SHA1: c3cfe8f96a73212c74cc7bbc1fdb662933f8f70f
+SHA256: 17ce8e0c3270ca812c5476a7348474df3d26fabb1732ff6efcb4c9217812ae18
+SHA512: d3a4eb35d715ab69f660032b7f2b88f55fcb7984d5541115596e3d1fee9aab54827fa4299bf2e35127bab760929aadad4ea72df8e97dff0c2399511f23754938
 Description: Ad Fast Forward
 Name: Ad Fast Forward
 Author: @1_lj6
 dev:
-Depiction: https://chienlove.github.io/AdFastForward/?p=info
+Depiction: https://chienlove.github.io/Info/AdFastForward/?p=info
 
 Package: chienlove.half
 Architecture: iphoneos-arm
