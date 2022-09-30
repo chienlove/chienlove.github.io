@@ -36,3 +36,21 @@ Name: VideoBG
 Author: JunesiPhone <junesgraphics@gmail.com>
 Depiction: http://chienlove.github.io/Info/VideoBG/?p=info
 
+Package: chienlove.weatherls
+Architecture: iphoneos-arm
+Version: 1.0.2
+Section: Tweaks
+Maintainer: Chienlove
+Installed-Size: 204
+Depends: mobilesubstrate
+Filename: ./Deb/chienlove.weatherls_1.0.2_iphoneos-arm.deb
+Size: 50964
+MD5sum: 29fdc0ef4daabff0af701803ea056487
+SHA1: 6ab2b979690d81369665e85ee92f5e73bf061e0b
+SHA256: a4ef96e6637861ed15803701a4b0046e57909e436fe1b1c06579410530e0ba18
+SHA512: 7e4fcc5719910752c19068c5dc7bf1fec7650a63cc75ede2e1c9152cb6f3559794af029772beb2147657353634fae19ba247e2232c8b561f7071b002b5aa4a11
+Description: Add Weather & Lunar Calendar To Your LockScreen!
+Name: WeatherLS
+Author: nqt1195
+Depiction: https://chienlove.github.io/Info/WeatherLS/?p=info
+
