@@ -1,3 +1,21 @@
+Package: chienlove.half
+Architecture: iphoneos-arm
+Version: 1.0.3
+Section: Tweaks
+Maintainer: Chien Love
+Installed-Size: 136
+Depends: mobilesubstrate
+Filename: ./Deb/chienlove.half_1.0.3_iphoneos-arm.deb
+Size: 14018
+MD5sum: 20b591245b382d8e148759c9a6ddc4d9
+SHA1: c20caa5b067e5d38e6c2ff28815dea3424848d04
+SHA256: b58117f82be54355c3408cf6bf6734783675728b91ce10533f1ca3c35d6ec83a
+SHA512: 0511e78c9c64f82748ba0bfbc12ca49737d9b4e5517597e2b131059077971fc180467f8d73b32ee461d294ee2cd1344d7a8024e2df9abc0e0e148870940877d7
+Description: Fancy iOS Battery Indicator for iOS 11+
+Name: half
+Author: Soongyu Kwon & Ayden Leppert
+Depiction: https://chienlove.github.io/Info/Half/?p=info
+
 Package: chienlove.safaripp
 Architecture: iphoneos-arm
 Version: 1.0.0.1
