@@ -54,6 +54,26 @@ Name: Safari++
 Author: SarahH12099
 Sponsor: chienlove.github.io <http://chienlove.github.io>
 
+Package: chienlove.velvet
+Architecture: iphoneos-arm
+Version: 1.4
+Section: Tweaks
+Maintainer: Chien Love
+Installed-Size: 700
+Depends: mobilesubstrate, firmware (>= 13.0), preferenceloader, net.limneos.libbulletin (>= 0.1-158), com.spark.libsparkcolourpicker
+Filename: ./Deb/chienlove.velvet_1.4_iphoneos-arm.deb
+Size: 241832
+MD5sum: 306c1bb2b82e9d566892dfdb17e15f8d
+SHA1: c60c6e2a27a265259fe50b57f221c4f85e841b6f
+SHA256: 428b11dd76dfb7210b9e66953bc570b4098f0867bb3c72ad594f8a0ac514f523
+SHA512: 44cc196998e975510519adca64bb0eb4d88aa50fd58d3fac02882ff1fc94f1dfff70b540a427e82819798b31ecf8fadf8bc7b5a749a785a816e62dfd3f691f5e
+Description: A new way to customize your notifications!
+Tag: cydia::commercial, compatible_min::ios13.0
+Name: Velvet VH
+Author: initWithFrame <initwithframe@protonmail.com>
+Icon: https://chariz.com/cdn/icon/velvet/icon@3x.png
+Depiction: https://chienlove.github.io/Info/velvet/?p=info
+
 Package: chienlove.videobg
 Architecture: iphoneos-arm
 Version: 0.6
