@@ -18,6 +18,23 @@ Author: @1_lj6
 dev:
 Depiction: https://chienlove.github.io/Info/AdFastForward/?p=info
 
+Package: chienlove.autounlockx
+Architecture: iphoneos-arm
+Version: 1.0.16
+Section: Tweaks
+Maintainer: Chienlove
+Depends: mobilesubstrate, preferenceloader
+Filename: ./Deb/chienlove.autounlockx_1.0.16_iphoneos-arm.deb
+Size: 83514
+MD5sum: a7e682eeefef776d753fbc94baa1534b
+SHA1: 00f9bf9dada652cafe94f4545415d664ff874c00
+SHA256: 01b0d95a0646010298e9c31bbe8159dcee101888e8ed17cca7ba3926c58aa365
+SHA512: 3c6448cb12b44d53ccae2afd744b82e84d8136b7aee63856e98b6ae053b40215d510786bc3fcbf817637233b9311772bfd2e3dfdf17f00d3760ae04517e4e42c
+Description: Thiết bị sẽ tự động mở khóa khi phát hiện ra Face ID hợp lệ.
+Name: AutoUnlockX VH
+Author: Spark
+Depiction: https://chienlove.github.io/Info/AutoUnlockX/?p=info
+
 Package: chienlove.half
 Architecture: iphoneos-arm
 Version: 1.0.3
