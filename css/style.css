@@ -531,8 +531,7 @@ panel>fieldset>a {
     position: relative;
     color: #337ab7;
     text-decoration: none;
-	    font-size: 17px;
-		    font-weight: 700;
+	font-size: 17px;
 }
 fieldset>a>img.icon {
     position: absolute;
@@ -567,6 +566,7 @@ fieldset>a>div>div {
 panel>label {
     text-transform: uppercase;
     font-size: 14px;
+	font-weight: 700;
 }
 panel>label {
     color: #6d6d72;
@@ -633,9 +633,22 @@ panel>label {
 .phdr {
     background-color: #efeff4;
     color: #6d6d72;
-    font-size: 18px;
+    font-size: 17px;
     padding: 6px;
     margin: 0;
     margin-top: 12px;
-    font-weight: bold;
+	font-weight: 700;
+}
+fieldset>div {
+    padding: 0 20px;
+}
+fieldset>div>*, panel>block>* {
+    margin-top: 9px;
+    margin-bottom: 9px;
+}
+fieldset>div>hr, panel>block>hr {
+    border-top: 1px solid #c8c7cc;
+}
+.item-title {
+	    color: #007aff;
 }
