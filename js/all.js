@@ -30,9 +30,7 @@ function swap(hide, show) {
 }
 
 function externalize() {
-    for (var i = document.querySelectorAll("a").length - 1; i >= 0; i--) {
-        document.querySelectorAll("a")[0].setAttribute("target","blank")
-    }
+    
 }
 function darkMode(isOled) {
     var darkColor = isOled ? "black" : "#161616";
