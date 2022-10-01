@@ -633,8 +633,9 @@ panel>label {
 .phdr {
     background-color: #efeff4;
     color: #6d6d72;
-    font-size: 17px;
+    font-size: 18px;
     padding: 6px;
     margin: 0;
     margin-top: 12px;
+    font-weight: bold;
 }
