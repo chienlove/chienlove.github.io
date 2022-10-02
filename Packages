@@ -53,6 +53,26 @@ Name: half
 Author: Soongyu Kwon & Ayden Leppert
 Depiction: https://chienlove.github.io/Info/Half/?p=info
 
+Package: chienlove.safariplus
+Architecture: iphoneos-arm
+Version: 1.7.22
+Section: Tweaks
+Maintainer: Chien Love
+Installed-Size: 5548
+Depends: firmware (>=8.0), mobilesubstrate, preferenceloader, com.opa334.libsandy, com.opa334.libundirect (>=1.1.3) | firmware (<<14.0), ws.hbang.common | firmware (>=11.0), com.creaturesurvive.libcscolorpicker | ws.hbang.alderis (>= 1.1)
+Filename: ./Deb/chienlove.safariplus_1.7.22_iphoneos-arm.deb
+Size: 1901470
+MD5sum: 45aa64c0dc835396892ac9a5cecfb450
+SHA1: 029b5ec7331bfa690dd30f04fe001b312384c407
+SHA256: c6189ece33e129cfd1753788f01e0c497e2d196a3a7fa8b6f63d046ca1f13850
+SHA512: 60021a8dc037f86b4aa0cc9deaeadc4859ea8f33e9f5fa4b4f3e5219c2a1d6d318b3006b8a1c9cfa2048e36447c981d4f1ac8e80aa977de5204a4d1f2d24dc69
+Homepage: https://chienlove.github.io/
+Description: Various enhancements to Safari!
+Name: Safari Plus VH
+Depiction: https://chienlove.github.io/Info/SafariPlus/?p=info
+Icon: https://chienlove.github.io/Info/SafariPlus/Screenshots/icon.png
+Author: opa334 <opa334@protonmail.com>
+
 Package: chienlove.safaripp
 Architecture: iphoneos-arm
 Version: 1.0.0.1
