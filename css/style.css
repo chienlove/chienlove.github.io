@@ -539,6 +539,7 @@ fieldset>a>img.icon {
     max-height: 30px;
     width: 30px;
     min-width: 30px;
+    border-radius: 23,3%;
 }
 fieldset>a>img.icon {
     margin: 6px 15px;
