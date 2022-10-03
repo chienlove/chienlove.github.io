@@ -61,15 +61,15 @@ Maintainer: Chienlove
 Installed-Size: 104
 Depends: mobilesubstrate
 Filename: ./Deb/chienlove.disabletouch_1.0.2_iphoneos-arm.deb
-Size: 7868
-MD5sum: 2546722c9b7808c5c6f14c36d6ff332c
-SHA1: 23fa8c562c1997a3938f79e383cbbf7b1161eb57
-SHA256: 59534c8fe06d8f53a7a9d7b6e3c6a7ffdc1b980e4ca182b618a49f75e3beccc8
-SHA512: 7808331cabec5bbedf904fc809eeff9083bf6cac2c83e1395709c965075f9d96276575d4697c2788c9c0dba5441828e0e514bb2ac1576876781464aa8b445145
+Size: 7870
+MD5sum: 73c7aa40050eae69b763bc47c259a63b
+SHA1: ce689b927ded53ff7907b31416977b4bd7c52d82
+SHA256: d57736a23d29cfb96a6d7f5b3b90eecefb8e5e084720c07f75d6904cfb8b1db6
+SHA512: c05bc6e2d7bb8e60401cc8774fe01dc6508ecbe4c7eb81243f154b493d04b341469d97be5b4e39be1fae79c8dbf20b37d94a860f1f3cabf64b4e569e34b13da1
 Description: Tinh chỉnh vô hiệu hoá cảm ứng, đa nhiệm, trung tâm thông báo, trung tâm điều khiển khi cần.
 Name: DisableTouch
 Author: nqt1195
-Depiction: https://repo.storeios.net/Innfo/DisableTouch/?p=info
+Depiction: https://repo.storeios.net/Info/DisableTouch/?p=info
 
 Package: chienlove.half
 Architecture: iphoneos-arm
