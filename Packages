@@ -43,15 +43,33 @@ Maintainer: Chien Love
 Installed-Size: 104
 Depends: mobilesubstrate
 Filename: ./Deb/chienlove.batterycricle_1.0_iphoneos-arm.deb
-Size: 13294
-MD5sum: 70a79d86db4790afbe3979ae31ff46ea
-SHA1: 3f92aaedb19d1c8555bb61e387037be0ff3610bd
-SHA256: 8af8e5567950c77d99b8938555abe5dea38c070aacb10a2c832521e12a03d860
-SHA512: fadbd49d9f48e029eeb1cf6d11dd3476a13a323181c4719062cd017377393869a0eb38fb4c1b8a31a9b1cfae286a0abc189acb4002d586602e047c20943c8a0f
+Size: 13290
+MD5sum: 73354efc9336582c8bb02bba96b5187c
+SHA1: 29807ad00ef911417430e9c704d01096a8eb7878
+SHA256: a9c06555506da7d565ffb054bb7896895d0e409de4acc141040c2fd7f4a16f77
+SHA512: 3fe5c8d9bd558e997c31823058bdef50d4a291f4162e0a1a7a12eb3ee8a25345bf39ce020bfd9e648c4b71a60431947e99d80fd7f49572974e2431788e88e4d9
 Description: Show Current Percentage Inside Cricle Battery Icon!
 Name: BatteryCircle
 Author: nqt1195
-Depiction: https://repo.storeios.net/Info/BatteryCircle/?p=info
+Depiction: https://repo.storeios.net/Info/BatteryCricle/?p=info
+
+Package: chienlove.disabletouch
+Architecture: iphoneos-arm
+Version: 1.0.2
+Section: Tweaks
+Maintainer: Chienlove
+Installed-Size: 104
+Depends: mobilesubstrate
+Filename: ./Deb/chienlove.disabletouch_1.0.2_iphoneos-arm.deb
+Size: 7868
+MD5sum: 2546722c9b7808c5c6f14c36d6ff332c
+SHA1: 23fa8c562c1997a3938f79e383cbbf7b1161eb57
+SHA256: 59534c8fe06d8f53a7a9d7b6e3c6a7ffdc1b980e4ca182b618a49f75e3beccc8
+SHA512: 7808331cabec5bbedf904fc809eeff9083bf6cac2c83e1395709c965075f9d96276575d4697c2788c9c0dba5441828e0e514bb2ac1576876781464aa8b445145
+Description: Tinh chỉnh vô hiệu hoá cảm ứng, đa nhiệm, trung tâm thông báo, trung tâm điều khiển khi cần.
+Name: DisableTouch
+Author: nqt1195
+Depiction: https://repo.storeios.net/Innfo/DisableTouch/?p=info
 
 Package: chienlove.half
 Architecture: iphoneos-arm
