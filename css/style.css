@@ -633,8 +633,8 @@ panel>label {
     -webkit-box-reflect: below 0em -webkit-gradient(linear,left top, left bottom, from(transparent), color-stop(80%, transparent), to(rgba(0,0,0, 0.3)));
 }
 .phdr {
-    background-color: #000080;
-    color: #ffffff;
+    background-color: #efeff4;
+    color: #6d6d72;
     font-size: 17px;
     padding: 6px;
     margin: 0;
