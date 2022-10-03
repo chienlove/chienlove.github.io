@@ -543,6 +543,7 @@ fieldset>a>img.icon {
 }
 fieldset>a>img.icon {
     margin: 6px 15px;
+    border-radius: 23,3%;
 }
 fieldset>a>img.icon+div {
     margin-left: 51px;
