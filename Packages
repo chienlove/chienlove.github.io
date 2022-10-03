@@ -35,6 +35,24 @@ Name: AutoUnlockX VH
 Author: Spark
 Depiction: https://chienlove.github.io/Info/AutoUnlockX/?p=info
 
+Package: chienlove.batterycricle
+Architecture: iphoneos-arm
+Version: 1.0
+Section: Tweaks
+Maintainer: Chien Love
+Installed-Size: 104
+Depends: mobilesubstrate
+Filename: ./Deb/chienlove.batterycricle_1.0_iphoneos-arm.deb
+Size: 13294
+MD5sum: 70a79d86db4790afbe3979ae31ff46ea
+SHA1: 3f92aaedb19d1c8555bb61e387037be0ff3610bd
+SHA256: 8af8e5567950c77d99b8938555abe5dea38c070aacb10a2c832521e12a03d860
+SHA512: fadbd49d9f48e029eeb1cf6d11dd3476a13a323181c4719062cd017377393869a0eb38fb4c1b8a31a9b1cfae286a0abc189acb4002d586602e047c20943c8a0f
+Description: Show Current Percentage Inside Cricle Battery Icon!
+Name: BatteryCircle
+Author: nqt1195
+Depiction: https://repo.storeios.net/Info/BatteryCircle/?p=info
+
 Package: chienlove.half
 Architecture: iphoneos-arm
 Version: 1.0.3
