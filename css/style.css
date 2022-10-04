@@ -673,7 +673,7 @@ fieldset>div>hr, panel>block>hr {
   border-radius: 5px;
   text-align: left;
 }
-quote {
+.quote {
     text-align: left;
     overflow-x: scroll;
     background: #f1f3f3;
