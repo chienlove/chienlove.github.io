@@ -18,6 +18,23 @@ Author: @1_lj6
 dev:
 Depiction: https://chienlove.github.io/Info/AdFastForward/?p=info
 
+Package: chienlove.actionbar
+Architecture: iphoneos-arm
+Version: 1.3.7
+Section: Tweaks
+Maintainer: Chien Love
+Depends: mobilesubstrate, org.thebigboss.libcolorpicker
+Filename: ./Deb/chienlove.actionbar_1.3.7_iphoneos-arm.deb
+Size: 72180
+MD5sum: 4d610536b14a88951f8b08566973f496
+SHA1: 67bcc4f0f73ff9ace4d617f387ac3b91e04ebdc5
+SHA256: b819d81a05cea76f4e4a33ad3840d4232c5119b24a2b9ec450639bbc6de2a0b1
+SHA512: 79bbdfcde8fbdfb234233cd1e3d6a5ffa3038f1835e2caa84c6be12e9b3836d6078a8c617d4a37c64963ea16984855e60388763e8f64541f69b1832445472699
+Description: Undo, redo, select all, copy, cut and paste actions on bottom of keyboard.
+Name: ActionBar VH
+Author: RestiveConch <restiveconch@gmail.com>
+Depiction: https://repo.storeios.net/Info/ActionBar/?p=info
+
 Package: chienlove.autounlockx
 Architecture: iphoneos-arm
 Version: 1.0.16
@@ -34,6 +51,24 @@ Description: Thiết bị sẽ tự động mở khóa khi phát hiện ra Face 
 Name: AutoUnlockX VH
 Author: Spark
 Depiction: https://chienlove.github.io/Info/AutoUnlockX/?p=info
+
+Package: chienlove.batterycricle
+Architecture: iphoneos-arm
+Version: 1.0.1
+Section: Tweaks
+Maintainer: nqt1195
+Installed-Size: 104
+Depends: mobilesubstrate
+Filename: ./Deb/chienlove.batterycricle_1.0.1_iphoneos-arm.deb
+Size: 14732
+MD5sum: 2fc0df55d32b957940d3c3549ba0c7de
+SHA1: fffde9ac0eec2b4b86c0c043fc5f18d3637029be
+SHA256: cd94df6b24896c6b94cab4c7988ced9bb0dc02c406d49f56adc1f05b887cbbe1
+SHA512: b1bede3cb760e33fc8068e66ae9b521b4b3f2f962518be7000c8812c42903efa7e74c800bf637d2dc00540bc268b068c623f9e70bd5e76c2d761ee3774505c1a
+Description: Show Current Percentage Inside Cricle Battery Icon!
+Name: BatteryCircle
+Author: nqt1195
+Depiction: https://repo/storeios.net/Info/BatteryCricle/?p=info
 
 Package: chienlove.batterycricle
 Architecture: iphoneos-arm
