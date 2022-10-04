@@ -654,3 +654,32 @@ fieldset>div>hr, panel>block>hr {
 .item-title {
 	    color: #007aff;
 }
+.notice.s {
+  color: rgb(107, 161, 106);
+  border-left: 3px solid rgb(107, 161, 106);
+  background: rgba(107, 161, 106, 0.2);
+}
+
+.notice.r {
+  color: rgb(201, 109, 109);
+  border-left: 3px solid rgb(201, 109, 109);
+  background: rgba(201, 109, 109, 0.2);
+}
+
+.notice {
+  line-height: 1.5;
+  padding: 10px;
+  margin: 10px;
+  border-radius: 5px;
+  text-align: left;
+}
+.quote {
+    text-align: left;
+    overflow-x: scroll;
+    background: #f1f3f3;
+    margin: 0 10px 10px 10px;
+    padding: 0 20px 20px 20px;
+    border-radius: 0 0 5px 5px;
+    color: #333;
+    font-size: 12px;
+}
