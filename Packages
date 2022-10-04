@@ -60,15 +60,15 @@ Maintainer: nqt1195
 Installed-Size: 104
 Depends: mobilesubstrate
 Filename: ./Deb/chienlove.batterycricle_1.0.1_iphoneos-arm.deb
-Size: 14732
-MD5sum: 2fc0df55d32b957940d3c3549ba0c7de
-SHA1: fffde9ac0eec2b4b86c0c043fc5f18d3637029be
-SHA256: cd94df6b24896c6b94cab4c7988ced9bb0dc02c406d49f56adc1f05b887cbbe1
-SHA512: b1bede3cb760e33fc8068e66ae9b521b4b3f2f962518be7000c8812c42903efa7e74c800bf637d2dc00540bc268b068c623f9e70bd5e76c2d761ee3774505c1a
+Size: 14736
+MD5sum: 571e8d0bd9ac038a666de04ea44df4c3
+SHA1: b3da629b9bda19f1e329170a29264641b5ea4478
+SHA256: e1dda1730459f996ac82ee71659231df7588428bf190513c1b0c903fdc5326ff
+SHA512: afef5471b326ef872ddb724b9253d92a40b8dc6505a27f4d5fc94cf7d132e217f254750c6dc93121b2c1b71f4975465910c14a56e6116a236c27801c36aee908
 Description: Show Current Percentage Inside Cricle Battery Icon!
 Name: BatteryCircle
 Author: nqt1195
-Depiction: https://repo/storeios.net/Info/BatteryCricle/?p=info
+Depiction: https://repo.storeios.net/Info/BatteryCricle/?p=info
 
 Package: chienlove.batterycricle
 Architecture: iphoneos-arm
