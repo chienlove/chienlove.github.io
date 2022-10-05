@@ -162,6 +162,24 @@ Name: Safari++
 Author: SarahH12099
 Sponsor: chienlove.github.io <http://chienlove.github.io>
 
+Package: chienlove.selectionplus
+Architecture: iphoneos-arm
+Version: 1.2.3
+Section: Tweaks
+Maintainer: Chien Love
+Installed-Size: 1244
+Depends: mobilesubstrate, firmware (>= 10.0), ws.hbang.alderis, ws.hbang.common (>= 1.14), preferenceloader
+Filename: ./Deb/chienlove.selectionplus_1.2.3_iphoneos-arm.deb
+Size: 177264
+MD5sum: 35afc335f0d251681bbae9008fc7d57c
+SHA1: 36fb60b68fa8c5bd9333a8a9c26912344d87468c
+SHA256: 0607186aa6886b485c0ceb0c0d9f66a54c1f8f4e726e537fa1c00b3d6698918a
+SHA512: 0eaa1c14aefae19ad8ce03354e97f80a7c0df8023344e2fbca8be1c54f05e647a6f811d9a1d0167bf686c48797cb40d7abc61ec12a63384d5b1f581405406929
+Description: Làm cho cửa sổ lựa chọn văn bản của bạn tiện lợi hơn.
+Name: SelectionPlus VH
+Author: Satvik
+Depiction: https://repo.storeios.net/Info/SelectionPlus/?p=info
+
 Package: chienlove.tweakcleaner
 Architecture: iphoneos-arm
 Version: 14.9d
