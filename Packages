@@ -187,15 +187,15 @@ Section: Tweaks
 Maintainer: Chien Love
 Depends: firmware (>= 13.0), firmware (<= 15.0), cy+model.iphone, bash, rsync, gzip, dpkg, coreutils, ncurses, system-cmds, openssh
 Filename: ./Deb/chienlove.tweakcleaner_14.9d_iphoneos-arm.deb
-Size: 4717992
-MD5sum: d3cb8fcbd66d30e4b9b6b83d0377326c
-SHA1: 34a207c11e409d44e4c300d03e9c11550034ab02
-SHA256: d6b98e4d3577dfa1a511838c6cda0d822c7c7cf98760868ffe6ca19c6059d636
-SHA512: ea69edd05e5226cf2a1f4b9c25814271abe0386701148d51beaa6d2068f50f8005d2e015b102b914905705c035e03fb67611b0724c1baf1252d63054cdef42cb
+Size: 4717984
+MD5sum: af1b239d9353c98fa3018c5e3106399c
+SHA1: abe50db72ec6d90ce04480b83ad984a309551651
+SHA256: 2e57c30664a4862749fe6f329b5cba9f0e36e358c8203139f45168d7db0ca0af
+SHA512: 2e4192c0acf607329e48c304c792fefe27f02ab3450db8cf248214e1137aadcd81568a4964265c2b06dbcc2bf386f16387e99e64d0ada2c113e06376ef9fa47e
 Description: Returns the device to its original JB state.
 Name: Tweak Cleaner PRO
 Author: Önder Azazi <onderazazi@hotmail.com>
-Depiction: https://repo.storeios.net/TweakCleanerPro/?p=info
+Depiction: https://repo.storeios.net/Info/TweakCleanerPro/?p=info
 
 Package: chienlove.velvet
 Architecture: iphoneos-arm
