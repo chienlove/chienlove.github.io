@@ -124,6 +124,24 @@ Name: half
 Author: Soongyu Kwon & Ayden Leppert
 Depiction: https://chienlove.github.io/Info/Half/?p=info
 
+Package: chienlove.remininoads
+Architecture: iphoneos-arm
+Version: 0.0.1-1+debug
+Section: Tweaks
+Maintainer: Chienlove
+Installed-Size: 200
+Depends: mobilesubstrate
+Filename: ./Deb/chienlove.remininoads_0.0.1-1+debug_iphoneos-arm.deb
+Size: 7686
+MD5sum: 34982f9bb7e6d63d42d4e16b47da6c5e
+SHA1: 0a085b3e7975ab2f89cda263d0b23fca7d431f52
+SHA256: 42f3f9ff0ba20337825e00e095f59b332ec485172e52fdc0c4bd0aafaae0e866
+SHA512: da718c63a8b5d302399f351cb118e1114b66f5b34567346f75eb2c6a7299e0364945303c2ad65eb8087c503aacda3de570b1577eab65ad88f6d15bdde63137a6
+Description: Remove ADS in app Remini
+Name: Remini Remove Ads
+Author: iPlus
+Depiction: https://repo.storeios.net/Info/ReminiRemoveAds/?p=info
+
 Package: chienlove.safariplus
 Architecture: iphoneos-arm
 Version: 1.7.22
@@ -179,6 +197,24 @@ Description: Làm cho cửa sổ lựa chọn văn bản của bạn tiện lợ
 Name: SelectionPlus VH
 Author: Satvik
 Depiction: https://repo.storeios.net/Info/SelectionPlus/?p=info
+
+Package: chienlove.terabox
+Architecture: iphoneos-arm
+Version: 0.0.1-1+debug
+Section: Tweaks
+Maintainer: nowesr1
+Installed-Size: 264
+Depends: mobilesubstrate
+Filename: ./Deb/chienlove.terabox_0.0.1-1+debug_iphoneos-arm.deb
+Size: 8924
+MD5sum: 9272fa9c4e53f05587cde912e87e7de8
+SHA1: 5a385b2b70f8c3e0a558d0e4bdcf71bab2683634
+SHA256: 2b328ab8f7e56933cc17af803257f9efa280a0232437e03accf17379cc16a858
+SHA512: 2fd221c01d554355600a6106b0bb966f7fca23c4d1779ccf0e5071169a7eee9f98811dc3f9d6cb2c52d4829f97e5d93d167649b646c99fde9ca8c416a879581a
+Description: Enables Premium Features
+Name: TeraBox Premium
+Author: nowesr1
+Depiction: https://repo.storeios.net/Info/TeraboxPremium/?p=info
 
 Package: chienlove.tweakcleaner
 Architecture: iphoneos-arm
