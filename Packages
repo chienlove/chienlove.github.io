@@ -88,6 +88,23 @@ Name: BatteryCircle
 Author: nqt1195
 Depiction: https://repo.storeios.net/Info/BatteryCricle/?p=info
 
+Package: chienlove.camscanner
+Architecture: iphoneos-arm
+Version: 5.5.2.16205-1
+Section: Tweaks
+Maintainer: Chien Love
+Depends: mobilesubstrate
+Filename: ./Deb/chienlove.camscanner_5.5.2.16205-1_iphoneos-arm.deb
+Size: 8074
+MD5sum: 120037eb541b5ed78d47843e10c15dd9
+SHA1: 8c834c2e9e436e706c50a2bd22956b0e1c58bdc3
+SHA256: 0483436d9ecaa13173b4692690fbdea0e156b448993e37f093a32c87589a7987
+SHA512: 8149b2153761a0ff4e4c0f934ca988738937dc105790ac00776ce94456a0add8ec4a58db89697c72908d195d4420d5a4d65b5806d3ef809b98e738ad319a6904
+Description: Collage, Auto upload to third-party cloud service, High quality scan, Export OCR result, No default watermark on PDF, Created unlimited number of folder
+Name: Camscanner Premium
+Author: kiengk0eng
+Depiction: https://repo.storeios.net/Info/Camscanner/?p=info
+
 Package: chienlove.disabletouch
 Architecture: iphoneos-arm
 Version: 1.0.2
