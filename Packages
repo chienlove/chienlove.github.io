@@ -95,15 +95,15 @@ Section: Tweaks
 Maintainer: Chien Love
 Depends: mobilesubstrate
 Filename: ./Deb/chienlove.camscanner_5.5.2.16205-1_iphoneos-arm.deb
-Size: 8086
-MD5sum: 8f277c644998afb1d85289a0b3c79b94
-SHA1: c8319c0e7b72f6f66e94610632fccdc3bbf56e24
-SHA256: 4b0199163ffaf9439522d838dc4af4e2a264a0e74286fbee1a73319ea303c1db
-SHA512: 0496c86e633100da8011a0f9cd74e13dea1896d81b523b92644b7d47e93b6353821609d0ce14e38ee2bb6824185433836b8a87380fb57491eef7d59a738a2bd3
+Size: 8080
+MD5sum: 22be1505ec5413bae13854d3aee8b28d
+SHA1: a8c72b360813744cfa7f845a21368d52af8e6968
+SHA256: c6abc6e502d9b6b5e6bc2e6bf363b7eb88fe77e5871d598c75a4469f949d59c7
+SHA512: 5d10d2d75e07bcc42d90cbb244b9e6510739ae935908f5ec0090291eb2a6153cee742e7e35bd6aff886cf4e4e20c0756015e059e524c1ba597a576377637821d
 Description: Collage, Auto upload to third-party cloud service, High quality scan, Export OCR result, No default watermark on PDF, Created unlimited number of folder
 Name: CamScanner Premium
 Author: kiengk0eng
-Depiction: https://repo.storeios.net/Info/CámcannerPremium/?p=info
+Depiction: https://repo.storeios.net/Info/CamScannerPremium/?p=info
 
 Package: chienlove.disabletouch
 Architecture: iphoneos-arm
