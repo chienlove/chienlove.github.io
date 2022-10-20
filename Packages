@@ -313,14 +313,14 @@ Architecture: iphoneos-arm
 Version: 1.0
 Section: Tweaks
 Maintainer: Chien Love
-Installed-Size: 40
+Installed-Size: 168
 Depends: mobilesubstrate (>= 0.9.5000)
 Filename: ./Deb/chienlove.ytnoshortsbutton_1.0_iphoneos-arm.deb
-Size: 1642
-MD5sum: 39f0807e441da7ce1dcf24140f62f39f
-SHA1: 89662a4df010e7536bcaaed311b59a88953c5b60
-SHA256: fc3958bb16ed95e286b835509e590aa9e741ab6cb6c45c956e56f23ce896a38b
-SHA512: aaf346563b3a0381ce3a355d66cb287b16c95f6c333d4dce3f1e1f53bbad20d1cf905418c96641ec7a226786a534ac3aacd52a11ef671bdedeec2e6d092ae066
+Size: 4876
+MD5sum: f50cf9df8066098b3369a8c1c36e6f0f
+SHA1: 8fb4166e6d5ab4e8a4344171e0fe321f8aa9afa6
+SHA256: c6b99158f4c88ce2dfe7c2dc91df0441a160e322ad005d669b410dd6eddeefff
+SHA512: 86304eb69fd6a948d1051f6019c1fafb0ce65da8b9bb48b19c32107403161f5da6afba44705d6a8172bbd5a86905358e0c78b2e146d8d665b3b1c3defed3a81f
 Description: Remove the shorts button from the YouTube app.
 Name: YTNoShortsButton
 Author: Galactic Dev
