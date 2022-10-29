@@ -35,6 +35,23 @@ Name: ActionBar VH
 Author: RestiveConch <restiveconch@gmail.com>
 Depiction: https://repo.storeios.net/Info/ActionBar/?p=info
 
+Package: chienlove.aphrodite
+Architecture: iphoneos-arm
+Version: 0.6.12~beta2
+Section: Tweaks
+Maintainer: Chienlove
+Filename: ./Deb/chienlove.aphrodite_0.6.12~beta2_iphoneos-arm.deb
+Size: 2122852
+MD5sum: 0c5d665dc9147855bf45880e29e599ee
+SHA1: e17f6e33773a07e6cd60d64fd8cbf9ebc4214286
+SHA256: 5733b447aef76bc274aa09b64885046239713bfb4a89f8200a8c31e073dffcac
+SHA512: 9a44d669f555617cb2479db72b98a116453d1fd523bfa981fa6e81e63c6d6ea4f3cd508e2ed81cb9eae893efac701c54a889bd64437ec1d725d2e7e531d774a8
+Homepage: https://repo.storeios.net
+Description: Asset Catalog Editor
+Name: Aphrodite
+Author: Joey GM
+Depiction: https://repo.storeios.net/Info/Aphrodite/?p=info
+
 Package: chienlove.autounlockx
 Architecture: iphoneos-arm
 Version: 1.0.16
