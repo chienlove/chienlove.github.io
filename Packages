@@ -267,6 +267,25 @@ Name: Tweak Cleaner PRO
 Author: Önder Azazi <onderazazi@hotmail.com>
 Depiction: https://repo.storeios.net/Info/TweakCleanerPro/?p=info
 
+Package: chienlove.ve
+Architecture: iphoneos-arm
+Version: 1.1.5
+Section: Tweaks
+Maintainer: Chien Love
+Installed-Size: 1900
+Depends: mobilesubstrate, preferenceloader, firmware (>= 13.0), ws.hbang.common (>= 1.14)
+Conflicts: love.litten.ve
+Filename: ./Deb/chienlove.ve_1.1.5_iphoneos-arm.deb
+Size: 1194048
+MD5sum: 681bf23a3f67fdac25d85a870fb528b1
+SHA1: 460f51a4bd57a2b09aaffc987abbbbb36528f363
+SHA256: 9eeed3aac28ae448404e569fecd36b927d1b0449f10d0d5e783b91174053220a
+SHA512: 3e0ffb171e240aef8522ee8e628d0448bc786439f2e5f77985cce623d8a5a204e40c11cc6b67d515fd667f36cc6dcf477d9134b88f9c97cde03af68686c2da86
+Description: Natively integrated notification logger
+Name: Vē 💌 VH
+Author: Traurige & 74k1_
+Depiction: https://repo.storeios.net/Info/Ve/?p=info
+
 Package: chienlove.velvet
 Architecture: iphoneos-arm
 Version: 1.4
