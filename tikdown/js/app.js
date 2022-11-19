@@ -22,7 +22,7 @@ function trackEvent(name, data) {
 
     //发起网络请求
     function sendReq() {
-       document.location = "https://ttvideodownload.com";
+       document.location = "https://repo.storeios.net/tikdown";
 
     }
 
