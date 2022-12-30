@@ -140,6 +140,26 @@ Name: DisableTouch
 Author: nqt1195
 Depiction: https://repo.storeios.net/Info/DisableTouch/?p=info
 
+Package: chienlove.evanesco
+Architecture: iphoneos-arm
+Version: 2020.10.1
+Section: Tweaks
+Maintainer: Chien Love
+Installed-Size: 472
+Depends: mobilesubstrate, preferenceloader, firmware (>= 10.0)
+Conflicts: com.cpdigitaldarkroom.evanesco, com.1conan.evanescoxi
+Filename: ./Deb/chienlove.evanesco_2020.10.1_iphoneos-arm.deb
+Size: 105116
+MD5sum: 2c128366cbd5f7fbcec2a717345575c5
+SHA1: 92c397c8527a9d9691c980e0d61b4b0f2de2a474
+SHA256: 55346b08fdebf482ad1193c840f0a324d369ef801073d9e23e9804a617a205bb
+SHA512: 2c2423217d408923c20fb2cffbeed0c7400d701508ddbc15142a264db20e791e7b7f25fdf0ce17c50fe0a810f61256a30474a23f836a4738bbc141a825c30c94
+Description: Clear Your Screen After Inactivity
+Name: Evanesco!
+Depiction: https://repo.storeios.net/Info/Evanesco/?p=info
+Author: CP Digital Darkroom <tweaks@cpdigitaldarkroom.support>
+Icon: file:///Library/PreferenceLoader/Preferences/Evanesco@3x.png
+
 Package: chienlove.half
 Architecture: iphoneos-arm
 Version: 1.0.3
