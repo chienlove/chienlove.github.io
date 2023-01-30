@@ -178,6 +178,23 @@ Name: half
 Author: Soongyu Kwon & Ayden Leppert
 Depiction: https://chienlove.github.io/Info/Half/?p=info
 
+Package: chienlove.libbulletin
+Architecture: iphoneos-arm
+Version: 0.1-165
+Section: Tweaks
+Maintainer: Elias Limneos
+Installed-Size: 332
+Depends: mobilesubstrate
+Filename: ./Deb/chienlove.libbulletin_0.1-165_iphoneos-arm.deb
+Size: 60766
+MD5sum: d229df758fa8af9e1b3d00f0e5c9a01e
+SHA1: 19452a209dbe16ce7a8da20c636c85c12c7a2387
+SHA256: 4267541974aede744609faecde28ba62705e40674f9f5050a600b4e657d2d62a
+SHA512: 00e9d3e2c4302255362922d97749e63ae132892e3e178cb9d0e822e42d97a2a44164b715e6164a5dd4d5c31b65a172182613422e1c691e05c145230555883426
+Description: Simple library that displays bulletins
+Name: libbulletin
+Author: Elias Limneos
+
 Package: chienlove.remininoads
 Architecture: iphoneos-arm
 Version: 0.0.1-1+debug
@@ -312,13 +329,13 @@ Version: 1.4
 Section: Tweaks
 Maintainer: Chien Love
 Installed-Size: 700
-Depends: mobilesubstrate, firmware (>= 13.0), preferenceloader, net.limneos.libbulletin (>= 0.1-158), com.spark.libsparkcolourpicker
+Depends: mobilesubstrate, firmware (>= 13.0), preferenceloader, chienlove.libbulletin (>= 0.1-158), com.spark.libsparkcolourpicker
 Filename: ./Deb/chienlove.velvet_1.4_iphoneos-arm.deb
-Size: 241832
-MD5sum: 306c1bb2b82e9d566892dfdb17e15f8d
-SHA1: c60c6e2a27a265259fe50b57f221c4f85e841b6f
-SHA256: 428b11dd76dfb7210b9e66953bc570b4098f0867bb3c72ad594f8a0ac514f523
-SHA512: 44cc196998e975510519adca64bb0eb4d88aa50fd58d3fac02882ff1fc94f1dfff70b540a427e82819798b31ecf8fadf8bc7b5a749a785a816e62dfd3f691f5e
+Size: 241826
+MD5sum: 8f7342e50a12ca19b48ce4ee963653b5
+SHA1: 5812cffb9ca540d1884eb997527e07f0060df541
+SHA256: ca455c43573254bf2e79c5e0bbec4a1cd409029c88bf190fad19141609bac2be
+SHA512: 567930c78bcc6f392de78dfce0443b1ab686d4a3ff9a0fea5e9fb27239e87173c265b4faa605c8b0f89f7330c68975fc4ed36ba0b10a1dc67b53157fd0a070b6
 Description: A new way to customize your notifications!
 Tag: cydia::commercial, compatible_min::ios13.0
 Name: Velvet VH
