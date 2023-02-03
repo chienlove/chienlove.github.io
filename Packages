@@ -105,6 +105,22 @@ Name: BatteryCircle
 Author: nqt1195
 Depiction: https://repo.storeios.net/Info/BatteryCricle/?p=info
 
+Package: chienlove.batteryhealthenabler
+Architecture: iphoneos-arm
+Version: 1.0.0
+Section: Tweaks
+Maintainer: PoomSmart
+Depends: mobilesubstrate (>= 0.9.5000), firmware (>= 11.3)
+Filename: ./Deb/chienlove.batteryhealthenabler_1.0.0_iphoneos-arm.deb
+Size: 8000
+MD5sum: aa3bf11745e098bb3a9cffb51eb7cc4b
+SHA1: b18e51cc15f7eabe4ba944566e96840c911742ea
+SHA256: 2fede2697107548ab1e0f6310b0390ca1549d9a2bc63d99ca8b50020d7da8871
+SHA512: ae1be5e0a2ce7535f412572bdd1d5620f85657954600ad3be80f71e9b9b8a7d869374e683a8daa14d38101b9fc24e294f1463bbc9893f7f18126b427c3c92e71
+Description: Bật tình trạng pin trên các thiết bị không được hỗ trợ.
+Name: Battery Health Enabler
+Author: PoomSmart
+
 Package: chienlove.camscanner
 Architecture: iphoneos-arm
 Version: 5.5.2.16205-1
