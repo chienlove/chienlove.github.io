@@ -1,5 +1,5 @@
 backend:
-  name: chienlove
+  name: github
   repo: chienlove/chienlove.github.io
   branch: main
 
