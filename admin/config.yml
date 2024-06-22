@@ -1,6 +1,7 @@
 backend:
   name: github
   repo: chienlove/chienlove.github.io
+  branch: main
 
 media_folder: "static/uploads"
 public_folder: "/uploads"
@@ -10,7 +11,8 @@ collections:
     label: "Posts"
     folder: "content/posts"
     create: true
+    slug: "{{year}}-{{month}}-{{day}}-{{slug}}"
     fields:
       - { label: "Title", name: "title", widget: "string" }
-      - { label: "Date", name: "date", widget: "datetime" }
+      - { label: "Publish Date", name: "date", widget: "datetime" }
       - { label: "Body", name: "body", widget: "markdown" }
