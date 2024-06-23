@@ -16,7 +16,13 @@
       window.netlifyIdentity.on("init", user => {
         if (!user) {
           window.netlifyIdentity.on("login", () => {
-            document.location.href = "/";
+            // Set a flag to indicate login success
+            const loggedIn = true;
+
+            // Redirect to the admin page after login
+            if (loggedIn) {
+              window.location.href = "/admin/";
+            }
           });
         }
       });
