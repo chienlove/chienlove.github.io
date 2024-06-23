@@ -35,4 +35,4 @@ publish_mode: editorial_workflow  # Bật chế độ quy trình biên tập
 site_url: https://storeios.netlify.app  # URL của trang web bạn trên Netlify
 logo_url: https://storeios.net/CydiaIcon.png  # URL logo của trang web bạn
 
-display_url: https://storeios.netlify.app  # URL hiển thị cho CMS
+display_url: https://storeios.net  # URL hiển thị cho CMS
