@@ -1,6 +1,7 @@
 backend:
   name: github
   branch: main
+  repo: chienlove/chienlove.github.io
   squash_merges: true
 
 # This line should *not* be indented
