@@ -12,14 +12,17 @@
   <!-- Include the script that builds the page and powers Netlify CMS -->
   <script src="https://cdn.jsdelivr.net/npm/netlify-cms@2.10.192/dist/netlify-cms.min.js"></script>
   <script>
+    // Check if Netlify Identity is available
     if (window.netlifyIdentity) {
+      // Listen for the "init" event to check user authentication status
       window.netlifyIdentity.on("init", user => {
+        // If user is not authenticated
         if (!user) {
+          // Listen for "login" event
           window.netlifyIdentity.on("login", () => {
-            // Set a flag to indicate login success
+            // After successful login, set loggedIn flag to true
             const loggedIn = true;
-
-            // Redirect to the admin page after login
+            // Redirect to the admin page if loggedIn is true
             if (loggedIn) {
               window.location.href = "/admin/";
             }
