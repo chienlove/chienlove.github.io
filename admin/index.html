@@ -3,22 +3,23 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <script src=" https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-  <div data-netlify-identity-button>Login with Netlify Identity</div>
   <title>Content Manager</title>
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 </head>
 <body>
+  <div data-netlify-identity-button>Login with Netlify Identity</div>
+
   <!-- Include the script that builds the page and powers Netlify CMS -->
   <script src="https://cdn.jsdelivr.net/npm/netlify-cms@2.10.192/dist/netlify-cms.min.js"></script>
   <script>
     if (window.netlifyIdentity) {
-        window.netlifyIdentity.on("init", user => {
+      window.netlifyIdentity.on("init", user => {
         if (!user) {
-            window.netlifyIdentity.on("login", () => {
+          window.netlifyIdentity.on("login", () => {
             document.location.href = "/";
-            });
+          });
         }
-        });
+      });
     }
   </script>
 </body>
