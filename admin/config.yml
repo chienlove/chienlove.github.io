@@ -2,7 +2,7 @@ backend:
   name: github
   branch: main
   repo: chienlove/chienlove.github.io
-  auth_spore: chienlove.github.io
+  auth_spore: repo
   squash_merges: true
 
 # This line should *not* be indented
