@@ -1,6 +1,6 @@
 backend:
-  name: git-gateway
-  branch: hugo # Branch to update (optional; defaults to master)
+  name: github
+  branch: main
   squash_merges: true
 
 # This line should *not* be indented
