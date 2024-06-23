@@ -3,7 +3,7 @@ backend:
   repo: chienlove/chienlove.github.io  # Thay thế bằng tên người dùng GitHub và tên repo của bạn
   branch: main  # Thay thế bằng nhánh bạn muốn quản lý với Netlify CMS, thường là main hoặc master
   base_url: https://api.netlify.com/api/v1/
-  auth_endpoint: auth
+  auth_endpoint: authorize
 
 media_folder: "static/images/uploads"  # Thư mục chứa các tệp media
 public_folder: "/images/uploads"  # Thư mục công khai chứa các tệp media
