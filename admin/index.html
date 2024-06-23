@@ -4,32 +4,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Content Manager</title>
-  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 </head>
 <body>
-  <div data-netlify-identity-button>Login with Netlify Identity</div>
-
   <!-- Include the script that builds the page and powers Netlify CMS -->
-  <script src="https://unpkg.com/decap-cms@^3.0.0/dist/decap-cms.js"></script>
-  <script>
-    // Check if Netlify Identity is available
-    if (window.netlifyIdentity) {
-      // Listen for the "init" event to check user authentication status
-      window.netlifyIdentity.on("init", user => {
-        // If user is not authenticated
-        if (!user) {
-          // Listen for "login" event
-          window.netlifyIdentity.on("login", () => {
-            // After successful login, set loggedIn flag to true
-            const loggedIn = true;
-            // Redirect to the admin page if loggedIn is true
-            if (loggedIn) {
-              window.location.href = "/admin/";
-            }
-          });
-        }
-      });
-    }
-  </script>
+  <script src="https://unpkg.com/netlify-cms@^2.0.0/dist/netlify-cms.js"></script>
 </body>
 </html>
