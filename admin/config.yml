@@ -2,7 +2,8 @@ backend:
   name: github
   branch: main
   repo: chienlove/chienlove.github.io
-  auth_spore: repo
+  auth_endpoint: auth
+  base_url: api.netlify.com
   squash_merges: true
 
 # This line should *not* be indented
@@ -37,4 +38,11 @@ collections:
           - {label: Relative, name: relative, widget: string, required: false, comment: when using page bundles set this to true}
           - {label: Hidden, name: hidden, widget: "hidden", required: false, default: false, comment: only hide on current single page}
       - {label: "Body", name: "body", widget: "markdown"}
+
+      publish_mode: editorial_workflow  # Bật chế độ quy trình biên tập
+
+site_url: https://storeios.netlify.app  # URL của trang web bạn trên Netlify
+logo_url: https://storeios.net/logo.png  # URL logo của trang web bạn
+
+display_url: https://storeios.netlify.app  # URL hiển thị cho CMS
       
