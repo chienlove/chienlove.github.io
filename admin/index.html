@@ -1,24 +1,24 @@
 <!doctype html>
 <html>
 <head>
-  <meta charset="utf-8">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <script src=" https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <title>Content Manager</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/netlify-cms@2.10.192/dist/cms.min.css">
 </head>
 <body>
+  <!-- Include the script that builds the page and powers Netlify CMS -->
   <script src="https://cdn.jsdelivr.net/npm/netlify-cms@2.10.192/dist/netlify-cms.min.js"></script>
   <script>
-    CMS.init({
-      config: {
-        backend: {
-          name: 'github',
-          repo: 'chienlove/chienlove.github.io',
-          branch: 'main'
-        },
-        media_folder: 'static/uploads',
-        public_folder: '/uploads'
-      }
-    });
+    if (window.netlifyIdentity) {
+        window.netlifyIdentity.on("init", user => {
+        if (!user) {
+            window.netlifyIdentity.on("login", () => {
+            document.location.href = "/";
+            });
+        }
+        });
+    }
   </script>
 </body>
 </html>
