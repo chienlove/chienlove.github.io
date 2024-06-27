@@ -196,7 +196,7 @@ app.post('/download', async (req, res) => {
             appVerId: appVerId
         });
 
-        const fileUrl = `${req.protocol}s://ipadown.thuthuatjb.com/files/${path.basename(uniqueDownloadPath)}/${fileName}`;
+        const fileUrl = `${req.protocol}s://storeios.net/files/${path.basename(uniqueDownloadPath)}/${fileName}`;
 
         // Schedule file deletion after 30 minutes
         setTimeout(async () => {
