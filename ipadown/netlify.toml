@@ -1,0 +1,12 @@
+[build]
+command = "npm install && npm run build"
+publish = "build"
+
+[dev]
+command = "node server.js"
+port = 5004
+[[redirects]]
+from = "/api/*"
+to = "http://localhost:5004/:splat"
+status = 200
+force = true
