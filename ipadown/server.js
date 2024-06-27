@@ -1,16 +1,16 @@
-import express from ‘express’;
-import path from ‘path’;
-import fs, { promises as fsPromises, createWriteStream, createReadStream } from ‘fs’;
-import fetch from ‘node-fetch’;
-import { fileURLToPath } from ‘url’;
-import { Store } from ‘./src/client.js’;
-import { SignatureClient } from ‘./src/Signature.js’;
-import { v4 as uuidv4 } from ‘uuid’;
+import express from 'express';
+import path from 'path';
+import fs, { promises as fsPromises, createWriteStream, createReadStream } from 'fs';
+import fetch from 'node-fetch';
+import { fileURLToPath } from 'url';
+import { Store } from './src/client.js';
+import { SignatureClient } from './src/Signature.js';
+import { v4 as uuidv4 } from 'uuid';
 
 // Generate a random string of specified length
 function generateRandomString(length) {
-    let result = ‘’;
-    const characters = ‘ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789’;
+    let result = '';
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
     const charactersLength = characters.length;
     for (let i = 0; i < length; i++) {
         result += characters.charAt(Math.floor(Math.random() * charactersLength));
@@ -27,14 +27,14 @@ const port = 5004;
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());  // Use express.json() to parse JSON bodies
 
-// Serve static files such as favicon.ico from the ‘public’ directory
-app.use(express.static(path.join(__dirname, ‘public’)));
+// Serve static files such as favicon.ico from the 'public' directory
+app.use(express.static(path.join(__dirname, 'public')));
 
-// Serve files from the ‘.well-known/acme-challenge’ directory
-app.use(‘/.well-known/acme-challenge’, express.static(path.join(__dirname, ‘.well-known’, ‘acme-challenge’)));
+// Serve files from the '.well-known/acme-challenge' directory
+app.use('/.well-known/acme-challenge', express.static(path.join(__dirname, '.well-known', 'acme-challenge')));
 
-app.get(‘/‘, (req, res) => {
-    res.sendFile(path.join(__dirname, ‘index.html’));
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 const CHUNK_SIZE = 5 * 1024 * 1024; 
@@ -50,11 +50,11 @@ async function downloadChunk({ url, start, end, output }) {
             if (!response.ok) {
                 throw new Error(`Không thể lấy phần: ${response.statusText}`);
             }
-            const fileStream = createWriteStream(output, { flags: ‘a’ });
+            const fileStream = createWriteStream(output, { flags: 'a' });
             await new Promise((resolve, reject) => {
                 response.body.pipe(fileStream);
-                response.body.on(‘error’, reject);
-                fileStream.on(‘finish’, resolve);
+                response.body.on('error', reject);
+                fileStream.on('finish', resolve);
             });
             return;
         } catch (error) {
@@ -75,7 +75,7 @@ async function clearCache(cacheDir) {
             await fsPromises.unlink(path.join(cacheDir, file));
         }
     } catch (error) {
-        if (error.code !== ‘ENOENT’) {
+        if (error.code !== 'ENOENT') {
             console.error(`Cannot clear cache directory: ${error.message}`);
         }
     }
@@ -83,20 +83,20 @@ async function clearCache(cacheDir) {
 
 class IPATool {
     async downipa({ path: downloadPath, APPLE_ID, PASSWORD, CODE, APPID, appVerId } = {}) {
-        downloadPath = downloadPath || ‘.’;
+        downloadPath = downloadPath || '.';
 
-        console.log(‘——Preparing to log in——‘);
+        console.log('------Preparing to log in------');
 
         const user = await Store.authenticate(APPLE_ID, PASSWORD, CODE);
-        if (user._state !== ‘success’) {
+        if (user._state !== 'success') {
             console.log(`Login failed: ${user.customerMessage}`);
             throw new Error(user.customerMessage);
         }
         console.log(`Login result: ${user.accountInfo.address.firstName} ${user.accountInfo.address.lastName}`);
 
-        console.log(‘——Querying app information——‘);
+        console.log('------Querying app information------');
         const app = await Store.download(APPID, appVerId, user);
-        if (app._state !== ‘success’) {
+        if (app._state !== 'success') {
             console.log(`Query failed: ${app.customerMessage}`);
             throw new Error(app.customerMessage);
         }
@@ -108,7 +108,7 @@ class IPATool {
         const uniqueString = uuidv4();
         const outputFileName = `${songList0.metadata.bundleDisplayName}_${songList0.metadata.bundleShortVersionString}_${uniqueString}.ipa`;
         const outputFilePath = path.join(downloadPath, outputFileName);
-        const cacheDir = path.join(downloadPath, ‘cache’);
+        const cacheDir = path.join(downloadPath, 'cache');
 
         await fsPromises.mkdir(cacheDir, { recursive: true });
 
@@ -118,7 +118,7 @@ class IPATool {
         if (!resp.ok) {
             throw new Error(`Cannot retrieve file: ${resp.statusText}`);
         }
-        const fileSize = Number(resp.headers.get(‘content-length’));
+        const fileSize = Number(resp.headers.get('content-length'));
         const numChunks = Math.ceil(fileSize / CHUNK_SIZE);
 
         console.log(`File size: ${(fileSize / 1024 / 1024).toFixed(2)} MB  Number of chunks: ${numChunks}`);
@@ -156,23 +156,23 @@ class IPATool {
             await Promise.all(chunkPromises);
         }
 
-        console.log(‘\nMerging chunks...’);
+        console.log('\nMerging chunks...');
         const finalFile = createWriteStream(outputFilePath);
         for (let i = 0; i < numChunks; i++) {
             const tempOutput = path.join(cacheDir, `part${i}`);
             const tempStream = createReadStream(tempOutput);
             tempStream.pipe(finalFile, { end: false });
-            await new Promise((resolve) => tempStream.on(‘end’, resolve));
+            await new Promise((resolve) => tempStream.on('end', resolve));
             await fsPromises.unlink(tempOutput);
         }
         finalFile.end();
 
-        console.log(‘Signing IPA’);
+        console.log('Signing IPA');
         const sigClient = new SignatureClient(songList0, APPLE_ID);
         await sigClient.loadFile(outputFilePath);
         await sigClient.appendMetadata().appendSignature();
         await sigClient.write();
-        console.log(‘Signing complete’);
+        console.log('Signing complete');
 
         await fsPromises.rm(cacheDir, { recursive: true, force: true });
 
@@ -182,9 +182,9 @@ class IPATool {
 
 const ipaTool = new IPATool();
 
-app.post(‘/download’, async (req, res) => {
+app.post('/download', async (req, res) => {
     const { APPLE_ID, PASSWORD, CODE, APPID, appVerId } = req.body;
-    const uniqueDownloadPath = path.join(__dirname, ‘app’, generateRandomString(16));
+    const uniqueDownloadPath = path.join(__dirname, 'app', generateRandomString(16));
 
     try {
         const { songList0, fileName, filePath } = await ipaTool.downipa({
@@ -196,7 +196,7 @@ app.post(‘/download’, async (req, res) => {
             appVerId: appVerId
         });
 
-        const fileUrl = `${req.protocol}s://storeios.net/files/${path.basename(uniqueDownloadPath)}/${fileName}`;
+        const fileUrl = `${req.protocol}s://ipadown.thuthuatjb.com/files/${path.basename(uniqueDownloadPath)}/${fileName}`;
 
         // Schedule file deletion after 30 minutes
         setTimeout(async () => {
@@ -211,14 +211,14 @@ app.post(‘/download’, async (req, res) => {
 
         res.json({ url: fileUrl });
     } catch (error) {
-        console.error(‘Error during file processing:’, error);
+        console.error('Error during file processing:', error);
         res.status(500).send(`Error: ${error.message}`);
         console.log(`Error during file processing: ${error.message}`);
     }
 });
 
-// Serve files dynamically from the ‘app’ directory
-app.use(‘/files’, express.static(path.join(__dirname, ‘app’)));
+// Serve files dynamically from the 'app' directory
+app.use('/files', express.static(path.join(__dirname, 'app')));
 
 app.listen(port, () => {
     console.log(`Server is running on http://localhost:${port}`);
