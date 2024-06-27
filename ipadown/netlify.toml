@@ -4,7 +4,7 @@ publish = "build"
 
 [dev]
 command = "node server.js"
-port = 3000
+port = 5004
 
 [[redirects]]
 from = "/api/*"
