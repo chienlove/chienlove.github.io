@@ -684,15 +684,12 @@ fieldset>div>hr, panel>block>hr {
     font-size: 12px;
 }
 .adsense-container {
-            width: 728px;  /* Đặt chiều rộng tùy chỉnh */
-            height: 90px; /* Đặt chiều cao tùy chỉnh */
-            border: 1px solid #ccc; /* Đường viền cho khung chứa */
-            overflow: hidden; /* Ẩn phần nội dung vượt ra ngoài khung chứa */
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            width: 728px;
+            height: 90px;
+            margin: 0 auto;
+            margin-bottom: 20px;
         }
         .adsense-content {
-            width: 728%;
-            height: 90%;
+            width: 100%;
+            height: 100%;
         }
