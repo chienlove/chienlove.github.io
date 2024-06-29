@@ -1,24 +1,26 @@
+// Khởi tạo cấu hình Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyABo1KBDlLJdeNIP5diteT2J0MMemgLigo",
   authDomain: "admin-panel-7418d.firebaseapp.com",
+  databaseURL: "https://admin-panel-7418d-default-rtdb.firebaseio.com",
   projectId: "admin-panel-7418d",
   storageBucket: "admin-panel-7418d.appspot.com",
   messagingSenderId: "158197054777",
   appId: "1:158197054777:web:202164ada59e2c0b59bce8"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const database = getDatabase(app);
+// Khởi tạo Firebase
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
 
-// Function to save post to Firebase
+// Lưu trữ dữ liệu bài viết vào Realtime Database
 function savePostToFirebase(post) {
-  return push(ref(database, 'posts'), post); // Return the promise to handle success and error
+  return database.ref('posts').push(post);
 }
 
 // Lấy form và lắng nghe sự kiện submit để lưu bài viết
 const postForm = document.getElementById('post-form');
-postForm.addEventListener('submit', (e) => {
+postForm.addEventListener('submit', async (e) => {
   e.preventDefault();
 
   const appName = postForm['appName'].value;
@@ -41,17 +43,12 @@ postForm.addEventListener('submit', (e) => {
     category
   };
 
-  // Lưu dữ liệu vào Firebase
-  firebase.database().ref('posts').push(newPost)
-    .then(() => {
-      // Thông báo thành công
-      document.getElementById('message').textContent = 'Bài viết đã được đăng thành công.';
-      // Reset form
-      postForm.reset();
-    })
-    .catch((error) => {
-      // Xử lý lỗi
-      console.error('Lỗi khi lưu bài viết:', error);
-      document.getElementById('message').textContent = 'Đã xảy ra lỗi khi đăng bài viết.';
-    });
+  try {
+    await savePostToFirebase(newPost);
+    document.getElementById('message').textContent = 'Bài viết đã được đăng thành công.';
+    postForm.reset(); // Reset form fields after submission
+  } catch (error) {
+    console.error('Lỗi khi lưu bài viết:', error);
+    document.getElementById('message').textContent = 'Đã xảy ra lỗi khi đăng bài viết.';
+  }
 });
