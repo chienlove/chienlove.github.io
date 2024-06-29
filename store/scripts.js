@@ -16,10 +16,10 @@ function savePostToFirebase(post) {
   return push(ref(database, 'posts'), post); // Return the promise to handle success and error
 }
 
-// Get the form and listen for submit event to save post
+// Lấy form và lắng nghe sự kiện submit để lưu bài viết
 const postForm = document.getElementById('post-form');
 postForm.addEventListener('submit', (e) => {
-  e.preventDefault(); // Prevent default form submit behavior (page reload)
+  e.preventDefault();
 
   const appName = postForm['appName'].value;
   const appImage = postForm['appImage'].value;
@@ -41,13 +41,17 @@ postForm.addEventListener('submit', (e) => {
     category
   };
 
-  savePostToFirebase(newPost)
+  // Lưu dữ liệu vào Firebase
+  firebase.database().ref('posts').push(newPost)
     .then(() => {
-      alert("Post saved successfully!"); // Show success message
-      postForm.reset(); // Reset form fields after successful submission
+      // Thông báo thành công
+      document.getElementById('message').textContent = 'Bài viết đã được đăng thành công.';
+      // Reset form
+      postForm.reset();
     })
     .catch((error) => {
-      console.error("Error saving post: ", error);
-      alert("Error saving post: " + error.message); // Show error message
+      // Xử lý lỗi
+      console.error('Lỗi khi lưu bài viết:', error);
+      document.getElementById('message').textContent = 'Đã xảy ra lỗi khi đăng bài viết.';
     });
 });
