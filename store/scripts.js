@@ -1,8 +1,3 @@
-// Import Firebase SDK
-import { initializeApp } from "firebase/app";
-import { getDatabase, ref, push, onValue } from "firebase/database";
-
-// Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyABo1KBDlLJdeNIP5diteT2J0MMemgLigo",
   authDomain: "admin-panel-7418d.firebaseapp.com",
