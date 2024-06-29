@@ -1,14 +1,64 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>App Listings</title>
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>App Store</title>
+  <style>
+    /* Các style CSS để tạo giao diện trang web */
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      margin: 20px;
+    }
+    .app {
+      margin-bottom: 20px;
+      border: 1px solid #ccc;
+      padding: 10px;
+    }
+    .app img {
+      max-width: 100px;
+      max-height: 100px;
+      margin-right: 10px;
+      border-radius: 5px;
+    }
+    .app h2 {
+      margin-bottom: 5px;
+    }
+    .app p {
+      margin: 5px 0;
+    }
+  </style>
 </head>
 <body>
-    <h1>App Listings</h1>
-    <ul id="app-list"></ul>
-    <script src="scripts/index.js"></script>
+  <h1>App Store</h1>
+  <div id="app-list"></div>
+
+  <script>
+    // Sử dụng fetch để lấy dữ liệu từ posts.json
+    fetch('posts.json')
+      .then(response => response.json())
+      .then(data => {
+        const appList = document.getElementById('app-list');
+
+        // Lặp qua từng bài viết trong dữ liệu và hiển thị lên trang web
+        data.forEach(post => {
+          const appDiv = document.createElement('div');
+          appDiv.classList.add('app');
+          appDiv.innerHTML = `
+            <h2>${post.title}</h2>
+            <img src="${post.image}" alt="${post.title}">
+            <p>${post.description}</p>
+            <p><strong>Developer:</strong> ${post.developer}</p>
+            <p><strong>iOS Version:</strong> ${post.iOSVersion}</p>
+            <p><strong>App Version:</strong> ${post.appVersion}</p>
+            <a href="${post.downloadLink}" target="_blank">Download</a>
+            <p><strong>Category:</strong> ${post.category}</p>
+          `;
+          appList.appendChild(appDiv);
+        });
+      })
+      .catch(error => console.error('Error fetching data:', error));
+  </script>
 </body>
 </html>
