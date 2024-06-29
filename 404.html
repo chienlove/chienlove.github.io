@@ -90,15 +90,17 @@
                     articles.forEach(article => {
                         const titleElement = article.querySelector('.item-title');
                         const subtitleElement = article.querySelector('.item-subtitle');
+                        const linkElement = article.querySelector('a');
 
-                        if (titleElement && subtitleElement) {
+                        if (titleElement && subtitleElement && linkElement) {
                             const title = titleElement.textContent.toLowerCase();
                             const content = subtitleElement.textContent.toLowerCase();
+                            const link = linkElement.getAttribute('onclick').match(/location='(.*?)'/)[1];
 
                             if (title.includes(query) || content.includes(query)) {
                                 const result = document.createElement('div');
                                 result.innerHTML = `
-                                    <h3>${titleElement.textContent}</h3>
+                                    <h3><a href="${link}">${titleElement.textContent}</a></h3>
                                     <p>${subtitleElement.textContent}</p>
                                 `;
                                 resultsContainer.appendChild(result);
