@@ -23,8 +23,8 @@
         header h1 {
             font-size: 2em;
             margin: 0;
-            padding: 0 10px; /* Đảm bảo tên trang web không tràn ra ngoài */
-            word-wrap: break-word; /* Tự động xuống dòng nếu cần thiết */
+            padding: 0 10px;
+            word-wrap: break-word;
         }
         .container {
             flex: 1;
@@ -66,7 +66,7 @@
             max-width: 300px;
             border: 1px solid #ccc;
             border-radius: 5px;
-            font-size: 16px; /* Fix issue khi zoom lên */
+            font-size: 16px;
         }
         .search-container button {
             padding: 10px 20px;
@@ -76,7 +76,7 @@
             border-radius: 5px;
             cursor: pointer;
             transition: background-color 0.3s;
-            font-size: 16px; /* Fix issue khi zoom lên */
+            font-size: 16px;
         }
         .search-container button:hover {
             background-color: #0056b3;
@@ -118,17 +118,19 @@
                     .then(data => {
                         var parser = new DOMParser();
                         var doc = parser.parseFromString(data, 'text/html');
-                        var bodyText = doc.body.innerText.toLowerCase();
+                        var articles = doc.querySelectorAll('article');
                         var results = [];
-                        
-                        if(bodyText.includes(query)) {
-                            var paragraphs = doc.body.querySelectorAll('p, h1, h2, h3, h4, h5, h6');
-                            paragraphs.forEach(para => {
-                                if(para.innerText.toLowerCase().includes(query)) {
-                                    results.push(para.innerText);
-                                }
-                            });
-                        }
+
+                        articles.forEach(article => {
+                            var title = article.querySelector('h2').innerText.toLowerCase();
+                            var content = article.querySelector('p').innerText.toLowerCase();
+                            if(title.includes(query) || content.includes(query)) {
+                                results.push({
+                                    title: article.querySelector('h2').innerText,
+                                    content: article.querySelector('p').innerText
+                                });
+                            }
+                        });
 
                         displayResults(results);
                     });
@@ -142,7 +144,12 @@
             if(results.length > 0) {
                 results.forEach(result => {
                     var li = document.createElement('li');
-                    li.textContent = result;
+                    var title = document.createElement('h3');
+                    var content = document.createElement('p');
+                    title.textContent = result.title;
+                    content.textContent = result.content;
+                    li.appendChild(title);
+                    li.appendChild(content);
                     resultsContainer.appendChild(li);
                 });
             } else {
