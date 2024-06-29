@@ -61,12 +61,13 @@
         <h1>404 - Page Not Found</h1>
         <p>Sorry, the page you are looking for does not exist.</p>
         <input type="text" id="search-input" placeholder="Search for content...">
+        <button id="search-button" class="btn btn-primary">Search</button>
         <div id="search-results"></div>
     </div>
 
     <script>
-        document.getElementById('search-input').addEventListener('input', function() {
-            const query = this.value.toLowerCase();
+        document.getElementById('search-button').addEventListener('click', function() {
+            const query = document.getElementById('search-input').value.toLowerCase();
             const resultsContainer = document.getElementById('search-results');
             resultsContainer.innerHTML = '';
 
