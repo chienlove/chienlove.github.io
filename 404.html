@@ -81,11 +81,19 @@
         .search-container button:hover {
             background-color: #0056b3;
         }
+        #search-results {
+            margin-top: 20px;
+            max-width: 300px;
+            text-align: left;
+        }
+        #search-results li {
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
     <header>
-        <h1>StoreiOS</h1>
+        <h1>Trang Web của Bạn</h1>
     </header>
     <div class="container">
         <h1>404</h1>
@@ -96,15 +104,51 @@
             <input type="text" id="search" placeholder="Tìm kiếm...">
             <button onclick="search()">Tìm kiếm</button>
         </div>
+        <ul id="search-results"></ul>
     </div>
     <footer>
         <p>Bản quyền © 2024. Tất cả các quyền được bảo lưu.</p>
     </footer>
     <script>
         function search() {
-            var query = document.getElementById('search').value;
+            var query = document.getElementById('search').value.toLowerCase();
             if(query) {
-                window.location.href = '/search?q=' + encodeURIComponent(query);
+                fetch('index.html')
+                    .then(response => response.text())
+                    .then(data => {
+                        var parser = new DOMParser();
+                        var doc = parser.parseFromString(data, 'text/html');
+                        var bodyText = doc.body.innerText.toLowerCase();
+                        var results = [];
+                        
+                        if(bodyText.includes(query)) {
+                            var paragraphs = doc.body.querySelectorAll('p, h1, h2, h3, h4, h5, h6');
+                            paragraphs.forEach(para => {
+                                if(para.innerText.toLowerCase().includes(query)) {
+                                    results.push(para.innerText);
+                                }
+                            });
+                        }
+
+                        displayResults(results);
+                    });
+            }
+        }
+
+        function displayResults(results) {
+            var resultsContainer = document.getElementById('search-results');
+            resultsContainer.innerHTML = '';
+
+            if(results.length > 0) {
+                results.forEach(result => {
+                    var li = document.createElement('li');
+                    li.textContent = result;
+                    resultsContainer.appendChild(li);
+                });
+            } else {
+                var li = document.createElement('li');
+                li.textContent = 'Không tìm thấy kết quả nào.';
+                resultsContainer.appendChild(li);
             }
         }
     </script>
