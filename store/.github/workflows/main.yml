@@ -1,0 +1,34 @@
+name: Update JSON
+
+on:
+  push:
+    paths:
+      - 'scripts/admin.js'
+      - 'posts.json'
+
+jobs:
+  update-json:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: '14'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Run script
+        run: node scripts/admin.js
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add posts.json
+          git commit -m 'Update posts.json'
+          git push
