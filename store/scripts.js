@@ -1,4 +1,4 @@
-// Khởi tạo cấu hình Firebase
+// Cấu hình Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyABo1KBDlLJdeNIP5diteT2J0MMemgLigo",
   authDomain: "admin-panel-7418d.firebaseapp.com",
