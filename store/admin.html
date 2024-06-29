@@ -1,40 +1,86 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel</title>
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel</title>
 </head>
 <body>
-    <h1>Admin Panel</h1>
-    <form id="app-form">
-        <label for="title">Title:</label>
-        <input type="text" id="title" name="title" required><br>
+  <h1>Admin Panel</h1>
+  
+  <form id="app-form">
+    <label for="title">Title:</label><br>
+    <input type="text" id="title" name="title" required><br>
+    
+    <label for="image">Image URL:</label><br>
+    <input type="text" id="image" name="image" required><br>
+    
+    <label for="description">Description:</label><br>
+    <textarea id="description" name="description" rows="4" required></textarea><br>
+    
+    <label for="developer">Developer:</label><br>
+    <input type="text" id="developer" name="developer" required><br>
+    
+    <label for="iOSVersion">iOS Version:</label><br>
+    <input type="text" id="iOSVersion" name="iOSVersion" required><br>
+    
+    <label for="appVersion">App Version:</label><br>
+    <input type="text" id="appVersion" name="appVersion" required><br>
+    
+    <label for="downloadLink">Download Link:</label><br>
+    <input type="text" id="downloadLink" name="downloadLink" required><br>
+    
+    <label for="category">Category:</label><br>
+    <input type="text" id="category" name="category" required><br><br>
+    
+    <button type="submit">Add App</button>
+  </form>
 
-        <label for="image">Image URL:</label>
-        <input type="url" id="image" name="image" required><br>
+  <script>
+    document.getElementById('app-form').addEventListener('submit', function(event) {
+      event.preventDefault();
 
-        <label for="description">Description:</label>
-        <textarea id="description" name="description" required></textarea><br>
+      // Lấy giá trị từ form
+      const title = document.getElementById('title').value;
+      const image = document.getElementById('image').value;
+      const description = document.getElementById('description').value;
+      const developer = document.getElementById('developer').value;
+      const iOSVersion = document.getElementById('iOSVersion').value;
+      const appVersion = document.getElementById('appVersion').value;
+      const downloadLink = document.getElementById('downloadLink').value;
+      const category = document.getElementById('category').value;
 
-        <label for="developer">Developer:</label>
-        <input type="text" id="developer" name="developer" required><br>
+      // Tạo object mới từ dữ liệu form
+      const newApp = {
+        "title": title,
+        "image": image,
+        "description": description,
+        "developer": developer,
+        "iOSVersion": iOSVersion,
+        "appVersion": appVersion,
+        "downloadLink": downloadLink,
+        "category": category
+      };
 
-        <label for="iosVersion">iOS Version Compatibility:</label>
-        <input type="text" id="iosVersion" name="iosVersion" required><br>
-
-        <label for="appVersion">App Version:</label>
-        <input type="text" id="appVersion" name="appVersion" required><br>
-
-        <label for="downloadLink">Download Link:</label>
-        <input type="url" id="downloadLink" name="downloadLink" required><br>
-
-        <label for="category">Category:</label>
-        <input type="text" id="category" name="category" required><br>
-
-        <button type="submit">Add App</button>
-    </form>
-    <script src="scripts/admin.js"></script>
+      // Gửi dữ liệu đến server-side hoặc lưu trữ vào posts.json (trong trường hợp này, chỉ là ví dụ)
+      fetch('posts.json', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(newApp)
+      })
+      .then(response => response.json())
+      .then(data => {
+        console.log('Success:', data);
+        alert('App added successfully!');
+        document.getElementById('app-form').reset(); // Đặt lại form sau khi thêm thành công
+      })
+      .catch((error) => {
+        console.error('Error:', error);
+        alert('An error occurred while adding the app. Please try again.');
+      });
+    });
+  </script>
 </body>
 </html>
