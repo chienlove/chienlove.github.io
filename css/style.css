@@ -683,13 +683,3 @@ fieldset>div>hr, panel>block>hr {
     color: #333;
     font-size: 12px;
 }
-.adsense-container {
-            width: 728px;
-            height: 90px;
-            margin: 0 auto;
-            margin-bottom: 20px;
-        }
-        .adsense-content {
-            width: 100%;
-            height: 100%;
-        }
