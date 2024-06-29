@@ -684,8 +684,8 @@ fieldset>div>hr, panel>block>hr {
     font-size: 12px;
 }
 .adsense-container {
-            width: 300px;  /* Đặt chiều rộng tùy chỉnh */
-            height: 250px; /* Đặt chiều cao tùy chỉnh */
+            width: 728px;  /* Đặt chiều rộng tùy chỉnh */
+            height: 90px; /* Đặt chiều cao tùy chỉnh */
             border: 1px solid #ccc; /* Đường viền cho khung chứa */
             overflow: hidden; /* Ẩn phần nội dung vượt ra ngoài khung chứa */
             display: flex;
