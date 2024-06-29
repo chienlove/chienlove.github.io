@@ -16,7 +16,8 @@ header {
 main {
   flex: 1;
   padding: 1em;
-  margin-bottom: 50px; /* Tạo khoảng trống dưới để tránh footer chồng lên */
+  padding-bottom: 80px; /* Tạo khoảng trống dưới để tránh footer chồng lên */
+  box-sizing: border-box;
 }
 
 form {
