@@ -1,168 +1,101 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Trang Không Tồn Tại</title>
+    <meta charset="utf-8">
+    <meta content='width=device-width, initial-scale=1.0, maximum-scale=2.0, user-scalable=0' name='viewport' />
+    <title>404 - Page Not Found</title>
+    <link rel="stylesheet" type="text/css" href="/css/style.css">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.13.0/css/fontawesome.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.13.0/css/solid.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.13.0/css/brands.min.css">
     <style>
-        body {
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-            margin: 0;
-            font-family: 'Arial', sans-serif;
-            background-color: #f0f0f0;
-            color: #333;
+        body, .navbar-brand, .nav-link, .form-label, .form-control, .btn, .text-white {
+            font-family: 'Nunito', sans-serif;
         }
-        header, footer {
-            background-color: #007bff;
-            color: white;
-            text-align: center;
-            padding: 10px 0;
-        }
-        header h1 {
-            font-size: 2em;
-            margin: 0;
-            padding: 0 10px;
-            word-wrap: break-word;
-        }
-        .container {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-        }
-        h1 {
-            font-size: 10em;
-            margin: 0;
-        }
-        h2 {
-            font-size: 2em;
-            margin: 10px 0;
-        }
-        p {
-            margin: 20px 0;
-        }
-        a {
-            text-decoration: none;
-            color: #007bff;
-            border: 1px solid #007bff;
-            padding: 10px 20px;
-            border-radius: 5px;
-            transition: background-color 0.3s, color 0.3s;
-        }
-        a:hover {
-            background-color: #007bff;
-            color: white;
-        }
-        .search-container {
+        footer.footer {
             margin-top: 20px;
         }
-        .search-container input[type="text"] {
-            padding: 10px;
+        #search-input {
             width: 100%;
-            max-width: 300px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-            font-size: 16px;
-        }
-        .search-container button {
-            padding: 10px 20px;
-            border: none;
-            background-color: #007bff;
-            color: white;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-            font-size: 16px;
-        }
-        .search-container button:hover {
-            background-color: #0056b3;
+            padding: 12px;
+            margin: 20px 0;
         }
         #search-results {
             margin-top: 20px;
-            max-width: 300px;
-            text-align: left;
-        }
-        #search-results li {
-            margin-bottom: 10px;
         }
     </style>
 </head>
+
 <body>
-    <header>
-        <h1>Trang Web của Bạn</h1>
-    </header>
-    <div class="container">
-        <h1>404</h1>
-        <h2>Trang Không Tồn Tại</h2>
-        <p>Xin lỗi, trang bạn đang tìm kiếm không tồn tại.</p>
-        <a href="/">Quay về trang chủ</a>
-        <div class="search-container">
-            <input type="text" id="search" placeholder="Tìm kiếm...">
-            <button onclick="search()">Tìm kiếm</button>
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background-color: #1E90FF;">
+        <div class="container">
+            <a class="navbar-brand" href="https://storeios.net/">StoreiOS</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">link 1</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">link 2</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">link 3</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">link 4</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">link 5</a>
+                    </li>
+                </ul>
+            </div>
         </div>
-        <ul id="search-results"></ul>
+    </nav>
+
+    <div class="container mt-4 text-center">
+        <h1>404 - Page Not Found</h1>
+        <p>Sorry, the page you are looking for does not exist.</p>
+        <input type="text" id="search-input" placeholder="Search for content...">
+        <div id="search-results"></div>
     </div>
-    <footer>
-        <p>Bản quyền © 2024. Tất cả các quyền được bảo lưu.</p>
-    </footer>
+
     <script>
-        async function search() {
-            var query = document.getElementById('search').value.toLowerCase();
-            if(query) {
-                try {
-                    let response = await fetch('index.html');
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok ' + response.statusText);
-                    }
-                    let data = await response.text();
-                    var parser = new DOMParser();
-                    var doc = parser.parseFromString(data, 'text/html');
-                    var articles = doc.querySelectorAll('article');
-                    var results = [];
-
-                    articles.forEach(article => {
-                        var title = article.querySelector('h2').innerText.toLowerCase();
-                        var content = article.querySelector('p').innerText.toLowerCase();
-                        if(title.includes(query) || content.includes(query)) {
-                            results.push({
-                                title: article.querySelector('h2').innerText,
-                                content: article.querySelector('p').innerText
-                            });
-                        }
-                    });
-
-                    displayResults(results);
-                } catch (error) {
-                    console.error('Fetch error: ', error);
-                }
-            }
-        }
-
-        function displayResults(results) {
-            var resultsContainer = document.getElementById('search-results');
+        document.getElementById('search-input').addEventListener('input', function() {
+            const query = this.value.toLowerCase();
+            const resultsContainer = document.getElementById('search-results');
             resultsContainer.innerHTML = '';
 
-            if(results.length > 0) {
-                results.forEach(result => {
-                    var li = document.createElement('li');
-                    var title = document.createElement('h3');
-                    var content = document.createElement('p');
-                    title.textContent = result.title;
-                    content.textContent = result.content;
-                    li.appendChild(title);
-                    li.appendChild(content);
-                    resultsContainer.appendChild(li);
-                });
-            } else {
-                var li = document.createElement('li');
-                li.textContent = 'Không tìm thấy kết quả nào.';
-                resultsContainer.appendChild(li);
-            }
-        }
+            fetch('/index.html')
+                .then(response => response.text())
+                .then(data => {
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(data, 'text/html');
+                    const articles = doc.querySelectorAll('#content article');
+
+                    articles.forEach(article => {
+                        const title = article.querySelector('h2').textContent.toLowerCase();
+                        const content = article.querySelector('p').textContent.toLowerCase();
+
+                        if (title.includes(query) || content.includes(query)) {
+                            const result = document.createElement('div');
+                            result.innerHTML = `
+                                <h3>${article.querySelector('h2').textContent}</h3>
+                                <p>${article.querySelector('p').textContent}</p>
+                            `;
+                            resultsContainer.appendChild(result);
+                        }
+                    });
+                })
+                .catch(error => console.error('Error fetching the index file:', error));
+        });
     </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/js/bootstrap.min.js"></script>
 </body>
 </html>
