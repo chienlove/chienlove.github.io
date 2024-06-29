@@ -1,9 +1,8 @@
 // Import Firebase SDK
 import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-import { getDatabase } from "firebase/database"; // Import database module
+import { getDatabase, ref, push, onValue } from "firebase/database";
 
-// Cấu hình Firebase
+// Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: "AIzaSyABo1KBDlLJdeNIP5diteT2J0MMemgLigo",
   authDomain: "admin-panel-7418d.firebaseapp.com",
@@ -13,39 +12,19 @@ const firebaseConfig = {
   appId: "1:158197054777:web:202164ada59e2c0b59bce8"
 };
 
-// Khởi tạo Firebase
-firebase.initializeApp(firebaseConfig);
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const database = getDatabase(app);
 
-// Lưu trữ dữ liệu bài viết vào Realtime Database
+// Function to save post to Firebase
 function savePostToFirebase(post) {
-  firebase.database().ref('posts').push(post);
-}
-// Hàm cập nhật danh sách bài viết trên trang index.html từ Firebase
-function updateArticleListFromFirebase() {
-  const articleList = document.getElementById('article-list');
-  articleList.innerHTML = '';
-
-  const postsRef = ref(database, 'posts');
-  onValue(postsRef, (snapshot) => {
-    snapshot.forEach((childSnapshot) => {
-      const post = childSnapshot.val();
-      const articleLink = document.createElement('a');
-      articleLink.href = '#'; // Thay bằng link đến trang chi tiết bài viết khi có
-      articleLink.textContent = post.appName;
-
-      const articleItem = document.createElement('div');
-      articleItem.classList.add('article-item');
-      articleItem.appendChild(articleLink);
-
-      articleList.appendChild(articleItem);
-    });
-  });
+  return push(ref(database, 'posts'), post); // Return the promise to handle success and error
 }
 
-// Lấy form và lắng nghe sự kiện submit để lưu bài viết
+// Get the form and listen for submit event to save post
 const postForm = document.getElementById('post-form');
 postForm.addEventListener('submit', (e) => {
-  e.preventDefault();
+  e.preventDefault(); // Prevent default form submit behavior (page reload)
 
   const appName = postForm['appName'].value;
   const appImage = postForm['appImage'].value;
@@ -67,9 +46,13 @@ postForm.addEventListener('submit', (e) => {
     category
   };
 
-  savePostToFirebase(newPost);
-  postForm.reset(); // Reset form fields after submission
+  savePostToFirebase(newPost)
+    .then(() => {
+      alert("Post saved successfully!"); // Show success message
+      postForm.reset(); // Reset form fields after successful submission
+    })
+    .catch((error) => {
+      console.error("Error saving post: ", error);
+      alert("Error saving post: " + error.message); // Show error message
+    });
 });
-
-// Cập nhật danh sách bài viết khi trang được tải
-updateArticleListFromFirebase();
