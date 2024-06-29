@@ -110,30 +110,35 @@
         <p>Bản quyền © 2024. Tất cả các quyền được bảo lưu.</p>
     </footer>
     <script>
-        function search() {
+        async function search() {
             var query = document.getElementById('search').value.toLowerCase();
             if(query) {
-                fetch('index.html')
-                    .then(response => response.text())
-                    .then(data => {
-                        var parser = new DOMParser();
-                        var doc = parser.parseFromString(data, 'text/html');
-                        var articles = doc.querySelectorAll('article');
-                        var results = [];
+                try {
+                    let response = await fetch('index.html');
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok ' + response.statusText);
+                    }
+                    let data = await response.text();
+                    var parser = new DOMParser();
+                    var doc = parser.parseFromString(data, 'text/html');
+                    var articles = doc.querySelectorAll('article');
+                    var results = [];
 
-                        articles.forEach(article => {
-                            var title = article.querySelector('h2').innerText.toLowerCase();
-                            var content = article.querySelector('p').innerText.toLowerCase();
-                            if(title.includes(query) || content.includes(query)) {
-                                results.push({
-                                    title: article.querySelector('h2').innerText,
-                                    content: article.querySelector('p').innerText
-                                });
-                            }
-                        });
-
-                        displayResults(results);
+                    articles.forEach(article => {
+                        var title = article.querySelector('h2').innerText.toLowerCase();
+                        var content = article.querySelector('p').innerText.toLowerCase();
+                        if(title.includes(query) || content.includes(query)) {
+                            results.push({
+                                title: article.querySelector('h2').innerText,
+                                content: article.querySelector('p').innerText
+                            });
+                        }
                     });
+
+                    displayResults(results);
+                } catch (error) {
+                    console.error('Fetch error: ', error);
+                }
             }
         }
 
