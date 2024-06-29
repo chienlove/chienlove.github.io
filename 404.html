@@ -71,13 +71,19 @@
             const resultsContainer = document.getElementById('search-results');
             resultsContainer.innerHTML = '';
 
+            console.log('Fetching index.html...');
             fetch('/index.html')
-                .then(response => response.text())
+                .then(response => {
+                    console.log('Response received');
+                    return response.text();
+                })
                 .then(data => {
+                    console.log('Data received:', data.substring(0, 200)); // Log a snippet of the data
                     const parser = new DOMParser();
                     const doc = parser.parseFromString(data, 'text/html');
                     const articles = doc.querySelectorAll('#content article');
 
+                    console.log('Articles found:', articles.length);
                     articles.forEach(article => {
                         const title = article.querySelector('h2').textContent.toLowerCase();
                         const content = article.querySelector('p').textContent.toLowerCase();
