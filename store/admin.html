@@ -1,41 +1,163 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Panel</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add App - Admin Panel</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #333;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        input, textarea {
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        select {
+            padding: 10px;
+            margin-bottom: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
 </head>
 <body>
-  <h1>Admin Panel</h1>
-  
-  <form id="app-form">
-    <label for="title">Title:</label><br>
-    <input type="text" id="title" name="title" required><br>
-    
-    <label for="image">Image URL:</label><br>
-    <input type="text" id="image" name="image" required><br>
-    
-    <label for="description">Description:</label><br>
-    <textarea id="description" name="description" rows="4" required></textarea><br>
-    
-    <label for="developer">Developer:</label><br>
-    <input type="text" id="developer" name="developer" required><br>
-    
-    <label for="iOSVersion">iOS Version:</label><br>
-    <input type="text" id="iOSVersion" name="iOSVersion" required><br>
-    
-    <label for="appVersion">App Version:</label><br>
-    <input type="text" id="appVersion" name="appVersion" required><br>
-    
-    <label for="downloadLink">Download Link:</label><br>
-    <input type="text" id="downloadLink" name="downloadLink" required><br>
-    
-    <label for="category">Category:</label><br>
-    <input type="text" id="category" name="category" required><br><br>
-    
-    <button type="submit">Add App</button>
-  </form>
+    <div class="container">
+        <h1>Add New App</h1>
+        <form id="appForm">
+            <label for="appName">App Name:</label>
+            <input type="text" id="appName" name="appName" required>
 
-  <script src="scripts/admin.js"></script>
+            <label for="appImage">App Image URL:</label>
+            <input type="url" id="appImage" name="appImage" required>
+
+            <label for="appDescription">App Description:</label>
+            <textarea id="appDescription" name="appDescription" rows="4" required></textarea>
+
+            <label for="appDeveloper">Developer:</label>
+            <input type="text" id="appDeveloper" name="appDeveloper" required>
+
+            <label for="appIOSVersion">iOS Version Compatibility:</label>
+            <input type="text" id="appIOSVersion" name="appIOSVersion" required>
+
+            <label for="appVersion">App Version:</label>
+            <input type="text" id="appVersion" name="appVersion" required>
+
+            <label for="appDownloadLink">Download Link:</label>
+            <input type="url" id="appDownloadLink" name="appDownloadLink" required>
+
+            <label for="appCategory">Category:</label>
+            <select id="appCategory" name="appCategory" required>
+                <option value="">Select a category...</option>
+                <option value="Games">Games</option>
+                <option value="Productivity">Productivity</option>
+                <option value="Utilities">Utilities</option>
+                <option value="Education">Education</option>
+                <!-- Add more categories as needed -->
+            </select>
+
+            <button type="submit">Add App</button>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById('appForm').addEventListener('submit', function(event) {
+            event.preventDefault();
+
+            const appName = document.getElementById('appName').value;
+            const appImage = document.getElementById('appImage').value;
+            const appDescription = document.getElementById('appDescription').value;
+            const appDeveloper = document.getElementById('appDeveloper').value;
+            const appIOSVersion = document.getElementById('appIOSVersion').value;
+            const appVersion = document.getElementById('appVersion').value;
+            const appDownloadLink = document.getElementById('appDownloadLink').value;
+            const appCategory = document.getElementById('appCategory').value;
+
+            const newApp = {
+                appName: appName,
+                appImage: appImage,
+                appDescription: appDescription,
+                appDeveloper: appDeveloper,
+                appIOSVersion: appIOSVersion,
+                appVersion: appVersion,
+                appDownloadLink: appDownloadLink,
+                appCategory: appCategory
+            };
+
+            // Send data to backend or save to posts.json (example)
+            fetch('/posts.json', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(newApp)
+            })
+            .then(response => {
+                if (response.ok) {
+                    console.log('App information added successfully');
+                    alert('App information added successfully');
+                    // Clear form fields if needed
+                    document.getElementById('appForm').reset();
+                } else {
+                    console.error('Failed to add app information');
+                    alert('Failed to add app information');
+                }
+            })
+            .catch(error => {
+                console.error('Error adding app information:', error);
+                alert('Error adding app information');
+            });
+        });
+    </script>
 </body>
 </html>
