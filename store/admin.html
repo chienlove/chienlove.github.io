@@ -70,13 +70,18 @@
         },
         body: JSON.stringify(newApp)
       })
-      .then(response => response.json())
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to add app');
+        }
+        return response.json();
+      })
       .then(data => {
         console.log('Success:', data);
         alert('App added successfully!');
         document.getElementById('app-form').reset(); // Đặt lại form sau khi thêm thành công
       })
-      .catch((error) => {
+      .catch(error => {
         console.error('Error:', error);
         alert('An error occurred while adding the app. Please try again.');
       });
