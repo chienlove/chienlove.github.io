@@ -74,6 +74,9 @@
             console.log('Fetching index.html...');
             fetch('/index.html')
                 .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok ' + response.statusText);
+                    }
                     console.log('Response received');
                     return response.text();
                 })
@@ -97,6 +100,10 @@
                             resultsContainer.appendChild(result);
                         }
                     });
+
+                    if (resultsContainer.innerHTML === '') {
+                        resultsContainer.innerHTML = '<p>No results found.</p>';
+                    }
                 })
                 .catch(error => console.error('Error fetching the index file:', error));
         });
