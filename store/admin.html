@@ -18,8 +18,11 @@
             <label for="app-icon">Icon ứng dụng (URL):</label>
             <input type="url" id="app-icon" name="app-icon" required><br>
 
-            <label for="app-screenshot">Ảnh màn hình ứng dụng (URL):</label>
-            <input type="url" id="app-screenshot" name="app-screenshot" required><br>
+            <label for="app-screenshots">Ảnh màn hình ứng dụng (URL):</label>
+            <input type="url" id="app-screenshot" name="app-screenshot" required>
+            <button type="button" id="add-screenshot">Thêm ảnh</button><br>
+            
+            <div id="screenshots-preview"></div>
 
             <label for="description">Mô tả ứng dụng:</label>
             <textarea id="description" name="description" required></textarea><br>
@@ -60,11 +63,23 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const form = document.getElementById('post-form');
-            const postsTableBody = document.querySelector('#posts-table tbody');
+            const screenshotsPreview = document.getElementById('screenshots-preview');
+            const addScreenshotButton = document.getElementById('add-screenshot');
 
+            addScreenshotButton.addEventListener('click', () => {
+                const screenshotInput = document.createElement('input');
+                screenshotInput.type = 'url';
+                screenshotInput.name = 'app-screenshot';
+                screenshotInput.placeholder = 'URL ảnh màn hình';
+                screenshotsPreview.appendChild(screenshotInput);
+            });
+
+            // Function to load and manage posts
             const loadPosts = () => {
                 const posts = JSON.parse(localStorage.getItem('posts')) || [];
+                const postsTableBody = document.querySelector('#posts-table tbody');
                 postsTableBody.innerHTML = '';
+
                 posts.forEach((post, index) => {
                     const row = document.createElement('tr');
                     row.innerHTML = `
@@ -91,13 +106,13 @@
                 });
             };
 
+            // Function to edit a post
             const editPost = (index) => {
                 const posts = JSON.parse(localStorage.getItem('posts')) || [];
                 const post = posts[index];
 
                 document.getElementById('app-name').value = post.app_name;
                 document.getElementById('app-icon').value = post.app_icon;
-                document.getElementById('app-screenshot').value = post.app_screenshot;
                 document.getElementById('description').value = post.description;
                 document.getElementById('developer').value = post.developer;
                 document.getElementById('ios-version').value = post.ios_version;
@@ -105,9 +120,19 @@
                 document.getElementById('category').value = post.category;
                 document.getElementById('download-link').value = post.download_link;
 
+                screenshotsPreview.innerHTML = '';
+                post.app_screenshots.forEach(url => {
+                    const screenshotInput = document.createElement('input');
+                    screenshotInput.type = 'url';
+                    screenshotInput.name = 'app-screenshot';
+                    screenshotInput.value = url;
+                    screenshotsPreview.appendChild(screenshotInput);
+                });
+
                 form.dataset.editIndex = index;
             };
 
+            // Function to delete a post
             const deletePost = (index) => {
                 let posts = JSON.parse(localStorage.getItem('posts')) || [];
                 posts.splice(index, 1);
@@ -115,11 +140,11 @@
                 loadPosts();
             };
 
+            // Form submit event listener
             form.addEventListener('submit', (event) => {
                 event.preventDefault();
                 const appName = document.getElementById('app-name').value;
                 const appIcon = document.getElementById('app-icon').value;
-                const appScreenshot = document.getElementById('app-screenshot').value;
                 const description = document.getElementById('description').value;
                 const developer = document.getElementById('developer').value;
                 const iosVersion = document.getElementById('ios-version').value;
@@ -127,10 +152,12 @@
                 const category = document.getElementById('category').value;
                 const downloadLink = document.getElementById('download-link').value;
 
+                const appScreenshots = Array.from(screenshotsPreview.querySelectorAll('input')).map(input => input.value);
+
                 const newPost = {
                     app_name: appName,
                     app_icon: appIcon,
-                    app_screenshot: appScreenshot,
+                    app_screenshots: appScreenshots,
                     description,
                     developer,
                     ios_version: iosVersion,
@@ -152,10 +179,12 @@
                 localStorage.setItem('posts', JSON.stringify(posts));
 
                 form.reset();
+                screenshotsPreview.innerHTML = '';
                 alert('Post saved successfully!');
                 loadPosts();
             });
 
+            // Initial load of posts
             loadPosts();
         });
     </script>
