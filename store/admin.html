@@ -25,6 +25,34 @@
             <button type="submit">Submit</button>
         </form>
     </main>
-    <script src="script.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const form = document.getElementById('post-form');
+
+            form.addEventListener('submit', (event) => {
+                event.preventDefault();
+                const title = document.getElementById('title').value;
+                const image = document.getElementById('image').value;
+                const description = document.getElementById('description').value;
+                const developer = document.getElementById('developer').value;
+                const iosVersion = document.getElementById('ios_version').value;
+
+                const newPost = {
+                    title,
+                    image,
+                    description,
+                    developer,
+                    ios_version: iosVersion
+                };
+
+                let posts = JSON.parse(localStorage.getItem('posts')) || [];
+                posts.push(newPost);
+                localStorage.setItem('posts', JSON.stringify(posts));
+
+                form.reset();
+                alert('Post added successfully!');
+            });
+        });
+    </script>
 </body>
 </html>
