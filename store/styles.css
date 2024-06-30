@@ -1,115 +1,28 @@
 body {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  margin: 0;
-  font-family: Arial, sans-serif;
+    font-family: Arial, sans-serif;
 }
 
 header {
-  background: #333;
-  color: #fff;
-  padding: 1em;
-  text-align: center;
+    background-color: #f8f9fa;
+    padding: 20px;
+    text-align: center;
 }
 
 main {
-  flex: 1;
-  padding: 1em;
-  padding-bottom: 80px; /* Tạo khoảng trống dưới để tránh footer chồng lên */
-  box-sizing: border-box;
+    margin: 20px;
 }
 
-form {
-  max-width: 500px;
-  margin: auto;
-}
-
-footer {
-  background: #333;
-  color: #fff;
-  text-align: center;
-  padding: 1em;
-  position: fixed;
-  width: 100%;
-  bottom: 0;
-}
-header {
-  background-color: #333;
-  color: #fff;
-  text-align: center;
-  padding: 1rem 0;
-}
-
-header h1 {
-  margin: 0;
-}
-
-main {
-  max-width: 800px;
-  margin: 20px auto;
-  padding: 0 20px;
-}
-
-footer {
-  background-color: #333;
-  color: #fff;
-  text-align: center;
-  padding: 1rem 0;
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-}
-
-/* Article list styles */
-.article-list {
-  margin-top: 20px;
-}
-
-.article-item {
-  margin-bottom: 10px;
-}
-
-.article-item a {
-  display: block;
-  background-color: #f4f4f4;
-  padding: 10px;
-  text-decoration: none;
-  color: #333;
-  border: 1px solid #ccc;
-  border-radius: 5px;
-}
-
-/* Admin form styles */
 #post-form {
-  max-width: 600px;
-  margin: 20px auto;
+    display: flex;
+    flex-direction: column;
 }
 
-#post-form label {
-  display: block;
-  margin-bottom: 5px;
+#post-form input, #post-form textarea {
+    margin-bottom: 10px;
 }
 
-#post-form input,
-#post-form textarea {
-  width: 100%;
-  padding: 8px;
-  margin-bottom: 10px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  box-sizing: border-box;
-}
-
-#post-form button {
-  background-color: #333;
-  color: #fff;
-  border: none;
-  padding: 10px 20px;
-  cursor: pointer;
-  border-radius: 5px;
-}
-
-#post-form button:hover {
-  background-color: #555;
+#posts article {
+    border: 1px solid #ddd;
+    margin-bottom: 10px;
+    padding: 10px;
 }
