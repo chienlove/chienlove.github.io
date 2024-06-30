@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Panel</title>
+    <title>Quản lý thông tin ứng dụng iOS</title>
     <!-- CSS styles for a better admin interface -->
     <style>
         body {
@@ -59,42 +59,53 @@
         .delete-btn:hover {
             background-color: #d32f2f;
         }
+        #login-message {
+            text-align: center;
+            margin-top: 50px;
+        }
     </style>
 </head>
-<body style="display: none;"> <!-- Ẩn body mặc định -->
-    <h1>Quản lý thông tin ứng dụng iOS</h1>
-    <form id="appForm" action="https://api.netlify.com/api/v1/sites/storeios.net/deploys" method="post">
-        <label for="appName">Tên ứng dụng:</label><br>
-        <input type="text" id="appName" name="appName" required><br><br>
-        
-        <label for="appVersion">Phiên bản ứng dụng:</label><br>
-        <input type="text" id="appVersion" name="appVersion" required><br><br>
-        
-        <label for="developer">Nhà phát triển:</label><br>
-        <input type="text" id="developer" name="developer" required><br><br>
-        
-        <label for="description">Mô tả ứng dụng:</label><br>
-        <textarea id="description" name="description" rows="5" cols="50" required></textarea><br><br>
-        
-        <label for="appImages">Ảnh màn hình ứng dụng:</label><br>
-        <input type="file" id="appImages" name="appImages" multiple accept="image/*"><br><br>
-        
-        <label for="iosCompatibility">Phiên bản iOS tương thích:</label><br>
-        <input type="text" id="iosCompatibility" name="iosCompatibility" required><br><br>
-        
-        <label for="downloadLink">Liên kết tải ứng dụng:</label><br>
-        <input type="text" id="downloadLink" name="downloadLink" required><br><br>
+<body>
+    <div id="login-message">
+        <h1>Vui lòng đăng nhập để truy cập trang này.</h1>
+        <button id="login-button">Đăng nhập</button>
+    </div>
 
-        <label for="category">Chuyên mục:</label><br>
-        <select id="category" name="category" required>
-            <option value="uncategorized">Chưa phân loại</option>
-            <option value="news">Tin tức</option>
-            <option value="tips">Mẹo hay</option>
-            <option value="updates">Cập nhật</option>
-        </select><br><br>
-        
-        <input type="submit" value="Thêm bài viết">
-    </form>
+    <div id="admin-form" style="display: none;">
+        <h1>Quản lý thông tin ứng dụng iOS</h1>
+        <form id="appForm" action="https://api.netlify.com/api/v1/sites/storeios.net/deploys" method="post">
+            <label for="appName">Tên ứng dụng:</label><br>
+            <input type="text" id="appName" name="appName" required><br><br>
+            
+            <label for="appVersion">Phiên bản ứng dụng:</label><br>
+            <input type="text" id="appVersion" name="appVersion" required><br><br>
+            
+            <label for="developer">Nhà phát triển:</label><br>
+            <input type="text" id="developer" name="developer" required><br><br>
+            
+            <label for="description">Mô tả ứng dụng:</label><br>
+            <textarea id="description" name="description" rows="5" cols="50" required></textarea><br><br>
+            
+            <label for="appImages">Ảnh màn hình ứng dụng:</label><br>
+            <input type="file" id="appImages" name="appImages" multiple accept="image/*"><br><br>
+            
+            <label for="iosCompatibility">Phiên bản iOS tương thích:</label><br>
+            <input type="text" id="iosCompatibility" name="iosCompatibility" required><br><br>
+            
+            <label for="downloadLink">Liên kết tải ứng dụng:</label><br>
+            <input type="text" id="downloadLink" name="downloadLink" required><br><br>
+
+            <label for="category">Chuyên mục:</label><br>
+            <select id="category" name="category" required>
+                <option value="uncategorized">Chưa phân loại</option>
+                <option value="news">Tin tức</option>
+                <option value="tips">Mẹo hay</option>
+                <option value="updates">Cập nhật</option>
+            </select><br><br>
+            
+            <input type="submit" value="Lưu thông tin">
+        </form>
+    </div>
 
     <!-- Netlify Identity Configuration -->
     <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
@@ -102,12 +113,24 @@
         if (window.netlifyIdentity) {
             window.netlifyIdentity.on('init', user => {
                 if (!user) {
-                    window.netlifyIdentity.on('login', () => {
-                        document.location.href = '/admin/';
-                    });
+                    document.getElementById('login-message').style.display = 'block';
+                    document.getElementById('admin-form').style.display = 'none';
                 } else {
-                    document.body.style.display = 'block'; // Hiển thị body khi người dùng đã đăng nhập
+                    document.getElementById('login-message').style.display = 'none';
+                    document.getElementById('admin-form').style.display = 'block';
                 }
+            });
+
+            window.netlifyIdentity.on('login', () => {
+                document.location.href = '/admin/';
+            });
+
+            window.netlifyIdentity.on('logout', () => {
+                document.location.href = '/';
+            });
+
+            document.getElementById('login-button').addEventListener('click', () => {
+                window.netlifyIdentity.open();
             });
         }
 
