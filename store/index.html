@@ -21,13 +21,11 @@
 
             const displayPosts = (posts) => {
                 postsSection.innerHTML = '';
-                posts.forEach(post => {
+                posts.forEach((post, index) => {
                     const article = document.createElement('article');
                     article.innerHTML = `
-                        <h2>${post.title}</h2>
+                        <h2><a href="post.html?id=${index}">${post.title}</a></h2>
                         <p>${post.description}</p>
-                        <p><strong>Developer:</strong> ${post.developer}</p>
-                        <p><strong>iOS Version Compatibility:</strong> ${post.ios_version}</p>
                     `;
                     postsSection.appendChild(article);
                 });
