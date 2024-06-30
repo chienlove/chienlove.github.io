@@ -132,6 +132,8 @@
         window.netlifyIdentity.on('logout', () => {
             document.location.href = '/';
         });
+
+        window.netlifyIdentity.init();
     }
 
     // Handle form submission
