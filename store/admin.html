@@ -21,6 +21,9 @@
             <label for="app-screenshot">Ảnh màn hình ứng dụng (URL):</label>
             <input type="url" id="app-screenshot" name="app-screenshot" required><br>
 
+            <label for="description">Mô tả ứng dụng:</label>
+            <textarea id="description" name="description" required></textarea><br>
+
             <label for="developer">Nhà phát triển:</label>
             <input type="text" id="developer" name="developer" required><br>
 
@@ -48,6 +51,7 @@
                 const appName = document.getElementById('app-name').value;
                 const appIcon = document.getElementById('app-icon').value;
                 const appScreenshot = document.getElementById('app-screenshot').value;
+                const description = document.getElementById('description').value;
                 const developer = document.getElementById('developer').value;
                 const iosVersion = document.getElementById('ios-version').value;
                 const appVersion = document.getElementById('app-version').value;
@@ -58,6 +62,7 @@
                     app_name: appName,
                     app_icon: appIcon,
                     app_screenshot: appScreenshot,
+                    description,
                     developer,
                     ios_version: iosVersion,
                     app_version: appVersion,
