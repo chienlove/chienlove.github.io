@@ -1,28 +1,76 @@
 body {
     font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f8f9fa;
 }
 
 header {
-    background-color: #f8f9fa;
+    background-color: #007bff;
+    color: white;
     padding: 20px;
     text-align: center;
 }
 
 main {
-    margin: 20px;
+    padding: 20px;
+    max-width: 800px;
+    margin: auto;
 }
 
-#post-form {
+.post-container {
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.app-header {
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    margin-bottom: 20px;
 }
 
-#post-form input, #post-form textarea {
-    margin-bottom: 10px;
+.app-icon {
+    width: 100px;
+    height: 100px;
+    border-radius: 20px;
+    margin-right: 20px;
 }
 
-#posts article {
-    border: 1px solid #ddd;
-    margin-bottom: 10px;
-    padding: 10px;
+.app-info {
+    flex-grow: 1;
+}
+
+.app-info h2 {
+    margin: 0;
+    font-size: 24px;
+}
+
+.developer, .category {
+    color: #666;
+    margin: 5px 0;
+}
+
+.download-button {
+    background-color: #28a745;
+    color: white;
+    padding: 10px 20px;
+    text-decoration: none;
+    border-radius: 5px;
+    font-weight: bold;
+}
+
+.download-button:hover {
+    background-color: #218838;
+}
+
+.app-screenshot {
+    width: 100%;
+    border-radius: 10px;
+    margin-bottom: 20px;
+}
+
+.app-details p {
+    margin: 5px 0;
 }

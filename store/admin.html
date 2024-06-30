@@ -33,6 +33,9 @@
             <label for="category">Danh mục:</label>
             <input type="text" id="category" name="category" required><br>
 
+            <label for="download-link">Liên kết tải xuống ứng dụng:</label>
+            <input type="url" id="download-link" name="download-link" required><br>
+
             <button type="submit">Submit</button>
         </form>
     </main>
@@ -49,6 +52,7 @@
                 const iosVersion = document.getElementById('ios-version').value;
                 const appVersion = document.getElementById('app-version').value;
                 const category = document.getElementById('category').value;
+                const downloadLink = document.getElementById('download-link').value;
 
                 const newPost = {
                     app_name: appName,
@@ -57,7 +61,8 @@
                     developer,
                     ios_version: iosVersion,
                     app_version: appVersion,
-                    category
+                    category,
+                    download_link: downloadLink
                 };
 
                 let posts = JSON.parse(localStorage.getItem('posts')) || [];

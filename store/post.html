@@ -11,7 +11,7 @@
         <h1>Post Details</h1>
     </header>
     <main>
-        <article id="post-details">
+        <article id="post-details" class="post-container">
             <!-- Nội dung chi tiết bài viết sẽ được hiển thị tại đây -->
         </article>
     </main>
@@ -25,13 +25,20 @@
             if (post) {
                 const postDetails = document.getElementById('post-details');
                 postDetails.innerHTML = `
-                    <h2>${post.app_name}</h2>
-                    <img src="${post.app_icon}" alt="${post.app_name} Icon">
-                    <img src="${post.app_screenshot}" alt="${post.app_name} Screenshot">
-                    <p><strong>Nhà phát triển:</strong> ${post.developer}</p>
-                    <p><strong>Phiên bản iOS tương thích:</strong> ${post.ios_version}</p>
-                    <p><strong>Phiên bản của ứng dụng:</strong> ${post.app_version}</p>
-                    <p><strong>Danh mục:</strong> ${post.category}</p>
+                    <div class="app-header">
+                        <img src="${post.app_icon}" alt="${post.app_name} Icon" class="app-icon">
+                        <div class="app-info">
+                            <h2>${post.app_name}</h2>
+                            <p class="developer">${post.developer}</p>
+                            <p class="category">${post.category}</p>
+                        </div>
+                        <a href="${post.download_link}" class="download-button">Download</a>
+                    </div>
+                    <img src="${post.app_screenshot}" alt="${post.app_name} Screenshot" class="app-screenshot">
+                    <div class="app-details">
+                        <p><strong>Phiên bản iOS tương thích:</strong> ${post.ios_version}</p>
+                        <p><strong>Phiên bản của ứng dụng:</strong> ${post.app_version}</p>
+                    </div>
                 `;
             } else {
                 document.body.innerHTML = '<p>Post not found.</p>';
