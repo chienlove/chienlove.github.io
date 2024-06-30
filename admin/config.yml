@@ -1,38 +1,30 @@
 backend:
   name: github
-  repo: chienlove/chienlove.github.io  # Thay thế bằng tên người dùng GitHub và tên repo của bạn
-  branch: main  # Thay thế bằng nhánh bạn muốn quản lý với Netlify CMS, thường là main hoặc master
-  base_url: https://api.netlify.com/api/v1/
-  auth_endpoint: authorize
+  repo: username/repository-name
+  branch: main  # hoặc master, tùy thuộc vào nhánh chính của bạn
+  base_url: https://api.netlify.com
 
-media_folder: "static/images/uploads"  # Thư mục chứa các tệp media
-public_folder: "/images/uploads"  # Thư mục công khai chứa các tệp media
+media_folder: "static/images/uploads"
+public_folder: "/images/uploads"
 
 collections:
-  - name: "post"  # Tên bộ sưu tập
-    label: "Post"
-    folder: "content/post"  # Thư mục chứa các bài viết blog
+  - name: "blog"
+    label: "Blog"
+    folder: "content/blog"
     create: true
-    slug: "{{year}}-{{month}}-{{day}}-{{slug}}"  # Định dạng slug cho các bài viết
+    slug: "{{year}}-{{month}}-{{day}}-{{slug}}"
     fields:
-      - { label: "Title", name: "title", widget: "string" }
-      - { label: "Publish Date", name: "date", widget: "datetime" }
-      - { label: "Featured Image", name: "thumbnail", widget: "image" }
-      - { label: "Body", name: "body", widget: "markdown" }
+      - {label: "Title", name: "title", widget: "string"}
+      - {label: "Publish Date", name: "date", widget: "datetime"}
+      - {label: "Description", name: "description", widget: "text"}
+      - {label: "Featured Image", name: "thumbnail", widget: "image", required: false}
+      - {label: "Body", name: "body", widget: "markdown"}
+      - {label: "Tags", name: "tags", widget: "list", required: false}
 
   - name: "pages"
     label: "Pages"
-    files:
-      - label: "About Page"
-        name: "about"
-        file: "content/pages/about.md"
-        fields:
-          - { label: "Title", name: "title", widget: "string" }
-          - { label: "Body", name: "body", widget: "markdown" }
-
-publish_mode: editorial_workflow  # Bật chế độ quy trình biên tập
-
-site_url: https://storeios.net  # URL của trang web bạn trên Netlify
-logo_url: https://storeios.net/CydiaIcon.png  # URL logo của trang web bạn
-
-display_url: https://storeios.net  # URL hiển thị cho CMS
+    folder: "content/pages"
+    create: true
+    fields:
+      - {label: "Title", name: "title", widget: "string"}
+      - {label: "Body", name: "body", widget: "markdown"}
