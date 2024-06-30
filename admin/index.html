@@ -31,6 +31,7 @@
             border: 1px solid #ddd;
             border-radius: 4px;
             box-sizing: border-box;
+            font-size: 14px; /* Set font-size for consistent appearance */
         }
         input[type="file"] {
             margin-top: 5px;
@@ -62,7 +63,7 @@
 </head>
 <body>
     <h1>Quản lý thông tin ứng dụng iOS</h1>
-    <form action="https://api.netlify.com/api/v1/sites/storeios/deploys" method="post">
+    <form id="appForm" action="https://api.netlify.com/api/v1/sites/storeios/deploys" method="post">
         <label for="appName">Tên ứng dụng:</label><br>
         <input type="text" id="appName" name="appName" required><br><br>
         
@@ -107,6 +108,28 @@
                 }
             });
         }
+
+        // Handle form submission
+        const form = document.getElementById('appForm');
+        form.addEventListener('submit', async function(event) {
+            event.preventDefault();
+
+            try {
+                const response = await fetch(form.action, {
+                    method: form.method,
+                    body: new FormData(form)
+                });
+
+                if (!response.ok) {
+                    throw new Error('Lỗi khi gửi yêu cầu');
+                }
+
+                alert('Bài viết đã được lưu thành công!');
+                form.reset(); // Reset form after successful submission
+            } catch (error) {
+                alert('Đã xảy ra lỗi khi lưu bài viết');
+            }
+        });
     </script>
 </body>
 </html>
