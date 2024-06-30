@@ -8,23 +8,25 @@ media_folder: "static/images/uploads"
 public_folder: "/images/uploads"
 
 collections:
-  - name: "posts"
-    label: "Post"
-    folder: "content/posts"
-    create: true
+  - name: "apps"  # Tên collection, sử dụng cho API và URL
+    label: "Thông tin ứng dụng iOS"  # Nhãn hiển thị trong CMS
+    folder: "content/apps"  # Thư mục lưu trữ nội dung
+    create: true  # Cho phép tạo mới bài viết
     slug: "{{year}}-{{month}}-{{day}}-{{slug}}"
     fields:
-      - {label: "Title", name: "title", widget: "string"}
-      - {label: "Publish Date", name: "date", widget: "datetime"}
-      - {label: "Description", name: "description", widget: "text"}
-      - {label: "Featured Image", name: "thumbnail", widget: "image", required: false}
-      - {label: "Body", name: "body", widget: "markdown"}
-      - {label: "Tags", name: "tags", widget: "list", required: false}
-
-  - name: "pages"
-    label: "Pages"
-    folder: "content/pages"
-    create: true
-    fields:
-      - {label: "Title", name: "title", widget: "string"}
-      - {label: "Body", name: "body", widget: "markdown"}
+      - { label: "ID", name: "id", widget: "hidden", default: "{{year}}{{month}}{{day}}{{slug}}" }
+      - { label: "Tên ứng dụng", name: "appName", widget: "string" }
+      - { label: "Phiên bản ứng dụng", name: "appVersion", widget: "string" }
+      - { label: "Nhà phát triển", name: "developer", widget: "string" }
+      - { label: "Mô tả ứng dụng", name: "description", widget: "text" }
+      - { label: "Ảnh màn hình ứng dụng", name: "appImages", widget: "list", fields: [
+          { label: "Ảnh màn hình", name: "image", widget: "image" }
+        ] }
+      - { label: "Phiên bản iOS tương thích", name: "iosCompatibility", widget: "string" }
+      - { label: "Liên kết tải ứng dụng", name: "downloadLink", widget: "string" }
+      - { label: "Chuyên mục", name: "category", widget: "select", options: [
+          { label: "Chưa phân loại", value: "uncategorized" },
+          { label: "Tin tức", value: "news" },
+          { label: "Mẹo hay", value: "tips" },
+          { label: "Cập nhật", value: "updates" }
+        ] }
