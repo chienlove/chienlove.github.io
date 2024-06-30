@@ -1,6 +1,6 @@
 backend:
   name: github
-  repo: username/repository-name
+  repo: chienlove/chienlove.github.io
   branch: main  # hoặc master, tùy thuộc vào nhánh chính của bạn
   base_url: https://api.netlify.com
 
@@ -8,9 +8,9 @@ media_folder: "static/images/uploads"
 public_folder: "/images/uploads"
 
 collections:
-  - name: "blog"
-    label: "Blog"
-    folder: "content/blog"
+  - name: "posts"
+    label: "Post"
+    folder: "content/posts"
     create: true
     slug: "{{year}}-{{month}}-{{day}}-{{slug}}"
     fields:
