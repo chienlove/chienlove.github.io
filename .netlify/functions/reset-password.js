@@ -1,17 +1,11 @@
-// Import nodemailer for sending emails
 const nodemailer = require('nodemailer');
 
-// Serverless function handler
 exports.handler = async (event, context) => {
-    // Parse the recovery_token from the request body
     const { recovery_token } = JSON.parse(event.body);
 
-    // Example function to get user email from token (replace with your own logic)
     const userEmail = await getUserEmailFromToken(recovery_token);
 
-    // If valid email is found, send password reset email
     if (userEmail) {
-        // Create transporter using SMTP details from environment variables
         let transporter = nodemailer.createTransport({
             host: process.env.SMTP_HOST,
             port: process.env.SMTP_PORT,
@@ -22,7 +16,6 @@ exports.handler = async (event, context) => {
             }
         });
 
-        // Email content
         let mailOptions = {
             from: process.env.SMTP_FROM,
             to: userEmail,
@@ -45,7 +38,6 @@ exports.handler = async (event, context) => {
             `
         };
 
-        // Send email
         try {
             let info = await transporter.sendMail(mailOptions);
             return {
@@ -59,7 +51,6 @@ exports.handler = async (event, context) => {
             };
         }
     } else {
-        // Invalid token or user not found
         return {
             statusCode: 400,
             body: JSON.stringify({ error: 'Invalid recovery token' })
@@ -67,9 +58,7 @@ exports.handler = async (event, context) => {
     }
 };
 
-// Example function to get user email from token (replace with your own logic)
 async function getUserEmailFromToken(token) {
-    // Replace this with your own logic to fetch user email from token
     const users = {
         'ZMc4gJg6WoWDp76ZC4yzkg': 'example@email.com'
     };
