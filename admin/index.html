@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quản lý thông tin ứng dụng iOS</title>
+    <title>Admin Panel</title>
     <!-- CSS styles for a better admin interface -->
     <style>
         body {
@@ -61,7 +61,7 @@
         }
     </style>
 </head>
-<body>
+<body style="display: none;"> <!-- Ẩn body mặc định -->
     <h1>Quản lý thông tin ứng dụng iOS</h1>
     <form id="appForm" action="https://api.netlify.com/api/v1/sites/storeios.net/deploys" method="post">
         <label for="appName">Tên ứng dụng:</label><br>
@@ -93,7 +93,7 @@
             <option value="updates">Cập nhật</option>
         </select><br><br>
         
-        <input type="submit" value="Lưu thông tin">
+        <input type="submit" value="Thêm bài viết">
     </form>
 
     <!-- Netlify Identity Configuration -->
@@ -105,6 +105,8 @@
                     window.netlifyIdentity.on('login', () => {
                         document.location.href = '/admin/';
                     });
+                } else {
+                    document.body.style.display = 'block'; // Hiển thị body khi người dùng đã đăng nhập
                 }
             });
         }
