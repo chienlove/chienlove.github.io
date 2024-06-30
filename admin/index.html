@@ -25,7 +25,7 @@
             font-weight: bold;
         }
         input[type="text"], textarea, select {
-            width: 100%;
+            width: calc(100% - 16px); /* Fix for input zoom issue */
             padding: 8px;
             margin-bottom: 10px;
             border: 1px solid #ddd;
