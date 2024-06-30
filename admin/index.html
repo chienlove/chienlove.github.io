@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -121,6 +121,16 @@
             }
         });
 
+        window.netlifyIdentity.on('login', () => {
+            document.getElementById('login-message').style.display = 'none';
+            document.getElementById('admin-form').style.display = 'block'; // Show the admin form
+        });
+
+        window.netlifyIdentity.on('logout', () => {
+            document.getElementById('login-message').style.display = 'block';
+            document.getElementById('admin-form').style.display = 'none';
+        });
+
         document.getElementById('login-button').addEventListener('click', () => {
             window.netlifyIdentity.open();
         });
@@ -132,20 +142,24 @@
         event.preventDefault();
 
         try {
+            const formData = new FormData(form);
             const response = await fetch(form.action, {
                 method: form.method,
-                body: new FormData(form)
+                body: formData
             });
 
             if (!response.ok) {
-                throw new Error('Lỗi khi gửi yêu cầu');
+                const errorMessage = await response.text();
+                throw new Error('Lỗi khi gửi yêu cầu: ' + errorMessage);
             }
 
             alert('Bài viết đã được lưu thành công!');
             form.reset(); // Reset form after successful submission
         } catch (error) {
-            alert('Đã xảy ra lỗi khi lưu bài viết');
+            console.error('Đã xảy ra lỗi khi lưu bài viết:', error.message);
+            alert('Đã xảy ra lỗi khi lưu bài viết. Vui lòng thử lại sau.');
         }
     });
-</script></body>
+</script>
+</body>
 </html>
