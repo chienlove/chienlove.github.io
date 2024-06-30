@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -41,10 +41,79 @@
 
             <button type="submit">Submit</button>
         </form>
+
+        <h2>Quản lý bài viết</h2>
+        <table id="posts-table">
+            <thead>
+                <tr>
+                    <th>Tên ứng dụng</th>
+                    <th>Nhà phát triển</th>
+                    <th>Chỉnh sửa</th>
+                    <th>Xóa</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Các bài viết sẽ được hiển thị tại đây -->
+            </tbody>
+        </table>
     </main>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const form = document.getElementById('post-form');
+            const postsTableBody = document.querySelector('#posts-table tbody');
+
+            const loadPosts = () => {
+                const posts = JSON.parse(localStorage.getItem('posts')) || [];
+                postsTableBody.innerHTML = '';
+                posts.forEach((post, index) => {
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${post.app_name}</td>
+                        <td>${post.developer}</td>
+                        <td><button data-index="${index}" class="edit-button">Chỉnh sửa</button></td>
+                        <td><button data-index="${index}" class="delete-button">Xóa</button></td>
+                    `;
+                    postsTableBody.appendChild(row);
+                });
+
+                document.querySelectorAll('.edit-button').forEach(button => {
+                    button.addEventListener('click', (event) => {
+                        const index = event.target.getAttribute('data-index');
+                        editPost(index);
+                    });
+                });
+
+                document.querySelectorAll('.delete-button').forEach(button => {
+                    button.addEventListener('click', (event) => {
+                        const index = event.target.getAttribute('data-index');
+                        deletePost(index);
+                    });
+                });
+            };
+
+            const editPost = (index) => {
+                const posts = JSON.parse(localStorage.getItem('posts')) || [];
+                const post = posts[index];
+
+                document.getElementById('app-name').value = post.app_name;
+                document.getElementById('app-icon').value = post.app_icon;
+                document.getElementById('app-screenshot').value = post.app_screenshot;
+                document.getElementById('description').value = post.description;
+                document.getElementById('developer').value = post.developer;
+                document.getElementById('ios-version').value = post.ios_version;
+                document.getElementById('app-version').value = post.app_version;
+                document.getElementById('category').value = post.category;
+                document.getElementById('download-link').value = post.download_link;
+
+                form.dataset.editIndex = index;
+            };
+
+            const deletePost = (index) => {
+                let posts = JSON.parse(localStorage.getItem('posts')) || [];
+                posts.splice(index, 1);
+                localStorage.setItem('posts', JSON.stringify(posts));
+                loadPosts();
+            };
 
             form.addEventListener('submit', (event) => {
                 event.preventDefault();
@@ -71,12 +140,23 @@
                 };
 
                 let posts = JSON.parse(localStorage.getItem('posts')) || [];
-                posts.push(newPost);
+
+                const editIndex = form.dataset.editIndex;
+                if (editIndex) {
+                    posts[editIndex] = newPost;
+                    delete form.dataset.editIndex;
+                } else {
+                    posts.push(newPost);
+                }
+
                 localStorage.setItem('posts', JSON.stringify(posts));
 
                 form.reset();
-                alert('Post added successfully!');
+                alert('Post saved successfully!');
+                loadPosts();
             });
+
+            loadPosts();
         });
     </script>
 </body>
