@@ -25,11 +25,13 @@
             if (post) {
                 const postDetails = document.getElementById('post-details');
                 postDetails.innerHTML = `
-                    <h2>${post.title}</h2>
-                    <img src="${post.image}" alt="${post.title}">
-                    <p>${post.description}</p>
-                    <p><strong>Developer:</strong> ${post.developer}</p>
-                    <p><strong>iOS Version Compatibility:</strong> ${post.ios_version}</p>
+                    <h2>${post.app_name}</h2>
+                    <img src="${post.app_icon}" alt="${post.app_name} Icon">
+                    <img src="${post.app_screenshot}" alt="${post.app_name} Screenshot">
+                    <p><strong>Nhà phát triển:</strong> ${post.developer}</p>
+                    <p><strong>Phiên bản iOS tương thích:</strong> ${post.ios_version}</p>
+                    <p><strong>Phiên bản của ứng dụng:</strong> ${post.app_version}</p>
+                    <p><strong>Danh mục:</strong> ${post.category}</p>
                 `;
             } else {
                 document.body.innerHTML = '<p>Post not found.</p>';

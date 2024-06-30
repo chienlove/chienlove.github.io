@@ -24,8 +24,8 @@
                 posts.forEach((post, index) => {
                     const article = document.createElement('article');
                     article.innerHTML = `
-                        <h2><a href="post.html?id=${index}">${post.title}</a></h2>
-                        <p>${post.description}</p>
+                        <h2><a href="post.html?id=${index}">${post.app_name}</a></h2>
+                        <p>${post.category}</p>
                     `;
                     postsSection.appendChild(article);
                 });
