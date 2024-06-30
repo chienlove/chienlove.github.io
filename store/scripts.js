@@ -2,7 +2,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('post-form');
     const postsSection = document.getElementById('posts');
 
-    form.addEventListener('submit', async (event) => {
+    form.addEventListener('submit', (event) => {
         event.preventDefault();
         const title = document.getElementById('title').value;
         const image = document.getElementById('image').value;
@@ -18,19 +18,12 @@ document.addEventListener('DOMContentLoaded', () => {
             ios_version: iosVersion
         };
 
-        const response = await fetch('posts.json');
-        const posts = await response.json();
-
+        let posts = JSON.parse(localStorage.getItem('posts')) || [];
         posts.push(newPost);
+        localStorage.setItem('posts', JSON.stringify(posts));
 
-        await fetch('posts.json', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(posts)
-        });
-
+        form.reset();
+        alert('Post added successfully!');
         displayPosts(posts);
     });
 
@@ -49,9 +42,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    const loadPosts = async () => {
-        const response = await fetch('posts.json');
-        const posts = await response.json();
+    const loadPosts = () => {
+        const posts = JSON.parse(localStorage.getItem('posts')) || [];
         displayPosts(posts);
     };
 
