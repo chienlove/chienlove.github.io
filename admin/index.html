@@ -1,4 +1,4 @@
-<<!DOCTYPE html>
+m<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -25,13 +25,13 @@
             font-weight: bold;
         }
         input[type="text"], textarea, select {
-            width: calc(100% - 16px); /* Fix for input zoom issue */
+            width: calc(100% - 16px);
             padding: 8px;
             margin-bottom: 10px;
             border: 1px solid #ddd;
             border-radius: 4px;
             box-sizing: border-box;
-            font-size: 14px; /* Set font-size for consistent appearance */
+            font-size: 14px;
         }
         input[type="file"] {
             margin-top: 5px;
@@ -117,13 +117,13 @@
                 document.getElementById('admin-form').style.display = 'none';
             } else {
                 document.getElementById('login-message').style.display = 'none';
-                document.getElementById('admin-form').style.display = 'block'; // Show the admin form
+                document.getElementById('admin-form').style.display = 'block';
             }
         });
 
         window.netlifyIdentity.on('login', () => {
             document.getElementById('login-message').style.display = 'none';
-            document.getElementById('admin-form').style.display = 'block'; // Show the admin form
+            document.getElementById('admin-form').style.display = 'block';
         });
 
         window.netlifyIdentity.on('logout', () => {
