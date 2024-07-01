@@ -116,19 +116,23 @@
                     document.getElementById('login-message').style.display = 'block';
                     document.getElementById('admin-form').style.display = 'none';
                 } else {
-                    document.getElementById('login-message').style.display = 'none';
-                    document.getElementById('admin-form').style.display = 'block';
+                    // Check if already showing admin form
+                    if (document.getElementById('admin-form').style.display !== 'block') {
+                        document.getElementById('login-message').style.display = 'none';
+                        document.getElementById('admin-form').style.display = 'block';
+                    }
                 }
             });
 
             window.netlifyIdentity.on('login', () => {
-                // Redirect to the current page after login
-                window.location.reload();
+                // Check if already showing admin form
+                if (document.getElementById('admin-form').style.display !== 'block') {
+                    window.location.reload();
+                }
             });
 
             window.netlifyIdentity.on('logout', () => {
-                // Redirect to the home page after logout
-                window.location.href = '/';
+                document.location.href = '/';
             });
 
             document.getElementById('login-button').addEventListener('click', () => {
