@@ -109,6 +109,7 @@
     <!-- Netlify Identity Configuration -->
     <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
     <script>
+document.addEventListener('DOMContentLoaded', function () {
     if (window.netlifyIdentity) {
         window.netlifyIdentity.on('init', user => {
             if (!user) {
@@ -147,8 +148,11 @@
             }
 
             const token = await user.jwt();
+            console.log('JWT Token:', token);
 
             const formData = new FormData(form);
+            console.log('Form Data:', formData);
+
             const response = await fetch(form.action, {
                 method: form.method,
                 headers: {
@@ -169,6 +173,7 @@
             alert('Đã xảy ra lỗi khi lưu bài viết. Vui lòng thử lại sau. Chi tiết lỗi: ' + error.message);
         }
     });
+});
 </script>
 </body>
 </html>
