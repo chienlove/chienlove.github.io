@@ -1,17 +1,15 @@
 backend:
-  name: github
-  repo: chienlove/chienlove.github.io
+  name: git-gateway
   branch: master
-  base_url: https://api.netlify.com
 
 media_folder: "static/images/uploads"
 public_folder: "/images/uploads"
 
 collections:
-  - name: "apps"  # Tên collection, sử dụng cho API và URL
-    label: "Thông tin ứng dụng iOS"  # Nhãn hiển thị trong CMS
-    folder: "content/apps"  # Thư mục lưu trữ nội dung
-    create: true  # Cho phép tạo mới bài viết
+  - name: "apps"
+    label: "Thông tin ứng dụng iOS"
+    folder: "content/apps"
+    create: true
     slug: "{{year}}-{{month}}-{{day}}-{{slug}}"
     fields:
       - { label: "ID", name: "id", widget: "hidden", default: "{{year}}{{month}}{{day}}{{slug}}" }
@@ -19,9 +17,7 @@ collections:
       - { label: "Phiên bản ứng dụng", name: "appVersion", widget: "string" }
       - { label: "Nhà phát triển", name: "developer", widget: "string" }
       - { label: "Mô tả ứng dụng", name: "description", widget: "text" }
-      - { label: "Ảnh màn hình ứng dụng", name: "appImages", widget: "list", fields: [
-          { label: "Ảnh màn hình", name: "image", widget: "image" }
-        ] }
+      - { label: "Ảnh màn hình ứng dụng", name: "appImages", widget: "list", field: { label: "Ảnh", name: "image", widget: "image" } }
       - { label: "Phiên bản iOS tương thích", name: "iosCompatibility", widget: "string" }
       - { label: "Liên kết tải ứng dụng", name: "downloadLink", widget: "string" }
       - { label: "Chuyên mục", name: "category", widget: "select", options: [
