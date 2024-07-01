@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quản lý thông tin ứng dụng iOS</title>
-    <!-- CSS styles for a better admin interface -->
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -67,12 +66,12 @@
 </head>
 <body>
     <div id="login-message">
-        <h1>Vui lòng đăng nhập để truy cập trang này.</h1>
+        <h1>Bạn khônh có quyền truy cập vào trang này.</h1>
         <button id="login-button">Đăng nhập</button>
     </div>
 
     <div id="admin-form" style="display: none;">
-        <h1>Quản lý thông tin ứng dụng iOS</h1>
+        <h1>Admin panel</h1>
         <form id="appForm" action="https://api.netlify.com/api/v1/sites/storeios.net/deploys" method="post">
             <label for="appName">Tên ứng dụng:</label><br>
             <input type="text" id="appName" name="appName" required><br><br>
@@ -110,54 +109,66 @@
     <!-- Netlify Identity Configuration -->
     <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
     <script>
-if (window.netlifyIdentity) {
-    window.netlifyIdentity.on('init', user => {
-        if (!user) {
-            document.getElementById('login-message').style.display = 'block';
-            document.getElementById('admin-form').style.display = 'none';
-        } else {
-            document.getElementById('login-message').style.display = 'none';
-            document.getElementById('admin-form').style.display = 'block';
-        }
-    });
-
-    window.netlifyIdentity.on('login', () => {
-        document.getElementById('login-message').style.display = 'none';
-        document.getElementById('admin-form').style.display = 'block';
-    });
-
-    window.netlifyIdentity.on('logout', () => {
-        document.getElementById('login-message').style.display = 'block';
-        document.getElementById('admin-form').style.display = 'none';
-    });
-
-    document.getElementById('login-button').addEventListener('click', () => {
-        window.netlifyIdentity.open();
-    });
-}
-
-// Handle form submission
-const form = document.getElementById('appForm');
-form.addEventListener('submit', async function(event) {
-    event.preventDefault();
-
-    try {
-        const formData = new FormData(form);
-        const response = await fetch(form.action, {
-            method: form.method,
-            body: formData
+    if (window.netlifyIdentity) {
+        window.netlifyIdentity.on('init', user => {
+            if (!user) {
+                document.getElementById('login-message').style.display = 'block';
+                document.getElementById('admin-form').style.display = 'none';
+            } else {
+                document.getElementById('login-message').style.display = 'none';
+                document.getElementById('admin-form').style.display = 'block';
+            }
         });
 
-        if (!response.ok) {
-            const errorMessage = await response.text();
-            throw new Error('Lỗi khi gửi yêu cầu: ' + errorMessage);
-        }
+        window.netlifyIdentity.on('login', () => {
+            document.getElementById('login-message').style.display = 'none';
+            document.getElementById('admin-form').style.display = 'block';
+        });
 
-        alert('Bài viết đã được lưu thành công!');
-        form.reset(); // Reset form after successful submission
-    } catch (error) {
-        console.error('Đã xảy ra lỗi khi lưu bài viết:', error);
-        alert('Đã xảy ra lỗi khi lưu bài viết. Vui lòng thử lại sau. Chi tiết lỗi: ' + error.message);
+        window.netlifyIdentity.on('logout', () => {
+            document.getElementById('login-message').style.display = 'block';
+            document.getElementById('admin-form').style.display = 'none';
+        });
+
+        document.getElementById('login-button').addEventListener('click', () => {
+            window.netlifyIdentity.open();
+        });
     }
-});
+
+    // Handle form submission
+    const form = document.getElementById('appForm');
+    form.addEventListener('submit', async function(event) {
+        event.preventDefault();
+
+        try {
+            const user = netlifyIdentity.currentUser();
+            if (!user) {
+                throw new Error('User is not logged in');
+            }
+
+            const token = await user.jwt();
+
+            const formData = new FormData(form);
+            const response = await fetch(form.action, {
+                method: form.method,
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                },
+                body: formData
+            });
+
+            if (!response.ok) {
+                const errorMessage = await response.text();
+                throw new Error('Lỗi khi gửi yêu cầu: ' + errorMessage);
+            }
+
+            alert('Bài viết đã được lưu thành công!');
+            form.reset(); // Reset form after successful submission
+        } catch (error) {
+            console.error('Đã xảy ra lỗi khi lưu bài viết:', error);
+            alert('Đã xảy ra lỗi khi lưu bài viết. Vui lòng thử lại sau. Chi tiết lỗi: ' + error.message);
+        }
+    });
 </script>
+</body>
+</html>
