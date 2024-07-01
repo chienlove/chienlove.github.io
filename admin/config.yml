@@ -2,27 +2,27 @@ backend:
   name: git-gateway
   branch: master
 
-media_folder: "static/images/uploads"
-public_folder: "/images/uploads"
-
-collections:
-  - name: "apps"
-    label: "Thông tin ứng dụng iOS"
-    folder: "content/apps"
+media_folder: "public/assets/guides-img"
+public_folder: "/assets/guides-img"
+collections: 
+  - name: "guide"
+    label: "guides"
+    folder: "src/guide"
     create: true
-    slug: "{{year}}-{{month}}-{{day}}-{{slug}}"
-    fields:
-      - { label: "ID", name: "id", widget: "hidden", default: "{{year}}{{month}}{{day}}{{slug}}" }
-      - { label: "Tên ứng dụng", name: "appName", widget: "string" }
-      - { label: "Phiên bản ứng dụng", name: "appVersion", widget: "string" }
-      - { label: "Nhà phát triển", name: "developer", widget: "string" }
-      - { label: "Mô tả ứng dụng", name: "description", widget: "text" }
-      - { label: "Ảnh màn hình ứng dụng", name: "appImages", widget: "list", field: { label: "Ảnh", name: "image", widget: "image" } }
-      - { label: "Phiên bản iOS tương thích", name: "iosCompatibility", widget: "string" }
-      - { label: "Liên kết tải ứng dụng", name: "downloadLink", widget: "string" }
-      - { label: "Chuyên mục", name: "category", widget: "select", options: [
-          { label: "Chưa phân loại", value: "uncategorized" },
-          { label: "Tin tức", value: "news" },
-          { label: "Mẹo hay", value: "tips" },
-          { label: "Cập nhật", value: "updates" }
-        ] }
+    slug: "{{year}}-{{month}}-{{slug}}"
+    fields: 
+      - { label: "Title", name: "title", widget: "string" } 
+      - { label: "Description", name: "description", widget: "string" }
+      - { label: "Date", name: "date", widget: "datetime" }
+      - { label: "Tags", name: "tags", widget: "list", default: ["guides"] }
+      - { label: "Featured Image", name: "image", widget: "image" }
+      - { label: "Image Caption", name: "imageAlt", widget: "string" }
+      - { label: "Body", name: "body", widget: "markdown" }
+   - name: "pages"
+    label: "page"
+    folder: "src/pages"
+    create: true
+    slug: "{{slug}}"
+    fields: 
+      - { label: "Title", name: "title", widget: "string" } 
+      - { label: "Body", name: "body", widget: "markdown" }
