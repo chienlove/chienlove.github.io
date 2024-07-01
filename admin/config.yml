@@ -6,8 +6,6 @@ media_folder: "static/images/uploads"
 public_folder: "/images/uploads"
 
 collections:
-  - name: "apps"
-    label: "Thông tin ứng dụng iOS"
     folder: "content/apps"
     create: true
     slug: "{{year}}-{{month}}-{{day}}-{{slug}}"
