@@ -72,7 +72,7 @@
 
     <div id="admin-form" style="display: none;">
         <h1>Admin panel</h1>
-        <form id="appForm" action="https://api.netlify.com/api/v1/sites/storeios.net/deploys" method="post">
+        <form id="appForm" action="/.netlify/functions/createPost" method="post">
             <label for="appName">Tên ứng dụng:</label><br>
             <input type="text" id="appName" name="appName" required><br><br>
             
@@ -108,8 +108,7 @@
 
     <!-- Netlify Identity Configuration -->
     <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-    <script>
-document.addEventListener('DOMContentLoaded', function () {
+    <script>document.addEventListener('DOMContentLoaded', function () {
     if (window.netlifyIdentity) {
         window.netlifyIdentity.on('init', user => {
             if (!user) {
@@ -148,17 +147,15 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             const token = await user.jwt();
-            console.log('JWT Token:', token);
-
             const formData = new FormData(form);
-            console.log('Form Data:', formData);
 
             const response = await fetch(form.action, {
                 method: form.method,
                 headers: {
-                    'Authorization': `Bearer ${token}`
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
                 },
-                body: formData
+                body: JSON.stringify(Object.fromEntries(formData.entries()))
             });
 
             if (!response.ok) {
