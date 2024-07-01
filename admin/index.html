@@ -141,26 +141,41 @@
         }
 
         // Handle form submission
-        const form = document.getElementById('appForm');
-        form.addEventListener('submit', async function(event) {
-            event.preventDefault();
+        // Handle form submission
+const form = document.getElementById('appForm');
+form.addEventListener('submit', async function(event) {
+    event.preventDefault();
 
-            try {
-                const response = await fetch(form.action, {
-                    method: form.method,
-                    body: new FormData(form)
-                });
+    try {
+        // Get the current user from Netlify Identity
+        const user = netlifyIdentity.currentUser();
+        if (!user) {
+            throw new Error('User is not authenticated');
+        }
 
-                if (!response.ok) {
-                    throw new Error('Lỗi khi gửi yêu cầu');
-                }
+        // Get token from the current user
+        const token = user.token.access_token;
 
-                alert('Bài viết đã được lưu thành công!');
-                form.reset(); // Reset form after successful submission
-            } catch (error) {
-                alert('Đã xảy ra lỗi khi lưu bài viết');
-            }
+        // Fetch API with authorization header
+        const response = await fetch(form.action, {
+            method: form.method,
+            headers: {
+                Authorization: `Bearer ${token}`
+            },
+            body: new FormData(form)
         });
+
+        if (!response.ok) {
+            throw new Error('Lỗi khi gửi yêu cầu');
+        }
+
+        alert('Bài viết đã được lưu thành công!');
+        form.reset(); // Reset form after successful submission
+    } catch (error) {
+        alert('Đã xảy ra lỗi khi lưu bài viết');
+        console.error(error);
+    }
+});
     </script>
 </body>
 </html>
