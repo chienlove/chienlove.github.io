@@ -143,6 +143,7 @@
         // Handle form submission
         // Handle form submission
 // Handle form submission
+// Handle form submission
 const form = document.getElementById('appForm');
 form.addEventListener('submit', async function(event) {
     event.preventDefault();
@@ -156,6 +157,7 @@ form.addEventListener('submit', async function(event) {
 
         // Get token from the current user
         const token = user.token.access_token;
+        console.log('Token:', token); // Log token for debugging
 
         // Fetch API with authorization header
         const response = await fetch(form.action, {
