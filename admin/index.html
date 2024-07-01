@@ -147,13 +147,13 @@
                     throw new Error('User is not authenticated');
                 }
 
-                const token = user.token.access_token;
+                const token = await user.jwt();
                 console.log('Token:', token);
 
                 const response = await fetch(form.action, {
                     method: form.method,
                     headers: {
-                        Authorization: `Bearer ${token}`
+                        'Authorization': `Bearer ${token}`
                     },
                     body: new FormData(form)
                 });
