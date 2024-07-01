@@ -111,7 +111,8 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             if (window.netlifyIdentity) {
-                window.netlifyIdentity.on('init', user => {
+                const updateAdminVisibility = () => {
+                    const user = netlifyIdentity.currentUser();
                     if (!user) {
                         document.getElementById('login-message').style.display = 'block';
                         document.getElementById('admin-form').style.display = 'none';
@@ -119,17 +120,11 @@
                         document.getElementById('login-message').style.display = 'none';
                         document.getElementById('admin-form').style.display = 'block';
                     }
-                });
+                };
 
-                window.netlifyIdentity.on('login', () => {
-                    document.getElementById('login-message').style.display = 'none';
-                    document.getElementById('admin-form').style.display = 'block';
-                });
-
-                window.netlifyIdentity.on('logout', () => {
-                    document.getElementById('login-message').style.display = 'block';
-                    document.getElementById('admin-form').style.display = 'none';
-                });
+                window.netlifyIdentity.on('init', updateAdminVisibility);
+                window.netlifyIdentity.on('login', updateAdminVisibility);
+                window.netlifyIdentity.on('logout', updateAdminVisibility);
 
                 document.getElementById('login-button').addEventListener('click', () => {
                     window.netlifyIdentity.open();
