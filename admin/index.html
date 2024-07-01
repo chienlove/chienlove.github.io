@@ -4,8 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quản lý thông tin ứng dụng iOS</title>
+    <!-- CSS styles for a better admin interface -->
     <style>
-        /* CSS styles for a better admin interface */
         body {
             font-family: Arial, sans-serif;
             max-width: 600px;
@@ -25,13 +25,13 @@
             font-weight: bold;
         }
         input[type="text"], textarea, select {
-            width: calc(100% - 16px);
+            width: calc(100% - 16px); /* Fix for input zoom issue */
             padding: 8px;
             margin-bottom: 10px;
             border: 1px solid #ddd;
             border-radius: 4px;
             box-sizing: border-box;
-            font-size: 14px;
+            font-size: 14px; /* Set font-size for consistent appearance */
         }
         input[type="file"] {
             margin-top: 5px;
@@ -107,6 +107,7 @@
         </form>
     </div>
 
+    <!-- Netlify Identity Configuration -->
     <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
     <script>
         if (window.netlifyIdentity) {
@@ -115,17 +116,13 @@
                     document.getElementById('login-message').style.display = 'block';
                     document.getElementById('admin-form').style.display = 'none';
                 } else {
-                    if (document.getElementById('admin-form').style.display !== 'block') {
-                        document.getElementById('login-message').style.display = 'none';
-                        document.getElementById('admin-form').style.display = 'block';
-                    }
+                    document.getElementById('login-message').style.display = 'none';
+                    document.getElementById('admin-form').style.display = 'block';
                 }
             });
 
             window.netlifyIdentity.on('login', () => {
-                if (document.getElementById('admin-form').style.display !== 'block') {
-                    window.location.reload();
-                }
+                window.location.reload();
             });
 
             window.netlifyIdentity.on('logout', () => {
@@ -147,13 +144,13 @@
                     throw new Error('User is not authenticated');
                 }
 
-                const token = await user.jwt();
+                const token = user.token.access_token;
                 console.log('Token:', token);
 
                 const response = await fetch(form.action, {
                     method: form.method,
                     headers: {
-                        'Authorization': `Bearer ${token}`
+                        Authorization: `Bearer ${token}`
                     },
                     body: new FormData(form)
                 });
