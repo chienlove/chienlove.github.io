@@ -122,11 +122,13 @@
             });
 
             window.netlifyIdentity.on('login', () => {
-                document.location.href = '/admin/';
+                // Redirect to the current page after login
+                window.location.reload();
             });
 
             window.netlifyIdentity.on('logout', () => {
-                document.location.href = '/';
+                // Redirect to the home page after logout
+                window.location.href = '/';
             });
 
             document.getElementById('login-button').addEventListener('click', () => {
