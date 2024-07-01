@@ -9,17 +9,18 @@
   <!-- Include the script that builds the page and powers Netlify CMS -->
   <script src="https://unpkg.com/netlify-cms@^2.10.192/dist/netlify-cms.js"></script>
   <script>
-  CMS.registerPreviewStyle("/admin/preview.css");
-  var PostPreview = createClass({
-    render: function() {
-      var entry = this.props.entry;
-      return h('div', {},
-        h('h1', {}, entry.getIn(['data', 'appName'])),
-        h('div', {"className": "text"}, this.props.widgetFor('description'))
-      );
-    }
-  });
-  CMS.registerPreviewTemplate("apps", PostPreview);
-</script>
+    CMS.init();
+    CMS.registerPreviewStyle("/admin/preview.css");
+    var PostPreview = createClass({
+      render: function() {
+        var entry = this.props.entry;
+        return h('div', {},
+          h('h1', {}, entry.getIn(['data', 'appName'])),
+          h('div', {"className": "text"}, this.props.widgetFor('description'))
+        );
+      }
+    });
+    CMS.registerPreviewTemplate("apps", PostPreview);
+  </script>
 </body>
 </html>
