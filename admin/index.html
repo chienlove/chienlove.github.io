@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quản lý thông tin ứng dụng iOS</title>
+    <title>Admin panel</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -66,7 +66,7 @@
 </head>
 <body>
     <div id="login-message">
-        <h1>Bạn khônh có quyền truy cập vào trang này.</h1>
+        <h1>Bạn không có quyền truy cập vào trang này.</h1>
         <button id="login-button">Đăng nhập</button>
     </div>
 
@@ -108,69 +108,71 @@
 
     <!-- Netlify Identity Configuration -->
     <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-    <script>document.addEventListener('DOMContentLoaded', function () {
-    if (window.netlifyIdentity) {
-        window.netlifyIdentity.on('init', user => {
-            if (!user) {
-                document.getElementById('login-message').style.display = 'block';
-                document.getElementById('admin-form').style.display = 'none';
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            if (window.netlifyIdentity) {
+                window.netlifyIdentity.on('init', user => {
+                    if (!user) {
+                        document.getElementById('login-message').style.display = 'block';
+                        document.getElementById('admin-form').style.display = 'none';
+                    } else {
+                        document.getElementById('login-message').style.display = 'none';
+                        document.getElementById('admin-form').style.display = 'block';
+                    }
+                });
+
+                window.netlifyIdentity.on('login', () => {
+                    document.getElementById('login-message').style.display = 'none';
+                    document.getElementById('admin-form').style.display = 'block';
+                });
+
+                window.netlifyIdentity.on('logout', () => {
+                    document.getElementById('login-message').style.display = 'block';
+                    document.getElementById('admin-form').style.display = 'none';
+                });
+
+                document.getElementById('login-button').addEventListener('click', () => {
+                    window.netlifyIdentity.open();
+                });
             } else {
-                document.getElementById('login-message').style.display = 'none';
-                document.getElementById('admin-form').style.display = 'block';
-            }
-        });
-
-        window.netlifyIdentity.on('login', () => {
-            document.getElementById('login-message').style.display = 'none';
-            document.getElementById('admin-form').style.display = 'block';
-        });
-
-        window.netlifyIdentity.on('logout', () => {
-            document.getElementById('login-message').style.display = 'block';
-            document.getElementById('admin-form').style.display = 'none';
-        });
-
-        document.getElementById('login-button').addEventListener('click', () => {
-            window.netlifyIdentity.open();
-        });
-    }
-
-    // Handle form submission
-    const form = document.getElementById('appForm');
-    form.addEventListener('submit', async function(event) {
-        event.preventDefault();
-
-        try {
-            const user = netlifyIdentity.currentUser();
-            if (!user) {
-                throw new Error('User is not logged in');
+                console.log('Netlify Identity not available');
             }
 
-            const token = await user.jwt();
-            const formData = new FormData(form);
+            // Handle form submission
+            const form = document.getElementById('appForm');
+            form.addEventListener('submit', async function(event) {
+                event.preventDefault();
 
-            const response = await fetch(form.action, {
-                method: form.method,
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(Object.fromEntries(formData.entries()))
+                try {
+                    const user = netlifyIdentity.currentUser();
+                    if (!user) {
+                        throw new Error('User is not logged in');
+                    }
+
+                    const token = await user.jwt();
+                    const formData = new FormData(form);
+
+                    const response = await fetch(form.action, {
+                        method: form.method,
+                        headers: {
+                            'Authorization': `Bearer ${token}`
+                        },
+                        body: formData
+                    });
+
+                    if (!response.ok) {
+                        const errorMessage = await response.text();
+                        throw new Error('Lỗi khi gửi yêu cầu: ' + errorMessage);
+                    }
+
+                    alert('Bài viết đã được lưu thành công!');
+                    form.reset(); // Reset form after successful submission
+                } catch (error) {
+                    console.error('Đã xảy ra lỗi khi lưu bài viết:', error);
+                    alert('Đã xảy ra lỗi khi lưu bài viết. Vui lòng thử lại sau. Chi tiết lỗi: ' + error.message);
+                }
             });
-
-            if (!response.ok) {
-                const errorMessage = await response.text();
-                throw new Error('Lỗi khi gửi yêu cầu: ' + errorMessage);
-            }
-
-            alert('Bài viết đã được lưu thành công!');
-            form.reset(); // Reset form after successful submission
-        } catch (error) {
-            console.error('Đã xảy ra lỗi khi lưu bài viết:', error);
-            alert('Đã xảy ra lỗi khi lưu bài viết. Vui lòng thử lại sau. Chi tiết lỗi: ' + error.message);
-        }
-    });
-});
-</script>
+        });
+    </script>
 </body>
 </html>
