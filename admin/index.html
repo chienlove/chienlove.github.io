@@ -1,12 +1,143 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Admin Panel</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Quản lý thông tin ứng dụng iOS</title>
+    <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .header {
+            background-color: #333;
+            color: white;
+            padding: 1rem;
+            text-align: center;
+        }
+        .nav {
+            background-color: #444;
+            padding: 0.5rem;
+        }
+        .nav ul {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+        }
+        .nav ul li {
+            margin: 0 10px;
+        }
+        .nav ul li a {
+            color: white;
+            text-decoration: none;
+        }
+        .container {
+            max-width: 1200px;
+            margin: auto;
+            padding: 20px;
+        }
+        .main-content {
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        .footer {
+            background-color: #333;
+            color: white;
+            text-align: center;
+            padding: 1rem;
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+        }
+        #cms-container {
+            margin-top: 20px;
+        }
+    </style>
 </head>
 <body>
-  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-  <script src="https://unpkg.com/netlify-cms@^2.0.0/dist/netlify-cms.js"></script>
+    <header class="header">
+        <h1>Admin Panel - Quản lý thông tin ứng dụng iOS</h1>
+    </header>
+
+    <nav class="nav">
+        <ul>
+            <li><a href="#dashboard">Dashboard</a></li>
+            <li><a href="#content">Quản lý nội dung</a></li>
+            <li><a href="#users">Quản lý người dùng</a></li>
+            <li><a href="#settings">Cài đặt</a></li>
+        </ul>
+    </nav>
+
+    <div class="container">
+        <main class="main-content">
+            <h2>Chào mừng đến với Admin Panel</h2>
+            <p>Sử dụng Netlify CMS để quản lý nội dung của bạn.</p>
+            <div id="cms-container"></div>
+        </main>
+    </div>
+
+    <footer class="footer">
+        <p>&copy; 2024 Admin Panel. Tất cả quyền được bảo lưu.</p>
+    </footer>
+
+    <script src="https://unpkg.com/netlify-cms@^2.0.0/dist/netlify-cms.js"></script>
+    <script>
+        if (window.netlifyIdentity) {
+            window.netlifyIdentity.on("init", user => {
+                if (!user) {
+                    window.netlifyIdentity.on("login", () => {
+                        document.location.href = "/admin/";
+                    });
+                }
+            });
+        }
+
+        // Thêm các chức năng JavaScript cho admin panel
+        document.addEventListener('DOMContentLoaded', function() {
+            const navLinks = document.querySelectorAll('.nav a');
+            const mainContent = document.querySelector('.main-content');
+
+            navLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const section = this.getAttribute('href').substring(1);
+                    loadSection(section);
+                });
+            });
+
+            function loadSection(section) {
+                // Đây là nơi bạn sẽ tải nội dung cho từng phần
+                switch(section) {
+                    case 'dashboard':
+                        mainContent.innerHTML = '<h2>Dashboard</h2><p>Thống kê và tổng quan về hệ thống.</p>';
+                        break;
+                    case 'content':
+                        mainContent.innerHTML = '<h2>Quản lý nội dung</h2><div id="cms-container"></div>';
+                        // Khởi tạo lại CMS nếu cần
+                        if (window.CMS) {
+                            window.CMS.init();
+                        }
+                        break;
+                    case 'users':
+                        mainContent.innerHTML = '<h2>Quản lý người dùng</h2><p>Danh sách và quản lý người dùng.</p>';
+                        break;
+                    case 'settings':
+                        mainContent.innerHTML = '<h2>Cài đặt</h2><p>Cấu hình hệ thống.</p>';
+                        break;
+                    default:
+                        mainContent.innerHTML = '<h2>Chào mừng đến với Admin Panel</h2><p>Vui lòng chọn một mục từ menu.</p>';
+                }
+            }
+        });
+    </script>
 </body>
 </html>
