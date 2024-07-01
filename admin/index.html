@@ -142,6 +142,7 @@
 
         // Handle form submission
         // Handle form submission
+// Handle form submission
 const form = document.getElementById('appForm');
 form.addEventListener('submit', async function(event) {
     event.preventDefault();
@@ -166,7 +167,7 @@ form.addEventListener('submit', async function(event) {
         });
 
         if (!response.ok) {
-            throw new Error('Lỗi khi gửi yêu cầu');
+            throw new Error('Error sending request');
         }
 
         alert('Bài viết đã được lưu thành công!');
