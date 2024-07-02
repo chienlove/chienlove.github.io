@@ -16,8 +16,33 @@ header h1, footer p {
 
 .container {
   max-width: 1200px;
+  padding: 15px;
 }
 
 .card {
   margin-bottom: 20px;
+}
+
+.card-title {
+  font-size: 1.5rem;
+  margin-bottom: 10px;
+}
+
+.card-text {
+  margin-bottom: 10px;
+}
+
+@media (max-width: 576px) {
+  header, footer {
+    text-align: center;
+    padding: 10px;
+  }
+
+  .card {
+    padding: 10px;
+  }
+
+  .card-title {
+    font-size: 1.25rem;
+  }
 }
