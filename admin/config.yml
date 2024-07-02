@@ -7,31 +7,28 @@ media_folder: "static/images/uploads"
 public_folder: "/images/uploads"
 
 collections:
-  - name: "app"
-    label: "App"
+  - name: "categories"
+    label: "Categories"
+    folder: "content/categories"
+    create: true
+    slug: "{{slug}}"
+    fields:
+      - {label: "Name", name: "name", widget: "string"}
+      - {label: "Description", name: "description", widget: "text"}
+
+  - name: "apps"
+    label: "Apps"
     folder: "content/apps"
     create: true
     slug: "{{slug}}"
     fields:
       - {label: "Date", name: "date", widget: "datetime"}
-      - {label: "Title", name: "title", widget: "string"}
-      - {label: "Layout", name: "layout", widget: "hidden", default: "recipe"}
-      - {label: "Description", name: "description", widget: "text"}
-      - label: "Image"
-        name: "image"
-        widget: "object"
-        fields:
-          - {label: "Text", name: "text", widget: "string"}
-          - {label: "URL", name: "url", widget: "image"}
-      - label: "Ingredients"
-        name: "ingredients"
-        widget: "list"
-        fields:
-          - label: "Ingredient"
-            name: "ingredient"
-            widget: "object"
-            fields:
-              - {label: "Amount", name: "amount", widget: "number"}
-              - {label: "Unit", name: "unit", widget: "select", options: ["", "dl", "l", "kg"]}
-              - {label: "Name", name: "name", widget: "string"}
+      - {label: "App Name", name: "app_name", widget: "string"}
+      - {label: "App Image", name: "app_image", widget: "image"}
+      - {label: "App Description", name: "app_description", widget: "text"}
+      - {label: "Developer", name: "developer", widget: "string"}
+      - {label: "iOS Version Compatibility", name: "ios_version", widget: "string"}
+      - {label: "App Version", name: "app_version", widget: "string"}
+      - {label: "Download Link", name: "download_link", widget: "string"}
+      - {label: "Category", name: "category", widget: "relation", collection: "categories", searchFields: ["name"], valueField: "name", displayFields: ["name"]}
       - {label: "Body", name: "body", widget: "markdown"}
