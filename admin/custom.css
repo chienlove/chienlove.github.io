@@ -1,0 +1,23 @@
+/* custom.css */
+
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f8f9fa;
+}
+
+header, footer {
+  background-color: #343a40;
+  color: white;
+}
+
+header h1, footer p {
+  margin: 0;
+}
+
+.container {
+  max-width: 1200px;
+}
+
+.card {
+  margin-bottom: 20px;
+}
