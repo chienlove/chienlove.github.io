@@ -1,89 +1,26 @@
 <!doctype html>
-<html lang="en">
+<html>
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Content Manager</title>
-  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" />
-  <link rel="stylesheet" href="/admin/custom.css" />
 </head>
 <body>
-  <header class="bg-dark text-white p-3">
-    <div class="container d-flex justify-content-between align-items-center">
-      <h1 class="mb-0">Content Manager</h1>
-      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-      <div class="collapse navbar-collapse" id="navbarNav">
-        <ul class="navbar-nav ml-auto">
-          <li class="nav-item">
-            <a class="nav-link" href="#apps">Apps</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="#categories">Categories</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="#all-posts">All Posts</a>
-          </li>
-        </ul>
-      </div>
-      <button class="btn btn-success" id="new-post-btn">New Post</button>
-    </div>
-  </header>
-  <div id="nc-root" class="container my-4"></div>
-  <footer class="bg-dark text-white p-3 text-center">
-    <p>&copy; 2024 Your Company</p>
-  </footer>
-  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
-  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+  <!-- Include the script that builds the page and powers Netlify CMS -->
   <script src="https://unpkg.com/netlify-cms@^2.10.192/dist/netlify-cms.js"></script>
   <script>
     CMS.init();
     CMS.registerPreviewStyle("/admin/preview.css");
-
-    var AppPreview = createClass({
+    var PostPreview = createClass({
       render: function() {
         var entry = this.props.entry;
-        var image = entry.getIn(['data', 'app_image']);
-        var title = entry.getIn(['data', 'app_name']);
-        var description = entry.getIn(['data', 'app_description']);
-        var developer = entry.getIn(['data', 'developer']);
-        var ios_version = entry.getIn(['data', 'ios_version']);
-        var app_version = entry.getIn(['data', 'app_version']);
-        var download_link = entry.getIn(['data', 'download_link']);
-        var category = entry.getIn(['data', 'category']);
-
-        return h('div', {className: 'card p-4'},
-          h('h1', {className: 'card-title'}, title),
-          h('img', {src: image, alt: title, className: 'card-img-top'}),
-          h('p', {className: 'card-text'}, `Developer: ${developer}`),
-          h('p', {className: 'card-text'}, `iOS Version Compatibility: ${ios_version}`),
-          h('p', {className: 'card-text'}, `App Version: ${app_version}`),
-          h('p', {className: 'card-text'}, `Category: ${category}`),
-          h('p', {className: 'card-text'}, `Download Link: ${download_link}`),
-          h('div', {className: 'card-body'}, description)
+        return h('div', {},
+          h('h1', {}, entry.getIn(['data', 'appName'])),
+          h('div', {"className": "text"}, this.props.widgetFor('description'))
         );
       }
     });
-
-    CMS.registerPreviewTemplate("apps", AppPreview);
-
-    // Redirect to new post page on load
-    window.location.href = '/admin/#/collections/apps/new';
-
-    // Handle new post button click
-    document.getElementById('new-post-btn').addEventListener('click', function() {
-      window.location.href = '/admin/#/collections/apps/new';
-    });
-
-    // Handle menu click
-    document.querySelectorAll('.nav-link').forEach(function(item) {
-      item.addEventListener('click', function(event) {
-        var target = event.target.getAttribute('href').substring(1);
-        window.location.href = `/admin/#/collections/${target}`;
-      });
-    });
+    CMS.registerPreviewTemplate("apps", PostPreview);
   </script>
 </body>
 </html>

@@ -1,34 +1,37 @@
 backend:
   name: github
-  repo: chienlove/chienlove.github.io
-  branch: master
-
-media_folder: "static/images/uploads"
-public_folder: "/images/uploads"
+  repo: chienlove/chienlove.github.io # Path to your Github repository
+  branch: master # Branch to update
+base_url: htts://api.netlify.com
+media_folder: "static/images/uploads" # Media files will be stored here
+public_folder: "/images/uploads" # The src attribute for uploaded 
 
 collections:
-  - name: "categories"
-    label: "Categories"
-    folder: "content/categories"
-    create: true
-    slug: "{{slug}}"
-    fields:
-      - {label: "Name", name: "name", widget: "string"}
-      - {label: "Description", name: "description", widget: "text", required: false}
-
-  - name: "apps"
-    label: "Apps"
-    folder: "content/apps"
-    create: true
-    slug: "{{slug}}"
-    fields:
-      - {label: "App Name", name: "app_name", widget: "string"}
-      - {label: "App Image", name: "app_image", widget: "image"}
-      - {label: "App Description", name: "app_description", widget: "text"}
-      - {label: "Developer", name: "developer", widget: "string"}
-      - {label: "iOS Version", name: "ios_version", widget: "string"}
-      - {label: "App Version", name: "app_version", widget: "string"}
-      - {label: "Download Link", name: "download_link", widget: "string"}
-      - {label: "Category", name: "category", widget: "relation", collection: "categories", searchFields: ["name"], valueField: "name", displayFields: ["name"]}
-      - {label: "Date", name: "date", widget: "datetime", default: ""}
-      - {label: "Body", name: "body", widget: "markdown", required: false}
+  - name: "apps" # Used in routes, e.g. /admin/collections/recipe
+    label: "Apps" # Used in the UI
+    folder: "content/apps" # The path to the folder where the documents are stored
+    create: true # Allow users to create new documents in this collection
+    slug: "{{slug}}" # Filename template i.e. title.md
+    fields: # The fields for each document, usually in front matter
+      - {label: "Date", name: "date", widget: "datetime"}
+      - {label: "Title", name: "title", widget: "string"}
+      - {label: "Layout", name: "layout", widget: "hidden", default: "recipe"}
+      - {label: "Description", name: "description", widget: "text"}
+      - label: "Image"
+        name: "image"
+        widget: "object"
+        fields:
+          - {label: "Text", name: "text", widget: "string"}
+          - {label: "URL", name: "url", widget: "image"}
+      - label: "Ingredients"
+        name: "ingredients"
+        widget: "list"
+        fields:
+          - label: "Ingredient"
+            name: "ingredient"
+            widget: "object"
+            fields:
+              - {label: "Amount", name: "amount", widget: "number"}
+              - {label: "Unit", name: "unit", widget: "select", options: ["", "dl", "l", "kg"]}
+              - {label: "Name", name: "name", widget: "string"}
+      - {label: "Body", name: "body", widget: "markdown"}
