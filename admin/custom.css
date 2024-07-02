@@ -39,6 +39,22 @@ header h1 {
   margin-bottom: 10px;
 }
 
+.dropdown-menu {
+  background-color: #343a40;
+}
+
+.dropdown-item {
+  color: white;
+}
+
+.dropdown-item:hover {
+  background-color: #495057;
+}
+
+#new-post-btn {
+  margin-left: 10px;
+}
+
 @media (max-width: 576px) {
   header, footer {
     text-align: center;

@@ -12,14 +12,16 @@
     <div class="container d-flex justify-content-between align-items-center">
       <h1 class="mb-0">Content Manager</h1>
       <nav>
-        <ul class="nav">
-          <li class="nav-item">
-            <a class="nav-link text-white" href="#apps">Apps</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link text-white" href="#categories">Categories</a>
-          </li>
-        </ul>
+        <div class="dropdown">
+          <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            Menu
+          </button>
+          <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+            <a class="dropdown-item" href="#apps">Apps</a>
+            <a class="dropdown-item" href="#categories">Categories</a>
+            <a class="dropdown-item" href="#all-posts">All Posts</a>
+          </div>
+        </div>
       </nav>
       <button class="btn btn-success" id="new-post-btn">New Post</button>
     </div>
@@ -28,6 +30,9 @@
   <footer class="bg-dark text-white p-3 text-center">
     <p>&copy; 2024 Your Company</p>
   </footer>
+  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
   <script src="https://unpkg.com/netlify-cms@^2.10.192/dist/netlify-cms.js"></script>
   <script>
     CMS.init();
@@ -63,6 +68,14 @@
     // Handle new post button click
     document.getElementById('new-post-btn').addEventListener('click', function() {
       window.location.href = '/admin/#/collections/apps/new';
+    });
+
+    // Handle menu click
+    document.querySelectorAll('.dropdown-item').forEach(function(item) {
+      item.addEventListener('click', function(event) {
+        var target = event.target.getAttribute('href').substring(1);
+        window.location.href = `/admin/#/collections/${target}`;
+      });
     });
   </script>
 </body>
