@@ -32,16 +32,33 @@
   <script>
     CMS.init();
     CMS.registerPreviewStyle("/admin/preview.css");
-    var PostPreview = createClass({
+
+    var AppPreview = createClass({
       render: function() {
         var entry = this.props.entry;
+        var image = entry.getIn(['data', 'app_image']);
+        var title = entry.getIn(['data', 'app_name']);
+        var description = entry.getIn(['data', 'app_description']);
+        var developer = entry.getIn(['data', 'developer']);
+        var ios_version = entry.getIn(['data', 'ios_version']);
+        var app_version = entry.getIn(['data', 'app_version']);
+        var download_link = entry.getIn(['data', 'download_link']);
+        var category = entry.getIn(['data', 'category']);
+
         return h('div', {},
-          h('h1', {}, entry.getIn(['data', 'title'])),
-          h('div', {"className": "text"}, this.props.widgetFor('description'))
+          h('h1', {}, title),
+          h('img', {src: image, alt: title}),
+          h('p', {}, `Developer: ${developer}`),
+          h('p', {}, `iOS Version Compatibility: ${ios_version}`),
+          h('p', {}, `App Version: ${app_version}`),
+          h('p', {}, `Category: ${category}`),
+          h('p', {}, `Download Link: ${download_link}`),
+          h('div', {"className": "text"}, description)
         );
       }
     });
-    CMS.registerPreviewTemplate("apps", PostPreview);
+
+    CMS.registerPreviewTemplate("apps", AppPreview);
   </script>
 </body>
 </html>
