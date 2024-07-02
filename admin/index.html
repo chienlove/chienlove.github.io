@@ -8,8 +8,21 @@
   <link rel="stylesheet" href="/admin/custom.css" />
 </head>
 <body>
-  <header class="bg-dark text-white p-3 text-center">
-    <h1>Content Manager</h1>
+  <header class="bg-dark text-white p-3">
+    <div class="container d-flex justify-content-between align-items-center">
+      <h1 class="mb-0">Content Manager</h1>
+      <nav>
+        <ul class="nav">
+          <li class="nav-item">
+            <a class="nav-link text-white" href="#apps">Apps</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link text-white" href="#categories">Categories</a>
+          </li>
+        </ul>
+      </nav>
+      <button class="btn btn-success" id="new-post-btn">New Post</button>
+    </div>
   </header>
   <div id="nc-root" class="container my-4"></div>
   <footer class="bg-dark text-white p-3 text-center">
@@ -46,6 +59,11 @@
     });
 
     CMS.registerPreviewTemplate("apps", AppPreview);
+
+    // Handle new post button click
+    document.getElementById('new-post-btn').addEventListener('click', function() {
+      window.location.href = '/admin/#/collections/apps/new';
+    });
   </script>
 </body>
 </html>

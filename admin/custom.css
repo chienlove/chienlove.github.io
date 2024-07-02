@@ -5,13 +5,20 @@ body {
   background-color: #f8f9fa;
 }
 
-header, footer {
+header {
   background-color: #343a40;
-  color: white;
 }
 
-header h1, footer p {
+header h1 {
   margin: 0;
+}
+
+.nav-link {
+  color: white !important;
+}
+
+.nav-link:hover {
+  color: #ddd !important;
 }
 
 .container {
@@ -36,6 +43,10 @@ header h1, footer p {
   header, footer {
     text-align: center;
     padding: 10px;
+  }
+
+  .container {
+    padding: 0 10px;
   }
 
   .card {
