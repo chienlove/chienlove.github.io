@@ -1,18 +1,18 @@
 backend:
   name: github
-  repo: chienlove/chienlove.github.io # Path to your Github repository
-  branch: master # Branch to update
-base_url: htts://api.netlify.com
-media_folder: "static/images/uploads" # Media files will be stored here
-public_folder: "/images/uploads" # The src attribute for uploaded media
+  repo: chienlove/chienlove.github.io
+  branch: master
+
+media_folder: "static/images/uploads"
+public_folder: "/images/uploads"
 
 collections:
-  - name: "app" # Used in routes, e.g. /admin/collections/recipe
-    label: "App" # Used in the UI
-    folder: "content/apps" # The path to the folder where the documents are stored
-    create: true # Allow users to create new documents in this collection
-    slug: "{{slug}}" # Filename template i.e. title.md
-    fields: # The fields for each document, usually in front matter
+  - name: "app"
+    label: "App"
+    folder: "content/apps"
+    create: true
+    slug: "{{slug}}"
+    fields:
       - {label: "Date", name: "date", widget: "datetime"}
       - {label: "Title", name: "title", widget: "string"}
       - {label: "Layout", name: "layout", widget: "hidden", default: "recipe"}

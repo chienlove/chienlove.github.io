@@ -4,9 +4,30 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Content Manager</title>
+  <link rel="stylesheet" href="https://unpkg.com/netlify-cms@^2.10.192/dist/netlify-cms.css" />
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+    }
+    header, footer {
+      background-color: #333;
+      color: white;
+      text-align: center;
+      padding: 1em 0;
+    }
+    header h1, footer p {
+      margin: 0;
+    }
+  </style>
 </head>
 <body>
-  <!-- Include the script that builds the page and powers Netlify CMS -->
+  <header>
+    <h1>Content Manager</h1>
+  </header>
+  <div id="nc-root"></div>
+  <footer>
+    <p>&copy; 2024 Your Company</p>
+  </footer>
   <script src="https://unpkg.com/netlify-cms@^2.10.192/dist/netlify-cms.js"></script>
   <script>
     CMS.init();
@@ -15,7 +36,7 @@
       render: function() {
         var entry = this.props.entry;
         return h('div', {},
-          h('h1', {}, entry.getIn(['data', 'appName'])),
+          h('h1', {}, entry.getIn(['data', 'title'])),
           h('div', {"className": "text"}, this.props.widgetFor('description'))
         );
       }
