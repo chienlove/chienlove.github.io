@@ -7,43 +7,132 @@
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" />
   <link rel="stylesheet" href="/admin/custom.css" />
   <style>
+    body {
+      overflow-x: hidden;
+    }
+    #sidebar {
+      position: fixed;
+      top: 0;
+      left: -250px;
+      width: 250px;
+      height: 100%;
+      z-index: 999;
+      background: #f8f9fa;
+      color: #fff;
+      transition: all 0.3s;
+    }
+    
+    #sidebar.active {
+      left: 0;
+    }
+    
+    .overlay {
+      display: none;
+      position: fixed;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 998;
+      opacity: 0;
+      transition: all 0.5s ease-in-out;
+    }
+    
+    .overlay.active {
+      display: block;
+      opacity: 1;
+    }
+
+    .sidebar-header {
+      padding: 20px;
+      background: #343a40;
+    }
+
+    #sidebar ul.components {
+      padding: 20px 0;
+    }
+
+    #sidebar ul li a {
+      padding: 10px;
+      font-size: 1.1em;
+      display: block;
+      color: #343a40;
+    }
+
+    #sidebar ul li a:hover {
+      color: #7386D5;
+      background: #fff;
+    }
+
     @media (max-width: 768px) {
       .container { padding: 0 10px; }
-      h1 { font-size: 1.5rem; }
+      h1 { font-size: 1.2rem; }
       #new-post-btn { font-size: 0.9rem; padding: 5px 10px; }
-      .navbar-nav { flex-direction: row; }
-      .nav-item { margin-right: 10px; }
     }
   </style>
 </head>
 <body>
+  <div class="overlay"></div>
+
   <header class="bg-dark text-white p-2">
-    <div class="container d-flex flex-column flex-md-row justify-content-between align-items-center">
-      <h1 class="mb-2 mb-md-0">Content Manager</h1>
-      <div class="d-flex align-items-center">
-        <nav class="mr-3">
-          <ul class="navbar-nav flex-row">
-            <li class="nav-item">
-              <a class="nav-link text-white" href="#apps">Apps</a>
-            </li>
-            <li class="nav-item">
-              <a class="nav-link text-white" href="#categories">Categories</a>
-            </li>
-          </ul>
-        </nav>
-        <button class="btn btn-success btn-sm" id="new-post-btn">New Post</button>
-      </div>
+    <div class="container d-flex justify-content-between align-items-center">
+      <button class="btn btn-dark" id="menu-toggle">☰</button>
+      <h1 class="mb-0">New Post</h1>
+      <button class="btn btn-success btn-sm" id="new-post-btn">Save</button>
     </div>
   </header>
+
+  <nav id="sidebar">
+    <div class="sidebar-header">
+      <h3>Menu</h3>
+    </div>
+    <ul class="list-unstyled components">
+      <li><a href="#apps">Apps</a></li>
+      <li><a href="#categories">Categories</a></li>
+      <li><a href="#media">Media</a></li>
+    </ul>
+  </nav>
+
   <div id="nc-root" class="container my-4"></div>
+
   <footer class="bg-dark text-white p-2 text-center">
     <p class="mb-0">&copy; 2024 Your Company</p>
   </footer>
+
   <script src="https://unpkg.com/netlify-cms@^2.10.192/dist/netlify-cms.js"></script>
   <script>
-    CMS.init();
-    CMS.registerPreviewStyle("/admin/preview.css");
+    // Initialize CMS
+    CMS.init({
+      config: {
+        load_config_file: false,
+        backend: {
+          name: 'github',
+          repo: 'chienlove/chienlove.github.io',
+          branch: 'master',
+        },
+        media_folder: "static/images/uploads",
+        public_folder: "/images/uploads",
+        collections: [
+          {
+            name: "apps",
+            label: "Apps",
+            folder: "content/apps",
+            create: true,
+            fields: [
+              {label: "App Name", name: "app_name", widget: "string"},
+              {label: "App Image", name: "app_image", widget: "image"},
+              {label: "App Description", name: "app_description", widget: "text"},
+              {label: "Developer", name: "developer", widget: "string"},
+              {label: "iOS Version", name: "ios_version", widget: "string"},
+              {label: "App Version", name: "app_version", widget: "string"},
+              {label: "Download Link", name: "download_link", widget: "string"},
+              {label: "Category", name: "category", widget: "string"},
+            ]
+          }
+        ]
+      }
+    });
 
+    // Register preview template
     var AppPreview = createClass({
       render: function() {
         var entry = this.props.entry;
@@ -70,14 +159,31 @@
 
     CMS.registerPreviewTemplate("apps", AppPreview);
 
-    document.getElementById('new-post-btn').addEventListener('click', function() {
-      window.location.href = '/admin/#/collections/apps/new';
+    // Handle sidebar toggle
+    document.getElementById('menu-toggle').addEventListener('click', function() {
+      document.getElementById('sidebar').classList.toggle('active');
+      document.querySelector('.overlay').classList.toggle('active');
     });
 
-    document.querySelectorAll('.nav-link').forEach(function(item) {
+    document.querySelector('.overlay').addEventListener('click', function() {
+      document.getElementById('sidebar').classList.remove('active');
+      this.classList.remove('active');
+    });
+
+    // Handle new post button click
+    document.getElementById('new-post-btn').addEventListener('click', function() {
+      // You might want to customize this to trigger the save action
+      console.log('Save post');
+    });
+
+    // Handle menu item clicks
+    document.querySelectorAll('#sidebar a').forEach(function(item) {
       item.addEventListener('click', function(event) {
+        event.preventDefault();
         var target = event.target.getAttribute('href').substring(1);
         window.location.href = `/admin/#/collections/${target}`;
+        document.getElementById('sidebar').classList.remove('active');
+        document.querySelector('.overlay').classList.remove('active');
       });
     });
   </script>
