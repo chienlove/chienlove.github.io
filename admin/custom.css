@@ -72,4 +72,8 @@ header h1 {
   .card-title {
     font-size: 1.25rem;
   }
+
+  .navbar-toggler {
+    background-color: white;
+  }
 }

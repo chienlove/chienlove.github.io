@@ -11,18 +11,22 @@
   <header class="bg-dark text-white p-3">
     <div class="container d-flex justify-content-between align-items-center">
       <h1 class="mb-0">Content Manager</h1>
-      <nav>
-        <div class="dropdown">
-          <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-            Menu
-          </button>
-          <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-            <a class="dropdown-item" href="#apps">Apps</a>
-            <a class="dropdown-item" href="#categories">Categories</a>
-            <a class="dropdown-item" href="#all-posts">All Posts</a>
-          </div>
-        </div>
-      </nav>
+      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav ml-auto">
+          <li class="nav-item">
+            <a class="nav-link" href="#apps">Apps</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#categories">Categories</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="#all-posts">All Posts</a>
+          </li>
+        </ul>
+      </div>
       <button class="btn btn-success" id="new-post-btn">New Post</button>
     </div>
   </header>
@@ -71,7 +75,7 @@
     });
 
     // Handle menu click
-    document.querySelectorAll('.dropdown-item').forEach(function(item) {
+    document.querySelectorAll('.nav-link').forEach(function(item) {
       item.addEventListener('click', function(event) {
         var target = event.target.getAttribute('href').substring(1);
         window.location.href = `/admin/#/collections/${target}`;
