@@ -6,37 +6,39 @@
   <title>Content Manager</title>
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" />
   <link rel="stylesheet" href="/admin/custom.css" />
+  <style>
+    @media (max-width: 768px) {
+      .container { padding: 0 10px; }
+      h1 { font-size: 1.5rem; }
+      #new-post-btn { font-size: 0.9rem; padding: 5px 10px; }
+      .navbar-nav { flex-direction: row; }
+      .nav-item { margin-right: 10px; }
+    }
+  </style>
 </head>
 <body>
-  <header class="bg-dark text-white p-3">
-    <div class="container d-flex justify-content-between align-items-center">
-      <h1 class="mb-0">Content Manager</h1>
-      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-      <div class="collapse navbar-collapse" id="navbarNav">
-        <ul class="navbar-nav ml-auto">
-          <li class="nav-item">
-            <a class="nav-link" href="#apps">Apps</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="#categories">Categories</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="#all-posts">All Posts</a>
-          </li>
-        </ul>
+  <header class="bg-dark text-white p-2">
+    <div class="container d-flex flex-column flex-md-row justify-content-between align-items-center">
+      <h1 class="mb-2 mb-md-0">Content Manager</h1>
+      <div class="d-flex align-items-center">
+        <nav class="mr-3">
+          <ul class="navbar-nav flex-row">
+            <li class="nav-item">
+              <a class="nav-link text-white" href="#apps">Apps</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link text-white" href="#categories">Categories</a>
+            </li>
+          </ul>
+        </nav>
+        <button class="btn btn-success btn-sm" id="new-post-btn">New Post</button>
       </div>
-      <button class="btn btn-success" id="new-post-btn">New Post</button>
     </div>
   </header>
   <div id="nc-root" class="container my-4"></div>
-  <footer class="bg-dark text-white p-3 text-center">
-    <p>&copy; 2024 Your Company</p>
+  <footer class="bg-dark text-white p-2 text-center">
+    <p class="mb-0">&copy; 2024 Your Company</p>
   </footer>
-  <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
-  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
   <script src="https://unpkg.com/netlify-cms@^2.10.192/dist/netlify-cms.js"></script>
   <script>
     CMS.init();
@@ -54,27 +56,24 @@
         var download_link = entry.getIn(['data', 'download_link']);
         var category = entry.getIn(['data', 'category']);
 
-        return h('div', {className: 'card p-4'},
-          h('h1', {className: 'card-title'}, title),
-          h('img', {src: image, alt: title, className: 'card-img-top'}),
-          h('p', {className: 'card-text'}, `Developer: ${developer}`),
-          h('p', {className: 'card-text'}, `iOS Version Compatibility: ${ios_version}`),
-          h('p', {className: 'card-text'}, `App Version: ${app_version}`),
-          h('p', {className: 'card-text'}, `Category: ${category}`),
-          h('p', {className: 'card-text'}, `Download Link: ${download_link}`),
-          h('div', {className: 'card-body'}, description)
+        return h('div', {className: 'card p-3'},
+          h('h2', {className: 'card-title h5'}, title),
+          h('img', {src: image, alt: title, className: 'card-img-top mb-2'}),
+          h('p', {className: 'card-text small'}, `Developer: ${developer}`),
+          h('p', {className: 'card-text small'}, `iOS: ${ios_version} | Version: ${app_version}`),
+          h('p', {className: 'card-text small'}, `Category: ${category}`),
+          h('a', {className: 'btn btn-primary btn-sm', href: download_link, target: '_blank'}, 'Download'),
+          h('div', {className: 'card-body p-0 mt-2'}, h('small', {}, description))
         );
       }
     });
 
     CMS.registerPreviewTemplate("apps", AppPreview);
 
-    // Handle new post button click
     document.getElementById('new-post-btn').addEventListener('click', function() {
       window.location.href = '/admin/#/collections/apps/new';
     });
 
-    // Handle menu click
     document.querySelectorAll('.nav-link').forEach(function(item) {
       item.addEventListener('click', function(event) {
         var target = event.target.getAttribute('href').substring(1);
