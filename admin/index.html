@@ -1,16 +1,13 @@
 <!doctype html>
-<html lang="en">
+<html lang="vi">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Content Manager</title>
+  <title>Quản lý nội dung</title>
+  <link rel="stylesheet" href="/admin/preview.css" />
   <style>
     body {
-      margin: 0;
-      padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-        sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
     }
   </style>
 </head>
@@ -19,33 +16,23 @@
   <script>
     CMS.init();
 
-    // Đăng ký preview style
-    CMS.registerPreviewStyle("/admin/preview.css");
-
-    // Định nghĩa PostPreview component
-    var PostPreview = createClass({
+    var AppPreview = createClass({
       render: function() {
         var entry = this.props.entry;
         return h('div', {},
           h('h1', {}, entry.getIn(['data', 'appName'])),
-          h('div', {"className": "text"}, this.props.widgetFor('description'))
+          h('p', {}, "Phiên bản: " + entry.getIn(['data', 'version'])),
+          h('p', {}, "Kích thước: " + entry.getIn(['data', 'size'])),
+          h('p', {}, "Nhà phát triển: " + entry.getIn(['data', 'developer'])),
+          h('p', {}, "Thể loại: " + entry.getIn(['data', 'category'])),
+          h('p', {}, "Giá: " + entry.getIn(['data', 'price'])),
+          h('div', {"className": "description"}, this.props.widgetFor('description')),
+          h('div', {"className": "content"}, this.props.widgetFor('body'))
         );
       }
     });
 
-    // Đăng ký template preview
-    CMS.registerPreviewTemplate("apps", PostPreview);
-
-    // Áp dụng custom styles sau khi CMS đã load
-    CMS.registerEventListener({
-      name: 'init',
-      handler: function() {
-        var link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.href = '/admin/custom-styles.css';
-        document.head.appendChild(link);
-      }
-    });
+    CMS.registerPreviewTemplate("apps", AppPreview);
   </script>
 </body>
 </html>
