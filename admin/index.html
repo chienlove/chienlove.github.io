@@ -46,6 +46,11 @@
         button:hover {
             background-color: #45a049;
         }
+        #message {
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 4px;
+        }
     </style>
 </head>
 <body>
@@ -69,6 +74,7 @@
             </div>
             <button type="submit">Lưu nội dung</button>
         </form>
+        <div id="message" style="display: none;"></div>
     </div>
 
     <script>
@@ -79,12 +85,70 @@
             const content = document.getElementById('content').value;
             const category = document.getElementById('category').value;
 
-            // Ở đây bạn sẽ thêm code để gửi dữ liệu đến backend của bạn
-            console.log('Đã lưu:', { title, content, category });
-            
-            // Reset form sau khi gửi
-            this.reset();
+            // Hiển thị thông báo "Đang xử lý"
+            showMessage('Đang xử lý...', 'info');
+
+            // Mô phỏng quá trình gửi dữ liệu (thay thế bằng API call thực tế)
+            setTimeout(() => {
+                // Giả lập xử lý thành công (80% trường hợp)
+                if (Math.random() < 0.8) {
+                    showMessage('Bài viết đã được lưu thành công!', 'success');
+                    this.reset(); // Reset form
+                } else {
+                    showMessage('Có lỗi xảy ra. Vui lòng thử lại.', 'error');
+                }
+            }, 2000); // Đợi 2 giây để mô phỏng quá trình xử lý
+
+            // Trong thực tế, bạn sẽ sử dụng đoạn code sau để gửi dữ liệu đến server:
+            /*
+            fetch('/api/save-content', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ title, content, category }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showMessage('Bài viết đã được lưu thành công!', 'success');
+                    this.reset(); // Reset form
+                } else {
+                    showMessage('Có lỗi xảy ra: ' + data.error, 'error');
+                }
+            })
+            .catch(error => {
+                showMessage('Có lỗi xảy ra khi gửi dữ liệu: ' + error.message, 'error');
+            });
+            */
         });
+
+        function showMessage(message, type) {
+            const messageElement = document.getElementById('message');
+            messageElement.textContent = message;
+            messageElement.style.display = 'block';
+
+            // Đặt màu sắc dựa trên loại thông báo
+            switch(type) {
+                case 'success':
+                    messageElement.style.backgroundColor = '#d4edda';
+                    messageElement.style.color = '#155724';
+                    break;
+                case 'error':
+                    messageElement.style.backgroundColor = '#f8d7da';
+                    messageElement.style.color = '#721c24';
+                    break;
+                case 'info':
+                    messageElement.style.backgroundColor = '#cce5ff';
+                    messageElement.style.color = '#004085';
+                    break;
+            }
+
+            // Tự động ẩn thông báo sau 5 giây
+            setTimeout(() => {
+                messageElement.style.display = 'none';
+            }, 5000);
+        }
     </script>
 </body>
 </html>
