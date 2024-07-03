@@ -1,68 +1,44 @@
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
-  background-color: #f6f8fa;
-  margin: 0;
-  padding: 20px;
+  background-color: #f0f2f5 !important;
 }
 
-.cms-container {
+#nc-root {
   max-width: 1200px;
   margin: 0 auto;
+  padding: 2rem;
 }
 
-.cms-list-control {
-  background-color: white;
-  border-radius: 5px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
-  margin-bottom: 20px;
-  padding: 20px;
+.css-1gj57a0-SidebarContainer-card { /* Sidebar */
+  background-color: #2c3e50 !important;
+  color: white !important;
 }
 
-.cms-list-control__item {
-  border-bottom: 1px solid #e1e4e8;
-  padding: 15px 0;
+.css-v758ki-AppMainContainer, .css-12b66la-AppHeaderContent { /* Main content & Header */
+  max-width: none !important;
 }
 
-.cms-list-control__item:last-child {
-  border-bottom: none;
+.css-104dqk8-AppHeaderButton-button-buttonActive-buttonActive-buttonActive-buttonActive-AppHeaderButton, /* Publish button */
+.css-12yqrwa-AppHeaderNavLink-AppHeaderButton-button-buttonActive-buttonActive-buttonActive-buttonActive-AppHeaderButton { /* Backend button */
+  background-color: #38b2ac !important;
+  color: white !important;
 }
 
-.cms-list-control__item-data {
-  font-size: 16px;
-  color: #24292e;
+.css-1vh1diw-FieldLabel-fieldLabel { /* Input labels */
+  background-color: #2c3e50 !important;
+  color: white !important;
+  padding: 0.5rem !important;
+  border-radius: 4px !important;
 }
 
-.cms-editor-control {
-  background-color: white;
-  border-radius: 5px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
-  padding: 20px;
+.css-1eh5mwy-ControlContainer { /* Input containers */
+  background-color: white !important;
+  border-radius: 4px !important;
+  padding: 1rem !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
 }
 
-.cms-editor-control input,
-.cms-editor-control textarea {
-  width: 100%;
-  padding: 10px;
-  margin-bottom: 15px;
-  border: 1px solid #e1e4e8;
-  border-radius: 3px;
-}
-
-.cms-editor-control label {
-  display: block;
-  margin-bottom: 5px;
-  font-weight: 600;
-}
-
-.cms-btn {
-  background-color: #2ea44f;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 3px;
-  cursor: pointer;
-}
-
-.cms-btn:hover {
-  background-color: #2c974b;
+@media (max-width: 768px) {
+  #nc-root {
+    padding: 1rem;
+  }
 }
