@@ -1,20 +1,8 @@
-window.CMS.registerPreviewTemplate('posts', () => null);
+// Ngăn Netlify CMS khởi tạo
+window.CMS = {};
 
-// Đảm bảo DOM đã sẵn sàng
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("DOM loaded");
-
-    // Khởi tạo CMS
-    window.CMS.init();
-
-    // Đợi CMS khởi tạo xong
-    window.CMS.registerEventListener({
-        name: 'preSave',
-        handler: function() {
-            console.log("CMS initialized");
-            initializeCustomAdmin();
-        },
-    });
+    initializeCustomAdmin();
 });
 
 function initializeCustomAdmin() {
@@ -23,6 +11,9 @@ function initializeCustomAdmin() {
     // Kiểm tra xác thực
     if (!window.netlifyIdentity.currentUser()) {
         app.innerHTML = '<h2>Vui lòng đăng nhập để tiếp tục</h2>';
+        window.netlifyIdentity.on('login', () => {
+            initializeCustomAdmin();
+        });
         window.netlifyIdentity.open();
         return;
     }
@@ -68,21 +59,26 @@ function createPost() {
         const body = document.getElementById('body').value;
         
         try {
-            const backend = window.CMS.getBackend();
-            const user = await backend.currentUser();
+            const user = window.netlifyIdentity.currentUser();
             if (!user) throw new Error('Không thể xác thực người dùng');
 
-            const collection = await backend.getCollection('posts');
-            const entry = await backend.createEntry(collection, {
-                slug: title.toLowerCase().replace(/\s+/g, '-'),
-                data: { 
-                    title, 
+            const response = await fetch('/.netlify/functions/create-post', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${user.token.access_token}`
+                },
+                body: JSON.stringify({
+                    title,
                     body,
                     date: new Date().toISOString()
-                }
+                })
             });
 
-            await backend.persistEntry(entry);
+            if (!response.ok) {
+                throw new Error('Lỗi khi tạo bài viết');
+            }
+
             alert('Bài viết đã được tạo!');
         } catch (error) {
             console.error('Lỗi khi tạo bài viết:', error);
@@ -97,13 +93,24 @@ async function listPosts() {
     const postList = document.getElementById('postList');
 
     try {
-        const backend = window.CMS.getBackend();
-        const collection = await backend.getCollection('posts');
-        const entries = await backend.entries(collection);
+        const user = window.netlifyIdentity.currentUser();
+        if (!user) throw new Error('Không thể xác thực người dùng');
+
+        const response = await fetch('/.netlify/functions/list-posts', {
+            headers: {
+                'Authorization': `Bearer ${user.token.access_token}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Lỗi khi lấy danh sách bài viết');
+        }
+
+        const posts = await response.json();
         
-        entries.forEach(entry => {
+        posts.forEach(post => {
             const li = document.createElement('li');
-            li.textContent = entry.data.title;
+            li.textContent = post.title;
             postList.appendChild(li);
         });
     } catch (error) {
