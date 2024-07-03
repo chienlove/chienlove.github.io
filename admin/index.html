@@ -1,78 +1,17 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Quản trị nội dung</title>
-  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-  <style>
-    body {
-      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-      color: #444;
-    }
-    .nc-appHeader-content {
-      background-color: #2c3e50;
-    }
-    .nc-appHeader-logo {
-      color: #ecf0f1;
-    }
-    .nc-appHeader-button {
-      background-color: #34495e;
-      color: #ecf0f1;
-    }
-    .nc-entryEditor-controlPane {
-      background-color: #f9f9f9;
-    }
-    .nc-entryEditor-previewPane {
-      background-color: #fff;
-      border-left: 1px solid #ddd;
-    }
-    .nc-widgetControl {
-      border: 1px solid #ddd;
-      padding: 10px;
-      margin-bottom: 15px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản trị nội dung tùy chỉnh</title>
+    <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+    <script src="https://unpkg.com/netlify-cms@^2.0.0/dist/netlify-cms.js"></script>
+    <link rel="stylesheet" href="/admin/admin.css">
 </head>
 <body>
-  <script src="https://unpkg.com/netlify-cms@^2.0.0/dist/netlify-cms.js"></script>
-  <script>
-    CMS.registerPreviewStyle("/preview.css");
-
-    var PostPreview = createClass({
-      render: function() {
-        var entry = this.props.entry;
-        var image = entry.getIn(['data', 'thumbnail']);
-        var bg = image && this.props.getAsset(image);
-        return h('div', {},
-          h('h1', {}, entry.getIn(['data', 'title'])),
-          h('img', {src: bg.toString()}),
-          h('div', {"className": "text"}, this.props.widgetFor('body'))
-        );
-      }
-    });
-
-    CMS.registerPreviewTemplate("blog", PostPreview);
-
-    CMS.registerEditorComponent({
-      id: "youtube",
-      label: "YouTube",
-      fields: [{name: 'id', label: 'YouTube Video ID', widget: 'string'}],
-      pattern: /^{{< youtube (\S+) >}}$/,
-      fromBlock: function(match) {
-        return {
-          id: match[1]
-        };
-      },
-      toBlock: function(obj) {
-        return '{{< youtube ' + obj.id + ' >}}';
-      },
-      toPreview: function(obj) {
-        return (
-          '<img src="http://img.youtube.com/vi/' + obj.id + '/maxresdefault.jpg" alt="YouTube Video"/>'
-        );
-      }
-    });
-  </script>
+    <div id="app">
+        <!-- Giao diện tùy chỉnh của bạn sẽ được render ở đây -->
+    </div>
+    <script src="/admin/admin.js"></script>
 </body>
 </html>
