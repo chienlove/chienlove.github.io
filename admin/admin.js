@@ -1,12 +1,15 @@
-// Ngăn Netlify CMS khởi tạo
-window.CMS = {};
-
-document.addEventListener('DOMContentLoaded', () => {
-    initializeCustomAdmin();
+// Đợi CMS khởi tạo xong
+window.CMS.registerEventListener({
+    name: 'init',
+    handler: function() {
+        console.log("CMS initialized");
+        initializeCustomAdmin();
+    },
 });
 
 function initializeCustomAdmin() {
-    const app = document.getElementById('app');
+    const app = document.getElementById('custom-admin');
+    app.style.display = 'block';
     
     // Kiểm tra xác thực
     if (!window.netlifyIdentity.currentUser()) {
@@ -59,26 +62,16 @@ function createPost() {
         const body = document.getElementById('body').value;
         
         try {
-            const user = window.netlifyIdentity.currentUser();
-            if (!user) throw new Error('Không thể xác thực người dùng');
-
-            const response = await fetch('/.netlify/functions/create-post', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${user.token.access_token}`
-                },
-                body: JSON.stringify({
-                    title,
-                    body,
+            const collection = window.CMS.getCollection('posts');
+            const entry = collection.newEntry({
+                data: {
+                    title: title,
+                    body: body,
                     date: new Date().toISOString()
-                })
+                }
             });
 
-            if (!response.ok) {
-                throw new Error('Lỗi khi tạo bài viết');
-            }
-
+            await window.CMS.entryPersister.persistEntry(entry);
             alert('Bài viết đã được tạo!');
         } catch (error) {
             console.error('Lỗi khi tạo bài viết:', error);
@@ -93,24 +86,12 @@ async function listPosts() {
     const postList = document.getElementById('postList');
 
     try {
-        const user = window.netlifyIdentity.currentUser();
-        if (!user) throw new Error('Không thể xác thực người dùng');
-
-        const response = await fetch('/.netlify/functions/list-posts', {
-            headers: {
-                'Authorization': `Bearer ${user.token.access_token}`
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error('Lỗi khi lấy danh sách bài viết');
-        }
-
-        const posts = await response.json();
+        const collection = window.CMS.getCollection('posts');
+        const entries = await collection.entries();
         
-        posts.forEach(post => {
+        entries.forEach(entry => {
             const li = document.createElement('li');
-            li.textContent = post.title;
+            li.textContent = entry.data.title;
             postList.appendChild(li);
         });
     } catch (error) {
