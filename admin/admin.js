@@ -4,6 +4,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const customAdminDiv = document.getElementById('custom-admin');
     const loginButton = document.getElementById('custom-login-button');
     const contentArea = document.getElementById('content-area');
+    const postForm = document.getElementById('post-form');
+    const postsList = document.getElementById('posts');
 
     function showLoginButton() {
         customAdminDiv.style.display = 'block';
@@ -15,6 +17,7 @@ document.addEventListener('DOMContentLoaded', () => {
         customAdminDiv.style.display = 'block';
         loginButton.style.display = 'none';
         contentArea.style.display = 'block';
+        loadPosts();
     }
 
     if (window.netlifyIdentity) {
@@ -44,11 +47,55 @@ document.addEventListener('DOMContentLoaded', () => {
         addDebug('Netlify Identity not found');
     }
 
-    // Kiểm tra CMS initialization
-    addDebug('Checking CMS initialization...');
+    postForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const title = document.getElementById('post-title').value;
+        const content = document.getElementById('post-content').value;
+        
+        try {
+            await createPost(title, content);
+            addDebug('Post created successfully');
+            postForm.reset();
+            loadPosts();
+        } catch (error) {
+            addDebug('Error creating post: ' + error.message);
+        }
+    });
+
+    async function createPost(title, content) {
+        const response = await fetch('/.netlify/functions/create-post', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ title, content }),
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to create post');
+        }
+
+        return response.json();
+    }
+
+    async function loadPosts() {
+        try {
+            const response = await fetch('/.netlify/functions/get-posts');
+            const posts = await response.json();
+            
+            postsList.innerHTML = '';
+            posts.forEach(post => {
+                const li = document.createElement('li');
+                li.textContent = post.title;
+                postsList.appendChild(li);
+            });
+        } catch (error) {
+            addDebug('Error loading posts: ' + error.message);
+        }
+    }
+
     if (window.CMS) {
         addDebug('CMS object found');
-        addDebug('Registering CMS event listener');
         CMS.registerEventListener({
             name: 'preSave',
             handler: () => {

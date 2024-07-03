@@ -14,8 +14,20 @@
         <h1>Quản trị nội dung tùy chỉnh</h1>
         <button id="custom-login-button" style="display: none;">Đăng nhập</button>
         <div id="content-area" style="display: none;">
-            <h2>Nội dung quản trị</h2>
-            <!-- Thêm các phần tử quản trị tùy chỉnh của bạn ở đây -->
+            <h2>Đăng bài viết mới</h2>
+            <form id="post-form">
+                <label for="post-title">Tiêu đề:</label>
+                <input type="text" id="post-title" required>
+                
+                <label for="post-content">Nội dung:</label>
+                <textarea id="post-content" required></textarea>
+                
+                <button type="submit">Đăng bài</button>
+            </form>
+            <div id="post-list">
+                <h2>Danh sách bài viết</h2>
+                <ul id="posts"></ul>
+            </div>
         </div>
     </div>
     <script>

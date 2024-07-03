@@ -71,3 +71,47 @@ li {
     margin-bottom: 20px;
     border: 1px solid #ccc;
 }
+#custom-login-button {
+    padding: 10px 20px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+#content-area {
+    margin-top: 20px;
+}
+
+#debug {
+    background-color: #f0f0f0;
+    padding: 10px;
+    margin-bottom: 20px;
+    border: 1px solid #ccc;
+}
+
+#post-form {
+    display: flex;
+    flex-direction: column;
+    max-width: 500px;
+    margin-bottom: 20px;
+}
+
+#post-form label {
+    margin-top: 10px;
+}
+
+#post-form input, #post-form textarea {
+    margin-bottom: 10px;
+    padding: 5px;
+}
+
+#post-form button {
+    padding: 10px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+#post-list {
+    margin-top: 20px;
+}

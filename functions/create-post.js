@@ -1,41 +1,19 @@
-const { Octokit } = require("@octokit/rest");
-const { Base64 } = require('js-base64');
-
-exports.handler = async function(event, context) {
-    if (!context.clientContext.user) {
-        return { statusCode: 401, body: 'Unauthorized' };
+exports.handler = async (event, context) => {
+    if (event.httpMethod !== 'POST') {
+        return { statusCode: 405, body: 'Method Not Allowed' };
     }
 
-    const { title, body, date } = JSON.parse(event.body);
-
-    const octokit = new Octokit({
-        auth: process.env.GITHUB_TOKEN
-    });
-
-    const content = `---
-title: ${title}
-date: ${date}
----
-${body}`;
-
     try {
-        await octokit.repos.createOrUpdateFileContents({
-            owner: process.env.GITHUB_OWNER,
-            repo: process.env.GITHUB_REPO,
-            path: `_posts/${date.split('T')[0]}-${title.toLowerCase().replace(/\s+/g, '-')}.md`,
-            message: `Create post ${title}`,
-            content: Base64.encode(content),
-            branch: 'main'
-        });
+        const { title, content } = JSON.parse(event.body);
+        // Ở đây, bạn sẽ lưu bài viết vào cơ sở dữ liệu hoặc CMS của bạn
+        // Đây chỉ là một ví dụ đơn giản
+        console.log(`New post: ${title}`);
 
         return {
             statusCode: 200,
-            body: JSON.stringify({ message: 'Post created successfully' })
+            body: JSON.stringify({ message: 'Post created successfully' }),
         };
     } catch (error) {
-        return {
-            statusCode: 500,
-            body: JSON.stringify({ error: 'Error creating post' })
-        };
+        return { statusCode: 500, body: error.toString() };
     }
 };
