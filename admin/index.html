@@ -1,154 +1,78 @@
-<!DOCTYPE html>
-<html lang="vi">
+<!doctype html>
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Quản trị nội dung</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #f0f0f0;
-        }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background-color: white;
-            padding: 20px;
-            border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-        h1 {
-            color: #333;
-        }
-        .form-group {
-            margin-bottom: 15px;
-        }
-        label {
-            display: block;
-            margin-bottom: 5px;
-        }
-        input[type="text"], textarea, select {
-            width: 100%;
-            padding: 8px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        button {
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px 15px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #45a049;
-        }
-        #message {
-            margin-top: 20px;
-            padding: 10px;
-            border-radius: 4px;
-        }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quản trị nội dung</title>
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <style>
+    body {
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      color: #444;
+    }
+    .nc-appHeader-content {
+      background-color: #2c3e50;
+    }
+    .nc-appHeader-logo {
+      color: #ecf0f1;
+    }
+    .nc-appHeader-button {
+      background-color: #34495e;
+      color: #ecf0f1;
+    }
+    .nc-entryEditor-controlPane {
+      background-color: #f9f9f9;
+    }
+    .nc-entryEditor-previewPane {
+      background-color: #fff;
+      border-left: 1px solid #ddd;
+    }
+    .nc-widgetControl {
+      border: 1px solid #ddd;
+      padding: 10px;
+      margin-bottom: 15px;
+    }
+  </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Quản trị nội dung</h1>
-        <form id="contentForm">
-            <div class="form-group">
-                <label for="title">Tiêu đề:</label>
-                <input type="text" id="title" name="title" required>
-            </div>
-            <div class="form-group">
-                <label for="content">Nội dung:</label>
-                <textarea id="content" name="content" rows="10" required></textarea>
-            </div>
-            <div class="form-group">
-                <label for="category">Danh mục:</label>
-                <select id="category" name="category">
-                    <option value="apps">Ứng dụng</option>
-                    <option value="pages">Trang</option>
-                </select>
-            </div>
-            <button type="submit">Lưu nội dung</button>
-        </form>
-        <div id="message" style="display: none;"></div>
-    </div>
+  <script src="https://unpkg.com/netlify-cms@^2.0.0/dist/netlify-cms.js"></script>
+  <script>
+    CMS.registerPreviewStyle("/preview.css");
 
-    <script>
-        document.getElementById('contentForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const title = document.getElementById('title').value;
-            const content = document.getElementById('content').value;
-            const category = document.getElementById('category').value;
+    var PostPreview = createClass({
+      render: function() {
+        var entry = this.props.entry;
+        var image = entry.getIn(['data', 'thumbnail']);
+        var bg = image && this.props.getAsset(image);
+        return h('div', {},
+          h('h1', {}, entry.getIn(['data', 'title'])),
+          h('img', {src: bg.toString()}),
+          h('div', {"className": "text"}, this.props.widgetFor('body'))
+        );
+      }
+    });
 
-            // Hiển thị thông báo "Đang xử lý"
-            showMessage('Đang xử lý...', 'info');
+    CMS.registerPreviewTemplate("blog", PostPreview);
 
-            // Mô phỏng quá trình gửi dữ liệu (thay thế bằng API call thực tế)
-            setTimeout(() => {
-                // Giả lập xử lý thành công (80% trường hợp)
-                if (Math.random() < 0.8) {
-                    showMessage('Bài viết đã được lưu thành công!', 'success');
-                    this.reset(); // Reset form
-                } else {
-                    showMessage('Có lỗi xảy ra. Vui lòng thử lại.', 'error');
-                }
-            }, 2000); // Đợi 2 giây để mô phỏng quá trình xử lý
-
-            // Trong thực tế, bạn sẽ sử dụng đoạn code sau để gửi dữ liệu đến server:
-            /*
-            fetch('/api/save-content', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ title, content, category }),
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showMessage('Bài viết đã được lưu thành công!', 'success');
-                    this.reset(); // Reset form
-                } else {
-                    showMessage('Có lỗi xảy ra: ' + data.error, 'error');
-                }
-            })
-            .catch(error => {
-                showMessage('Có lỗi xảy ra khi gửi dữ liệu: ' + error.message, 'error');
-            });
-            */
-        });
-
-        function showMessage(message, type) {
-            const messageElement = document.getElementById('message');
-            messageElement.textContent = message;
-            messageElement.style.display = 'block';
-
-            // Đặt màu sắc dựa trên loại thông báo
-            switch(type) {
-                case 'success':
-                    messageElement.style.backgroundColor = '#d4edda';
-                    messageElement.style.color = '#155724';
-                    break;
-                case 'error':
-                    messageElement.style.backgroundColor = '#f8d7da';
-                    messageElement.style.color = '#721c24';
-                    break;
-                case 'info':
-                    messageElement.style.backgroundColor = '#cce5ff';
-                    messageElement.style.color = '#004085';
-                    break;
-            }
-
-            // Tự động ẩn thông báo sau 5 giây
-            setTimeout(() => {
-                messageElement.style.display = 'none';
-            }, 5000);
-        }
-    </script>
+    CMS.registerEditorComponent({
+      id: "youtube",
+      label: "YouTube",
+      fields: [{name: 'id', label: 'YouTube Video ID', widget: 'string'}],
+      pattern: /^{{< youtube (\S+) >}}$/,
+      fromBlock: function(match) {
+        return {
+          id: match[1]
+        };
+      },
+      toBlock: function(obj) {
+        return '{{< youtube ' + obj.id + ' >}}';
+      },
+      toPreview: function(obj) {
+        return (
+          '<img src="http://img.youtube.com/vi/' + obj.id + '/maxresdefault.jpg" alt="YouTube Video"/>'
+        );
+      }
+    });
+  </script>
 </body>
 </html>
