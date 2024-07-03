@@ -4,50 +4,33 @@
 
 #custom-admin {
     display: block !important;
-html, body {
-    width: 100%;
-    height: 100%;
-    margin: 0;
-    padding: 0;
-    overflow-x: hidden;
     font-family: Arial, sans-serif;
-    line-height: 1.6;
-    background-color: #f4f4f4;
-}
-
-#app {
     max-width: 800px;
     margin: 0 auto;
-    background-color: #fff;
     padding: 20px;
-    border-radius: 5px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
 }
 
 header {
-    background-color: #333;
-    color: #fff;
-    text-align: center;
-    padding: 1rem;
+    background-color: #f0f0f0;
+    padding: 10px;
+    margin-bottom: 20px;
 }
 
 nav {
-    display: flex;
-    justify-content: space-around;
-    margin: 1rem 0;
+    margin-bottom: 20px;
 }
 
 button {
-    padding: 0.5rem 1rem;
-    background-color: #333;
-    color: #fff;
+    padding: 10px 15px;
+    margin-right: 10px;
+    background-color: #007bff;
+    color: white;
     border: none;
     cursor: pointer;
-    transition: background-color 0.3s ease;
 }
 
 button:hover {
-    background-color: #555;
+    background-color: #0056b3;
 }
 
 form {
@@ -56,12 +39,12 @@ form {
 }
 
 label {
-    margin-top: 1rem;
+    margin-top: 10px;
 }
 
 input, textarea {
-    margin-bottom: 1rem;
-    padding: 0.5rem;
+    margin-bottom: 10px;
+    padding: 5px;
 }
 
 ul {
@@ -70,8 +53,5 @@ ul {
 }
 
 li {
-    background-color: #f4f4f4;
-    margin-bottom: 0.5rem;
-    padding: 0.5rem;
-    border-radius: 3px;
+    margin-bottom: 5px;
 }

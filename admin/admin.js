@@ -1,12 +1,7 @@
-// Đợi CMS khởi tạo xong
-window.CMS.registerEventListener({
-    name: 'init',
-    handler: function() {
-        console.log("CMS initialized");
-        initializeCustomAdmin();
-    },
-});
+// Biến để theo dõi trạng thái khởi tạo CMS
+let cmsInitialized = false;
 
+// Hàm khởi tạo admin tùy chỉnh
 function initializeCustomAdmin() {
     const app = document.getElementById('custom-admin');
     app.style.display = 'block';
@@ -42,6 +37,34 @@ function initializeCustomAdmin() {
         window.location.reload();
     });
 }
+
+// Hàm kiểm tra và khởi tạo
+function checkAndInitialize() {
+    console.log("Checking CMS initialization...");
+    if (window.CMS) {
+        console.log("CMS object found");
+        if (!cmsInitialized) {
+            console.log("Registering CMS event listener");
+            window.CMS.registerEventListener({
+                name: 'init',
+                handler: function() {
+                    console.log("CMS initialized");
+                    cmsInitialized = true;
+                    initializeCustomAdmin();
+                },
+            });
+        } else {
+            console.log("CMS already initialized, calling initializeCustomAdmin directly");
+            initializeCustomAdmin();
+        }
+    } else {
+        console.log("CMS object not found, retrying in 1 second");
+        setTimeout(checkAndInitialize, 1000);
+    }
+}
+
+// Gọi hàm kiểm tra khi trang đã tải xong
+document.addEventListener('DOMContentLoaded', checkAndInitialize);
 
 function createPost() {
     const content = document.getElementById('content');

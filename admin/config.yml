@@ -1,16 +1,16 @@
 backend:
   name: git-gateway
-  branch: master
+  branch: main # Hoặc tên nhánh chính của bạn
 
-media_folder: "images/uploads"
+media_folder: "static/images/uploads"
 public_folder: "/images/uploads"
 
 collections:
   - name: "posts"
     label: "Posts"
-    folder: "_posts"
+    folder: "content/posts"
     create: true
     slug: "{{year}}-{{month}}-{{day}}-{{slug}}"
     fields:
       - {label: "Title", name: "title", widget: "string"}
-      - {label: "Body", name: "body", widget: "markdown"}
+      - {label: "Publish
