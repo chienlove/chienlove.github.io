@@ -1,28 +1,24 @@
 document.addEventListener('DOMContentLoaded', () => {
-    addDebug('DOM content loaded');
-
-    const customAdminDiv = document.getElementById('custom-admin');
-    const loginButton = document.getElementById('custom-login-button');
+    const loginArea = document.getElementById('login-area');
     const contentArea = document.getElementById('content-area');
+    const loginButton = document.getElementById('login-button');
+    const logoutButton = document.getElementById('logout-button');
     const postForm = document.getElementById('post-form');
     const postsList = document.getElementById('posts');
 
     function showLoginButton() {
-        customAdminDiv.style.display = 'block';
-        loginButton.style.display = 'block';
+        loginArea.style.display = 'block';
         contentArea.style.display = 'none';
     }
 
     function showAdminContent() {
-        customAdminDiv.style.display = 'block';
-        loginButton.style.display = 'none';
+        loginArea.style.display = 'none';
         contentArea.style.display = 'block';
         loadPosts();
     }
 
     if (window.netlifyIdentity) {
         netlifyIdentity.on('init', user => {
-            addDebug(user ? 'User is logged in' : 'User is not logged in');
             if (user) {
                 showAdminContent();
             } else {
@@ -34,17 +30,17 @@ document.addEventListener('DOMContentLoaded', () => {
             netlifyIdentity.open();
         });
 
+        logoutButton.addEventListener('click', () => {
+            netlifyIdentity.logout();
+        });
+
         netlifyIdentity.on('login', () => {
-            addDebug('User logged in');
             showAdminContent();
         });
 
         netlifyIdentity.on('logout', () => {
-            addDebug('User logged out');
             showLoginButton();
         });
-    } else {
-        addDebug('Netlify Identity not found');
     }
 
     postForm.addEventListener('submit', async (e) => {
@@ -54,11 +50,11 @@ document.addEventListener('DOMContentLoaded', () => {
         
         try {
             await createPost(title, content);
-            addDebug('Post created successfully');
+            alert('Bài viết đã được đăng thành công!');
             postForm.reset();
             loadPosts();
         } catch (error) {
-            addDebug('Error creating post: ' + error.message);
+            alert('Lỗi khi đăng bài: ' + error.message);
         }
     });
 
@@ -72,7 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         if (!response.ok) {
-            throw new Error('Failed to create post');
+            throw new Error('Không thể tạo bài viết');
         }
 
         return response.json();
@@ -90,21 +86,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 postsList.appendChild(li);
             });
         } catch (error) {
-            addDebug('Error loading posts: ' + error.message);
+            console.error('Lỗi khi tải bài viết:', error);
         }
     }
-
-    if (window.CMS) {
-        addDebug('CMS object found');
-        CMS.registerEventListener({
-            name: 'preSave',
-            handler: () => {
-                addDebug('CMS preSave event fired');
-            },
-        });
-    } else {
-        addDebug('CMS object not found');
-    }
 });
-
-addDebug('admin.js loaded');
