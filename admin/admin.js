@@ -1,3 +1,6 @@
+window.CMS.registerPreviewTemplate('posts', () => null);
+
+// Đảm bảo DOM đã sẵn sàng
 document.addEventListener('DOMContentLoaded', () => {
     console.log("DOM loaded");
 
@@ -17,6 +20,13 @@ document.addEventListener('DOMContentLoaded', () => {
 function initializeCustomAdmin() {
     const app = document.getElementById('app');
     
+    // Kiểm tra xác thực
+    if (!window.netlifyIdentity.currentUser()) {
+        app.innerHTML = '<h2>Vui lòng đăng nhập để tiếp tục</h2>';
+        window.netlifyIdentity.open();
+        return;
+    }
+
     // Render giao diện tùy chỉnh
     app.innerHTML = `
         <header>
@@ -25,6 +35,7 @@ function initializeCustomAdmin() {
         <nav>
             <button id="createPost">Tạo bài viết mới</button>
             <button id="listPosts">Danh sách bài viết</button>
+            <button id="logout">Đăng xuất</button>
         </nav>
         <main id="content"></main>
     `;
@@ -32,6 +43,10 @@ function initializeCustomAdmin() {
     // Thêm event listeners
     document.getElementById('createPost').addEventListener('click', createPost);
     document.getElementById('listPosts').addEventListener('click', listPosts);
+    document.getElementById('logout').addEventListener('click', () => {
+        window.netlifyIdentity.logout();
+        window.location.reload();
+    });
 }
 
 function createPost() {
@@ -53,15 +68,25 @@ function createPost() {
         const body = document.getElementById('body').value;
         
         try {
-            await window.CMS.getBackend().currentUser();
-            const entry = await window.CMS.getBackend().createEntry('posts', {
-                data: { title, body },
-                slug: title.toLowerCase().replace(/\s+/g, '-')
+            const backend = window.CMS.getBackend();
+            const user = await backend.currentUser();
+            if (!user) throw new Error('Không thể xác thực người dùng');
+
+            const collection = await backend.getCollection('posts');
+            const entry = await backend.createEntry(collection, {
+                slug: title.toLowerCase().replace(/\s+/g, '-'),
+                data: { 
+                    title, 
+                    body,
+                    date: new Date().toISOString()
+                }
             });
+
+            await backend.persistEntry(entry);
             alert('Bài viết đã được tạo!');
         } catch (error) {
             console.error('Lỗi khi tạo bài viết:', error);
-            alert('Có lỗi xảy ra khi tạo bài viết.');
+            alert('Có lỗi xảy ra khi tạo bài viết: ' + error.message);
         }
     });
 }
@@ -72,7 +97,10 @@ async function listPosts() {
     const postList = document.getElementById('postList');
 
     try {
-        const entries = await window.CMS.getBackend().entries({ collection: 'posts' });
+        const backend = window.CMS.getBackend();
+        const collection = await backend.getCollection('posts');
+        const entries = await backend.entries(collection);
+        
         entries.forEach(entry => {
             const li = document.createElement('li');
             li.textContent = entry.data.title;
