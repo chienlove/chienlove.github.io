@@ -11,11 +11,6 @@ site_url: https://yourdomain.com
 display_url: https://yourdomain.com
 logo_url: https://yourdomain.com/images/logo.png
 locale: 'vi'
-show_preview_links: false
-
-slug:
-  encoding: "ascii"
-  clean_accents: true
 
 collections:
   - name: "apps"
@@ -25,16 +20,6 @@ collections:
     slug: "{{slug}}"
     fields:
       - {label: "Tiêu đề", name: "title", widget: "string"}
-      - {label: "Ngày đăng", name: "date", widget: "datetime"}
-      - {label: "Mô tả ngắn", name: "description", widget: "text"}
-      - {label: "Hình ảnh", name: "image", widget: "image"}
-      - {label: "Tên ứng dụng", name: "appName", widget: "string"}
-      - {label: "Phiên bản", name: "version", widget: "string"}
-      - {label: "Kích thước", name: "size", widget: "string"}
-      - {label: "Nhà phát triển", name: "developer", widget: "string"}
-      - {label: "Thể loại", name: "category", widget: "select", options: ["Game", "Công cụ", "Giáo dục", "Giải trí", "Khác"]}
-      - {label: "Giá", name: "price", widget: "string", default: "Miễn phí"}
-      - {label: "Link tải", name: "downloadLink", widget: "string"}
       - {label: "Nội dung", name: "body", widget: "markdown"}
 
   - name: "pages"
@@ -45,15 +30,3 @@ collections:
     fields:
       - {label: "Tiêu đề", name: "title", widget: "string"}
       - {label: "Nội dung", name: "body", widget: "markdown"}
-
-  - name: "settings"
-    label: "Cài đặt"
-    files:
-      - file: "content/settings/general.md"
-        label: "Cài đặt chung"
-        name: "general"
-        fields:
-          - {label: "Tên trang web", name: "siteName", widget: "string"}
-          - {label: "Mô tả trang web", name: "siteDescription", widget: "text"}
-          - {label: "Logo", name: "logo", widget: "image"}
-          - {label: "Favicon", name: "favicon", widget: "image"}
