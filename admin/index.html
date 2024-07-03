@@ -11,7 +11,12 @@
     <div id="debug"></div>
     <div id="nc-root"></div>
     <div id="custom-admin" style="display: none;">
-        <h1>Đang tải...</h1>
+        <h1>Quản trị nội dung tùy chỉnh</h1>
+        <button id="custom-login-button" style="display: none;">Đăng nhập</button>
+        <div id="content-area" style="display: none;">
+            <h2>Nội dung quản trị</h2>
+            <!-- Thêm các phần tử quản trị tùy chỉnh của bạn ở đây -->
+        </div>
     </div>
     <script>
         function addDebug(message) {
@@ -22,21 +27,5 @@
     </script>
     <script src="https://unpkg.com/netlify-cms@2.10.192/dist/netlify-cms.js"></script>
     <script src="admin.js"></script>
-    <script>
-        addDebug('All scripts loaded');
-
-        if (window.netlifyIdentity) {
-            netlifyIdentity.on("init", user => {
-                addDebug(user ? 'User is logged in' : 'User is not logged in');
-                if (!user) {
-                    netlifyIdentity.on("login", () => {
-                        document.location.href = "/admin/";
-                    });
-                }
-            });
-        } else {
-            addDebug('Netlify Identity not found');
-        }
-    </script>
 </body>
 </html>

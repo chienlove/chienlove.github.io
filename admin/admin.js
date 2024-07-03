@@ -1,39 +1,63 @@
-// Kiểm tra CMS initialization
-if (window.CMS) {
-    addDebug('CMS object found');
-    CMS.registerEventListener({
-        name: 'preSave',
-        handler: () => {
-            addDebug('CMS preSave event fired');
-        },
-    });
+document.addEventListener('DOMContentLoaded', () => {
+    addDebug('DOM content loaded');
 
-    CMS.registerEventListener({
-        name: 'onInit',
-        handler: () => {
-            addDebug('CMS initialized');
-            document.getElementById('custom-admin').style.display = 'block';
-        },
-    });
-} else {
-    addDebug('CMS object not found');
-}
+    const customAdminDiv = document.getElementById('custom-admin');
+    const loginButton = document.getElementById('custom-login-button');
+    const contentArea = document.getElementById('content-area');
 
-// Kiểm tra xác thực
-if (window.netlifyIdentity) {
-    netlifyIdentity.on('init', user => {
-        addDebug(user ? 'User is logged in' : 'User is not logged in');
-    });
-} else {
-    addDebug('Netlify Identity not found');
-}
+    function showLoginButton() {
+        customAdminDiv.style.display = 'block';
+        loginButton.style.display = 'block';
+        contentArea.style.display = 'none';
+    }
 
-// Kiểm tra config.yml
-fetch('/admin/config.yml')
-    .then(response => response.text())
-    .then(text => {
-        addDebug('config.yml loaded successfully');
-    })
-    .catch(error => {
-        addDebug('Error loading config.yml: ' + error);
-    });
+    function showAdminContent() {
+        customAdminDiv.style.display = 'block';
+        loginButton.style.display = 'none';
+        contentArea.style.display = 'block';
+    }
+
+    if (window.netlifyIdentity) {
+        netlifyIdentity.on('init', user => {
+            addDebug(user ? 'User is logged in' : 'User is not logged in');
+            if (user) {
+                showAdminContent();
+            } else {
+                showLoginButton();
+            }
+        });
+
+        loginButton.addEventListener('click', () => {
+            netlifyIdentity.open();
+        });
+
+        netlifyIdentity.on('login', () => {
+            addDebug('User logged in');
+            showAdminContent();
+        });
+
+        netlifyIdentity.on('logout', () => {
+            addDebug('User logged out');
+            showLoginButton();
+        });
+    } else {
+        addDebug('Netlify Identity not found');
+    }
+
+    // Kiểm tra CMS initialization
+    addDebug('Checking CMS initialization...');
+    if (window.CMS) {
+        addDebug('CMS object found');
+        addDebug('Registering CMS event listener');
+        CMS.registerEventListener({
+            name: 'preSave',
+            handler: () => {
+                addDebug('CMS preSave event fired');
+            },
+        });
+    } else {
+        addDebug('CMS object not found');
+    }
+});
+
+addDebug('admin.js loaded');
