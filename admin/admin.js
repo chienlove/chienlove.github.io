@@ -1,12 +1,23 @@
-// Khởi tạo CMS
-const CMS = window.CMS;
-CMS.init();
+document.addEventListener('DOMContentLoaded', () => {
+    console.log("DOM loaded");
 
-// Tạo giao diện tùy chỉnh
-const app = document.getElementById('app');
+    // Khởi tạo CMS
+    window.CMS.init();
 
-// Ví dụ về giao diện đơn giản
-function renderApp() {
+    // Đợi CMS khởi tạo xong
+    window.CMS.registerEventListener({
+        name: 'preSave',
+        handler: function() {
+            console.log("CMS initialized");
+            initializeCustomAdmin();
+        },
+    });
+});
+
+function initializeCustomAdmin() {
+    const app = document.getElementById('app');
+    
+    // Render giao diện tùy chỉnh
     app.innerHTML = `
         <header>
             <h1>Quản trị nội dung tùy chỉnh</h1>
@@ -18,11 +29,11 @@ function renderApp() {
         <main id="content"></main>
     `;
 
+    // Thêm event listeners
     document.getElementById('createPost').addEventListener('click', createPost);
     document.getElementById('listPosts').addEventListener('click', listPosts);
 }
 
-// Hàm tạo bài viết mới
 function createPost() {
     const content = document.getElementById('content');
     content.innerHTML = `
@@ -42,8 +53,8 @@ function createPost() {
         const body = document.getElementById('body').value;
         
         try {
-            await CMS.getBackend().currentUser();
-            const entry = await CMS.getBackend().createEntry('posts', {
+            await window.CMS.getBackend().currentUser();
+            const entry = await window.CMS.getBackend().createEntry('posts', {
                 data: { title, body },
                 slug: title.toLowerCase().replace(/\s+/g, '-')
             });
@@ -55,14 +66,13 @@ function createPost() {
     });
 }
 
-// Hàm liệt kê bài viết
 async function listPosts() {
     const content = document.getElementById('content');
     content.innerHTML = '<h2>Danh sách bài viết</h2><ul id="postList"></ul>';
     const postList = document.getElementById('postList');
 
     try {
-        const entries = await CMS.getBackend().entries({ collection: 'posts' });
+        const entries = await window.CMS.getBackend().entries({ collection: 'posts' });
         entries.forEach(entry => {
             const li = document.createElement('li');
             li.textContent = entry.data.title;
@@ -73,6 +83,3 @@ async function listPosts() {
         content.innerHTML += '<p>Có lỗi xảy ra khi tải danh sách bài viết.</p>';
     }
 }
-
-// Render ứng dụng
-renderApp();
