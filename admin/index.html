@@ -20,10 +20,23 @@
         }
         addDebug('Page loaded');
     </script>
-    <script src="https://unpkg.com/netlify-cms@^2.10.192/dist/netlify-cms.js"></script>
+    <script src="https://unpkg.com/netlify-cms@2.10.192/dist/netlify-cms.js"></script>
     <script src="admin.js"></script>
     <script>
         addDebug('All scripts loaded');
+
+        if (window.netlifyIdentity) {
+            netlifyIdentity.on("init", user => {
+                addDebug(user ? 'User is logged in' : 'User is not logged in');
+                if (!user) {
+                    netlifyIdentity.on("login", () => {
+                        document.location.href = "/admin/";
+                    });
+                }
+            });
+        } else {
+            addDebug('Netlify Identity not found');
+        }
     </script>
 </body>
 </html>
