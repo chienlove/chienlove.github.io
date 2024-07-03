@@ -1,18 +1,21 @@
 backend:
   name: github
   repo: chienlove/chienlove.github.io
-  branch: master
-base_url: https://api.netlify.com
+  branch: main
 
-# Cài đặt chung
-publish_mode: editorial_workflow
 media_folder: "static/images/uploads"
 public_folder: "/images/uploads"
-display_url: https://storeios.net
-logo_url: https://storeios.net/images/logo.png
-site_url: https://storeios.net
+
+publish_mode: editorial_workflow
+site_url: https://yourdomain.com
+display_url: https://yourdomain.com
+logo_url: https://yourdomain.com/images/logo.png
 locale: 'vi'
-show_preview_links: true
+show_preview_links: false
+
+slug:
+  encoding: "ascii"
+  clean_accents: true
 
 collections:
   - name: "apps"
@@ -21,16 +24,10 @@ collections:
     create: true
     slug: "{{slug}}"
     fields:
-      - {label: "Ngày đăng", name: "date", widget: "datetime"}
       - {label: "Tiêu đề", name: "title", widget: "string"}
-      - {label: "Layout", name: "layout", widget: "hidden", default: "app"}
+      - {label: "Ngày đăng", name: "date", widget: "datetime"}
       - {label: "Mô tả ngắn", name: "description", widget: "text"}
-      - label: "Hình ảnh"
-        name: "image"
-        widget: "object"
-        fields:
-          - {label: "Alt Text", name: "alt", widget: "string"}
-          - {label: "URL", name: "url", widget: "image"}
+      - {label: "Hình ảnh", name: "image", widget: "image"}
       - {label: "Tên ứng dụng", name: "appName", widget: "string"}
       - {label: "Phiên bản", name: "version", widget: "string"}
       - {label: "Kích thước", name: "size", widget: "string"}
@@ -38,7 +35,7 @@ collections:
       - {label: "Thể loại", name: "category", widget: "select", options: ["Game", "Công cụ", "Giáo dục", "Giải trí", "Khác"]}
       - {label: "Giá", name: "price", widget: "string", default: "Miễn phí"}
       - {label: "Link tải", name: "downloadLink", widget: "string"}
-      - {label: "Nội dung chi tiết", name: "body", widget: "markdown"}
+      - {label: "Nội dung", name: "body", widget: "markdown"}
 
   - name: "pages"
     label: "Trang"
@@ -47,7 +44,6 @@ collections:
     slug: "{{slug}}"
     fields:
       - {label: "Tiêu đề", name: "title", widget: "string"}
-      - {label: "Layout", name: "layout", widget: "hidden", default: "page"}
       - {label: "Nội dung", name: "body", widget: "markdown"}
 
   - name: "settings"
