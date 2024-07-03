@@ -8,11 +8,22 @@
     <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 </head>
 <body>
+    <div id="debug"></div>
     <div id="nc-root"></div>
     <div id="custom-admin" style="display: none;">
         <h1>Đang tải...</h1>
     </div>
+    <script>
+        function addDebug(message) {
+            var debugDiv = document.getElementById('debug');
+            debugDiv.innerHTML += '<p>' + message + '</p>';
+        }
+        addDebug('Page loaded');
+    </script>
     <script src="https://unpkg.com/netlify-cms@^2.10.192/dist/netlify-cms.js"></script>
     <script src="admin.js"></script>
+    <script>
+        addDebug('All scripts loaded');
+    </script>
 </body>
 </html>
