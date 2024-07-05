@@ -3,103 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>App Version History</title>
-    <style>
-        table {
-            border-collapse: collapse;
-            width: 100%;
-        }
-        th, td {
-            border: 1px solid black;
-            padding: 8px;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
-    </style>
+    <title>App Store Version Finder</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <h1>App Version History</h1>
-    <input type="text" id="appName" placeholder="Enter App Name">
-    <button onclick="searchApp()">Search App</button>
-    <div id="searchResult"></div>
-    <div id="versionResult"></div>
-
-    <script>
-        async function searchApp() {
-            const appName = document.getElementById('appName').value;
-            const searchUrl = `https://appraven.net/api/v1/search?q=${encodeURIComponent(appName)}&region=us`;
-
-            try {
-                const response = await fetch(searchUrl);
-                const data = await response.json();
-
-                if (data && data.apps && data.apps.length > 0) {
-                    displaySearchResults(data.apps);
-                } else {
-                    document.getElementById('searchResult').innerHTML = "No apps found.";
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                document.getElementById('searchResult').innerHTML = "An error occurred while searching for the app.";
-            }
-        }
-
-        function displaySearchResults(apps) {
-            let resultsHtml = '<h2>Search Results:</h2><ul>';
-            apps.slice(0, 5).forEach(app => {
-                resultsHtml += `<li>
-                    ${app.name} (${app.developer})
-                    <button onclick="getAppVersions('${app.id}')">Get Versions</button>
-                </li>`;
-            });
-            resultsHtml += '</ul>';
-            document.getElementById('searchResult').innerHTML = resultsHtml;
-        }
-
-        async function getAppVersions(appId) {
-            const url = `https://appraven.net/api/v1/app_versions?appId=${appId}&region=us`;
-
-            try {
-                const response = await fetch(url);
-                const data = await response.json();
-
-                if (data && data.versions) {
-                    displayVersions(data.versions);
-                } else {
-                    document.getElementById('versionResult').innerHTML = "No version information found.";
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                document.getElementById('versionResult').innerHTML = "An error occurred while fetching version data.";
-            }
-        }
-
-        function displayVersions(versions) {
-            let tableHtml = `
-                <h2>Version History</h2>
-                <table>
-                    <tr>
-                        <th>Version</th>
-                        <th>Release Date</th>
-                        <th>What's New</th>
-                    </tr>
-            `;
-
-            versions.forEach(version => {
-                tableHtml += `
-                    <tr>
-                        <td>${version.version}</td>
-                        <td>${new Date(version.date).toLocaleDateString()}</td>
-                        <td>${version.notes || 'No information available'}</td>
-                    </tr>
-                `;
-            });
-
-            tableHtml += '</table>';
-            document.getElementById('versionResult').innerHTML = tableHtml;
-        }
-    </script>
+    <div class="container">
+        <h1>Find App Version on App Store</h1>
+        <form id="appForm">
+            <input type="text" id="appName" placeholder="Enter App Name" required>
+            <button type="submit">Search</button>
+        </form>
+        <div id="result"></div>
+    </div>
+    <script src="script.js"></script>
 </body>
 </html>
