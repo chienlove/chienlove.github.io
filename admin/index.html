@@ -1,36 +1,64 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Quản trị nội dung tùy chỉnh</title>
-    <link rel="stylesheet" href="admin.css">
-    <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quản lý Nội dung</title>
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 </head>
 <body>
-    <div id="custom-admin">
-        <h1>Quản trị nội dung tùy chỉnh</h1>
-        <div id="login-area">
-            <button id="login-button">Đăng nhập</button>
-        </div>
-        <div id="content-area" style="display: none;">
-            <button id="logout-button">Đăng xuất</button>
-            <h2>Đăng bài viết mới</h2>
-            <form id="post-form">
-                <label for="post-title">Tiêu đề:</label>
-                <input type="text" id="post-title" required>
-                
-                <label for="post-content">Nội dung:</label>
-                <textarea id="post-content" required></textarea>
-                
-                <button type="submit">Đăng bài</button>
-            </form>
-            <div id="post-list">
-                <h2>Danh sách bài viết</h2>
-                <ul id="posts"></ul>
-            </div>
-        </div>
-    </div>
-    <script src="admin.js"></script>
+  <script src="https://unpkg.com/netlify-cms@^2.0.0/dist/netlify-cms.js"></script>
+  <script src="https://unpkg.com/react@16/umd/react.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="customWidget.js"></script>
+  <script>
+    CMS.registerPreviewStyle("/admin/preview.css");
+    
+    // Tùy chỉnh xem trước bài viết
+    const PostPreview = createClass({
+      render: function() {
+        const entry = this.props.entry;
+        const image = entry.getIn(['data', 'featured_image']);
+        return h('div', {},
+          h('h1', {}, entry.getIn(['data', 'title'])),
+          h('img', {src: image}),
+          h('div', {"className": "text"}, this.props.widgetFor('body'))
+        );
+      }
+    });
+    CMS.registerPreviewTemplate("blog", PostPreview);
+
+    // Thêm tùy chỉnh tiếng Việt
+    CMS.registerLocale('vi', {
+      "app": {
+        "header": {
+          "content": "Nội dung",
+          "workflow": "Quy trình",
+          "media": "Tập tin",
+          "quickAdd": "Thêm nhanh"
+        },
+        "app": {
+          "errorHeader": "Lỗi khi tải cấu hình CMS",
+          "configErrors": "Lỗi cấu hình",
+          "checkConfigYml": "Kiểm tra file config.yml của bạn."
+        },
+        "workflow": {
+          "workflow": "Quy trình",
+          "workflowHeading": "Quy trình biên tập",
+          "newPost": "Bài viết mới"
+        }
+      }
+    });
+
+    // Sử dụng ngôn ngữ tiếng Việt
+    CMS.registerPreviewStyle("/admin/preview.css");
+    CMS.registerLocale('vi', {});
+    CMS.registerWidget(
+      'color',
+      'file',
+      ColorControl,
+      ColorPreview
+    );
+  </script>
 </body>
 </html>
