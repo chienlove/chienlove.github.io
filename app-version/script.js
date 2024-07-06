@@ -1,23 +1,82 @@
 document.getElementById('appForm').addEventListener('submit', function(event) {
     event.preventDefault();
-    const appName = document.getElementById('appName').value;
-    fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(appName)}&entity=software`)
+    const appName = document.getElementById('appName').value.trim();
+    if (appName) {
+        fetchAppVersions(appName);
+    }
+});
+
+function fetchAppVersions(appName) {
+    const url = `https://appstore.bilin.eu.org/search?term=${encodeURIComponent(appName)}`;
+
+    fetch(url)
         .then(response => response.json())
         .then(data => {
-            const resultDiv = document.getElementById('result');
-            resultDiv.innerHTML = ''; // Clear previous results
             if (data.results.length > 0) {
                 const app = data.results[0];
-                resultDiv.innerHTML = `
-                    <p><strong>App Name:</strong> ${app.trackName}</p>
-                    <p><strong>Version:</strong> ${app.version}</p>
-                    <p><strong>Developer:</strong> ${app.sellerName}</p>
-                `;
+                const appId = app.trackId;
+                const appName = app.trackName;
+                const appIcon = app.artworkUrl100;
+                const appLink = app.trackViewUrl;
+                fetchAppDetails(appId, appName, appIcon, appLink);
             } else {
-                resultDiv.innerHTML = '<p>No app found with that name.</p>';
+                document.getElementById('result').innerText = 'No app found.';
             }
         })
         .catch(error => {
-            console.error('Error fetching data:', error);
+            console.error('Error fetching app data:', error);
+            document.getElementById('result').innerText = 'Error fetching app data.';
         });
-});
+}
+
+function fetchAppDetails(appId, appName, appIcon, appLink) {
+    const url = `https://appstore.bilin.eu.org/lookup?id=${appId}`;
+
+    fetch(url)
+        .then(response => response.json())
+        .then(data => {
+            if (data.results.length > 0) {
+                const versions = data.results.map(app => app.version);
+                displayVersions(appName, appIcon, appLink, versions);
+            } else {
+                document.getElementById('result').innerText = 'No versions found.';
+            }
+        })
+        .catch(error => {
+            console.error('Error fetching app details:', error);
+            document.getElementById('result').innerText = 'Error fetching app details.';
+        });
+}
+
+function displayVersions(appName, appIcon, appLink, versions) {
+    const resultDiv = document.getElementById('result');
+    resultDiv.innerHTML = '';
+
+    const appInfo = document.createElement('div');
+    appInfo.classList.add('app-info');
+
+    const appImage = document.createElement('img');
+    appImage.src = appIcon;
+    appImage.alt = `${appName} icon`;
+
+    const appNameLink = document.createElement('a');
+    appNameLink.href = appLink;
+    appNameLink.target = '_blank';
+    appNameLink.innerText = appName;
+
+    appInfo.appendChild(appImage);
+    appInfo.appendChild(appNameLink);
+    resultDiv.appendChild(appInfo);
+
+    if (versions.length > 0) {
+        const ul = document.createElement('ul');
+        versions.forEach(version => {
+            const li = document.createElement('li');
+            li.innerText = version;
+            ul.appendChild(li);
+        });
+        resultDiv.appendChild(ul);
+    } else {
+        resultDiv.innerText = 'No versions found.';
+    }
+}
