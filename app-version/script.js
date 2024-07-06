@@ -36,7 +36,7 @@ function fetchAppDetails(appId, appName, appIcon, appLink) {
         .then(response => response.json())
         .then(data => {
             if (data.results.length > 0) {
-                const versions = data.results.map(app => app.version);
+                const versions = data.results[0].versionHistory.map(version => version.versionId);
                 displayVersions(appName, appIcon, appLink, versions);
             } else {
                 document.getElementById('result').innerText = 'No versions found.';
@@ -70,9 +70,9 @@ function displayVersions(appName, appIcon, appLink, versions) {
 
     if (versions.length > 0) {
         const ul = document.createElement('ul');
-        versions.forEach(version => {
+        versions.forEach(versionId => {
             const li = document.createElement('li');
-            li.innerText = version;
+            li.innerText = versionId;
             ul.appendChild(li);
         });
         resultDiv.appendChild(ul);
