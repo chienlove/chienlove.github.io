@@ -10,7 +10,13 @@ async function searchApp() {
 
     try {
         const response = await fetch(`https://api.sharklatan.com/search?query=${encodeURIComponent(query)}`);
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
         const data = await response.json();
+        console.log('API Response:', data); // Log the response for debugging
 
         if (data.results && data.results.length > 0) {
             data.results.forEach(app => {
@@ -27,6 +33,6 @@ async function searchApp() {
         }
     } catch (error) {
         console.error('Error fetching app data:', error);
-        resultsDiv.innerHTML = 'Error fetching app data. Please try again later.';
+        resultsDiv.innerHTML = `Error fetching app data: ${error.message}`;
     }
 }
