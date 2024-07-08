@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Removed App from App Store</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        #app-info {
+            margin-top: 20px;
+            display: none;
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
+        .app-detail {
+            margin-bottom: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Search Removed App from App Store</h1>
+    <input type="text" id="search-term" placeholder="Enter app name or keyword">
+    <button onclick="searchApp()">Search</button>
+    <div id="app-info">
+        <h2>App Information</h2>
+        <div id="app-details"></div>
+    </div>
+    <script>
+        async function searchApp() {
+            const searchTerm = document.getElementById('search-term').value;
+            const appStoreUrl = `https://apps.apple.com/vn/app/id${searchTerm}`;
+            const waybackUrl = `https://archive.org/wayback/available?url=${appStoreUrl}`;
+
+            const response = await fetch(waybackUrl);
+            const data = await response.json();
+            
+            if (data.archived_snapshots && data.archived_snapshots.closest) {
+                const snapshotUrl = data.archived_snapshots.closest.url;
+                displayAppInfo(snapshotUrl);
+            } else {
+                displayAppInfo(null);
+            }
+        }
+
+        function displayAppInfo(snapshotUrl) {
+            const appDetailsDiv = document.getElementById('app-details');
+            appDetailsDiv.innerHTML = '';
+
+            if (!snapshotUrl) {
+                appDetailsDiv.innerHTML = '<p>No archived snapshots found.</p>';
+                document.getElementById('app-info').style.display = 'block';
+                return;
+            }
+
+            appDetailsDiv.innerHTML = `
+                <p><strong>Archived Snapshot:</strong> <a href="${snapshotUrl}" target="_blank">${snapshotUrl}</a></p>
+            `;
+            document.getElementById('app-info').style.display = 'block';
+        }
+    </script>
+</body>
+</html>
