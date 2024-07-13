@@ -3,62 +3,81 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Quản lý Nội dung</title>
+  <title>Quản lý nội dung - Chia sẻ ứng dụng</title>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <style>
+    /* CSS được cung cấp trước đó */
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      line-height: 1.6;
+      color: #333;
+      background-color: #f4f4f4;
+    }
+
+    .netlify-cms-app {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .nc-appHeader-content {
+      background-color: #2c3e50;
+      color: #ecf0f1;
+    }
+
+    .nc-appHeader-logo {
+      max-height: 40px;
+    }
+
+    .nc-entryEditor-container {
+      background-color: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .nc-entryEditor-header {
+      border-bottom: 1px solid #e0e0e0;
+      padding: 15px;
+    }
+
+    .nc-entryEditor-inputWrapper {
+      margin-bottom: 20px;
+    }
+
+    .nc-entryEditor-widget input,
+    .nc-entryEditor-widget textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+
+    .nc-entryEditor-widget-image .nc-imageControl-imageWrapper {
+      border-radius: 4px;
+      overflow: hidden;
+    }
+
+    .nc-entryEditor-controlPane-widget button {
+      background-color: #3498db;
+      color: #fff;
+      border: none;
+      padding: 10px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .nc-entryEditor-controlPane-widget button:hover {
+      background-color: #2980b9;
+    }
+  </style>
 </head>
 <body>
+  <!-- Include the script that builds the page and powers Netlify CMS -->
   <script src="https://unpkg.com/netlify-cms@^2.0.0/dist/netlify-cms.js"></script>
-  <script src="https://unpkg.com/react@16/umd/react.development.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script src="customWidget.js"></script>
   <script>
+    // Tùy chỉnh giao diện hoặc thêm các widget tùy chỉnh nếu cần
     CMS.registerPreviewStyle("/admin/preview.css");
-    
-    // Tùy chỉnh xem trước bài viết
-    const PostPreview = createClass({
-      render: function() {
-        const entry = this.props.entry;
-        const image = entry.getIn(['data', 'featured_image']);
-        return h('div', {},
-          h('h1', {}, entry.getIn(['data', 'title'])),
-          h('img', {src: image}),
-          h('div', {"className": "text"}, this.props.widgetFor('body'))
-        );
-      }
-    });
-    CMS.registerPreviewTemplate("blog", PostPreview);
-
-    // Thêm tùy chỉnh tiếng Việt
-    CMS.registerLocale('vi', {
-      "app": {
-        "header": {
-          "content": "Nội dung",
-          "workflow": "Quy trình",
-          "media": "Tập tin",
-          "quickAdd": "Thêm nhanh"
-        },
-        "app": {
-          "errorHeader": "Lỗi khi tải cấu hình CMS",
-          "configErrors": "Lỗi cấu hình",
-          "checkConfigYml": "Kiểm tra file config.yml của bạn."
-        },
-        "workflow": {
-          "workflow": "Quy trình",
-          "workflowHeading": "Quy trình biên tập",
-          "newPost": "Bài viết mới"
-        }
-      }
-    });
-
-    // Sử dụng ngôn ngữ tiếng Việt
-    CMS.registerPreviewStyle("/admin/preview.css");
-    CMS.registerLocale('vi', {});
-    CMS.registerWidget(
-      'color',
-      'file',
-      ColorControl,
-      ColorPreview
-    );
   </script>
 </body>
 </html>
