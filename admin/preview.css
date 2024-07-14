@@ -1,20 +1,41 @@
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
 body {
-  font-family: 'Roboto', sans-serif;
-  padding: 20px;
-  color: #333;
-}
-
-h1 {
-  font-size: 2em;
-  margin-bottom: 0.5em;
-}
-
-img {
-  max-width: 100%;
-  height: auto;
-  margin-bottom: 1em;
-}
-
-.text {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   line-height: 1.6;
+  color: #333;
+  background-color: #f4f4f4;
 }
+
+#nc-root {
+  height: 100%;
+  overflow: hidden;
+}
+
+.netlify-cms-app {
+  height: 100%;
+}
+
+.nc-app-container {
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.nc-app-content {
+  flex: 1;
+  overflow: auto;
+}
+
+.nc-entryEditor-container {
+  height: 100%;
+  overflow: auto;
+}
+
+/* Các quy tắc CSS khác giữ nguyên */

@@ -5,79 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Quản lý nội dung - Chia sẻ ứng dụng</title>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-  <style>
-    /* CSS được cung cấp trước đó */
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      line-height: 1.6;
-      color: #333;
-      background-color: #f4f4f4;
-    }
-
-    .netlify-cms-app {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-
-    .nc-appHeader-content {
-      background-color: #2c3e50;
-      color: #ecf0f1;
-    }
-
-    .nc-appHeader-logo {
-      max-height: 40px;
-    }
-
-    .nc-entryEditor-container {
-      background-color: #fff;
-      border-radius: 8px;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    }
-
-    .nc-entryEditor-header {
-      border-bottom: 1px solid #e0e0e0;
-      padding: 15px;
-    }
-
-    .nc-entryEditor-inputWrapper {
-      margin-bottom: 20px;
-    }
-
-    .nc-entryEditor-widget input,
-    .nc-entryEditor-widget textarea {
-      width: 100%;
-      padding: 10px;
-      border: 1px solid #ddd;
-      border-radius: 4px;
-    }
-
-    .nc-entryEditor-widget-image .nc-imageControl-imageWrapper {
-      border-radius: 4px;
-      overflow: hidden;
-    }
-
-    .nc-entryEditor-controlPane-widget button {
-      background-color: #3498db;
-      color: #fff;
-      border: none;
-      padding: 10px 15px;
-      border-radius: 4px;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-    }
-
-    .nc-entryEditor-controlPane-widget button:hover {
-      background-color: #2980b9;
-    }
-  </style>
+  <link rel="stylesheet" href="admin/preview.css">
 </head>
 <body>
-  <!-- Include the script that builds the page and powers Netlify CMS -->
+  <div id="nc-root"></div>
   <script src="https://unpkg.com/netlify-cms@^2.0.0/dist/netlify-cms.js"></script>
-  <script>
-    // Tùy chỉnh giao diện hoặc thêm các widget tùy chỉnh nếu cần
-    CMS.registerPreviewStyle("/admin/preview.css");
-  </script>
 </body>
 </html>
