@@ -12,12 +12,19 @@
   <script src="https://unpkg.com/netlify-cms@^2.0.0/dist/netlify-cms.js"></script>
   <script>
   window.addEventListener('load', function() {
+    const style = document.createElement('style');
+    style.textContent = `
+      .css-1ix3pzl-CollectionControlsContainer {
+        overflow-x: hidden !important;
+      }
+    `;
+    document.head.appendChild(style);
+    
     const resizeHandler = () => {
       document.body.style.height = window.innerHeight + 'px';
     };
     window.addEventListener('resize', resizeHandler);
     resizeHandler();
   });
-</script>
-</body>
+</script></body>
 </html>

@@ -1,65 +1,40 @@
-html, body, #nc-root {
-  height: 100%;
-  width: 100%;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-}
-
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  overflow: hidden !important;
 }
 
-.netlify-cms-app {
-  height: 100%;
-  display: flex;
-  flex-direction: column;
+#nc-root {
+  height: 100vh !important;
+  width: 100vw !important;
+  overflow: hidden !important;
 }
 
-.nc-app-container {
-  flex: 1;
-  display: flex;
-  overflow: hidden;
+.css-1hvrgvd-CollectionTopContainer-card-cardTop {
+  position: absolute !important;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
 }
 
-.nc-app-content {
-  flex: 1;
-  display: flex;
-  overflow: hidden;
+.css-1ix3pzl-CollectionControlsContainer {
+  height: calc(100vh - 66px) !important;
+  overflow-y: auto !important;
 }
 
-.nc-collectionPage {
-  display: flex;
-  width: 100%;
-  overflow: hidden;
+.css-1hvrgvd-CollectionTopContainer-card-cardTop {
+  overflow-x: auto !important;
 }
 
-.nc-collectionPage-sidebarContainer {
-  width: 250px;
-  overflow-y: auto;
-  flex-shrink: 0;
+.css-1ix3pzl-CollectionControlsContainer > div {
+  width: 100% !important;
 }
 
-.nc-collectionPage-mainContainer {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px;
-}
-
-/* Điều chỉnh cho màn hình nhỏ */
-@media (max-width: 768px) {
-  .nc-collectionPage {
-    flex-direction: column;
+@media (max-width: 799px) {
+  .css-1hvrgvd-CollectionTopContainer-card-cardTop {
+    position: static !important;
   }
   
-  .nc-collectionPage-sidebarContainer {
-    width: 100%;
-    max-height: 200px;
+  .css-1ix3pzl-CollectionControlsContainer {
+    height: auto !important;
   }
-}
-
-/* Đảm bảo tất cả các phần tử không vượt quá chiều rộng của container */
-* {
-  max-width: 100%;
-  box-sizing: border-box;
 }
