@@ -1,0 +1,44 @@
+import CMS from 'netlify-cms-app'
+import { de } from 'netlify-cms-locales'
+
+CMS.registerLocale('de', de)
+
+CMS.init()
+
+// Thêm CSS tùy chỉnh
+CMS.registerPreviewStyle(`
+  body {
+    overflow: hidden !important;
+  }
+  #nc-root {
+    height: 100vh !important;
+    width: 100vw !important;
+    overflow: hidden !important;
+  }
+  .css-1hvrgvd-CollectionTopContainer-card-cardTop {
+    position: absolute !important;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 100;
+  }
+  .css-1ix3pzl-CollectionControlsContainer {
+    height: calc(100vh - 66px) !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+  }
+  .css-1hvrgvd-CollectionTopContainer-card-cardTop {
+    overflow-x: auto !important;
+  }
+  .css-1ix3pzl-CollectionControlsContainer > div {
+    width: 100% !important;
+  }
+  @media (max-width: 799px) {
+    .css-1hvrgvd-CollectionTopContainer-card-cardTop {
+      position: static !important;
+    }
+    .css-1ix3pzl-CollectionControlsContainer {
+      height: auto !important;
+    }
+  }
+`, { raw: true })

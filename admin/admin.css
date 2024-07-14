@@ -1,0 +1,27 @@
+/* Ẩn thanh cuộn ngang và điều chỉnh kích thước phần tử */
+body {
+  overflow-x: hidden;
+}
+
+.cms .nc-gateway-sidebar {
+  width: 100%;
+}
+
+.nc-collection-sidebar {
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .nc-collection-sidebar {
+    position: relative;
+    width: 100%;
+    flex: none;
+  }
+
+  .nc-collection-content {
+    width: 100%;
+  }
+}
