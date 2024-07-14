@@ -3,74 +3,42 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>App Store</title>
+  <title>App Store Interface</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-    }
-    .app-list {
-      display: flex;
-      flex-wrap: wrap;
-    }
-    .app-item {
-      border: 1px solid #ddd;
-      border-radius: 5px;
-      margin: 10px;
-      padding: 15px;
-      width: calc(33.333% - 40px);
-      box-sizing: border-box;
-      text-align: center;
-    }
-    .app-item img {
-      max-width: 100px;
-      height: auto;
-    }
-    .app-item h2 {
-      font-size: 20px;
-      margin: 10px 0;
-    }
-    .app-item p {
-      margin: 5px 0;
-    }
-    .download-link {
-      color: #007BFF;
-      text-decoration: none;
-      font-weight: bold;
-    }
+    /* CSS cho giao diện */
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
-  <h1>App Store</h1>
-  <div class="app-list" id="app-list"></div>
+  <h1>Danh sách bài viết</h1>
+  <ul id="post-list"></ul>
 
   <script>
     async function fetchPosts() {
-      const response = await fetch('/api/posts'); // Cần thay đổi URL đến API của bạn
-      const posts = await response.json();
-      return posts;
+      try {
+        const response = await fetch('/api/posts');
+        const data = await response.json();
+        return data.posts;
+      } catch (error) {
+        console.error('Lỗi khi lấy danh sách bài viết:', error);
+        return [];
+      }
     }
 
-    function displayPosts(posts) {
-      const appList = document.getElementById('app-list');
-      appList.innerHTML = '';
+    async function displayPosts() {
+      const postList = document.getElementById('post-list');
+      const posts = await fetchPosts();
+      
       posts.forEach(post => {
-        const appItem = document.createElement('div');
-        appItem.className = 'app-item';
-        appItem.innerHTML = `
-          <img src="${post.icon}" alt="${post.title}">
-          <h2>${post.title}</h2>
-          <p><strong>Nhà phát triển:</strong> ${post.developer}</p>
-          <p><strong>Phiên bản iOS:</strong> ${post.ios_version}</p>
-          <p><strong>Phiên bản ứng dụng:</strong> ${post.app_version}</p>
-          <p><strong>Thể loại:</strong> ${post.category}</p>
-          <a href="${post.download_link}" class="download-link">Tải về</a>
-        `;
-        appList.appendChild(appItem);
+        const listItem = document.createElement('li');
+        const link = document.createElement('a');
+        link.href = post.link;
+        link.textContent = post.title;
+        listItem.appendChild(link);
+        postList.appendChild(listItem);
       });
     }
 
-    fetchPosts().then(posts => displayPosts(posts));
+    displayPosts();
   </script>
 </body>
 </html>
