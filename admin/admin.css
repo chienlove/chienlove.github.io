@@ -1,27 +1,40 @@
-/* Ẩn thanh cuộn ngang và điều chỉnh kích thước phần tử */
+/* Ẩn thanh cuộn ngang */
 body {
   overflow-x: hidden;
 }
 
-.cms .nc-gateway-sidebar {
-  width: 100%;
-}
-
+/* Điều chỉnh sidebar cho phù hợp với màn hình nhỏ */
 .nc-collection-sidebar {
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
   width: 100%;
+  overflow-y: auto;
+  padding: 0 10px;
 }
 
+.nc-collection-sidebar h2, .nc-collection-sidebar label {
+  font-size: 1.2em;
+}
+
+.nc-collection-sidebar .nc-collection-item {
+  padding: 10px;
+}
+
+.nc-collection-sidebar input {
+  width: calc(100% - 20px);
+}
+
+/* Điều chỉnh layout cho màn hình nhỏ */
 @media (max-width: 768px) {
   .nc-collection-sidebar {
     position: relative;
-    width: 100%;
     flex: none;
   }
 
   .nc-collection-content {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .nc-collection-content .nc-collection-item {
     width: 100%;
   }
 }
