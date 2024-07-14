@@ -1,13 +1,47 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Quản lý nội dung - Chia sẻ ứng dụng</title>
-  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-  <link rel="stylesheet" href="admin/admin.css">
-</head>
-<body>
-  <script src="https://unpkg.com/netlify-cms@^2.9.0/dist/netlify-cms.js"></script>
- </body>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Netlify CMS</title>
+    <link rel="stylesheet" href="custom-styles.css" />
+  </head>
+  <body>
+    <script src="https://unpkg.com/netlify-cms@^2.9.0/dist/netlify-cms.js"></script>
+    <script>
+      const style = document.createElement('style');
+      style.textContent = `
+        body {
+          overflow-x: hidden;
+        }
+        .nc-collection-sidebar {
+          width: 100%;
+          overflow-y: auto;
+          padding: 0 10px;
+        }
+        .nc-collection-sidebar h2, .nc-collection-sidebar label {
+          font-size: 1.2em;
+        }
+        .nc-collection-sidebar .nc-collection-item {
+          padding: 10px;
+        }
+        .nc-collection-sidebar input {
+          width: calc(100% - 20px);
+        }
+        @media (max-width: 768px) {
+          .nc-collection-sidebar {
+            position: relative;
+            flex: none;
+          }
+          .nc-collection-content {
+            width: 100%;
+            margin-left: 0;
+          }
+          .nc-collection-content .nc-collection-item {
+            width: 100%;
+          }
+        }
+      `;
+      document.head.appendChild(style);
+    </script>
+  </body>
 </html>
