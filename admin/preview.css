@@ -19,18 +19,38 @@ body {
 
 .netlify-cms-app {
   height: 100%;
-}
-
-.nc-app-container {
-  height: 100%;
-  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
+.nc-app-container {
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+
 .nc-app-content {
   flex: 1;
-  overflow: auto;
+  display: flex;
+  overflow: hidden;
+}
+
+.nc-collectionPage {
+  display: flex;
+  width: 100%;
+  overflow: hidden;
+}
+
+.nc-collectionPage-sidebarContainer {
+  width: 250px;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.nc-collectionPage-mainContainer {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
 }
 
 .nc-entryEditor-container {
@@ -38,4 +58,7 @@ body {
   overflow: auto;
 }
 
-/* Các quy tắc CSS khác giữ nguyên */
+/* Đảm bảo không có phần tử nào vượt quá chiều rộng của container */
+.netlify-cms-app * {
+  max-width: 100%;
+}
