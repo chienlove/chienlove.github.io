@@ -4,6 +4,106 @@
   <meta charset="UTF-8">
   <title>Netlify CMS</title>
   <link rel="stylesheet" href="https://unpkg.com/netlify-cms@^2.9.0/dist/netlify-cms.css">
+  <style>
+    /* Cơ bản */
+    body {
+      overflow-x: hidden;
+      margin: 0;
+      padding: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    /* Sidebar */
+    .nc-collection-sidebar {
+      width: 100%;
+      overflow-y: auto;
+      padding: 0 10px;
+      background-color: #f7f7f7;
+      border-right: 1px solid #ddd;
+    }
+
+    .nc-collection-sidebar h2, .nc-collection-sidebar label {
+      font-size: 1.2em;
+    }
+
+    .nc-collection-sidebar .nc-collection-item {
+      padding: 10px;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .nc-collection-sidebar input {
+      width: calc(100% - 20px);
+      margin: 10px 0;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    /* Nội dung */
+    .nc-collection-content {
+      width: 100%;
+      padding: 10px;
+    }
+
+    /* Ẩn mục xem trước */
+    .nc-previewPane {
+      display: none !important;
+    }
+
+    /* Điều chỉnh chiều rộng cho mục thêm bài viết */
+    .nc-entryEditor {
+      width: 100% !important;
+      margin: 0 auto !important;
+    }
+
+    /* Media Queries cho thiết bị di động */
+    @media (max-width: 768px) {
+      .nc-collection-sidebar {
+        width: 100%;
+        padding: 10px;
+      }
+
+      .nc-collection-content {
+        width: 100%;
+        margin-left: 0;
+      }
+
+      .nc-collection-item {
+        display: flex;
+        flex-direction: column;
+        padding: 10px;
+      }
+
+      .nc-collection-item label {
+        margin-bottom: 5px;
+      }
+
+      .nc-collection-item input,
+      .nc-collection-item select,
+      .nc-collection-item textarea {
+        width: calc(100% - 20px);
+        margin-bottom: 10px;
+        padding: 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+    }
+
+    /* Tìm kiếm */
+    .search-bar {
+      width: 100%;
+      padding: 10px;
+      background-color: #fff;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .search-bar input {
+      width: calc(100% - 20px);
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+  </style>
 </head>
 <body>
   <script src="https://unpkg.com/netlify-cms@^2.9.0/dist/netlify-cms.js"></script>
@@ -11,103 +111,8 @@
     // Thêm CSS trực tiếp bằng JavaScript
     const style = document.createElement('style');
     style.textContent = `
-      /* Cơ bản */
-      body {
-        overflow-x: hidden;
-        margin: 0;
-        padding: 0;
-        font-family: Arial, sans-serif;
-      }
-
-      /* Sidebar */
-      .nc-collection-sidebar {
-        width: 100%;
-        overflow-y: auto;
-        padding: 0 10px;
-        background-color: #f7f7f7;
-        border-right: 1px solid #ddd;
-      }
-
-      .nc-collection-sidebar h2, .nc-collection-sidebar label {
-        font-size: 1.2em;
-      }
-
-      .nc-collection-sidebar .nc-collection-item {
-        padding: 10px;
-        border-bottom: 1px solid #ddd;
-      }
-
-      .nc-collection-sidebar input {
-        width: calc(100% - 20px);
-        margin: 10px 0;
-        padding: 8px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
-      }
-
-      /* Nội dung */
-      .nc-collection-content {
-        width: 100%;
-        padding: 10px;
-      }
-
-      /* Ẩn mục xem trước */
       .nc-previewPane {
         display: none !important;
-      }
-
-      /* Điều chỉnh chiều rộng cho mục thêm bài viết */
-      .nc-entryEditor {
-        width: 100% !important;
-        margin: 0 auto !important;
-      }
-
-      /* Media Queries cho thiết bị di động */
-      @media (max-width: 768px) {
-        .nc-collection-sidebar {
-          width: 100%;
-          padding: 10px;
-        }
-
-        .nc-collection-content {
-          width: 100%;
-          margin-left: 0;
-        }
-
-        .nc-collection-item {
-          display: flex;
-          flex-direction: column;
-          padding: 10px;
-        }
-
-        .nc-collection-item label {
-          margin-bottom: 5px;
-        }
-
-        .nc-collection-item input,
-        .nc-collection-item select,
-        .nc-collection-item textarea {
-          width: calc(100% - 20px);
-          margin-bottom: 10px;
-          padding: 8px;
-          border: 1px solid #ccc;
-          border-radius: 4px;
-        }
-      }
-
-      /* Tìm kiếm */
-      .search-bar {
-        width: 100%;
-        padding: 10px;
-        background-color: #fff;
-        border-bottom: 1px solid #ddd;
-      }
-
-      .search-bar input {
-        width: calc(100% - 20px);
-        padding: 8px;
-        border: 1px solid #ccc;
-        border-radius: 4px;
       }
     `;
     document.head.appendChild(style);
@@ -134,13 +139,63 @@
       });
     }
 
-    // Chờ Netlify CMS tải xong rồi ẩn mục xem trước
+    // Ẩn mục xem trước sau khi Netlify CMS đã tải xong
     window.addEventListener('load', () => {
-      const previewPane = document.querySelector('.nc-previewPane');
-      if (previewPane) {
-        previewPane.style.display = 'none';
-      }
+      const observer = new MutationObserver(() => {
+        const previewPane = document.querySelector('.nc-previewPane');
+        if (previewPane) {
+          previewPane.style.display = 'none';
+        }
+      });
+
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true
+      });
     });
+
+    // Thêm chức năng danh sách bài viết
+    function addManagePosts() {
+      const managePosts = document.createElement('div');
+      managePosts.className = 'manage-posts';
+      managePosts.innerHTML = `
+        <h2>Danh sách bài viết</h2>
+        <ul id="post-list"></ul>
+      `;
+      document.body.appendChild(managePosts);
+
+      const postList = document.getElementById('post-list');
+
+      // Giả sử có một API để lấy danh sách bài viết
+      const posts = [
+        { id: 1, title: 'Bài viết 1', content: 'Nội dung bài viết 1' },
+        { id: 2, title: 'Bài viết 2', content: 'Nội dung bài viết 2' },
+        // Các bài viết khác
+      ];
+
+      posts.forEach(post => {
+        const postItem = document.createElement('li');
+        postItem.innerHTML = `
+          <h3>${post.title}</h3>
+          <p>${post.content}</p>
+          <button onclick="editPost(${post.id})">Sửa</button>
+          <button onclick="deletePost(${post.id})">Xóa</button>
+        `;
+        postList.appendChild(postItem);
+      });
+    }
+
+    function editPost(id) {
+      // Hàm xử lý sửa bài viết
+      alert('Chức năng sửa bài viết: ' + id);
+    }
+
+    function deletePost(id) {
+      // Hàm xử lý xóa bài viết
+      alert('Chức năng xóa bài viết: ' + id);
+    }
+
+    addManagePosts();
   </script>
 </body>
 </html>

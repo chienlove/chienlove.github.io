@@ -8,7 +8,7 @@ public_folder: "/images/uploads"
 collections:
   - name: "category"
     label: "Chuyên mục"
-    folder: "content/categories"
+    folder: "content/apps"
     create: true
     slug: "{{slug}}"
     fields:
