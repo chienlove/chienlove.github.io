@@ -5,7 +5,7 @@ exports.handler = async function(event, context) {
   try {
     console.log('Starting handler function');
     
-    const postsDirectory = path.join(__dirname, '/../../content/apps');
+    const postsDirectory = path.join(__dirname, 'content/apps');
     console.log('Posts directory:', postsDirectory);
     
     console.log('Attempting to read directory');

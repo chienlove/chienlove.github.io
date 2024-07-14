@@ -1,7 +1,3 @@
-[build]
-  functions = "netlify/functions"
-
-[[redirects]]
-  from = "/api/posts"
-  to = "/.netlify/functions/posts"
-  status = 200
+[functions]
+  directory = "functions"
+  included_files = ["content/**"]

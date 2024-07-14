@@ -1,44 +1,88 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>App Store Interface</title>
-  <style>
-    /* CSS cho giao diện */
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Danh sách bài viết</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        #posts-list {
+            list-style-type: none;
+            padding: 0;
+        }
+        #posts-list li {
+            background: #f4f4f4;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        #posts-list li a {
+            color: #3498db;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        #posts-list li a:hover {
+            text-decoration: underline;
+        }
+        #loading, #error {
+            text-align: center;
+            font-style: italic;
+        }
+    </style>
 </head>
 <body>
-  <h1>Danh sách bài viết</h1>
-  <ul id="post-list"></ul>
+    <h1>Danh sách bài viết</h1>
+    <div id="loading">Đang tải danh sách bài viết...</div>
+    <div id="error" style="display: none; color: red;"></div>
+    <ul id="posts-list"></ul>
 
-  <script>
-    async function fetchPosts() {
-      try {
-        const response = await fetch('/api/posts');
-        const data = await response.json();
-        return data.posts;
-      } catch (error) {
-        console.error('Lỗi khi lấy danh sách bài viết:', error);
-        return [];
-      }
-    }
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const postsListElement = document.getElementById('posts-list');
+            const loadingElement = document.getElementById('loading');
+            const errorElement = document.getElementById('error');
 
-    async function displayPosts() {
-      const postList = document.getElementById('post-list');
-      const posts = await fetchPosts();
-      
-      posts.forEach(post => {
-        const listItem = document.createElement('li');
-        const link = document.createElement('a');
-        link.href = post.link;
-        link.textContent = post.title;
-        listItem.appendChild(link);
-        postList.appendChild(listItem);
-      });
-    }
-
-    displayPosts();
-  </script>
+            fetch('/.netlify/functions/posts')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    loadingElement.style.display = 'none';
+                    if (data.posts && data.posts.length > 0) {
+                        data.posts.forEach(post => {
+                            const li = document.createElement('li');
+                            const a = document.createElement('a');
+                            a.href = post.link;
+                            a.textContent = post.title;
+                            li.appendChild(a);
+                            postsListElement.appendChild(li);
+                        });
+                    } else {
+                        errorElement.textContent = 'Không có bài viết nào.';
+                        errorElement.style.display = 'block';
+                    }
+                })
+                .catch(error => {
+                    loadingElement.style.display = 'none';
+                    errorElement.textContent = 'Đã xảy ra lỗi khi tải danh sách bài viết: ' + error.message;
+                    errorElement.style.display = 'block';
+                    console.error('There was a problem with the fetch operation:', error);
+                });
+        });
+    </script>
 </body>
 </html>
