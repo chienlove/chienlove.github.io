@@ -3,7 +3,7 @@ const path = require('path');
 
 exports.handler = async function(event, context) {
   try {
-    const postsDirectory = path.join(__dirname, '../../content/apps');
+    const postsDirectory = path.join(__dirname, '/content/apps');
     const filenames = fs.readdirSync(postsDirectory);
 
     const posts = filenames.map(filename => {
