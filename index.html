@@ -53,7 +53,7 @@
             const loadingElement = document.getElementById('loading');
             const errorElement = document.getElementById('error');
 
-            fetch('/.netlify/functions/posts')
+            fetch('/api/posts')
                 .then(response => {
                     if (!response.ok) {
                         throw new Error('Network response was not ok');
