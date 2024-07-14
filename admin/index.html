@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Quản lý nội dung - Chia sẻ ứng dụng</title>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <link rel="stylesheet" href="admin/preview.css">
@@ -10,5 +10,14 @@
 <body>
   <div id="nc-root"></div>
   <script src="https://unpkg.com/netlify-cms@^2.0.0/dist/netlify-cms.js"></script>
+  <script>
+  window.addEventListener('load', function() {
+    const resizeHandler = () => {
+      document.body.style.height = window.innerHeight + 'px';
+    };
+    window.addEventListener('resize', resizeHandler);
+    resizeHandler();
+  });
+</script>
 </body>
 </html>
