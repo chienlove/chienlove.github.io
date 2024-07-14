@@ -1,5 +1,9 @@
+[functions]
+  directory = "netlify/functions"
+  included_files = ["content/**"]
+
 [build]
-  functions = "netlify/functions"  # Đảm bảo đường dẫn này đúng
+  functions = "netlify/functions"
 
 [[redirects]]
   from = "/api/*"
