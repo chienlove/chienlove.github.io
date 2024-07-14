@@ -51,6 +51,17 @@
         padding: 10px;
       }
 
+      /* Ẩn mục xem trước */
+      .nc-previewPane {
+        display: none !important;
+      }
+
+      /* Điều chỉnh chiều rộng cho mục thêm bài viết */
+      .nc-entryEditor {
+        width: 100% !important;
+        margin: 0 auto !important;
+      }
+
       /* Media Queries cho thiết bị di động */
       @media (max-width: 768px) {
         .nc-collection-sidebar {
@@ -98,17 +109,6 @@
         border: 1px solid #ccc;
         border-radius: 4px;
       }
-
-      /* Ẩn mục xem trước */
-      .nc-previewPane {
-        display: none;
-      }
-
-      /* Điều chỉnh chiều rộng cho mục thêm bài viết */
-      .nc-entryEditor {
-        width: 100%;
-        margin: 0 auto;
-      }
     `;
     document.head.appendChild(style);
 
@@ -133,6 +133,14 @@
         }
       });
     }
+
+    // Chờ Netlify CMS tải xong rồi ẩn mục xem trước
+    window.addEventListener('load', () => {
+      const previewPane = document.querySelector('.nc-previewPane');
+      if (previewPane) {
+        previewPane.style.display = 'none';
+      }
+    });
   </script>
 </body>
 </html>
