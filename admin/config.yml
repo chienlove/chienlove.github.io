@@ -28,15 +28,12 @@ collections:
       - {label: "Mô tả ngắn", name: "short_description", widget: "text"}
       - {label: "Mô tả chi tiết", name: "description", widget: "markdown"}
       - {label: "Nhà phát triển", name: "developer", widget: "string"}
-      - {label: "Thể loại", name: "category", widget: "select", options: ["Giáo dục", "Trò chơi", "Công cụ", "Năng suất", "Xã hội", "Khác"]}
+      - {label: "Thể loại", name: "category", widget: "select", options: ["Ứng dụng", "Games", "Tool jailbreak", "Thủ thuật", "File ipa", "Khác"]}
       - {label: "Chuyên mục", name: "categories", widget: "relation", collection: "category", search_fields: ["title"], value_field: "title", multiple: true}
-      - {label: "Giá", name: "price", widget: "string"}
-      - {label: "Xếp hạng", name: "rating", widget: "number", min: 0, max: 5, step: 0.1}
-      - {label: "Số lượt tải", name: "downloads", widget: "number"}
+      
       - {label: "Phiên bản", name: "version", widget: "string"}
       - {label: "Kích thước", name: "size", widget: "string"}
-      - {label: "Yêu cầu hệ thống", name: "requirements", widget: "string"}
+      - {label: "iOS tương thích", name: "requirements", widget: "string"}
       - {label: "Ngôn ngữ hỗ trợ", name: "languages", widget: "list"}
       - {label: "Liên kết tải App Store", name: "app_store_link", widget: "string"}
-      - {label: "Liên kết tải Google Play", name: "google_play_link", widget: "string"}
       - {label: "Từ khóa", name: "tags", widget: "list"}
