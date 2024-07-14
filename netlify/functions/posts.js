@@ -2,27 +2,32 @@ const fs = require('fs');
 const path = require('path');
 
 exports.handler = async function(event, context) {
-  console.log('Function started');
   try {
-    // Sử dụng đường dẫn tương đối
-    const postsDirectory = path.join(__dirname, '..', '..', 'content', 'apps');
-    console.log('Posts directory:', postsDirectory);
+    const postsDirectory = path.join(__dirname, '../../content/apps');
+    const filenames = fs.readdirSync(postsDirectory);
 
-    // Kiểm tra xem thư mục có tồn tại không
-    if (!fs.existsSync(postsDirectory)) {
-      console.error('Directory does not exist:', postsDirectory);
+    const posts = filenames.map(filename => {
+      const filePath = path.join(postsDirectory, filename);
+      const fileContents = fs.readFileSync(filePath, 'utf8');
+
+      // Extract the title from the Markdown front matter
+      const match = fileContents.match(/title:\s*(.*)/);
+      const title = match ? match[1] : 'No title';
+
       return {
-        statusCode: 500,
-        body: JSON.stringify({ error: 'Posts directory not found' }),
+        title: title,
+        link: `/apps/${filename.replace('.md', '')}`,
       };
-    }
+    });
 
-    // Rest of your code...
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ posts }),
+    };
   } catch (error) {
-    console.error('Error in function:', error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: `An internal server error occurred: ${error.message}` }),
+      body: JSON.stringify({ error: error.message }),
     };
   }
 };
