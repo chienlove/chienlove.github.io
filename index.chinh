@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta content='width=device-width, initial-scale=1.0, maximum-scale=2.0, user-scalable=0' name='viewport' />
+<meta name="revisit-after" content="14 days">
+    <meta name="author" content="ChienLove"> 
+    <meta itemprop="name" content="Cydia/Zebra Repository & app, tool Jailbreak">
+    <meta itemprop="description" content="Kho lưu trữ Cydia/Zebra, app++ và tool jailbreak cho iOS.">
+    <meta itemprop="image" content="https://repo.storeios.net/assets/avatar.png"> 
+    <meta property="og:title" content="Cydia/Zebra Repository & App, Tool Jailbreak"> 
+    <meta property="og:type" content="article">
+    <meta property="og:image" content="https://repo.storeios.net/CydiaIcon.png">
+    <meta property="og:description" content="Kho lưu trữ Cydia/Zebra, app++ và tool jailbreak cho iOS."> 
+    <meta property="og:site_name" content="Chienlove Repository">
+    <title>Chien Love - Cydia/Zebra Repository</title>
+    <meta name="keywords" content="chienlove repo, chien love repo, tweaks, tool jailbreak, ipa, file ipa, jailbreak, ipa crack, storeios">
+    <meta name="description" content="Kho lưu trữ Cydia/Zebra, app++ và tool jailbreak cho iOS.">
+    <meta itemprop="image" content="https://repo.storeios.net/assets/avatar.png">
+    <link rel="icon" href="assets/iconmac2.png">
+    <link rel="stylesheet" type="text/css" href="/css/style.css">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/css/bootstrap.min.css" rel="stylesheet">    
+    <script src="/js/all.js?version=1"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.13.0/css/fontawesome.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.13.0/css/solid.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.13.0/css/brands.min.css">
+   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797"      crossorigin="anonymous"></script>
+<style>
+  body, .navbar-brand, .nav-link, .form-label, .form-control, .btn, .text-white {
+          font-family: 'Nunito', sans-serif;
+      }
+      footer.footer {
+      margin-top: 20px;
+      }
+      
+  #download-btn {
+      background-color: red; 
+      color: white; 
+      width: 70%; 
+      padding: 10px; 
+      text-align: center;
+      display: block;
+      text-decoration: none;
+      border: none;
+      border-radius: 5px;
+      margin-bottom: 10px;
+  }
+  
+  #download-url-btn {
+      background-color: green;
+      color: white;
+      width: 60%;
+      padding: 10px; 
+      text-align: center;
+      display: block;
+      text-decoration: none;
+      border: none; 
+      border-radius: 5px; 
+      margin-bottom: 10px; 
+  }
+  
+  #install-ipa-btn {
+      background-color: blue;
+      color: white;
+      width: 60%;
+      padding: 10px;
+      text-align: center;
+      display: block;
+      text-decoration: none;
+      border: none;
+      border-radius: 5px;
+      margin-bottom: 10px;
+  }
+
+  #retry-btn {
+      background-color: gray;
+      color: white;
+      width: 80%;
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+  }
+  
+  .button-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 20px;
+  }
+  .search-results {
+            display: none;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .search-result-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        .search-result-item:last-child {
+            border-bottom: none;
+        }
+        .search-result-item img {
+            width: 40px;
+            height: 40px;
+            margin-right: 10px;
+        }
+  </style>
+</head>
+
+<body>
+  <!-- Navbar -->
+  <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <img src="/CydiaIcon.png" alt="Logo" height="30">
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarSupportedContent">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Tweaks</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Apps</a>
+                    </li>
+                </ul>
+                <form class="d-flex">
+                    <input class="form-control me-2" type="search" placeholder="Tìm kiếm" id="searchInput">
+                    <button class="btn btn-outline-success" type="button" onclick="search()">Tìm</button>
+                </form>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div id="searchResults" class="search-results">
+            <p id="resultCount"></p>
+            <div id="resultList"></div>
+        </div>
+
+        <!-- Nội dung trang web hiện tại của bạn -->
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function search() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const articles = document.getElementsByTagName('article');
+            const searchResults = document.getElementById('searchResults');
+            const resultList = document.getElementById('resultList');
+            const resultCount = document.getElementById('resultCount');
+            let count = 0;
+
+            resultList.innerHTML = '';
+
+            for (let article of articles) {
+                const title = article.querySelector('.item-title').textContent.toLowerCase();
+                const subtitle = article.querySelector('.item-subtitle').textContent.toLowerCase();
+                if (title.includes(searchTerm) || subtitle.includes(searchTerm)) {
+                    count++;
+                    const img = article.querySelector('img').src;
+                    const link = article.querySelector('a').getAttribute('onclick').replace("location='", "").replace("'", "");
+                    resultList.innerHTML += `
+                        <div class="search-result-item">
+                            <a href="${link}">
+                                <img src="${img}" alt="${title}">
+                                <span>${title}</span>
+                            </a>
+                        </div>
+                    `;
+                }
+            }
+
+            resultCount.textContent = `Tìm thấy ${count} kết quả`;
+            searchResults.style.display = count > 0 ? 'block' : 'none';
+        }
+    </script>
+
+
+<div class="body">
+	<div class="page-content">
+	<panel style="margin-top: -20px;">
+			<fieldset>
+				<a href="zbra://sources/add/https://storeios.net/" target="_blank" class="">
+				<img class="icon" src="/assets/zebraicon.png">
+					<div>
+						<div>
+							<label>
+								<b>
+									Nhấp để thêm vào Zebra<sup><small>™</small></sup>							</b>
+							</label>
+						</div>
+					</div>
+				</a>
+			
+				<a href="cydia://url/https://cydia.saurik.com/api/share#?source=https://storeios.net/" target="_blank" class="">
+				<img class="icon" src="/assets/cydiaicon.png">
+					<div>
+						<div>
+							<label>
+								<b>
+									Nhấp để thêm vào Cydia<sup><small>™</small></sup>							</b>
+							</label>
+						</div>
+					</div>
+				</a>
+			</fieldset>
+  
+         <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797"
+     crossorigin="anonymous"></script>
+<!-- Storeios ads -->
+<ins class="adsbygoogle"
+     style="display:block"
+     data-ad-client="ca-pub-3905625903416797"
+     data-ad-slot="5160182988"
+     data-ad-format="auto"
+     data-full-width-responsive="true"></ins>
+<script>
+     (adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
+			<fieldset>
+				<div>
+					<div style="float: right; vertical-align: middle; text-align: center; width: 200px">
+						<span style="font-size: 24px">
+						Chien Love Repo						</span>
+						<br>
+					</div>
+					<img class="icon" src="/assets/avatar.png" style="width:64px; height:64px; vertical-align: top;">
+					<hr>
+					<p>
+						 Tweaks & app for iOS<sup><small>™</small></sup>: 						<br>
+						<strong><a href="https://storeios.net/">https://storeios.net/</a></strong>
+					</p>
+				</div>
+			</fieldset>
+			<fieldset>
+				<a href="mailto:boypink93@gmail.com" target="_blank" class="">
+				<img class="icon" src="/assets/emailicon.png">
+					<div>
+						<div>
+							<label>
+								<p>Liên hệ</p>
+							</label>
+						</div>
+					</div>
+				</a>
+                <a href="https://twitter.com/ChienLove93/" class="">
+                    <img class="icon" src="/assets/twittericon.png">
+                    <div>
+                        <div>
+                            <label>
+                                <p>Follow me</p>
+                            </label>
+                        </div>
+                    </div>
+                </a>
+                <a href="https://www.facebook.com/boypink88" class="">
+                    <img class="icon" src="/assets/facebookicon.png">
+                    <div>
+                        <div>
+                            <label>
+                                <p>Facebook</p>
+                            </label>
+                        </div>
+                    </div>
+                </a>
+			</fieldset>
+		</panel>
+<center>
+<input type="text" id="myInput" onkeyup="myFunction()" placeholder="tìm kiếm">
+</center>
+   <div class="phdr">Tool Jailbreak | (Signed ✅)</div>
+		<div class="list media-list inset">
+			<ul id="myUL">
+              <article>
+			<li>
+					<a onclick="location='/app/usescarlet.html'" class="item-link item-content">
+						<div class="item-media"><img style="border-radius: 23.3%;" src="https://chienlove.github.io/assets/usescarlet.png" width="60"></div>
+						<div class="item-inner">
+							<div class="item-title-row">
+							<i class="fas fa-chevron-right"></i>
+								<div class="item-title">UseScarlet</div>
+							</div>
+							<div class="item-subtitle">getscarlet</div>
+						</div>
+					</a>
+				</li>
+              </article>
+              <article>
+         <li>
+					<a onclick="location='/app/dopamine.html'" class="item-link item-content">
+						<div class="item-media"><img style="border-radius: 23.3%;" src="https://chienlove.github.io/assets/dopamine.png" width="60"></div>
+						<div class="item-inner">
+							<div class="item-title-row">
+							<i class="fas fa-chevron-right"></i>
+								<div class="item-title">Dopamine</div>
+							</div>
+							<div class="item-subtitle">opa334</div>
+						</div>
+					</a>
+				</li>
+              </article>
+              <article>
+         <li>
+					<a onclick="location='/app/xinaa15.html'" class="item-link item-content">
+						<div class="item-media"><img style="border-radius: 23.3%;" src="https://chienlove.github.io/assets/xinaa15.png" width="60"></div>
+						<div class="item-inner">
+							<div class="item-title-row">
+							<i class="fas fa-chevron-right"></i>
+								<div class="item-title">XinaA15</div>
+							</div>
+							<div class="item-subtitle">@xina520</div>
+						</div>
+					</a>
+				</li>
+              </article>
+              <article>
+            <li>
+					<a onclick="location='/app/com.filzaescaped15.html'" class="item-link item-content">
+						<div class="item-media"><img style="border-radius: 23.3%;" src="https://chienlove.github.io/assets/filzaescaped.png" width="60"></div>
+						<div class="item-inner">
+							<div class="item-title-row">
+							<i class="fas fa-chevron-right"></i>
+								<div class="item-title">FilzaEscaped15</div>
+							</div>
+							<div class="item-subtitle">AppleDry05</div>
+						</div>
+					</a>
+				</li>
+              </article>
+              <article>
+            <li>
+					<a onclick="location='/app/plankfilza.html'" class="item-link item-content">
+						<div class="item-media"><img style="border-radius: 23.3%;" src="https://chienlove.github.io/assets/filzaescaped.png" width="60"></div>
+						<div class="item-inner">
+							<div class="item-title-row">
+							<i class="fas fa-chevron-right"></i>
+								<div class="item-title">PlankFilza</div>
+							</div>
+							<div class="item-subtitle">@_bplank</div>
+						</div>
+					</a>
+				</li>
+              </article>
+              <article>
+				<li>
+					<a onclick="location='/app/com.unc0ver.html'" class="item-link item-content">
+						<div class="item-media"><img style="border-radius: 23.3%;" src="https://chienlove.github.io/assets/unc0ver.png" width="60"></div>
+						<div class="item-inner">
+							<div class="item-title-row">
+							<i class="fas fa-chevron-right"></i>
+								<div class="item-title">Unc0ver</div>
+							</div>
+							<div class="item-subtitle">Pwn20wnd</div>
+						</div>
+					</a>
+				</li>
+              </article>
+				<li>
+					<a onclick="location='/app/com.taurine.html'" class="item-link item-content">
+						<div class="item-media"><img style="border-radius: 23.3%;" src="/assets/Taurine.png" width="60"></div>
+						<div class="item-inner">
+							<div class="item-title-row">
+							<i class="fas fa-chevron-right"></i>
+								<div class="item-title">Taurine</div>
+							</div>
+							<div class="item-subtitle">Odyssey Team</div>
+						</div>
+					</a>
+				</li>
+            <li>
+					<a onclick="location='/app/com.chimera.html'" class="item-link item-content">
+						<div class="item-media"><img style="border-radius: 23.3%;" src="/assets/chimera.png" width="60"></div>
+						<div class="item-inner">
+							<div class="item-title-row">
+							<i class="fas fa-chevron-right"></i>
+								<div class="item-title">Chimera</div>
+							</div>
+							<div class="item-subtitle">CoolStar</div>
+						</div>
+					</a>
+				</li>
+            <li>
+					<a onclick="location='/app/com.odyssey.html'" class="item-link item-content">
+						<div class="item-media"><img style="border-radius: 23.3%;" src="/assets/odyssey.png" width="60"></div>
+						<div class="item-inner">
+							<div class="item-title-row">
+							<i class="fas fa-chevron-right"></i>
+								<div class="item-title">Odyssey</div>
+							</div>
+							<div class="item-subtitle">CoolStar Team</div>
+						</div>
+					</a>
+				</li>
+            <li>
+					<a onclick="location='/app/com.phoenix.html'" class="item-link item-content">
+						<div class="item-media"><img style="border-radius: 23.3%;" src="/assets/phoenix.png" width="60"></div>
+						<div class="item-inner">
+							<div class="item-title-row">
+							<i class="fas fa-chevron-right"></i>
+								<div class="item-title">Phoenix</div>
+							</div>
+							<div class="item-subtitle">PhoenixPwn</div>
+						</div>
+					</a>
+				</li>
+            <li>
+					<a onclick="location='/app/freya.html'" class="item-link item-content">
+						<div class="item-media"><img style="border-radius: 23.3%;" src="/assets/freya.png" width="60"></div>
+						<div class="item-inner">
+							<div class="item-title-row">
+							<i class="fas fa-chevron-right"></i>
+								<div class="item-title">Freya</div>
+							</div>
+							<div class="item-subtitle">pwned4ever</div>
+						</div>
+					</a>
+				</li>
+			</ul>
+         <div class="phdr">App++</div>
+		<div class="list media-list inset">
+			<ul id="myUL">
+				<li>
+					<a onclick="location='/app/com.videostar.html'" class="item-link item-content">
+						<div class="item-media"><img style="border-radius: 23.3%;" src="https://chienlove.github.io/assets/videostar.png" width="60"></div>
+						<div class="item-inner">
+							<div class="item-title-row">
+							<i class="fas fa-chevron-right"></i>
+								<div class="item-title">VideoStar</div>
+							</div>
+							<div class="item-subtitle">Frontier Design Group</div>
+						</div>
+					</a>
+				</li>
+            </ul>
+		</div>
+      
+      <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797"
+     crossorigin="anonymous"></script>
+<!-- Storeios ads -->
+<ins class="adsbygoogle"
+     style="display:block"
+     data-ad-client="ca-pub-3905625903416797"
+     data-ad-slot="5160182988"
+     data-ad-format="auto"
+     data-full-width-responsive="true"></ins>
+<script>
+     (adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+
+		<panel>
+			<label class="source">
+				<p style="font-weight:bold; padding:2px;">Tweak List</p>
+			</label>
+			<fieldset class="source">
+         <a href="/depiction/Evanesco.html" class="">
+					<img class="icon" src="/assets/icontweaks.png">
+					<div>
+						<div>
+							<label>
+								<p id="source-name">
+									Evanesco!								</p>
+							</label>
+						</div>
+					</div>
+				</a>
+         <a href="/depiction/Ve.html" class="">
+					<img class="icon" src="/assets/icontweaks.png">
+					<div>
+						<div>
+							<label>
+								<p id="source-name">
+									Vē 💌 VH								</p>
+							</label>
+						</div>
+					</div>
+				</a>
+         <a href="/depiction/Aphrodite.html" class="">
+					<img class="icon" src="/Info/Aphrodite/Screenshots/icon.png">
+					<div>
+						<div>
+							<label>
+								<p id="source-name">
+									Aphrodite								</p>
+							</label>
+						</div>
+					</div>
+				</a>
+         <a href="/depiction/YTNoShortsButton.html" class="">
+					<img class="icon" src="/assets/icontweaks.png">
+					<div>
+						<div>
+							<label>
+								<p id="source-name">
+									YTNoShortsButton								</p>
+							</label>
+						</div>
+					</div>
+				</a>
+            <a href="/depiction/CamScannerPremium.html" class="">
+					<img class="icon" src="/assets/icontweaks.png">
+					<div>
+						<div>
+							<label>
+								<p id="source-name">
+									CamScanner Premium								</p>
+							</label>
+						</div>
+					</div>
+				</a>
+            <a href="/depiction/ReminiRemoveAds.html" class="">
+					<img class="icon" src="/assets/icontweaks.png">
+					<div>
+						<div>
+							<label>
+								<p id="source-name">
+									Remini Remove Ads								</p>
+							</label>
+						</div>
+					</div>
+				</a>
+            <a href="/depiction/TeraboxPremium.html" class="">
+					<img class="icon" src="/assets/icontweaks.png">
+					<div>
+						<div>
+							<label>
+								<p id="source-name">
+									Terabox Premium								</p>
+							</label>
+						</div>
+					</div>
+				</a>
+            <a href="/depiction/SelectionPlus.html" class="">
+					<img class="icon" src="/assets/icontweaks.png">
+					<div>
+						<div>
+							<label>
+								<p id="source-name">
+									SelectionPlus VH								</p>
+							</label>
+						</div>
+					</div>
+				</a>
+            <a href="/depiction/ActionBar.html" class="">
+					<img class="icon" src="/assets/icontweaks.png">
+					<div>
+						<div>
+							<label>
+								<p id="source-name">
+									ActionBar VH								</p>
+							</label>
+						</div>
+					</div>
+				</a>
+            <a href="/depiction/TweakCleanerPro.html" class="">
+					<img class="icon" src="/Info/TweakCleanerPro/Screenshots/icon.png">
+					<div>
+						<div>
+							<label>
+								<p id="source-name">
+									Tweak Cleaner Pro								</p>
+							</label>
+						</div>
+					</div>
+				</a>
+            <a href="/depiction/disabletouch.html" class="">
+					<img class="icon" src="/assets/icontweaks.png">
+					<div>
+						<div>
+							<label>
+								<p id="source-name">
+									DisableTouch								</p>
+							</label>
+						</div>
+					</div>
+				</a>
+            <a href="/depiction/BatteryCricle.html" class="">
+					<img class="icon" src="/assets/icontweaks.png">
+					<div>
+						<div>
+							<label>
+								<p id="source-name">
+									BatteryCricle								</p>
+							</label>
+						</div>
+					</div>
+				</a>
+            <a href="/depiction/SafariPlus.html" class="">
+					<img class="icon" src="/Info/SafariPlus/Screenshots/icon.png">
+					<div>
+						<div>
+							<label>
+								<p id="source-name">
+									SafariPlus VH								</p>
+							</label>
+						</div>
+					</div>
+				</a>
+            <a href="/depiction/AutoUnlockX.html" class="">
+					<img class="icon" src="/Info/AutoUnlockX/Screenshots/icon.png">
+					<div>
+						<div>
+							<label>
+								<p id="source-name">
+									AutoUnlockX VH								</p>
+							</label>
+						</div>
+					</div>
+				</a>
+            <a href="/depiction/Velvet.html" class="">
+					<img class="icon" src="/Info/velvet/Screenshots/icon.png">
+					<div>
+						<div>
+							<label>
+								<p id="source-name">
+									Velvet VH								</p>
+							</label>
+						</div>
+					</div>
+				</a>
+				<a href="/depiction/VideoBG.html" class="">
+					<img class="icon" src="/assets/icontweaks.png">
+					<div>
+						<div>
+							<label>
+								<p id="source-name">
+									VideoBG								</p>
+							</label>
+						</div>
+					</div>
+				</a>
+            <a href="/depiction/AdFastForward.html" class="">
+					<img class="icon" src="/assets/icontweaks.png">
+					<div>
+						<div>
+							<label>
+								<p id="source-name">
+									Ad Fast Forward								</p>
+							</label>
+						</div>
+					</div>
+				</a>
+            <a href="/depiction/Half.html" class="">
+					<img class="icon" src="/assets/icontweaks.png">
+					<div>
+						<div>
+							<label>
+								<p id="source-name">
+									Half								</p>
+							</label>
+						</div>
+					</div>
+				</a>
+            <a href="depiction/WeatherLS.html" class="">
+					<img class="icon" src="/assets/icontweaks.png">
+					<div>
+						<div>
+							<label>
+								<p id="source-name">
+									WeatherLS								</p>
+							</label>
+						</div>
+					</div>
+				</a>
+			</fieldset>
+		</panel>
+	</div>
+	</div>
+	</div>
+	<!-- Footer -->
+  <footer class="text-center text-white mt-5" style="background-color: #1E90FF;">
+    <div class="text-center p-3" style="background-color: rgba(0, 0, 0, 0.2);">© 2024 STOREIOS -
+      <a class="text-white" href="#">Nhóm hỗ trợ Telegram</a>|
+      <a class="text-white" href="https://fb.com/storeios.net/">Fanpage Facebook</a>
+    </div>
+  </footer>
+  <!-- Bootstrap JS and dependencies -->
+  <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797"
+     crossorigin="anonymous"></script>
+<!-- Storeios ads -->
+<ins class="adsbygoogle"
+     style="display:block"
+     data-ad-client="ca-pub-3905625903416797"
+     data-ad-slot="5160182988"
+     data-ad-format="auto"
+     data-full-width-responsive="true"></ins>
+<script>
+     (adsbygoogle = window.adsbygoogle || []).push({});
+</script>
+</body>
+</html>
