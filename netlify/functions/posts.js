@@ -3,12 +3,8 @@ const path = require('path');
 
 exports.handler = async function(event, context) {
   try {
-    // Lấy đường dẫn gốc của Lambda function
-    const lambdaRoot = process.env.LAMBDA_TASK_ROOT || __dirname;
-    console.log("Lambda root directory:", lambdaRoot);
-    
-    // Tìm đường dẫn đến thư mục content/apps từ thư mục gốc Lambda
-    const postsDirectory = path.join(lambdaRoot, 'content', 'apps');
+    // Đường dẫn tới thư mục content/apps trong thư mục public
+    const postsDirectory = path.join(__dirname, '..', 'public', 'content', 'apps');
     console.log("Posts directory path:", postsDirectory);
 
     // Kiểm tra xem thư mục có tồn tại hay không
