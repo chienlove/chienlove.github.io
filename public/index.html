@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>My Site</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <header>
+    <h1>My Site</h1>
+  </header>
+  <main>
+    <section id="app-list">
+      <h2>Applications</h2>
+      <ul id="apps">
+        <!-- Danh sách bài viết sẽ được thêm vào đây -->
+      </ul>
+    </section>
+  </main>
+  <footer>
+    <p>&copy; 2024 My Site</p>
+  </footer>
+  <script>
+    async function fetchPosts() {
+      const response = await fetch('/api/posts');
+      const posts = await response.json();
+      return posts;
+    }
+
+    function displayPosts(posts) {
+      const appList = document.getElementById('apps');
+      posts.forEach(post => {
+        const listItem = document.createElement('li');
+        listItem.innerHTML = `
+          <h3>${post.title}</h3>
+          <p>${post.description}</p>
+          <div>${post.body}</div>
+        `;
+        appList.appendChild(listItem);
+      });
+    }
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      const posts = await fetchPosts();
+      displayPosts(posts);
+    });
+  </script>
+</body>
+</html>
