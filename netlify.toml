@@ -1,14 +1,11 @@
 [build]
+  publish = "public"  # Thư mục xuất bản của Hugo, có thể thay đổi nếu bạn sử dụng thư mục khác
   functions = "netlify/functions"
 
 [[redirects]]
   from = "/api/posts"
   to = "/.netlify/functions/posts"
   status = 200
-
-  [build]
-  publish = "public"  # Thư mục xuất bản của Hugo, có thể thay đổi nếu bạn sử dụng thư mục khác
-  functions = "netlify/functions"
 
 [[plugins]]
   package = "netlify-plugin-copy"
