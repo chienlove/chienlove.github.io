@@ -3,11 +3,13 @@ const path = require('path');
 
 exports.handler = async function(event, context) {
   try {
-    const postsDirectory = path.resolve(__dirname, '../content/apps');
+    // Sử dụng process.cwd() để lấy thư mục làm việc hiện tại
+    const workingDirectory = process.cwd();
+    const postsDirectory = path.join(workingDirectory, 'content', 'apps');
     console.log("Posts directory path:", postsDirectory);
     
     // Log cấu trúc thư mục hiện tại
-    const currentDirectory = path.resolve(__dirname, '../');
+    const currentDirectory = process.cwd();
     console.log("Current directory structure:", fs.readdirSync(currentDirectory));
     
     // Check if directory exists
