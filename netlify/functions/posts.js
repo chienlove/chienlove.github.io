@@ -1,15 +1,26 @@
-console.log("Current directory:", __dirname);
 const fs = require('fs');
 const path = require('path');
 
 exports.handler = async function(event, context) {
   try {
     const postsDirectory = path.resolve(__dirname, '../../content/apps');
+    console.log("Posts directory path:", postsDirectory);
+    
+    // Check if directory exists
+    if (!fs.existsSync(postsDirectory)) {
+      console.error("Directory does not exist:", postsDirectory);
+      throw new Error(`Directory does not exist: ${postsDirectory}`);
+    }
+
     const filenames = fs.readdirSync(postsDirectory);
+    console.log("Filenames:", filenames);
 
     const posts = filenames.map(filename => {
       const filePath = path.join(postsDirectory, filename);
+      console.log("Reading file:", filePath);
+      
       const fileContents = fs.readFileSync(filePath, 'utf8');
+      console.log("File contents:", fileContents);
 
       // Extract the title from the Markdown front matter
       const match = fileContents.match(/title:\s*(.*)/);
@@ -26,6 +37,7 @@ exports.handler = async function(event, context) {
       body: JSON.stringify({ posts }),
     };
   } catch (error) {
+    console.error("Error:", error);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: error.message }),
