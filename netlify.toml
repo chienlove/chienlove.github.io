@@ -1,16 +1,7 @@
 [build]
-  publish = "public"  # Thư mục xuất bản của Hugo, có thể thay đổi nếu bạn sử dụng thư mục khác
   functions = "netlify/functions"
 
 [[redirects]]
   from = "/api/posts"
   to = "/.netlify/functions/posts"
   status = 200
-
-[[plugins]]
-  package = "netlify-plugin-copy"
-
-  [plugins.inputs]
-    copy = [
-      { from = "content", to = "public/content" }  # Sao chép thư mục content vào thư mục public
-    ]
