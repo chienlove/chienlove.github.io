@@ -3,28 +3,25 @@ const path = require('path');
 
 exports.handler = async function(event, context) {
   try {
-    // Sử dụng process.cwd() để lấy thư mục làm việc hiện tại
-    const workingDirectory = process.cwd();
-    console.log("Working directory:", workingDirectory);
+    // Lấy đường dẫn tuyệt đối của file hiện tại
+    const currentDirectory = __dirname;
+    console.log("Current directory:", currentDirectory);
     
-    // Liệt kê tất cả các thư mục con của thư mục làm việc hiện tại
-    const directories = fs.readdirSync(workingDirectory, { withFileTypes: true })
-      .filter(dirent => dirent.isDirectory())
-      .map(dirent => dirent.name);
-    console.log("Directories in working directory:", directories);
-    
-    const postsDirectory = path.join(workingDirectory, 'content', 'apps');
+    // Tìm đường dẫn đến thư mục content/apps từ thư mục hiện tại
+    const postsDirectory = path.join(currentDirectory, '..', 'content', 'apps');
     console.log("Posts directory path:", postsDirectory);
 
-    // Check if directory exists
+    // Kiểm tra xem thư mục có tồn tại hay không
     if (!fs.existsSync(postsDirectory)) {
       console.error("Directory does not exist:", postsDirectory);
       throw new Error(`Directory does not exist: ${postsDirectory}`);
     }
 
+    // Đọc danh sách tệp tin trong thư mục content/apps
     const filenames = fs.readdirSync(postsDirectory);
     console.log("Filenames:", filenames);
 
+    // Xử lý nội dung từng tệp tin
     const posts = filenames.map(filename => {
       const filePath = path.join(postsDirectory, filename);
       console.log("Reading file:", filePath);
@@ -32,7 +29,7 @@ exports.handler = async function(event, context) {
       const fileContents = fs.readFileSync(filePath, 'utf8');
       console.log("File contents:", fileContents);
 
-      // Extract the title from the Markdown front matter
+      // Trích xuất tiêu đề từ Markdown front matter
       const match = fileContents.match(/title:\s*(.*)/);
       const title = match ? match[1] : 'No title';
 
