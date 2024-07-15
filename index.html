@@ -2,57 +2,48 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>App Store Interface</title>
-  <style>
-    /* CSS cho giao diện */
-    body {
-      font-family: Arial, sans-serif;
-    }
-    ul {
-      list-style-type: none;
-      padding: 0;
-    }
-    li {
-      margin: 10px 0;
-    }
-    a {
-      text-decoration: none;
-      color: blue;
-    }
-  </style>
+  <title>My Site</title>
+  <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
-  <h1>Danh sách bài viết</h1>
-  <ul id="post-list"></ul>
-
+  <header>
+    <h1>My Site</h1>
+  </header>
+  <main>
+    <section id="app-list">
+      <h2>Applications</h2>
+      <ul id="apps">
+        <!-- Danh sách bài viết sẽ được thêm vào đây -->
+      </ul>
+    </section>
+  </main>
+  <footer>
+    <p>&copy; 2024 My Site</p>
+  </footer>
   <script>
     async function fetchPosts() {
-      try {
-        const response = await fetch('/api/posts');
-        const data = await response.json();
-        return data.posts;
-      } catch (error) {
-        console.error('Lỗi khi lấy danh sách bài viết:', error);
-        return [];
-      }
+      const response = await fetch('/api/posts');
+      const posts = await response.json();
+      return posts;
     }
 
-    async function displayPosts() {
-      const postList = document.getElementById('post-list');
-      const posts = await fetchPosts();
-      
+    function displayPosts(posts) {
+      const appList = document.getElementById('apps');
       posts.forEach(post => {
         const listItem = document.createElement('li');
-        const link = document.createElement('a');
-        link.href = post.link;
-        link.textContent = post.title;
-        listItem.appendChild(link);
-        postList.appendChild(listItem);
+        listItem.innerHTML = `
+          <h3>${post.title}</h3>
+          <p>${post.description}</p>
+          <div>${post.body}</div>
+        `;
+        appList.appendChild(listItem);
       });
     }
 
-    displayPosts();
+    document.addEventListener('DOMContentLoaded', async () => {
+      const posts = await fetchPosts();
+      displayPosts(posts);
+    });
   </script>
 </body>
 </html>
