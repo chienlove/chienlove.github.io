@@ -5,13 +5,17 @@ exports.handler = async function(event, context) {
   try {
     // Sử dụng process.cwd() để lấy thư mục làm việc hiện tại
     const workingDirectory = process.cwd();
+    console.log("Working directory:", workingDirectory);
+    
+    // Liệt kê tất cả các thư mục con của thư mục làm việc hiện tại
+    const directories = fs.readdirSync(workingDirectory, { withFileTypes: true })
+      .filter(dirent => dirent.isDirectory())
+      .map(dirent => dirent.name);
+    console.log("Directories in working directory:", directories);
+    
     const postsDirectory = path.join(workingDirectory, 'content', 'apps');
     console.log("Posts directory path:", postsDirectory);
-    
-    // Log cấu trúc thư mục hiện tại
-    const currentDirectory = process.cwd();
-    console.log("Current directory structure:", fs.readdirSync(currentDirectory));
-    
+
     // Check if directory exists
     if (!fs.existsSync(postsDirectory)) {
       console.error("Directory does not exist:", postsDirectory);
