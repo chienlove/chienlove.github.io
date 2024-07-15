@@ -6,6 +6,10 @@ exports.handler = async function(event, context) {
     const postsDirectory = path.resolve(__dirname, '../../content/apps');
     console.log("Posts directory path:", postsDirectory);
     
+    // Log cấu trúc thư mục hiện tại
+    const currentDirectory = path.resolve(__dirname, '../../');
+    console.log("Current directory structure:", fs.readdirSync(currentDirectory));
+    
     // Check if directory exists
     if (!fs.existsSync(postsDirectory)) {
       console.error("Directory does not exist:", postsDirectory);
