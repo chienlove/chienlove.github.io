@@ -1,4 +1,24 @@
-baseURL = "https://chienlove.github.io/"
+baseURL = "https://example.com"
 languageCode = "en-us"
-title = "storeios"
-theme = "ananke"  # hoặc tên theme bạn đang sử dụng
+title = "My New Hugo Site"
+
+# Comment out the theme line
+# theme = "ananke"
+
+# Các cài đặt khác có thể được thêm vào đây
+[params]
+  # Các tham số tùy chỉnh
+
+[menu]
+  [[menu.main]]
+    identifier = "about"
+    name = "About"
+    url = "/about/"
+    weight = 10
+  [[menu.main]]
+    identifier = "posts"
+    name = "Posts"
+    url = "/posts/"
+    weight = 20
+
+# Thêm các cấu hình khác nếu cần
