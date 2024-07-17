@@ -8,4 +8,4 @@ image:
   text: "Facebook "
 ingredients: []
 ---
-What? Watch video/ music and use other apps at the SAME TIME? That’s all right!!! Protube. is a powerful Tube player: Play and Save your new, trending videos & music OFFLINE. - Allows you to play videos in Floating Popup Play Mode, Enjoy video will continue to play when you exit Pure Tuber for other social media apps, such as Line, Messenger, WhatsApp, et
+What? Watch video/ music and use other apps at the SAME TIME? That’s all right!!! Protube. is a powerful Tube player: Play and Save your new, trending videos & music OFFLINE. - Allows you to play videos in Floating Popup Play Mode, Enjoy video will continue to play when you exit Pure Tuber for other social media apps, such as Line, Messenger, WhatsApp...
