@@ -1,0 +1,4 @@
+baseURL = "https://chienlove.github.io/"
+languageCode = "en-us"
+title = "storeios"
+theme = "ananke"  # hoặc tên theme bạn đang sử dụng
