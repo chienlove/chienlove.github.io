@@ -1,6 +1,6 @@
-baseURL = "https://example.com"
+baseURL = "https://chienlove.github.io"
 languageCode = "en-us"
-title = "My New Hugo Site"
+title = "storeios"
 
 # Comment out the theme line
 # theme = "ananke"
