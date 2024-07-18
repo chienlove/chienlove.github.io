@@ -14,16 +14,24 @@
     <main>
         <div class="app-container">
             <div class="app-header">
-                <img class="app-icon" src="{{ .Params.icon | absURL }}" alt="App Icon">
+                {{ if .Params.icon }}
+                    <img class="app-icon" src="{{ .Params.icon | absURL }}" alt="App Icon">
+                {{ end }}
                 <div class="app-details">
                     <h1 class="app-title">{{ .Title }}</h1>
-                    <p class="app-description">{{ .Params.short_description }}</p>
-                    <a class="app-download-link" href="{{ .Params.download_link }}" target="_blank">Download</a>
+                    {{ if .Params.short_description }}
+                        <p class="app-description">{{ .Params.short_description }}</p>
+                    {{ end }}
+                    {{ if .Params.download_link }}
+                        <a class="app-download-link" href="{{ .Params.download_link }}" target="_blank">Download</a>
+                    {{ end }}
                 </div>
             </div>
             <div class="app-screenshots">
-                {{ range .Params.screenshots }}
-                    <img src="{{ .image | absURL }}" alt="Screenshot">
+                {{ if .Params.screenshots }}
+                    {{ range .Params.screenshots }}
+                        <img src="{{ . | absURL }}" alt="Screenshot">
+                    {{ end }}
                 {{ end }}
             </div>
             <div class="app-description">
