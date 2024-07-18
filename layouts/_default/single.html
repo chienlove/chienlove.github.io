@@ -3,52 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ title }}</title>
-    <link rel="stylesheet" href="css/apps.css">
+    <title>{{ .Title }}</title>
+    <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
     <div class="app-container">
         <header class="app-header">
-            <img src="{{ icon }}" alt="{{ title }}" class="app-icon">
+            {{ with .Params.icon }}
+                <img src="{{ . }}" alt="{{ $.Title }}" class="app-icon">
+            {{ end }}
             <div class="app-info">
-                <h1 class="app-title">{{ title }}</h1>
-                <p class="app-developer">{{ developer }}</p>
-                <p class="app-category">{{ category }}</p>
+                <h1 class="app-title">{{ .Title }}</h1>
+                <p class="app-developer">{{ .Params.developer }}</p>
+                <p class="app-category">{{ .Params.category }}</p>
             </div>
         </header>
 
         <div class="app-actions">
-            <a href="{{ app_store_link }}" class="download-btn">Tải về</a>
-            <p class="app-version">Phiên bản {{ version }}</p>
+            <a href="{{ .Params.app_store_link }}" class="download-btn">Tải về</a>
+            <p class="app-version">Phiên bản {{ .Params.version }}</p>
         </div>
 
         <div class="app-screenshots">
-            {% for screenshot in screenshots %}
-                <img src="{{ screenshot }}" alt="Screenshot {{ forloop.index }}" class="screenshot">
-            {% endfor %}
+            {{ range .Params.screenshots }}
+                <img src="{{ . }}" alt="Screenshot" class="screenshot">
+            {{ end }}
         </div>
 
         <div class="app-description">
             <h2>Mô tả</h2>
-            <p class="short-description">{{ short_description }}</p>
-            <div class="full-description">{{ description | markdownify }}</div>
+            <p class="short-description">{{ .Params.short_description }}</p>
+            <div class="full-description">{{ .Params.description | markdownify }}</div>
         </div>
 
         <div class="app-details">
             <h2>Thông tin chi tiết</h2>
             <ul>
-                <li><strong>Kích thước:</strong> {{ size }}</li>
-                <li><strong>iOS tương thích:</strong> {{ requirements }}</li>
-                <li><strong>Ngôn ngữ hỗ trợ:</strong> {{ languages | join: ", " }}</li>
+                <li><strong>Kích thước:</strong> {{ .Params.size }}</li>
+                <li><strong>iOS tương thích:</strong> {{ .Params.requirements }}</li>
+                <li><strong>Ngôn ngữ hỗ trợ:</strong> {{ delimit .Params.languages ", " }}</li>
             </ul>
         </div>
 
         <div class="app-tags">
             <h2>Từ khóa</h2>
             <ul>
-                {% for tag in tags %}
-                    <li>{{ tag }}</li>
-                {% endfor %}
+                {{ range .Params.tags }}
+                    <li>{{ . }}</li>
+                {{ end }}
             </ul>
         </div>
     </div>
