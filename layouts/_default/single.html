@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ .Title }}</title>
-    <link rel="stylesheet" href="/css/apps.css">
+    <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     <link rel="stylesheet" href="/css/single.css"> <!-- Link to your custom CSS for single app page -->
 </head>
@@ -23,7 +23,7 @@
             <div class="screenshots">
                 {{ range .Params.screenshots }}
                     {{ if isset . "image" }}
-                        <img src="{{ .image }}" alt="Screenshot">
+                        <img src="{{ .image | default "/path/to/default/screenshot.png" }}" alt="Screenshot">
                     {{ end }}
                 {{ end }}
             </div>
