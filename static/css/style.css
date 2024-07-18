@@ -8,156 +8,103 @@
 body {
     font-family: Arial, sans-serif;
     line-height: 1.6;
-    color: #333;
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 20px;
 }
 
-/* Header */
-header {
+/* Header styles */
+.site-header {
+    background-color: #fff;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+}
+
+.header-container {
+    max-width: 1200px;
+    margin: 0 auto;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1rem 0;
-    background-color: #f4f4f4;
+    padding: 10px 20px;
 }
 
-.logo {
-    font-size: 1.5rem;
+.logo img {
+    height: 40px;
+}
+
+.main-nav ul {
+    display: flex;
+    list-style: none;
+}
+
+.main-nav ul li {
+    margin-left: 20px;
+}
+
+.main-nav ul li a {
+    text-decoration: none;
+    color: #333;
     font-weight: bold;
 }
 
 .search-bar {
     flex-grow: 1;
-    margin: 0 1rem;
+    margin: 0 20px;
 }
 
-.search-bar input {
+.search-bar form {
+    display: flex;
+}
+
+.search-bar input[type="text"] {
     width: 100%;
-    padding: 0.5rem;
+    padding: 10px;
     border: 1px solid #ddd;
-    border-radius: 4px;
+    border-radius: 4px 0 0 4px;
 }
 
-.hamburger {
-    display: none;
-    font-size: 1.5rem;
+.search-bar button {
+    padding: 10px 15px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 0 4px 4px 0;
     cursor: pointer;
 }
 
-/* Main content */
-main {
-    padding: 2rem 0;
+.mobile-menu-toggle {
+    display: none;
+    font-size: 24px;
+    cursor: pointer;
 }
 
-h1 {
-    font-size: 2.5rem;
-    margin-bottom: 1rem;
-}
-
-h2 {
-    font-size: 2rem;
-    margin: 2rem 0 1rem;
-}
-
-/* Post list */
-.post-list {
-    list-style: none;
-}
-
-.post-item {
-    display: flex;
-    margin-bottom: 2rem;
-    border-bottom: 1px solid #ddd;
-    padding-bottom: 1rem;
-}
-
-.post-icon {
-    font-size: 2rem;
-    margin-right: 1rem;
-    color: #007bff;
-}
-
-.post-content {
-    flex: 1;
-}
-
-.post-content h3 {
-    font-size: 1.5rem;
-    margin-bottom: 0.5rem;
-}
-
-.post-content time {
-    color: #666;
-    font-style: italic;
-}
-
-.post-content p {
-    margin-top: 0.5rem;
-}
-
-/* Footer */
-footer {
-    background-color: #333;
-    color: #fff;
-    padding: 2rem 0;
-    margin-top: 2rem;
-}
-
-.footer-content {
-    display: flex;
-    justify-content: space-between;
-}
-
-.contact-info, .donate-info {
-    flex: 1;
-}
-
-/* Responsive design */
+/* Responsive styles */
 @media (max-width: 768px) {
-    header {
+    .main-nav {
+        display: none;
+    }
+
+    .mobile-menu-toggle {
+        display: block;
+    }
+
+    .search-bar {
+        order: 1;
+        width: 100%;
+        margin: 10px 0;
+    }
+
+    .header-container {
         flex-wrap: wrap;
     }
-    
-    .logo {
-        order: 1;
-    }
-    
-    .search-bar {
-        order: 3;
-        width: 100%;
-        margin: 1rem 0;
-    }
-    
-    .hamburger {
-        display: block;
-        order: 2;
-    }
-    
-    nav {
-        display: none;
-        width: 100%;
-        order: 4;
-    }
-    
-    nav.active {
-        display: block;
-    }
-    
-    nav ul {
-        list-style: none;
-    }
-    
-    nav ul li {
-        padding: 0.5rem 0;
-    }
-    
-    .footer-content {
-        flex-direction: column;
-    }
-    
-    .contact-info, .donate-info {
-        margin-bottom: 1rem;
-    }
 }
+
+/* Main content styles */
+main {
+    margin-top: 60px; /* Adjust based on your header height */
+    padding: 20px;
+}
+
+/* Rest of your existing CSS */

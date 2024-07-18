@@ -8,28 +8,39 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
 </head>
 <body>
-    <header>
-        <div class="logo">Logo</div>
-        <div class="search-bar">
-            <input type="text" placeholder="Tìm kiếm...">
+    <header class="site-header">
+        <div class="header-container">
+            <div class="logo">
+                <a href="/">
+                    <img src="/images/logo.png" alt="Logo">
+                </a>
+            </div>
+            <nav class="main-nav">
+                <ul>
+                    <li><a href="/">Trang chủ</a></li>
+                    <li><a href="/games">Games</a></li>
+                    <li><a href="/apps">Apps</a></li>
+                    <li><a href="/topics">Chủ đề</a></li>
+                </ul>
+            </nav>
+            <div class="search-bar">
+                <form action="/search" method="get">
+                    <input type="text" name="q" placeholder="Tìm kiếm apps & games">
+                    <button type="submit"><i class="fas fa-search"></i></button>
+                </form>
+            </div>
+            <div class="mobile-menu-toggle">
+                <i class="fas fa-bars"></i>
+            </div>
         </div>
-        <div class="hamburger">☰</div>
     </header>
 
     {{ block "main" . }}{{ end }}
 
     <footer>
-        <div class="footer-content">
-            <div class="contact-info">
-                <h3>Liên hệ</h3>
-                <p>Email: example@example.com</p>
-                <p>Điện thoại: 123-456-7890</p>
-            </div>
-            <div class="donate-info">
-                <h3>Ủng hộ</h3>
-                <p>Nếu bạn thích nội dung của chúng tôi, hãy xem xét ủng hộ.</p>
-            </div>
-        </div>
+        <!-- Footer content here -->
     </footer>
+
+    <script src="/js/main.js"></script>
 </body>
 </html>
