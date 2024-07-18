@@ -3,51 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ .Title }}</title>
-    <link rel="stylesheet" href="/css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-    <link rel="stylesheet" href="/css/single.css"> <!-- Link to your custom CSS for single app page -->
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="css/apps.css">
 </head>
 <body>
-    <header>
-        <!-- Header content here -->
-    </header>
-
-    <main>
-        <article class="app-details">
-            <div class="app-icon">
-                <img src="{{ .Params.icon | default "/path/to/default/icon.png" }}" alt="{{ .Title }}">
-            </div>
-            <h1>{{ .Title }}</h1>
-            <p class="short-description">{{ .Params.short_description }}</p>
-            <div class="screenshots">
-                {{ range .Params.screenshots }}
-                    {{ if isset . "image" }}
-                        <img src="{{ .image | default "/path/to/default/screenshot.png" }}" alt="Screenshot">
-                    {{ end }}
-                {{ end }}
-            </div>
+    <div class="app-container">
+        <header class="app-header">
+            <img src="{{ icon }}" alt="{{ title }}" class="app-icon">
             <div class="app-info">
-                <ul>
-                    <li><strong>Phiên bản:</strong> {{ .Params.version }}</li>
-                    <li><strong>Kích thước:</strong> {{ .Params.size }}</li>
-                    <li><strong>iOS tương thích:</strong> {{ .Params.requirements }}</li>
-                    <li><strong>Ngôn ngữ hỗ trợ:</strong> {{ range .Params.languages }}{{ . }}, {{ end }}</li>
-                    <li><strong>Thể loại:</strong> {{ .Params.category }}</li>
-                    <li><strong>Nhà phát triển:</strong> {{ .Params.developer }}</li>
-                </ul>
+                <h1 class="app-title">{{ title }}</h1>
+                <p class="app-developer">{{ developer }}</p>
+                <p class="app-category">{{ category }}</p>
             </div>
-            <div class="description">
-                {{ .Params.description | markdownify }}
-            </div>
-            <div class="app-store-link">
-                <a href="{{ .Params.app_store_link }}" target="_blank" rel="noopener noreferrer">Tải từ App Store</a>
-            </div>
-        </article>
-    </main>
+        </header>
 
-    <footer>
-        <!-- Footer content here -->
-    </footer>
+        <div class="app-actions">
+            <a href="{{ app_store_link }}" class="download-btn">Tải về</a>
+            <p class="app-version">Phiên bản {{ version }}</p>
+        </div>
+
+        <div class="app-screenshots">
+            {% for screenshot in screenshots %}
+                <img src="{{ screenshot }}" alt="Screenshot {{ forloop.index }}" class="screenshot">
+            {% endfor %}
+        </div>
+
+        <div class="app-description">
+            <h2>Mô tả</h2>
+            <p class="short-description">{{ short_description }}</p>
+            <div class="full-description">{{ description | markdownify }}</div>
+        </div>
+
+        <div class="app-details">
+            <h2>Thông tin chi tiết</h2>
+            <ul>
+                <li><strong>Kích thước:</strong> {{ size }}</li>
+                <li><strong>iOS tương thích:</strong> {{ requirements }}</li>
+                <li><strong>Ngôn ngữ hỗ trợ:</strong> {{ languages | join: ", " }}</li>
+            </ul>
+        </div>
+
+        <div class="app-tags">
+            <h2>Từ khóa</h2>
+            <ul>
+                {% for tag in tags %}
+                    <li>{{ tag }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
 </body>
 </html>
