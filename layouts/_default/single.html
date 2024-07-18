@@ -4,31 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ .Title }}</title>
-    <link rel="stylesheet" href="/css/ap.css">
+    <link rel="stylesheet" href="/css/apps.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-    <style>
-        /* Custom CSS styles specific to single app page */
-        /* Style for app icon */
-        .app-icon {
-            max-width: 100px; /* Adjust size as needed */
-            margin-bottom: 20px;
-        }
-        .app-icon img {
-            max-width: 100%;
-        }
-        /* Style for screenshots */
-        .screenshots {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 10px;
-            margin-top: 20px;
-        }
-        .screenshots img {
-            max-width: calc(33.33% - 10px); /* Adjust for responsive layout */
-            border: 1px solid #ddd; /* Optional: border for screenshots */
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Optional: shadow effect */
-        }
-    </style>
+    <link rel="stylesheet" href="/css/single.css"> <!-- Link to your custom CSS for single app page -->
 </head>
 <body>
     <header>
@@ -60,7 +38,7 @@
                 </ul>
             </div>
             <div class="description">
-                {{ .Content }}
+                {{ .Params.description | markdownify }}
             </div>
             <div class="app-store-link">
                 <a href="{{ .Params.app_store_link }}" target="_blank" rel="noopener noreferrer">Tải từ App Store</a>
