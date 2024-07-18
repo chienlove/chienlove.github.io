@@ -37,13 +37,19 @@
         </div>
 
         <div class="app-details">
-            <h2>Thông tin chi tiết</h2>
-            <ul>
-                <li><strong>Kích thước:</strong> {{ .Params.size }}</li>
-                <li><strong>iOS tương thích:</strong> {{ .Params.requirements }}</li>
-                <li><strong>Ngôn ngữ hỗ trợ:</strong> {{ delimit .Params.languages ", " }}</li>
-            </ul>
-        </div>
+    <h2>Thông tin chi tiết</h2>
+    <ul>
+        <li><strong>Kích thước:</strong> {{ .Params.size }}</li>
+        <li><strong>iOS tương thích:</strong> {{ .Params.requirements }}</li>
+        <li><strong>Ngôn ngữ hỗ trợ:</strong>
+            {{ if .Params.languages }}
+                {{ delimit .Params.languages ", " }}
+            {{ else }}
+                Không có thông tin
+            {{ end }}
+        </li>
+    </ul>
+</div>
 
         <div class="app-tags">
             <h2>Từ khóa</h2>
