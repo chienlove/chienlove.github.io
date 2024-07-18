@@ -9,36 +9,23 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
 </head>
 <body>
-    <header>
-        <!-- Header content here -->
-    </header>
-
     <main>
-        <h1>{{ .Title }}</h1>
-        {{ .Content }}
-        
-        <!-- Section for "Ứng dụng mới nhất" -->
-        <section>
-            <h2>Ứng dụng mới nhất</h2>
-            <ul class="app-list">
-                {{ range first 10 (where .Site.RegularPages "Type" "in" (slice "apps")) }}
-                    <li class="app-item">
-                        <div class="app-icon">
-                            <img src="{{ .Params.Icon }}" alt="{{ .Title }}">
+        <ul class="app-list">
+            {{ range first 10 (where .Site.RegularPages "Type" "in" (slice "apps")) }}
+                <li class="app-item">
+                    <img class="app-icon" src="{{ .Params.Icon }}" alt="{{ .Title }}">
+                    <div class="app-info">
+                        <h3 class="app-title">{{ .Title }}</h3>
+                        <p class="app-developer">{{ .Params.Developer }}</p>
+                        <div class="app-meta">
+                            <span class="app-version"><i class="fas fa-arrow-up"></i> {{ .Params.Version }}</span>
                         </div>
-                        <div class="app-content">
-                            <h3><a href="{{ .Permalink }}">{{ .Title }}</a></h3>
-                            <p>{{ .Params.Subtitle }}</p>
-                        </div>
-                    </li>
-                {{ end }}
-            </ul>
-        </section>
+                    </div>
+                    <button class="download-btn">Tải</button>
+                </li>
+            {{ end }}
+        </ul>
     </main>
-
-    <footer>
-        <!-- Footer content here -->
-    </footer>
 </body>
 </html>
 {{ end }}
