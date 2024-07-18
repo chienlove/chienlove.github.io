@@ -44,7 +44,9 @@
             <p class="short-description">{{ .Params.short_description }}</p>
             <div class="screenshots">
                 {{ range .Params.screenshots }}
-                    <img src="{{ .image }}" alt="Screenshot">
+                    {{ if isset . "image" }}
+                        <img src="{{ .image }}" alt="Screenshot">
+                    {{ end }}
                 {{ end }}
             </div>
             <div class="app-info">
