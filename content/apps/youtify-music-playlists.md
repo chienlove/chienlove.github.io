@@ -87,5 +87,5 @@ languages:
   - Anh
 app_store_link: https://getapp.cc/app/1587457403
 tags:
-  - "#youtify"
+  - youtify
 ---
