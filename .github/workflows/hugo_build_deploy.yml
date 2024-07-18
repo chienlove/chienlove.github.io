@@ -14,6 +14,9 @@ jobs:
           submodules: true
           fetch-depth: 0
 
+      - name: Clear Hugo Cache
+        run: rm -rf public
+
       - name: Setup Hugo
         uses: peaceiris/actions-hugo@v2
         with:
