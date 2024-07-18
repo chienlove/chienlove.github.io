@@ -17,25 +17,6 @@
         <h1>{{ .Title }}</h1>
         {{ .Content }}
         
-        <!-- Section for "Bài viết mới nhất" -->
-        <section>
-            <h2>Bài viết mới nhất</h2>
-            <ul class="post-list">
-                {{ range first 10 (where .Site.RegularPages "Type" "in" (slice "posts")) }}
-                    <li class="post-item">
-                        <div class="post-icon">
-                            <i class="fas fa-file-alt"></i>
-                        </div>
-                        <div class="post-content">
-                            <h3><a href="{{ .Permalink }}">{{ .Title }}</a></h3>
-                            <time>{{ .Date.Format "02-01-2006" }}</time>
-                            <p>{{ .Summary }}</p>
-                        </div>
-                    </li>
-                {{ end }}
-            </ul>
-        </section>
-
         <!-- Section for "Ứng dụng mới nhất" -->
         <section>
             <h2>Ứng dụng mới nhất</h2>
@@ -43,12 +24,11 @@
                 {{ range first 10 (where .Site.RegularPages "Type" "in" (slice "apps")) }}
                     <li class="app-item">
                         <div class="app-icon">
-                            <!-- Replace with icon for app -->
+                            <img src="{{ .Params.Icon }}" alt="{{ .Title }}">
                         </div>
                         <div class="app-content">
                             <h3><a href="{{ .Permalink }}">{{ .Title }}</a></h3>
-                            <time>{{ .Date.Format "02-01-2006" }}</time>
-                            <p>{{ .Params.Description }}</p>
+                            <p>{{ .Params.Subtitle }}</p>
                         </div>
                     </li>
                 {{ end }}
