@@ -1,47 +1,73 @@
-<!-- layouts/_default/single.html -->
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ .Title }}</title>
-    <link rel="stylesheet" href="/css/apps.css">
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <style>
+        /* Custom CSS styles specific to single app page */
+        /* Style for app icon */
+        .app-icon {
+            max-width: 100px; /* Adjust size as needed */
+            margin-bottom: 20px;
+        }
+        .app-icon img {
+            max-width: 100%;
+        }
+        /* Style for screenshots */
+        .screenshots {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .screenshots img {
+            max-width: calc(33.33% - 10px); /* Adjust for responsive layout */
+            border: 1px solid #ddd; /* Optional: border for screenshots */
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); /* Optional: shadow effect */
+        }
+    </style>
 </head>
 <body>
     <header>
-        <!-- Header content -->
+        <!-- Header content here -->
     </header>
+
     <main>
-        <div class="app-container">
-            <div class="app-header">
-                {{ if .Params.icon }}
-                    <img class="app-icon" src="{{ .Params.icon | absURL }}" alt="App Icon">
-                {{ end }}
-                <div class="app-details">
-                    <h1 class="app-title">{{ .Title }}</h1>
-                    {{ if .Params.short_description }}
-                        <p class="app-description">{{ .Params.short_description }}</p>
-                    {{ end }}
-                    {{ if .Params.download_link }}
-                        <a class="app-download-link" href="{{ .Params.download_link }}" target="_blank">Download</a>
-                    {{ end }}
-                </div>
+        <article class="app-details">
+            <div class="app-icon">
+                <img src="{{ .Params.icon | default "/path/to/default/icon.png" }}" alt="{{ .Title }}">
             </div>
-            <div class="app-screenshots">
-                {{ if .Params.screenshots }}
-                    {{ range .Params.screenshots }}
-                        <img src="{{ . | absURL }}" alt="Screenshot">
-                    {{ end }}
+            <h1>{{ .Title }}</h1>
+            <p class="short-description">{{ .Params.short_description }}</p>
+            <div class="screenshots">
+                {{ range .Params.screenshots }}
+                    <img src="{{ .image }}" alt="Screenshot">
                 {{ end }}
             </div>
-            <div class="app-description">
-                <h2>Thông tin chi tiết</h2>
+            <div class="app-info">
+                <ul>
+                    <li><strong>Phiên bản:</strong> {{ .Params.version }}</li>
+                    <li><strong>Kích thước:</strong> {{ .Params.size }}</li>
+                    <li><strong>iOS tương thích:</strong> {{ .Params.requirements }}</li>
+                    <li><strong>Ngôn ngữ hỗ trợ:</strong> {{ range .Params.languages }}{{ . }}, {{ end }}</li>
+                    <li><strong>Thể loại:</strong> {{ .Params.category }}</li>
+                    <li><strong>Nhà phát triển:</strong> {{ .Params.developer }}</li>
+                </ul>
+            </div>
+            <div class="description">
                 {{ .Content }}
             </div>
-        </div>
+            <div class="app-store-link">
+                <a href="{{ .Params.app_store_link }}" target="_blank" rel="noopener noreferrer">Tải từ App Store</a>
+            </div>
+        </article>
     </main>
+
     <footer>
-        <!-- Footer content -->
+        <!-- Footer content here -->
     </footer>
 </body>
 </html>
