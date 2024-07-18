@@ -60,5 +60,26 @@
             </ul>
         </div>
     </div>
+  <script>
+document.addEventListener('DOMContentLoaded', function() {
+    const toggleBtn = document.querySelector('.toggle-description');
+    const previewDesc = document.querySelector('.description-preview');
+    const fullDesc = document.querySelector('.description-full');
+
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', function() {
+            if (fullDesc.style.display === 'none') {
+                fullDesc.style.display = 'block';
+                previewDesc.style.display = 'none';
+                toggleBtn.textContent = 'Thu gọn';
+            } else {
+                fullDesc.style.display = 'none';
+                previewDesc.style.display = 'block';
+                toggleBtn.textContent = 'Xem thêm';
+            }
+        });
+    }
+});
+</script>
 </body>
 </html>
