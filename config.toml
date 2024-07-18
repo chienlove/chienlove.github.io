@@ -1,5 +1,5 @@
 baseURL = "https://storeios.net"
-languageCode = "en-us"
+languageCode = "vi-vn"
 title = "storeios"
 
 # Comment out the theme line
@@ -22,3 +22,5 @@ title = "storeios"
     weight = 20
 
 # Thêm các cấu hình khác nếu cần
+[markup.goldmark.renderer]
+  unsafe = true
