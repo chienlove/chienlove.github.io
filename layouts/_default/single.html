@@ -32,24 +32,25 @@
 
         <div class="app-description">
             <h2>Mô tả</h2>
-            <p class="short-description">{{ .Params.short_description }}</p>
-            <div class="full-description">{{ .Params.description | markdownify }}</div>
+            <p class="short-description description-preview">{{ .Params.short_description }}</p>
+            <div class="full-description description-full" style="display:none;">{{ .Params.description | markdownify }}</div>
+            <button class="toggle-description">Xem thêm</button>
         </div>
 
         <div class="app-details">
-    <h2>Thông tin chi tiết</h2>
-    <ul>
-        <li><strong>Kích thước:</strong> {{ .Params.size }}</li>
-        <li><strong>iOS tương thích:</strong> {{ .Params.requirements }}</li>
-        <li><strong>Ngôn ngữ hỗ trợ:</strong>
-            {{ if .Params.languages }}
-                {{ delimit .Params.languages ", " }}
-            {{ else }}
-                Không có thông tin
-            {{ end }}
-        </li>
-    </ul>
-</div>
+            <h2>Thông tin chi tiết</h2>
+            <ul>
+                <li><strong>Kích thước:</strong> {{ .Params.size }}</li>
+                <li><strong>iOS tương thích:</strong> {{ .Params.requirements }}</li>
+                <li><strong>Ngôn ngữ hỗ trợ:</strong>
+                    {{ if .Params.languages }}
+                        {{ delimit .Params.languages ", " }}
+                    {{ else }}
+                        Không có thông tin
+                    {{ end }}
+                </li>
+            </ul>
+        </div>
 
         <div class="app-tags">
             <h2>Từ khóa</h2>
@@ -60,26 +61,26 @@
             </ul>
         </div>
     </div>
-  <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const toggleBtn = document.querySelector('.toggle-description');
-    const previewDesc = document.querySelector('.description-preview');
-    const fullDesc = document.querySelector('.description-full');
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const toggleBtn = document.querySelector('.toggle-description');
+            const previewDesc = document.querySelector('.description-preview');
+            const fullDesc = document.querySelector('.description-full');
 
-    if (toggleBtn) {
-        toggleBtn.addEventListener('click', function() {
-            if (fullDesc.style.display === 'none') {
-                fullDesc.style.display = 'block';
-                previewDesc.style.display = 'none';
-                toggleBtn.textContent = 'Thu gọn';
-            } else {
-                fullDesc.style.display = 'none';
-                previewDesc.style.display = 'block';
-                toggleBtn.textContent = 'Xem thêm';
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', function() {
+                    if (fullDesc.style.display === 'none') {
+                        fullDesc.style.display = 'block';
+                        previewDesc.style.display = 'none';
+                        toggleBtn.textContent = 'Thu gọn';
+                    } else {
+                        fullDesc.style.display = 'none';
+                        previewDesc.style.display = 'block';
+                        toggleBtn.textContent = 'Xem thêm';
+                    }
+                });
             }
         });
-    }
-});
-</script>
+    </script>
 </body>
 </html>
