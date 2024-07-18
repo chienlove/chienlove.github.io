@@ -1,7 +1,39 @@
-{{ define "main" }}
-<article>
-    <h1>{{ .Title }}</h1>
-    <time>{{ .Date.Format "2006-01-02" }}</time>
-    {{ .Content }}
-</article>
-{{ end }}
+<!-- layouts/_default/single.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ .Title }}</title>
+    <link rel="stylesheet" href="/css/apps.css">
+</head>
+<body>
+    <header>
+        <!-- Header content -->
+    </header>
+    <main>
+        <div class="app-container">
+            <div class="app-header">
+                <img class="app-icon" src="{{ .Params.icon | absURL }}" alt="App Icon">
+                <div class="app-details">
+                    <h1 class="app-title">{{ .Title }}</h1>
+                    <p class="app-description">{{ .Params.short_description }}</p>
+                    <a class="app-download-link" href="{{ .Params.download_link }}" target="_blank">Download</a>
+                </div>
+            </div>
+            <div class="app-screenshots">
+                {{ range .Params.screenshots }}
+                    <img src="{{ .image | absURL }}" alt="Screenshot">
+                {{ end }}
+            </div>
+            <div class="app-description">
+                <h2>Thông tin chi tiết</h2>
+                {{ .Content }}
+            </div>
+        </div>
+    </main>
+    <footer>
+        <!-- Footer content -->
+    </footer>
+</body>
+</html>
