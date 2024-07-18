@@ -40,7 +40,7 @@
         <section>
             <h2>Ứng dụng mới nhất</h2>
             <ul class="app-list">
-                {{ range first 10 (where .Site.RegularPages "Type" "in" (slice "app")) }}
+                {{ range first 10 (where .Site.RegularPages "Type" "in" (slice "apps")) }}
                     <li class="app-item">
                         <div class="app-icon">
                             <!-- Replace with icon for app -->
