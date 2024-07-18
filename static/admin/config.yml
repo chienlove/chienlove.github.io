@@ -6,14 +6,19 @@ media_folder: "static/images/uploads"
 public_folder: "/images/uploads"
 
 collections:
-  - name: "category"
-    label: "Chuyên mục"
-    folder: "content/apps"
+  - name: "posts"
+    label: "Bài viết"
+    folder: "content/posts"
     create: true
-    slug: "{{slug}}"
+    slug: "{{year}}-{{month}}-{{day}}-{{slug}}"
     fields:
-      - {label: "Tên chuyên mục", name: "title", widget: "string"}
-      - {label: "Mô tả", name: "description", widget: "text"}
+      - {label: "Tiêu đề", name: "title", widget: "string"}
+      - {label: "Ngày đăng", name: "date", widget: "datetime"}
+      - {label: "Hình ảnh đại diện", name: "thumbnail", widget: "image", required: false}
+      - {label: "Mô tả ngắn", name: "description", widget: "text"}
+      - {label: "Nội dung", name: "body", widget: "markdown"}
+      - {label: "Thẻ", name: "tags", widget: "list", required: false}
+      - {label: "Chuyên mục", name: "categories", widget: "list", required: false}
 
   - name: "app"
     label: "Ứng dụng"
@@ -30,10 +35,18 @@ collections:
       - {label: "Nhà phát triển", name: "developer", widget: "string"}
       - {label: "Thể loại", name: "category", widget: "select", options: ["Ứng dụng", "Games", "Tool jailbreak", "Thủ thuật", "File ipa", "Khác"]}
       - {label: "Chuyên mục", name: "categories", widget: "relation", collection: "category", search_fields: ["title"], value_field: "title", multiple: true}
-      
       - {label: "Phiên bản", name: "version", widget: "string"}
       - {label: "Kích thước", name: "size", widget: "string"}
       - {label: "iOS tương thích", name: "requirements", widget: "string"}
       - {label: "Ngôn ngữ hỗ trợ", name: "languages", widget: "list"}
       - {label: "Liên kết tải App Store", name: "app_store_link", widget: "string"}
       - {label: "Từ khóa", name: "tags", widget: "list"}
+
+  - name: "category"
+    label: "Chuyên mục"
+    folder: "content/categories"
+    create: true
+    slug: "{{slug}}"
+    fields:
+      - {label: "Tên chuyên mục", name: "title", widget: "string"}
+      - {label: "Mô tả", name: "description", widget: "text"}
