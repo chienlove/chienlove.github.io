@@ -1,13 +1,42 @@
 {{ define "main" }}
-<h1>{{ .Title }}</h1>
-{{ .Content }}
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ .Title }}</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+</head>
+<body>
+    <header>
+        <!-- Header content here -->
+    </header>
 
-<h2>Bài viết mới nhất</h2>
-{{ range first 10 (where .Site.RegularPages "Type" "in" (slice "posts" "blog")) }}
-    <article>
-        <h3><a href="{{ .Permalink }}">{{ .Title }}</a></h3>
-        <time>{{ .Date.Format "2006-01-02" }}</time>
-        <p>{{ .Summary }}</p>
-    </article>
-{{ end }}
+    <main>
+        <h1>{{ .Title }}</h1>
+        {{ .Content }}
+        
+        <h2>Bài viết mới nhất</h2>
+        <ul class="post-list">
+            {{ range first 10 (where .Site.RegularPages "Type" "in" (slice "posts" "blog")) }}
+                <li class="post-item">
+                    <div class="post-icon">
+                        <i class="fas fa-file-alt"></i>
+                    </div>
+                    <div class="post-content">
+                        <h3><a href="{{ .Permalink }}">{{ .Title }}</a></h3>
+                        <time>{{ .Date.Format "02-01-2006" }}</time>
+                        <p>{{ .Summary }}</p>
+                    </div>
+                </li>
+            {{ end }}
+        </ul>
+    </main>
+
+    <footer>
+        <!-- Footer content here -->
+    </footer>
+</body>
+</html>
 {{ end }}
