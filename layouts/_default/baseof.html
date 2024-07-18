@@ -1,24 +1,35 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ .Title }} | {{ .Site.Title }}</title>
+    <title>{{ .Title }}</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
 </head>
 <body>
     <header>
-        <h1><a href="{{ .Site.BaseURL }}">{{ .Site.Title }}</a></h1>
+        <div class="logo">Logo</div>
+        <div class="search-bar">
+            <input type="text" placeholder="Tìm kiếm...">
+        </div>
+        <div class="hamburger">☰</div>
     </header>
-    <nav>
-        {{ range .Site.Menus.main }}
-        <a href="{{ .URL }}">{{ .Name }}</a>
-        {{ end }}
-    </nav>
-    <main>
-        {{ block "main" . }}{{ end }}
-    </main>
+
+    {{ block "main" . }}{{ end }}
+
     <footer>
-        <p>&copy; {{ now.Year }} {{ .Site.Title }}</p>
+        <div class="footer-content">
+            <div class="contact-info">
+                <h3>Liên hệ</h3>
+                <p>Email: example@example.com</p>
+                <p>Điện thoại: 123-456-7890</p>
+            </div>
+            <div class="donate-info">
+                <h3>Ủng hộ</h3>
+                <p>Nếu bạn thích nội dung của chúng tôi, hãy xem xét ủng hộ.</p>
+            </div>
+        </div>
     </footer>
 </body>
 </html>
