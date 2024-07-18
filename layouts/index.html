@@ -13,15 +13,17 @@
         <ul class="app-list">
             {{ range first 10 (where .Site.RegularPages "Type" "in" (slice "apps")) }}
                 <li class="app-item">
-                    <img class="app-icon" src="{{ .Params.Icon }}" alt="{{ .Title }}">
-                    <div class="app-info">
-                        <h3 class="app-title">{{ .Title }}</h3>
-                        <p class="app-developer">{{ .Params.Developer }}</p>
-                        <div class="app-meta">
-                            <span class="app-version"><i class="fas fa-arrow-up"></i> {{ .Params.Version }}</span>
+                    <a href="{{ .Permalink }}" class="app-link">
+                        <img class="app-icon" src="{{ .Params.Icon }}" alt="{{ .Title }}">
+                        <div class="app-info">
+                            <h3 class="app-title">{{ .Title }}</h3>
+                            <p class="app-developer">{{ .Params.Developer }}</p>
+                            <div class="app-meta">
+                                <span class="app-version"><i class="fas fa-arrow-up"></i> {{ .Params.Version }}</span>
+                            </div>
                         </div>
-                    </div>
-                    <button class="download-btn">Tải</button>
+                    </a>
+                    <a href="{{ .Permalink }}" class="download-btn">Tải</a>
                 </li>
             {{ end }}
         </ul>
