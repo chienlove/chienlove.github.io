@@ -21,35 +21,37 @@ collections:
       - {label: "Chuyên mục", name: "categories", widget: "list", required: false}
 
   - name: "app"
-label: "Ứng dụng"
-folder: "content/apps"
-create: true
-slug: "{{slug}}"
-fields:
-  - {label: "Tên ứng dụng", name: "title", widget: "string", required: true}
-  - {label: "Ngày đăng", name: "date", widget: "datetime", required: true}
-  - {label: "Ảnh icon", name: "icon", widget: "image", required: true}
-  - {label: "Ảnh screenshot", name: "screenshots", widget: "list", field: {label: "Ảnh", name: "image", widget: "image"}, required: false}
-  - {label: "Mô tả ngắn", name: "short_description", widget: "text", required: true}
-  - {label: "Mô tả chi tiết", name: "description", widget: "markdown", required: true}
-  - {label: "Nhà phát triển", name: "developer", widget: "string", required: true}
-  - {label: "Thể loại", name: "category", widget: "select", options: ["Ứng dụng", "Games", "Tool jailbreak", "Thủ thuật", "File ipa", "Khác"], required: true}
-  - {label: "Chuyên mục", name: "categories", widget: "relation", collection: "category", search_fields: ["title"], value_field: "title", multiple: true, required: true}
-  - {label: "Phiên bản", name: "version", widget: "string", required: true}
-  - {label: "Kích thước", name: "size", widget: "string", required: true}
-  - {label: "iOS tương thích", name: "requirements", widget: "string", required: true}
-  - {label: "Ngôn ngữ hỗ trợ", name: "languages", widget: "list", required: true}
-  - {label: "Liên kết tải App Store", name: "app_store_link", widget: "string", required: true}
-  - {label: "Từ khóa", name: "tags", widget: "list", required: false}
+    label: "Ứng dụng"
+    folder: "content/apps"
+    create: true
+    slug: "{{slug}}"
+    fields:
+      - {label: "Tên ứng dụng", name: "title", widget: "string", required: true}
+      - {label: "Ngày đăng", name: "date", widget: "datetime", required: true}
+      - {label: "Ảnh icon", name: "icon", widget: "image", required: true}
+      - {label: "Ảnh screenshot", name: "screenshots", widget: "list", field: {label: "Ảnh", name: "image", widget: "image"}, required: false}
+      - {label: "Mô tả ngắn", name: "short_description", widget: "text", required: true}
+      - {label: "Mô tả chi tiết", name: "description", widget: "markdown", required: true}
+      - {label: "Nhà phát triển", name: "developer", widget: "string", required: true}
+      - {label: "Thể loại", name: "category", widget: "select", options: ["Ứng dụng", "Games", "Tool jailbreak", "Thủ thuật", "File ipa", "Khác"], required: true}
+      - {label: "Chuyên mục", name: "categories", widget: "relation", collection: "category", search_fields: ["title"], value_field: "title", multiple: true, required: true}
+      - {label: "Phiên bản", name: "version", widget: "string", required: true}
+      - {label: "Kích thước", name: "size", widget: "string", required: true}
+      - {label: "iOS tương thích", name: "requirements", widget: "string", required: true}
+      - {label: "Ngôn ngữ hỗ trợ", name: "languages", widget: "list", required: true}
+      - {label: "Liên kết tải App Store", name: "app_store_link", widget: "string", required: true}
+      - {label: "Từ khóa", name: "tags", widget: "list", required: false}
 
-- name: "category"
-  label: "Chuyên mục"
-  folder: "content/categories"
-  create: true
-  slug: "{{slug}}"
-  fields:
-    - {label: "Tên chuyên mục", name: "title", widget: "string", required: true}
-    - {label: "Mô tả", name: "description", widget: "text", required: true}
-    head:
+  - name: "category"
+    label: "Chuyên mục"
+    folder: "content/categories"
+    create: true
+    slug: "{{slug}}"
+    fields:
+      - {label: "Tên chuyên mục", name: "title", widget: "string", required: true}
+      - {label: "Mô tả", name: "description", widget: "text", required: true}
+
+# Adding custom head elements
+head:
   - rel: "stylesheet"
     href: "/admin/admin.css"
