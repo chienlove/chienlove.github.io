@@ -1,10 +1,63 @@
 /* admin.css */
+
+/* Toàn bộ body */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+}
+
+/* Header */
+header {
+    background-color: #333;
+    color: #fff;
+    padding: 10px;
+}
+
+header h1 {
+    margin: 0;
+}
+
+nav ul {
+    list-style: none;
+    padding: 0;
+}
+
+nav ul li {
+    display: inline;
+    margin-right: 10px;
+}
+
+nav ul li a {
+    color: #fff;
+    text-decoration: none;
+}
+
+/* Main content */
+main {
+    padding: 20px;
+}
+
+.content-list {
+    margin-top: 20px;
+}
+
+/* Footer */
+footer {
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    padding: 10px;
+    position: fixed;
+    width: 100%;
+    bottom: 0;
+}
 /* Ẩn phần xem trước bài viết */
 .nc-previewPane {
   display: none;
 }
 
-/* Tùy chỉnh bố cục trang admin */
+/* Sắp xếp lại các chức năng */
 .nc-root {
   display: flex;
   flex-direction: column;
@@ -22,7 +75,7 @@
   padding: 20px;
 }
 
-/* Hiển thị bài viết theo danh sách */
+/* Hiển thị danh sách bài viết */
 .nc-collectionPage-main .nc-collectionPage-cardGrid {
   display: flex;
   flex-direction: column;
@@ -43,7 +96,7 @@
   background-color: #f0f0f0;
 }
 
-/* Thêm nút Sửa và Xóa */
+/* Thêm các nút Sửa và Xóa */
 .nc-collectionPage-main .nc-collectionPage-cardGrid-item .nc-collectionPage-cardGrid-item-actions {
   display: flex;
   gap: 10px;

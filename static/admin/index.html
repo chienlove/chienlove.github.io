@@ -1,48 +1,46 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Page</title>
+    <title>Admin Dashboard</title>
     <link rel="stylesheet" href="/admin/admin.css">
+  <script src="https://unpkg.com/netlify-cms@^2.0.0/dist/netlify-cms.js"></script>
+    <script src="/admin/admin.js" defer></script>
 </head>
 <body>
-    <script src="https://unpkg.com/netlify-cms@^2.0.0/dist/netlify-cms.js"></script>
-    <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            const observer = new MutationObserver(() => {
-                const postItems = document.querySelectorAll('.nc-collectionPage-cardGrid-item');
-
-                postItems.forEach(item => {
-                    if (!item.querySelector('.nc-collectionPage-cardGrid-item-actions')) {
-                        const actionsDiv = document.createElement('div');
-                        actionsDiv.classList.add('nc-collectionPage-cardGrid-item-actions');
-
-                        const editButton = document.createElement('button');
-                        editButton.classList.add('edit');
-                        editButton.textContent = 'Sửa';
-                        editButton.addEventListener('click', () => {
-                            // Logic sửa bài viết
-                            alert('Edit clicked for ' + item.querySelector('.nc-collectionPage-cardGrid-item-title').textContent);
-                        });
-
-                        const deleteButton = document.createElement('button');
-                        deleteButton.classList.add('delete');
-                        deleteButton.textContent = 'Xóa';
-                        deleteButton.addEventListener('click', () => {
-                            // Logic xóa bài viết
-                            alert('Delete clicked for ' + item.querySelector('.nc-collectionPage-cardGrid-item-title').textContent);
-                        });
-
-                        actionsDiv.appendChild(editButton);
-                        actionsDiv.appendChild(deleteButton);
-                        item.appendChild(actionsDiv);
-                    }
-                });
-            });
-
-            observer.observe(document.body, { childList: true, subtree: true });
-        });
-    </script>
+    <header>
+        <h1>Quản lý Nội Dung</h1>
+        <nav>
+            <ul>
+                <li><a href="#posts">Bài viết</a></li>
+                <li><a href="#apps">Ứng dụng</a></li>
+                <li><a href="#categories">Chuyên mục</a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <section id="posts">
+            <h2>Bài viết</h2>
+            <div class="content-list">
+                <!-- Danh sách bài viết sẽ được tự động tạo bởi CMS -->
+            </div>
+        </section>
+        <section id="apps">
+            <h2>Ứng dụng</h2>
+            <div class="content-list">
+                <!-- Danh sách ứng dụng sẽ được tự động tạo bởi CMS -->
+            </div>
+        </section>
+        <section id="categories">
+            <h2>Chuyên mục</h2>
+            <div class="content-list">
+                <!-- Danh sách chuyên mục sẽ được tự động tạo bởi CMS -->
+            </div>
+        </section>
+    </main>
+    <footer>
+        <p>&copy; 2024 Quản lý Nội Dung</p>
+    </footer>
 </body>
 </html>
