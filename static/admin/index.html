@@ -1,57 +1,10 @@
-<!DOCTYPE html>
-<html lang="vi">
+<!doctype html>
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Netlify CMS Admin</title>
-  <link rel="stylesheet" href="https://unpkg.com/netlify-cms@^2.9.0/dist/netlify-cms.css">
-  <link rel="stylesheet" href="/admin/admin.css"> <!-- Liên kết tới tệp CSS tùy chỉnh -->
+  <title>Content Manager</title>
+  <link href="/admin/admin.css" rel="stylesheet">
 </head>
 <body>
-  <script src="https://unpkg.com/netlify-cms@^2.9.0/dist/netlify-cms.js"></script>
-  <script>
-    // Đảm bảo rằng mã JavaScript chạy sau khi tài liệu đã được tải
-    document.addEventListener('DOMContentLoaded', () => {
-      // Thêm thanh tìm kiếm
-      const searchBar = document.createElement('div');
-      searchBar.className = 'search-bar';
-      searchBar.innerHTML = '<input type="text" id="search-input" placeholder="Tìm kiếm..." oninput="filterItems()">';
-      document.body.insertBefore(searchBar, document.body.firstChild);
-
-      // Thêm JavaScript để thực hiện tìm kiếm
-      function filterItems() {
-        const input = document.getElementById('search-input');
-        const filter = input.value.toLowerCase();
-        const items = document.getElementsByClassName('nc-collection-item');
-        
-        Array.from(items).forEach((item) => {
-          const text = item.textContent || item.innerText;
-          item.style.display = text.toLowerCase().includes(filter) ? '' : 'none';
-        });
-      }
-
-      // Thêm khu vực quản lý bài viết
-      const postManagement = document.createElement('div');
-      postManagement.className = 'post-management';
-      postManagement.innerHTML = `
-        <h1>Quản lý Bài Viết</h1>
-        <button onclick="addPost()">Thêm Bài Viết Mới</button>
-        <ul id="post-list">
-          <!-- Danh sách bài viết sẽ được liệt kê ở đây -->
-        </ul>
-      `;
-      document.querySelector('.nc-collection-content').appendChild(postManagement);
-
-      // Hàm thêm bài viết mới
-      function addPost() {
-        // Ví dụ về việc thêm bài viết
-        const postList = document.getElementById('post-list');
-        const newItem = document.createElement('li');
-        newItem.textContent = 'Bài viết mới - click để chỉnh sửa';
-        newItem.onclick = () => alert('Chỉnh sửa bài viết');
-        postList.appendChild(newItem);
-      }
-    });
-  </script>
+  <script src="https://unpkg.com/netlify-cms@^2.0.0/dist/netlify-cms.js"></script>
 </body>
 </html>

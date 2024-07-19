@@ -117,4 +117,16 @@
 /* Các phần tử không cần thiết */
 .cms-unnecessary-element {
   display: none;
+
+  .nc-app-header {
+  background-color: #4CAF50; /* Màu nền của tiêu đề */
+}
+
+.nc-editor-pane {
+  display: none; /* Ẩn phần xem trước */
+}
+
+.nc-editor-control-pane {
+  width: 100%; /* Mở rộng phần thêm bài viết */
+}
 }
