@@ -1,40 +1,67 @@
-/* Ẩn thanh cuộn ngang */
-body {
-  overflow-x: hidden;
+/* admin.css */
+/* Ẩn phần xem trước bài viết */
+.nc-previewPane {
+  display: none;
 }
 
-/* Điều chỉnh sidebar cho phù hợp với màn hình nhỏ */
-.nc-collection-sidebar {
+/* Tùy chỉnh bố cục trang admin */
+.nc-root {
+  display: flex;
+  flex-direction: column;
+}
+
+.nc-collectionPage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.nc-collectionPage-main {
   width: 100%;
-  overflow-y: auto;
-  padding: 0 10px;
+  max-width: 1200px;
+  padding: 20px;
 }
 
-.nc-collection-sidebar h2, .nc-collection-sidebar label {
-  font-size: 1.2em;
+/* Hiển thị bài viết theo danh sách */
+.nc-collectionPage-main .nc-collectionPage-cardGrid {
+  display: flex;
+  flex-direction: column;
 }
 
-.nc-collection-sidebar .nc-collection-item {
+.nc-collectionPage-main .nc-collectionPage-cardGrid-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   padding: 10px;
+  border: 1px solid #ddd;
+  margin-bottom: 10px;
+  border-radius: 4px;
+  background-color: #fff;
 }
 
-.nc-collection-sidebar input {
-  width: calc(100% - 20px);
+.nc-collectionPage-main .nc-collectionPage-cardGrid-item:hover {
+  background-color: #f0f0f0;
 }
 
-/* Điều chỉnh layout cho màn hình nhỏ */
-@media (max-width: 768px) {
-  .nc-collection-sidebar {
-    position: relative;
-    flex: none;
-  }
+/* Thêm nút Sửa và Xóa */
+.nc-collectionPage-main .nc-collectionPage-cardGrid-item .nc-collectionPage-cardGrid-item-actions {
+  display: flex;
+  gap: 10px;
+}
 
-  .nc-collection-content {
-    width: 100%;
-    margin-left: 0;
-  }
+.nc-collectionPage-main .nc-collectionPage-cardGrid-item .nc-collectionPage-cardGrid-item-actions button {
+  padding: 5px 10px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
 
-  .nc-collection-content .nc-collection-item {
-    width: 100%;
-  }
+.nc-collectionPage-main .nc-collectionPage-cardGrid-item .nc-collectionPage-cardGrid-item-actions button.edit {
+  background-color: #007bff;
+  color: #fff;
+}
+
+.nc-collectionPage-main .nc-collectionPage-cardGrid-item .nc-collectionPage-cardGrid-item-actions button.delete {
+  background-color: #dc3545;
+  color: #fff;
 }

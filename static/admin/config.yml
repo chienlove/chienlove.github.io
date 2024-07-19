@@ -50,3 +50,6 @@ fields:
   fields:
     - {label: "Tên chuyên mục", name: "title", widget: "string", required: true}
     - {label: "Mô tả", name: "description", widget: "text", required: true}
+    head:
+  - rel: "stylesheet"
+    href: "/admin/admin.css"
