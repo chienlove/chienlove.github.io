@@ -1,46 +1,17 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard</title>
-    <link rel="stylesheet" href="/admin/admin.css">
-  <script src="https://unpkg.com/netlify-cms@^2.0.0/dist/netlify-cms.js"></script>
-    <script src="/admin/admin.js" defer></script>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Content Manager</title>
+    <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+    <link href="admin.css" rel="stylesheet">
 </head>
 <body>
-    <header>
-        <h1>Quản lý Nội Dung</h1>
-        <nav>
-            <ul>
-                <li><a href="#posts">Bài viết</a></li>
-                <li><a href="#apps">Ứng dụng</a></li>
-                <li><a href="#categories">Chuyên mục</a></li>
-            </ul>
-        </nav>
-    </header>
-    <main>
-        <section id="posts">
-            <h2>Bài viết</h2>
-            <div class="content-list">
-                <!-- Danh sách bài viết sẽ được tự động tạo bởi CMS -->
-            </div>
-        </section>
-        <section id="apps">
-            <h2>Ứng dụng</h2>
-            <div class="content-list">
-                <!-- Danh sách ứng dụng sẽ được tự động tạo bởi CMS -->
-            </div>
-        </section>
-        <section id="categories">
-            <h2>Chuyên mục</h2>
-            <div class="content-list">
-                <!-- Danh sách chuyên mục sẽ được tự động tạo bởi CMS -->
-            </div>
-        </section>
-    </main>
-    <footer>
-        <p>&copy; 2024 Quản lý Nội Dung</p>
-    </footer>
+    <!-- Bao gồm script của Netlify CMS -->
+    <script src="https://unpkg.com/netlify-cms@^2.0.0/dist/netlify-cms.js"></script>
+    
+    <!-- Script tùy chỉnh của chúng ta -->
+    <script src="admin.js"></script>
 </body>
 </html>

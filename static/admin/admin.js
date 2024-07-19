@@ -1,36 +1,51 @@
-document.addEventListener("DOMContentLoaded", function() {
-  // Ẩn phần xem trước
-  const previewPane = document.querySelector('.nc-previewPane');
-  if (previewPane) {
-    previewPane.style.display = 'none';
-  }
+document.addEventListener('DOMContentLoaded', (event) => {
+    // Thêm nút quay lại danh sách
+    const backButton = document.createElement('button');
+    backButton.textContent = 'Quay lại danh sách';
+    backButton.onclick = () => {
+        window.history.back();
+    };
+    document.querySelector('.css-v758ki-AppHeader').appendChild(backButton);
 
-  // Thêm nút Sửa và Xóa vào danh sách bài viết
-  const postItems = document.querySelectorAll('.nc-collectionPage-cardGrid-item');
-  postItems.forEach(item => {
-    if (!item.querySelector('.nc-collectionPage-cardGrid-item-actions')) {
-      const actionsDiv = document.createElement('div');
-      actionsDiv.classList.add('nc-collectionPage-cardGrid-item-actions');
-
-      const editButton = document.createElement('button');
-      editButton.classList.add('edit');
-      editButton.textContent = 'Sửa';
-      editButton.addEventListener('click', () => {
-        // Logic sửa bài viết
-        alert('Edit clicked for ' + item.querySelector('.nc-collectionPage-cardGrid-item-title').textContent);
-      });
-
-      const deleteButton = document.createElement('button');
-      deleteButton.classList.add('delete');
-      deleteButton.textContent = 'Xóa';
-      deleteButton.addEventListener('click', () => {
-        // Logic xóa bài viết
-        alert('Delete clicked for ' + item.querySelector('.nc-collectionPage-cardGrid-item-title').textContent);
-      });
-
-      actionsDiv.appendChild(editButton);
-      actionsDiv.appendChild(deleteButton);
-      item.appendChild(actionsDiv);
+    // Tùy chỉnh tiêu đề
+    const headerTitle = document.querySelector('.css-v758ki-AppHeaderContent');
+    if (headerTitle) {
+        headerTitle.textContent = 'Quản lý nội dung';
     }
-  });
+
+    // Tùy chỉnh danh sách bài viết
+    const enhancePostList = () => {
+        const postItems = document.querySelectorAll('.css-1hvrgvd-CollectionTopContainer-card-cardTop .css-hn3jn7-CollectionTopRow');
+        postItems.forEach(item => {
+            const editButton = item.querySelector('a');
+            if (editButton) {
+                editButton.style.marginRight = '10px';
+                
+                const deleteButton = document.createElement('button');
+                deleteButton.textContent = 'Xóa';
+                deleteButton.onclick = (e) => {
+                    e.preventDefault();
+                    if (confirm('Bạn có chắc muốn xóa bài viết này?')) {
+                        // Thêm logic xóa bài viết ở đây
+                        console.log('Xóa bài viết');
+                    }
+                };
+                item.appendChild(deleteButton);
+            }
+        });
+    };
+
+    // Gọi hàm tùy chỉnh danh sách bài viết
+    enhancePostList();
+
+    // Theo dõi thay đổi DOM để áp dụng tùy chỉnh cho các phần tử mới
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.type === 'childList') {
+                enhancePostList();
+            }
+        });
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
 });

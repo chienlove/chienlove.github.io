@@ -1,6 +1,4 @@
-/* admin.css */
-
-/* Toàn bộ body */
+/* Tổng thể */
 body {
     font-family: Arial, sans-serif;
     margin: 0;
@@ -8,113 +6,68 @@ body {
 }
 
 /* Header */
-header {
-    background-color: #333;
-    color: #fff;
-    padding: 10px;
+.css-v758ki-AppHeader {
+    background-color: #2c3e50;
+    color: white;
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-header h1 {
-    margin: 0;
+/* Ẩn sidebar */
+.css-1gj57a0-SidebarContainer-card {
+    display: none;
 }
 
-nav ul {
-    list-style: none;
-    padding: 0;
-}
-
-nav ul li {
-    display: inline;
-    margin-right: 10px;
-}
-
-nav ul li a {
-    color: #fff;
-    text-decoration: none;
-}
-
-/* Main content */
-main {
-    padding: 20px;
-}
-
-.content-list {
-    margin-top: 20px;
-}
-
-/* Footer */
-footer {
-    background-color: #333;
-    color: #fff;
-    text-align: center;
-    padding: 10px;
-    position: fixed;
+/* Mở rộng phần nội dung chính */
+.css-v758ki-AppMainContainer {
+    margin-left: 0;
     width: 100%;
-    bottom: 0;
-}
-/* Ẩn phần xem trước bài viết */
-.nc-previewPane {
-  display: none;
 }
 
-/* Sắp xếp lại các chức năng */
-.nc-root {
-  display: flex;
-  flex-direction: column;
+/* Tùy chỉnh danh sách bài viết */
+.css-1hvrgvd-CollectionTopContainer-card-cardTop {
+    background-color: #ecf0f1;
+    margin-bottom: 20px;
+    padding: 15px;
+    border-radius: 5px;
 }
 
-.nc-collectionPage {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+/* Tùy chỉnh form chỉnh sửa */
+.css-1ihmj8g-ControlContainer {
+    background-color: #f9f9f9;
+    padding: 15px;
+    border-radius: 5px;
 }
 
-.nc-collectionPage-main {
-  width: 100%;
-  max-width: 1200px;
-  padding: 20px;
+/* Nút */
+button {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 3px;
+    cursor: pointer;
 }
 
-/* Hiển thị danh sách bài viết */
-.nc-collectionPage-main .nc-collectionPage-cardGrid {
-  display: flex;
-  flex-direction: column;
+button:hover {
+    background-color: #2980b9;
 }
 
-.nc-collectionPage-main .nc-collectionPage-cardGrid-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px;
-  border: 1px solid #ddd;
-  margin-bottom: 10px;
-  border-radius: 4px;
-  background-color: #fff;
-}
+/* Responsive design */
+@media (max-width: 768px) {
+    .css-12b66la-PreviewPaneContainer-card {
+        display: none;
+    }
 
-.nc-collectionPage-main .nc-collectionPage-cardGrid-item:hover {
-  background-color: #f0f0f0;
-}
-
-/* Thêm các nút Sửa và Xóa */
-.nc-collectionPage-main .nc-collectionPage-cardGrid-item .nc-collectionPage-cardGrid-item-actions {
-  display: flex;
-  gap: 10px;
-}
-
-.nc-collectionPage-main .nc-collectionPage-cardGrid-item .nc-collectionPage-cardGrid-item-actions button {
-  padding: 5px 10px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-}
-
-.nc-collectionPage-main .nc-collectionPage-cardGrid-item .nc-collectionPage-cardGrid-item-actions button.edit {
-  background-color: #007bff;
-  color: #fff;
-}
-
-.nc-collectionPage-main .nc-collectionPage-cardGrid-item .nc-collectionPage-cardGrid-item-actions button.delete {
-  background-color: #dc3545;
-  color: #fff;
+    .css-1f7nhiq-CollectionMain {
+        width: 100%;
+    }
+    
+    /* Tăng kích thước nút trên mobile */
+    button {
+        padding: 15px 20px;
+        font-size: 16px;
+    }
 }
