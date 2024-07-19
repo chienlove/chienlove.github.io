@@ -6,13 +6,15 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com;">
     <title>Content Manager</title>
     <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-    <link href="/admin/admin.css" rel="stylesheet">
+    <script>
+CMS.registerPreviewStyle("admin.css");
+</script>
 </head>
 <body>
     <!-- Bao gồm script của Netlify CMS -->
     <script src="https://unpkg.com/netlify-cms@^2.10.192/dist/netlify-cms.js"></script>
     
     <!-- Script tùy chỉnh của chúng ta -->
-    <script src="/admin/admin.js"></script>
+    <script src="/admin.js"></script>
 </body>
 </html>
