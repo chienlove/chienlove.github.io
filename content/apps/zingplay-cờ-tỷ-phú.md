@@ -1,6 +1,6 @@
 ---
 title: ZingPlay - Cờ Tỷ Phú
-date: 2024-07-18T13:45:39.108Z
+date: 2024-07-19T15:53:46.608Z
 icon: https://is2-ssl.mzstatic.com/image/thumb/Purple118/v4/91/79/12/91791221-c0ee-0732-2abe-ed4f8f4ffff9/source/300x300bb.jpg
 screenshots:
   - https://is5-ssl.mzstatic.com/image/thumb/Purple49/v4/7b/ea/bc/7beabc59-cdc3-8c11-2bfe-e94700e4b956/pr_source.png/750x750bb.jpeg
@@ -72,6 +72,5 @@ languages:
   - Anh
   - Việt
 app_store_link: https://storeios.net
-tags:
-  - cotyphu
+tags: []
 ---
