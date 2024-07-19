@@ -1,73 +1,120 @@
-/* custom-admin.css */
+/* Tùy chỉnh giao diện admin Netlify CMS trên điện thoại di động */
 
-/* Giao diện cơ bản */
-body {
-  overflow-x: hidden;
+/* Ẩn phần xem trước */
+.cms-preview {
+  display: none;
+}
+
+/* Sắp xếp lại các chức năng */
+.cms-toolbar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Đặt thanh tìm kiếm và các nút thành một cột */
+.cms-toolbar .search-bar,
+.cms-toolbar .toolbar-buttons {
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+/* Tạo danh sách bài viết */
+.cms-collection {
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+}
+
+.cms-collection .cms-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px;
+  border-bottom: 1px solid #ddd;
+}
+
+.cms-collection .cms-item .item-info {
+  flex: 1;
+}
+
+.cms-collection .cms-item .item-actions {
+  display: flex;
+  gap: 10px;
+}
+
+/* Điều chỉnh kích thước các nút */
+.cms-toolbar .toolbar-buttons button,
+.cms-collection .cms-item .item-actions button {
+  padding: 10px;
+  font-size: 14px;
+}
+
+/* Điều chỉnh giao diện danh sách bài viết */
+.cms-collection .cms-item .item-info h3 {
+  font-size: 16px;
   margin: 0;
-  padding: 0;
-  font-family: Arial, sans-serif;
-  background-color: #f0f0f0;
 }
 
-/* Sidebar */
-.nc-collection-sidebar {
-  width: 250px;
-  overflow-y: auto;
+.cms-collection .cms-item .item-info p {
+  font-size: 14px;
+  margin: 5px 0 0 0;
+}
+
+/* Đặt lại phần header và sidebar cho phù hợp với điện thoại */
+.cms-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   padding: 10px;
-  background-color: #ffffff;
-  border-right: 1px solid #ddd;
-  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
-  position: fixed;
-  top: 0;
-  bottom: 0;
-  z-index: 1000;
 }
 
-.nc-collection-sidebar h2, .nc-collection-sidebar label {
-  font-size: 1.1em;
+.cms-sidebar {
+  display: none;
 }
 
-.nc-collection-sidebar .nc-collection-item {
+.cms-main {
+  margin: 0;
   padding: 10px;
-  border-bottom: 1px solid #ddd;
 }
 
-/* Nội dung */
-.nc-collection-content {
-  margin-left: 260px;
-  padding: 20px;
-}
-
-/* Media Queries cho thiết bị di động */
-@media (max-width: 768px) {
-  .nc-collection-sidebar {
-    width: 100%;
-    position: fixed;
-    height: 100%;
-    z-index: 1000;
-  }
-
-  .nc-collection-content {
-    margin-left: 0;
-  }
-
-  .nc-collection-item {
-    display: block;
-    padding: 10px;
-  }
-}
-
-/* Tìm kiếm */
-.search-bar {
+/* Đảm bảo rằng các thành phần điều hướng phù hợp với màn hình nhỏ */
+.cms-navigation {
+  display: flex;
+  flex-direction: column;
   width: 100%;
-  padding: 10px;
-  background-color: #ffffff;
-  border-bottom: 1px solid #ddd;
 }
 
-.search-bar input {
-  width: 100%;
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+.cms-navigation a {
+  padding: 10px;
+  text-align: center;
+}
+
+/* Điều chỉnh phần heading */
+.cms-heading {
+  font-size: 20px;
+  text-align: center;
+  margin-bottom: 10px;
+}
+
+/* Điều chỉnh các nút trong phần hành động */
+.cms-actions {
+  display: flex;
+  justify-content: space-around;
+}
+
+.cms-actions button {
+  width: 45%;
+  padding: 10px;
+  font-size: 16px;
+}
+
+/* Phần footer */
+.cms-footer {
+  display: none;
+}
+
+/* Các phần tử không cần thiết */
+.cms-unnecessary-element {
+  display: none;
 }
