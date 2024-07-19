@@ -123,10 +123,10 @@
 }
 
 .nc-editor-pane {
-  display: none; /* Ẩn phần xem trước */
+  display: none !important; /* Ẩn phần xem trước */
 }
 
 .nc-editor-control-pane {
-  width: 100%; /* Mở rộng phần thêm bài viết */
+  width: 100% !important; /* Mở rộng phần thêm bài viết */
 }
 }
