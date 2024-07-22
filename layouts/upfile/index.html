@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Upload</title>
+    <link rel="stylesheet" href="upfile.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Upload File</h1>
+        <form name="file-upload" method="POST" data-netlify="true" enctype="multipart/form-data">
+            <input type="file" name="file" required />
+            <input type="submit" value="Upload File" />
+        </form>
+        <div id="upload-result" class="hidden">
+            <p>File uploaded successfully!</p>
+            <p>Download link: <a id="file-link" href="#" target="_blank"></a></p>
+            <button id="copy-link">Copy Link</button>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
