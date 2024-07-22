@@ -1,10 +1,22 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
 <head>
-  <meta charset="UTF-8">
-  <title>Netlify CMS</title>
-  <link rel="stylesheet" href="https://unpkg.com/netlify-cms@^2.9.0/dist/netlify-cms.css">
+  <title>Content Manager</title>
   <link rel="stylesheet" href="/admin/admin.css">
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script src="https://unpkg.com/netlify-cms@^2.0.0/dist/netlify-cms.js"></script>
 </head>
 <body>
-  <script src="https://unpkg.com/netlify-cms@^2.9.0/dist/netlify-cms.js"></script>
+  <script>
+    if (window.netlifyIdentity) {
+      window.netlifyIdentity.on("init", user => {
+        if (!user) {
+          window.netlifyIdentity.on("login", () => {
+            document.location.href = "/admin/";
+          });
+        }
+      });
+    }
+  </script>
+</body>
+</html>
