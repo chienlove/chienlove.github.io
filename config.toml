@@ -21,8 +21,3 @@ title = "storeios"
 
 [markup.goldmark.renderer]
   unsafe = true
-
-[module]
-  [[module.mounts]]
-    source = "src"
-    target = "assets"
