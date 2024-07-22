@@ -8,18 +8,7 @@
 </head>
 <body>
   <script>
-    if (window.netlifyIdentity) {
-      window.netlifyIdentity.on("init", user => {
-        if (!user) {
-          window.netlifyIdentity.on("login", () => {
-            document.location.href = "/admin/";
-          });
-        }
-      });
-    }
-  </script>
-  <script>
-  CMS.registerPreviewStyle('admin.css');
+  CMS.registerPreviewStyle('/admin/admin.css');
   CMS.registerPreviewTemplate('posts', BlogPostPreview);
 </script>
 </body>
