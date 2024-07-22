@@ -24,3 +24,8 @@ title = "storeios"
 # Thêm các cấu hình khác nếu cần
 [markup.goldmark.renderer]
   unsafe = true
+# tuỳ chỉnh cms
+ [module]
+  [[module.mounts]]
+    source = "src"
+    target = "src"
