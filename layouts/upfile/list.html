@@ -27,20 +27,26 @@
 </main>
 
 <script>
-document.getElementById('upload-form').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    const status = document.getElementById('status');
-    status.textContent = 'Đang upload...';
+document.getElementById('upload-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const file = document.getElementById('file-input').files[0];
+  const formData = new FormData();
+  formData.append('file', file);
 
-    // Ở đây bạn sẽ thêm logic để gửi file lên GitHub Releases
-    // Lưu ý: Việc này thường được thực hiện thông qua một backend service để bảo mật
-    
-    // Ví dụ mô phỏng:
-    setTimeout(() => {
-        status.textContent = 'Upload thành công!';
-    }, 2000);
+  try {
+    const response = await fetch('/.netlify/functions/upload-handler', {
+      method: 'POST',
+      body: formData
+    });
+    const result = await response.json();
+    document.getElementById('result').textContent = `File uploaded: ${result.url}`;
+  } catch (error) {
+    console.error('Error:', error);
+    document.getElementById('result').textContent = 'Upload failed';
+  }
 });
 </script>
+{{ end }}
 
 <style>
 .upload-page {
