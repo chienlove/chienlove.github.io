@@ -4,8 +4,8 @@ exports.handler = async (event, context) => {
     try {
         const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
         const releases = await octokit.repos.listReleases({
-            owner: 'YOUR_GITHUB_USERNAME',
-            repo: 'YOUR_REPO_NAME'
+            owner: 'chienlove',
+            repo: 'chienlove.github.io'
         });
 
         return {
