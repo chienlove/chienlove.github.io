@@ -1,8 +1,6 @@
 document.getElementById('upload-form').addEventListener('submit', async function(e) {
     e.preventDefault();
     const status = document.getElementById('status');
-    const links = document.getElementById('links');
-    const fileLinks = document.getElementById('file-links');
     status.textContent = 'Đang upload...';
 
     const fileInput = document.getElementById('file-input');
@@ -24,13 +22,6 @@ document.getElementById('upload-form').addEventListener('submit', async function
         const result = await response.json();
         if (response.ok) {
             status.textContent = 'Upload thành công!';
-            const linkItem = document.createElement('li');
-            const link = document.createElement('a');
-            link.href = result.file_url;
-            link.textContent = result.file_url;
-            linkItem.appendChild(link);
-            fileLinks.appendChild(linkItem);
-            links.classList.remove('hidden');
         } else {
             status.textContent = `Lỗi: ${result.error}`;
         }
