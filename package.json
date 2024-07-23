@@ -10,6 +10,8 @@
   "license": "ISC",
   "dependencies": {
     "fs": "^0.0.1-security",
-    "path": "^0.12.7"
+    "path": "^0.12.7",
+    "@octokit/rest": "^18.0.0",
+    "node-fetch": "^2.6.1"
   }
 }
