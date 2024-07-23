@@ -1,5 +1,4 @@
 name: Hugo Build, Deploy, and Upload Release Asset
-
 on:
   push:
     branches:
@@ -7,29 +6,23 @@ on:
   workflow_dispatch:
   repository_dispatch:
     types: [upload]
-
 jobs:
   build-deploy:
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v3
       with:
         submodules: true
         fetch-depth: 0
-
     - name: Clear Hugo Cache
       run: rm -rf public
-
     - name: Setup Hugo
       uses: peaceiris/actions-hugo@v2
       with:
         hugo-version: 'latest'
         extended: true
-
     - name: Build
       run: hugo --minify
-
     - name: Deploy to Netlify
       uses: nwtgck/actions-netlify@v2.0
       with:
@@ -41,37 +34,34 @@ jobs:
         NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
         NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
       timeout-minutes: 1
-
     - name: Handle Netlify Upload
-  if: github.event_name == 'repository_dispatch' && github.event.action == 'upload'
-  run: |
-    if [ -n "${{ github.event.client_payload.file_url }}" ]; then
-      wget "${{ github.event.client_payload.file_url }}" -O uploaded_file.zip
-      echo "File downloaded: uploaded_file.zip"
-    else
-      echo "No file URL provided. Creating a dummy file."
-      echo "This is a dummy file" > uploaded_file.zip
-    fi
-
-- name: Create GitHub Release
-  if: github.event_name == 'repository_dispatch' && github.event.action == 'upload'
-  id: create_release
-  uses: actions/create-release@v1
-  env:
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  with:
-    tag_name: 'v${{ github.run_number }}'
-    release_name: 'Release v${{ github.run_number }}'
-    draft: false
-    prerelease: false
-
-- name: Upload Release Asset
-  if: github.event_name == 'repository_dispatch' && github.event.action == 'upload'
-  uses: actions/upload-release-asset@v1
-  env:
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  with:
-    upload_url: ${{ steps.create_release.outputs.upload_url }}
-    asset_path: ./uploaded_file.zip
-    asset_name: uploaded_file.zip
-    asset_content_type: application/zip
+      if: github.event_name == 'repository_dispatch' && github.event.action == 'upload'
+      run: |
+        if [ -n "${{ github.event.client_payload.file_url }}" ]; then
+          wget "${{ github.event.client_payload.file_url }}" -O uploaded_file.zip
+          echo "File downloaded: uploaded_file.zip"
+        else
+          echo "No file URL provided. Creating a dummy file."
+          echo "This is a dummy file" > uploaded_file.zip
+        fi
+    - name: Create GitHub Release
+      if: github.event_name == 'repository_dispatch' && github.event.action == 'upload'
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: 'v${{ github.run_number }}'
+        release_name: 'Release v${{ github.run_number }}'
+        draft: false
+        prerelease: false
+    - name: Upload Release Asset
+      if: github.event_name == 'repository_dispatch' && github.event.action == 'upload'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./uploaded_file.zip
+        asset_name: uploaded_file.zip
+        asset_content_type: application/zip
