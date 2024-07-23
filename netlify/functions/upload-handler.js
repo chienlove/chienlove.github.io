@@ -57,7 +57,7 @@ exports.handler = async (event, context) => {
             method: 'POST',
             headers: {
                 Authorization: `token ${process.env.GITHUB_TOKEN}`,
-                ...form.getHeaders()
+                ...form.getHeaders()  // Ensure headers are set properly
             },
             body: form
         });
