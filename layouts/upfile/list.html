@@ -29,24 +29,38 @@
 <script>
 document.getElementById('upload-form').addEventListener('submit', async (e) => {
   e.preventDefault();
+  const statusElement = document.getElementById('status');
+  statusElement.textContent = 'Đang upload...';
+
   const file = document.getElementById('file-input').files[0];
+  const releaseTag = document.getElementById('release-tag').value;
+  const releaseName = document.getElementById('release-name').value;
+  const releaseNotes = document.getElementById('release-notes').value;
+
   const formData = new FormData();
   formData.append('file', file);
+  formData.append('releaseTag', releaseTag);
+  formData.append('releaseName', releaseName);
+  formData.append('releaseNotes', releaseNotes);
 
   try {
     const response = await fetch('/.netlify/functions/upload-handler', {
       method: 'POST',
       body: formData
     });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
     const result = await response.json();
-    document.getElementById('result').textContent = `File uploaded: ${result.url}`;
+    statusElement.textContent = `File uploaded successfully. Download URL: ${result.url}`;
   } catch (error) {
     console.error('Error:', error);
-    document.getElementById('result').textContent = 'Upload failed';
+    statusElement.textContent = `Upload failed: ${error.message}`;
   }
 });
 </script>
-{{ end }}
 
 <style>
 .upload-page {
