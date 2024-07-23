@@ -1,24 +1,82 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>File Upload</title>
-    <link rel="stylesheet" href="upfile.css">
-</head>
-<body>
-    <div class="container">
-        <h1>Upload File</h1>
-        <form name="file-upload" method="POST" data-netlify="true" enctype="multipart/form-data">
-            <input type="file" name="file" required />
-            <input type="submit" value="Upload File" />
-        </form>
-        <div id="upload-result" class="hidden">
-            <p>File uploaded successfully!</p>
-            <p>Download link: <a id="file-link" href="#" target="_blank"></a></p>
-            <button id="copy-link">Copy Link</button>
-        </div>
+{{ define "main" }}
+<main class="upload-page">
+    <h1>{{ .Title }}</h1>
+    <div class="content">
+        {{ .Content }}
     </div>
-    <script src="script.js"></script>
-</body>
-</html>
+    <form id="upload-form">
+        <div class="form-group">
+            <label for="file-input">Chọn file để upload:</label>
+            <input type="file" id="file-input" required>
+        </div>
+        <div class="form-group">
+            <label for="release-tag">Tag phiên bản:</label>
+            <input type="text" id="release-tag" placeholder="v1.0.0" required>
+        </div>
+        <div class="form-group">
+            <label for="release-name">Tên phiên bản:</label>
+            <input type="text" id="release-name" placeholder="Phiên bản 1.0.0" required>
+        </div>
+        <div class="form-group">
+            <label for="release-notes">Ghi chú phiên bản:</label>
+            <textarea id="release-notes" placeholder="Mô tả các thay đổi trong phiên bản này"></textarea>
+        </div>
+        <button type="submit">Upload lên GitHub Releases</button>
+    </form>
+    <div id="status" class="mt-3"></div>
+</main>
+
+<script>
+document.getElementById('upload-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const status = document.getElementById('status');
+    status.textContent = 'Đang upload...';
+
+    // Ở đây bạn sẽ thêm logic để gửi file lên GitHub Releases
+    // Lưu ý: Việc này thường được thực hiện thông qua một backend service để bảo mật
+    
+    // Ví dụ mô phỏng:
+    setTimeout(() => {
+        status.textContent = 'Upload thành công!';
+    }, 2000);
+});
+</script>
+
+<style>
+.upload-page {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+}
+.form-group {
+    margin-bottom: 15px;
+}
+label {
+    display: block;
+    margin-bottom: 5px;
+}
+input[type="file"],
+input[type="text"],
+textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+button {
+    background-color: #0366d6;
+    color: white;
+    padding: 10px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+button:hover {
+    background-color: #0056b3;
+}
+#status {
+    margin-top: 15px;
+    font-weight: bold;
+}
+</style>
+{{ end }}
