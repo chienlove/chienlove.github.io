@@ -45,18 +45,16 @@ exports.handler = async (event, context) => {
             }
         }
 
-        const uploadUrl = release.data.upload_url;
+        const uploadUrl = release.data.upload_url.replace(/\{.*\}$/, ''); // Remove placeholder from URL
 
         // Upload the file
         const form = new FormData();
         form.append('file', file.buffer, file.originalname);
 
-        console.log('Uploading to URL:', `${uploadUrl}?name=${encodeURIComponent(file.originalname)}`);
-
         const uploadResponse = await fetch(`${uploadUrl}?name=${encodeURIComponent(file.originalname)}`, {
             method: 'POST',
             headers: {
-                Authorization: `token ${process.env.GITHUB_TOKEN}`,
+                'Authorization': `token ${process.env.GITHUB_TOKEN}`,
                 ...form.getHeaders()  // Ensure headers are set properly
             },
             body: form
