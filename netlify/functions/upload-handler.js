@@ -1,31 +1,47 @@
 const fetch = require('node-fetch');
 
-exports.handler = async (event) => {
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Method Not Allowed' };
-  }
+exports.handler = async (event, context) => {
+    try {
+        const data = new URLSearchParams(event.body);
+        const fileUrl = data.get('file'); // URL của tệp tải lên
 
-  try {
-    const response = await fetch(`https://api.github.com/repos/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/dispatches`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `token ${process.env.GITHUB_TOKEN}`,
-        'Accept': 'application/vnd.github.v3+json'
-      },
-      body: JSON.stringify({
-        event_type: 'upload',
-        client_payload: {
-          file_url: 'URL_TO_UPLOADED_FILE' // Bạn cần thay thế cái này bằng URL thực tế của file đã upload
+        const payload = {
+            event_type: 'upload',
+            client_payload: {
+                file_url: fileUrl,
+                release_tag: data.get('release_tag'),
+                release_name: data.get('release_name'),
+                release_notes: data.get('release_notes')
+            }
+        };
+
+        const response = await fetch(`https://api.github.com/repos/chienlove/chienlove.github.io/dispatches`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `token ${process.env.GITHUB_TOKEN}`
+            },
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const errorResponse = await response.text();
+            console.error('Error response from GitHub:', errorResponse);
+            return {
+                statusCode: response.status,
+                body: JSON.stringify({ error: errorResponse })
+            };
         }
-      })
-    });
 
-    if (response.ok) {
-      return { statusCode: 200, body: JSON.stringify({ message: 'GitHub Action triggered successfully' }) };
-    } else {
-      throw new Error('Failed to trigger GitHub Action');
+        return {
+            statusCode: 200,
+            body: JSON.stringify({ message: 'Webhook triggered', file_url: fileUrl })
+        };
+    } catch (error) {
+        console.error('Error in Netlify Function:', error);
+        return {
+            statusCode: 500,
+            body: JSON.stringify({ error: 'Internal Server Error' })
+        };
     }
-  } catch (error) {
-    return { statusCode: 500, body: JSON.stringify({ error: error.message }) };
-  }
 };
