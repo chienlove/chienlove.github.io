@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "echo 'No build step defined'"
+    "build": "echo 'No build step defined' && hugo --gc --minify"
   },
   "author": "",
   "license": "ISC",
@@ -12,6 +12,7 @@
     "fs": "^0.0.1-security",
     "path": "^0.12.7",
     "@octokit/rest": "^18.0.0",
-    "node-fetch": "^2.6.1"
+    "node-fetch": "^2.6.1",
+    "form-data": "^4.0.0"
   }
 }
