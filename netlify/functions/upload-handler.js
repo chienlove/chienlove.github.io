@@ -48,7 +48,8 @@ exports.handler = async (event, context) => {
         const uploadResponse = await fetch(`${uploadUrl}?name=${encodeURIComponent(file.originalname)}`, {
             method: 'POST',
             headers: {
-                Authorization: `token ${process.env.GITHUB_TOKEN}`
+                Authorization: `token ${process.env.GITHUB_TOKEN}`,
+                ...form.getHeaders() // Add the correct headers for form-data
             },
             body: form
         });
@@ -64,21 +65,9 @@ exports.handler = async (event, context) => {
 
         const uploadResult = await uploadResponse.json();
 
-        // Shorten URL
-        const shortUrlResponse = await fetch(`https://wap4.co/api/shorten?url=${encodeURIComponent(uploadResult.browser_download_url)}`);
-        const shortUrlData = await shortUrlResponse.json();
-
-        if (!shortUrlResponse.ok) {
-            console.error('Error response from URL shortener:', shortUrlData);
-            return {
-                statusCode: shortUrlResponse.status,
-                body: JSON.stringify({ error: shortUrlData.message })
-            };
-        }
-
         return {
             statusCode: 200,
-            body: JSON.stringify({ message: 'Upload thành công!', file_url: uploadResult.browser_download_url, short_url: shortUrlData.shortUrl })
+            body: JSON.stringify({ message: 'Upload thành công!', file_url: uploadResult.browser_download_url })
         };
     } catch (error) {
         console.error('Error in Netlify Function:', error);
