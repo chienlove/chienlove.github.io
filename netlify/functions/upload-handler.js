@@ -7,6 +7,8 @@ exports.handler = async (event, context) => {
         const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
         const { file, release_tag, release_name, release_notes, existing_release } = JSON.parse(event.body);
 
+        console.log('Received data:', { file, release_tag, release_name, release_notes, existing_release });
+
         let release;
         if (existing_release) {
             // Use existing release
@@ -15,6 +17,7 @@ exports.handler = async (event, context) => {
                 repo: 'chienlove.github.io',
                 tag: existing_release
             });
+            console.log('Existing release:', release.data);
         } else {
             // Check if release exists
             try {
@@ -23,6 +26,7 @@ exports.handler = async (event, context) => {
                     repo: 'chienlove.github.io',
                     tag: release_tag
                 });
+                console.log('Found release:', release.data);
             } catch (error) {
                 if (error.status === 404) {
                     // Create a new release if not found
@@ -33,7 +37,9 @@ exports.handler = async (event, context) => {
                         name: release_name,
                         body: release_notes
                     });
+                    console.log('Created new release:', release.data);
                 } else {
+                    console.error('Error checking release:', error);
                     throw error;
                 }
             }
@@ -45,11 +51,13 @@ exports.handler = async (event, context) => {
         const form = new FormData();
         form.append('file', file.buffer, file.originalname);
 
+        console.log('Uploading to URL:', `${uploadUrl}?name=${encodeURIComponent(file.originalname)}`);
+
         const uploadResponse = await fetch(`${uploadUrl}?name=${encodeURIComponent(file.originalname)}`, {
             method: 'POST',
             headers: {
                 Authorization: `token ${process.env.GITHUB_TOKEN}`,
-                ...form.getHeaders() // Add the correct headers for form-data
+                ...form.getHeaders()
             },
             body: form
         });
@@ -64,6 +72,7 @@ exports.handler = async (event, context) => {
         }
 
         const uploadResult = await uploadResponse.json();
+        console.log('Upload result:', uploadResult);
 
         return {
             statusCode: 200,
