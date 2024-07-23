@@ -1,41 +1,84 @@
 const fetch = require('node-fetch');
+const FormData = require('form-data');
+const { Octokit } = require('@octokit/rest');
 
 exports.handler = async (event, context) => {
     try {
-        const data = new URLSearchParams(event.body);
-        const fileUrl = data.get('file'); // URL của tệp tải lên
+        const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
+        const { file, release_tag, release_name, release_notes, existing_release } = JSON.parse(event.body);
 
-        const payload = {
-            event_type: 'upload',
-            client_payload: {
-                file_url: fileUrl,
-                release_tag: data.get('release_tag'),
-                release_name: data.get('release_name'),
-                release_notes: data.get('release_notes')
+        let release;
+        if (existing_release) {
+            // Use existing release
+            release = await octokit.repos.getReleaseByTag({
+                owner: 'chienlove',
+                repo: 'chienlove.github.io',
+                tag: existing_release
+            });
+        } else {
+            // Check if release exists
+            try {
+                release = await octokit.repos.getReleaseByTag({
+                    owner: 'chienlove',
+                    repo: 'chienlove.github.io',
+                    tag: release_tag
+                });
+            } catch (error) {
+                if (error.status === 404) {
+                    // Create a new release if not found
+                    release = await octokit.repos.createRelease({
+                        owner: 'chienlove',
+                        repo: 'chienlove.github.io',
+                        tag_name: release_tag,
+                        name: release_name,
+                        body: release_notes
+                    });
+                } else {
+                    throw error;
+                }
             }
-        };
+        }
 
-        const response = await fetch(`https://api.github.com/repos/chienlove/chienlove.github.io/dispatches`, {
+        const uploadUrl = release.data.upload_url;
+
+        // Upload the file
+        const form = new FormData();
+        form.append('file', file.buffer, file.originalname);
+
+        const uploadResponse = await fetch(`${uploadUrl}?name=${encodeURIComponent(file.originalname)}`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `token ${process.env.GITHUB_TOKEN}`
+                Authorization: `token ${process.env.GITHUB_TOKEN}`
             },
-            body: JSON.stringify(payload)
+            body: form
         });
 
-        if (!response.ok) {
-            const errorResponse = await response.text();
+        if (!uploadResponse.ok) {
+            const errorResponse = await uploadResponse.text();
             console.error('Error response from GitHub:', errorResponse);
             return {
-                statusCode: response.status,
+                statusCode: uploadResponse.status,
                 body: JSON.stringify({ error: errorResponse })
+            };
+        }
+
+        const uploadResult = await uploadResponse.json();
+
+        // Shorten URL
+        const shortUrlResponse = await fetch(`https://wap4.co/api/shorten?url=${encodeURIComponent(uploadResult.browser_download_url)}`);
+        const shortUrlData = await shortUrlResponse.json();
+
+        if (!shortUrlResponse.ok) {
+            console.error('Error response from URL shortener:', shortUrlData);
+            return {
+                statusCode: shortUrlResponse.status,
+                body: JSON.stringify({ error: shortUrlData.message })
             };
         }
 
         return {
             statusCode: 200,
-            body: JSON.stringify({ message: 'Webhook triggered', file_url: fileUrl })
+            body: JSON.stringify({ message: 'Upload thành công!', file_url: uploadResult.browser_download_url, short_url: shortUrlData.shortUrl })
         };
     } catch (error) {
         console.error('Error in Netlify Function:', error);
