@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const messageDiv = document.getElementById('message');
 
     // Populate existing releases
-    fetch('/.netlify/functions/releases')
+    fetch('/api/releases')
         .then(response => response.json())
         .then(releases => {
             releases.forEach(release => {
@@ -30,22 +30,24 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     form.addEventListener('submit', async (e) => {
-        e.preventDefault();
+        e.preventDefault(); // Ngăn chặn form submit mặc định
+        
         const formData = new FormData(form);
         
         try {
-            const response = await fetch('/.netlify/functions/upload', {
+            const response = await fetch('/api/upload', {
                 method: 'POST',
                 body: formData
             });
-            const result = await response.json();
-            if (response.ok) {
-                showMessage(result.message, 'success');
-            } else {
-                showMessage(result.error, 'error');
+            
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
             }
+            
+            const result = await response.json();
+            showMessage(result.message, 'success');
         } catch (error) {
-            showMessage('An error occurred during upload', 'error');
+            showMessage(error.message || 'An error occurred during upload', 'error');
         }
     });
 
