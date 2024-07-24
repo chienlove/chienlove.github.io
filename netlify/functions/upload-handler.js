@@ -9,9 +9,11 @@ exports.handler = async (event, context) => {
 
     try {
         const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
-        const { file, release_tag, release_name, release_notes, existing_release } = JSON.parse(event.body);
+        const payload = JSON.parse(event.body);
 
-        console.log('Received data:', { file, release_tag, release_name, release_notes, existing_release });
+        console.log('Received payload:', payload);
+
+        const { file, release_tag, release_name, release_notes, existing_release } = payload;
 
         // Kiểm tra dữ liệu đầu vào
         if (!file || !file.content || !file.name) {
