@@ -2,31 +2,24 @@ const fetch = require('node-fetch');
 const { Octokit } = require('@octokit/rest');
 
 exports.handler = async (event, context) => {
-    // Kiểm tra phương thức HTTP
     if (event.httpMethod !== 'POST') {
         return { statusCode: 405, body: JSON.stringify({ error: 'Method Not Allowed' }) };
     }
 
     try {
         const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
-        const payload = JSON.parse(event.body);
+        const { file, release_tag, release_name, release_notes, existing_release } = JSON.parse(event.body);
 
-        console.log('Received payload:', payload);
+        console.log('Received data:', { release_tag, release_name, existing_release });
 
-        const { file, release_tag, release_name, release_notes, existing_release } = payload;
-
-        // Kiểm tra dữ liệu đầu vào
         if (!file || !file.content || !file.name) {
-            console.error('Invalid file data:', { file });
             throw new Error('Invalid file data');
         }
 
-        console.log('File data:', { name: file.name, size: file.content.length });
-
         const owner = 'chienlove';
         const repo = 'chienlove.github.io';
-        let release;
 
+        let release;
         if (existing_release) {
             console.log(`Using existing release: ${existing_release}`);
             release = await octokit.repos.getReleaseByTag({ owner, repo, tag: existing_release });
@@ -45,7 +38,6 @@ exports.handler = async (event, context) => {
                         body: release_notes
                     });
                 } else {
-                    console.error('Error checking release:', error);
                     throw error;
                 }
             }
@@ -61,7 +53,8 @@ exports.handler = async (event, context) => {
             method: 'POST',
             headers: {
                 'Authorization': `token ${process.env.GITHUB_TOKEN}`,
-                'Content-Type': 'application/octet-stream'
+                'Content-Type': 'application/zip', // Thay đổi loại nội dung cho tệp .ipa
+                'Content-Length': fileBuffer.length
             },
             body: fileBuffer
         });
