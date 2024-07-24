@@ -60,42 +60,29 @@ document.getElementById('upload-form').addEventListener('submit', async function
     const releaseName = document.getElementById('release-name').value;
     const releaseNotes = document.getElementById('release-notes').value;
 
-    const reader = new FileReader();
-    reader.readAsDataURL(fileInput);
-    reader.onloadend = async () => {
-        const base64String = reader.result.split(',')[1];
+    const formData = new FormData();
+    formData.append('file', fileInput);
+    formData.append('existing_release', existingRelease);
+    formData.append('release_tag', releaseTag);
+    formData.append('release_name', releaseName);
+    formData.append('release_notes', releaseNotes);
 
-        const data = {
-            file: {
-                name: fileInput.name,
-                content: base64String
-            },
-            existing_release: existingRelease,
-            release_tag: releaseTag,
-            release_name: releaseName,
-            release_notes: releaseNotes
-        };
+    try {
+        const response = await fetch('/.netlify/functions/upload-handler', {
+            method: 'POST',
+            body: formData
+        });
 
-        try {
-            const response = await fetch('/.netlify/functions/upload-handler', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            });
-
-            if (!response.ok) {
-                throw new Error('Upload failed');
-            }
-
-            const result = await response.json();
-            status.textContent = 'Upload thành công!';
-            shortUrlDiv.innerHTML = `Link rút gọn: <a href="${result.short_url}" target="_blank">${result.short_url}</a>`;
-        } catch (error) {
-            status.textContent = 'Upload thất bại: ' + error.message;
+        if (!response.ok) {
+            throw new Error('Upload failed');
         }
-    };
+
+        const result = await response.json();
+        status.textContent = 'Upload thành công!';
+        shortUrlDiv.innerHTML = `Link rút gọn: <a href="${result.short_url}" target="_blank">${result.short_url}</a>`;
+    } catch (error) {
+        status.textContent = 'Upload thất bại: ' + error.message;
+    }
 });
 </script>
 

@@ -1,5 +1,6 @@
 const fetch = require('node-fetch');
 const { Octokit } = require('@octokit/rest');
+const FormData = require('form-data');
 
 exports.handler = async (event, context) => {
     if (event.httpMethod !== 'POST') {
@@ -8,7 +9,8 @@ exports.handler = async (event, context) => {
 
     try {
         const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
-        const { file, release_tag, release_name, release_notes, existing_release } = JSON.parse(event.body);
+        const { release_tag, release_name, release_notes, existing_release } = JSON.parse(event.body);
+        const file = event.body.file;
 
         if (!file || !file.content || !file.name) {
             throw new Error('Invalid file data');
@@ -38,17 +40,17 @@ exports.handler = async (event, context) => {
             }
         }
 
-        const fileBuffer = Buffer.from(file.content, 'base64');
         const uploadUrl = release.data.upload_url.replace(/\{.*\}$/, '');
+        
+        const form = new FormData();
+        form.append('file', Buffer.from(file.content, 'base64'), file.name);
 
         const uploadResponse = await fetch(`${uploadUrl}?name=${encodeURIComponent(file.name)}`, {
             method: 'POST',
             headers: {
-                'Authorization': `token ${process.env.GITHUB_TOKEN}`,
-                'Content-Type': 'application/octet-stream', // Thay đổi loại nội dung cho tệp .ipa
-                'Content-Length': fileBuffer.length
+                'Authorization': `token ${process.env.GITHUB_TOKEN}`
             },
-            body: fileBuffer
+            body: form
         });
 
         if (!uploadResponse.ok) {
