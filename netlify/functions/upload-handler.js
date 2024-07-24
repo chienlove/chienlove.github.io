@@ -2,7 +2,6 @@ const fetch = require('node-fetch');
 const { Octokit } = require('@octokit/rest');
 
 exports.handler = async (event, context) => {
-    // Kiểm tra phương thức HTTP
     if (event.httpMethod !== 'POST') {
         return { statusCode: 405, body: JSON.stringify({ error: 'Method Not Allowed' }) };
     }
@@ -12,16 +11,16 @@ exports.handler = async (event, context) => {
         const { file, release_tag, release_name, release_notes, existing_release } = JSON.parse(event.body);
 
         console.log('Received data:', { release_tag, release_name, existing_release });
+        console.log('File data:', { name: file.name, size: file.content.length });
 
-        // Kiểm tra dữ liệu đầu vào
         if (!file || !file.content || !file.name) {
             throw new Error('Invalid file data');
         }
 
         const owner = 'chienlove';
         const repo = 'chienlove.github.io';
-
         let release;
+
         if (existing_release) {
             console.log(`Using existing release: ${existing_release}`);
             release = await octokit.repos.getReleaseByTag({ owner, repo, tag: existing_release });
@@ -40,6 +39,7 @@ exports.handler = async (event, context) => {
                         body: release_notes
                     });
                 } else {
+                    console.error('Error checking release:', error);
                     throw error;
                 }
             }
@@ -47,7 +47,6 @@ exports.handler = async (event, context) => {
 
         console.log('Release data:', release.data);
 
-        // Upload file
         const fileBuffer = Buffer.from(file.content, 'base64');
         const uploadUrl = release.data.upload_url.replace(/\{.*\}$/, '');
 
