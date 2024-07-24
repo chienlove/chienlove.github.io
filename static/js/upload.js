@@ -1,31 +1,57 @@
-document.getElementById('upload-form').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    const status = document.getElementById('status');
-    status.textContent = 'Đang upload...';
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('uploadForm');
+    const releaseTypeSelect = document.getElementById('releaseType');
+    const newReleaseFields = document.getElementById('newReleaseFields');
+    const existingReleaseField = document.getElementById('existingReleaseField');
+    const existingReleasesSelect = document.getElementById('existingReleases');
+    const messageDiv = document.getElementById('message');
 
-    const fileInput = document.getElementById('file-input');
-    const releaseTag = document.getElementById('release-tag').value;
-    const releaseName = document.getElementById('release-name').value;
-    const releaseNotes = document.getElementById('release-notes').value;
+    // Populate existing releases
+    fetch('/.netlify/functions/releases')
+        .then(response => response.json())
+        .then(releases => {
+            releases.forEach(release => {
+                const option = document.createElement('option');
+                option.value = release.id;
+                option.textContent = release.name;
+                existingReleasesSelect.appendChild(option);
+            });
+        })
+        .catch(error => showMessage(error.message, 'error'));
 
-    const formData = new FormData();
-    formData.append('file', fileInput.files[0]);
-    formData.append('release_tag', releaseTag);
-    formData.append('release_name', releaseName);
-    formData.append('release_notes', releaseNotes);
-
-    try {
-        const response = await fetch('/.netlify/functions/upload-handler', {
-            method: 'POST',
-            body: formData,
-        });
-        const result = await response.json();
-        if (response.ok) {
-            status.textContent = 'Upload thành công!';
+    releaseTypeSelect.addEventListener('change', (e) => {
+        if (e.target.value === 'new') {
+            newReleaseFields.classList.remove('hidden');
+            existingReleaseField.classList.add('hidden');
         } else {
-            status.textContent = `Lỗi: ${result.error}`;
+            newReleaseFields.classList.add('hidden');
+            existingReleaseField.classList.remove('hidden');
         }
-    } catch (error) {
-        status.textContent = `Lỗi: ${error.message}`;
+    });
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(form);
+        
+        try {
+            const response = await fetch('/.netlify/functions/upload', {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+            if (response.ok) {
+                showMessage(result.message, 'success');
+            } else {
+                showMessage(result.error, 'error');
+            }
+        } catch (error) {
+            showMessage('An error occurred during upload', 'error');
+        }
+    });
+
+    function showMessage(message, type) {
+        messageDiv.textContent = message;
+        messageDiv.className = `message ${type}`;
+        messageDiv.classList.remove('hidden');
     }
 });
