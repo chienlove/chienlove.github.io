@@ -13,7 +13,6 @@
             <label for="existing-release">Chọn release đã tạo:</label>
             <select id="existing-release">
                 <option value="">Tạo release mới</option>
-                <!-- Bạn sẽ cần tải danh sách các release hiện có và điền vào đây -->
             </select>
         </div>
         <div class="form-group">
@@ -38,7 +37,6 @@
 document.addEventListener('DOMContentLoaded', async function() {
     const existingReleaseSelect = document.getElementById('existing-release');
 
-    // Fetch existing releases
     const releasesResponse = await fetch('/.netlify/functions/get-releases');
     const releases = await releasesResponse.json();
     releases.forEach(release => {

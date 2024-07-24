@@ -10,8 +10,6 @@ exports.handler = async (event, context) => {
         const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
         const { file, release_tag, release_name, release_notes, existing_release } = JSON.parse(event.body);
 
-        console.log('Received data:', { release_tag, release_name, existing_release });
-
         if (!file || !file.content || !file.name) {
             throw new Error('Invalid file data');
         }
@@ -21,15 +19,12 @@ exports.handler = async (event, context) => {
 
         let release;
         if (existing_release) {
-            console.log(`Using existing release: ${existing_release}`);
             release = await octokit.repos.getReleaseByTag({ owner, repo, tag: existing_release });
         } else {
             try {
-                console.log(`Checking for existing release: ${release_tag}`);
                 release = await octokit.repos.getReleaseByTag({ owner, repo, tag: release_tag });
             } catch (error) {
                 if (error.status === 404) {
-                    console.log(`Creating new release: ${release_tag}`);
                     release = await octokit.repos.createRelease({
                         owner,
                         repo,
@@ -43,17 +38,14 @@ exports.handler = async (event, context) => {
             }
         }
 
-        console.log('Release data:', release.data);
-
         const fileBuffer = Buffer.from(file.content, 'base64');
         const uploadUrl = release.data.upload_url.replace(/\{.*\}$/, '');
 
-        console.log(`Uploading file: ${file.name} to ${uploadUrl}`);
         const uploadResponse = await fetch(`${uploadUrl}?name=${encodeURIComponent(file.name)}`, {
             method: 'POST',
             headers: {
                 'Authorization': `token ${process.env.GITHUB_TOKEN}`,
-                'Content-Type': 'application/zip', // Thay đổi loại nội dung cho tệp .ipa
+                'Content-Type': 'application/octet-stream', // Thay đổi loại nội dung cho tệp .ipa
                 'Content-Length': fileBuffer.length
             },
             body: fileBuffer
@@ -61,12 +53,10 @@ exports.handler = async (event, context) => {
 
         if (!uploadResponse.ok) {
             const errorText = await uploadResponse.text();
-            console.error('Upload error:', uploadResponse.status, errorText);
             throw new Error(`Upload failed: ${uploadResponse.status} ${errorText}`);
         }
 
         const uploadResult = await uploadResponse.json();
-        console.log('Upload successful:', uploadResult);
 
         return {
             statusCode: 200,
@@ -76,7 +66,6 @@ exports.handler = async (event, context) => {
             })
         };
     } catch (error) {
-        console.error('Error in Netlify Function:', error);
         return {
             statusCode: 500,
             body: JSON.stringify({ error: error.message || 'Internal Server Error' })
