@@ -11,11 +11,13 @@ exports.handler = async (event, context) => {
         const { file, release_tag, release_name, release_notes, existing_release } = JSON.parse(event.body);
 
         console.log('Received data:', { release_tag, release_name, existing_release });
-        console.log('File data:', { name: file.name, size: file.content.length });
 
+        // Kiểm tra dữ liệu đầu vào
         if (!file || !file.content || !file.name) {
             throw new Error('Invalid file data');
         }
+
+        console.log('File data:', { name: file.name, size: file.content.length });
 
         const owner = 'chienlove';
         const repo = 'chienlove.github.io';
