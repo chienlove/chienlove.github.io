@@ -2,6 +2,7 @@ const fetch = require('node-fetch');
 const { Octokit } = require('@octokit/rest');
 
 exports.handler = async (event, context) => {
+    // Kiểm tra phương thức HTTP
     if (event.httpMethod !== 'POST') {
         return { statusCode: 405, body: JSON.stringify({ error: 'Method Not Allowed' }) };
     }
@@ -10,10 +11,11 @@ exports.handler = async (event, context) => {
         const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
         const { file, release_tag, release_name, release_notes, existing_release } = JSON.parse(event.body);
 
-        console.log('Received data:', { release_tag, release_name, existing_release });
+        console.log('Received data:', { file, release_tag, release_name, release_notes, existing_release });
 
         // Kiểm tra dữ liệu đầu vào
         if (!file || !file.content || !file.name) {
+            console.error('Invalid file data:', { file });
             throw new Error('Invalid file data');
         }
 
