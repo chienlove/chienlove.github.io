@@ -91,7 +91,7 @@ document.getElementById('upload-form').addEventListener('submit', async function
 
             const result = await response.json();
             status.textContent = 'Upload thành công!';
-            shortUrlDiv.innerHTML = `Link rút gọn: <a href="${result.browser_download_url}" target="_blank">${result.browser_download_url}</a>`;
+            shortUrlDiv.innerHTML = `Link tải về: <a href="${result.browser_download_url}" target="_blank">${result.browser_download_url}</a>`;
         } catch (error) {
             status.textContent = 'Upload thất bại: ' + error.message;
         }
