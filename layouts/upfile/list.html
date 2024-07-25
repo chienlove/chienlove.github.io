@@ -1,7 +1,6 @@
- {{ define "head" }}
+{{ define "head" }}
 <link rel="stylesheet" href="{{ "css/upload.css" | relURL }}">
 {{ end }}
-
 {{ define "main" }}
 <div class="container">
     <h1>{{ .Title }}</h1>
@@ -10,7 +9,7 @@
         {{ .Content }}
     </div>
     
-    <form id="uploadForm" class="upload-form">
+    <form id="uploadForm" class="upload-form" onsubmit="return false;">
         <div class="form-group">
             <label for="file">Choose file:</label>
             <input type="file" id="file" name="file" required>
@@ -38,12 +37,11 @@
                 <select id="existingReleases" name="existingRelease"></select>
             </div>
         </div>
-        <button type="submit" class="btn">Upload</button>
+        <button type="button" id="submitButton" class="btn">Upload</button>
     </form>
     <div id="message" class="message hidden"></div>
 </div>
 {{ end }}
-
 {{ define "scripts" }}
 <script src="{{ "js/upload.js" | relURL }}"></script>
 {{ end }}
