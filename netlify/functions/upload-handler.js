@@ -1,4 +1,3 @@
-// /.netlify/functions/upload-to-github.js
 const fetch = require('node-fetch');
 const FormData = require('form-data');
 const { Buffer } = require('buffer');
@@ -32,7 +31,8 @@ exports.handler = async function(event) {
             });
 
             if (!createReleaseResponse.ok) {
-                throw new Error('Failed to create release');
+                const error = await createReleaseResponse.json();
+                throw new Error(`Failed to create release: ${error.message}`);
             }
 
             const release = await createReleaseResponse.json();
@@ -58,7 +58,8 @@ exports.handler = async function(event) {
         });
 
         if (!uploadResponse.ok) {
-            throw new Error('Failed to upload file');
+            const error = await uploadResponse.json();
+            throw new Error(`Failed to upload file: ${error.message}`);
         }
 
         const result = await uploadResponse.json();
