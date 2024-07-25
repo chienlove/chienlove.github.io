@@ -33,7 +33,7 @@
     <div id="short-url" class="mt-3"></div>
 </main>
 
-e<script>
+<script>
 document.addEventListener('DOMContentLoaded', async function() {
     const existingReleaseSelect = document.getElementById('existing-release');
 
@@ -86,7 +86,8 @@ document.getElementById('upload-form').addEventListener('submit', async function
             });
 
             if (!response.ok) {
-                throw new Error('Upload failed');
+                const error = await response.json();
+                throw new Error('Upload failed: ' + error.error);
             }
 
             const result = await response.json();
