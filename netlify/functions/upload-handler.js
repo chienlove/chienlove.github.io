@@ -4,7 +4,7 @@ const { Buffer } = require('buffer');
 
 exports.handler = async function(event) {
     try {
-        const { file, existing_release, release_tag, release_name, release_notes } = JSON.parse(event.body);
+        const { fileName, chunkIndex, totalChunks, existing_release, release_tag, release_name, release_notes } = JSON.parse(event.body);
         const token = process.env.GITHUB_TOKEN;
 
         if (!token) {
@@ -39,13 +39,13 @@ exports.handler = async function(event) {
             releaseId = release.id;
         }
 
-        // Tải tệp lên GitHub Releases
-        const uploadUrl = `https://uploads.github.com/repos/chienlove/chienlove.github.io/releases/${releaseId}/assets?name=${encodeURIComponent(file.name)}`;
-        
+        // Tải phần của tệp lên GitHub Releases
+        const uploadUrl = `https://uploads.github.com/repos/chienlove/chienlove.github.io/releases/${releaseId}/assets?name=${encodeURIComponent(fileName)}`;
+
         const form = new FormData();
         form.append('file', Buffer.from(file.content, 'base64'), {
-            filename: file.name,
-            contentType: file.type
+            filename: fileName,
+            contentType: 'application/octet-stream'
         });
 
         const uploadResponse = await fetch(uploadUrl, {

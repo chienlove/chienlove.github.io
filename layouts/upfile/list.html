@@ -32,7 +32,6 @@
     <div id="status" class="mt-3"></div>
     <div id="short-url" class="mt-3"></div>
 </main>
-
 <script>
 document.addEventListener('DOMContentLoaded', async function() {
     const existingReleaseSelect = document.getElementById('existing-release');
@@ -61,20 +60,30 @@ document.getElementById('upload-form').addEventListener('submit', async function
     const releaseName = document.getElementById('release-name').value;
     const releaseNotes = document.getElementById('release-notes').value;
 
-    const reader = new FileReader();
-    reader.onload = async function(event) {
-        const base64Content = event.target.result.split(',')[1];
-        const file = {
-            name: fileInput.name,
-            content: base64Content,
-            type: fileInput.type
-        };
+    try {
+        // Chia nhỏ tệp thành các phần
+        const chunkSize = 5 * 1024 * 1024; // 5MB
+        const totalChunks = Math.ceil(fileInput.size / chunkSize);
+        const chunks = [];
 
-        try {
-            const response = await fetch('/.netlify/functions/upload-handler', {
+        for (let i = 0; i < totalChunks; i++) {
+            const start = i * chunkSize;
+            const end = Math.min(start + chunkSize, fileInput.size);
+            chunks.push(fileInput.slice(start, end));
+        }
+
+        // Tải các phần của tệp
+        for (let i = 0; i < chunks.length; i++) {
+            const chunk = chunks[i];
+            const formData = new FormData();
+            formData.append('file', chunk, fileInput.name);
+
+            const response = await fetch('/.netlify/functions/upload-to-github', {
                 method: 'POST',
                 body: JSON.stringify({
-                    file,
+                    fileName: fileInput.name,
+                    chunkIndex: i,
+                    totalChunks,
                     existing_release: existingRelease,
                     release_tag: releaseTag,
                     release_name: releaseName,
@@ -90,16 +99,16 @@ document.getElementById('upload-form').addEventListener('submit', async function
             }
 
             const result = await response.json();
-            status.textContent = 'Upload thành công!';
-            shortUrlDiv.innerHTML = `Link tải về: <a href="${result.browser_download_url}" target="_blank">${result.browser_download_url}</a>`;
-        } catch (error) {
-            status.textContent = 'Upload thất bại: ' + error.message;
+            if (i === totalChunks - 1) {
+                status.textContent = 'Upload thành công!';
+                shortUrlDiv.innerHTML = `Link tải về: <a href="${result.browser_download_url}" target="_blank">${result.browser_download_url}</a>`;
+            }
         }
-    };
-    reader.readAsDataURL(fileInput);
+    } catch (error) {
+        status.textContent = 'Upload thất bại: ' + error.message;
+    }
 });
-</script>
-
+</script>r
 <style>
 .upload-page {
     max-width: 600px;
