@@ -1,6 +1,7 @@
 {{ define "head" }}
 <link rel="stylesheet" href="{{ "css/upload.css" | relURL }}">
 {{ end }}
+
 {{ define "main" }}
 <div class="container">
     <h1>{{ .Title }}</h1>
@@ -42,6 +43,7 @@
     <div id="message" class="message hidden"></div>
 </div>
 {{ end }}
+
 {{ define "scripts" }}
 <script src="{{ "js/upload.js" | relURL }}"></script>
 {{ end }}
