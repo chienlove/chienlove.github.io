@@ -1,7 +1,8 @@
 // /.netlify/functions/upload-to-github.js
 const fetch = require('node-fetch');
+const FormData = require('form-data');
 
-exports.handler = async function(event, context) {
+exports.handler = async function(event) {
     try {
         const { file, existing_release, release_tag, release_name, release_notes } = JSON.parse(event.body);
         const token = process.env.GITHUB_TOKEN;
@@ -32,13 +33,20 @@ exports.handler = async function(event, context) {
 
         // Tải tệp lên GitHub Releases
         const uploadUrl = `https://uploads.github.com/repos/chienlove/chienlove.github.io/releases/${releaseId}/assets?name=${encodeURIComponent(file.name)}`;
+        
+        const form = new FormData();
+        form.append('file', Buffer.from(file.content, 'base64'), {
+            filename: file.name,
+            contentType: file.type
+        });
+
         const uploadResponse = await fetch(uploadUrl, {
             method: 'POST',
             headers: {
                 'Authorization': `token ${token}`,
-                'Content-Type': file.type
+                ...form.getHeaders()
             },
-            body: Buffer.from(file.content, 'base64')
+            body: form
         });
 
         if (!uploadResponse.ok) {
