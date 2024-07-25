@@ -86,8 +86,7 @@ document.getElementById('upload-form').addEventListener('submit', async function
             });
 
             if (!response.ok) {
-                const error = await response.json();
-                throw new Error('Upload failed: ' + error.error);
+                throw new Error('Upload failed');
             }
 
             const result = await response.json();
