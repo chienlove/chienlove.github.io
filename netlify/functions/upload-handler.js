@@ -1,11 +1,19 @@
 // /.netlify/functions/upload-to-github.js
 const fetch = require('node-fetch');
 const FormData = require('form-data');
+const { Buffer } = require('buffer');
 
 exports.handler = async function(event) {
     try {
         const { file, existing_release, release_tag, release_name, release_notes } = JSON.parse(event.body);
         const token = process.env.GITHUB_TOKEN;
+
+        if (!token) {
+            return {
+                statusCode: 500,
+                body: JSON.stringify({ error: 'GITHUB_TOKEN is not defined' })
+            };
+        }
 
         // Tạo release nếu chưa có
         let releaseId = existing_release;
