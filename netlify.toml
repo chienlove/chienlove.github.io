@@ -3,7 +3,25 @@
   command = "hugo --gc --minify"
   functions = "netlify/functions"
 
+[functions]
+  node_bundler = "esbuild"
+
+[build.environment]
+  NODE_VERSION = "14"  # hoặc phiên bản Node.js mà bạn muốn sử dụng
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+[dev]
+  framework = "hugo"
+  targetPort = 1313
+
+[template.environment]
+  NETLIFY_GRAPH_TOKEN = "Thêm Netlify Graph Token của bạn ở đây"

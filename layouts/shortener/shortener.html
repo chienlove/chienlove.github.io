@@ -1,0 +1,28 @@
+{{ define "main" }}
+<link rel="stylesheet" href="{{ "css/shortener.css?v=1.0.0" | relURL }}">
+<main>
+    <h1>{{ .Title }}</h1>
+    <div id="url-shortener">
+        <input type="text" id="longUrl" placeholder="Nhập URL dài">
+        <button onclick="shortenUrl()">Rút gọn</button>
+        <p id="result"></p>
+    </div>
+
+    <script>
+    async function shortenUrl() {
+        const longUrl = document.getElementById('longUrl').value;
+        try {
+            const response = await fetch('/.netlify/functions/shorten', {
+                method: 'POST',
+                body: JSON.stringify({ url: longUrl }),
+            });
+            const data = await response.json();
+            document.getElementById('result').innerHTML = `URL rút gọn: <a href="${data.shortUrl}" target="_blank">${data.shortUrl}</a>`;
+        } catch (error) {
+            console.error('Error:', error);
+            document.getElementById('result').innerHTML = 'Có lỗi xảy ra khi rút gọn URL.';
+        }
+    }
+    </script>
+</main>
+{{ end }}
