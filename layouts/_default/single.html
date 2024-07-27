@@ -69,7 +69,7 @@
     <div class="related-apps">
         <h2>Ứng dụng cùng chuyên mục</h2>
         {{ $currentPage := . }}
-        {{ $relatedApps := where (where .Site.RegularPages "Section" "app") "Permalink" "ne" .Permalink | first 5 }}
+        {{ $relatedApps := where (where .Site.RegularPages "Section" "apps") "Permalink" "ne" .Permalink | first 5 }}
         {{ with $relatedApps }}
         <div class="related-apps-container">
             {{ range . }}
