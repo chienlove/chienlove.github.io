@@ -168,10 +168,8 @@ footer {
 /* App List Styles */
 .app-list {
     display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    gap: 20px;
-    margin: 20px 0;
+    flex-direction: column;
+    gap: 10px;
 }
 
 .app-item {
@@ -180,8 +178,10 @@ footer {
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
     overflow: hidden;
     transition: transform 0.3s;
-    width: calc(50% - 10px); /* Adjust for two columns */
-    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
 }
 
 .app-item:hover {
@@ -193,10 +193,10 @@ footer {
     align-items: center;
     text-decoration: none;
     color: inherit;
-    padding: 15px;
+    flex-grow: 1;
 }
 
-.app-link img {
+.app-icon {
     width: 60px;
     height: 60px;
     object-fit: cover;
@@ -205,7 +205,7 @@ footer {
 }
 
 .app-item-content {
-    flex: 1;
+    flex-grow: 1;
 }
 
 .app-item-content h3 {
@@ -222,7 +222,7 @@ footer {
 .app-meta {
     display: flex;
     align-items: center;
-    margin-top: 10px;
+    gap: 10px;
 }
 
 .app-version {
@@ -242,11 +242,9 @@ footer {
 .download-btn {
     background-color: #28a745;
     color: #fff;
-    text-align: center;
-    padding: 10px 0;
-    display: block;
+    padding: 8px 15px;
+    border-radius: 5px;
     text-decoration: none;
-    border-top: 1px solid #eee;
     transition: background-color 0.3s;
 }
 
@@ -254,12 +252,24 @@ footer {
     background-color: #218838;
 }
 
+/* Media Queries */
 @media (min-width: 768px) {
+    .app-list {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+
     .app-item {
-        width: calc(33.33% - 20px); /* Adjust for three columns */
+        width: calc(50% - 10px); /* Two columns on tablets */
+        margin: 5px;
     }
 }
 
+@media (min-width: 1024px) {
+    .app-item {
+        width: calc(33.33% - 10px); /* Three columns on desktops */
+    }
+}
 /* Ad Container Styles */
 .ad-container {
     margin-top: 20px;
