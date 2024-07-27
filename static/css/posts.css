@@ -138,3 +138,15 @@
         width: 100%;
     }
 }
+.author-icon {
+  width: 32px; /* Kích thước tùy chỉnh */
+  height: 32px; /* Kích thước tùy chỉnh */
+  border-radius: 50%;
+  background-image: url('/images/verify.png');
+  background-size: cover;
+  background-position: center;
+}
+
+.author-info img {
+  display: none; /* Ẩn ảnh được cung cấp từ Netlify CMS nếu có ảnh mặc định trong CSS */
+}
