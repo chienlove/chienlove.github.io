@@ -86,7 +86,7 @@ body {
 }
 
 .screenshot {
-    width: 180px;
+    width: 160px;
     height: auto;
     border-radius: 10px;
     flex-shrink: 0; /* Ngăn không cho ảnh bị co giãn */
