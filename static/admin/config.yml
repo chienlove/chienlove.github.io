@@ -1,24 +1,27 @@
 backend:
   name: git-gateway
   branch: master
+
 media_folder: "static/images/uploads"
 public_folder: "/images/uploads"
+
 collections:
   - name: "posts"
-  label: "Bài viết"
-  folder: "content/posts"
-  create: true
-  slug: "{{year}}-{{month}}-{{day}}-{{slug}}"
-  fields:
-    - {label: "Tiêu đề", name: "title", widget: "string"}
-    - {label: "Ngày đăng", name: "date", widget: "datetime"}
-    - {label: "Tác giả", name: "author", widget: "string"}
-    - {label: "Số lượt xem", name: "views", widget: "number"}
-    - {label: "Hình ảnh đại diện", name: "thumbnail", widget: "image", required: false}
-    - {label: "Mô tả ngắn", name: "description", widget: "text", required: false}
-    - {label: "Nội dung", name: "body", widget: "markdown"}
-    - {label: "Thẻ", name: "tags", widget: "list", required: false}
+    label: "Bài viết"
+    folder: "content/posts"
+    create: true
+    slug: "{{year}}-{{month}}-{{day}}-{{slug}}"
+    fields:
+      - {label: "Tiêu đề", name: "title", widget: "string"}
+      - {label: "Ngày đăng", name: "date", widget: "datetime"}
+      - {label: "Tác giả", name: "author", widget: "string"}
+      - {label: "Số lượt xem", name: "views", widget: "number"}
+      - {label: "Hình ảnh đại diện", name: "thumbnail", widget: "image", required: false}
+      - {label: "Mô tả ngắn", name: "description", widget: "text", required: false}
+      - {label: "Nội dung", name: "body", widget: "markdown"}
+      - {label: "Thẻ", name: "tags", widget: "list", required: false}
       - {label: "Chuyên mục", name: "categories", widget: "list", required: false}
+
   - name: "app"
     label: "Ứng dụng"
     folder: "content/apps"
@@ -40,6 +43,7 @@ collections:
       - {label: "Ngôn ngữ hỗ trợ", name: "languages", widget: "list", required: true}
       - {label: "Liên kết tải App Store", name: "app_store_link", widget: "string", required: true}
       - {label: "Từ khóa", name: "tags", widget: "list", required: false}
+
   - name: "category"
     label: "Chuyên mục"
     folder: "content/categories"
@@ -48,5 +52,6 @@ collections:
     fields:
       - {label: "Tên chuyên mục", name: "title", widget: "string", required: true}
       - {label: "Mô tả", name: "description", widget: "text", required: true}
+
 # Thêm đường dẫn tới tệp CSS tùy chỉnh
 custom_css: "/admin/admin.css"
