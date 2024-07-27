@@ -1,4 +1,5 @@
 name: Hugo Build, Deploy, and Upload Release Asset
+
 on:
   push:
     branches:
@@ -6,31 +7,41 @@ on:
   workflow_dispatch:
   repository_dispatch:
     types: [upload]
+
 jobs:
   build-deploy:
     runs-on: ubuntu-latest
+
     steps:
     - uses: actions/checkout@v3
       with:
         submodules: true
         fetch-depth: 0
+
     - name: Setup Node.js
       uses: actions/setup-node@v3
       with:
         node-version: '16'
+
     - name: Install dependencies
-      run: npm install
+      run: |
+        npm install
+        npm install -D netlify-plugin-cache-buster
+
     - name: Clear Hugo Cache and Public Folder
       run: |
         rm -rf public
         rm -rf .hugo_cache
+
     - name: Setup Hugo
       uses: peaceiris/actions-hugo@v2
       with:
         hugo-version: 'latest'
         extended: true
+
     - name: Build
       run: hugo --minify --verbose
+
     - name: Deploy to Netlify
       uses: nwtgck/actions-netlify@v2.0
       with:
@@ -46,6 +57,7 @@ jobs:
         NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
         NETLIFY_CLEAR_CACHE: 'true'
       timeout-minutes: 10
+
     - name: Handle Netlify Upload
       if: github.event_name == 'repository_dispatch' && github.event.action == 'upload'
       run: |
@@ -56,6 +68,7 @@ jobs:
           echo "No file URL provided. Creating a dummy file."
           echo "This is a dummy file" > uploaded_file.zip
         fi
+
     - name: Create GitHub Release
       if: github.event_name == 'repository_dispatch' && github.event.action == 'upload'
       id: create_release
@@ -67,6 +80,7 @@ jobs:
         release_name: 'Release v${{ github.run_number }}'
         draft: false
         prerelease: false
+
     - name: Upload Release Asset
       if: github.event_name == 'repository_dispatch' && github.event.action == 'upload'
       uses: actions/upload-release-asset@v1
