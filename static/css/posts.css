@@ -16,18 +16,18 @@ body {
 .container {
   width: 100%;
   max-width: 100%;
-  margin: 0 auto;
+  margin: 0;
   padding: 0;
+  box-sizing: border-box; /* Ensure padding and borders are included in element's total width and height */
 }
 
 .post-header {
   background: #fff;
   padding: 20px;
-  margin-bottom: 20px;
   border-bottom: 2px solid #e1e1e1;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+  position: relative; /* Ensure header doesn't overlap content */
+  width: 100%;
+  box-sizing: border-box; /* Include padding and borders in width calculation */
 }
 
 .post-header h1 {
@@ -41,6 +41,7 @@ body {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+  margin-top: 10px;
 }
 
 .back-to-posts {
@@ -64,7 +65,7 @@ body {
 .author-info strong {
   font-size: 1.1rem;
   color: #333;
-  margin-right: 10px;
+  margin-right: 8px;
 }
 
 .author-icon {
@@ -86,7 +87,7 @@ body {
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   width: 100%;
-  margin: 0;
+  box-sizing: border-box; /* Include padding and borders in width calculation */
 }
 
 .post-content h2 {
@@ -143,16 +144,17 @@ body {
 /* Full-screen adjustments */
 @media (min-width: 768px) {
   .post-header {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
+    padding: 20px 40px; /* Adjust padding for larger screens */
   }
+}
 
+@media (max-width: 767px) {
   .post-header h1 {
-    flex: 1;
+    font-size: 1.8rem;
   }
 
   .post-meta {
-    align-items: center;
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
