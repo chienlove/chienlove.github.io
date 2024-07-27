@@ -3,9 +3,6 @@
   command = "hugo --gc --minify"
   functions = "netlify/functions"
 
-[build.environment]
-  HUGO_VERSION = "0.88.1"
-
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
