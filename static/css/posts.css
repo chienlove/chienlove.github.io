@@ -1,5 +1,11 @@
 /* posts.css */
 
+/* Reset default margin and padding */
+body, h1, p, a {
+  margin: 0;
+  padding: 0;
+}
+
 body {
   font-family: Arial, sans-serif;
   line-height: 1.6;
@@ -8,36 +14,41 @@ body {
 }
 
 .container {
-  max-width: 800px;
+  width: 100%;
+  max-width: 1200px;
   margin: 0 auto;
   padding: 20px;
 }
 
 .post-header {
   background: #fff;
-  border-bottom: 2px solid #e1e1e1;
   padding: 20px;
   margin-bottom: 20px;
+  border-bottom: 2px solid #e1e1e1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .post-header h1 {
-  margin: 0;
   font-size: 2.5rem;
   color: #333;
+  margin-bottom: 10px;
 }
 
 .post-meta {
-  margin-top: 10px;
-  font-size: 1rem;
-  color: #666;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .back-to-posts {
-  display: inline-block;
-  margin-bottom: 10px;
   color: #007bff;
   text-decoration: none;
   font-weight: bold;
+  margin-bottom: 10px;
+  font-size: 1rem;
 }
 
 .back-to-posts:hover {
@@ -47,13 +58,13 @@ body {
 .author-info {
   display: flex;
   align-items: center;
-  margin-top: 10px;
+  margin-bottom: 10px;
 }
 
 .author-info strong {
-  margin-right: 10px;
   font-size: 1.1rem;
   color: #333;
+  margin-right: 10px;
 }
 
 .author-icon {
@@ -65,7 +76,8 @@ body {
 
 .post-date,
 .post-views {
-  margin: 5px 0;
+  font-size: 0.9rem;
+  color: #666;
 }
 
 .post-content {
@@ -78,6 +90,7 @@ body {
 .post-content h2 {
   font-size: 2rem;
   color: #333;
+  margin-bottom: 15px;
 }
 
 .post-content p {
@@ -86,18 +99,24 @@ body {
 
 .social-share {
   margin-top: 20px;
+  display: flex;
+  gap: 10px;
 }
 
 .social-share a {
-  display: inline-block;
-  margin-right: 15px;
-  color: #007bff;
+  color: #333;
   text-decoration: none;
-  font-weight: bold;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
 }
 
 .social-share a:hover {
-  text-decoration: underline;
+  color: #007bff;
+}
+
+.social-share .fa {
+  margin-right: 8px;
 }
 
 .related-posts {
@@ -117,4 +136,21 @@ body {
 
 .related-posts a:hover {
   text-decoration: underline;
+}
+
+/* Full-screen adjustments */
+@media (min-width: 768px) {
+  .post-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .post-header h1 {
+    flex: 1;
+  }
+
+  .post-meta {
+    align-items: center;
+  }
 }
