@@ -9,6 +9,7 @@ body {
 .container {
     width: 90%;
     margin: 0 auto;
+    padding-top: 80px; /* Adjust for fixed header */
 }
 
 /* Header styles */
