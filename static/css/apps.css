@@ -3,31 +3,30 @@ body {
     background-color: #f2f2f7;
     color: #1c1c1e;
     line-height: 1.5;
-    margin: 0; /* Xóa margin mặc định */
-    padding: 0; /* Xóa padding mặc định */
+    margin: 0;
+    padding: 0;
 }
 
 .app-container {
-    width: 100vw; /* Chiếm toàn bộ chiều rộng màn hình */
     max-width: 100%;
-    margin: 0;
+    margin: 0 auto;
     padding: 20px;
     background-color: #ffffff;
     border-radius: 10px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    position: relative; /* Để nút tải về có thể được đặt tuyệt đối */
 }
 
 .app-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    position: relative; /* Để nút tải về có thể được định vị tuyệt đối */
     margin-bottom: 20px;
 }
 
 .app-icon {
-    width: 80px; /* Kích thước icon */
-    height: 80px;
+    width: 60px;
+    height: 60px;
     border-radius: 20px;
     margin-right: 15px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
@@ -35,12 +34,13 @@ body {
 
 .app-info {
     flex-grow: 1;
+    position: relative;
 }
 
 .app-title {
-    font-size: 20px; /* Kích thước tiêu đề */
+    font-size: 20px;
     font-weight: 600;
-    margin: 0 0 5px 0;
+    margin: 0;
 }
 
 .app-developer {
@@ -63,8 +63,9 @@ body {
     text-decoration: none;
     font-weight: 600;
     position: absolute;
-    bottom: 20px; /* Đặt nút tải về ở góc dưới */
-    right: 20px;
+    bottom: 0; /* Đặt nút tải về ở góc dưới bên phải của tiêu đề */
+    right: 0;
+    transform: translate(10px, 10px); /* Điều chỉnh để cách một chút khỏi góc */
 }
 
 .app-screenshots {
@@ -74,7 +75,7 @@ body {
 }
 
 .screenshot {
-    width: 180px; /* Kích thước ảnh màn hình */
+    width: 180px;
     height: auto;
     margin-right: 10px;
     border-radius: 10px;
@@ -124,7 +125,7 @@ h2 {
 
 .related-apps-container {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); /* Điều chỉnh kích thước cho phù hợp */
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
     gap: 20px;
 }
 
@@ -134,7 +135,7 @@ h2 {
 }
 
 .related-app-icon {
-    width: 60px; /* Kích thước icon liên quan */
+    width: 60px;
     height: 60px;
     border-radius: 12px;
     margin-right: 10px;
@@ -145,7 +146,7 @@ h2 {
 }
 
 .related-app-title {
-    font-size: 16px; /* Kích thước tiêu đề liên quan */
+    font-size: 16px;
     font-weight: 600;
     color: #007aff;
     text-decoration: none;
