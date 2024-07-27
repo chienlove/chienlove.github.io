@@ -1,183 +1,164 @@
-/* Header styles to match APKPure */
+/* style.css */
+:root {
+    --primary-color: #007bff;
+    --secondary-color: #6c757d;
+    --background-color: #f8f9fa;
+    --text-color: #333;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
+    color: var(--text-color);
+    margin: 0;
+    padding: 0;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 15px;
+}
+
+/* Header styles */
 .site-header {
-    background-color: #4CAF50; /* Green background similar to APKPure */
-    padding: 10px 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    position: relative;
-    flex-direction: column;
+    background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    position: fixed;
+    width: 100%;
+    top: 0;
+    z-index: 1000;
 }
 
 .header-container {
     display: flex;
-    align-items: center;
     justify-content: space-between;
-    width: 100%;
-    max-width: 1200px;
-    padding: 0 15px;
+    align-items: center;
+    padding: 10px 0;
 }
 
 .logo img {
     height: 40px;
 }
 
-.mobile-menu-toggle,
-.search-toggle {
-    color: #fff;
-    font-size: 24px;
-    cursor: pointer;
-}
-
-.main-nav {
-    display: none;
-    width: 100%;
-    text-align: center;
-    background-color: #4CAF50;
-}
-
 .main-nav ul {
-    list-style: none;
+    list-style-type: none;
     padding: 0;
     margin: 0;
+    display: flex;
 }
 
-.main-nav ul li {
-    display: inline-block;
-    padding: 10px;
+.main-nav li {
+    margin-right: 20px;
 }
 
-.main-nav ul li a {
-    color: #fff;
+.main-nav a {
     text-decoration: none;
+    color: var(--text-color);
+    font-weight: bold;
 }
 
 .search-bar {
     display: none;
-    width: 100%;
-    padding: 10px 0;
-    background-color: #4CAF50;
-    text-align: center;
+    margin-top: 10px;
 }
 
 .search-bar form {
     display: flex;
-    justify-content: center;
-    align-items: center;
 }
 
-.search-bar input {
-    padding: 5px;
-    width: 70%;
-    max-width: 300px;
-    border: none;
-    border-radius: 5px 0 0 5px;
-    outline: none;
+.search-bar input[type="text"] {
+    flex-grow: 1;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px 0 0 4px;
 }
 
 .search-bar button {
-    padding: 5px;
-    background-color: #fff;
+    background-color: var(--primary-color);
+    color: #fff;
     border: none;
-    border-radius: 0 5px 5px 0;
+    padding: 8px 15px;
     cursor: pointer;
+    border-radius: 0 4px 4px 0;
 }
 
+/* Footer styles */
+footer {
+    background-color: var(--secondary-color);
+    color: #fff;
+    padding: 40px 0;
+    margin-top: 40px;
+}
+
+.footer-content {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+
+.footer-section {
+    flex: 1;
+    margin-right: 30px;
+    margin-bottom: 20px;
+}
+
+.footer-section h3 {
+    margin-bottom: 15px;
+}
+
+.footer-section ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+.footer-section li {
+    margin-bottom: 10px;
+}
+
+.footer-section a {
+    color: #fff;
+    text-decoration: none;
+}
+
+/* Responsive styles */
 @media (max-width: 768px) {
     .main-nav {
         display: none;
     }
-    
-    .mobile-menu-toggle,
-    .search-toggle {
+
+    .mobile-menu-toggle, .search-toggle {
+        display: block;
+        font-size: 24px;
+        cursor: pointer;
+    }
+
+    .main-nav.active {
+        display: block;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        width: 100%;
+        background-color: #fff;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .main-nav.active ul {
+        flex-direction: column;
+    }
+
+    .main-nav.active li {
+        margin-right: 0;
+        padding: 10px 15px;
+        border-bottom: 1px solid #eee;
+    }
+
+    .search-bar.active {
         display: block;
     }
-}
-body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-    background-color: #f5f5f7;
-    margin: 0;
-    padding: 20px;
-}
 
-.app-list {
-    list-style-type: none;
-    padding: 0;
-    margin: 0;
-    background-color: white;
-    border-radius: 10px;
-    overflow: hidden;
-}
-
-.app-item {
-    display: flex;
-    align-items: center;
-    padding: 15px;
-    border-bottom: 1px solid #e0e0e0;
-}
-
-.app-item:last-child {
-    border-bottom: none;
-}
-
-.app-link {
-    display: flex;
-    align-items: center;
-    flex-grow: 1;
-    text-decoration: none;
-    color: inherit;
-}
-
-.app-icon {
-    width: 60px;
-    height: 60px;
-    border-radius: 12px;
-    margin-right: 15px;
-}
-
-.app-info {
-    flex-grow: 1;
-}
-
-.app-title {
-    margin: 0;
-    font-size: 16px;
-    font-weight: 600;
-}
-
-.app-developer {
-    margin: 2px 0;
-    font-size: 14px;
-    color: #8e8e93;
-}
-
-.app-meta {
-    font-size: 12px;
-    color: #8e8e93;
-}
-
-.app-version {
-    display: inline-flex;
-    align-items: center;
-}
-
-.app-version i {
-    font-size: 10px;
-    margin-right: 3px;
-}
-
-.download-btn {
-    background-color: #f5f5f7;
-    color: #007aff;
-    border: none;
-    padding: 6px 15px;
-    border-radius: 100px;
-    font-size: 14px;
-    font-weight: 600;
-    text-decoration: none;
-    display: inline-block;
-}
-
-.download-btn:hover {
-    background-color: #e5e5ea;
+    .footer-section {
+        flex-basis: 100%;
+        margin-right: 0;
+    }
 }
