@@ -16,12 +16,17 @@ body {
     background-color: #333;
     color: #fff;
     padding: 10px 0;
+    position: fixed;
+    width: 100%;
+    top: 0;
+    z-index: 1000;
 }
 
 .header-container {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding: 0 15px;
 }
 
 .logo img {
@@ -51,6 +56,8 @@ body {
 
 .search-bar {
     display: none;
+    padding: 10px 15px;
+    background-color: #333;
 }
 
 .search-bar form {
@@ -79,6 +86,10 @@ body {
     display: block;
 }
 
+.open {
+    display: block !important;
+}
+
 @media (min-width: 768px) {
     .main-nav {
         display: block;
@@ -97,6 +108,7 @@ footer {
     background-color: #333;
     color: #fff;
     padding: 20px 0;
+    margin-top: 100px;
 }
 
 .footer-content {

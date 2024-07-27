@@ -1,15 +1,7 @@
-// main.js
-document.addEventListener('DOMContentLoaded', function() {
-    const mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
-    const searchToggle = document.querySelector('.search-toggle');
-    const mainNav = document.querySelector('.main-nav');
-    const searchBar = document.querySelector('.search-bar');
+document.getElementById('mobile-menu-toggle').addEventListener('click', function() {
+            document.getElementById('main-nav').classList.toggle('open');
+        });
 
-    mobileMenuToggle.addEventListener('click', function() {
-        mainNav.classList.toggle('active');
-    });
-
-    searchToggle.addEventListener('click', function() {
-        searchBar.classList.toggle('active');
-    });
-});
+        document.getElementById('search-toggle').addEventListener('click', function() {
+            document.getElementById('search-bar').classList.toggle('open');
+        });
