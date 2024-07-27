@@ -68,22 +68,28 @@ body {
     transform: translate(10px, 10px); /* Điều chỉnh để cách một chút khỏi góc */
 }
 
+.app-screenshots-container {
+    margin-bottom: 20px;
+    padding: 0 10px; /* Optional: Thêm padding cho container */
+}
+
+.app-screenshots-container h2 {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 15px; /* Khoảng cách giữa tiêu đề và các ảnh */
+}
+
 .app-screenshots {
     display: flex;
     overflow-x: auto;
-    margin-bottom: 20px;
-}
-.app-screenshots h2 {
-    font-size: 20px;
-    font-weight: 600;
-    margin-bottom: 15px;
+    gap: 10px; /* Khoảng cách giữa các ảnh */
 }
 
 .screenshot {
     width: 180px;
     height: auto;
-    margin-right: 10px;
     border-radius: 10px;
+    flex-shrink: 0; /* Ngăn không cho ảnh bị co giãn */
 }
 
 h2 {

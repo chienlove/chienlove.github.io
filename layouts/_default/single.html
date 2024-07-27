@@ -15,12 +15,14 @@
 
     <hr>
 
+    <div class="app-screenshots-container">
+    <h2>Ảnh màn hình</h2>
     <div class="app-screenshots">
-      <h2>Ảnh màn hình</h2>
         {{ range .Params.screenshots }}
             <img src="{{ . }}" alt="Screenshot" class="screenshot">
         {{ end }}
     </div>
+</div>
 
     <hr>
 
