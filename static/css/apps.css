@@ -73,6 +73,11 @@ body {
     overflow-x: auto;
     margin-bottom: 20px;
 }
+.app-screenshots h2 {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 15px;
+}
 
 .screenshot {
     width: 180px;
