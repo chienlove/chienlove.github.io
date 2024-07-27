@@ -102,6 +102,18 @@ body {
     .search-bar {
         display: block;
     }
+    .site-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: #333; /* Ensure background color for desktop */
+    }
+    .header-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+    }
 }
 
 /* Footer styles */
