@@ -3,15 +3,19 @@ body {
     background-color: #f2f2f7;
     color: #1c1c1e;
     line-height: 1.5;
+    margin: 0; /* Xóa margin mặc định */
+    padding: 0; /* Xóa padding mặc định */
 }
 
 .app-container {
+    width: 100vw; /* Chiếm toàn bộ chiều rộng màn hình */
     max-width: 100%;
-    margin: 0 auto;
+    margin: 0;
     padding: 20px;
     background-color: #ffffff;
     border-radius: 10px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    position: relative; /* Để nút tải về có thể được đặt tuyệt đối */
 }
 
 .app-header {
@@ -22,8 +26,8 @@ body {
 }
 
 .app-icon {
-    width: 100px; /* Giảm kích thước icon */
-    height: 100px;
+    width: 800px; /* Kích thước icon */
+    height: 80px;
     border-radius: 20px;
     margin-right: 15px;
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
@@ -34,7 +38,7 @@ body {
 }
 
 .app-title {
-    font-size: 20px; /* Giảm kích thước tiêu đề */
+    font-size: 20px; /* Kích thước tiêu đề */
     font-weight: 600;
     margin: 0 0 5px 0;
 }
@@ -59,7 +63,7 @@ body {
     text-decoration: none;
     font-weight: 600;
     position: absolute;
-    bottom: 20px; /* Đưa nút tải về xuống bên dưới */
+    bottom: 20px; /* Đặt nút tải về ở góc dưới */
     right: 20px;
 }
 
@@ -70,7 +74,7 @@ body {
 }
 
 .screenshot {
-    width: 180px; /* Giảm kích thước ảnh màn hình */
+    width: 180px; /* Kích thước ảnh màn hình */
     height: auto;
     margin-right: 10px;
     border-radius: 10px;
@@ -130,7 +134,7 @@ h2 {
 }
 
 .related-app-icon {
-    width: 60px; /* Giảm kích thước icon liên quan */
+    width: 60px; /* Kích thước icon liên quan */
     height: 60px;
     border-radius: 12px;
     margin-right: 10px;
@@ -141,7 +145,7 @@ h2 {
 }
 
 .related-app-title {
-    font-size: 16px; /* Giảm kích thước tiêu đề liên quan */
+    font-size: 16px; /* Kích thước tiêu đề liên quan */
     font-weight: 600;
     color: #007aff;
     text-decoration: none;
