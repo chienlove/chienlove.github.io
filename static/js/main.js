@@ -1,9 +1,9 @@
 // main.js
 document.addEventListener('DOMContentLoaded', function() {
-    const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
-    const mainNav = document.getElementById('main-nav');
-    const searchToggle = document.getElementById('search-toggle');
-    const searchBar = document.getElementById('search-bar');
+    const mobileMenuToggle = document.querySelector('.mobile-menu-toggle');
+    const searchToggle = document.querySelector('.search-toggle');
+    const mainNav = document.querySelector('.main-nav');
+    const searchBar = document.querySelector('.search-bar');
 
     mobileMenuToggle.addEventListener('click', function() {
         mainNav.classList.toggle('active');

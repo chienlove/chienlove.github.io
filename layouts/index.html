@@ -1,38 +1,109 @@
 {{ define "main" }}
-<main class="container">
-    <h1>Ứng dụng nổi bật</h1>
-    <div class="app-list">
-        {{ range first 10 (where .Site.RegularPages "Type" "in" (slice "apps")) }}
-            <div class="app-item">
-                <a href="{{ .Permalink }}" class="app-link">
-                    <img src="{{ .Params.Icon }}" alt="{{ .Title }}">
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ if .IsHome }}{{ .Site.Title }}{{ else }}{{ .Title }} - {{ .Site.Title }}{{ end }}</title>
+    <link rel="stylesheet" href="/css/style.css?v=1.1">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797" crossorigin="anonymous"></script>
+</head>
+<body>
+    <header class="site-header">
+        <div class="header-container">
+            <div class="logo">
+                <a href="/">
+                    <img src="/images/logo.png" alt="{{ .Site.Title }}">
+                </a>
+            </div>
+            <div class="mobile-menu-toggle" id="mobile-menu-toggle">
+                <i class="fas fa-bars"></i>
+            </div>
+            <div class="search-toggle" id="search-toggle">
+                <i class="fas fa-search"></i>
+            </div>
+            <nav class="main-nav" id="main-nav">
+                <ul>
+                    <li><a href="/">Trang chủ</a></li>
+                    <li><a href="/games">Games</a></li>
+                    <li><a href="/apps">Apps</a></li>
+                    <li><a href="/topics">Chủ đề</a></li>
+                </ul>
+            </nav>
+            <div class="search-bar" id="search-bar">
+                <form action="/search" method="get">
+                    <input type="text" name="q" placeholder="Tìm kiếm apps & games">
+                    <button type="submit"><i class="fas fa-search"></i></button>
+                </form>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <h1>Ứng dụng nổi bật</h1>
+        <div class="app-list">
+            {{ range first 10 (where .Site.RegularPages "Type" "in" (slice "apps")) }}
+                <div class="app-item">
                     <div class="app-item-content">
-                        <h3>{{ .Title }}</h3>
-                        <p>{{ .Params.Developer }}</p>
-                        <div class="app-meta">
-                            <span class="app-version"><i class="fas fa-arrow-up"></i> {{ .Params.Version }}</span>
+                        <img src="{{ .Params.Icon }}" alt="{{ .Title }}" class="app-icon">
+                        <div class="app-info">
+                            <h3>{{ .Title }}</h3>
+                            <p>{{ .Params.Developer }}</p>
+                            <div class="app-meta">
+                                <span class="app-version"><i class="fas fa-arrow-up"></i> {{ .Params.Version }}</span>
+                            </div>
                         </div>
                     </div>
-                </a>
-                <a href="{{ .Permalink }}" class="download-btn">Tải</a>
-            </div>
-        {{ end }}
-    </div>
-    
-    <!-- Google AdSense -->
-    <div class="ad-container">
-        <ins class="adsbygoogle"
-             style="display:block"
-             data-ad-client="ca-pub-3905625903416797"
-             data-ad-slot="5160182988"
-             data-ad-format="auto"
-             data-full-width-responsive="true"></ins>
-    </div>
-</main>
+                    <a href="{{ .Permalink }}" class="download-btn">Tải</a>
+                </div>
+            {{ end }}
+        </div>
+        
+        <!-- Google AdSense -->
+        <div class="ad-container">
+            <ins class="adsbygoogle"
+                 style="display:block"
+                 data-ad-client="ca-pub-3905625903416797"
+                 data-ad-slot="5160182988"
+                 data-ad-format="auto"
+                 data-full-width-responsive="true"></ins>
+        </div>
+    </main>
 
-<script>
-     (adsbygoogle = window.adsbygoogle || []).push({});
-</script>
-<!-- Liên kết đến file JavaScript -->
-<script src="/js/main.js"></script>
+    <footer>
+        <div class="container footer-content">
+            <div class="footer-section">
+                <h3>Về chúng tôi</h3>
+                <ul>
+                    <li><a href="/about">Giới thiệu</a></li>
+                    <li><a href="/contact">Liên hệ</a></li>
+                    <li><a href="/privacy">Chính sách bảo mật</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h3>Danh mục</h3>
+                <ul>
+                    <li><a href="/games">Games</a></li>
+                    <li><a href="/apps">Apps</a></li>
+                    <li><a href="/topics">Chủ đề</a></li>
+                </ul>
+            </div>
+            <div class="footer-section">
+                <h3>Theo dõi chúng tôi</h3>
+                <ul>
+                    <li><a href="#"><i class="fab fa-facebook"></i> Facebook</a></li>
+                    <li><a href="#"><i class="fab fa-twitter"></i> Twitter</a></li>
+                    <li><a href="#"><i class="fab fa-instagram"></i> Instagram</a></li>
+                </ul>
+            </div>
+        </div>
+    </footer>
+
+    <script src="/js/main.js"></script>
+    <script>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
+</body>
+</html>
 {{ end }}
