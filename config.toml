@@ -1,23 +1,20 @@
 baseURL = "https://storeios.net"
 languageCode = "vi-vn"
 title = "storeios"
-# Comment out the theme line
+
+# Uncomment this line if you have a theme to use
 # theme = "ananke"
 
 [params]
-  # Các tham số tùy chỉnh
+  # Các tham số tùy chỉnh nếu cần
 
-[menu]
-  [[menu.main]]
-    identifier = "about"
-    name = "About"
-    url = "/about/"
-    weight = 10
-  [[menu.main]]
-    identifier = "posts"
-    name = "Posts"
-    url = "/posts/"
-    weight = 20
+# Bỏ cấu hình menu không cần thiết
 
 [markup.goldmark.renderer]
   unsafe = true
+
+# Thêm cấu hình build nếu cần
+[build]
+  publishDir = "public"
+  minify = true
+  gc = true
