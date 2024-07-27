@@ -6,6 +6,7 @@ on:
   workflow_dispatch:
   repository_dispatch:
     types: [upload]
+
 jobs:
   build-deploy:
     runs-on: ubuntu-latest
@@ -22,6 +23,7 @@ jobs:
       run: |
         npm install
         npm install @netlify/functions uuid
+        netlify graph install
     - name: Clear Hugo Cache and Public Folder
       run: |
         rm -rf public
