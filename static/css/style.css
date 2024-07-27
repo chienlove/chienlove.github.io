@@ -282,11 +282,6 @@ footer {
     margin-top: 20px;
     text-align: center;
 }
-/* Ad Container Styles */
-.ad-container {
-    margin-top: 20px;
-    text-align: center;
-}
 .ad-container ins {
     display: block !important;
     text-align: center !important;
