@@ -13,7 +13,7 @@ collections:
       - {label: "Tiêu đề", name: "title", widget: "string"}
       - {label: "Ngày đăng", name: "date", widget: "datetime"}
       - {label: "Hình ảnh đại diện", name: "thumbnail", widget: "image", required: false}
-      - {label: "Mô tả ngắn", name: "description", widget: "text"}
+      - {label: "Mô tả ngắn", name: "description", widget: "text", required: false}
       - {label: "Nội dung", name: "body", widget: "markdown"}
       - {label: "Thẻ", name: "tags", widget: "list", required: false}
       - {label: "Chuyên mục", name: "categories", widget: "list", required: false}
