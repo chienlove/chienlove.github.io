@@ -22,19 +22,18 @@
     {{ .Content }}
   </article>
 
-  <footer class="post-footer">
-    <div class="social-share">
-      <a href="https://twitter.com/share?url={{ .Permalink }}" target="_blank">Twitter</a>
-      <a href="https://facebook.com/sharer/sharer.php?u={{ .Permalink }}" target="_blank">Facebook</a>
-      <!-- Add other social media links here -->
-    </div>
+  <!-- Social share links and related posts -->
+  <div class="social-share">
+    <a href="https://twitter.com/share?url={{ .Permalink }}" target="_blank">Twitter</a>
+    <a href="https://facebook.com/sharer/sharer.php?u={{ .Permalink }}" target="_blank">Facebook</a>
+    <!-- Add other social media links here -->
+  </div>
 
-    <h3>Bài viết cùng chuyên mục</h3>
-    <ul class="related-posts">
-      {{ range where .Site.RegularPages "Params.categories" "in" .Params.categories }}
-        <li><a href="{{ .Permalink }}">{{ .Title }}</a></li>
-      {{ end }}
-    </ul>
-  </footer>
+  <h3>Bài viết cùng chuyên mục</h3>
+  <ul class="related-posts">
+    {{ range where .Site.RegularPages "Params.categories" "in" .Params.categories }}
+      <li><a href="{{ .Permalink }}">{{ .Title }}</a></li>
+    {{ end }}
+  </ul>
 </main>
 {{ end }}

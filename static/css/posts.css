@@ -1,152 +1,120 @@
-/* CSS cho trang chi tiết bài viết */
-.post-container {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 20px;
-    background: #fff;
-    border-radius: 10px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+/* posts.css */
+
+body {
+  font-family: Arial, sans-serif;
+  line-height: 1.6;
+  color: #333;
+  background-color: #f9f9f9;
+}
+
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
 }
 
 .post-header {
-    border-bottom: 1px solid #eee;
-    padding-bottom: 20px;
-    margin-bottom: 20px;
+  background: #fff;
+  border-bottom: 2px solid #e1e1e1;
+  padding: 20px;
+  margin-bottom: 20px;
 }
 
 .post-header h1 {
-    font-size: 32px;
-    margin: 0 0 10px;
+  margin: 0;
+  font-size: 2.5rem;
+  color: #333;
 }
 
 .post-meta {
-    display: flex;
-    justify-content: space-between;
-    font-size: 14px;
-    color: #999;
+  margin-top: 10px;
+  font-size: 1rem;
+  color: #666;
 }
 
-.post-meta .post-author {
-    display: flex;
-    align-items: center;
+.back-to-posts {
+  display: inline-block;
+  margin-bottom: 10px;
+  color: #007bff;
+  text-decoration: none;
+  font-weight: bold;
 }
 
-.author-tick {
-    width: 16px;
-    height: 16px;
-    margin-right: 5px;
+.back-to-posts:hover {
+  text-decoration: underline;
 }
 
-.post-body {
-    font-size: 18px;
-    line-height: 1.6;
+.author-info {
+  display: flex;
+  align-items: center;
+  margin-top: 10px;
 }
 
-.post-footer {
-    border-top: 1px solid #eee;
-    padding-top: 20px;
-    margin-top: 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+.author-info strong {
+  margin-right: 10px;
+  font-size: 1.1rem;
+  color: #333;
 }
 
-.share-buttons {
-    display: flex;
-    align-items: center;
+.author-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  object-fit: cover;
 }
 
-.share-buttons span {
-    margin-right: 10px;
+.post-date,
+.post-views {
+  margin: 5px 0;
 }
 
-.share-btn {
-    text-decoration: none;
-    color: #fff;
-    padding: 8px 12px;
-    margin-right: 10px;
-    border-radius: 5px;
-    transition: background 0.3s ease;
+.post-content {
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.share-btn.facebook {
-    background: #3b5998;
+.post-content h2 {
+  font-size: 2rem;
+  color: #333;
 }
 
-.share-btn.twitter {
-    background: #1da1f2;
+.post-content p {
+  margin-bottom: 15px;
 }
 
-.share-btn.linkedin {
-    background: #0077b5;
+.social-share {
+  margin-top: 20px;
 }
 
-.share-btn:hover {
-    opacity: 0.8;
+.social-share a {
+  display: inline-block;
+  margin-right: 15px;
+  color: #007bff;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.social-share a:hover {
+  text-decoration: underline;
 }
 
 .related-posts {
-    margin-top: 40px;
+  list-style-type: none;
+  padding: 0;
+  margin: 20px 0;
 }
 
-.related-posts h2 {
-    font-size: 24px;
-    margin-bottom: 20px;
+.related-posts li {
+  margin-bottom: 10px;
 }
 
-.related-posts-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 20px;
+.related-posts a {
+  color: #007bff;
+  text-decoration: none;
 }
 
-.related-post-item {
-    background: #f9f9f9;
-    border-radius: 10px;
-    overflow: hidden;
-    width: calc(50% - 10px);
-    transition: transform 0.3s ease;
-}
-
-.related-post-item:hover {
-    transform: translateY(-10px);
-}
-
-.related-post-link {
-    text-decoration: none;
-    color: inherit;
-    display: block;
-}
-
-.related-post-image {
-    width: 100%;
-    height: auto;
-}
-
-.related-post-content {
-    padding: 10px;
-}
-
-.related-post-content h3 {
-    font-size: 18px;
-    margin: 0;
-}
-
-/* Responsive Styles */
-@media (max-width: 768px) {
-    .related-post-item {
-        width: 100%;
-    }
-}
-.author-icon {
-  width: 32px; /* Kích thước tùy chỉnh */
-  height: 32px; /* Kích thước tùy chỉnh */
-  border-radius: 50%;
-  background-image: url('/images/verify.png');
-  background-size: cover;
-  background-position: center;
-}
-
-.author-info img {
-  display: none; /* Ẩn ảnh được cung cấp từ Netlify CMS nếu có ảnh mặc định trong CSS */
+.related-posts a:hover {
+  text-decoration: underline;
 }
