@@ -16,16 +16,15 @@ jobs:
         submodules: true
         fetch-depth: 0
 
-    # Cài đặt Node.js và cài đặt phụ thuộc
     - name: Setup Node.js
       uses: actions/setup-node@v3
       with:
-        node-version: '16'  # Thay đổi theo phiên bản Node.js bạn cần
+        node-version: '16'
 
     - name: Install dependencies
       run: npm install
 
-    - name: Clear Hugo Cache
+    - name: Clear Hugo Cache and Public Folder
       run: |
         rm -rf public
         rm -rf .hugo_cache
@@ -49,7 +48,7 @@ jobs:
       env:
         NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
         NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
-      timeout-minutes: 10  # Tăng thời gian timeout
+      timeout-minutes: 10
 
     - name: Handle Netlify Upload
       if: github.event_name == 'repository_dispatch' && github.event.action == 'upload'
