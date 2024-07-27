@@ -18,6 +18,26 @@
             </div>
         {{ end }}
     </div>
+
+    <h1>Bài viết mới nhất</h1>
+    <div class="post-list">
+        {{ range first 10 (where .Site.RegularPages "Type" "in" (slice "posts")) }}
+            <div class="post-item">
+                <a href="{{ .Permalink }}" class="post-link">
+                    <img src="{{ .Params.FeaturedImage }}" alt="{{ .Title }}" class="post-image">
+                    <div class="post-item-content">
+                        <h3>{{ .Title }}</h3>
+                        <p>{{ .Summary }}</p>
+                    </div>
+                </a>
+                <div class="post-meta">
+                    <span class="post-date">{{ .Date.Format "02-01-2006" }}</span>
+                    <span class="post-author">{{ .Params.Author }}</span>
+                </div>
+            </div>
+        {{ end }}
+    </div>
+
     <!-- Google AdSense -->
     <div class="ad-container">
         <ins class="adsbygoogle"
@@ -27,8 +47,8 @@
              data-ad-format="auto"
              data-full-width-responsive="true"></ins>
     </div>
-  <script>
-     (adsbygoogle = window.adsbygoogle || []).push({});
-</script>
+    <script>
+        (adsbygoogle = window.adsbygoogle || []).push({});
+    </script>
 </main>
 {{ end }}

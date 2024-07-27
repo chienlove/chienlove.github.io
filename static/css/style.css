@@ -293,3 +293,80 @@ footer {
     width: 100%;
     margin: 0 auto;
 }
+/* CSS cho phần hiển thị bài viết */
+.post-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin-top: 30px;
+}
+
+.post-item {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    width: calc(33.333% - 20px);
+    margin-bottom: 20px;
+    transition: transform 0.3s ease;
+}
+
+.post-item:hover {
+    transform: translateY(-10px);
+}
+
+.post-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+.post-image {
+    width: 100%;
+    height: auto;
+}
+
+.post-item-content {
+    padding: 15px;
+}
+
+.post-item-content h3 {
+    font-size: 24px;
+    margin: 0 0 10px;
+}
+
+.post-item-content p {
+    color: #666;
+    font-size: 16px;
+    margin: 0;
+}
+
+.post-meta {
+    display: flex;
+    justify-content: space-between;
+    padding: 15px;
+    font-size: 14px;
+    color: #999;
+    border-top: 1px solid #eee;
+}
+
+.post-meta .post-date {
+    font-style: italic;
+}
+
+.post-meta .post-author {
+    font-weight: bold;
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+    .post-item {
+        width: calc(50% - 20px);
+    }
+}
+
+@media (max-width: 480px) {
+    .post-item {
+        width: 100%;
+    }
+}
