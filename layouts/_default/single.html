@@ -10,18 +10,18 @@
             <p class="app-developer">{{ .Params.developer }}</p>
             <p class="app-category">{{ .Params.category }}</p>
         </div>
+        <a href="{{ .Params.app_store_link }}" class="download-btn">Tải về</a>
     </header>
 
-    <div class="app-actions">
-        <a href="{{ .Params.app_store_link }}" class="download-btn">Tải về</a>
-        <p class="app-version">Phiên bản {{ .Params.version }}</p>
-    </div>
+    <hr>
 
     <div class="app-screenshots">
         {{ range .Params.screenshots }}
             <img src="{{ . }}" alt="Screenshot" class="screenshot">
         {{ end }}
     </div>
+
+    <hr>
 
     <div class="app-description">
         <h2>Mô tả</h2>
@@ -35,6 +35,8 @@
         {{ end }}
     </div>
 
+    <hr>
+
     <div class="app-details">
         <h2>Thông tin chi tiết</h2>
         <ul>
@@ -47,8 +49,11 @@
                     Không có thông tin
                 {{ end }}
             </li>
+            <li><strong>Phiên bản:</strong> {{ .Params.version }}</li>
         </ul>
     </div>
+
+    <hr>
 
     <div class="app-tags">
         <h2>Từ khóa</h2>
@@ -59,15 +64,24 @@
         </ul>
     </div>
 
+    <hr>
+
     <div class="related-apps">
         <h2>Ứng dụng cùng chuyên mục</h2>
-        {{ $related := where .Site.RegularPages "Params.category" .Params.category | first 5 }}
-        {{ with $related }}
-        <ul>
+        {{ $currentPage := . }}
+        {{ $relatedApps := where (where .Site.RegularPages "Section" "app") "Permalink" "ne" .Permalink | first 5 }}
+        {{ with $relatedApps }}
+        <div class="related-apps-container">
             {{ range . }}
-            <li><a href="{{ .Permalink }}">{{ .Title }}</a></li>
+            <div class="related-app">
+                <img src="{{ .Params.icon }}" alt="{{ .Title }}" class="related-app-icon">
+                <div class="related-app-info">
+                    <a href="{{ .Permalink }}" class="related-app-title">{{ .Title }}</a>
+                    <p class="related-app-developer">{{ .Params.developer }}</p>
+                </div>
+            </div>
             {{ end }}
-        </ul>
+        </div>
         {{ end }}
     </div>
 </div>
