@@ -6,7 +6,7 @@ body {
 }
 
 .app-container {
-    max-width: 800px;
+    max-width: 100%;
     margin: 0 auto;
     padding: 20px;
     background-color: #ffffff;
@@ -19,6 +19,7 @@ body {
     align-items: center;
     justify-content: space-between;
     margin-bottom: 20px;
+    position: relative;
 }
 
 .app-icon {
@@ -60,6 +61,7 @@ body {
     font-weight: 600;
     align-self: flex-start;
     white-space: nowrap;
+    position: absolute;
 }
 
 .app-screenshots {
