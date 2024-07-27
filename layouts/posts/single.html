@@ -1,8 +1,5 @@
-<!DOCTYPE html>
 {{ define "main" }}
-<head>
-  <link rel="stylesheet" href="/css/posts.css"> <!-- Liên kết đến file CSS cho bài viết -->
-</head>
+<link rel="stylesheet" href="{{ "css/posts.css" | relURL }}">
 <main class="container">
   <header class="post-header">
     <h1>{{ .Title }}</h1>
