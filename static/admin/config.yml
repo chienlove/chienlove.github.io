@@ -27,7 +27,7 @@ collections:
       - {label: "Ngày đăng", name: "date", widget: "datetime", required: true}
       - {label: "Ảnh icon", name: "icon", widget: "image", required: true}
       - {label: "Ảnh screenshot", name: "screenshots", widget: "list", field: {label: "Ảnh", name: "image", widget: "image"}, required: false}
-      - {label: "Mô tả ngắn", name: "short_description", widget: "text", required: true}
+      - {label: "Mô tả ngắn", name: "short_description", widget: "text", required: false}
       - {label: "Mô tả chi tiết", name: "description", widget: "markdown", required: true}
       - {label: "Nhà phát triển", name: "developer", widget: "string", required: true}
       - {label: "Thể loại", name: "category", widget: "select", options: ["Ứng dụng", "Games", "Tool jailbreak", "Thủ thuật", "File ipa", "Khác"], required: true}
