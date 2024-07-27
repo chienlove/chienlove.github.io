@@ -28,12 +28,14 @@ body {
   position: relative; /* Ensure header doesn't overlap content */
   width: 100%;
   box-sizing: border-box; /* Include padding and borders in width calculation */
+  z-index: 1; /* Ensure header stays on top */
 }
 
 .post-header h1 {
   font-size: 2.5rem;
   color: #333;
   margin-bottom: 10px;
+  padding-top: 80px; /* Add padding to ensure title is not covered by fixed header */
 }
 
 .post-meta {
@@ -65,7 +67,7 @@ body {
 .author-info strong {
   font-size: 1.1rem;
   color: #333;
-  margin-right: 8px;
+  margin-right: 5px;
 }
 
 .author-icon {
