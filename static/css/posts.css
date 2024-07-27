@@ -1,0 +1,140 @@
+/* CSS cho trang chi tiết bài viết */
+.post-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.post-header {
+    border-bottom: 1px solid #eee;
+    padding-bottom: 20px;
+    margin-bottom: 20px;
+}
+
+.post-header h1 {
+    font-size: 32px;
+    margin: 0 0 10px;
+}
+
+.post-meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    color: #999;
+}
+
+.post-meta .post-author {
+    display: flex;
+    align-items: center;
+}
+
+.author-tick {
+    width: 16px;
+    height: 16px;
+    margin-right: 5px;
+}
+
+.post-body {
+    font-size: 18px;
+    line-height: 1.6;
+}
+
+.post-footer {
+    border-top: 1px solid #eee;
+    padding-top: 20px;
+    margin-top: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.share-buttons {
+    display: flex;
+    align-items: center;
+}
+
+.share-buttons span {
+    margin-right: 10px;
+}
+
+.share-btn {
+    text-decoration: none;
+    color: #fff;
+    padding: 8px 12px;
+    margin-right: 10px;
+    border-radius: 5px;
+    transition: background 0.3s ease;
+}
+
+.share-btn.facebook {
+    background: #3b5998;
+}
+
+.share-btn.twitter {
+    background: #1da1f2;
+}
+
+.share-btn.linkedin {
+    background: #0077b5;
+}
+
+.share-btn:hover {
+    opacity: 0.8;
+}
+
+.related-posts {
+    margin-top: 40px;
+}
+
+.related-posts h2 {
+    font-size: 24px;
+    margin-bottom: 20px;
+}
+
+.related-posts-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
+.related-post-item {
+    background: #f9f9f9;
+    border-radius: 10px;
+    overflow: hidden;
+    width: calc(50% - 10px);
+    transition: transform 0.3s ease;
+}
+
+.related-post-item:hover {
+    transform: translateY(-10px);
+}
+
+.related-post-link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+}
+
+.related-post-image {
+    width: 100%;
+    height: auto;
+}
+
+.related-post-content {
+    padding: 10px;
+}
+
+.related-post-content h3 {
+    font-size: 18px;
+    margin: 0;
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+    .related-post-item {
+        width: 100%;
+    }
+}

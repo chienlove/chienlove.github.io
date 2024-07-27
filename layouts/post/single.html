@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ .Title }}</title>
+    <link rel="stylesheet" href="{{ "css/posts.css?v=1.0" | relURL }}">
+</head>
+<body>
+    <div class="post-container">
+        <article class="post-content">
+            <header class="post-header">
+                <h1>{{ .Title }}</h1>
+                <div class="post-meta">
+                    <span class="post-author">
+                        <img src="/images/tick.png" alt="Tick" class="author-tick">{{ .Params.Author }}
+                    </span>
+                    <span class="post-date">{{ .Date.Format "02-01-2006" }}</span>
+                    <span class="post-views">{{ .Params.Views }} lượt xem</span>
+                </div>
+            </header>
+            <div class="post-body">
+                {{ .Content }}
+            </div>
+            <footer class="post-footer">
+                <div class="share-buttons">
+                    <span>Chia sẻ:</span>
+                    <a href="https://facebook.com/sharer/sharer.php?u={{ .Permalink }}" target="_blank" class="share-btn facebook">Facebook</a>
+                    <a href="https://twitter.com/intent/tweet?url={{ .Permalink }}" target="_blank" class="share-btn twitter">Twitter</a>
+                    <a href="https://www.linkedin.com/shareArticle?mini=true&url={{ .Permalink }}" target="_blank" class="share-btn linkedin">LinkedIn</a>
+                </div>
+            </footer>
+        </article>
+
+        <aside class="related-posts">
+            <h2>Xem thêm</h2>
+            <div class="related-posts-list">
+                {{ range first 5 (where .Site.RegularPages "Type" "posts") }}
+                    <div class="related-post-item">
+                        <a href="{{ .Permalink }}" class="related-post-link">
+                            <img src="{{ .Params.FeaturedImage }}" alt="{{ .Title }}" class="related-post-image">
+                            <div class="related-post-content">
+                                <h3>{{ .Title }}</h3>
+                            </div>
+                        </a>
+                    </div>
+                {{ end }}
+            </div>
+        </aside>
+    </div>
+</body>
+</html>
