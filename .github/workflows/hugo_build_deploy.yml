@@ -19,7 +19,9 @@ jobs:
       with:
         node-version: '16'
     - name: Install dependencies
-      run: npm install
+      run: |
+        npm install
+        npm install @netlify/functions uuid
     - name: Clear Hugo Cache and Public Folder
       run: |
         rm -rf public
