@@ -18,3 +18,5 @@ title = "storeios"
   publishDir = "public"
   minify = true
   gc = true
+[permalinks]
+posts = "/posts/:slug/"
