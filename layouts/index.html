@@ -1,45 +1,36 @@
 {{ define "main" }}
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ .Title }}</title>
-    <link rel="stylesheet" href="/css/style.css?v=1.0">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797"
-     crossorigin="anonymous"></script>
-<!-- Storeios ads -->
-<ins class="adsbygoogle"
-     style="display:block"
-     data-ad-client="ca-pub-3905625903416797"
-     data-ad-slot="5160182988"
-     data-ad-format="auto"
-     data-full-width-responsive="true"></ins>
+<main class="container">
+    <h1>Ứng dụng nổi bật</h1>
+    <div class="app-list">
+        {{ range first 10 (where .Site.RegularPages "Type" "in" (slice "apps")) }}
+            <div class="app-item">
+                <a href="{{ .Permalink }}" class="app-link">
+                    <img src="{{ .Params.Icon }}" alt="{{ .Title }}">
+                    <div class="app-item-content">
+                        <h3>{{ .Title }}</h3>
+                        <p>{{ .Params.Developer }}</p>
+                        <div class="app-meta">
+                            <span class="app-version"><i class="fas fa-arrow-up"></i> {{ .Params.Version }}</span>
+                        </div>
+                    </div>
+                </a>
+                <a href="{{ .Permalink }}" class="download-btn">Tải</a>
+            </div>
+        {{ end }}
+    </div>
+    
+    <!-- Google AdSense -->
+    <div class="ad-container">
+        <ins class="adsbygoogle"
+             style="display:block"
+             data-ad-client="ca-pub-3905625903416797"
+             data-ad-slot="5160182988"
+             data-ad-format="auto"
+             data-full-width-responsive="true"></ins>
+    </div>
+</main>
+
 <script>
      (adsbygoogle = window.adsbygoogle || []).push({});
 </script>
-</head>
-<body>
-    <main>
-        <ul class="app-list">
-            {{ range first 10 (where .Site.RegularPages "Type" "in" (slice "apps")) }}
-                <li class="app-item">
-                    <a href="{{ .Permalink }}" class="app-link">
-                        <img class="app-icon" src="{{ .Params.Icon }}" alt="{{ .Title }}">
-                        <div class="app-info">
-                            <h3 class="app-title">{{ .Title }}</h3>
-                            <p class="app-developer">{{ .Params.Developer }}</p>
-                            <div class="app-meta">
-                                <span class="app-version"><i class="fas fa-arrow-up"></i> {{ .Params.Version }}</span>
-                            </div>
-                        </div>
-                    </a>
-                    <a href="{{ .Permalink }}" class="download-btn">Tải</a>
-                </li>
-            {{ end }}
-        </ul>
-    </main>
-</body>
-</html>
 {{ end }}
