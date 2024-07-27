@@ -207,6 +207,9 @@ footer {
 
 .app-item-content {
     flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 .app-item-content h3 {
@@ -222,8 +225,10 @@ footer {
 
 .app-meta {
     display: flex;
-    align-items: center;
+    flex-direction: column;
+    align-items: flex-end;
     gap: 10px;
+    margin-left: auto;
 }
 
 .app-version {
@@ -276,4 +281,15 @@ footer {
 .ad-container {
     margin-top: 20px;
     text-align: center;
+}
+/* Ad Container Styles */
+.ad-container {
+    margin-top: 20px;
+    text-align: center;
+}
+.ad-container ins {
+    display: block !important;
+    text-align: center !important;
+    width: 100%;
+    margin: 0 auto;
 }
