@@ -5,20 +5,19 @@
         {{ range first 10 (where .Site.RegularPages "Type" "in" (slice "apps")) }}
             <div class="app-item">
                 <a href="{{ .Permalink }}" class="app-link">
-                    <img src="{{ .Params.Icon }}" alt="{{ .Title }}">
+                    <img src="{{ .Params.Icon }}" alt="{{ .Title }}" class="app-icon">
                     <div class="app-item-content">
                         <h3>{{ .Title }}</h3>
                         <p>{{ .Params.Developer }}</p>
-                        <div class="app-meta">
-                            <span class="app-version"><i class="fas fa-arrow-up"></i> {{ .Params.Version }}</span>
-                        </div>
                     </div>
                 </a>
-                <a href="{{ .Permalink }}" class="download-btn">Tải</a>
+                <div class="app-meta">
+                    <a href="{{ .Permalink }}" class="download-btn">Tải</a>
+                    <span class="app-version"><i class="fas fa-arrow-up"></i> {{ .Params.Version }}</span>
+                </div>
             </div>
         {{ end }}
     </div>
-    
     <!-- Google AdSense -->
     <div class="ad-container">
         <ins class="adsbygoogle"

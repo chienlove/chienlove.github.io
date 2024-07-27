@@ -165,6 +165,7 @@ footer {
 .footer-bottom p {
     margin: 0;
 }
+
 /* App List Styles */
 .app-list {
     display: flex;
@@ -270,6 +271,7 @@ footer {
         width: calc(33.33% - 10px); /* Three columns on desktops */
     }
 }
+
 /* Ad Container Styles */
 .ad-container {
     margin-top: 20px;
