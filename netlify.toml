@@ -19,6 +19,11 @@
   from = "/*"
   to = "/index.html"
   status = 200
+  
+[[redirects]]
+  from = "/shortener/*"
+  to = "/shortener/"
+  status = 200
 
 [dev]
   framework = "hugo"
