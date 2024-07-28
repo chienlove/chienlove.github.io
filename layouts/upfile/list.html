@@ -1,3 +1,5 @@
+{{ defile "head" }}
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 {{ define "main" }}
 <main class="upload-page">
     <h1>{{ .Title }}</h1>
@@ -27,7 +29,7 @@
             <label for="release-notes">Ghi chú phiên bản:</label>
             <textarea id="release-notes" placeholder="Mô tả các thay đổi trong phiên bản này"></textarea>
         </div>
-        <button type="submit">Upload lên GitHub Releases</button>
+        <button type="submit">Upload</button>
     </form>
     <div id="status" class="mt-3"></div>
     <div id="short-url" class="mt-3"></div>
