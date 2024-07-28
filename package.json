@@ -13,7 +13,6 @@
     "node-fetch": "^2.6.1",
     "form-data": "^4.0.0",
     "@netlify/functions": "^1.0.0",
-    "uuid": "^8.3.2"
     "faunadb": "^4.0.0",
     "shortid": "^2.2.16"
   }
