@@ -1,77 +1,90 @@
+const { Octokit } = require('@octokit/rest');
 const fetch = require('node-fetch');
-const FormData = require('form-data');
-const { Buffer } = require('buffer');
 
-exports.handler = async function(event) {
+exports.handler = async (event, context) => {
+    // Kiểm tra phương thức HTTP
+    if (event.httpMethod !== 'POST') {
+        return { statusCode: 405, body: JSON.stringify({ error: 'Method Not Allowed' }) };
+    }
+
     try {
-        const { fileName, chunkIndex, totalChunks, existing_release, release_tag, release_name, release_notes } = JSON.parse(event.body);
-        const token = process.env.GITHUB_TOKEN;
+        const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
+        const { file, release_tag, release_name, release_notes, existing_release } = JSON.parse(event.body);
 
-        if (!token) {
-            return {
-                statusCode: 500,
-                body: JSON.stringify({ error: 'GITHUB_TOKEN is not defined' })
-            };
+        console.log('Received data:', { release_tag, release_name, existing_release });
+
+        // Kiểm tra dữ liệu đầu vào
+        if (!file || !file.content || !file.name) {
+            throw new Error('Invalid file data');
         }
 
-        // Tạo release nếu chưa có
-        let releaseId = existing_release;
-        if (!existing_release) {
-            const createReleaseResponse = await fetch('https://api.github.com/repos/chienlove/chienlove.github.io/releases', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `token ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    tag_name: release_tag,
-                    name: release_name,
-                    body: release_notes
-                })
-            });
+        const owner = 'chienlove';
+        const repo = 'chienlove.github.io';
 
-            if (!createReleaseResponse.ok) {
-                const error = await createReleaseResponse.json();
-                throw new Error(`Failed to create release: ${error.message}`);
+        let release;
+        if (existing_release) {
+            console.log(`Using existing release: ${existing_release}`);
+            release = await octokit.repos.getReleaseByTag({ owner, repo, tag: existing_release });
+        } else {
+            try {
+                console.log(`Checking for existing release: ${release_tag}`);
+                release = await octokit.repos.getReleaseByTag({ owner, repo, tag: release_tag });
+            } catch (error) {
+                if (error.status === 404) {
+                    console.log(`Creating new release: ${release_tag}`);
+                    release = await octokit.repos.createRelease({
+                        owner,
+                        repo,
+                        tag_name: release_tag,
+                        name: release_name,
+                        body: release_notes
+                    });
+                } else {
+                    throw error;
+                }
             }
-
-            const release = await createReleaseResponse.json();
-            releaseId = release.id;
         }
 
-        // Tải phần của tệp lên GitHub Releases
-        const uploadUrl = `https://uploads.github.com/repos/chienlove/chienlove.github.io/releases/${releaseId}/assets?name=${encodeURIComponent(fileName)}`;
+        console.log('Release data:', release.data);
 
-        const form = new FormData();
-        form.append('file', Buffer.from(file.content, 'base64'), {
-            filename: fileName,
-            contentType: 'application/octet-stream'
-        });
+        // Upload file
+        const fileBuffer = Buffer.from(file.content, 'base64');
+        console.log('File buffer size:', fileBuffer.length); // Kiểm tra kích thước file
 
-        const uploadResponse = await fetch(uploadUrl, {
+        const uploadUrl = release.data.upload_url.replace(/\{.*\}$/, '');
+        console.log(`Uploading file: ${file.name} to ${uploadUrl}`);
+
+        const uploadResponse = await fetch(`${uploadUrl}?name=${encodeURIComponent(file.name)}`, {
             method: 'POST',
             headers: {
-                'Authorization': `token ${token}`,
-                ...form.getHeaders()
+                'Authorization': `token ${process.env.GITHUB_TOKEN}`,
+                'Content-Type': 'application/octet-stream',
+                'Content-Length': fileBuffer.length
             },
-            body: form
+            body: fileBuffer
         });
 
         if (!uploadResponse.ok) {
-            const error = await uploadResponse.json();
-            throw new Error(`Failed to upload file: ${error.message}`);
+            const errorText = await uploadResponse.text();
+            console.error('Upload error:', uploadResponse.status, errorText);
+            throw new Error(`Upload failed: ${uploadResponse.status} ${errorText}`);
         }
 
-        const result = await uploadResponse.json();
+        const uploadResult = await uploadResponse.json();
+        console.log('Upload successful:', uploadResult);
 
         return {
             statusCode: 200,
-            body: JSON.stringify({ browser_download_url: result.browser_download_url })
+            body: JSON.stringify({
+                message: 'Upload thành công!',
+                file_url: uploadResult.browser_download_url
+            })
         };
     } catch (error) {
+        console.error('Error in Netlify Function:', error);
         return {
             statusCode: 500,
-            body: JSON.stringify({ error: error.message })
+            body: JSON.stringify({ error: error.message || 'Internal Server Error' })
         };
     }
 };
