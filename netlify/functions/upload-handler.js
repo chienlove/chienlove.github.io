@@ -2,9 +2,6 @@ const { Octokit } = require('@octokit/rest');
 const fetch = require('node-fetch');
 
 exports.handler = async (event, context) => {
-    console.log('Event:', event);
-    console.log('Context:', context);
-
     // Kiểm tra phương thức HTTP
     if (event.httpMethod !== 'POST') {
         return { statusCode: 405, body: JSON.stringify({ error: 'Method Not Allowed' }) };
@@ -14,7 +11,7 @@ exports.handler = async (event, context) => {
         const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
         const { file, release_tag, release_name, release_notes, existing_release } = JSON.parse(event.body);
 
-        console.log('Received data:', { file, release_tag, release_name, existing_release });
+        console.log('Received data:', { release_tag, release_name, existing_release });
 
         // Kiểm tra dữ liệu đầu vào
         if (!file || !file.content || !file.name) {
@@ -43,7 +40,6 @@ exports.handler = async (event, context) => {
                         body: release_notes
                     });
                 } else {
-                    console.log('Error checking existing release:', error);
                     throw error;
                 }
             }
@@ -53,10 +49,10 @@ exports.handler = async (event, context) => {
 
         // Upload file
         const fileBuffer = Buffer.from(file.content, 'base64');
-        console.log('File buffer size:', fileBuffer.length); // Kiểm tra kích thước file
-
         const uploadUrl = release.data.upload_url.replace(/\{.*\}$/, '');
+
         console.log(`Uploading file: ${file.name} to ${uploadUrl}`);
+        console.log(`File size: ${fileBuffer.length / (1024 * 1024)} MB`);
 
         const uploadResponse = await fetch(`${uploadUrl}?name=${encodeURIComponent(file.name)}`, {
             method: 'POST',
@@ -65,8 +61,7 @@ exports.handler = async (event, context) => {
                 'Content-Type': 'application/octet-stream',
                 'Content-Length': fileBuffer.length
             },
-            body: fileBuffer,
-            timeout: 120000 // Tăng thời gian chờ lên 120 giây (2 phút)
+            body: fileBuffer
         });
 
         if (!uploadResponse.ok) {
