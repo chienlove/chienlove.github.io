@@ -52,6 +52,3 @@ collections:
     fields:
       - {label: "Tên chuyên mục", name: "title", widget: "string", required: true}
       - {label: "Mô tả", name: "description", widget: "text", required: true}
-
-# Thêm đường dẫn tới tệp CSS tùy chỉnh
-custom_css: "/admin/admin.css"
