@@ -10,24 +10,24 @@
 
 <script>
 document.getElementById('shorten-form').addEventListener('submit', async (e) => {
-  e.preventDefault()
-  const url = document.getElementById('url-input').value
+  e.preventDefault();
+  const url = document.getElementById('url-input').value;
   const response = await fetch('/.netlify/functions/shorten', {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/json' // Thiếu headers
+      'Content-Type': 'application/json'
     },
     body: JSON.stringify({ url })
-  })
-  const data = await response.json()
+  });
+  const data = await response.json();
   if (data.shortId) {
-    const shortUrl = `${window.location.origin}/.netlify/functions/redirect?shortId=${data.shortId}`
+    const shortUrl = `${window.location.origin}/${data.shortId}`;
     document.getElementById('result').innerHTML = `
       <p>Link rút gọn của bạn: <a href="${shortUrl}" target="_blank">${shortUrl}</a></p>
-    `
+    `;
   } else {
-    document.getElementById('result').innerHTML = '<p>Có lỗi xảy ra. Vui lòng thử lại.</p>'
+    document.getElementById('result').innerHTML = '<p>Có lỗi xảy ra. Vui lòng thử lại.</p>';
   }
-})
+});
 </script>
 {{ end }}
