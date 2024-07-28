@@ -1,28 +1,30 @@
 {{ define "main" }}
-<link rel="stylesheet" href="{{ "css/shortener.css?v=1.0.0" | relURL }}">
-<main>
-    <h1>{{ .Title }}</h1>
-    <div id="url-shortener">
-        <input type="text" id="longUrl" placeholder="Nhập URL dài">
-        <button onclick="shortenUrl()">Rút gọn</button>
-        <p id="result"></p>
-    </div>
+<div id="shortener">
+  <h1>{{ .Title }}</h1>
+  <form id="shorten-form">
+    <input type="url" id="url-input" placeholder="Nhập URL cần rút gọn" required>
+    <button type="submit">Rút gọn</button>
+  </form>
+  <div id="result"></div>
+</div>
 
-    <script>
-    async function shortenUrl() {
-        const longUrl = document.getElementById('longUrl').value;
-        try {
-            const response = await fetch('/.netlify/functions/shorten', {
-                method: 'POST',
-                body: JSON.stringify({ url: longUrl }),
-            });
-            const data = await response.json();
-            document.getElementById('result').innerHTML = `URL rút gọn: <a href="${data.shortUrl}" target="_blank">${data.shortUrl}</a>`;
-        } catch (error) {
-            console.error('Error:', error);
-            document.getElementById('result').innerHTML = 'Có lỗi xảy ra khi rút gọn URL.';
-        }
-    }
-    </script>
-</main>
+<script>
+document.getElementById('shorten-form').addEventListener('submit', async (e) => {
+  e.preventDefault()
+  const url = document.getElementById('url-input').value
+  const response = await fetch('/.netlify/functions/shorten', {
+    method: 'POST',
+    body: JSON.stringify({ url })
+  })
+  const data = await response.json()
+  if (data.shortId) {
+    const shortUrl = `${window.location.origin}/.netlify/functions/redirect?shortId=${data.shortId}`
+    document.getElementById('result').innerHTML = `
+      <p>Link rút gọn của bạn: <a href="${shortUrl}" target="_blank">${shortUrl}</a></p>
+    `
+  } else {
+    document.getElementById('result').innerHTML = '<p>Có lỗi xảy ra. Vui lòng thử lại.</p>'
+  }
+})
+</script>
 {{ end }}

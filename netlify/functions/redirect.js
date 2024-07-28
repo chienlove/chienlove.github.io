@@ -1,31 +1,28 @@
-const { NetlifyGraph } = require('@netlify/functions')
+const faunadb = require('faunadb')
 
-exports.handler = NetlifyGraph.wrapHandler(async (event, context) => {
-  const shortId = event.path.split('/').pop()
+const q = faunadb.query
+const client = new faunadb.Client({
+  secret: process.env.FAUNA_SECRET_KEY
+})
+
+exports.handler = async (event) => {
+  const { shortId } = event.queryStringParameters
 
   try {
-    // Lấy URL gốc từ Netlify KV Store
-    const originalUrl = await NetlifyGraph.getValue({ key: shortId })
+    const response = await client.query(
+      q.Get(q.Match(q.Index('url_by_short_id'), shortId))
+    )
 
-    if (originalUrl) {
-      return {
-        statusCode: 301,
-        headers: {
-          Location: originalUrl
-        }
-      }
-    } else {
-      return {
-        statusCode: 404,
-        body: 'Not Found'
+    return {
+      statusCode: 301,
+      headers: {
+        Location: response.data.url
       }
     }
   } catch (error) {
-    return { statusCode: 500, body: error.toString() }
+    return {
+      statusCode: 404,
+      body: 'Link không tồn tại'
+    }
   }
-}, {
-  onError: (error) => {
-    console.error(error)
-    return { statusCode: 500, body: 'Error redirecting' }
-  }
-})
+}
