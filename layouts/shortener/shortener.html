@@ -12,24 +12,19 @@
 document.getElementById('shorten-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const url = document.getElementById('url-input').value;
-  try {
-    const response = await fetch('/.netlify/functions/shorten', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ url })
-    });
-    const data = await response.json();
-    if (data.shortUrl) {
-      document.getElementById('result').innerHTML = `
-        <p>Link rút gọn của bạn: <a href="${data.shortUrl}" target="_blank">${data.shortUrl}</a></p>
-      `;
-    } else {
-      document.getElementById('result').innerHTML = '<p>Có lỗi xảy ra. Vui lòng thử lại.</p>';
+  const response = await fetch('/.netlify/functions/shorten', {
+    method: 'POST',
+    body: JSON.stringify({ url }),
+    headers: {
+      'Content-Type': 'application/json'
     }
-  } catch (error) {
-    console.error('Error:', error);
+  });
+  const data = await response.json();
+  if (data.shortUrl) {
+    document.getElementById('result').innerHTML = `
+      <p>Link rút gọn của bạn: <a href="${data.shortUrl}" target="_blank">${data.shortUrl}</a></p>
+    `;
+  } else {
     document.getElementById('result').innerHTML = '<p>Có lỗi xảy ra. Vui lòng thử lại.</p>';
   }
 });
