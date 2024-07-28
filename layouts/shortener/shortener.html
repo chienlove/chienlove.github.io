@@ -1,33 +1,36 @@
+{{ define "head" }}
+    <link rel="stylesheet" href="{{ "css/shortener.css" | relURL }}">
+{{ end }}
+
 {{ define "main" }}
-<link rel="stylesheet" href="{{ "css/shortener.css" | relURL }}">
-    <div id="shortener">
-      <h1>{{ .Title }}</h1>
-      <form id="shorten-form">
+<div id="shortener">
+    <h1>{{ .Title }}</h1>
+    <form id="shorten-form">
         <input type="url" id="url-input" placeholder="Nhập URL cần rút gọn" required>
         <button type="submit">Rút gọn</button>
-      </form>
-      <div id="result"></div>
-    </div>
+    </form>
+    <div id="result"></div>
+</div>
 
-    <script>
-    document.getElementById('shorten-form').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const url = document.getElementById('url-input').value;
-      const response = await fetch('/.netlify/functions/shorten', {
+<script>
+document.getElementById('shorten-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const url = document.getElementById('url-input').value;
+    const response = await fetch('/.netlify/functions/shorten', {
         method: 'POST',
         body: JSON.stringify({ url }),
         headers: {
-          'Content-Type': 'application/json'
+            'Content-Type': 'application/json'
         }
-      });
-      const data = await response.json();
-      if (data.shortUrl) {
-        document.getElementById('result').innerHTML = `
-          <p>Link rút gọn của bạn: <a href="${data.shortUrl}" target="_blank">${data.shortUrl}</a></p>
-        `;
-      } else {
-        document.getElementById('result').innerHTML = '<p>Có lỗi xảy ra. Vui lòng thử lại.</p>';
-      }
     });
-    </script>
-    {{ end }}
+    const data = await response.json();
+    if (data.shortUrl) {
+        document.getElementById('result').innerHTML = `
+            <p>Link rút gọn của bạn: <a href="${data.shortUrl}" target="_blank">${data.shortUrl}</a></p>
+        `;
+    } else {
+        document.getElementById('result').innerHTML = '<p>Có lỗi xảy ra. Vui lòng thử lại.</p>';
+    }
+});
+</script>
+{{ end }}
