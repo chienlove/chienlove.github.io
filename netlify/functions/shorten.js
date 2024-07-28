@@ -22,9 +22,11 @@ exports.handler = async (event) => {
       })
     )
 
+    const siteUrl = process.env.SITE_URL || 'http://localhost:8888' // Sử dụng URL cục bộ nếu biến môi trường không có
+
     return {
       statusCode: 200,
-      body: JSON.stringify({ shortUrl: `${process.env.URL}/.netlify/functions/redirect/${shortId}` })
+      body: JSON.stringify({ shortUrl: `${siteUrl}/.netlify/functions/redirect/${shortId}` })
     }
   } catch (error) {
     console.error('Error:', error)
