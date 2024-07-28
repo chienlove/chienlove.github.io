@@ -11,18 +11,6 @@ body {
     padding: 20px;
 }
 
-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 20px;
-}
-
-.logo {
-    font-size: 2.5em;
-    color: #FF6600;
-    margin: 0;
-}
 
 .menu-button {
     background: none;
