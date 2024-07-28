@@ -20,6 +20,10 @@ exports.handler = async (event) => {
       q.Get(q.Match(q.Index('url_by_short_id'), shortId))
     )
 
+    if (!response.data.url) {
+      throw new Error('URL not found')
+    }
+
     return {
       statusCode: 301,
       headers: {
