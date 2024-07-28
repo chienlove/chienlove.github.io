@@ -22,8 +22,7 @@ jobs:
     - name: Install dependencies
       run: |
         npm install
-        npm install @netlify/functions uuid
-        netlify graph install
+        npm install faunadb
     - name: Clear Hugo Cache and Public Folder
       run: |
         rm -rf public
