@@ -1,5 +1,4 @@
 const faunadb = require('faunadb')
-const shortid = require('shortid')
 
 const q = faunadb.query
 const client = new faunadb.Client({
@@ -7,28 +6,35 @@ const client = new faunadb.Client({
 })
 
 exports.handler = async (event) => {
-  const { url } = JSON.parse(event.body)
-  const shortId = shortid.generate()
-
   try {
-    await client.query(
-      q.Create(
-        q.Collection('links'),
-        { data: { url, shortId } }
-      )
-    )
+    const { url } = JSON.parse(event.body)
+    if (!url) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({ error: 'URL is required' })
+      }
+    }
 
-    const shortUrl = `${process.env.URL}/${shortId}`
+    const shortId = generateShortId()
+    const response = await client.query(
+      q.Create(q.Collection('links'), {
+        data: { url, shortId }
+      })
+    )
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ shortUrl })
+      body: JSON.stringify({ shortUrl: `${process.env.URL}/.netlify/functions/redirect/${shortId}` })
     }
   } catch (error) {
     console.error('Error:', error)
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Không thể tạo link rút gọn' })
+      body: JSON.stringify({ error: 'Internal Server Error' })
     }
   }
+}
+
+function generateShortId() {
+  return Math.random().toString(36).substr(2, 8)
 }
