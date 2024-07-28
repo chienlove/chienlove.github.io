@@ -15,7 +15,7 @@
   status = 200
   
 [[redirects]]
-  from = "/shortener/*"
+  from = "/shortener"
   to = "/.netlify/functions/shorten/"
   status = 200
 
