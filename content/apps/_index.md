@@ -1,5 +1,5 @@
 ---
 title: "Share apps for iOS"
-layout: "apps"
-url: "/apps/"
+layout: "app"
+type: "apps"
 ---
