@@ -1,4 +1,5 @@
-#shortener-wrapper {
+/* CSS cho phần tử bên trong .shortener-wrapper */
+.shortener-wrapper {
   display: flex;
   justify-content: center;
   align-items: center;
@@ -27,6 +28,56 @@
 #shorten-form {
   display: flex;
   margin-bottom: 20px;
+}
+
+#url-input {
+  flex-grow: 1;
+  padding: 12px 15px;
+  font-size: 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 4px 0 0 4px;
+  outline: none;
+  transition: border-color 0.3s ease;
+}
+
+#url-input:focus {
+  border-color: #2a5bd7;
+}
+
+#shortener button {
+  background-color: #2a5bd7;
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  font-size: 16px;
+  font-weight: bold;
+  border-radius: 0 4px 4px 0;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+#shortener button:hover {
+  background-color: #1e4bb6;
+}
+
+#result {
+  margin-top: 20px;
+  text-align: center;
+}
+
+#result p {
+  font-size: 18px;
+  color: #333;
+}
+
+#result a {
+  color: #2a5bd7;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+#result a:hover {
+  text-decoration: underline;
 }
 
 #url-input {
