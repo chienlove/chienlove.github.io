@@ -1,5 +1,5 @@
 {{ define "head" }}
-    <link rel="stylesheet" href="{{ "css/shortener.css" | relURL }}">
+    <link rel="stylesheet" href="{{ "css/shortener.css" | relURL }}?{{ now.Unix }}">
 {{ end }}
 
 {{ define "main" }}
