@@ -5,12 +5,24 @@
 {{ define "main" }}
 <div class="shortener-wrapper">
     <div id="shortener">
-        <h1>{{ .Title }}</h1>
+        <header>
+            <h1 class="logo">Blitly</h1>
+            <button class="menu-button">☰</button>
+        </header>
+        <h2>Rút gọn liên kết</h2>
+        <p class="description">Công cụ hỗ trợ rút gọn link, thu gọn link, làm ngắn link, thống kê lượt truy cập, short link, hoàn toàn miễn phí và kiếm thu nhập từ việc chia sẻ liên kết rút gọn đó của mình</p>
         <form id="shorten-form">
-            <input type="url" id="url-input" placeholder="Nhập URL cần rút gọn" required>
-            <button type="submit">Rút gọn</button>
+            <div class="input-wrapper">
+                <input type="url" id="url-input" placeholder="Nhập liên kết bạn cần" required>
+                <button type="submit">Rút gọn</button>
+            </div>
         </form>
         <div id="result"></div>
+        <div class="stats">
+            <h3>Số người tin dùng Blitly</h3>
+            <p class="count">51763+</p>
+            <p class="label">Liên kết</p>
+        </div>
     </div>
 </div>
 
