@@ -3,13 +3,15 @@
 {{ end }}
 
 {{ define "main" }}
-<div id="shortener">
-    <h1>{{ .Title }}</h1>
-    <form id="shorten-form">
-        <input type="url" id="url-input" placeholder="Nhập URL cần rút gọn" required>
-        <button type="submit">Rút gọn</button>
-    </form>
-    <div id="result"></div>
+<div id="shortener-wrapper">
+    <div id="shortener">
+        <h1>{{ .Title }}</h1>
+        <form id="shorten-form">
+            <input type="url" id="url-input" placeholder="Nhập URL cần rút gọn" required>
+            <button type="submit">Rút gọn</button>
+        </form>
+        <div id="result"></div>
+    </div>
 </div>
 
 <script>

@@ -8,7 +8,17 @@ body {
     background-color: #f3f4f6;
 }
 
-/* shortener.css */
+/* Chỉ áp dụng cho phần tử bên trong #shortener-wrapper */
+#shortener-wrapper {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #f0f0f0;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
 #shortener {
   background-color: white;
   border-radius: 8px;
@@ -16,7 +26,6 @@ body {
   padding: 40px;
   width: 100%;
   max-width: 600px;
-  margin: 0 auto; /* Center the content horizontally */
 }
 
 #shortener h1 {
@@ -26,12 +35,12 @@ body {
   text-align: center;
 }
 
-#shortener #shorten-form {
+#shorten-form {
   display: flex;
   margin-bottom: 20px;
 }
 
-#shortener #url-input {
+#url-input {
   flex-grow: 1;
   padding: 12px 15px;
   font-size: 16px;
@@ -41,7 +50,7 @@ body {
   transition: border-color 0.3s ease;
 }
 
-#shortener #url-input:focus {
+#url-input:focus {
   border-color: #2a5bd7;
 }
 
@@ -61,23 +70,22 @@ body {
   background-color: #1e4bb6;
 }
 
-#shortener #result {
+#result {
   margin-top: 20px;
   text-align: center;
 }
 
-#shortener #result p {
+#result p {
   font-size: 18px;
   color: #333;
 }
 
-#shortener #result a {
+#result a {
   color: #2a5bd7;
   text-decoration: none;
   font-weight: bold;
 }
 
-#shortener #result a:hover {
+#result a:hover {
   text-decoration: underline;
-}
 }
