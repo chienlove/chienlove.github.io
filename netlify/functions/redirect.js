@@ -6,7 +6,14 @@ const client = new faunadb.Client({
 })
 
 exports.handler = async (event) => {
-  const { shortId } = event.queryStringParameters
+  const shortId = event.path.split('/').pop()
+
+  if (!shortId) {
+    return {
+      statusCode: 400,
+      body: 'Invalid short link'
+    }
+  }
 
   try {
     const response = await client.query(
@@ -20,6 +27,7 @@ exports.handler = async (event) => {
       }
     }
   } catch (error) {
+    console.error('Error:', error)
     return {
       statusCode: 404,
       body: 'Link không tồn tại'

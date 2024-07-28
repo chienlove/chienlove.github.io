@@ -1,10 +1,4 @@
-const faunadb = require('faunadb')
-const shortid = require('shortid')
-
-const q = faunadb.query
-const client = new faunadb.Client({
-  secret: process.env.FAUNA_SECRET_KEY
-})
+// ... (phần code khác giữ nguyên)
 
 exports.handler = async (event) => {
   const { url } = JSON.parse(event.body)
@@ -18,9 +12,11 @@ exports.handler = async (event) => {
       )
     )
 
+    const shortUrl = `${process.env.URL}/${shortId}`
+
     return {
       statusCode: 200,
-      body: JSON.stringify({ shortId })
+      body: JSON.stringify({ shortUrl })
     }
   } catch (error) {
     return {

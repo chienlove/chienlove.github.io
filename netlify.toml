@@ -13,10 +13,15 @@
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
-  
+
 [[redirects]]
   from = "/shortener"
   to = "/.netlify/functions/shorten/"
+  status = 200
+
+[[redirects]]
+  from = "/:shortId"
+  to = "/.netlify/functions/redirect"
   status = 200
 
 [dev]
