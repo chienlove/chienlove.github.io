@@ -11,7 +11,6 @@ body {
     padding: 20px;
 }
 
-
 .menu-button {
     background: none;
     border: none;
@@ -39,6 +38,7 @@ h2 {
     padding: 10px;
     border: 1px solid #ccc;
     border-radius: 5px 0 0 5px;
+    font-size: 16px; /* Đảm bảo font-size không quá nhỏ */
 }
 
 button[type="submit"] {
@@ -48,6 +48,7 @@ button[type="submit"] {
     padding: 10px 20px;
     cursor: pointer;
     border-radius: 0 5px 5px 0;
+    font-size: 16px; /* Đảm bảo kích thước phông chữ nhất quán */
 }
 
 .stats {
