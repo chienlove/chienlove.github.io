@@ -14,6 +14,9 @@ document.getElementById('shorten-form').addEventListener('submit', async (e) => 
   const url = document.getElementById('url-input').value
   const response = await fetch('/.netlify/functions/shorten', {
     method: 'POST',
+    headers: {
+      'Content-Type': 'application/json' // Thiếu headers
+    },
     body: JSON.stringify({ url })
   })
   const data = await response.json()

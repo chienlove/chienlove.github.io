@@ -7,8 +7,7 @@
   node_bundler = "esbuild"
 
 [build.environment]
-  NODE_VERSION = "16"  # hoặc phiên bản Node.js mà bạn muốn sử dụng
-  NETLIFY_GRAPH_TOKEN = "Thêm Netlify Graph Token của bạn ở đây"  # Thêm Netlify Graph Token vào đây
+  NODE_VERSION = "16"
 
 [[redirects]]
   from = "/api/*"
