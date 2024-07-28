@@ -1,27 +1,51 @@
-/* assets/css/main.css */
 body {
     font-family: Arial, sans-serif;
-    line-height: 1.6;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    background-color: #f3f4f6;
+}
+
+#shortener {
+    text-align: center;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     padding: 20px;
-}
-
-#url-shortener {
-    max-width: 600px;
-    margin: 0 auto;
-}
-
-input[type="text"] {
     width: 100%;
+    max-width: 500px;
+}
+
+h1 {
+    margin: 0 0 20px;
+    color: #333;
+}
+
+#shorten-form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+#url-input {
     padding: 10px;
-    margin-bottom: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 button {
-    padding: 10px 20px;
+    padding: 10px;
+    border: none;
+    border-radius: 4px;
     background-color: #007bff;
     color: white;
-    border: none;
+    font-size: 16px;
     cursor: pointer;
+    transition: background-color 0.3s;
 }
 
 button:hover {

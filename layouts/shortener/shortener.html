@@ -1,32 +1,43 @@
-{{ define "main" }}
-<div id="shortener">
-  <h1>{{ .Title }}</h1>
-  <form id="shorten-form">
-    <input type="url" id="url-input" placeholder="Nhập URL cần rút gọn" required>
-    <button type="submit">Rút gọn</button>
-  </form>
-  <div id="result"></div>
-</div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ .Site.Title }}</title>
+    <link rel="stylesheet" href="{{ "shortener.css" | relURL }}">
+</head>
+<body>
+    {{ define "main" }}
+    <div id="shortener">
+      <h1>{{ .Title }}</h1>
+      <form id="shorten-form">
+        <input type="url" id="url-input" placeholder="Nhập URL cần rút gọn" required>
+        <button type="submit">Rút gọn</button>
+      </form>
+      <div id="result"></div>
+    </div>
 
-<script>
-document.getElementById('shorten-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  const url = document.getElementById('url-input').value;
-  const response = await fetch('/.netlify/functions/shorten', {
-    method: 'POST',
-    body: JSON.stringify({ url }),
-    headers: {
-      'Content-Type': 'application/json'
-    }
-  });
-  const data = await response.json();
-  if (data.shortUrl) {
-    document.getElementById('result').innerHTML = `
-      <p>Link rút gọn của bạn: <a href="${data.shortUrl}" target="_blank">${data.shortUrl}</a></p>
-    `;
-  } else {
-    document.getElementById('result').innerHTML = '<p>Có lỗi xảy ra. Vui lòng thử lại.</p>';
-  }
-});
-</script>
-{{ end }}
+    <script>
+    document.getElementById('shorten-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const url = document.getElementById('url-input').value;
+      const response = await fetch('/.netlify/functions/shorten', {
+        method: 'POST',
+        body: JSON.stringify({ url }),
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      });
+      const data = await response.json();
+      if (data.shortUrl) {
+        document.getElementById('result').innerHTML = `
+          <p>Link rút gọn của bạn: <a href="${data.shortUrl}" target="_blank">${data.shortUrl}</a></p>
+        `;
+      } else {
+        document.getElementById('result').innerHTML = '<p>Có lỗi xảy ra. Vui lòng thử lại.</p>';
+      }
+    });
+    </script>
+    {{ end }}
+</body>
+</html>
