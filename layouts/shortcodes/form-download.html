@@ -1,0 +1,30 @@
+<form id="download-form">
+  <input type="text" id="appid" name="appid" placeholder="APPID hoặc URL Appstore" required>
+  <input type="text" id="appVerId" name="appVerId" placeholder="ID phiên bản (không bắt buộc)">
+  <input type="email" id="apple-id" name="apple-id" placeholder="Apple ID" required>
+  <input type="password" id="password" name="password" placeholder="Mật khẩu" required>
+  <input type="text" id="code" name="code" placeholder="Mã xác minh 2 bước (nếu có)">
+  <button type="submit">Tải xuống IPA</button>
+</form>
+<div id="result"></div>
+
+<script>
+document.getElementById('download-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const formData = new FormData(e.target);
+  const data = Object.fromEntries(formData);
+  
+  try {
+    const response = await fetch('https://your-worker.workers.dev', {
+      method: 'POST',
+      body: JSON.stringify(data),
+      headers: { 'Content-Type': 'application/json' }
+    });
+    
+    const result = await response.json();
+    document.getElementById('result').innerHTML = `<a href="${result.url}">Tải xuống IPA</a>`;
+  } catch (error) {
+    document.getElementById('result').innerHTML = `Lỗi: ${error.message}`;
+  }
+});
+</script>
