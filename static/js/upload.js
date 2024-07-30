@@ -1,96 +1,41 @@
-console.log('upload.js loaded');
+const { Octokit } = require('@octokit/rest');
+const fs = require('fs');
+const path = require('path');
 
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOMContentLoaded event fired');
+const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
+const owner = process.env.GITHUB_REPOSITORY_OWNER;
+const repo = process.env.GITHUB_REPOSITORY_NAME;
+const filePath = process.env.FILE_PATH;
+const fileName = path.basename(filePath);
 
-    const form = document.getElementById('uploadForm');
-    const submitButton = document.getElementById('submitButton');
-    const releaseTypeSelect = document.getElementById('releaseType');
-    const newReleaseFields = document.getElementById('newReleaseFields');
-    const existingReleaseField = document.getElementById('existingReleaseField');
-    const existingReleasesSelect = document.getElementById('existingReleases');
-    const messageDiv = document.getElementById('message');
-
-    console.log('Elements selected:', {form, submitButton, releaseTypeSelect, newReleaseFields, existingReleaseField, existingReleasesSelect, messageDiv});
-
-    // Populate existing releases
-    fetch('/api/releases')
-        .then(response => response.json())
-        .then(releases => {
-            console.log('Fetched releases:', releases);
-            releases.forEach(release => {
-                const option = document.createElement('option');
-                option.value = release.id;
-                option.textContent = release.name;
-                existingReleasesSelect.appendChild(option);
-            });
-        })
-        .catch(error => {
-            console.error('Error fetching releases:', error);
-            showMessage(error.message, 'error');
-        });
-
-    releaseTypeSelect.addEventListener('change', (e) => {
-        console.log('Release type changed:', e.target.value);
-        if (e.target.value === 'new') {
-            newReleaseFields.classList.remove('hidden');
-            existingReleaseField.classList.add('hidden');
-        } else {
-            newReleaseFields.classList.add('hidden');
-            existingReleaseField.classList.remove('hidden');
-        }
+async function run() {
+  try {
+    // Tạo một release mới
+    const release = await octokit.repos.createRelease({
+      owner,
+      repo,
+      tag_name: `v${Date.now()}`,
+      name: 'New Release',
     });
 
-    submitButton.addEventListener('click', async (e) => {
-        console.log('Submit button clicked');
-        e.preventDefault();
-        
-        const formData = new FormData(form);
-        
-        console.log('Form data:');
-        for (let [key, value] of formData.entries()) {
-            console.log(key, value);
-        }
-
-        try {
-            console.log('Sending request to /api/upload');
-            const response = await fetch('/api/upload', {
-                method: 'POST',
-                body: formData
-            });
-            
-            console.log('Response status:', response.status);
-
-            if (!response.ok) {
-                throw new Error('Network response was not ok');
-            }
-            
-            const result = await response.json();
-            console.log('Response result:', result);
-            showMessage(result.message, 'success');
-        } catch (error) {
-            console.error('Error during upload:', error);
-            showMessage(error.message || 'An error occurred during upload', 'error');
-        }
-
-        // Uncomment the following block to use a simulated API response instead of the actual fetch
-        /*
-        try {
-            console.log('Simulating API call');
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            showMessage('Upload successful (simulated)', 'success');
-        } catch (error) {
-            console.error('Error during upload:', error);
-            showMessage(error.message || 'An error occurred during upload', 'error');
-        }
-        */
+    // Tải tệp lên release
+    await octokit.repos.uploadReleaseAsset({
+      owner,
+      repo,
+      release_id: release.data.id,
+      name: fileName,
+      data: fs.createReadStream(filePath),
+      headers: {
+        'content-length': fs.statSync(filePath).size,
+        'content-type': 'application/octet-stream',
+      },
     });
 
-    function showMessage(message, type) {
-        console.log('Showing message:', message, type);
-        messageDiv.textContent = message;
-        messageDiv.className = `message ${type}`;
-        messageDiv.classList.remove('hidden');
-        console.log('Message div:', messageDiv);
-    }
-});
+    console.log('File uploaded successfully!');
+  } catch (err) {
+    console.error('Error uploading file:', err);
+    process.exit(1);
+  }
+}
+
+run();
