@@ -30,4 +30,4 @@ jobs:
         GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
         GITHUB_REPOSITORY_NAME: ${{ github.repository }}
         FILE_PATH: ${{ github.event.inputs.file }}
-      run: node upfile/scripts/upload.js
+      run: node js/upload.js
