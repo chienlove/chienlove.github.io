@@ -12,8 +12,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
+    - name: Checkout master branch
       uses: actions/checkout@v2
+      with:
+        ref: master
+
+    - name: Checkout gh-pages branch
+      uses: actions/checkout@v2
+      with:
+        ref: gh-pages
+        path: gh-pages
 
     - name: Set up Node.js
       uses: actions/setup-node@v2
@@ -30,4 +38,4 @@ jobs:
         GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
         GITHUB_REPOSITORY_NAME: ${{ github.repository }}
         FILE_PATH: ${{ github.event.inputs.file }}
-      run: node js/upload.js
+      run: node gh-pages/js/upload.js
