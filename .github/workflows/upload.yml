@@ -21,13 +21,12 @@ jobs:
         node-version: '16'
 
     - name: Install dependencies
-      run: |
-        npm install @octokit/rest
+      run: npm install @octokit/rest
 
     - name: Run upload script
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
-        GITHUB_REPOSITORY_NAME: ${{ github.repository }}
+        GITHUB_REPOSITORY_NAME: ${{ github.event.repository.name }}
         FILE_PATH: ${{ github.event.inputs.file }}
       run: node js/upload.js
