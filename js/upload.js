@@ -10,15 +10,13 @@ const fileName = path.basename(filePath);
 
 async function run() {
   try {
-    // Tạo một release mới
     const release = await octokit.repos.createRelease({
       owner,
       repo,
       tag_name: `v${Date.now()}`,
-      name: 'New Release',
+      name: 'New Release'
     });
 
-    // Tải tệp lên release
     await octokit.repos.uploadReleaseAsset({
       owner,
       repo,
@@ -27,13 +25,11 @@ async function run() {
       data: fs.createReadStream(filePath),
       headers: {
         'content-length': fs.statSync(filePath).size,
-        'content-type': 'application/octet-stream',
-      },
+        'content-type': 'application/octet-stream'
+      }
     });
-
-    console.log('File uploaded successfully!');
-  } catch (err) {
-    console.error('Error uploading file:', err);
+  } catch (error) {
+    console.error('Error uploading file:', error);
     process.exit(1);
   }
 }
