@@ -8,7 +8,7 @@ exports.handler = async function(event, context) {
   try {
     const { code } = JSON.parse(event.body);
 
-    const response = await axios.post('https://github.com/login/oauth/access_token', {
+    const tokenResponse = await axios.post('https://github.com/login/oauth/access_token', {
       client_id: process.env.GITHUB_CLIENT_ID,
       client_secret: process.env.GITHUB_CLIENT_SECRET,
       code: code
@@ -18,9 +18,25 @@ exports.handler = async function(event, context) {
       }
     });
 
+    const accessToken = tokenResponse.data.access_token;
+
+    // Kiểm tra tính hợp lệ của token
+    try {
+      await axios.get('https://api.github.com/user', {
+        headers: {
+          Authorization: `token ${accessToken}`
+        }
+      });
+    } catch (error) {
+      return {
+        statusCode: 401,
+        body: JSON.stringify({ error: 'Invalid token' })
+      };
+    }
+
     return {
       statusCode: 200,
-      body: JSON.stringify(response.data)
+      body: JSON.stringify({ access_token: accessToken })
     };
   } catch (error) {
     return {

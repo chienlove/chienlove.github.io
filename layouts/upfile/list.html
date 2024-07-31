@@ -4,8 +4,9 @@
 
 {{ define "main" }}
 <h1>Upload to GitHub Release</h1>
-    <input type="file" id="fileInput">
-    <button id="uploadButton">Upload</button>
+    <button id="loginButton" style="display:none;">Login with GitHub</button>
+    <input type="file" id="fileInput" style="display:none;">
+    <button id="uploadButton" style="display:none;">Upload</button>
     <div id="status"></div>
     <div id="progressBar"><div></div></div>
 
