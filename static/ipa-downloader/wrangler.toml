@@ -1,5 +1,5 @@
 name = "ipa-downloader"
-account_id = "CF_ACCOUNT_ID"
+account_id = "b9b33e1228ae77e510897cc002c1735c"
 workers_dev = true
 main = "src/index.js"
 
