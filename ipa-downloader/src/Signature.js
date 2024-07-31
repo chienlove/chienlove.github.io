@@ -1,6 +1,6 @@
-import { createWriteStream, readFileSync } from ‘fs’;
-import JSZip from ‘jszip’;
-import plist from ‘plist’;
+import { createWriteStream, readFileSync } from 'fs';
+import JSZip from 'jszip';
+import plist from 'plist';
 
 export async function readZip(path) {
     const content = readFileSync(path);

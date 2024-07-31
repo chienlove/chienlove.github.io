@@ -1,5 +1,6 @@
 import { Store } from "./client.js";
 import { SignatureClient } from "./Signature.js";
+import fetch from 'node-fetch'; // Thêm import node-fetch
 
 export default {
   async fetch(request, env, ctx) {
