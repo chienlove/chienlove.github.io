@@ -1,9 +1,8 @@
 name = "ipa-downloader"
 account_id = "$CF_ACCOUNT_ID"
 workers_dev = true
+main = "src/index.js"
 
 [[r2_buckets]]
 binding = "MY_BUCKET"
 bucket_name = "ipa-downloads"
-
-main = "src/index.js"
