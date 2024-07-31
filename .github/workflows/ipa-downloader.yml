@@ -26,10 +26,10 @@ jobs:
       run: |
         if [ -d "ipa-downloader" ]; then
           cd ipa-downloader
-          wrangler publish
+          wrangler deploy
         else
           echo "ipa-downloader directory does not exist"
           exit 1
         fi
       env:
-        CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+        CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
