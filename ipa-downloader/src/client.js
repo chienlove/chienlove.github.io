@@ -1,3 +1,5 @@
+import { promisify } from 'node:util';
+import { exec } from 'node:child_process';
 import plist from 'plist';
 import getMAC from 'getmac';
 import fetchCookie from 'fetch-cookie';
