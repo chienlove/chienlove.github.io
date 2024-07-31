@@ -5,6 +5,3 @@ workers_dev = true
 [[r2_buckets]]
 binding = "MY_BUCKET"
 bucket_name = "ipa-downloads"
-
-# Đặt trường main đúng vị trí
-main = "src/index.js"
