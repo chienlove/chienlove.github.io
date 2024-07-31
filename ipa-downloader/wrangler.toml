@@ -6,4 +6,5 @@ workers_dev = true
 binding = "MY_BUCKET"
 bucket_name = "ipa-downloads"
 
+# Đặt trường main đúng vị trí
 main = "src/index.js"
