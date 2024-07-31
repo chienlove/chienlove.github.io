@@ -1,6 +1,7 @@
 ---
 title: "IPA Downloader"
-url: "/ipadown"
+url: "/ipadown/"
+layouts: "ipadown/single"
 ---
 
 {{< form-download >}}
