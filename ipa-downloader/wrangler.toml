@@ -1,0 +1,8 @@
+name = "ipa-downloader"
+type = "javascript"
+account_id = "$CF_ACCOUNT_ID"
+workers_dev = true
+
+[[r2_buckets]]
+binding = "MY_BUCKET"
+bucket_name = "ipa-downloads"
