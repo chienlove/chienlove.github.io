@@ -22,6 +22,26 @@ jobs:
     - name: Install Wrangler
       run: npm install -g wrangler@latest
 
+    - name: Create wrangler.toml with environment variables
+      run: |
+        if [ -d "ipa-downloader" ]; then
+          cd ipa-downloader
+          echo "name = \"ipa-downloader\"" > wrangler.toml
+          echo "account_id = \"$CF_ACCOUNT_ID\"" >> wrangler.toml
+          echo "workers_dev = true" >> wrangler.toml
+          echo "main = \"src/index.js\"" >> wrangler.toml
+          echo "compatibility_date = \"2024-07-31\"" >> wrangler.toml
+          echo "" >> wrangler.toml
+          echo "[[r2_buckets]]" >> wrangler.toml
+          echo "binding = \"MY_BUCKET\"" >> wrangler.toml
+          echo "bucket_name = \"ipa-downloads\"" >> wrangler.toml
+        else
+          echo "ipa-downloader directory does not exist"
+          exit 1
+        fi
+      env:
+        CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
+
     - name: Deploy Worker
       run: |
         if [ -d "ipa-downloader" ]; then
