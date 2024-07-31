@@ -20,7 +20,7 @@ jobs:
         node-version: '16'
 
     - name: Install Wrangler
-      run: npm install -g wrangler
+      run: npm install -g wrangler@latest
 
     - name: Deploy Worker
       run: |
