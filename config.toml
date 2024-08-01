@@ -18,5 +18,7 @@ title = "storeios"
   publishDir = "public"
   minify = true
   gc = true
+
 [permalinks]
-posts = "/posts/:slug/"
+  posts = "/posts/:slug/"
+  ipa-downloader = "/ipa-downloader/:slug/"
