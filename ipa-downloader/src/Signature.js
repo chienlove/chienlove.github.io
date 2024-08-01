@@ -1,4 +1,4 @@
-import { createWriteStream, readFileSync } from 'fs';
+import { createWriteStream, readFileSync } from 'node:fs';
 import JSZip from 'jszip';
 import plist from 'plist';
 
