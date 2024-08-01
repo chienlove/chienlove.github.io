@@ -1,4 +1,4 @@
-import plist from 'plist';
+import { build, parse } from './plist-worker.js';  // Chúng ta sẽ tạo file này
 
 export class Store {
     static get guid() {
@@ -16,7 +16,7 @@ export class Store {
             rmp: 0,
             why: 'signIn',
         };
-        const body = plist.build(dataJson);
+        const body = build(dataJson);
         const url = `https://auth.itunes.apple.com/auth/v1/native/fast?guid=${this.guid}`;
         try {
             const resp = await fetch(url, {
@@ -25,7 +25,7 @@ export class Store {
                 headers: this.Headers
             });
             const responseText = await resp.text();
-            const parsedResp = plist.parse(responseText);
+            const parsedResp = parse(responseText);
             console.log("Authentication response:", parsedResp);
             return {...parsedResp, _state: parsedResp.failureType ? 'failure' : 'success'};
         } catch (error) {
@@ -45,7 +45,7 @@ export class Store {
             salableAdamId: appIdentifier,
             externalVersionId: appVerId
         };
-        const body = plist.build(dataJson);
+        const body = build(dataJson);
         const url = `https://p25-buy.itunes.apple.com/WebObjects/MZFinance.woa/wa/volumeStoreDownloadProduct?guid=${this.guid}`;
         try {
             const resp = await fetch(url, {
@@ -54,7 +54,7 @@ export class Store {
                 headers: {...this.Headers, 'X-Dsid': Cookie.dsPersonId, 'iCloud-DSID': Cookie.dsPersonId}
             });
             const responseText = await resp.text();
-            const parsedResp = plist.parse(responseText);
+            const parsedResp = parse(responseText);
             console.log("Download response:", parsedResp);
             return {...parsedResp, _state: parsedResp.failureType ? 'failure' : 'success'};
         } catch (error) {
