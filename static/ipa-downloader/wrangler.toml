@@ -8,3 +8,10 @@ node_compat = true
 [[r2_buckets]]
 binding = "MY_BUCKET"
 bucket_name = "ipa-downloads"
+
+[build]
+command = "npm install && npm run build"
+
+[build.upload]
+format = "modules"
+external = ["jszip"]
