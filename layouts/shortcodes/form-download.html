@@ -13,7 +13,7 @@
   document.getElementById("download-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
-    const data = Object.fromEntries(formData);
+    const data = Object.fromEntries(formData.entries());  // Ensure proper conversion to JSON object
     const resultDiv = document.getElementById("result");
     
     resultDiv.innerHTML = "Đang xử lý...";
