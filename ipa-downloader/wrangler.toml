@@ -14,4 +14,4 @@ command = "npm install && npm run build"
 
 [build.upload]
 format = "modules"
-external = ["jszip"]
+external = ["jszip", "node"]
