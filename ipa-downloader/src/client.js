@@ -5,58 +5,7 @@ export class Store {
         return 'XXXXXXXXXXXXXXXX'.replace(/X/g, () => Math.floor(Math.random() * 16).toString(16));
     }
 
-    static async authenticate(email, password, mfa) {
-        console.log("Authenticating...");
-        const dataJson = {
-            appleId: email,
-            attempt: mfa ? 2 : 4,
-            createSession: 'true',
-            guid: this.guid,
-            password: `${password}${mfa ?? ''}`,
-            rmp: 0,
-            why: 'signIn',
-        };
-        const body = build(dataJson);
-        const url = `https://auth.itunes.apple.com/auth/v1/native/fast?guid=${this.guid}`;
-        try {
-            console.log("Sending authentication request to:", url);
-            console.log("Request body:", body);
-            const resp = await fetch(url, {
-                method: 'POST', 
-                body, 
-                headers: this.Headers
-            });
-            console.log("Authentication response status:", resp.status);
-            const responseText = await resp.text();
-            console.log("Authentication response text:", responseText);
-            
-            if (!responseText.trim()) {
-                throw new Error("Empty response from authentication server");
-            }
-            
-            let parsedResp;
-            try {
-                parsedResp = parse(responseText);
-            } catch (parseError) {
-                console.error("Error parsing response:", parseError);
-                throw new Error(`Failed to parse authentication response: ${parseError.message}`);
-            }
-            
-            console.log("Parsed authentication response:", parsedResp);
-            
-            if (!parsedResp) {
-                throw new Error("Authentication response is invalid");
-            }
-            
-            return {
-                ...parsedResp, 
-                _state: parsedResp.failureType ? 'failure' : 'success'
-            };
-        } catch (error) {
-            console.error("Authentication error:", error);
-            throw new Error(`Authentication failed: ${error.message}`);
-        }
-    }
+    
 
     static async download(appIdentifier, appVerId, Cookie) {
         console.log("Downloading app...");
