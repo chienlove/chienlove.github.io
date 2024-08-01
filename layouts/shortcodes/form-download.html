@@ -13,29 +13,35 @@
   document.getElementById("download-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
-    const data = Object.fromEntries(formData.entries());
+    const data = {
+      APPID: formData.get("appid"),
+      appVerId: formData.get("appVerId"),
+      APPLE_ID: formData.get("apple-id"),
+      PASSWORD: formData.get("password"),
+      CODE: formData.get("code")
+    };
     const resultDiv = document.getElementById("result");
-    
+
     // Kiểm tra nếu các trường bắt buộc không trống
-    if (!data.appid || !data["apple-id"] || !data.password) {
+    if (!data.APPID || !data.APPLE_ID || !data.PASSWORD) {
       resultDiv.innerHTML = "Lỗi: Các trường bắt buộc không được để trống.";
       return;
     }
 
     resultDiv.innerHTML = "Đang xử lý...";
-    
+
     try {
       const response = await fetch("https://ipa-downloader.boypink93.workers.dev", {
         method: "POST",
         body: JSON.stringify(data),
         headers: { "Content-Type": "application/json" }
       });
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`HTTP error! status: ${response.status}. Response: ${errorText}`);
       }
-      
+
       const result = await response.json();
       if (result.url) {
         resultDiv.innerHTML = `<a href="${result.url}">Tải xuống IPA</a>`;
