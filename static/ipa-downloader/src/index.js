@@ -52,6 +52,9 @@ export default {
       console.log("Download successful");
 
       const songList0 = app?.songList[0];
+      if (!songList0) {
+        throw new Error("No song list found in the app data");
+      }
       const uniqueString = crypto.randomUUID();
       const fileName = `${songList0.metadata.bundleDisplayName}_${songList0.metadata.bundleShortVersionString}_${uniqueString}.ipa`;
 
@@ -85,8 +88,8 @@ export default {
 
       return new Response(JSON.stringify({ url }), { headers });
     } catch (error) {
-      console.error("Error in worker:", error);
-      return new Response(JSON.stringify({ error: error.message }), { status: 500, headers });
+      console.error("Detailed error:", error);
+      return new Response(JSON.stringify({ error: error.message, stack: error.stack }), { status: 500, headers });
     }
   },
 };
