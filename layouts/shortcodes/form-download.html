@@ -13,9 +13,15 @@
   document.getElementById("download-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
-    const data = Object.fromEntries(formData.entries());  // Ensure proper conversion to JSON object
+    const data = Object.fromEntries(formData.entries());
     const resultDiv = document.getElementById("result");
     
+    // Kiểm tra nếu các trường bắt buộc không trống
+    if (!data.appid || !data["apple-id"] || !data.password) {
+      resultDiv.innerHTML = "Lỗi: Các trường bắt buộc không được để trống.";
+      return;
+    }
+
     resultDiv.innerHTML = "Đang xử lý...";
     
     try {
