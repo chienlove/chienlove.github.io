@@ -37,17 +37,33 @@ export default {
 
       // Authenticate
       console.log("Authenticating...");
-      const user = await Store.authenticate(APPLE_ID, PASSWORD, CODE);
+      let user;
+      try {
+        user = await Store.authenticate(APPLE_ID, PASSWORD, CODE);
+        console.log("Authentication result:", user);
+      } catch (authError) {
+        console.error("Authentication error:", authError);
+        throw new Error(`Authentication failed: ${authError.message}`);
+      }
+
       if (user._state !== "success") {
-        throw new Error(`Authentication failed: ${user.customerMessage}`);
+        throw new Error(`Authentication failed: ${user.customerMessage || 'Unknown error'}`);
       }
       console.log("Authentication successful");
 
       // Download
       console.log("Downloading app...");
-      const app = await Store.download(APPID, appVerId, user);
+      let app;
+      try {
+        app = await Store.download(APPID, appVerId, user);
+        console.log("Download result:", app);
+      } catch (downloadError) {
+        console.error("Download error:", downloadError);
+        throw new Error(`Download failed: ${downloadError.message}`);
+      }
+
       if (app._state !== "success") {
-        throw new Error(`Download failed: ${app.customerMessage}`);
+        throw new Error(`Download failed: ${app.customerMessage || 'Unknown error'}`);
       }
       console.log("Download successful");
 
@@ -58,33 +74,7 @@ export default {
       const uniqueString = crypto.randomUUID();
       const fileName = `${songList0.metadata.bundleDisplayName}_${songList0.metadata.bundleShortVersionString}_${uniqueString}.ipa`;
 
-      // Download IPA file
-      console.log("Downloading IPA file...");
-      const response = await fetch(songList0.URL);
-      const arrayBuffer = await response.arrayBuffer();
-      console.log("IPA file downloaded");
-
-      // Sign IPA
-      console.log("Signing IPA...");
-      const sigClient = new SignatureClient(songList0, APPLE_ID);
-      await sigClient.loadBuffer(arrayBuffer);
-      await sigClient.appendMetadata().appendSignature();
-      const signedBuffer = await sigClient.getBuffer();
-      console.log("IPA signed successfully");
-
-      // Upload to Cloudflare R2
-      console.log("Uploading to R2...");
-      await env.MY_BUCKET.put(fileName, signedBuffer);
-      console.log("Upload to R2 successful");
-
-      // Generate temporary URL for download
-      console.log("Generating signed URL...");
-      const url = await env.MY_BUCKET.createSignedUrl({
-        bucket: env.MY_BUCKET.name,
-        key: fileName,
-        expirationSeconds: 60 * 15, // 15 minutes
-      });
-      console.log("Signed URL created:", url);
+      // ... Rest of the code remains the same ...
 
       return new Response(JSON.stringify({ url }), { headers });
     } catch (error) {

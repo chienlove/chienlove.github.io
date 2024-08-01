@@ -1,4 +1,4 @@
-import { build, parse } from './plist-worker.js';  // Chúng ta sẽ tạo file này
+import { build, parse } from './plist-worker.js';
 
 export class Store {
     static get guid() {
@@ -24,13 +24,31 @@ export class Store {
                 body, 
                 headers: this.Headers
             });
+            console.log("Authentication response status:", resp.status);
             const responseText = await resp.text();
-            const parsedResp = parse(responseText);
-            console.log("Authentication response:", parsedResp);
-            return {...parsedResp, _state: parsedResp.failureType ? 'failure' : 'success'};
+            console.log("Authentication response text:", responseText);
+            
+            let parsedResp;
+            try {
+                parsedResp = parse(responseText);
+            } catch (parseError) {
+                console.error("Error parsing response:", parseError);
+                throw new Error(`Failed to parse authentication response: ${parseError.message}`);
+            }
+            
+            console.log("Parsed authentication response:", parsedResp);
+            
+            if (!parsedResp) {
+                throw new Error("Authentication response is empty or invalid");
+            }
+            
+            return {
+                ...parsedResp, 
+                _state: parsedResp.failureType ? 'failure' : 'success'
+            };
         } catch (error) {
             console.error("Authentication error:", error);
-            throw error;
+            throw new Error(`Authentication failed: ${error.message}`);
         }
     }
 
@@ -53,13 +71,31 @@ export class Store {
                 body,
                 headers: {...this.Headers, 'X-Dsid': Cookie.dsPersonId, 'iCloud-DSID': Cookie.dsPersonId}
             });
+            console.log("Download response status:", resp.status);
             const responseText = await resp.text();
-            const parsedResp = parse(responseText);
-            console.log("Download response:", parsedResp);
-            return {...parsedResp, _state: parsedResp.failureType ? 'failure' : 'success'};
+            console.log("Download response text:", responseText);
+            
+            let parsedResp;
+            try {
+                parsedResp = parse(responseText);
+            } catch (parseError) {
+                console.error("Error parsing download response:", parseError);
+                throw new Error(`Failed to parse download response: ${parseError.message}`);
+            }
+            
+            console.log("Parsed download response:", parsedResp);
+            
+            if (!parsedResp) {
+                throw new Error("Download response is empty or invalid");
+            }
+            
+            return {
+                ...parsedResp, 
+                _state: parsedResp.failureType ? 'failure' : 'success'
+            };
         } catch (error) {
             console.error("Download error:", error);
-            throw error;
+            throw new Error(`Download failed: ${error.message}`);
         }
     }
 
