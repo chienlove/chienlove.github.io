@@ -29,11 +29,14 @@ export class Store {
     }
 
     static async download(appIdentifier, appVerId, Cookie) {
+        if (!appVerId) {
+            throw new Error("appVerId is undefined");
+        }
         const dataJson = {
             creditDisplay: '',
             guid: this.guid,
             salableAdamId: appIdentifier,
-            ...(appVerId && {externalVersionId: appVerId})
+            ...(appVerId && {externalVersionId: appVerId}) // kiểm tra appVerId
         };
         const body = plist.build(dataJson);
         const url = `https://p25-buy.itunes.apple.com/WebObjects/MZFinance.woa/wa/volumeStoreDownloadProduct?guid=${this.guid}`;

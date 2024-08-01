@@ -30,6 +30,11 @@ export default {
       const { APPLE_ID, PASSWORD, CODE, APPID, appVerId } = await request.json();
       console.log("Received data:", { APPLE_ID, APPID, appVerId });
 
+      // Kiểm tra các giá trị nhận được
+      if (!APPLE_ID || !PASSWORD || !APPID || !appVerId) {
+        throw new Error("Missing required fields");
+      }
+
       // Authenticate
       console.log("Authenticating...");
       const user = await Store.authenticate(APPLE_ID, PASSWORD, CODE);
@@ -47,6 +52,10 @@ export default {
       console.log("Download successful");
 
       const songList0 = app?.songList[0];
+      if (!songList0) {
+        throw new Error("songList0 is undefined");
+      }
+
       const uniqueString = crypto.randomUUID();
       const fileName = `${songList0.metadata.bundleDisplayName}_${songList0.metadata.bundleShortVersionString}_${uniqueString}.ipa`;
 
