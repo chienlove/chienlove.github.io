@@ -1,13 +1,10 @@
-import { promisify } from 'node:util';
-import { exec } from 'node:child_process';
-import plist from 'plist';
-import getMAC from 'getmac';
-import fetchCookie from 'fetch-cookie';
-import nodeFetch from 'node-fetch';
+import { plist } from 'plist';
 
-class Store {
+export class Store {
     static get guid() {
-        return getMAC().replace(/:/g, '').toUpperCase();
+        // Trong môi trường Cloudflare Worker, chúng ta không thể sử dụng getmac
+        // Thay vào đó, chúng ta sẽ tạo một GUID giả
+        return 'XXXXXXXXXXXXXXXX'.replace(/X/g, () => Math.floor(Math.random() * 16).toString(16));
     }
 
     static async authenticate(email, password, mfa) {
@@ -22,9 +19,12 @@ class Store {
         };
         const body = plist.build(dataJson);
         const url = `https://auth.itunes.apple.com/auth/v1/native/fast?guid=${this.guid}`;
-        const resp = await this.fetch(url, {method: 'POST', body, headers: this.Headers});
+        const resp = await fetch(url, {
+            method: 'POST', 
+            body, 
+            headers: this.Headers
+        });
         const parsedResp = plist.parse(await resp.text());
-        //console.log(JSON.stringify(parsedResp));
         return {...parsedResp, _state: parsedResp.failureType ? 'failure' : 'success'};
     }
 
@@ -37,22 +37,17 @@ class Store {
         };
         const body = plist.build(dataJson);
         const url = `https://p25-buy.itunes.apple.com/WebObjects/MZFinance.woa/wa/volumeStoreDownloadProduct?guid=${this.guid}`;
-        const resp = await this.fetch(url, {
-            method: 'POST', body,
+        const resp = await fetch(url, {
+            method: 'POST', 
+            body,
             headers: {...this.Headers, 'X-Dsid': Cookie.dsPersonId, 'iCloud-DSID': Cookie.dsPersonId}
-            //'X-Token': Cookie.passwordToken
         });
         const parsedResp = plist.parse(await resp.text());
-        //console.log(JSON.stringify(parsedResp));
         return {...parsedResp, _state: parsedResp.failureType ? 'failure' : 'success'};
     }
 
+    static Headers = {
+        'User-Agent': 'Configurator/2.15 (Macintosh; OS X 11.0.0; 16G29) AppleWebKit/2603.3.8',
+        'Content-Type': 'application/x-www-form-urlencoded',
+    };
 }
-
-Store.cookieJar = new fetchCookie.toughCookie.CookieJar();
-Store.fetch = fetchCookie(nodeFetch, Store.cookieJar);
-Store.Headers = {
-    'User-Agent': 'Configurator/2.15 (Macintosh; OS X 11.0.0; 16G29) AppleWebKit/2603.3.8',
-    'Content-Type': 'application/x-www-form-urlencoded',
-};
-export {Store};

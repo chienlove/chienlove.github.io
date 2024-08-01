@@ -1,6 +1,5 @@
 import { Store } from "./client.js";
 import { SignatureClient } from "./Signature.js";
-import fetch from 'node-fetch'; // Thêm import node-fetch
 
 export default {
   async fetch(request, env, ctx) {
@@ -39,8 +38,10 @@ export default {
       await env.MY_BUCKET.put(fileName, signedBuffer);
 
       // Generate temporary URL for download
-      const url = await env.MY_BUCKET.createSignedUrl(fileName, {
-        expiresIn: 60 * 15, // 15 minutes
+      const url = await env.MY_BUCKET.createSignedUrl({
+        bucket: env.MY_BUCKET.name,
+        key: fileName,
+        expirationSeconds: 60 * 15, // 15 minutes
       });
 
       return new Response(JSON.stringify({ url }), {
