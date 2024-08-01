@@ -30,7 +30,7 @@ jobs:
         hugo-version: 'latest'
         extended: true
     - name: Build
-      run: hugo --minify --verbose
+      run: hugo --minify --logLevel info
     - name: Deploy to Netlify
       uses: nwtgck/actions-netlify@v2.0
       with:
