@@ -19,6 +19,8 @@ export class Store {
         const body = build(dataJson);
         const url = `https://auth.itunes.apple.com/auth/v1/native/fast?guid=${this.guid}`;
         try {
+            console.log("Sending authentication request to:", url);
+            console.log("Request body:", body);
             const resp = await fetch(url, {
                 method: 'POST', 
                 body, 
@@ -27,6 +29,10 @@ export class Store {
             console.log("Authentication response status:", resp.status);
             const responseText = await resp.text();
             console.log("Authentication response text:", responseText);
+            
+            if (!responseText.trim()) {
+                throw new Error("Empty response from authentication server");
+            }
             
             let parsedResp;
             try {
@@ -39,7 +45,7 @@ export class Store {
             console.log("Parsed authentication response:", parsedResp);
             
             if (!parsedResp) {
-                throw new Error("Authentication response is empty or invalid");
+                throw new Error("Authentication response is invalid");
             }
             
             return {
@@ -66,6 +72,8 @@ export class Store {
         const body = build(dataJson);
         const url = `https://p25-buy.itunes.apple.com/WebObjects/MZFinance.woa/wa/volumeStoreDownloadProduct?guid=${this.guid}`;
         try {
+            console.log("Sending download request to:", url);
+            console.log("Download request body:", body);
             const resp = await fetch(url, {
                 method: 'POST', 
                 body,
@@ -74,6 +82,10 @@ export class Store {
             console.log("Download response status:", resp.status);
             const responseText = await resp.text();
             console.log("Download response text:", responseText);
+            
+            if (!responseText.trim()) {
+                throw new Error("Empty response from download server");
+            }
             
             let parsedResp;
             try {
