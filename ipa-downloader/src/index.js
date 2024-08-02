@@ -1,5 +1,9 @@
+console.log("index.js is being loaded");
+
 import { Store } from "./client.js";
 import { SignatureClient } from "./Signature.js";
+
+console.log("Imports completed in index.js, Store object:", Store);
 
 export default {
   async fetch(request, env, ctx) {
@@ -37,6 +41,8 @@ export default {
 
       // Authenticate
       console.log("Authenticating...");
+      console.log("Store object before authentication:", Store);
+      console.log("authenticate function:", Store.authenticate);
       let user;
       try {
         user = await Store.authenticate(APPLE_ID, PASSWORD, CODE);
@@ -83,3 +89,5 @@ export default {
     }
   },
 };
+
+console.log("index.js has been fully loaded");
