@@ -21,4 +21,3 @@ title = "storeios"
 
 [permalinks]
   posts = "/posts/:slug/"
-  ipa-downloader = "/ipa-downloader/:slug/"
