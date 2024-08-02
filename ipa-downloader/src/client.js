@@ -32,7 +32,12 @@ export class Store {
             });
             
             console.log("Authentication response status:", resp.status);
-            console.log("Authentication response headers:", JSON.stringify(Object.fromEntries(resp.headers)));
+            if (resp.status !== 200) {
+                console.error("Server returned non-200 status code:", resp.status);
+                const errorText = await resp.text();
+                console.error("Error response from server:", errorText);
+                throw new Error(`Server returned status ${resp.status}: ${errorText}`);
+            }
             
             const responseText = await resp.text();
             console.log("Authentication response text:", responseText);
@@ -86,6 +91,12 @@ export class Store {
                 headers: {...this.Headers, 'X-Dsid': Cookie.dsPersonId, 'iCloud-DSID': Cookie.dsPersonId}
             });
             console.log("Download response status:", resp.status);
+            if (resp.status !== 200) {
+                console.error("Server returned non-200 status code:", resp.status);
+                const errorText = await resp.text();
+                console.error("Error response from server:", errorText);
+                throw new Error(`Server returned status ${resp.status}: ${errorText}`);
+            }
             const responseText = await resp.text();
             console.log("Download response text:", responseText);
             
