@@ -24,7 +24,7 @@ export class Store {
             console.log("Sending authentication request to:", url);
             console.log("Request headers:", JSON.stringify(this.Headers));
             console.log("Request body:", body);
-            
+
             const resp = await fetch(url, {
                 method: 'POST', 
                 body, 
