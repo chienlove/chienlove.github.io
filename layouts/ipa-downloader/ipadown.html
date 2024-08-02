@@ -1,22 +1,17 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="/css/ipadown.css">
-    <title>Tải xuống IPA</title>
-</head>
-<body>
-    <form id="download-form">
-        <input type="text" id="appid" name="appid" placeholder="APPID hoặc URL Appstore" required>
-        <input type="text" id="appVerId" name="appVerId" placeholder="ID phiên bản (không bắt buộc)">
-        <input type="email" id="apple-id" name="apple-id" placeholder="Apple ID" required>
-        <input type="password" id="password" name="password" placeholder="Mật khẩu" required>
-        <input type="text" id="code" name="code" placeholder="Mã xác minh 2 bước (nếu có)">
-        <button type="submit">Tải xuống IPA</button>
-    </form>
-    <div id="result"></div>
+{{ define "head" }}
+<link rel="stylesheet" href="{{ "css/ipadown.css" | relURL }}">
+{{ end }}
 
-    <script type="module" src="/ipa-downloader/src/index.js"></script>
-</body>
-</html>
+{{ define "main" }}
+<form id="download-form">
+    <input type="text" id="appid" name="appid" placeholder="APPID hoặc URL Appstore" required>
+    <input type="text" id="appVerId" name="appVerId" placeholder="ID phiên bản (không bắt buộc)">
+    <input type="email" id="apple-id" name="apple-id" placeholder="Apple ID" required>
+    <input type="password" id="password" name="password" placeholder="Mật khẩu" required>
+    <input type="text" id="code" name="code" placeholder="Mã xác minh 2 bước (nếu có)">
+    <button type="submit">Tải xuống IPA</button>
+</form>
+<div id="result"></div>
+
+<script type="module" src="{{ "src/index.js" | relURL }}"></script>
+{{ end }}
