@@ -1,6 +1,7 @@
 ---
 title: "IPA Downloader"
-layout: "ipa-downloader/ipadown"
+layout: "ipadown"
+url: "ipa-downloader"
 ---
 
 Trang này cho phép bạn tải xuống các tệp IPA từ App Store.
