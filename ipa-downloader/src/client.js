@@ -32,15 +32,13 @@ export class Store {
         });
         
         console.log("Authentication response status:", resp.status);
-        if (!resp.ok) {
-            console.error("Server returned non-200 status code:", resp.status);
-            const errorText = await resp.text();
-            console.error("Error response from server:", errorText);
-            throw new Error(`Server returned status ${resp.status}: ${errorText}`);
-        }
-        
         const responseText = await resp.text();
         console.log("Authentication response text:", responseText);
+
+        if (!resp.ok) {
+            console.error("Server returned non-200 status code:", resp.status);
+            throw new Error(`Server returned status ${resp.status}: ${responseText}`);
+        }
         
         if (!responseText.trim()) {
             throw new Error("Empty response from authentication server");
@@ -55,7 +53,7 @@ export class Store {
             throw new Error(`Failed to parse authentication response: ${parseError.message}`);
         }
         
-        if (!parsedResp || typeof parsedResp !== 'object') {
+        if (!parsedResp || typeof parsedResp !== 'object' || Object.keys(parsedResp).length === 0) {
             throw new Error("Authentication response is invalid or empty");
         }
         
