@@ -49,11 +49,11 @@ export default {
         console.log("Authentication result:", user);
       } catch (authError) {
         console.error("Authentication error:", authError);
-        throw new Error(`Authentication failed: ${authError.message}`);
+        return new Response(JSON.stringify({ error: `Authentication failed: ${authError.message}`, stack: authError.stack }), { status: 500, headers });
       }
 
       if (user._state !== "success") {
-        throw new Error(`Authentication failed: ${user.customerMessage || 'Unknown error'}`);
+        return new Response(JSON.stringify({ error: `Authentication failed: ${user.customerMessage || 'Unknown error'}` }), { status: 401, headers });
       }
       console.log("Authentication successful");
 
@@ -65,11 +65,11 @@ export default {
         console.log("Download result:", app);
       } catch (downloadError) {
         console.error("Download error:", downloadError);
-        throw new Error(`Download failed: ${downloadError.message}`);
+        return new Response(JSON.stringify({ error: `Download failed: ${downloadError.message}`, stack: downloadError.stack }), { status: 500, headers });
       }
 
       if (app._state !== "success") {
-        throw new Error(`Download failed: ${app.customerMessage || 'Unknown error'}`);
+        return new Response(JSON.stringify({ error: `Download failed: ${app.customerMessage || 'Unknown error'}` }), { status: 400, headers });
       }
       console.log("Download successful");
 
@@ -80,7 +80,26 @@ export default {
       const uniqueString = crypto.randomUUID();
       const fileName = `${songList0.metadata.bundleDisplayName}_${songList0.metadata.bundleShortVersionString}_${uniqueString}.ipa`;
 
-      // ... Rest of the code remains the same ...
+      console.log("Creating SignatureClient...");
+      const signatureClient = new SignatureClient(songList0, APPLE_ID);
+
+      console.log("Loading buffer...");
+      await signatureClient.loadBuffer(await (await fetch(songList0.URL)).arrayBuffer());
+
+      console.log("Appending metadata...");
+      signatureClient.appendMetadata();
+
+      console.log("Appending signature...");
+      await signatureClient.appendSignature();
+
+      console.log("Generating buffer...");
+      const buffer = await signatureClient.getBuffer();
+
+      console.log("Uploading to R2...");
+      await env.R2.put(fileName, buffer);
+
+      const url = `${env.DOMAIN}/${fileName}`;
+      console.log("Download URL:", url);
 
       return new Response(JSON.stringify({ url }), { headers });
     } catch (error) {
