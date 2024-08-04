@@ -21,3 +21,6 @@ title = "storeios"
 
 [permalinks]
   posts = "/posts/:slug/"
+
+[taxonomies]
+  author = "authors"
