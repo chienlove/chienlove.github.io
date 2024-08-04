@@ -1,14 +1,15 @@
 {{ define "main" }}
-<h1>Upload to GitHub Release</h1>
-    <button id="loginButton" style="display:none;">Login with GitHub</button>
-    <input type="file" id="fileInput" style="display:none;">
-    <button id="uploadButton" style="display:none;">Upload File</button>
-    <div id="status"></div>
-    <div id="progressBar"><div></div></div>
-
-    <script src="upload.js"></script>
-
-<style>
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload to GitHub Release</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
         input, button {
             display: block;
             width: 100%;
@@ -26,4 +27,16 @@
             width: 0%;
         }
     </style>
+</head>
+<body>
+    <h1>Upload to GitHub Release</h1>
+    <button id="loginButton">Login with GitHub</button>
+    <input type="file" id="fileInput">
+    <button id="uploadButton">Upload File</button>
+    <div id="status"></div>
+    <div id="progressBar"><div></div></div>
+
+    <script src="upload.js"></script>
+</body>
+</html>
 {{ end }}
