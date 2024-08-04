@@ -2,7 +2,7 @@
 <article>
     <header>
         <h1>{{ .Title }}</h1>
-        <p>Đăng bởi {{ .Author }} vào ngày {{ .Date.Format "2006-01-02" }}</p>
+        <p>Đăng bởi {{ .Params.author }} vào ngày {{ .Date.Format "2006-01-02" }}</p>
     </header>
 
     <div>
