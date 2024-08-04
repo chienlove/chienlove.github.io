@@ -1,6 +1,7 @@
 ---
 title: "Upload file lên GitHub Releases"
-layout: "upload"
+layout: "uploads"
+url: "upfile"
 description: "Trang này cho phép bạn upload file lên GitHub Releases cho dự án của bạn."
 date: 2023-07-23
 draft: false
