@@ -52,3 +52,30 @@ collections:
     fields:
       - {label: "Tên chuyên mục", name: "title", widget: "string", required: true}
       - {label: "Mô tả", name: "description", widget: "text", required: true}
+
+  - name: "jailbreak-tools"
+    label: "Tool Jailbreak"
+    folder: "content/jailbreak-tools"
+    create: true
+    slug: "{{slug}}"
+    fields:
+      - {label: "Tên Tool", name: "title", widget: "string", required: true}
+      - {label: "Ngày đăng", name: "date", widget: "datetime", required: true}
+      - {label: "Icon", name: "icon", widget: "image", required: true}
+      - {label: "Ảnh màn hình", name: "screenshots", widget: "list", field: {label: "Ảnh", name: "image", widget: "image"}, required: false}
+      - {label: "Mô tả ngắn", name: "short_description", widget: "text", required: false}
+      - {label: "Mô tả chi tiết", name: "description", widget: "markdown", required: true}
+      - {label: "Nhà phát triển", name: "developer", widget: "string", required: true}
+      - {label: "Thể loại", name: "category", widget: "string", required: true}
+      - {label: "Kích thước", name: "size", widget: "string", required: true}
+      - {label: "iOS tương thích", name: "ios_version", widget: "string", required: true}
+      - {label: "Từ khóa", name: "keywords", widget: "list", required: false}
+      - {label: "Status", name: "status", widget: "select", options: ["Signed", "Revoked"], default: "Signed", required: true}
+      - name: "versions"
+        label: "Versions"
+        widget: "list"
+        fields:
+          - {name: "version", label: "Version", widget: "string"}
+          - {name: "appId", label: "App ID", widget: "string"}
+          - {name: "plistUrl", label: "Plist URL", widget: "string"}
+          - {name: "intermediate_page_url", label: "Intermediate Page URL", widget: "hidden", default: "/intermediate/:appId"}

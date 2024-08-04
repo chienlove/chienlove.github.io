@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tải xuống {{ .Params.title }}</title>
+    <link rel="stylesheet" href="/styles/intermediate.css">
+</head>
+<body>
+    <header>
+        <h1>Đang chuẩn bị tải xuống...</h1>
+    </header>
+
+    <main>
+        <p>Chúng tôi đang chuẩn bị liên kết tải xuống cho bạn. Vui lòng đợi một chút.</p>
+        <p id="countdown">10</p>
+    </main>
+
+    <footer>
+        <p>&copy; {{ now.Year }} Tool Jailbreak. Tất cả các quyền được bảo lưu.</p>
+    </footer>
+
+    <script>
+        // Countdown function
+        let countdown = document.getElementById('countdown').innerText;
+        const interval = setInterval(function() {
+            countdown--;
+            document.getElementById('countdown').innerText = countdown;
+            if (countdown <= 0) {
+                clearInterval(interval);
+                window.location.href = "{{ .Params.plistUrl }}"; // Link tải xuống
+            }
+        }, 1000);
+    </script>
+</body>
+</html>

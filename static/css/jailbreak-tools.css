@@ -1,0 +1,99 @@
+/* CSS cho trang tool jailbreak */
+
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    color: #333;
+}
+
+header {
+    background-color: #f8f9fa;
+    padding: 20px;
+    text-align: center;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 2rem;
+}
+
+header p {
+    margin: 5px 0;
+    font-size: 1rem;
+}
+
+main {
+    padding: 20px;
+}
+
+.tool-info {
+    margin-bottom: 20px;
+}
+
+.tool-icon {
+    width: 100px;
+    height: 100px;
+    display: block;
+    margin: 0 auto 20px;
+}
+
+.tool-info h2,
+.tool-info h3 {
+    font-size: 1.5rem;
+    margin-top: 20px;
+}
+
+.tool-details {
+    margin-top: 10px;
+    background-color: #f1f1f1;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+.tool-details div {
+    margin-bottom: 5px;
+}
+
+.tool-details .status {
+    font-weight: bold;
+}
+
+.tool-details .signed {
+    color: green;
+}
+
+.tool-details .revoked {
+    color: red;
+}
+
+.screenshots img {
+    max-width: 100%;
+    height: auto;
+    margin-top: 10px;
+    display: block;
+}
+
+.download-links {
+    margin-top: 20px;
+}
+
+.download-links a {
+    display: inline-block;
+    background-color: #007bff;
+    color: #fff;
+    padding: 10px 20px;
+    margin-right: 10px;
+    text-decoration: none;
+    border-radius: 5px;
+}
+
+.download-links a:hover {
+    background-color: #0056b3;
+}
+
+footer {
+    background-color: #f8f9fa;
+    padding: 10px;
+    text-align: center;
+}
