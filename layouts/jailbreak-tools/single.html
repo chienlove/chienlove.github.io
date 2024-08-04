@@ -9,7 +9,7 @@
 <body>
     <header>
         <h1>{{ .Title }}</h1>
-        <p>{{ .Date | date "Ngày 02 tháng 01 năm 2006" }}</p>
+        <p>{{ .Params.date.Format "Ngày 02 tháng 01 năm 2006" }}</p>
     </header>
 
     <main>
