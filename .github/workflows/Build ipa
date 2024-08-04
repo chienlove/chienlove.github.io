@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - master
+  workflow_dispatch:
 
 jobs:
   build:
@@ -11,21 +12,21 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Unzip xcarchive
         run: |
-          unzip Asspp.2024-7-13.18.32.xcarchive.zip -d ./Asspp.2024-7-13.18.32.xcarchive
+          unzip Asspp.2024-7-13.18.32.xcarchive.zip -d .
 
       - name: Build the IPA
         run: |
           xcodebuild -exportArchive \
-            -archivePath ./Asspp.2024-7-13.18.32.xcarchive/Asspp.2024-7-13.18.32.xcarchive \
+            -archivePath Asspp.2024-7-13.18.32.xcarchive \
             -exportPath ./output \
             -exportOptionsPlist ./ExportOptions.plist
 
       - name: Upload IPA
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: app-ipa
           path: ./output/*.ipa
