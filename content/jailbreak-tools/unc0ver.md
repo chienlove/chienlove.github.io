@@ -2,6 +2,7 @@
 title: Unc0ver
 date: 2024-08-05T06:37:16.583Z
 icon: /images/img_0911.jpeg
+short_description: Unc0ver tool jailbreak for iOS 11.0 - 14.8
 description: "**Unc0ver** là một bản bẻ khoá, có nghĩa là bạn có thể tự do làm
   bất cứ điều gì bạn muốn đối với thiết bị iOS của mình. Cho phép bạn thay đổi
   những gì bạn muốn và hoạt động trong phạm vi mục đích của bạn, unc0ver mở ra
