@@ -1,9 +1,8 @@
 {{ define "head" }}
-    <link rel="stylesheet" href="/styles/jailbreak-tools.css">
+    <link rel="stylesheet" href="/css/jailbreak-tools.css">
 {{ end }}
 
 {{ define "main" }}
-<main>
     <section class="tool-info">
         <img src="{{ .Params.icon }}" alt="{{ .Title }} Icon" class="tool-icon">
         <h2>Mô tả</h2>
@@ -43,5 +42,4 @@
             <a href="/intermediate/{{ .appId }}" class="download-link">{{ .version }}</a>
         {{ end }}
     </section>
-</main>
 {{ end }}
