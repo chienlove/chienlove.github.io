@@ -20,6 +20,7 @@
     "express": "^4.17.1",
     "plist": "^3.0.1",
     "getmac": "^2.0.0",
-    "fetch-cookie": "^0.8.0"
+    "fetch-cookie": "^0.8.0",
+    "gray-matter": "^4.0.3"
   }
 }
