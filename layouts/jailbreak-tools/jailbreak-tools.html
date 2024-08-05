@@ -1,52 +1,38 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ .Title }} - Tool Jailbreak</title>
+{{ define "head" }}
     <link rel="stylesheet" href="/styles/jailbreak-tools.css">
-</head>
-<body>
-    <header>
-        <h1>{{ .Title }}</h1>
-        <p>{{ .Date.Format "Ngày 02 tháng 01 năm 2006" }}</p>
-    </header>
+{{ end }}
 
-    <main>
-        <section class="tool-info">
-            <img src="{{ .Params.icon }}" alt="{{ .Title }} Icon" class="tool-icon">
-            <h2>Mô tả</h2>
-            <p>{{ .Params.short_description }}</p>
-            <h3>Mô tả chi tiết</h3>
-            <div>{{ .Params.description | safeHTML }}</div>
-            
-            <div class="tool-details">
-                <div><strong>Nhà phát triển:</strong> {{ .Params.developer }}</div>
-                <div><strong>Thể loại:</strong> {{ .Params.category }}</div>
-                <div><strong>Kích thước:</strong> {{ .Params.size }}</div>
-                <div><strong>iOS tương thích:</strong> {{ .Params.ios_version }}</div>
-                <div><strong>Từ khóa:</strong> {{ .Params.keywords }}</div>
-                <div><strong>Status:</strong> <span class="{{ .Params.status | lower }}">{{ .Params.status }}</span></div>
-            </div>
-            
-            <h3>Ảnh màn hình</h3>
-            <div class="screenshots">
-                {{ range .Params.screenshots }}
-                    <img src="{{ . }}" alt="Screenshot">
-                {{ end }}
-            </div>
-        </section>
+{{ define "main" }}
+<main>
+    <section class="tool-info">
+        <img src="{{ .Params.icon }}" alt="{{ .Title }} Icon" class="tool-icon">
+        <h2>Mô tả</h2>
+        <p>{{ .Params.short_description }}</p>
+        <h3>Mô tả chi tiết</h3>
+        <div>{{ .Params.description | markdownify }}</div>
 
-        <section class="download-links">
-            <h2>Liên kết tải xuống</h2>
-            {{ range .Params.versions }}
-                <a href="/intermediate/{{ .appId }}" class="download-link">{{ .version }}</a>
+        <div class="tool-details">
+            <div><strong>Nhà phát triển:</strong> {{ .Params.developer }}</div>
+            <div><strong>Thể loại:</strong> {{ .Params.category }}</div>
+            <div><strong>Kích thước:</strong> {{ .Params.size }}</div>
+            <div><strong>iOS tương thích:</strong> {{ .Params.ios_version }}</div>
+            <div><strong>Từ khóa:</strong> {{ delimit .Params.keywords ", " }}</div>
+            <div><strong>Status:</strong> <span class="{{ .Params.status | lower }}">{{ .Params.status }}</span></div>
+        </div>
+
+        <h3>Ảnh màn hình</h3>
+        <div class="screenshots">
+            {{ range .Params.screenshots }}
+                <img src="{{ .image }}" alt="Screenshot">
             {{ end }}
-        </section>
-    </main>
+        </div>
+    </section>
 
-    <footer>
-        <p>&copy; {{ now.Year }} Tool Jailbreak. Tất cả các quyền được bảo lưu.</p>
-    </footer>
-</body>
-</html>
+    <section class="download-links">
+        <h2>Liên kết tải xuống</h2>
+        {{ range .Params.versions }}
+            <a href="/intermediate/{{ .appId }}" class="download-link">{{ .version }}</a>
+        {{ end }}
+    </section>
+</main>
+{{ end }}
