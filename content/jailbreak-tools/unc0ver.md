@@ -1,6 +1,6 @@
 ---
 title: Unc0ver
-date: 2024-08-05T06:37:16.583Z
+date: 2024-08-05T07:01:04.071Z
 icon: /images/img_0911.jpeg
 short_description: Unc0ver tool jailbreak for iOS 11.0 - 14.8
 description: "**Unc0ver** là một bản bẻ khoá, có nghĩa là bạn có thể tự do làm
@@ -17,6 +17,6 @@ status: Revoked
 versions:
   - intermediate_page_url: /intermediate/:appId
     version: 8.0.2
-    appId: unc0ver
+    appId: net.storeios.unc0ver
     plistUrl: https://storeios.net/plist/unc0ver.plist
 ---
