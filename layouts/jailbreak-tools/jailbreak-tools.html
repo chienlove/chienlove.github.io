@@ -3,6 +3,7 @@
 {{ end }}
 
 {{ define "main" }}
+<main>
     <section class="tool-info">
         <img src="{{ .Params.icon }}" alt="{{ .Title }} Icon" class="tool-icon">
         <h2>Mô tả</h2>
@@ -15,16 +16,7 @@
             <div><strong>Thể loại:</strong> {{ .Params.category }}</div>
             <div><strong>Kích thước:</strong> {{ .Params.size }}</div>
             <div><strong>iOS tương thích:</strong> {{ .Params.ios_version }}</div>
-            <div><strong>Từ khóa:</strong> 
-              <ul>
-              {{ if .Params.keywords }}
-                {{ range .Params.keywords }}
-                    <li>{{ . }}</li>
-                {{ end }}
-            {{ else }}
-                <li>Không có từ khóa</li>
-            {{ end }}
-        </ul></div>
+            <div><strong>Từ khóa:</strong> {{ delimit .Params.keywords ", " }}</div>
             <div><strong>Status:</strong> <span class="{{ .Params.status | lower }}">{{ .Params.status }}</span></div>
         </div>
 
@@ -42,4 +34,5 @@
             <a href="/intermediate/{{ .appId }}" class="download-link">{{ .version }}</a>
         {{ end }}
     </section>
+</main>
 {{ end }}
