@@ -6,32 +6,48 @@
 <main>
     <section class="tool-info">
         <img src="{{ .Params.icon }}" alt="{{ .Title }} Icon" class="tool-icon">
+
         <h2>Mô tả</h2>
         <p>{{ .Params.short_description }}</p>
+
         <h3>Mô tả chi tiết</h3>
         <div>{{ .Params.description | markdownify }}</div>
 
         <div class="tool-details">
-            <div><strong>Nhà phát triển:</strong> {{ .Params.developer }}</div>
-            <div><strong>Thể loại:</strong> {{ .Params.category }}</div>
-            <div><strong>Kích thước:</strong> {{ .Params.size }}</div>
-            <div><strong>iOS tương thích:</strong> {{ .Params.ios_version }}</div>
-            <div><strong>Từ khóa:</strong> {{ .Params.keywords ", " }}</div>
+            <div><strong>Nhà phát triển:</strong> {{ with .Params.developer }}{{ . }}{{ else }}Không có thông tin{{ end }}</div>
+            <div><strong>Thể loại:</strong> {{ with .Params.category }}{{ . }}{{ else }}Không có thông tin{{ end }}</div>
+            <div><strong>Kích thước:</strong> {{ with .Params.size }}{{ . }}{{ else }}Không có thông tin{{ end }}</div>
+            <div><strong>iOS tương thích:</strong> {{ with .Params.ios_version }}{{ . }}{{ else }}Không có thông tin{{ end }}</div>
+            <div><strong>Từ khóa:</strong> 
+                {{ if .Params.keywords }}
+                    {{ delimit .Params.keywords ", " }}
+                {{ else }}
+                    Không có từ khóa
+                {{ end }}
+            </div>
             <div><strong>Status:</strong> <span class="{{ .Params.status | lower }}">{{ .Params.status }}</span></div>
         </div>
 
         <h3>Ảnh màn hình</h3>
         <div class="screenshots">
-            {{ range .Params.screenshots }}
-                <img src="{{ .image }}" alt="Screenshot">
+            {{ if .Params.screenshots }}
+                {{ range .Params.screenshots }}
+                    <img src="{{ .image }}" alt="Screenshot">
+                {{ end }}
+            {{ else }}
+                <p>Không có ảnh màn hình.</p>
             {{ end }}
         </div>
     </section>
 
     <section class="download-links">
         <h2>Liên kết tải xuống</h2>
-        {{ range .Params.versions }}
-            <a href="/intermediate/{{ .appId }}" class="download-link">{{ .version }}</a>
+        {{ if .Params.versions }}
+            {{ range .Params.versions }}
+                <a href="/intermediate/{{ .appId }}" class="download-link">{{ .version }}</a>
+            {{ end }}
+        {{ else }}
+            <p>Không có liên kết tải xuống.</p>
         {{ end }}
     </section>
 </main>
