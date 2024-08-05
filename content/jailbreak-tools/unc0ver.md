@@ -1,6 +1,6 @@
 ---
 title: Unc0ver
-date: 2024-08-05T01:29:20.339Z
+date: 2024-08-05T06:37:16.583Z
 icon: /images/img_0911.jpeg
 description: "**Unc0ver** là một bản bẻ khoá, có nghĩa là bạn có thể tự do làm
   bất cứ điều gì bạn muốn đối với thiết bị iOS của mình. Cho phép bạn thay đổi
@@ -9,11 +9,10 @@ description: "**Unc0ver** là một bản bẻ khoá, có nghĩa là bạn có 
 developer: pwn20pwd
 category: "Tool jailbreak "
 size: 60Mb
-ios_version: 11.0 đến 14.8
+ios_version: 11.0 trở lên
 keywords:
-  - '"unc0ver"'
-  - '"jailbreak"'
-status: Signed
+  - unc0ver
+status: Revoked
 versions:
   - intermediate_page_url: /intermediate/:appId
     version: 8.0.2
