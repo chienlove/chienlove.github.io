@@ -1,6 +1,6 @@
 [build]
   publish = "public"
-  command = "./netlify-build.sh && hugo --gc --minify"
+  command = "chmod +x ./netlify-build.sh && ./netlify-build.sh && hugo --gc --minify"
   functions = "netlify/functions"
 
 [functions]
