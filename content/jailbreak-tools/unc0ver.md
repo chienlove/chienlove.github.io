@@ -13,10 +13,10 @@ size: 60Mb
 ios_version: 11.0 trở lên
 keywords:
   - unc0ver
-status: Revoked
+status: Signed
 versions:
   - intermediate_page_url: /intermediate/:appId
     version: 8.0.2
-    appId: net.storeios.unc0ver
+    appId: unc0ver
     plistUrl: https://storeios.net/plist/unc0ver.plist
 ---
