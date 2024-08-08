@@ -21,22 +21,24 @@
     </footer>
 
     <script>
-        // Lấy link tải xuống từ Hugo
-        let downloadUrl = "";
-        {{ range .Params.versions }}
-        downloadUrl = "{{ .plistUrl }}";
-        {{ end }}
+        // Gán URL tải xuống trực tiếp từ Hugo vào biến JavaScript
+        const downloadUrl = "{{ .Params.versions.0.plistUrl }}";
 
-        // Countdown function
-        let countdown = document.getElementById('countdown').innerText;
-        const interval = setInterval(function() {
-            countdown--;
-            document.getElementById('countdown').innerText = countdown;
-            if (countdown <= 0) {
-                clearInterval(interval);
-                window.location.href = downloadUrl; // Chuyển hướng đến link tải xuống
-            }
-        }, 1000);
+        // Kiểm tra nếu URL tồn tại
+        if (downloadUrl) {
+            // Countdown function
+            let countdown = 10;
+            const interval = setInterval(function() {
+                countdown--;
+                document.getElementById('countdown').innerText = countdown;
+                if (countdown <= 0) {
+                    clearInterval(interval);
+                    window.location.href = downloadUrl; // Chuyển hướng đến link tải xuống
+                }
+            }, 1000);
+        } else {
+            document.getElementById('countdown').innerText = "Lỗi: Không tìm thấy URL tải xuống!";
+        }
     </script>
 </body>
 </html>
