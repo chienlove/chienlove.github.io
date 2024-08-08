@@ -1,36 +1,51 @@
 name: Hugo Build and Deploy
+
 on:
   push:
     branches:
       - master
   workflow_dispatch:
+
 jobs:
   build-deploy:
     runs-on: ubuntu-latest
+
     steps:
     - uses: actions/checkout@v3
       with:
         submodules: true
         fetch-depth: 0
+
     - name: Setup Node.js
       uses: actions/setup-node@v3
       with:
         node-version: '16'
+
     - name: Install dependencies
       run: |
         npm install
         npm install faunadb
+
     - name: Clear Hugo Cache and Public Folder
       run: |
         rm -rf public
         rm -rf .hugo_cache
+
     - name: Setup Hugo
       uses: peaceiris/actions-hugo@v2
       with:
         hugo-version: 'latest'
         extended: true
+
+    - name: Set execute permission for netlify-build.sh
+      run: chmod +x ./netlify-build.sh
+
+    - name: Run netlify-build.sh
+      run: ./netlify-build.sh
+
     - name: Build
       run: hugo --minify --logLevel info
+
     - name: Deploy to Netlify
       uses: nwtgck/actions-netlify@v2.0
       with:
