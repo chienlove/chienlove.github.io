@@ -21,28 +21,28 @@
     </footer>
 
     <script>
-        // Lấy URL tải xuống từ phiên bản đầu tiên
-        let downloadUrl = '';
-        {{ range .Params.versions }}
-            downloadUrl = "{{ .plistUrl }}";
-            {{ break }}
-        {{ end }}
+    // Lấy URL tải xuống từ phiên bản đầu tiên
+    let downloadUrl = '';
+    {{ range .Params.versions }}
+        downloadUrl = "itms-services://?action=download-manifest&url={{ .plistUrl }}";
+        {{ break }}
+    {{ end }}
 
-        // Kiểm tra nếu URL tồn tại
-        if (downloadUrl) {
-            // Countdown function
-            let countdown = 10;
-            const interval = setInterval(function() {
-                countdown--;
-                document.getElementById('countdown').innerText = countdown;
-                if (countdown <= 0) {
-                    clearInterval(interval);
-                    window.location.href = downloadUrl; // Chuyển hướng đến link tải xuống
-                }
-            }, 1000);
-        } else {
-            document.getElementById('countdown').innerText = "Lỗi: Không tìm thấy URL tải xuống!";
-        }
-    </script>
+    // Kiểm tra nếu URL tồn tại
+    if (downloadUrl) {
+        // Countdown function
+        let countdown = 10;
+        const interval = setInterval(function() {
+            countdown--;
+            document.getElementById('countdown').innerText = countdown;
+            if (countdown <= 0) {
+                clearInterval(interval);
+                window.location.href = downloadUrl; // Chuyển hướng đến link tải xuống
+            }
+        }, 1000);
+    } else {
+        document.getElementById('countdown').innerText = "Lỗi: Không tìm thấy URL tải xuống!";
+    }
+</script>
 </body>
 </html>
