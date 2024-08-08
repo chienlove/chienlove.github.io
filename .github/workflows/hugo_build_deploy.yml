@@ -36,12 +36,6 @@ jobs:
         hugo-version: 'latest'
         extended: true
         
-    - name: Make netlify-build.sh executable
-      run: chmod +x ./netlify-build.sh
-        
-    - name: Run Netlify Build Script
-      run: ./netlify-build.sh
-      
     - name: Build Hugo Site
       run: hugo --gc --minify --logLevel info
       
