@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tải xuống {{ .Params.title }}</title>
+    <title>Tải xuống {{ .Title }}</title>
     <link rel="stylesheet" href="/css/intermediate.css">
 </head>
 <body>
@@ -28,7 +28,7 @@
             document.getElementById('countdown').innerText = countdown;
             if (countdown <= 0) {
                 clearInterval(interval);
-                window.location.href = "{{ .Params.plistUrl }}"; // Link tải xuống
+                window.location.href = "{{ .Params.versions[0].plistUrl }}"; // Link tải xuống
             }
         }, 1000);
     </script>
