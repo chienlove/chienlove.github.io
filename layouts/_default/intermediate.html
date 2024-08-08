@@ -21,8 +21,12 @@
     </footer>
 
     <script>
-        // Gán URL tải xuống trực tiếp từ Hugo vào biến JavaScript
-        const downloadUrl = "{{ .Params.versions.0.plistUrl }}";
+        // Lấy URL tải xuống từ phiên bản đầu tiên
+        let downloadUrl = '';
+        {{ range .Params.versions }}
+            downloadUrl = "{{ .plistUrl }}";
+            {{ break }}
+        {{ end }}
 
         // Kiểm tra nếu URL tồn tại
         if (downloadUrl) {
