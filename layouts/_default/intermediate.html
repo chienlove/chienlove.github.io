@@ -21,6 +21,12 @@
     </footer>
 
     <script>
+        // Lấy link tải xuống từ Hugo
+        let downloadUrl = "";
+        {{ range .Params.versions }}
+        downloadUrl = "{{ .plistUrl }}";
+        {{ end }}
+
         // Countdown function
         let countdown = document.getElementById('countdown').innerText;
         const interval = setInterval(function() {
@@ -28,9 +34,7 @@
             document.getElementById('countdown').innerText = countdown;
             if (countdown <= 0) {
                 clearInterval(interval);
-                {{ range .Params.versions }}
-                window.location.href = "{{ .plistUrl }}"; // Link tải xuống
-                {{ end }}
+                window.location.href = downloadUrl; // Chuyển hướng đến link tải xuống
             }
         }, 1000);
     </script>
