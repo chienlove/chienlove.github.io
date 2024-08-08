@@ -1,4 +1,8 @@
 #!/bin/bash
-apt-get update
-apt-get install -y libimobiledevice-utils
-brew install majd/repo/ipatool
+
+# Chạy Hugo build
+hugo --gc --minify
+
+# Cài đặt ipatool qua Homebrew
+brew tap majd/repo
+brew install ipatool
