@@ -1,18 +1,22 @@
 const { exec } = require('child_process');
 
-exports.handler = async (event) => {
+exports.handler = async (event, context) => {
     const { appleId, password, appUrl } = JSON.parse(event.body);
 
-    const command = `ipatool auth login -e ${appleId} -p ${password} && ipatool purchase ${appUrl}`;
-
     return new Promise((resolve, reject) => {
-        exec(command, (error, stdout, stderr) => {
+        exec(`ipatool purchase --apple-id ${appleId} --password ${password} --app-url ${appUrl}`, (error, stdout, stderr) => {
             if (error) {
-                console.error(`exec error: ${error}`);
-                reject({ statusCode: 500, body: JSON.stringify({ message: 'Failed to download app' }) });
-            } else {
-                resolve({ statusCode: 200, body: JSON.stringify({ message: 'App added to your purchased list' }) });
+                resolve({
+                    statusCode: 500,
+                    body: JSON.stringify({ message: `Error: ${stderr}` }),
+                });
+                return;
             }
+
+            resolve({
+                statusCode: 200,
+                body: JSON.stringify({ message: `Success: ${stdout}` }),
+            });
         });
     });
 };
