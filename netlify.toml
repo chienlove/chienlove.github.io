@@ -1,6 +1,6 @@
 [build]
   publish = "public"
-  command = "hugo --gc --minify"
+  command = "./netlify-build.sh && hugo --gc --minify"
   functions = "netlify/functions"
 
 [functions]
@@ -27,6 +27,7 @@
 [dev]
   framework = "hugo"
   targetPort = 1313
+
 [[headers]]
   for = "/upload"
   [headers.values]
