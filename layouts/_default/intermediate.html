@@ -28,7 +28,9 @@
             document.getElementById('countdown').innerText = countdown;
             if (countdown <= 0) {
                 clearInterval(interval);
-                window.location.href = "{{ .Params.versions[0].plistUrl }}"; // Link tải xuống
+                {{ range .Params.versions }}
+                window.location.href = "{{ .plistUrl }}"; // Link tải xuống
+                {{ end }}
             }
         }, 1000);
     </script>
