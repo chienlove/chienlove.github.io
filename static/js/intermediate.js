@@ -1,0 +1,33 @@
+  const urlParams = new URLSearchParams(window.location.search);
+        const appId = urlParams.get('appId');
+        if (appId) {
+            let countdown = 10;
+            const interval = setInterval(function() {
+                countdown--;
+                document.getElementById('countdown').innerText = countdown;
+                if (countdown <= 0) {
+                    clearInterval(interval);
+                    // Gọi Netlify Function để lấy URL tải xuống
+                    fetch(`/.netlify/functions/download?appId=${appId}`)
+                        .then(response => {
+                            if (response.ok) {
+                                // Nếu response là chuyển hướng (302), lấy URL từ header Location
+                                const redirectUrl = response.headers.get('Location');
+                                if (redirectUrl) {
+                                    window.location.href = `itms-services://?action=download-manifest&url=${encodeURIComponent(redirectUrl)}`;
+                                } else {
+                                    document.getElementById('countdown').innerText = "Lỗi: Không tìm thấy liên kết tải xuống!";
+                                }
+                            } else {
+                                throw new Error('Network response was not ok.');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error:', error);
+                            document.getElementById('countdown').innerText = "Lỗi: Không thể tải xuống!";
+                        });
+                }
+            }, 1000);
+        } else {
+            document.getElementById('countdown').innerText = "Lỗi: Không tìm thấy App ID!";
+        }
