@@ -14,9 +14,10 @@
         const urlParams = new URLSearchParams(window.location.search);
         const appId = urlParams.get('appId');
 
+        // Đảm bảo rằng biến `appId` được truyền
         if (appId) {
-            // URL tải xuống từ hàm Hugo
-            const downloadUrl = `{{ .Params.versions | first | with .plistUrl }}?appId=${appId}`;
+            // Tạo URL tải xuống từ dữ liệu bài viết
+            const downloadUrl = `{{ with .Site.Pages }}{{ range .Params.versions }}{{ if eq .appId "${appId}" }}{{ .plistUrl }}{{ end }}{{ end }}{{ end }}`;
 
             let countdown = 10;
             const interval = setInterval(function() {
@@ -24,7 +25,7 @@
                 document.getElementById('countdown').innerText = countdown;
                 if (countdown <= 0) {
                     clearInterval(interval);
-                    window.location.href = downloadUrl;
+                    window.location.href = `itms-services://?action=download-manifest&url=${encodeURIComponent(downloadUrl)}`;
                 }
             }, 1000);
         } else {
