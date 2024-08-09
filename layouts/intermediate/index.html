@@ -15,16 +15,8 @@
         const appId = urlParams.get('appId');
 
         if (appId) {
-            // Tìm liên kết tải xuống cho appId
-            const downloadUrl = (function() {
-                const pages = {{ .Site.Pages | jsonify }};
-                for (const page of pages) {
-                    if (page.Params.appId === appId) {
-                        return page.Params.versions[0].plistUrl;
-                    }
-                }
-                return null;
-            })();
+            // Lấy thông tin từ các bài viết
+            const downloadUrl = "{{ .Site.GetPage (printf \"jailbreak-tools/%s.md\" appId) | .Params.plistUrl }}";
 
             let countdown = 10;
             const interval = setInterval(function() {
