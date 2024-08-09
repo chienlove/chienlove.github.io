@@ -3,10 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tải xuống</title>
+    <title>Tải xuống {{ .Title }}</title>
 </head>
 <body>
     <h1>Đang chuẩn bị tải xuống...</h1>
     <p>Vui lòng đợi trong giây lát.</p>
+    <p id="countdown">10</p>
+
+    <script>
+    // Lấy URL tải xuống từ Hugo template
+    const downloadUrl = "{{ with .Params.versions }}{{ if len . }}{{ with index . 0 }}{{ .plistUrl }}{{ end }}{{ end }}{{ end }}";
+
+    if (downloadUrl) {
+        let fullUrl = downloadUrl;
+        if (!fullUrl.startsWith('https://')) {
+            fullUrl = 'https://' + fullUrl;
+        }
+        
+        const itmsUrl = `itms-services://?action=download-manifest&url=${encodeURIComponent(fullUrl)}`;
+
+        let countdown = 10;
+        const interval = setInterval(function() {
+            countdown--;
+            document.getElementById('countdown').innerText = countdown;
+            if (countdown <= 0) {
+                clearInterval(interval);
+                window.location.href = itmsUrl;
+            }
+        }, 1000);
+    } else {
+        document.getElementById('countdown').innerText = "Lỗi: Không tìm thấy URL tải xuống!";
+    }
+    </script>
 </body>
 </html>
