@@ -16,7 +16,7 @@
 
         if (appId) {
             // Lấy thông tin từ các bài viết
-            const downloadUrl = "{{ .Site.GetPage (printf \"jailbreak-tools/%s.md\" appId) | .Params.plistUrl }}";
+            const downloadUrl = "{{ with .Site.GetPage (printf \"jailbreak-tools/%s.md\" appId) }}{{ .Params.plistUrl }}{{ end }}";
 
             let countdown = 10;
             const interval = setInterval(function() {
