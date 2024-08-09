@@ -31,8 +31,8 @@ let intermediatePageUrl = '';
 {{ end }}
 
 // Kiểm tra nếu URL tồn tại
-if (downloadUrl) {
-    // Countdown function
+if (intermediatePageUrl) {
+    console.log('Intermediate Page URL:', intermediatePageUrl); // Xem giá trị trong console
     let countdown = 10;
     const interval = setInterval(function() {
         countdown--;
@@ -47,7 +47,7 @@ if (downloadUrl) {
         }
     }, 1000);
 } else {
-    document.getElementById('countdown').innerText = "Lỗi: Không tìm thấy URL tải xuống!";
+    document.getElementById('countdown').innerText = "Lỗi: Không tìm thấy URL trung gian!";
 }
     </script>
 </body>
