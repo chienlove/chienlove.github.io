@@ -81,4 +81,4 @@ collections:
           label: "Plist URL"
           widget: "string"
           hint: "Nhập URL đầy đủ đến file .plist, ví dụ: https://storeios.net/plist/unc0ver.plist"
-        - {name: "intermediate_page_url", label: "Intermediate Page URL", widget: "hidden", default: "{{< app_id appId={{appId}} >}}"}
+        - {name: "intermediate_page_url", label: "Intermediate Page URL", widget: "hidden", default: "/intermediate/:appId"}
