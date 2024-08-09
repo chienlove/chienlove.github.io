@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tải xuống {{ .Title }}</title>
+    <link rel="stylesheet" href="/css/intermediate.css">
+</head>
+<body>
+    <header>
+        <h1>Đang chuẩn bị tải xuống...</h1>
+    </header>
+
+    <main>
+        <p>Chúng tôi đang chuẩn bị liên kết tải xuống cho bạn. Vui lòng đợi một chút.</p>
+        <p id="countdown">10</p>
+    </main>
+
+    <footer>
+        <p>&copy; {{ now.Year }} Tool Jailbreak. Tất cả các quyền được bảo lưu.</p>
+    </footer>
+
+    <script>
+    // Lấy URL tải xuống từ phiên bản đầu tiên
+    let downloadUrl = '';
+    {{ range .Params.versions }}
+        downloadUrl = "{{ .plistUrl }}";
+        {{ break }}
+    {{ end }}
+
+    // Kiểm tra nếu URL tồn tại
+    if (downloadUrl) {
+        // Đảm bảo URL bắt đầu bằng https://
+        if (!downloadUrl.startsWith('https://')) {
+            downloadUrl = 'https://' + downloadUrl;
+        }
+        
+        // Tạo URL itms-services
+        const itmsUrl = `itms-services://?action=download-manifest&url=${encodeURIComponent(downloadUrl)}`;
+
+        // Countdown function
+        let countdown = 10;
+        const interval = setInterval(function() {
+            countdown--;
+            document.getElementById('countdown').innerText = countdown;
+            if (countdown <= 0) {
+                clearInterval(interval);
+                window.location.href = itmsUrl; // Chuyển hướng đến link tải xuống
+            }
+        }, 1000);
+    } else {
+        document.getElementById('countdown').innerText = "Lỗi: Không tìm thấy URL tải xuống!";
+    }
+</script>
+</body>
+</html>
