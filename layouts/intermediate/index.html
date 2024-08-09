@@ -9,15 +9,12 @@
     <h1>Đang chuẩn bị tải xuống...</h1>
     <p>Vui lòng đợi trong giây lát.</p>
     <p id="countdown">10</p>
-
     <script>
         const urlParams = new URLSearchParams(window.location.search);
         const appId = urlParams.get('appId');
-
         if (appId) {
-            // Lấy thông tin từ các bài viết
-            const downloadUrl = "{{ with .Site.GetPage (printf 'jailbreak-tools/%s.md' appId) }}{{ .Params.plistUrl }}{{ end }}";
-
+            // Tạo một biến Hugo để lưu trữ URL tải xuống
+            const downloadUrl = {{ with .Site.GetPage (printf "jailbreak-tools/%s.md" .Params.appId) }}{{ .Params.plistUrl }}{{ end }};
             let countdown = 10;
             const interval = setInterval(function() {
                 countdown--;
