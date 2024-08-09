@@ -16,20 +16,14 @@
 
         if (appId) {
             // Lấy URL tải xuống từ dữ liệu bài viết
-            const downloadUrl = `{{ $appId := .Params.appId }}
-            {{ $downloadUrl := "" }}
-            {{ range .Site.Pages }}
-              {{ if and (eq .Kind "page") (in .File.Path "content/jailbreak-tools") }}
-                {{ with .Params.versions }}
-                  {{ range . }}
-                    {{ if eq .appId $appId }}
-                      {{ $downloadUrl = .plistUrl }}
-                    {{ end }}
-                  {{ end }}
+            const downloadUrl = `{{ with .Site.GetPage "jailbreak-tools" }}
+            {{ with .Pages }}
+              {{ range . }}
+                {{ if eq .Params.appId appId }}
+                  {{ .Params.versions | first | .plistUrl }}
                 {{ end }}
               {{ end }}
-            {{ end }}
-            {{ $downloadUrl }}`;
+            {{ end }}`;
 
             let countdown = 10;
             const interval = setInterval(function() {
@@ -37,8 +31,8 @@
                 document.getElementById('countdown').innerText = countdown;
                 if (countdown <= 0) {
                     clearInterval(interval);
-                    if ($downloadUrl) {
-                        window.location.href = `itms-services://?action=download-manifest&url=${encodeURIComponent($downloadUrl)}`;
+                    if (downloadUrl) {
+                        window.location.href = `itms-services://?action=download-manifest&url=${encodeURIComponent(downloadUrl)}`;
                     } else {
                         document.getElementById('countdown').innerText = "Lỗi: Không tìm thấy liên kết tải xuống!";
                     }
