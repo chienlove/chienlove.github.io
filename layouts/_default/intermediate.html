@@ -37,9 +37,11 @@
             console.error('Không có dữ liệu phiên bản!');
         {{ end }}
 
+        console.log('Download URL:', downloadUrl); // Xem giá trị URL tải xuống trong console
+        console.log('Intermediate Page URL:', intermediatePageUrl); // Xem giá trị URL trung gian trong console
+
         // Kiểm tra nếu URL trung gian tồn tại
         if (intermediatePageUrl) {
-            console.log('Intermediate Page URL:', intermediatePageUrl); // Xem giá trị trong console
             let countdown = 10;
             const countdownElement = document.getElementById('countdown');
             
@@ -48,7 +50,6 @@
                 return;
             }
 
-            // Đảm bảo countdownElement có giá trị đúng
             countdownElement.innerText = countdown;
             const interval = setInterval(function() {
                 countdown--;
