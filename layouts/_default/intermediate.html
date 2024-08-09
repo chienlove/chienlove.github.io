@@ -48,9 +48,12 @@
                 return;
             }
 
+            // Đảm bảo countdownElement có giá trị đúng
+            countdownElement.innerText = countdown;
             const interval = setInterval(function() {
                 countdown--;
                 countdownElement.innerText = countdown;
+                console.log('Countdown:', countdown); // Xem giá trị đếm ngược trong console
                 if (countdown <= 0) {
                     clearInterval(interval);
                     if (intermediatePageUrl) {
