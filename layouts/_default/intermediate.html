@@ -24,10 +24,17 @@
         // Lấy URL tải xuống từ phiên bản đầu tiên
         let downloadUrl = '';
         let intermediatePageUrl = '';
-        {{ $versions := .Params.versions }}
-        {{ with index $versions 0 }}
-            downloadUrl = "{{ .plistUrl }}";
-            intermediatePageUrl = "{{ .intermediate_page_url }}".replace(":appId", "{{ .appId }}");
+
+        {{ with .Params.versions }}
+            {{ if gt (len .) 0 }}
+                {{ $firstVersion := index . 0 }}
+                downloadUrl = "{{ $firstVersion.plistUrl }}";
+                intermediatePageUrl = "{{ $firstVersion.intermediate_page_url }}".replace(":appId", "{{ $firstVersion.appId }}");
+            {{ else }}
+                console.error('Không có phiên bản nào được tìm thấy!');
+            {{ end }}
+        {{ else }}
+            console.error('Không có dữ liệu phiên bản!');
         {{ end }}
 
         // Kiểm tra nếu URL trung gian tồn tại
