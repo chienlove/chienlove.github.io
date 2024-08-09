@@ -21,14 +21,18 @@
     </footer>
 
     <script>
-    // Lấy URL tải xuống từ phiên bản đầu tiên
+    // Lấy URL tải xuống từ phiên bản đầu tiên nếu có
     {{ $downloadUrl := "" }}
-    {{ with index .Params.versions 0 }}
-        {{ $downloadUrl = .plistUrl }}
+    {{ with .Params.versions }}
+        {{ if len . }}
+            {{ with index . 0 }}
+                {{ $downloadUrl = .plistUrl }}
+            {{ end }}
+        {{ end }}
     {{ end }}
 
     // Sử dụng biến $downloadUrl trong JavaScript
-    const downloadUrl = {{ $downloadUrl }};
+    const downloadUrl = {{ if $downloadUrl }}{{ $downloadUrl }}{{ else }}""{{ end }};
 
     // Kiểm tra nếu URL tồn tại
     if (downloadUrl) {
