@@ -32,7 +32,7 @@
     {{ end }}
 
     // Sử dụng biến $downloadUrl trong JavaScript
-    const downloadUrl = {{ if $downloadUrl }}{{ $downloadUrl }}{{ else }}""{{ end }};
+    const downloadUrl = {{ if $downloadUrl }}"{{ $downloadUrl }}"{{ else }}""{{ end }};
 
     // Kiểm tra nếu URL tồn tại
     if (downloadUrl) {
