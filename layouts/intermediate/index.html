@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trang Trung Gian</title>
+</head>
+<body>
+    <h1>Đang chuẩn bị tải xuống...</h1>
+    <p>Vui lòng đợi trong giây lát.</p>
+    <p id="countdown">10</p>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const appId = urlParams.get('appId');
+
+        if (appId) {
+            // URL tải xuống từ hàm Hugo
+            const downloadUrl = `{{ .Params.versions | first | with .plistUrl }}?appId=${appId}`;
+
+            let countdown = 10;
+            const interval = setInterval(function() {
+                countdown--;
+                document.getElementById('countdown').innerText = countdown;
+                if (countdown <= 0) {
+                    clearInterval(interval);
+                    window.location.href = downloadUrl;
+                }
+            }, 1000);
+        } else {
+            document.getElementById('countdown').innerText = "Lỗi: Không tìm thấy App ID!";
+        }
+    </script>
+</body>
+</html>
