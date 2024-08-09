@@ -13,14 +13,17 @@ exports.handler = async function(event, context) {
       const fileContents = fs.readFileSync(filePath, 'utf8');
       const { data } = matter(fileContents);
 
-      for (const version of data.versions) {
-        if (version.appId === appId) {
-          return {
-            statusCode: 302,
-            headers: {
-              Location: version.intermediate_page_url.replace(':appId', appId)
-            }
-          };
+      if (data.versions) {
+        for (const version of data.versions) {
+          if (version.appId === appId) {
+            const redirectUrl = version.intermediate_page_url.replace(':appId', appId);
+            return {
+              statusCode: 302,
+              headers: {
+                Location: redirectUrl
+              }
+            };
+          }
         }
       }
     }
@@ -30,7 +33,7 @@ exports.handler = async function(event, context) {
       body: 'App not found'
     };
   } catch (error) {
-    console.error(error);
+    console.error('Error:', error);
     return {
       statusCode: 500,
       body: 'Internal Server Error'
