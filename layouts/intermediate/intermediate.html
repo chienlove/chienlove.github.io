@@ -22,21 +22,24 @@
 
     <script>
     // Lấy URL tải xuống từ phiên bản đầu tiên
-    let downloadUrl = '';
-    {{ range .Params.versions }}
-        downloadUrl = "{{ .plistUrl }}";
-        {{ break }}
+    {{ $downloadUrl := "" }}
+    {{ with index .Params.versions 0 }}
+        {{ $downloadUrl = .plistUrl }}
     {{ end }}
+
+    // Sử dụng biến $downloadUrl trong JavaScript
+    const downloadUrl = {{ $downloadUrl }};
 
     // Kiểm tra nếu URL tồn tại
     if (downloadUrl) {
         // Đảm bảo URL bắt đầu bằng https://
-        if (!downloadUrl.startsWith('https://')) {
-            downloadUrl = 'https://' + downloadUrl;
+        let fullUrl = downloadUrl;
+        if (!fullUrl.startsWith('https://')) {
+            fullUrl = 'https://' + fullUrl;
         }
         
         // Tạo URL itms-services
-        const itmsUrl = `itms-services://?action=download-manifest&url=${encodeURIComponent(downloadUrl)}`;
+        const itmsUrl = `itms-services://?action=download-manifest&url=${encodeURIComponent(fullUrl)}`;
 
         // Countdown function
         let countdown = 10;
@@ -51,6 +54,6 @@
     } else {
         document.getElementById('countdown').innerText = "Lỗi: Không tìm thấy URL tải xuống!";
     }
-</script>
+    </script>
 </body>
 </html>
