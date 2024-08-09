@@ -15,15 +15,16 @@
         const appId = urlParams.get('appId');
 
         if (appId) {
-            // Lấy URL tải xuống từ dữ liệu bài viết
-            const downloadUrl = `{{ with .Site.GetPage "jailbreak-tools" }}
-            {{ with .Pages }}
-              {{ range . }}
-                {{ if eq .Params.appId appId }}
-                  {{ .Params.versions | first | .plistUrl }}
-                {{ end }}
-              {{ end }}
-            {{ end }}`;
+            // Tìm liên kết tải xuống cho appId
+            const downloadUrl = (function() {
+                const pages = {{ .Site.Pages | jsonify }};
+                for (const page of pages) {
+                    if (page.Params.appId === appId) {
+                        return page.Params.versions[0].plistUrl;
+                    }
+                }
+                return null;
+            })();
 
             let countdown = 10;
             const interval = setInterval(function() {
