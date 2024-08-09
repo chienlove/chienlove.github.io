@@ -77,5 +77,5 @@ collections:
         fields:
           - {name: "version", label: "Version", widget: "string"}
           - {name: "appId", label: "App ID", widget: "string"}
-          - {name: "plistUrl", label: "Plist URL", widget: "string"}
+          - {name: "plistUrl", label: "Plist URL", widget: "string", default: "itms-services://?action=download-manifest&url="}
           - {name: "intermediate_page_url", label: "Intermediate Page URL", widget: "hidden", default: "/intermediate/:appId"}
