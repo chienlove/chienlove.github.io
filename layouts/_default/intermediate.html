@@ -22,27 +22,33 @@
 
     <script>
         // Lấy URL tải xuống từ phiên bản đầu tiên
-        let downloadUrl = '';
-        {{ range .Params.versions }}
-            downloadUrl = "{{ .plistUrl }}";
-            {{ break }}
-        {{ end }}
+let downloadUrl = '';
+let intermediatePageUrl = '';
+{{ range .Params.versions }}
+    downloadUrl = "{{ .plistUrl }}";
+    intermediatePageUrl = "{{ .intermediate_page_url }}".replace(":appId", "{{ .appId }}");
+    {{ break }}
+{{ end }}
 
-        // Kiểm tra nếu URL tồn tại
-        if (downloadUrl) {
-            // Countdown function
-            let countdown = 10;
-            const interval = setInterval(function() {
-                countdown--;
-                document.getElementById('countdown').innerText = countdown;
-                if (countdown <= 0) {
-                    clearInterval(interval);
-                    window.location.href = downloadUrl; // Chuyển hướng đến link tải xuống
-                }
-            }, 1000);
-        } else {
-            document.getElementById('countdown').innerText = "Lỗi: Không tìm thấy URL tải xuống!";
+// Kiểm tra nếu URL tồn tại
+if (downloadUrl) {
+    // Countdown function
+    let countdown = 10;
+    const interval = setInterval(function() {
+        countdown--;
+        document.getElementById('countdown').innerText = countdown;
+        if (countdown <= 0) {
+            clearInterval(interval);
+            if (intermediatePageUrl) {
+                window.location.href = intermediatePageUrl; // Chuyển hướng đến trang trung gian
+            } else {
+                document.getElementById('countdown').innerText = "Lỗi: Không có URL trung gian!";
+            }
         }
+    }, 1000);
+} else {
+    document.getElementById('countdown').innerText = "Lỗi: Không tìm thấy URL tải xuống!";
+}
     </script>
 </body>
 </html>
