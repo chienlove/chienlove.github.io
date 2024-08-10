@@ -1,49 +1,59 @@
-const fs = require('fs');
-const path = require('path');
+const fetch = require('node-fetch');
 const matter = require('gray-matter');
 
 exports.handler = async function(event, context) {
   const appId = event.queryStringParameters.appId;
-  
+  const repo = 'chienlove/chienlove.github.io';
+  const contentDir = 'content/jailbreak-tools';
+  const token = process.env.GITHUB_TOKEN;
+
   if (!appId) {
     return {
       statusCode: 400,
-      body: JSON.stringify({ error: 'AppId is required' })
+      body: 'AppId is required'
     };
   }
 
   try {
-    const contentDir = path.join(__dirname, '..', '..', 'content', 'jailbreak-tools');
-    const files = fs.readdirSync(contentDir);
+    // Fetch the content of the directory
+    const response = await fetch(`https://api.github.com/repos/${repo}/contents/${contentDir}`, {
+      headers: {
+        'Authorization': `token ${token}`
+      }
+    });
+    const files = await response.json();
 
     for (const file of files) {
-      const filePath = path.join(contentDir, file);
-      const fileContents = fs.readFileSync(filePath, 'utf8');
+      // Get the content of each file
+      const fileResponse = await fetch(file.download_url);
+      const fileContents = await fileResponse.text();
       const { data } = matter(fileContents);
 
+      // Check the appId in the file data
       if (data.versions) {
-        const version = data.versions.find(v => v.appId === appId);
-        if (version) {
-          const redirectUrl = version.plistUrl;
-          return {
-            statusCode: 302,
-            headers: {
-              Location: redirectUrl
-            }
-          };
+        for (const version of data.versions) {
+          if (version.appId === appId) {
+            const redirectUrl = version.intermediate_page_url.replace(':appId', appId);
+            return {
+              statusCode: 302,
+              headers: {
+                Location: redirectUrl
+              }
+            };
+          }
         }
       }
     }
 
     return {
       statusCode: 404,
-      body: JSON.stringify({ error: 'App not found' })
+      body: 'App not found'
     };
   } catch (error) {
     console.error('Error:', error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Internal Server Error', details: error.message })
+      body: 'Internal Server Error'
     };
   }
 };
