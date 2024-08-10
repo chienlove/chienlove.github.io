@@ -2,34 +2,53 @@
 <h1>{{ .Title }}</h1>
 <div id="app-info">
   <!-- Nội dung động sẽ được điền vào đây bởi JavaScript -->
+  <div id="countdown">10</div>
+  <div id="app-details">
+    <!-- Thông tin ứng dụng sẽ được điền vào đây -->
+  </div>
 </div>
 <script>
   const urlParams = new URLSearchParams(window.location.search);
   const appId = urlParams.get('appId');
   if (appId) {
     let countdown = 10;
+    const countdownElement = document.getElementById('countdown');
+    const appDetailsElement = document.getElementById('app-details');
+    
+    countdownElement.innerText = countdown;
+
     const interval = setInterval(function() {
       countdown--;
-      document.getElementById('countdown').innerText = countdown;
+      countdownElement.innerText = countdown;
       if (countdown <= 0) {
         clearInterval(interval);
-        // Gọi Netlify Function để lấy URL tải xuống
+        // Gọi Netlify Function để lấy URL tải xuống và thông tin ứng dụng
         fetch(`/.netlify/functions/download?appId=${appId}`)
-          .then(response => {
-            if (response.ok) {
-              const redirectUrl = response.headers.get('Location');
-              if (redirectUrl) {
-                window.location.href = `itms-services://?action=download-manifest&url=${encodeURIComponent(redirectUrl)}`;
-              } else {
-                document.getElementById('countdown').innerText = "Lỗi: Không tìm thấy liên kết tải xuống!";
-              }
+          .then(response => response.json())  // Giả sử hàm này trả về dữ liệu JSON
+          .then(data => {
+            const redirectUrl = data.redirectUrl; // Thay đổi theo dữ liệu trả về
+            const appInfo = data.appInfo; // Thay đổi theo dữ liệu trả về
+
+            if (redirectUrl) {
+              window.location.href = `itms-services://?action=download-manifest&url=${encodeURIComponent(redirectUrl)}`;
             } else {
-              throw new Error('Network response was not ok.');
+              countdownElement.innerText = "Lỗi: Không tìm thấy liên kết tải xuống!";
             }
+
+            // Hiển thị thông tin ứng dụng
+            appDetailsElement.innerHTML = `
+              <h2>${appInfo.title}</h2>
+              <p>${appInfo.description}</p>
+              <img src="${appInfo.iconUrl}" alt="${appInfo.title} icon" />
+              <p>Phát triển bởi: ${appInfo.developer}</p>
+              <p>Phiên bản iOS: ${appInfo.iosVersion}</p>
+              <p>Kích thước: ${appInfo.size}</p>
+              <p>Danh mục: ${appInfo.category}</p>
+            `;
           })
           .catch(error => {
             console.error('Error:', error);
-            document.getElementById('countdown').innerText = "Lỗi: Không thể tải xuống!";
+            countdownElement.innerText = "Lỗi: Không thể tải xuống!";
           });
       }
     }, 1000);
