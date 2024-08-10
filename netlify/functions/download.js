@@ -33,13 +33,13 @@ exports.handler = async function(event, context) {
       if (data.versions) {
         for (const version of data.versions) {
           if (version.appId === appId) {
-            const redirectUrl = version.intermediate_page_url.replace(':appId', appId);
-            return {
-              statusCode: 302,
-              headers: {
-                Location: redirectUrl
-              }
-            };
+            const redirectUrl = `/intermediate/${appId}?plistUrl=${encodeURIComponent(version.plistUrl)}`;
+return {
+  statusCode: 302,
+  headers: {
+    Location: redirectUrl
+  }
+};
           }
         }
       }
