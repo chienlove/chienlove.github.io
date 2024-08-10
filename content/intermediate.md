@@ -1,5 +1,5 @@
 ---
 title: "Intermediate Page"
-layout: "index"
+layout: "intermediate"
 url: "/intermediate"
 ---
