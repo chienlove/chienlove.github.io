@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Download {{ .Params.title }}</title>
+  <script>
+    function countdown(seconds, appId) {
+      let counter = seconds;
+      const interval = setInterval(() => {
+        document.getElementById('countdown').innerText = counter;
+        counter--;
+        if (counter < 0) {
+          clearInterval(interval);
+          window.location.href = `/download/${appId}`;
+        }
+      }, 1000);
+    }
+
+    document.addEventListener('DOMContentLoaded', (event) => {
+      const params = new URLSearchParams(window.location.search);
+      const appId = params.get('appId');
+      if (appId) {
+        countdown(10, appId); // Change 10 to the number of seconds you want
+      }
+    });
+  </script>
+</head>
+<body>
+  <h1>Preparing your download...</h1>
+  <p>Please wait for <span id="countdown">10</span> seconds.</p>
+  <p>If you are not redirected, <a id="download-link" href="#">click here</a>.</p>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const appId = params.get('appId');
+    if (appId) {
+      document.getElementById('download-link').href = `/download/${appId}`;
+    }
+  </script>
+</body>
+</html>
