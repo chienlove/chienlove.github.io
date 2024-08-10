@@ -71,14 +71,9 @@ collections:
       - {label: "iOS tương thích", name: "ios_version", widget: "string", required: true}
       - {label: "Từ khóa", name: "keywords", widget: "list", required: false}
       - {label: "Status", name: "status", widget: "select", options: ["Signed", "Revoked"], default: "Signed", required: true}
-      - name: "versions"
-        label: "Versions"
-        widget: "list"
-        fields:
-          - {name: "version", label: "Version", widget: "string"}
-          - {name: "appId", label: "App ID", widget: "string"}
-          - name: "plistUrl"
-          label: "Plist URL"
-          widget: "string"
-          hint: "Nhập URL đầy đủ đến file .plist, ví dụ: https://storeios.net/plist/unc0ver.plist"
-        - {name: "intermediate_page_url", label: "Intermediate Page URL", widget: "hidden", default: "/intermediate/:appId"}
+      - {name: "versions", label: "Versions", widget: "list", fields: [
+          {name: "version", label: "Version", widget: "string"},
+          {name: "appId", label: "App ID", widget: "string"},
+          {name: "plistUrl", label: "Plist URL", widget: "string", hint: "Nhập URL đầy đủ đến file .plist, ví dụ: https://storeios.net/plist/unc0ver.plist"},
+          {name: "intermediate_page_url", label: "Intermediate Page URL", widget: "hidden", default: "/intermediate/:appId"}
+        ]}
