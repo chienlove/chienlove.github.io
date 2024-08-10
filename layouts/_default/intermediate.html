@@ -68,8 +68,8 @@
         const currentPath = window.location.pathname;
         window.history.replaceState({}, document.title, currentPath);
 
-        // Set the correct download link
-        downloadLink.href = plistUrl;
+        // Set the correct download link with the itms-services prefix
+        downloadLink.href = `itms-services://?action=download-manifest&url=${encodeURIComponent(plistUrl)}`;
         
         function updateCountdown() {
             countdownElement.textContent = countdown;
@@ -87,7 +87,7 @@
         // Prevent the default action when clicking on the download link
         downloadLink.addEventListener('click', function(e) {
             e.preventDefault();
-            window.location.href = plistUrl;
+            window.location.href = this.href;
         });
     })();
     </script>
