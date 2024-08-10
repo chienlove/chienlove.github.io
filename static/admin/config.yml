@@ -74,6 +74,6 @@ collections:
       - {name: "versions", label: "Versions", widget: "list", fields: [
           {name: "version", label: "Version", widget: "string"},
           {name: "appId", label: "App ID", widget: "string"},
-          {name: "plistUrl", label: "Plist URL", widget: "string", hint: "Nhập URL đầy đủ đến file .plist, ví dụ: https://storeios.net/plist/unc0ver.plist"},
-          {name: "intermediate_page_url", label: "Intermediate Page URL", widget: "hidden", default: "/intermediate/:appId"}
+          {name: "plistUrl", label: "Plist URL", widget: "string" hint: "Nhập URL đầy đủ đến file .plist, ví dụ: https://storeios.net/plist/unc0ver.plist"},
+          {name: "intermediate_page_url", label: "Intermediate Page URL", widget: "text", default: "/intermediate/:appId"}
         ]}
