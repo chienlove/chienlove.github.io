@@ -31,7 +31,7 @@ function updateCountdown() {
 }
 
 // Set the correct download link
-downloadLink.href = "{{ .Params.plistUrl }}";
+downloadLink.href = "{{ $plistUrl := .Params.plistUrl }}";
 
 // Log the link to console for debugging
 console.log('Download Link:', downloadLink.href);
