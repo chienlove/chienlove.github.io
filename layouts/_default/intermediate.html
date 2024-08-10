@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/css/jailbreak-tool.css?v=1.0">
     <title>Preparing your download...</title>
 </head>
 <body>
@@ -11,24 +12,31 @@
     <p>If you are not redirected, <a href="#" id="download-link">click here</a>.</p>
 
     <script>
-    let countdown = 10;
-    const countdownElement = document.getElementById('countdown');
-    const downloadLink = document.getElementById('download-link');
-    
-    function updateCountdown() {
-      countdownElement.textContent = countdown;
-      if (countdown <= 0) {
-        window.location.href = downloadLink.href;
-      } else {
-        countdown--;
-        setTimeout(updateCountdown, 1000);
-      }
+let countdown = 10;
+const countdownElement = document.getElementById('countdown');
+const downloadLink = document.getElementById('download-link');
+
+function updateCountdown() {
+  countdownElement.textContent = countdown;
+  if (countdown <= 0) {
+    if (downloadLink.href && downloadLink.href !== "#") {
+      window.location.href = downloadLink.href;
+    } else {
+      alert("Download link is not available.");
     }
-    
-    // Set the correct download link
-    downloadLink.href = "{{ .Params.plistUrl }}";
-    
-    updateCountdown();
-    </script>
+  } else {
+    countdown--;
+    setTimeout(updateCountdown, 1000);
+  }
+}
+
+// Set the correct download link
+downloadLink.href = "{{ .Params.plistUrl }}";
+
+// Log the link to console for debugging
+console.log('Download Link:', downloadLink.href);
+
+updateCountdown();
+</script>
 </body>
 </html>
