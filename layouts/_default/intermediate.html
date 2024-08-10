@@ -16,6 +16,9 @@ let countdown = 10;
 const countdownElement = document.getElementById('countdown');
 const downloadLink = document.getElementById('download-link');
 
+// Log the current download link
+console.log('Download Link:', downloadLink.href);
+
 function updateCountdown() {
   countdownElement.textContent = countdown;
   if (countdown <= 0) {
@@ -31,12 +34,7 @@ function updateCountdown() {
 }
 
 // Set the correct download link
-downloadLink.href = "{{ $plistUrl := .Params.plistUrl }}";
-
-// Log the link to console for debugging
-console.log('Download Link:', downloadLink.href);
-
+downloadLink.href = "{{ .Params.plistUrl }}";
 updateCountdown();
-</script>
-</body>
+</script></body>
 </html>
