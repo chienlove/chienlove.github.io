@@ -18,6 +18,8 @@
   from = "/shortener/*"
   to = "/.netlify/functions/shorten/"
   status = 200
+
+[[redirects]]
   from = "/download"
   to = "/.netlify/functions/download"
   status = 200
