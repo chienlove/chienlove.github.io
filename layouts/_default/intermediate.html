@@ -27,7 +27,7 @@
             color: #007bff;
         }
         #download-link {
-            display: inline-block;
+            display: none;
             margin-top: 1rem;
             padding: 0.5rem 1rem;
             background-color: #007bff;
@@ -45,7 +45,7 @@
     <div class="container">
         <h1>Preparing your download...</h1>
         <p>Please wait for <span id="countdown">10</span> seconds.</p>
-        <p>If you are not redirected, <a href="#" id="download-link">click here</a>.</p>
+        <a href="#" id="download-link">Click here to download</a>
     </div>
 
     <script>
@@ -54,7 +54,7 @@
         const countdownElement = document.getElementById('countdown');
         const downloadLink = document.getElementById('download-link');
         
-        // Get plistUrl from URL parameters
+        // Get plistUrl from URL parameters and then remove it
         const urlParams = new URLSearchParams(window.location.search);
         const plistUrl = urlParams.get('plistUrl');
         
@@ -63,13 +63,17 @@
             return;
         }
 
+        // Remove plistUrl from URL
+        window.history.replaceState({}, document.title, "/intermediate/" + urlParams.get('appId'));
+
         // Set the correct download link
         downloadLink.href = plistUrl;
         
         function updateCountdown() {
             countdownElement.textContent = countdown;
             if (countdown <= 0) {
-                window.location.href = plistUrl;
+                downloadLink.style.display = 'inline-block';
+                downloadLink.focus();
             } else {
                 countdown--;
                 setTimeout(updateCountdown, 1000);
