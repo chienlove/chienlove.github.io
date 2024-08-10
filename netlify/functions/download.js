@@ -6,6 +6,13 @@ exports.handler = async function(event, context) {
   const appId = event.queryStringParameters.appId;
   const contentDir = path.join(__dirname, '../../content/jailbreak-tools');
 
+  if (!appId) {
+    return {
+      statusCode: 400,
+      body: 'AppId is required'
+    };
+  }
+
   try {
     const files = fs.readdirSync(contentDir);
     for (const file of files) {

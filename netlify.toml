@@ -18,6 +18,9 @@
   from = "/shortener/*"
   to = "/.netlify/functions/shorten/"
   status = 200
+  from = "/download"
+  to = "/.netlify/functions/download"
+  status = 200
 
 [[redirects]]
   from = "/:shortId"
