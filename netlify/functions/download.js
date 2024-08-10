@@ -13,7 +13,7 @@ exports.handler = async function(event, context) {
   }
 
   try {
-    const contentDir = path.join(__dirname, '..', '..', 'content', 'jailbreak-tools');
+    const contentDir = path.join(__dirname, 'content', 'jailbreak-tools');
     const files = fs.readdirSync(contentDir);
 
     for (const file of files) {
