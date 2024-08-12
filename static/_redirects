@@ -1,4 +1,4 @@
-# Chặn truy cập trực tiếp vào thư mục plist và trả về lỗi 403
+# Chặn truy cập vào các tệp plist và trả về lỗi 403
 /plist/*  /.netlify/functions/block-access  403
 
 # Chuyển hướng yêu cầu đến API để xử lý tải xuống
