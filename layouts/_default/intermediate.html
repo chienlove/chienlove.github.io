@@ -45,7 +45,7 @@
     <div class="container">
         <h1>Preparing your download...</h1>
         <p>Please wait for <span id="countdown">10</span> seconds.</p>
-        <a href="#" id="download-link">Click here to download</a>
+        <a href="#" id="download-link">Click here to install</a>
     </div>
 
     <script>
@@ -68,8 +68,9 @@
         const currentPath = window.location.pathname;
         window.history.replaceState({}, document.title, currentPath);
 
-        // Set the correct download link
-        downloadLink.href = plistUrl;
+        // Set the correct download link for installation
+        const installLink = `itms-services://?action=download-manifest&url=${encodeURIComponent(plistUrl)}`;
+        downloadLink.href = installLink;
         
         function updateCountdown() {
             countdownElement.textContent = countdown;
@@ -87,7 +88,7 @@
         // Prevent the default action when clicking on the download link
         downloadLink.addEventListener('click', function(e) {
             e.preventDefault();
-            window.location.href = plistUrl;
+            window.location.href = installLink;
         });
     })();
     </script>
