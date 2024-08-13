@@ -36,7 +36,7 @@
   force = true
 
 [[redirects]]
-  from = "/plist"
+  from = "/*/plist/*"
   to = "/.netlify/functions/block-access"
   status = 403
   force = true
