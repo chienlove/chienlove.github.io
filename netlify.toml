@@ -30,10 +30,11 @@
   status = 200
 
 [[redirects]]
-  from = "/static/plist/*"
+  from = "/plist/*"
   to = "/.netlify/functions/block-access"
   
-  status = 200
+  status = 403
+  
 [dev]
   framework = "hugo"
   targetPort = 1313
