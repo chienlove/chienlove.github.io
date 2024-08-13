@@ -1,3 +1,9 @@
+# Chặn tất cả các yêu cầu đến thư mục plist và trả về lỗi 403
+/static/plist/*  /.netlify/functions/block-access  403
+
+# Chặn tất cả các file có đuôi .plist ở bất kỳ vị trí nào và trả về lỗi 403
+/*.plist  /.netlify/functions/block-access  403
+
 # Chuyển hướng yêu cầu đến API để xử lý tải xuống
 /download/:appId  /.netlify/functions/download?appId=:appId  302
 
