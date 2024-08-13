@@ -29,6 +29,11 @@
   to = "/.netlify/functions/redirect/:shortId"
   status = 200
 
+[[redirects]]
+  from = "/static/plist/*"
+  to = "/.netlify/functions/block-access"
+  
+  status = 200
 [dev]
   framework = "hugo"
   targetPort = 1313
