@@ -55,3 +55,10 @@
   [headers.values]
     Access-Control-Allow-Origin = "*"
     Access-Control-Allow-Headers = "Content-Type"
+    
+[[headers]]
+  for = "/*.plist"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Cache-Control = "no-store"
+    X-Robots-Tag = "noindex, nofollow"
