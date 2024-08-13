@@ -36,14 +36,14 @@
     </section>
 
     <section class="download-links">
-        <h2>Liên kết tải xuống</h2>
-        {{ if .Params.versions }}
-            {{ range .Params.versions }}
-                <a href="/download?appId={{ .appId }}" class="download-link">{{ .version }}</a>
-            {{ end }}
-        {{ else }}
-            <p>Không có liên kết tải xuống.</p>
+    <h2>Liên kết tải xuống</h2>
+    {{ if .Params.versions }}
+        {{ range .Params.versions }}
+            <a href="/download?appId={{ .appId }}" class="download-link">{{ .version }}</a>
         {{ end }}
-    </section>
+    {{ else }}
+        <p>Không có liên kết tải xuống.</p>
+    {{ end }}
+</section>
 </main>
 {{ end }}

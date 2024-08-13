@@ -15,7 +15,6 @@ exports.handler = async function(event, context) {
   }
 
   try {
-    // Fetch the content of the directory
     const response = await fetch(`https://api.github.com/repos/${repo}/contents/${contentDir}`, {
       headers: {
         'Authorization': `token ${token}`
@@ -24,22 +23,20 @@ exports.handler = async function(event, context) {
     const files = await response.json();
 
     for (const file of files) {
-      // Get the content of each file
       const fileResponse = await fetch(file.download_url);
       const fileContents = await fileResponse.text();
       const { data } = matter(fileContents);
 
-      // Check the appId in the file data
       if (data.versions) {
         for (const version of data.versions) {
           if (version.appId === appId) {
             const redirectUrl = `/intermediate/${appId}?plistUrl=${encodeURIComponent(version.plistUrl)}`;
-return {
-  statusCode: 302,
-  headers: {
-    Location: redirectUrl
-  }
-};
+            return {
+              statusCode: 302,
+              headers: {
+                Location: redirectUrl
+              }
+            };
           }
         }
       }
