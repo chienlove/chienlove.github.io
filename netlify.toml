@@ -30,12 +30,6 @@
   status = 200
 
 [[redirects]]
-  from = "/*.plist"
-  to = "/.netlify/functions/block-access"
-  status = 403
-  force = true
-
-[[redirects]]
   from = "/*/plist/*"
   to = "/.netlify/functions/block-access"
   status = 403
