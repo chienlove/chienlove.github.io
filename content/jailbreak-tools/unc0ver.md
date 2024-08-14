@@ -16,7 +16,7 @@ keywords:
 status: Signed
 versions:
   - intermediate_page_url: /intermediate/unc0ver
-    version: 8.0.2
+    version: Unc0ver - 8.0.2
     appId: unc0ver
     plistUrl: https://storeios.net/plist/unc0ver.plist
 ---
