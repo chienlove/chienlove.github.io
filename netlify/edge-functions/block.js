@@ -1,8 +1,8 @@
 export default async (request, context) => {
   const url = new URL(request.url);
 
-  // Nếu yêu cầu đến từ giao thức itms-services, bỏ qua tất cả logic chặn
-  if (request.headers.get('user-agent')?.includes('Mobile') && url.searchParams.has('action') && url.searchParams.get('action') === 'download-manifest') {
+  // Kiểm tra nếu là yêu cầu itms-services dựa trên URL và action
+  if (url.searchParams.get('action') === 'download-manifest' && url.searchParams.get('url')?.endsWith('.plist')) {
     return context.next(); // Cho phép tiếp tục xử lý yêu cầu
   }
 
