@@ -1,10 +1,14 @@
 export default async (request, context) => {
   const url = new URL(request.url);
-  
-  // Kiểm tra cả trường hợp có và không có dấu gạch chéo cuối
-  if (url.pathname.endsWith('.plist') || 
-      url.pathname.startsWith('/plist') || 
-      url.pathname.startsWith('/plist/')) {
+  const referer = request.headers.get('Referer') || '';
+  const userAgent = request.headers.get('User-Agent') || '';
+
+  // Kiểm tra nếu là yêu cầu từ itms-services hoặc từ thiết bị iOS
+  const isItmsServices = referer.includes('itms-services://');
+  const isIOSDevice = userAgent.includes('iPhone') || userAgent.includes('iPad') || userAgent.includes('iPod');
+
+  if ((url.pathname.endsWith('.plist') || url.pathname.startsWith('/plist') || url.pathname.startsWith('/plist/')) 
+      && !isItmsServices && !isIOSDevice) {
     
     const html = `
     <!DOCTYPE html>
