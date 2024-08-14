@@ -63,9 +63,11 @@ export default async (request, context) => {
     </head>
     <body>
         <div class="container">
-            <img src="https://i.imgur.com/JKNdp0c.png" alt="Access Denied">
-            <h1>Access Denied</h1>
-            <p>Sorry, you don't have permission to access this resource.</p>
+            <img src="/images/access_denied.png" alt="Access Denied">
+            <h1>Sorry, you have been blocked</h1>
+          <p>You are unable to access this site.</p>
+          <p>Why have I been blocked? This website is using a security service to protect itself from online attacks. The action you just performed triggered the security solution. There are several actions that could trigger this block including submitting a certain word or phrase, a SQL command or malformed data.</p>
+          <p>What can I do to resolve this? You can email the site owner to let them know you were blocked. Please include what you were doing when this page came up.</p>
             <a href="/" class="btn">Go to Homepage</a>
         </div>
     </body>
