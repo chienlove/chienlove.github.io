@@ -30,7 +30,7 @@
   status = 200
 
  [[redirects]]
-  from = "/plist/index.html"
+  from = "*/plist"
   to = "/.netlify/functions/block-access"
   status = 302
   force = true
