@@ -1,37 +1,40 @@
 export default async (request, context) => {
   const url = new URL(request.url);
+  const userAgent = request.headers.get('User-Agent') || '';
 
   // Xử lý yêu cầu itms-services
-  if (url.searchParams.get('action') === 'download-manifest' && url.searchParams.get('url')?.includes('.plist')) {
+  if (url.searchParams.get('action') === 'download-manifest') {
     const plistUrl = url.searchParams.get('url');
-    // Tạo một token tạm thời bằng cách mã hóa URL gốc
-    const tempToken = btoa(plistUrl).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
-    
-    // Chuyển hướng đến URL tạm thời
-    const newUrl = new URL(request.url);
-    newUrl.searchParams.set('temp_token', tempToken);
-    return Response.redirect(newUrl.toString(), 302);
-  }
-
-  // Xử lý yêu cầu với token tạm thời
-  if (url.searchParams.has('temp_token')) {
-    const tempToken = url.searchParams.get('temp_token');
-    try {
-      // Giải mã token để lấy URL gốc
-      const originalUrl = atob(tempToken.replace(/-/g, '+').replace(/_/g, '/'));
-      if (originalUrl.includes('.plist')) {
-        // Chuyển hướng đến URL gốc
-        return Response.redirect(originalUrl, 302);
+    if (plistUrl && plistUrl.includes('.plist')) {
+      // Trả về nội dung của file .plist thay vì chuyển hướng
+      try {
+        const response = await fetch(plistUrl);
+        if (!response.ok) {
+          throw new Error('Failed to fetch .plist file');
+        }
+        const plistContent = await response.text();
+        return new Response(plistContent, {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/x-plist',
+            'Content-Disposition': 'attachment; filename="manifest.plist"'
+          }
+        });
+      } catch (error) {
+        return new Response('Error fetching .plist file', { status: 500 });
       }
-    } catch (error) {
-      // Xử lý lỗi nếu token không hợp lệ
-      return new Response('Invalid token', { status: 400 });
     }
   }
 
   // Xử lý truy cập trực tiếp đến file .plist
   if (url.pathname.endsWith('.plist')) {
-    return new Response('Access Denied', { status: 403 });
+    // Cho phép truy cập từ thiết bị iOS hoặc iTunes
+    if (userAgent.includes('iPhone') || userAgent.includes('iPad') || userAgent.includes('iPod') || userAgent.includes('iTunes')) {
+      return context.next();
+    } else {
+      // Chặn truy cập trực tiếp từ các nguồn khác
+      return new Response('Access Denied', { status: 403 });
+    }
   }
 
   // Chặn truy cập trực tiếp vào thư mục /plist
