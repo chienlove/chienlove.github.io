@@ -1,19 +1,13 @@
 export default async (request, context) => {
   const url = new URL(request.url);
-  const referer = request.headers.get('Referer') || '';
-  const userAgent = request.headers.get('User-Agent') || '';
 
-  // Kiểm tra nếu là yêu cầu từ itms-services hoặc từ thiết bị iOS
-  const isItmsServices = referer.includes('itms-services://');
-  const isIOSDevice = /iPhone|iPad|iPod/.test(userAgent);
+  // Kiểm tra nếu là file .plist nhưng là yêu cầu itms-services
+  if (url.pathname.endsWith('.plist') && url.protocol === 'itms-services:') {
+    return context.next(); // Cho phép tiếp tục xử lý yêu cầu
+  }
 
-  if (url.pathname.endsWith('.plist') || url.pathname.startsWith('/plist') || url.pathname.startsWith('/plist/')) {
-    // Cho phép truy cập nếu là từ itms-services hoặc thiết bị iOS
-    if (isItmsServices || isIOSDevice) {
-      return context.next();
-    }
-    
-    // Chặn truy cập trong các trường hợp khác
+  // Chặn truy cập vào thư mục /plist và các file .plist trong thư mục này
+  if (url.pathname.startsWith('/plist') || url.pathname.endsWith('.plist')) {
     const html = `
     <!DOCTYPE html>
     <html lang="en">
