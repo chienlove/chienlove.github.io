@@ -1,9 +1,9 @@
 export default async (request, context) => {
   const url = new URL(request.url);
 
-  // Kiểm tra nếu là file .plist nhưng là yêu cầu itms-services
-  if (url.pathname.endsWith('.plist') && url.protocol === 'itms-services:') {
-    return context.next(); // Cho phép tiếp tục xử lý yêu cầu
+  // Kiểm tra nếu là yêu cầu itms-services
+  if (url.searchParams.get('url') && url.searchParams.get('url').endsWith('.plist') && url.protocol === 'https:') {
+    return context.next(); // Cho phép tiếp tục xử lý yêu cầu nếu là itms-services
   }
 
   // Chặn truy cập vào thư mục /plist và các file .plist trong thư mục này
