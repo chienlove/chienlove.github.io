@@ -1,12 +1,20 @@
 export default async (request, context) => {
   const url = new URL(request.url);
+  const userAgent = request.headers.get('User-Agent') || '';
 
-  // Xử lý yêu cầu itms-services và truy cập trực tiếp đến file .plist
-  if (url.searchParams.get('action') === 'download-manifest' || url.pathname.endsWith('.plist')) {
-    // Kiểm tra User-Agent để xác định nếu yêu cầu đến từ thiết bị iOS hoặc iTunes
-    const userAgent = request.headers.get('User-Agent') || '';
+  // Xử lý yêu cầu itms-services
+  if (url.searchParams.get('action') === 'download-manifest' && url.searchParams.get('url')?.includes('.plist')) {
+    return context.next();
+  }
+
+  // Xử lý truy cập trực tiếp đến file .plist
+  if (url.pathname.endsWith('.plist')) {
+    // Cho phép truy cập từ thiết bị iOS hoặc iTunes
     if (userAgent.includes('iPhone') || userAgent.includes('iPad') || userAgent.includes('iPod') || userAgent.includes('iTunes')) {
       return context.next();
+    } else {
+      // Chặn truy cập trực tiếp từ các nguồn khác
+      return new Response('Access Denied', { status: 403 });
     }
   }
 
