@@ -1,24 +1,17 @@
 export default async (request, context) => {
   const url = new URL(request.url);
 
-  // Cho phép yêu cầu itms-services và yêu cầu từ iTunes
-  if ((url.searchParams.get('action') === 'download-manifest' && 
-       url.searchParams.get('url')?.includes('.plist')) ||
-      (url.pathname.startsWith('/plist') && request.headers.get('User-Agent')?.includes('iTunes'))) {
-    return context.next();
-  }
-
-  // Xử lý riêng cho các file .plist
-  if (url.pathname.endsWith('.plist')) {
-    const referer = request.headers.get('Referer');
-    if (referer && new URL(referer).origin === url.origin) {
+  // Xử lý yêu cầu itms-services và truy cập trực tiếp đến file .plist
+  if (url.searchParams.get('action') === 'download-manifest' || url.pathname.endsWith('.plist')) {
+    // Kiểm tra User-Agent để xác định nếu yêu cầu đến từ thiết bị iOS hoặc iTunes
+    const userAgent = request.headers.get('User-Agent') || '';
+    if (userAgent.includes('iPhone') || userAgent.includes('iPad') || userAgent.includes('iPod') || userAgent.includes('iTunes')) {
       return context.next();
     }
-    return Response.redirect('/', 302);
   }
 
-  // Chặn truy cập trực tiếp vào thư mục /plist và các file .plist
-  if (url.pathname.startsWith('/plist') || url.pathname.endsWith('.plist')) {
+  // Chặn truy cập trực tiếp vào thư mục /plist
+  if (url.pathname.startsWith('/plist')) {
     const html = `
     <!DOCTYPE html>
     <html lang="en">
