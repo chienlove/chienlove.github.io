@@ -1,21 +1,37 @@
 export default async (request, context) => {
   const url = new URL(request.url);
-  const userAgent = request.headers.get('User-Agent') || '';
 
   // Xử lý yêu cầu itms-services
   if (url.searchParams.get('action') === 'download-manifest' && url.searchParams.get('url')?.includes('.plist')) {
-    return context.next();
+    const plistUrl = url.searchParams.get('url');
+    // Tạo một token tạm thời bằng cách mã hóa URL gốc
+    const tempToken = btoa(plistUrl).replace(/=/g, '').replace(/\+/g, '-').replace(/\//g, '_');
+    
+    // Chuyển hướng đến URL tạm thời
+    const newUrl = new URL(request.url);
+    newUrl.searchParams.set('temp_token', tempToken);
+    return Response.redirect(newUrl.toString(), 302);
+  }
+
+  // Xử lý yêu cầu với token tạm thời
+  if (url.searchParams.has('temp_token')) {
+    const tempToken = url.searchParams.get('temp_token');
+    try {
+      // Giải mã token để lấy URL gốc
+      const originalUrl = atob(tempToken.replace(/-/g, '+').replace(/_/g, '/'));
+      if (originalUrl.includes('.plist')) {
+        // Chuyển hướng đến URL gốc
+        return Response.redirect(originalUrl, 302);
+      }
+    } catch (error) {
+      // Xử lý lỗi nếu token không hợp lệ
+      return new Response('Invalid token', { status: 400 });
+    }
   }
 
   // Xử lý truy cập trực tiếp đến file .plist
   if (url.pathname.endsWith('.plist')) {
-    // Cho phép truy cập từ thiết bị iOS hoặc iTunes
-    if (userAgent.includes('iPhone') || userAgent.includes('iPad') || userAgent.includes('iPod') || userAgent.includes('iTunes')) {
-      return context.next();
-    } else {
-      // Chặn truy cập trực tiếp từ các nguồn khác
-      return new Response('Access Denied', { status: 403 });
-    }
+    return new Response('Access Denied', { status: 403 });
   }
 
   // Chặn truy cập trực tiếp vào thư mục /plist
@@ -28,49 +44,7 @@ export default async (request, context) => {
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Access Denied</title>
         <style>
-            body {
-                font-family: Arial, sans-serif;
-                background-color: #f0f0f0;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                height: 100vh;
-                margin: 0;
-            }
-            .container {
-                background-color: white;
-                padding: 2rem;
-                border-radius: 10px;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-                text-align: center;
-                max-width: 80%;
-            }
-            h1 {
-                color: #e74c3c;
-                margin-bottom: 1rem;
-            }
-            p {
-                color: #34495e;
-                margin-bottom: 1.5rem;
-            }
-            img {
-                max-width: 100%;
-                height: auto;
-                margin-bottom: 1.5rem;
-                border-radius: 5px;
-            }
-            .btn {
-                display: inline-block;
-                background-color: #3498db;
-                color: white;
-                padding: 0.5rem 1rem;
-                text-decoration: none;
-                border-radius: 5px;
-                transition: background-color 0.3s ease;
-            }
-            .btn:hover {
-                background-color: #2980b9;
-            }
+            /* ... (giữ nguyên CSS như trước) ... */
         </style>
     </head>
     <body>
