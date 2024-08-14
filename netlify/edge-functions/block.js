@@ -5,11 +5,15 @@ export default async (request, context) => {
 
   // Kiểm tra nếu là yêu cầu từ itms-services hoặc từ thiết bị iOS
   const isItmsServices = referer.includes('itms-services://');
-  const isIOSDevice = userAgent.includes('iPhone') || userAgent.includes('iPad') || userAgent.includes('iPod');
+  const isIOSDevice = /iPhone|iPad|iPod/.test(userAgent);
 
-  if ((url.pathname.endsWith('.plist') || url.pathname.startsWith('/plist') || url.pathname.startsWith('/plist/')) 
-      && !isItmsServices && !isIOSDevice) {
+  if (url.pathname.endsWith('.plist') || url.pathname.startsWith('/plist') || url.pathname.startsWith('/plist/')) {
+    // Cho phép truy cập nếu là từ itms-services hoặc thiết bị iOS
+    if (isItmsServices || isIOSDevice) {
+      return context.next();
+    }
     
+    // Chặn truy cập trong các trường hợp khác
     const html = `
     <!DOCTYPE html>
     <html lang="en">
