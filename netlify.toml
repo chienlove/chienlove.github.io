@@ -9,6 +9,10 @@
 [build.environment]
   NODE_VERSION = "16"
 
+[[edge_functions]]
+  function = "block"
+  path = "/*"
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
@@ -28,19 +32,6 @@
   from = "/:shortId"
   to = "/.netlify/functions/redirect/:shortId"
   status = 200
-
- [[redirects]]
-  from = "*/plist"
-  to = "/.netlify/functions/block-access"
-  status = 302
-  force = true
-
-[[redirects]]
-  from = "/plist/*"
-  to = "/.netlify/functions/block-access"
-  status = 302
-  force = true
-
   
 [dev]
   framework = "hugo"
