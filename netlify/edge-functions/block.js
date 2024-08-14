@@ -1,12 +1,12 @@
 export default async (request, context) => {
   const url = new URL(request.url);
 
-  // Kiểm tra nếu là yêu cầu itms-services
-  if (url.searchParams.get('url') && url.searchParams.get('url').endsWith('.plist') && url.protocol === 'https:') {
-    return context.next(); // Cho phép tiếp tục xử lý yêu cầu nếu là itms-services
+  // Nếu yêu cầu đến từ giao thức itms-services, bỏ qua tất cả logic chặn
+  if (request.headers.get('user-agent')?.includes('Mobile') && url.searchParams.has('action') && url.searchParams.get('action') === 'download-manifest') {
+    return context.next(); // Cho phép tiếp tục xử lý yêu cầu
   }
 
-  // Chặn truy cập vào thư mục /plist và các file .plist trong thư mục này
+  // Chặn truy cập trực tiếp vào thư mục /plist và các file .plist
   if (url.pathname.startsWith('/plist') || url.pathname.endsWith('.plist')) {
     const html = `
     <!DOCTYPE html>
@@ -63,11 +63,9 @@ export default async (request, context) => {
     </head>
     <body>
         <div class="container">
-            <img src="/images/access_denied.png" alt="Access Denied">
-            <h1>Sorry, you have been blocked</h1>
-          <p>You are unable to access this site.</p>
-          <p>Why have I been blocked? This website is using a security service to protect itself from online attacks. The action you just performed triggered the security solution. There are several actions that could trigger this block including submitting a certain word or phrase, a SQL command or malformed data.</p>
-          <p>What can I do to resolve this? You can email the site owner to let them know you were blocked. Please include what you were doing when this page came up.</p>
+            <img src="https://i.imgur.com/JKNdp0c.png" alt="Access Denied">
+            <h1>Access Denied</h1>
+            <p>Sorry, you don't have permission to access this resource.</p>
             <a href="/" class="btn">Go to Homepage</a>
         </div>
     </body>
