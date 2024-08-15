@@ -6,19 +6,14 @@ export default async (request, context) => {
   if (url.searchParams.get('action') === 'download-manifest') {
     const plistUrl = url.searchParams.get('url');
     if (plistUrl && plistUrl.includes('.plist')) {
-      const tempToken = Date.now().toString(36) + Math.random().toString(36).substr(2);
-      
-      const newUrl = new URL(request.url);
-      newUrl.searchParams.set('temp_token', tempToken);
-      newUrl.searchParams.set('plist_url', encodeURIComponent(plistUrl));
-      newUrl.searchParams.delete('url');
-      newUrl.searchParams.delete('action');
-
-      return Response.redirect(newUrl.toString(), 302);
+      // Chuyển hướng đến trang trung gian
+      const intermediateUrl = new URL('/intermediate.html', request.url);
+      intermediateUrl.searchParams.set('url', plistUrl);
+      return Response.redirect(intermediateUrl.toString(), 302);
     }
   }
 
-  // Xử lý yêu cầu có temp_token
+  // Xử lý yêu cầu có temp_token (giữ lại để tương thích ngược nếu cần)
   if (url.searchParams.has('temp_token') && url.searchParams.has('plist_url')) {
     const plistUrl = decodeURIComponent(url.searchParams.get('plist_url'));
     
@@ -46,65 +41,60 @@ export default async (request, context) => {
 
   // Xử lý truy cập trực tiếp vào file .plist hoặc thư mục plist
   if (url.pathname.endsWith('.plist') || url.pathname.startsWith('/plist')) {
-    if (!url.searchParams.has('temp_token')) {
-      const html = `
-      <!DOCTYPE html>
-      <html lang="en">
-      <head>
-          <meta charset="UTF-8">
-          <meta name="viewport" content="width=device-width, initial-scale=1.0">
-          <title>Access Denied</title>
-          <style>
-              body {
-                  font-family: Arial, sans-serif;
-                  display: flex;
-                  justify-content: center;
-                  align-items: center;
-                  height: 100vh;
-                  margin: 0;
-                  background-color: #f0f0f0;
-              }
-              .container {
-                  text-align: center;
-                  padding: 20px;
-                  background-color: white;
-                  border-radius: 10px;
-                  box-shadow: 0 0 10px rgba(0,0,0,0.1);
-              }
-              h1 {
-                  color: #d9534f;
-              }
-              .btn {
-                  display: inline-block;
-                  padding: 10px 20px;
-                  margin-top: 20px;
-                  background-color: #5bc0de;
-                  color: white;
-                  text-decoration: none;
-                  border-radius: 5px;
-              }
-          </style>
-      </head>
-      <body>
-          <div class="container">
-              <img src="https://i.imgur.com/JKNdp0c.png" alt="Access Denied">
-              <h1>Access Denied</h1>
-              <p>Sorry, you don't have permission to access this resource.</p>
-              <a href="/" class="btn">Go to Homepage</a>
-          </div>
-      </body>
-      </html>
-      `;
-      return new Response(html, { 
-        status: 403,
-        headers: {
-          'Content-Type': 'text/html'
-        }
-      });
-    } else {
-      // Cho phép truy cập nếu có temp_token
-      return context.next();
-    }
+    const html = `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Access Denied</title>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                margin: 0;
+                background-color: #f0f0f0;
+            }
+            .container {
+                text-align: center;
+                padding: 20px;
+                background-color: white;
+                border-radius: 10px;
+                box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            }
+            h1 {
+                color: #d9534f;
+            }
+            .btn {
+                display: inline-block;
+                padding: 10px 20px;
+                margin-top: 20px;
+                background-color: #5bc0de;
+                color: white;
+                text-decoration: none;
+                border-radius: 5px;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <img src="https://i.imgur.com/JKNdp0c.png" alt="Access Denied">
+            <h1>Access Denied</h1>
+            <p>Sorry, you don't have permission to access this resource.</p>
+            <a href="/" class="btn">Go to Homepage</a>
+        </div>
+    </body>
+    </html>
+    `;
+    return new Response(html, { 
+      status: 403,
+      headers: {
+        'Content-Type': 'text/html'
+      }
+    });
   }
   
   // Xử lý các yêu cầu khác
