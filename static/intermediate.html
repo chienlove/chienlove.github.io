@@ -1,9 +1,11 @@
+Intermediate
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Preparing Download</title>
+    <title>Preparing your download...</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -16,19 +18,28 @@
         }
         .container {
             text-align: center;
-            padding: 20px;
             background-color: white;
+            padding: 2rem;
             border-radius: 10px;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
+        #countdown {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #007bff;
+        }
         #download-link {
             display: none;
-            padding: 10px 20px;
-            margin-top: 20px;
-            background-color: #5bc0de;
+            margin-top: 1rem;
+            padding: 0.5rem 1rem;
+            background-color: #007bff;
             color: white;
             text-decoration: none;
             border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        #download-link:hover {
+            background-color: #0056b3;
         }
     </style>
 </head>
@@ -40,39 +51,44 @@
     </div>
 
     <script>
-        function encodeExtension(url) {
-            return url.replace('.plist', '.p1i5t');
+(function() {
+    let countdown = 10;
+    const countdownElement = document.getElementById('countdown');
+    const downloadLink = document.getElementById('download-link');
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    const plistUrl = urlParams.get('plistUrl');
+    
+    if (!plistUrl) {
+        console.error('No plistUrl provided');
+        document.body.innerHTML = '<div class="container"><h1>Error</h1><p>Invalid download link. Please try again.</p></div>';
+        return;
+    }
+
+    const currentPath = window.location.pathname;
+    window.history.replaceState({}, document.title, currentPath);
+
+    const installLink = `itms-services://?action=download-manifest&url=${encodeURIComponent(plistUrl)}`;
+    downloadLink.href = installLink;
+    
+    function updateCountdown() {
+        countdownElement.textContent = countdown;
+        if (countdown <= 0) {
+            downloadLink.style.display = 'inline-block';
+            downloadLink.focus();
+        } else {
+            countdown--;
+            setTimeout(updateCountdown, 1000);
         }
-
-        function decodeExtension(url) {
-            return url.replace('.p1i5t', '.plist');
-        }
-
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log("DOM fully loaded and parsed");
-            const urlParams = new URLSearchParams(window.location.search);
-            const plistUrl = decodeExtension(urlParams.get('url'));
-            console.log("Decoded plist URL: ", plistUrl);
-
-            const downloadLink = document.getElementById('download-link');
-            const countdown = document.getElementById('countdown');
-            let secondsLeft = 10;
-
-            function updateCountdown() {
-                console.log("Updating countdown: ", secondsLeft);
-                countdown.textContent = secondsLeft;
-                if (secondsLeft <= 0) {
-                    console.log("Countdown complete. Displaying download link.");
-                    downloadLink.style.display = 'inline-block';
-                    downloadLink.href = `itms-services://?action=download-manifest&url=${encodeURIComponent(encodeExtension(plistUrl))}`;
-                } else {
-                    secondsLeft--;
-                    setTimeout(updateCountdown, 1000);
-                }
-            }
-
-            updateCountdown();
-        });
-    </script>
+    }
+    
+    updateCountdown();
+    
+    downloadLink.addEventListener('click', function(e) {
+        e.preventDefault();
+        window.location.href = installLink;
+    });
+})();
+</script>
 </body>
 </html>
