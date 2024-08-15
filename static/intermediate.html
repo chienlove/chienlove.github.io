@@ -55,7 +55,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const encodedPlistUrl = urlParams.get('plistUrl');
     
     if (encodedPlistUrl) {
-        downloadLink.href = `itms-services://?action=download-manifest&url=${encodedPlistUrl}`;
+        const decodedPlistUrl = decodeURIComponent(encodedPlistUrl);
+        downloadLink.href = `itms-services://?action=download-manifest&url=${encodeURIComponent(decodedPlistUrl)}`;
     }
 
     let countdown = 10;
@@ -66,7 +67,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (countdown <= 0) {
             clearInterval(timer);
             downloadLink.style.display = 'inline';
-            downloadLink.click();  // Tự động click vào liên kết sau khi đếm ngược kết thúc
+            window.location.href = downloadLink.href; // Tự động chuyển hướng tới link cài đặt
         }
     }, 1000);
 });
