@@ -44,8 +44,12 @@
             return url.replace('.plist', '.p1i5t');
         }
 
+        function decodeExtension(url) {
+            return url.replace('.p1i5t', '.plist');
+        }
+
         const urlParams = new URLSearchParams(window.location.search);
-        const plistUrl = urlParams.get('url');
+        const plistUrl = decodeExtension(urlParams.get('url'));
         const downloadLink = document.getElementById('download-link');
         const countdown = document.getElementById('countdown');
         let secondsLeft = 10;
@@ -54,8 +58,7 @@
             countdown.textContent = secondsLeft;
             if (secondsLeft <= 0) {
                 downloadLink.style.display = 'inline-block';
-                const encodedPlistUrl = encodeExtension(plistUrl);
-                downloadLink.href = `itms-services://?action=download-manifest&url=${encodeURIComponent(encodedPlistUrl)}`;
+                downloadLink.href = `itms-services://?action=download-manifest&url=${encodeURIComponent(encodeExtension(plistUrl))}`;
             } else {
                 secondsLeft--;
                 setTimeout(updateCountdown, 1000);
