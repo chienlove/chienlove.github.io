@@ -1,4 +1,9 @@
-{{ define "main" }}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload to GitHub Release</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -21,16 +26,14 @@
             width: 0%;
         }
     </style>
+</head>
+<body>
     <h1>Upload to GitHub Release</h1>
     <button id="loginButton">Login with GitHub</button>
     <input type="file" id="fileInput" style="display:none;">
     <button id="uploadButton" style="display:none;">Upload File</button>
     <div id="status"></div>
     <div id="progressBar"><div></div></div>
-
-    <script>
-        // Kiểm tra xem file upload.js có tải lên đúng không
-        console.log("Page loaded, attempting to load upload.js...");
-    </script>
-    <script src="/js/upload.js"></script>
-{{ end }}
+    <script src="js/upload.js"></script>
+</body>
+</html>
