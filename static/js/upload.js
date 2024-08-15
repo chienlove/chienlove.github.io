@@ -1,5 +1,5 @@
 const CLIENT_ID = 'Ov23lixtCFiQYWFH232n'; // replace with your actual client ID
-const REDIRECT_URI = 'storeios.net/.netlify/functions/callback'; // replace with your actual redirect URI
+const REDIRECT_URI = 'https://storeios.net/.netlify/functions/callback'; // replace with your actual redirect URI
 const CHUNK_SIZE = 1024 * 1024 * 5; // 5MB
 
 let token = localStorage.getItem('github_token');
