@@ -1,6 +1,5 @@
 const CLIENT_ID = 'Ov23lixtCFiQYWFH232n'; // replace with your actual client ID
 const REDIRECT_URI = 'https://storeios.net/.netlify/functions/callback'; // replace with your actual redirect URI
-const CHUNK_SIZE = 1024 * 1024 * 5; // 5MB
 
 let token = localStorage.getItem('github_token');
 
@@ -41,6 +40,10 @@ window.addEventListener('message', event => {
             token = data.access_token;
             localStorage.setItem('github_token', token);
             window.location.reload();
+        })
+        .catch(error => {
+            console.error('Error getting token:', error);
+            setStatus('Failed to get access token');
         });
     }
 });
@@ -58,67 +61,71 @@ async function handleUpload() {
         return;
     }
 
-    setStatus('Creating release...');
-    const releaseData = await createRelease();
-    if (!releaseData) return;
+    try {
+        setStatus('Creating release...');
+        const releaseData = await createRelease();
+        if (!releaseData) return;
 
-    setStatus('Uploading file...');
-    await uploadFileInChunks(file, releaseData.upload_url);
+        await uploadFile(file, releaseData.upload_url);
+    } catch (error) {
+        setStatus(`Error during upload process: ${error.message}`);
+        console.error('Upload process error:', error);
+    }
 }
 
 async function createRelease() {
-    const response = await fetch('https://api.github.com/repos/chienlove/chienlove.github.io/releases', {
-        method: 'POST',
-        headers: {
-            'Authorization': `token ${token}`,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            tag_name: 'v' + new Date().getTime(),
-            name: 'Release ' + new Date().toISOString(),
-            body: 'Uploaded from web interface'
-        })
-    });
-
-    if (!response.ok) {
-        setStatus('Failed to create release');
-        return null;
-    }
-
-    return await response.json();
-}
-
-async function uploadFileInChunks(file, uploadUrl) {
-    const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
-    let uploadedChunks = 0;
-
-    document.getElementById('progressBar').style.display = 'block';
-
-    for (let start = 0; start < file.size; start += CHUNK_SIZE) {
-        const chunk = file.slice(start, start + CHUNK_SIZE);
-        const end = Math.min(start + CHUNK_SIZE - 1, file.size - 1);
-
-        const response = await fetch(uploadUrl.replace('{?name,label}', `?name=${file.name}`), {
+    try {
+        const response = await fetch('https://api.github.com/repos/chienlove/chienlove.github.io/releases', {
             method: 'POST',
             headers: {
                 'Authorization': `token ${token}`,
-                'Content-Type': file.type,
-                'Content-Length': chunk.size,
-                'Content-Range': `bytes ${start}-${end}/${file.size}`
+                'Content-Type': 'application/json'
             },
-            body: chunk
+            body: JSON.stringify({
+                tag_name: 'v' + new Date().getTime(),
+                name: 'Release ' + new Date().toISOString(),
+                body: 'Uploaded from web interface'
+            })
         });
 
         if (!response.ok) {
-            setStatus('Failed to upload chunk');
-            return;
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
 
-        uploadedChunks++;
-        updateProgress((uploadedChunks / totalChunks) * 100);
+        return await response.json();
+    } catch (error) {
+        setStatus(`Failed to create release: ${error.message}`);
+        console.error('Create release error:', error);
+        return null;
     }
+}
 
-    setStatus('File uploaded successfully!');
+async function uploadFile(file, uploadUrl) {
+    setStatus('Uploading file...');
+    document.getElementById('progressBar').style.display = 'block';
+
+    try {
+        const response = await fetch(uploadUrl.replace('{?name,label}', '') + `?name=${encodeURIComponent(file.name)}`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `token ${token}`,
+                'Content-Type': file.type
+            },
+            body: file
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        setStatus('File uploaded successfully!');
+        updateProgress(100);
+        console.log('Upload response:', data);
+    } catch (error) {
+        setStatus(`Failed to upload file: ${error.message}`);
+        console.error('Upload error:', error);
+    }
 }
 
 function setStatus(message) {
