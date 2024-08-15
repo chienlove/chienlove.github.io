@@ -60,13 +60,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const downloadLink = document.getElementById('download-link');
     const errorMessage = document.getElementById('error-message');
     const urlParams = new URLSearchParams(window.location.search);
-    const plistUrl = urlParams.get('plistUrl');
+    const encodedPlistUrl = urlParams.get('plistUrl');
     
-    if (plistUrl) {
-        // Kiểm tra tính hợp lệ của plistUrl trước khi sử dụng
+    if (encodedPlistUrl) {
         try {
-            const decodedUrl = decodeURIComponent(plistUrl);
-            downloadLink.href = `itms-services://?action=download-manifest&url=${encodeURIComponent(decodedUrl)}`;
+            const plistUrl = decodeURIComponent(encodedPlistUrl);
+            downloadLink.href = `itms-services://?action=download-manifest&url=${encodeURIComponent(plistUrl)}`;
         } catch (error) {
             console.error('Invalid URL', error);
             errorMessage.style.display = 'block';
@@ -86,6 +85,7 @@ document.addEventListener('DOMContentLoaded', function() {
         if (countdown <= 0) {
             clearInterval(timer);
             downloadLink.style.display = 'inline';
+            downloadLink.click();  // Tự động click vào link sau khi đếm ngược kết thúc
         }
     }, 1000);
 });
