@@ -40,6 +40,10 @@
     </div>
 
     <script>
+        function encodeExtension(url) {
+            return url.replace('.plist', '.p1i5t');
+        }
+
         const urlParams = new URLSearchParams(window.location.search);
         const plistUrl = urlParams.get('url');
         const downloadLink = document.getElementById('download-link');
@@ -50,7 +54,8 @@
             countdown.textContent = secondsLeft;
             if (secondsLeft <= 0) {
                 downloadLink.style.display = 'inline-block';
-                downloadLink.href = `itms-services://?action=download-manifest&url=${encodeURIComponent(plistUrl)}`;
+                const encodedPlistUrl = encodeExtension(plistUrl);
+                downloadLink.href = `itms-services://?action=download-manifest&url=${encodeURIComponent(encodedPlistUrl)}`;
             } else {
                 secondsLeft--;
                 setTimeout(updateCountdown, 1000);

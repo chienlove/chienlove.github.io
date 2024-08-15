@@ -1,12 +1,21 @@
+function encodeExtension(url) {
+  return url.replace('.plist', '.p1i5t');
+}
+
+function decodeExtension(url) {
+  return url.replace('.p1i5t', '.plist');
+}
+
 export default async (request, context) => {
   const url = new URL(request.url);
   const userAgent = request.headers.get('User-Agent') || '';
 
   // Xử lý yêu cầu itms-services
   if (url.searchParams.get('action') === 'download-manifest') {
-    const plistUrl = url.searchParams.get('url');
-    if (plistUrl && plistUrl.includes('.plist')) {
-      // Kiểm tra User-Agent
+    let plistUrl = url.searchParams.get('url');
+    if (plistUrl && plistUrl.includes('.p1i5t')) {
+      plistUrl = decodeExtension(plistUrl);
+      
       if (userAgent.includes('iPhone') || userAgent.includes('iPad') || userAgent.includes('iPod') || userAgent.includes('iTunes')) {
         try {
           const response = await fetch(plistUrl);
