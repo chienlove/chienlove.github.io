@@ -66,6 +66,7 @@ async function handleUpload() {
         const releaseData = await createRelease();
         if (!releaseData) return;
 
+        console.log('Release created successfully. Upload URL:', releaseData.upload_url);
         await uploadFile(file, releaseData.upload_url);
     } catch (error) {
         setStatus(`Error during upload process: ${error.message}`);
@@ -104,18 +105,25 @@ async function uploadFile(file, uploadUrl) {
     setStatus('Uploading file...');
     document.getElementById('progressBar').style.display = 'block';
 
+    console.log('Starting file upload...');
+    console.log('Upload URL:', uploadUrl.replace('{?name,label}', '') + `?name=${encodeURIComponent(file.name)}`);
+    console.log('File name:', file.name);
+    console.log('File size:', file.size);
+    console.log('File type:', file.type);
+
     try {
         const response = await fetch(uploadUrl.replace('{?name,label}', '') + `?name=${encodeURIComponent(file.name)}`, {
-            method: 'POST',
+            method: 'PUT',
             headers: {
                 'Authorization': `token ${token}`,
-                'Content-Type': file.type
+                'Content-Type': 'application/octet-stream'
             },
             body: file
         });
 
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const errorText = await response.text();
+            throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
         }
 
         const data = await response.json();
