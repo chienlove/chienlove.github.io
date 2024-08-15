@@ -39,6 +39,12 @@
         #download-link:hover {
             background-color: #0056b3;
         }
+        .error {
+            color: red;
+            font-size: 1.2rem;
+            margin-top: 1rem;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -46,16 +52,30 @@
         <h1>Preparing your download...</h1>
         <p>Please wait for <span id="countdown">10</span> seconds.</p>
         <a href="#" id="download-link">Click here to install</a>
+        <p class="error" id="error-message">Failed to prepare the download link. Please try again.</p>
     </div>
 
     <script>
 document.addEventListener('DOMContentLoaded', function() {
     const downloadLink = document.getElementById('download-link');
+    const errorMessage = document.getElementById('error-message');
     const urlParams = new URLSearchParams(window.location.search);
     const plistUrl = urlParams.get('plistUrl');
     
     if (plistUrl) {
-        downloadLink.href = `itms-services://?action=download-manifest&url=${encodeURIComponent(plistUrl)}`;
+        // Kiểm tra tính hợp lệ của plistUrl trước khi sử dụng
+        try {
+            const decodedUrl = decodeURIComponent(plistUrl);
+            downloadLink.href = `itms-services://?action=download-manifest&url=${encodeURIComponent(decodedUrl)}`;
+        } catch (error) {
+            console.error('Invalid URL', error);
+            errorMessage.style.display = 'block';
+            return;
+        }
+    } else {
+        errorMessage.textContent = 'No download URL provided.';
+        errorMessage.style.display = 'block';
+        return;
     }
 
     let countdown = 10;
