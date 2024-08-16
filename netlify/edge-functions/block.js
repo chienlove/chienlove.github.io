@@ -7,19 +7,20 @@ export default async (request, context) => {
   // Generate and validate temp-token
   const tempToken = url.searchParams.get('token');
   if (tempToken) {
-    // Store the token temporarily (expires after 5 minutes)
-    validTokens.set(tempToken, Date.now() + 5 * 60 * 1000);
+    // Store the token temporarily without expiration
+    validTokens.set(tempToken, true);
   }
 
-  // Xử lý yêu cầu itms-services
+  // Handle the itms-services request
   if (url.searchParams.get('action') === 'download-manifest') {
     const plistUrl = url.searchParams.get('url');
     if (plistUrl && plistUrl.includes('.plist')) {
       if (userAgent.includes('iPhone') || userAgent.includes('iPad') || userAgent.includes('iPod') || userAgent.includes('iTunes')) {
         const plistToken = url.searchParams.get('token');
-        if (validTokens.has(plistToken) && validTokens.get(plistToken) > Date.now()) {
+        if (validTokens.has(plistToken)) {
           try {
-            validTokens.delete(plistToken); // Delete the token after use
+            // Remove the token immediately after use
+            validTokens.delete(plistToken);
             const response = await fetch(plistUrl);
             if (!response.ok) {
               throw new Error('Failed to fetch .plist file');
@@ -44,11 +45,11 @@ export default async (request, context) => {
     }
   }
 
-  // Chặn truy cập trực tiếp vào các tệp plist
+  // Block direct access to plist files
   if ((url.pathname.endsWith('.plist') || url.pathname.startsWith('/plist')) && !tempToken) {
     return new Response('This endpoint is not accessible directly.', { status: 403 });
   }
 
-  // Xử lý các yêu cầu khác
+  // Handle other requests
   return context.next();
 };
