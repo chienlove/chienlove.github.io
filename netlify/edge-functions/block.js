@@ -3,25 +3,25 @@ const validTokens = new Map();
 export default async (request, context) => {
   const url = new URL(request.url);
 
-  // Handle token generation
+  // Xử lý việc tạo token
   if (request.method === 'POST' && url.pathname === '/generate-token') {
     const token = generateToken();
-    const expirationTime = Date.now() + 30000; // Token expires in 30 seconds
+    const expirationTime = Date.now() + 30000; // Token hết hạn sau 30 giây
     validTokens.set(token, { expirationTime, url: url.searchParams.get('url') });
     return new Response(token, { status: 200 });
   }
 
-  // Handle the itms-services request with token
+  // Xử lý yêu cầu itms-services với token
   if (url.searchParams.get('action') === 'download-manifest') {
     const plistToken = url.searchParams.get('token');
     const plistUrl = decodeURIComponent(url.searchParams.get('url'));
 
     if (plistToken && validTokens.has(plistToken)) {
       const tokenData = validTokens.get(plistToken);
-      
-      // Ensure token is used only for the intended URL and is still valid
+
+      // Đảm bảo token chỉ được sử dụng cho URL đã định và vẫn còn hợp lệ
       if (Date.now() < tokenData.expirationTime && tokenData.url === plistUrl) {
-        validTokens.delete(plistToken); // Immediately delete token after use
+        validTokens.delete(plistToken); // Xóa token ngay sau khi sử dụng
         const response = await fetch(plistUrl);
         const plistContent = await response.text();
 
@@ -34,26 +34,27 @@ export default async (request, context) => {
           }
         });
       } else {
-        validTokens.delete(plistToken); // Clean up expired or invalid token
-        return new Response('Token expired or invalid', { status: 403 });
+        validTokens.delete(plistToken); // Xóa token hết hạn hoặc không hợp lệ
+        return Response.redirect('/access-denied.html', 302);
       }
     } else {
-      return new Response('Invalid or expired token', { status: 403 });
+      return Response.redirect('/access-denied.html', 302);
     }
   }
 
-  // Block direct access to plist files without token
+  // Chặn truy cập trực tiếp vào các file plist mà không có token
   if (url.pathname.endsWith('.plist')) {
     const plistToken = url.searchParams.get('token');
 
     if (!plistToken || !validTokens.has(plistToken)) {
-      return new Response('Access Denied', { status: 403 });
+      return Response.redirect('/access-denied.html', 302);
     }
   }
 
   return context.next();
 };
 
+// Hàm tạo token ngẫu nhiên
 function generateToken() {
   return Math.random().toString(36).substr(2, 10);
 }
