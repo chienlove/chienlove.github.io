@@ -4,27 +4,25 @@ export default async (request, context) => {
   const url = new URL(request.url);
   const userAgent = request.headers.get('User-Agent') || '';
 
-  // Generate and validate temp-token
-  const tempToken = url.searchParams.get('token');
-  if (tempToken) {
-    // Store the token temporarily without expiration
-    validTokens.set(tempToken, true);
-  }
-
   // Handle the itms-services request
   if (url.searchParams.get('action') === 'download-manifest') {
     const plistUrl = url.searchParams.get('url');
+    const plistToken = url.searchParams.get('token');
+    
     if (plistUrl && plistUrl.includes('.plist')) {
+      // Verify that the request comes from a compatible user-agent
       if (userAgent.includes('iPhone') || userAgent.includes('iPad') || userAgent.includes('iPod') || userAgent.includes('iTunes')) {
-        const plistToken = url.searchParams.get('token');
-        if (validTokens.has(plistToken)) {
+        // Check if token is valid and present
+        if (plistToken && validTokens.has(plistToken)) {
           try {
             // Remove the token immediately after use
             validTokens.delete(plistToken);
+            
             const response = await fetch(plistUrl);
             if (!response.ok) {
               throw new Error('Failed to fetch .plist file');
             }
+
             const plistContent = await response.text();
             return new Response(plistContent, {
               status: 200,
@@ -48,8 +46,8 @@ export default async (request, context) => {
     }
   }
 
-  // Block direct access to plist files
-  if ((url.pathname.endsWith('.plist') || url.pathname.startsWith('/plist')) && !tempToken) {
+  // Block direct access to plist files without valid token
+  if ((url.pathname.endsWith('.plist') || url.pathname.startsWith('/plist')) && !url.searchParams.get('token')) {
     return new Response('This endpoint is not accessible directly.', { status: 403 });
   }
 
