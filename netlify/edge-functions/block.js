@@ -2,6 +2,12 @@ const validTokens = new Map();
 
 export default async (request, context) => {
   const url = new URL(request.url);
+  const pathname = url.pathname;
+
+  // Chặn truy cập vào thư mục /plist và /plist/
+  if (pathname.startsWith('/plist') && !url.searchParams.has('token')) {
+    return Response.redirect('/access-denied.html', 302);
+  }
 
   // Xử lý việc tạo token
   if (request.method === 'POST' && url.pathname === '/generate-token') {
@@ -43,7 +49,7 @@ export default async (request, context) => {
   }
 
   // Chặn truy cập trực tiếp vào các file plist mà không có token
-  if (url.pathname.endsWith('.plist')) {
+  if (pathname.endsWith('.plist')) {
     const plistToken = url.searchParams.get('token');
 
     if (!plistToken || !validTokens.has(plistToken)) {
