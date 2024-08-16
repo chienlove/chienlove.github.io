@@ -12,7 +12,7 @@ export default async (request, context) => {
     if (plistUrl && plistUrl.includes('.plist')) {
       // Verify that the request comes from a compatible user-agent
       if (userAgent.includes('iPhone') || userAgent.includes('iPad') || userAgent.includes('iPod') || userAgent.includes('iTunes')) {
-        // Check if token is valid and present
+        // Check if token is valid and present in the validTokens map
         if (plistToken && validTokens.has(plistToken)) {
           try {
             // Remove the token immediately after use
@@ -46,7 +46,7 @@ export default async (request, context) => {
     }
   }
 
-  // Block direct access to plist files without valid token
+  // Block direct access to plist files without a valid token
   if ((url.pathname.endsWith('.plist') || url.pathname.startsWith('/plist')) && !url.searchParams.get('token')) {
     return new Response('This endpoint is not accessible directly.', { status: 403 });
   }
