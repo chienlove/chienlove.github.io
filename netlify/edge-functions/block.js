@@ -28,9 +28,12 @@ export default async (request, context) => {
       // Đảm bảo token chỉ được sử dụng cho URL đã định và vẫn còn hợp lệ
       if (Date.now() < tokenData.expirationTime && tokenData.url === plistUrl) {
         validTokens.delete(plistToken); // Xóa token ngay sau khi sử dụng
+
+        // Tải nội dung plist
         const response = await fetch(plistUrl);
         const plistContent = await response.text();
 
+        // Trả về nội dung plist và xóa token ngay lập tức
         return new Response(plistContent, {
           status: 200,
           headers: {
