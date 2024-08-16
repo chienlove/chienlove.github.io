@@ -1,6 +1,3 @@
-```javascript
-// netlify/functions/update-plists.js
-
 const fetch = require('node-fetch');
 const fs = require('fs');
 const path = require('path');
