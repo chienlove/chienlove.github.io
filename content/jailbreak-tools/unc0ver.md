@@ -10,6 +10,7 @@ description: "**Unc0ver** là một bản bẻ khoá, có nghĩa là bạn có 
 developer: pwn20pwd
 category: "Tool jailbreak "
 size: 60Mb
+ios_compatible: 11.0 - 14.8
 ios_version: 11.0 trở lên
 keywords:
   - unc0ver

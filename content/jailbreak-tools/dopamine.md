@@ -7,13 +7,14 @@ description: "**Dopamine** is A jailbreak for arm64e (A12 - A15) and M1
 developer: opa334
 category: "Tool jailbreak "
 size: 50Mb
+ios_compatible: 15.0 - 16.6.1
 ios_version: 15.0 - 15.4.1
 keywords:
   - Dopamine
 status: Signed
 versions:
   - intermediate_page_url: /intermediate/:appId
-    version: 2.1.7
+    version: 2.2.2
     appId: dopamine
     plistUrl: https://storeios.net/plist/dopamine.plist
 ---
