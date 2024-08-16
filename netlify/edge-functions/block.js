@@ -6,7 +6,7 @@ export default async (request, context) => {
   // Handle token generation
   if (request.method === 'POST' && url.pathname === '/generate-token') {
     const token = generateToken();
-    const expirationTime = Date.now() + 30000; // Token expires in 30 seconds (adjust if needed)
+    const expirationTime = Date.now() + 30000; // Token expires in 30 seconds
     validTokens.set(token, expirationTime);
     return new Response(token, { status: 200 });
   }
@@ -14,13 +14,13 @@ export default async (request, context) => {
   // Handle the itms-services request
   if (url.searchParams.get('action') === 'download-manifest') {
     const plistToken = url.searchParams.get('token');
-    
+    const plistUrl = url.searchParams.get('url');
+
     if (plistToken && validTokens.has(plistToken)) {
       const expirationTime = validTokens.get(plistToken);
       
       if (Date.now() < expirationTime) {
-        validTokens.delete(plistToken); // Immediately delete token after use
-        const plistUrl = url.searchParams.get('url');
+        validTokens.delete(plistToken); // Delete token after use
         const response = await fetch(plistUrl);
         const plistContent = await response.text();
 
@@ -43,7 +43,10 @@ export default async (request, context) => {
 
   // Block direct access to plist files without token
   if (url.pathname.endsWith('.plist') || url.pathname.startsWith('/plist')) {
-    return new Response('Access Denied', { status: 403 });
+    const plistToken = url.searchParams.get('token');
+    if (!plistToken || !validTokens.has(plistToken)) {
+      return new Response('Access Denied', { status: 403 });
+    }
   }
 
   return context.next();
