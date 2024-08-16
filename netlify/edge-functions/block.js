@@ -4,13 +4,13 @@ export default async (request, context) => {
   const url = new URL(request.url);
   const pathname = url.pathname;
 
-  // Chặn truy cập vào thư mục /plist và /plist/
+  // Chặn truy cập vào thư mục /plist và /plist/ nếu không có token
   if (pathname.startsWith('/plist') && !url.searchParams.has('token')) {
     return Response.redirect('/access-denied.html', 302);
   }
 
   // Xử lý việc tạo token
-  if (request.method === 'POST' && url.pathname === '/generate-token') {
+  if (request.method === 'POST' && pathname === '/generate-token') {
     const token = generateToken();
     const expirationTime = Date.now() + 30000; // Token hết hạn sau 30 giây
     validTokens.set(token, { expirationTime, url: url.searchParams.get('url') });
@@ -25,25 +25,25 @@ export default async (request, context) => {
     if (plistToken && validTokens.has(plistToken)) {
       const tokenData = validTokens.get(plistToken);
 
-      // Đảm bảo token chỉ được sử dụng cho URL đã định và vẫn còn hợp lệ
+      // Kiểm tra tính hợp lệ và thời gian tồn tại của token
       if (Date.now() < tokenData.expirationTime && tokenData.url === plistUrl) {
-        validTokens.delete(plistToken); // Xóa token ngay sau khi sử dụng
+        // Xóa token trước khi tải plist để đảm bảo không giữ lại token
+        validTokens.delete(plistToken); 
 
-        // Tải nội dung plist
+        // Tải và trả về nội dung plist
         const response = await fetch(plistUrl);
         const plistContent = await response.text();
 
-        // Trả về nội dung plist và xóa token ngay lập tức
         return new Response(plistContent, {
           status: 200,
           headers: {
             'Content-Type': 'application/x-plist',
             'Cache-Control': 'no-store',
-            'Pragma': 'no-cache'
+            'Pragma': 'no-cache',
           }
         });
       } else {
-        validTokens.delete(plistToken); // Xóa token hết hạn hoặc không hợp lệ
+        validTokens.delete(plistToken); // Xóa token không hợp lệ hoặc hết hạn
         return Response.redirect('/access-denied.html', 302);
       }
     } else {
@@ -51,7 +51,7 @@ export default async (request, context) => {
     }
   }
 
-  // Chặn truy cập trực tiếp vào các file plist mà không có token
+  // Chặn truy cập trực tiếp vào các file plist mà không có token hợp lệ
   if (pathname.endsWith('.plist')) {
     const plistToken = url.searchParams.get('token');
 
