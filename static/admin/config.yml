@@ -68,7 +68,7 @@ collections:
       - {label: "Nhà phát triển", name: "developer", widget: "string", required: true}
       - {label: "Thể loại", name: "category", widget: "string", required: true}
       - {label: "Kích thước", name: "size", widget: "string", required: true}
-      - {label: "iOS tương thích", name: "ios-compatible", widget: "string", required: true}
+      - {label: "iOS tương thích", name: "ios_compatible", widget: "string", required: true}
       - {label: "Từ khóa", name: "keywords", widget: "list", required: false}
       - {label: "Status", name: "status", widget: "select", options: ["Signed", "Revoked"], default: "Signed", required: true}
       - {name: "versions", label: "Versions", widget: "list", fields: [
