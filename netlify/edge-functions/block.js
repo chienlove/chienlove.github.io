@@ -30,7 +30,10 @@ export default async (request, context) => {
               status: 200,
               headers: {
                 'Content-Type': 'application/x-plist',
-                'Content-Disposition': 'attachment; filename="manifest.plist"'
+                'Content-Disposition': 'attachment; filename="manifest.plist"',
+                'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+                'Pragma': 'no-cache',
+                'Expires': '0'
               }
             });
           } catch (error) {
