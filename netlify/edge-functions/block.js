@@ -43,7 +43,7 @@ export default async (request, context) => {
   }
 
   // Block direct access to plist files without token
-  if ((url.pathname.endsWith('.plist') || url.pathname.startsWith('/plist')) {
+  if (url.pathname.endsWith('.plist') || url.pathname.startsWith('/plist')) {
     const plistToken = url.searchParams.get('token');
 
     if (!plistToken || !validTokens.has(plistToken)) {
