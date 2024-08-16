@@ -1,56 +1,54 @@
-const validTokens = new Map(); // In-memory store for valid tokens
+const validTokens = new Map();
 
 export default async (request, context) => {
   const url = new URL(request.url);
-  const userAgent = request.headers.get('User-Agent') || '';
+
+  // Handle token generation
+  if (request.method === 'POST' && url.pathname === '/generate-token') {
+    const token = generateToken();
+    const expirationTime = Date.now() + 30000; // Token expires in 30 seconds (adjust if needed)
+    validTokens.set(token, expirationTime);
+    return new Response(token, { status: 200 });
+  }
 
   // Handle the itms-services request
   if (url.searchParams.get('action') === 'download-manifest') {
-    const plistUrl = url.searchParams.get('url');
     const plistToken = url.searchParams.get('token');
     
-    if (plistUrl && plistUrl.includes('.plist')) {
-      // Verify that the request comes from a compatible user-agent
-      if (userAgent.includes('iPhone') || userAgent.includes('iPad') || userAgent.includes('iPod') || userAgent.includes('iTunes')) {
-        // Check if token is valid and present in the validTokens map
-        if (plistToken && validTokens.has(plistToken)) {
-          try {
-            // Remove the token immediately after use
-            validTokens.delete(plistToken);
-            
-            const response = await fetch(plistUrl);
-            if (!response.ok) {
-              throw new Error('Failed to fetch .plist file');
-            }
+    if (plistToken && validTokens.has(plistToken)) {
+      const expirationTime = validTokens.get(plistToken);
+      
+      if (Date.now() < expirationTime) {
+        validTokens.delete(plistToken); // Immediately delete token after use
+        const plistUrl = url.searchParams.get('url');
+        const response = await fetch(plistUrl);
+        const plistContent = await response.text();
 
-            const plistContent = await response.text();
-            return new Response(plistContent, {
-              status: 200,
-              headers: {
-                'Content-Type': 'application/x-plist',
-                'Content-Disposition': 'attachment; filename="manifest.plist"',
-                'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-                'Pragma': 'no-cache',
-                'Expires': '0'
-              }
-            });
-          } catch (error) {
-            return new Response('Error fetching .plist file', { status: 500 });
+        return new Response(plistContent, {
+          status: 200,
+          headers: {
+            'Content-Type': 'application/x-plist',
+            'Cache-Control': 'no-store',
+            'Pragma': 'no-cache'
           }
-        } else {
-          return new Response('Invalid or expired token', { status: 403 });
-        }
+        });
       } else {
-        return new Response('Access Denied', { status: 403 });
+        validTokens.delete(plistToken); // Clean up expired token
+        return new Response('Token expired', { status: 403 });
       }
+    } else {
+      return new Response('Invalid or expired token', { status: 403 });
     }
   }
 
-  // Block direct access to plist files without a valid token
-  if ((url.pathname.endsWith('.plist') || url.pathname.startsWith('/plist')) && !url.searchParams.get('token')) {
-    return new Response('This endpoint is not accessible directly.', { status: 403 });
+  // Block direct access to plist files without token
+  if (url.pathname.endsWith('.plist') || url.pathname.startsWith('/plist')) {
+    return new Response('Access Denied', { status: 403 });
   }
 
-  // Handle other requests
   return context.next();
 };
+
+function generateToken() {
+  return Math.random().toString(36).substr(2, 10);
+}
