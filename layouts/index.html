@@ -20,6 +20,17 @@
     </div>
 
   <h1>Tool Jailbreak</h1>
+  <div id="status">Loading...</div>
+<script>
+  fetch('/api/check-status')  // Đường dẫn đến Netlify Function
+    .then(response => response.json())
+    .then(data => {
+      document.getElementById('status').textContent = data.status;
+    })
+    .catch(error => {
+      document.getElementById('status').textContent = 'Error';
+    });
+</script>
     <div class="app-list">
         {{ range first 10 (where .Site.RegularPages "Type" "in" (slice "jailbreak-tools")) }}
             <div class="app-item">
