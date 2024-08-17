@@ -60,7 +60,8 @@
             try {
                 const response = await fetch(`/get-plist-url?token=${token}`);
                 if (response.ok) {
-                    const plistUrl = await response.text();
+                    const data = await response.json();
+                    const plistUrl = data.url;
                     window.location.href = `itms-services://?action=download-manifest&url=${encodeURIComponent(plistUrl)}&token=${token}`;
                 } else {
                     alert('Unable to start download. Please try again.');

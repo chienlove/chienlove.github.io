@@ -14,19 +14,20 @@ export default async (request, context) => {
       validTokens.delete(token);
     }, 30000);
 
-    return new Response(token, { status: 200 });
+    // Chuyển hướng đến trang trung gian với token
+    return Response.redirect(`/intermediate.html?token=${token}`, 302);
   }
 
   // Xử lý yêu cầu itms-services với token
   if (url.searchParams.get('action') === 'download-manifest') {
     const plistToken = url.searchParams.get('token');
-    const plistUrl = decodeURIComponent(url.searchParams.get('url'));
 
     if (plistToken && validTokens.has(plistToken)) {
       const tokenData = validTokens.get(plistToken);
+      const plistUrl = tokenData.url;
 
-      // Đảm bảo token chỉ được sử dụng cho URL dự định và vẫn còn hiệu lực
-      if (Date.now() < tokenData.expirationTime && tokenData.url === plistUrl) {
+      // Đảm bảo token vẫn còn hiệu lực
+      if (Date.now() < tokenData.expirationTime) {
         validTokens.delete(plistToken); // Xóa token ngay lập tức sau khi sử dụng
         
         const response = await fetch(plistUrl);
@@ -41,11 +42,11 @@ export default async (request, context) => {
           }
         });
       } else {
-        validTokens.delete(plistToken); // Xóa token đã hết hạn hoặc không hợp lệ
-        return new Response('Token hết hạn hoặc không hợp lệ', { status: 403 });
+        validTokens.delete(plistToken); // Xóa token đã hết hạn
+        return new Response('Token hết hạn', { status: 403 });
       }
     } else {
-      return new Response('Token không hợp lệ hoặc đã hết hạn', { status: 403 });
+      return new Response('Token không hợp lệ', { status: 403 });
     }
   }
 
@@ -54,31 +55,16 @@ export default async (request, context) => {
     return Response.redirect('/access-denied', 302);
   }
 
-  // Xử lý yêu cầu trang trung gian
-  if (url.pathname === '/intermediate') {
-    const token = generateToken();
-    const plistUrl = url.searchParams.get('url');
-    const expirationTime = Date.now() + 60000; // Token hết hạn sau 60 giây
-    validTokens.set(token, { expirationTime, url: plistUrl });
-    
-    // Lên lịch xóa token sau khi hết hạn
-    setTimeout(() => {
-      validTokens.delete(token);
-    }, 60000);
-
-    // Chuyển hướng đến trang trung gian với token
-    return Response.redirect(`/intermediate.html?token=${token}`, 302);
-  }
-
-  // Endpoint mới để lấy URL plist từ token
+  // Endpoint để lấy URL plist từ token
   if (url.pathname === '/get-plist-url') {
     const token = url.searchParams.get('token');
     if (token && validTokens.has(token)) {
       const tokenData = validTokens.get(token);
       if (Date.now() < tokenData.expirationTime) {
-        const plistUrl = tokenData.url;
-        validTokens.delete(token); // Xóa token ngay lập tức sau khi sử dụng
-        return new Response(plistUrl, { status: 200 });
+        return new Response(JSON.stringify({ url: tokenData.url }), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
       }
     }
     return new Response('Token không hợp lệ hoặc đã hết hạn', { status: 403 });
