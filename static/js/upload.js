@@ -1,5 +1,6 @@
 const CLIENT_ID = 'Ov23lixtCFiQYWFH232n'; // replace with your actual client ID
 const REDIRECT_URI = 'https://storeios.net/.netlify/functions/callback'; // replace with your actual redirect URI
+const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB max file size
 
 let token = localStorage.getItem('github_token');
 
@@ -61,6 +62,11 @@ async function handleUpload() {
         return;
     }
 
+    if (file.size > MAX_FILE_SIZE) {
+        setStatus(`File size exceeds the maximum limit of ${MAX_FILE_SIZE / 1024 / 1024}MB`);
+        return;
+    }
+
     try {
         setStatus('Creating release...');
         const releaseData = await createRelease();
@@ -90,7 +96,8 @@ async function createRelease() {
         });
 
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const errorText = await response.text();
+            throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
         }
 
         return await response.json();
@@ -113,16 +120,20 @@ async function uploadFile(file, uploadUrl) {
 
     try {
         const response = await fetch(uploadUrl.replace('{?name,label}', '') + `?name=${encodeURIComponent(file.name)}`, {
-            method: 'PUT',
+            method: 'POST',
             headers: {
                 'Authorization': `token ${token}`,
-                'Content-Type': 'application/octet-stream'
+                'Content-Type': file.type || 'application/octet-stream'
             },
             body: file
         });
 
+        console.log('Response status:', response.status);
+        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
         if (!response.ok) {
             const errorText = await response.text();
+            console.error('Error response body:', errorText);
             throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
         }
 
