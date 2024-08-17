@@ -365,3 +365,20 @@ footer {
         width: 100%;
     }
 }
+#status {
+  display: flex;
+  align-items: center;
+  font-size: 1.2em;
+}
+
+#status.signed {
+  color: green;
+}
+
+#status.revoked {
+  color: red;
+}
+
+.status-icon {
+  margin-right: 8px;
+}
