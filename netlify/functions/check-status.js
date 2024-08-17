@@ -1,7 +1,7 @@
 const fetch = require('node-fetch');
 
 exports.handler = async function(event, context) {
-  const url = 'https://ipa-apps.me'; 
+  const url = 'https://claude.ai'; 
   
   try {
     const response = await fetch(url);
