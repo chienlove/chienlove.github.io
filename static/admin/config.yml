@@ -70,7 +70,6 @@ collections:
       - {label: "Kích thước", name: "size", widget: "string", required: true}
       - {label: "iOS tương thích", name: "ios_compatible", widget: "string", required: true}
       - {label: "Từ khóa", name: "keywords", widget: "list", required: false}
-      - {label: "Status", name: "status", widget: "select", options: ["Signed", "Revoked"], default: "Signed", required: true}
       - {name: "versions", label: "Versions", widget: "list", fields: [
           {name: "version", label: "Version", widget: "string"},
           {name: "appId", label: "App ID", widget: "string"},
