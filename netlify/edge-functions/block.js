@@ -18,21 +18,20 @@ export default async (request, context) => {
 
     if (plistToken && validTokens.has(plistToken)) {
       const tokenData = validTokens.get(plistToken);
-      
+
       // Ensure token is used only for the intended URL and is still valid
       if (Date.now() < tokenData.expirationTime && tokenData.url === plistUrl) {
         validTokens.delete(plistToken); // Immediately delete token after use
+        
         const response = await fetch(plistUrl);
         const plistContent = await response.text();
-
-        // Token is deleted right here to prevent reuse
-        validTokens.delete(plistToken);
 
         return new Response(plistContent, {
           status: 200,
           headers: {
             'Content-Type': 'application/x-plist',
-            'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate'
+            'Cache-Control': 'no-store',
+            'Pragma': 'no-cache'
           }
         });
       } else {
@@ -49,7 +48,7 @@ export default async (request, context) => {
     const plistToken = url.searchParams.get('token');
 
     if (!plistToken || !validTokens.has(plistToken)) {
-      return context.rewrite('/access-denied.html'); // Redirect to a custom access denied page
+      return Response.redirect('/access-denied', 302);
     }
   }
 
