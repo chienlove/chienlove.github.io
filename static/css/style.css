@@ -386,3 +386,6 @@ footer {
   font-size: 1.2em; /* Thay đổi kích thước biểu tượng */
   margin-right: 5px; /* Khoảng cách giữa biểu tượng và chữ trạng thái */
 }
+
+h2 {
+    display: inline;
