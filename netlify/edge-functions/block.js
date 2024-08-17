@@ -1,4 +1,5 @@
-const validTokens = new Map();
+const Redis = require("ioredis");
+const redis = new Redis();
 
 export default async (request, context) => {
   const url = new URL(request.url);
@@ -6,8 +7,11 @@ export default async (request, context) => {
   // Handle token generation
   if (request.method === 'POST' && url.pathname === '/generate-token') {
     const token = generateToken();
-    const expirationTime = Date.now() + 30000; // Token expires in 30 seconds
-    validTokens.set(token, { expirationTime, url: url.searchParams.get('url') });
+    const expirationTime = 30; // Token expires in 30 seconds
+
+    // Store token in Redis with expiration time
+    await redis.set(token, url.searchParams.get('url'), 'EX', expirationTime);
+
     return new Response(token, { status: 200 });
   }
 
@@ -16,39 +20,33 @@ export default async (request, context) => {
     const plistToken = url.searchParams.get('token');
     const plistUrl = decodeURIComponent(url.searchParams.get('url'));
 
-    if (plistToken && validTokens.has(plistToken)) {
-      const tokenData = validTokens.get(plistToken);
+    const storedUrl = await redis.get(plistToken);
+    
+    if (storedUrl === plistUrl) {
+      await redis.del(plistToken); // Immediately delete token after use
+      const response = await fetch(plistUrl);
+      const plistContent = await response.text();
 
-      // Ensure token is used only for the intended URL and is still valid
-      if (Date.now() < tokenData.expirationTime && tokenData.url === plistUrl) {
-        validTokens.delete(plistToken); // Immediately delete token after use
-        
-        const response = await fetch(plistUrl);
-        const plistContent = await response.text();
-
-        return new Response(plistContent, {
-          status: 200,
-          headers: {
-            'Content-Type': 'application/x-plist',
-            'Cache-Control': 'no-store',
-            'Pragma': 'no-cache'
-          }
-        });
-      } else {
-        validTokens.delete(plistToken); // Clean up expired or invalid token
-        return new Response('Token expired or invalid', { status: 403 });
-      }
+      return new Response(plistContent, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/x-plist',
+          'Cache-Control': 'no-store',
+          'Pragma': 'no-cache'
+        }
+      });
     } else {
-      return new Response('Invalid or expired token', { status: 403 });
+      return new Response('Token expired or invalid', { status: 403 });
     }
   }
 
   // Block direct access to plist files without token
   if (url.pathname.endsWith('.plist')) {
     const plistToken = url.searchParams.get('token');
+    const storedUrl = await redis.get(plistToken);
 
-    if (!plistToken || !validTokens.has(plistToken)) {
-      return Response.redirect('/access-denied', 302);
+    if (!plistToken || !storedUrl) {
+      return new Response('Access Denied', { status: 403 });
     }
   }
 
