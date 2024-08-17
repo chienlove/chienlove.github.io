@@ -19,7 +19,7 @@
         {{ end }}
     </div>
 
-  <h2>Tool Jailbreak</h2><span id="status" class="status"><span id="status-icon" class="status-icon"></span><span id="status-text">Loading...</span></span>
+  <h2>Tool Jailbreak</h2> (<span id="status" class="status"><span id="status-icon" class="status-icon"></span><span id="status-text">Loading...</span></span>)
     <div class="app-list">
         {{ range first 10 (where .Site.RegularPages "Type" "in" (slice "jailbreak-tools")) }}
             <div class="app-item">
