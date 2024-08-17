@@ -368,26 +368,26 @@ footer {
 
 }
 #status {
-  display: flex;
-  align-items: center; /* Đảm bảo trạng thái và biểu tượng nằm ngang hàng */
-  font-size: 0.9em; /* Thay đổi kích thước chữ của trạng thái */
+  display: inline-flex;
+  align-items: center;
+  font-size: 14px; /* Kích thước font chữ */
   margin-left: 10px; /* Khoảng cách giữa tiêu đề và trạng thái */
-}
-
-#status.signed {
-  color: green;
-}
-
-#status.revoked {
-  color: red;
+  font-style: italic; /* Tùy chọn: chữ nghiêng */
 }
 
 .status-icon {
-  font-size: 1.2em; /* Thay đổi kích thước biểu tượng */
-  margin-right: 5px; /* Khoảng cách giữa biểu tượng và chữ trạng thái */
+  margin-right: 5px; /* Khoảng cách giữa icon và văn bản */
+}
+
+#status:before {
+  content: "(";
+  margin-right: 5px; /* Khoảng cách giữa dấu mở ngoặc và icon */
+}
+
+#status:after {
+  content: ")";
+  margin-left: 5px; /* Khoảng cách giữa dấu đóng ngoặc và văn bản */
 }
 
 h2 {
-    display: inline;
-    margin-right: 5px;
     margin-bottom: 10px;
