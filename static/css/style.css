@@ -365,10 +365,13 @@ footer {
         width: 100%;
     }
 }
+
+}
 #status {
   display: flex;
-  align-items: center;
-  font-size: 1.2em;
+  align-items: center; /* Đảm bảo trạng thái và biểu tượng nằm ngang hàng */
+  font-size: 0.9em; /* Thay đổi kích thước chữ của trạng thái */
+  margin-left: 10px; /* Khoảng cách giữa tiêu đề và trạng thái */
 }
 
 #status.signed {
@@ -380,5 +383,6 @@ footer {
 }
 
 .status-icon {
-  margin-right: 8px;
+  font-size: 1.2em; /* Thay đổi kích thước biểu tượng */
+  margin-right: 5px; /* Khoảng cách giữa biểu tượng và chữ trạng thái */
 }
