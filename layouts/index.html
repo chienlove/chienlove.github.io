@@ -56,26 +56,8 @@
             </div>
         {{ end }}
     </div>
-
-    <!-- Google AdSense -->
-    <div class="ad-container">
-        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797"
-             crossorigin="anonymous"></script>
-        <!-- Storeios ads -->
-        <ins class="adsbygoogle"
-             style="display:block;width:300px;height:250px"
-             data-ad-client="ca-pub-3905625903416797"
-             data-ad-slot="5160182988"
-             data-ad-format="auto"
-             data-full-width-responsive="true"></ins>
-        <script>
-             (adsbygoogle = window.adsbygoogle || []).push({});
-        </script>
-    </div>
-</main>
-{{ end }}
-
-<script>
+    <!-- status -->
+  <script>
   fetch('/api/check-status')  // Đường dẫn đến Netlify Function
     .then(response => response.json())
     .then(data => {
@@ -100,3 +82,20 @@
       document.getElementById('status-text').textContent = 'Error';
     });
 </script>
+    <!-- Google AdSense -->
+    <div class="ad-container">
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797"
+             crossorigin="anonymous"></script>
+        <!-- Storeios ads -->
+        <ins class="adsbygoogle"
+             style="display:block;width:300px;height:250px"
+             data-ad-client="ca-pub-3905625903416797"
+             data-ad-slot="5160182988"
+             data-ad-format="auto"
+             data-full-width-responsive="true"></ins>
+        <script>
+             (adsbygoogle = window.adsbygoogle || []).push({});
+        </script>
+    </div>
+</main>
+{{ end }}
