@@ -63,7 +63,7 @@
         return;
     }
 
-    // Request temp-token from server
+    // Chỉ tạo một temp-token từ server
     fetch('/generate-token', {
         method: 'POST',
         headers: {
@@ -94,7 +94,8 @@
         }
         
         updateCountdown();
-        
+
+        // Chỉ kích hoạt tải và xóa token sau khi nhấp chuột
         downloadLink.addEventListener('click', function(e) {
             e.preventDefault();
             window.location.href = installLink;
