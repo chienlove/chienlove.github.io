@@ -367,16 +367,21 @@ footer {
 }
 
 }
+h2 {
+  margin-bottom: 20px; /* Khoảng cách giữa tiêu đề và nội dung bên dưới */
+}
+
 #status {
-  display: inline-flex;
-  align-items: center;
+  display: inline-flex; /* Đặt các phần tử nằm trên cùng một hàng */
+  align-items: center; /* Căn giữa icon và văn bản theo chiều dọc */
   font-size: 14px; /* Kích thước font chữ */
-  margin-left: 10px; /* Khoảng cách giữa tiêu đề và trạng thái */
   font-style: italic; /* Tùy chọn: chữ nghiêng */
+  margin-left: 10px; /* Khoảng cách giữa tiêu đề và trạng thái */
 }
 
 .status-icon {
   margin-right: 5px; /* Khoảng cách giữa icon và văn bản */
+  font-size: 16px; /* Kích thước icon */
 }
 
 #status:before {
@@ -389,5 +394,26 @@ footer {
   margin-left: 5px; /* Khoảng cách giữa dấu đóng ngoặc và văn bản */
 }
 
-h2 {
-    margin-bottom: 10px;
+.status.signed .status-icon {
+  color: green; /* Màu của icon khi trạng thái là "signed" */
+}
+
+.status.revoked .status-icon {
+  color: red; /* Màu của icon khi trạng thái là "revoked" */
+}
+
+.status.signed #status-text {
+  color: green; /* Màu của văn bản khi trạng thái là "signed" */
+}
+
+.status.revoked #status-text {
+  color: red; /* Màu của văn bản khi trạng thái là "revoked" */
+}
+
+.status.error .status-icon {
+  color: orange; /* Màu của icon khi có lỗi */
+}
+
+.status.error #status-text {
+  color: orange; /* Màu của văn bản khi có lỗi */
+}
