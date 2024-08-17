@@ -28,7 +28,7 @@ export default async (request, context) => {
       // Kiểm tra tính hợp lệ và thời gian tồn tại của token
       if (Date.now() < tokenData.expirationTime && tokenData.url === plistUrl) {
         // Xóa token trước khi tải plist để đảm bảo không giữ lại token
-        validTokens.delete(plistToken); 
+        await deleteToken(plistToken);
 
         // Tải và trả về nội dung plist
         const response = await fetch(plistUrl);
@@ -43,7 +43,7 @@ export default async (request, context) => {
           }
         });
       } else {
-        validTokens.delete(plistToken); // Xóa token không hợp lệ hoặc hết hạn
+        await deleteToken(plistToken); // Xóa token không hợp lệ hoặc hết hạn
         return Response.redirect('/access-denied.html', 302);
       }
     } else {
@@ -66,4 +66,11 @@ export default async (request, context) => {
 // Hàm tạo token ngẫu nhiên
 function generateToken() {
   return Math.random().toString(36).substr(2, 10);
+}
+
+// Hàm xóa token đồng bộ
+async function deleteToken(token) {
+  if (validTokens.has(token)) {
+    validTokens.delete(token);
+  }
 }
