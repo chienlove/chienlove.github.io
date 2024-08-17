@@ -56,16 +56,15 @@
     const countdownElement = document.getElementById('countdown');
     const downloadLink = document.getElementById('download-link');
     
-    const urlParams = new URLSearchParams(window.location.search);
-    const plistUrl = urlParams.get('plistUrl');
+    const plistUrl = sessionStorage.getItem('plistUrl');
     
     if (!plistUrl) {
-        console.error('No plistUrl provided');
+        console.error('No plistUrl found in sessionStorage');
         document.body.innerHTML = '<div class="container"><h1>Error</h1><p>Invalid download link. Please try again.</p></div>';
         return;
     }
     
-    // Chỉ tạo một temp-token từ server
+    // Request token from server
     fetch('/generate-token', {
         method: 'POST',
         headers: {
@@ -97,7 +96,7 @@
         
         updateCountdown();
 
-        // Chỉ kích hoạt tải và xóa token sau khi nhấp chuột
+        // Trigger download and remove token upon click
         downloadLink.addEventListener('click', function(e) {
             e.preventDefault();
             window.location.href = installLink;
@@ -108,5 +107,4 @@
         document.body.innerHTML = '<div class="container"><h1>Error</h1><p>An error occurred. Please try again later.</p></div>';
     });
 })();
-</script></body>
-</html>
+</script>
