@@ -47,7 +47,7 @@
         <p>Please wait for <span id="countdown">10</span> seconds.</p>
         <a href="#" id="download-link">Click here to install</a>
     </div>
-
+<p id="url-display"></p>
     <script>
 (function() {
     let countdown = 10;
@@ -62,7 +62,8 @@
         document.body.innerHTML = '<div class="container"><h1>Error</h1><p>Invalid download link. Please try again.</p></div>';
         return;
     }
-
+    const urlDisplayElement = document.getElementById('url-display');
+urlDisplayElement.textContent = installLink; // Hiển thị URL chứa token
     // Chỉ tạo một temp-token từ server
     fetch('/generate-token', {
         method: 'POST',
