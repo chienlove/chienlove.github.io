@@ -8,6 +8,12 @@ export default async (request, context) => {
     const token = generateToken();
     const expirationTime = Date.now() + 30000; // Token expires in 30 seconds
     validTokens.set(token, { expirationTime, url: url.searchParams.get('url') });
+    
+    // Schedule token cleanup after expiration time
+    setTimeout(() => {
+      validTokens.delete(token);
+    }, expirationTime - Date.now());
+
     return new Response(token, { status: 200 });
   }
 
@@ -43,7 +49,7 @@ export default async (request, context) => {
     }
   }
 
-  // Block direct access to plist files or the /plist folder without a valid token
+  // Block direct access to plist files without token
   if (url.pathname.endsWith('.plist') || url.pathname.startsWith('/plist')) {
     const plistToken = url.searchParams.get('token');
 
