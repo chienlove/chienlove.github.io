@@ -1,22 +1,21 @@
+{{ define "head" }}
+    <link rel="stylesheet" href="/css/jailbreak-tools.css?v={{ now.Unix }}">
+{{ end }}
+
 {{ define "main" }}
 <main>
-    <h1>{{ .Title }}</h1>
-    {{ .Content }}
-    
-    <h2>Bài viết mới nhất</h2>
-    <ul class="post-list">
-        {{ range first 10 (where .Site.RegularPages "Type" "in" (slice "jailbreak-tools" )) }}
-            <li class="post-item">
-                <div class="post-icon">
-                    <i class="fas fa-file-alt"></i>
+        <ul class="jailbreak-list">
+            {{ range .Pages }}
+            <li class="jailbreak-item">
+                <img src="{{ .Params.icon }}" alt="{{ .Title }} icon" class="jailbreak-icon">
+                <div class="jailbreak-info">
+                    <h2>{{ .Title }}</h2>
+                    <p class="developer">{{ .Params.developer }}</p>
+                    <p class="compatibility">{{ .Params.ios_compatible }}</p>
                 </div>
-                <div class="post-content">
-                    <h3><a href="{{ .Permalink }}">{{ .Title }}</a></h3>
-                    <time>{{ .Date.Format "02-01-2006" }}</time>
-                    <p>{{ .Summary }}</p>
-                </div>
+                <span class="version">{{ index .Params.versions 0 "version" }}</span>
             </li>
-        {{ end }}
-    </ul>
-</main>
+            {{ end }}
+        </ul>
+    </main>
 {{ end }}

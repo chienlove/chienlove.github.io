@@ -76,3 +76,53 @@ p {
 .download-link:hover {
     background-color: #218838; /* Màu xanh đậm hơn khi hover */
 }
+
+  /* list jailbreak tool css */
+
+h1 {
+    margin: 0;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.jailbreak-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.jailbreak-item {
+    display: flex;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 1px solid #e0e0e0;
+    background-color: #ffffff;
+}
+
+.jailbreak-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    margin-right: 15px;
+}
+
+.jailbreak-info {
+    flex-grow: 1;
+}
+
+.jailbreak-info h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.developer, .compatibility {
+    margin: 2px 0;
+    font-size: 14px;
+    color: #8e8e93;
+}
+
+.version {
+    font-size: 14px;
+    color: #8e8e93;
+}
