@@ -1,32 +1,10 @@
-ddocument.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', () => {
   const netlifyIdentity = window.netlifyIdentity;
 
   // Khởi tạo Netlify Identity
   netlifyIdentity.init();
 
-  // Các phần còn lại của mã xử lý đăng nhập và đăng xuất
-  const loginFormContainer = document.getElementById('login-form-container');
-  const userInfoContainer = document.getElementById('user-info-container');
-  const userAvatar = document.getElementById('avatar');
-  const userName = document.getElementById('user-name');
-  const userEmail = document.getElementById('user-email');
-  const loginDate = document.getElementById('login-date');
-  const userRole = document.getElementById('user-role');
-  const logoutButton = document.getElementById('logout-button');
-  const googleLoginButton = document.getElementById('google-login-button');
-
-  function showUserInfo(user) {
-    loginFormContainer.style.display = 'none';
-    userInfoContainer.style.display = 'flex';
-
-    const userMetadata = user.user_metadata || {};
-    userAvatar.src = user.user_metadata.avatar_url || 'default-avatar.png';
-    userName.textContent = user.user_metadata.full_name || 'Chưa có tên';
-    userEmail.textContent = user.email;
-    loginDate.textContent = new Date(user.updated_at).toLocaleDateString();
-    userRole.textContent = user.user_metadata.role || 'Thành viên';
-  }
-
+  // Xử lý đăng nhập admin
   document.getElementById('admin-login-form').addEventListener('submit', async (event) => {
     event.preventDefault();
     const email = document.getElementById('admin-email').value;
@@ -40,15 +18,29 @@ ddocument.addEventListener('DOMContentLoaded', () => {
     }
   });
 
+  // Xử lý đăng nhập Google
   googleLoginButton.addEventListener('click', () => {
     netlifyIdentity.open('login');
   });
 
+  // Xử lý đăng xuất
   logoutButton.addEventListener('click', () => {
     netlifyIdentity.logout();
     loginFormContainer.style.display = 'flex';
     userInfoContainer.style.display = 'none';
   });
+
+  function showUserInfo(user) {
+    loginFormContainer.style.display = 'none';
+    userInfoContainer.style.display = 'flex';
+
+    const userMetadata = user.user_metadata || {};
+    userAvatar.src = user.user_metadata.avatar_url || 'default-avatar.png';
+    userName.textContent = user.user_metadata.full_name || 'Chưa có tên';
+    userEmail.textContent = user.email;
+    loginDate.textContent = new Date(user.updated_at).toLocaleDateString();
+    userRole.textContent = user.user_metadata.role || 'Thành viên';
+  }
 
   if (netlifyIdentity.currentUser()) {
     showUserInfo(netlifyIdentity.currentUser());
