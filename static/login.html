@@ -4,27 +4,46 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Trang Đăng Nhập</title>
-  <link rel="stylesheet" href="/css/login.css">
+  <link rel="stylesheet" href="/css/custom-login.css">
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script src="/js/custom-login.js" defer></script>
 </head>
 <body>
   <div class="login-container">
-    <h1>Đăng Nhập</h1>
-    <div class="login-form-container">
-      <form id="admin-login-form">
-        <h2>Đăng Nhập Admin</h2>
-        <label for="admin-email">Email:</label>
-        <input type="email" id="admin-email" required>
-        <label for="admin-password">Mật khẩu:</label>
-        <input type="password" id="admin-password" required>
-        <button type="submit">Đăng Nhập Admin</button>
-      </form>
-      <div class="google-login-container">
-        <h2>Hoặc Đăng Nhập bằng Google</h2>
-        <button id="google-login-button">Đăng Nhập bằng Google</button>
+    <!-- Form đăng nhập -->
+    <div id="login-form-container">
+      <h1>Đăng Nhập</h1>
+      <div class="login-form-container">
+        <form id="admin-login-form">
+          <h2>Đăng Nhập Admin</h2>
+          <label for="admin-email">Email:</label>
+          <input type="email" id="admin-email" required>
+          <label for="admin-password">Mật khẩu:</label>
+          <input type="password" id="admin-password" required>
+          <button type="submit">Đăng Nhập Admin</button>
+        </form>
+        <div class="google-login-container">
+          <h2>Hoặc Đăng Nhập bằng Google</h2>
+          <button id="google-login-button">Đăng Nhập bằng Google</button>
+        </div>
       </div>
     </div>
+    
+    <!-- Thông tin tài khoản -->
+    <div id="user-info-container" style="display: none;">
+      <h1>Thông Tin Tài Khoản</h1>
+      <div id="user-avatar">
+        <img id="avatar" src="" alt="Avatar" />
+      </div>
+      <div id="user-details">
+        <p><strong>Tên:</strong> <span id="user-name"></span></p>
+        <p><strong>Email:</strong> <span id="user-email"></span></p>
+        <p><strong>Ngày đăng nhập:</strong> <span id="login-date"></span></p>
+        <p><strong>Vai trò:</strong> <span id="user-role"></span></p>
+      </div>
+      <button id="logout-button">Đăng Xuất</button>
+      <a href="/">Trở lại trang chủ</a>
+    </div>
   </div>
-  <script src="/js/login.js" defer></script>
 </body>
 </html>

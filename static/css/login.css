@@ -17,7 +17,8 @@ body {
   text-align: center;
 }
 
-.login-form-container {
+.login-form-container,
+#user-info-container {
   display: flex;
   flex-direction: column;
 }
@@ -72,4 +73,25 @@ button:hover {
 
 #google-login-button:hover {
   background-color: #357ae8;
+}
+
+#user-avatar img {
+  border-radius: 50%;
+  width: 80px;
+  height: 80px;
+}
+
+#user-info-container {
+  display: flex;
+  flex-direction: column;
+}
+
+#user-info-container a {
+  margin-top: 20px;
+  text-decoration: none;
+  color: #007bff;
+}
+/* Ẩn widget đăng nhập mặc định của Netlify Identity */
+.netlify-identity-widget {
+  display: none !important;
 }
