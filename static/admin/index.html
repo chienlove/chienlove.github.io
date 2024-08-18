@@ -1,12 +1,24 @@
-<!doctype html>
-<html>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <title>Content Manager</title>
-  <link rel="stylesheet" href="htts://storeios.net/admin/admin.css">
-  <link rel="stylesheet" href="https://unpkg.com/netlify-cms@^2.9.0/dist/netlify-cms.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Custom Admin Dashboard</title>
+  <link rel="stylesheet" href="/admin/styles.css">
 </head>
 <body>
-  <script src="https://unpkg.com/netlify-cms@^2.9.0/dist/netlify-cms.js">
-  </script>
+  <div id="app">
+    <header>
+      <h1>Custom Admin Dashboard</h1>
+      <button id="loginButton">Login</button>
+      <button id="logoutButton" style="display: none;">Logout</button>
+    </header>
+    <main>
+      <h2>Posts</h2>
+      <ul id="postsList"></ul>
+      <button id="createPostButton">Create New Post</button>
+    </main>
+    <script src="/admin/script.js"></script>
+  </div>
 </body>
 </html>
