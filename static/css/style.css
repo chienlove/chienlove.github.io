@@ -23,7 +23,6 @@ body {
     z-index: 1000;
     height: 70px;
 }
-}
 
 .header-container {
     display: flex;
@@ -372,7 +371,6 @@ p {
     }
 }
 
-}
 h2 {
   margin-bottom: 20px; /* Khoảng cách giữa tiêu đề và nội dung bên dưới */
 }
