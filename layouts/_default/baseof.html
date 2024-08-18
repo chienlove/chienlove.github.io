@@ -120,7 +120,7 @@
         netlifyIdentity.on('init', user => {
             if (user) {
                 // Check if admin
-                if (user.email.endsWith('@youradminemail.com')) {
+                if (user.email.endsWith('@storeios.net')) {
                     document.getElementById('admin-login').style.display = 'none';
                     document.getElementById('admin-info').style.display = 'block';
                     document.getElementById('admin-name').innerText = user.user_metadata.full_name;
