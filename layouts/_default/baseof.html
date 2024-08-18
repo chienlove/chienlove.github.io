@@ -11,60 +11,62 @@
 <body>
     <header class="site-header">
         <div class="header-container">
-            <!-- Logo -->
             <div class="logo">
                 <a href="/">
                     <img src="/images/logo.png" alt="{{ .Site.Title }}">
                 </a>
             </div>
-
-            <!-- Tìm kiếm -->
             <div class="search-bar">
                 <form action="/search" method="get">
                     <input type="text" name="q" placeholder="Tìm kiếm apps & games">
                     <button type="submit"><i class="fas fa-search"></i></button>
                 </form>
             </div>
-
-            <!-- Menu hamburger -->
-            <div class="mobile-menu-toggle" id="mobile-menu-toggle">
+            <nav class="main-nav">
+                <ul>
+                    <li><a href="/">Trang chủ</a></li>
+                    <li><a href="/games">Games</a></li>
+                    <li><a href="/apps">Apps</a></li>
+                    <li><a href="/topics">Chủ đề</a></li>
+                </ul>
+            </nav>
+            <div class="user-menu">
+                <div id="login-button" style="display: none;">
+                    <a href="#" onclick="login()">Đăng nhập</a>
+                </div>
+                <div id="user-info" style="display: none;">
+                    <span id="user-name"></span>
+                    <span id="user-email"></span>
+                    <a href="#" onclick="logout()">Đăng xuất</a>
+                </div>
+            </div>
+            <div class="hamburger-menu">
                 <i class="fas fa-bars"></i>
             </div>
         </div>
-
-        <!-- Menu chính -->
-        <nav class="main-nav" id="main-nav">
-            <ul>
-                <li><a href="/">Trang chủ</a></li>
-                <li><a href="/games">Games</a></li>
-                <li><a href="/apps">Apps</a></li>
-                <li><a href="/topics">Chủ đề</a></li>
-
-                <!-- Nút đăng nhập Netlify Identity -->
-                <li id="identity-login">
-                    <a href="#" id="identity-login-btn"><i class="fas fa-sign-in-alt"></i> Đăng nhập</a>
-                </li>
-
-                <!-- Hiển thị thông tin admin khi đã đăng nhập -->
-                <li id="admin-info" style="display:none;">
-                    <a href="#" id="admin-account"><i class="fas fa-user-shield"></i> <span id="admin-name"></span></a>
-                    <ul class="dropdown-menu">
-                        <li><a href="/admin/dashboard">Dashboard</a></li>
-                        <li><a href="/admin/posts">Quản lý Bài viết</a></li>
-                        <li><a href="/admin/settings">Cài đặt</a></li>
-                        <li><a href="#" id="logout"><i class="fas fa-sign-out-alt"></i> Đăng xuất</a></li>
-                    </ul>
-                </li>
-            </ul>
-        </nav>
     </header>
+
+    <nav class="mobile-nav">
+        <ul>
+            <li><a href="/">Trang chủ</a></li>
+            <li><a href="/games">Games</a></li>
+            <li><a href="/apps">Apps</a></li>
+            <li><a href="/topics">Chủ đề</a></li>
+            <li id="mobile-login-button" style="display: none;"><a href="#" onclick="login()">Đăng nhập</a></li>
+            <li id="mobile-user-info" style="display: none;">
+                <span id="mobile-user-name"></span>
+                <span id="mobile-user-email"></span>
+                <a href="#" onclick="logout()">Đăng xuất</a>
+            </li>
+        </ul>
+    </nav>
 
     <main class="container">
         {{ block "main" . }}{{ end }}
     </main>
 
-    <footer>
-        <div class="container footer-content">
+    <footer class="site-footer">
+        <div class="footer-content">
             <div class="footer-section">
                 <h3>Về chúng tôi</h3>
                 <ul>
@@ -83,10 +85,10 @@
             </div>
             <div class="footer-section">
                 <h3>Theo dõi chúng tôi</h3>
-                <ul>
-                    <li><a href="#"><i class="fab fa-facebook"></i> Facebook</a></li>
-                    <li><a href="#"><i class="fab fa-twitter"></i> Twitter</a></li>
-                    <li><a href="#"><i class="fab fa-instagram"></i> Instagram</a></li>
+                <ul class="social-icons">
+                    <li><a href="#"><i class="fab fa-facebook"></i></a></li>
+                    <li><a href="#"><i class="fab fa-twitter"></i></a></li>
+                    <li><a href="#"><i class="fab fa-instagram"></i></a></li>
                 </ul>
             </div>
         </div>
@@ -95,36 +97,71 @@
         </div>
     </footer>
 
+    <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
     <script src="/js/main.js"></script>
     <script>
-        document.getElementById('mobile-menu-toggle').addEventListener('click', function() {
-            document.getElementById('main-nav').classList.toggle('active');
-        });
-
-        // Xác thực Netlify Identity
-        netlifyIdentity.on('init', user => {
-            if (user) {
-                // Kiểm tra nếu là admin dựa trên tên miền email
-                if (user.app_metadata.roles && user.app_metadata.roles.includes('admin')) {
-                    document.getElementById('identity-login').style.display = 'none';
-                    document.getElementById('admin-info').style.display = 'block';
-                    document.getElementById('admin-name').innerText = user.user_metadata.full_name;
+        // Xử lý đăng nhập và hiển thị thông tin người dùng
+        if (window.netlifyIdentity) {
+            window.netlifyIdentity.on("init", user => {
+                if (!user) {
+                    document.getElementById('login-button').style.display = 'block';
+                    document.getElementById('mobile-login-button').style.display = 'block';
                 } else {
-                    document.getElementById('identity-login').style.display = 'none';
+                    showUserInfo(user);
                 }
-            } else {
-                document.getElementById('identity-login').style.display = 'block';
+            });
+
+            window.netlifyIdentity.on("login", user => {
+                showUserInfo(user);
+            });
+
+            window.netlifyIdentity.on("logout", () => {
+                document.getElementById('login-button').style.display = 'block';
+                document.getElementById('user-info').style.display = 'none';
+                document.getElementById('mobile-login-button').style.display = 'block';
+                document.getElementById('mobile-user-info').style.display = 'none';
+            });
+        }
+
+        function showUserInfo(user) {
+            document.getElementById('login-button').style.display = 'none';
+            document.getElementById('user-info').style.display = 'block';
+            document.getElementById('user-name').textContent = user.user_metadata.full_name;
+            document.getElementById('user-email').textContent = user.email;
+
+            document.getElementById('mobile-login-button').style.display = 'none';
+            document.getElementById('mobile-user-info').style.display = 'block';
+            document.getElementById('mobile-user-name').textContent = user.user_metadata.full_name;
+            document.getElementById('mobile-user-email').textContent = user.email;
+
+            // Hiển thị Admin Panel nếu người dùng là admin
+            if (user.app_metadata && user.app_metadata.roles && user.app_metadata.roles.includes('admin')) {
+                showAdminPanel();
             }
-        });
+        }
 
-        // Xử lý đăng nhập qua Netlify Identity
-        document.getElementById('identity-login-btn').addEventListener('click', function() {
-            netlifyIdentity.open();
-        });
+        function showAdminPanel() {
+            // Thêm mục Admin Panel vào menu
+            const adminMenuItem = document.createElement('li');
+            adminMenuItem.innerHTML = '<a href="/admin">Admin Panel</a>';
+            document.querySelector('.main-nav ul').appendChild(adminMenuItem);
 
-        // Xử lý đăng xuất
-        document.getElementById('logout').addEventListener('click', function() {
-            netlifyIdentity.logout();
+            const mobileAdminMenuItem = document.createElement('li');
+            mobileAdminMenuItem.innerHTML = '<a href="/admin">Admin Panel</a>';
+            document.querySelector('.mobile-nav ul').appendChild(mobileAdminMenuItem);
+        }
+
+        function login() {
+            window.netlifyIdentity.open();
+        }
+
+        function logout() {
+            window.netlifyIdentity.logout();
+        }
+
+        // Xử lý menu hamburger
+        document.querySelector('.hamburger-menu').addEventListener('click', function() {
+            document.querySelector('.mobile-nav').classList.toggle('active');
         });
     </script>
 </body>
