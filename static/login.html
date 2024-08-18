@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trang Đăng Nhập</title>
+  <link rel="stylesheet" href="/css/login.css">
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+</head>
+<body>
+  <div class="login-container">
+    <h1>Đăng Nhập</h1>
+    <div class="login-form-container">
+      <form id="admin-login-form">
+        <h2>Đăng Nhập Admin</h2>
+        <label for="admin-email">Email:</label>
+        <input type="email" id="admin-email" required>
+        <label for="admin-password">Mật khẩu:</label>
+        <input type="password" id="admin-password" required>
+        <button type="submit">Đăng Nhập Admin</button>
+      </form>
+      <div class="google-login-container">
+        <h2>Hoặc Đăng Nhập bằng Google</h2>
+        <button id="google-login-button">Đăng Nhập bằng Google</button>
+      </div>
+    </div>
+  </div>
+  <script src="/js/login.js" defer></script>
+</body>
+</html>
