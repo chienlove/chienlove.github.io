@@ -48,9 +48,13 @@
     {{ range first 10 (where .Site.RegularPages "Type" "in" (slice "posts")) }}
         <div class="post-item">
             <a href="{{ .Permalink }}" class="post-link">
-                <img src="{{ .Params.thumbnail }}" alt="{{ .Title }}" class="post-image">
+                {{ with .Params.thumbnail }}
+                    <img src="{{ . }}" alt="{{ $.Title }}" class="post-image">
+                {{ end }}
                 <div class="post-item-content">
-                    <span class="post-category">{{ .Params.Category }}</span>
+                    {{ with .Params.category }}
+                        <span class="post-category">{{ . }}</span>
+                    {{ end }}
                     <h3>{{ .Title }}</h3>
                     <p>{{ .Summary | truncate 150 }}</p>
                 </div>
