@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ if .IsHome }}{{ .Site.Title }}{{ else }}{{ .Title }} - {{ .Site.Title }}{{ end }}</title>
-    <link rel="stylesheet" href="/css/style.css?v={{ now.Unix }}">
+    <link rel="stylesheet" href="/css/style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
     {{ block "head" . }}{{ end }}
 </head>
@@ -31,12 +31,11 @@
                 </ul>
             </nav>
             <div class="user-menu">
-                <div id="login-button" style="display: none;">
-                    <a href="#" onclick="login()">Đăng nhập</a>
+                <div id="login-button">
+                    <a href="#" onclick="loginWithGoogle()">Đăng nhập với Google</a>
                 </div>
                 <div id="user-info" style="display: none;">
                     <span id="user-name"></span>
-                    <span id="user-email"></span>
                     <a href="#" onclick="logout()">Đăng xuất</a>
                 </div>
             </div>
@@ -52,11 +51,14 @@
             <li><a href="/games">Games</a></li>
             <li><a href="/apps">Apps</a></li>
             <li><a href="/topics">Chủ đề</a></li>
-            <li id="mobile-login-button" style="display: none;"><a href="#" onclick="login()">Đăng nhập</a></li>
-            <li id="mobile-user-info" style="display: none;">
-                <span id="mobile-user-name"></span>
-                <span id="mobile-user-email"></span>
-                <a href="#" onclick="logout()">Đăng xuất</a>
+            <li id="mobile-user-menu">
+                <div id="mobile-login-button">
+                    <a href="#" onclick="loginWithGoogle()">Đăng nhập với Google</a>
+                </div>
+                <div id="mobile-user-info" style="display: none;">
+                    <span id="mobile-user-name"></span>
+                    <a href="#" onclick="logout()">Đăng xuất</a>
+                </div>
             </li>
         </ul>
     </nav>
@@ -99,70 +101,5 @@
 
     <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
     <script src="/js/main.js"></script>
-    <script>
-        // Xử lý đăng nhập và hiển thị thông tin người dùng
-        if (window.netlifyIdentity) {
-            window.netlifyIdentity.on("init", user => {
-                if (!user) {
-                    document.getElementById('login-button').style.display = 'block';
-                    document.getElementById('mobile-login-button').style.display = 'block';
-                } else {
-                    showUserInfo(user);
-                }
-            });
-
-            window.netlifyIdentity.on("login", user => {
-                showUserInfo(user);
-            });
-
-            window.netlifyIdentity.on("logout", () => {
-                document.getElementById('login-button').style.display = 'block';
-                document.getElementById('user-info').style.display = 'none';
-                document.getElementById('mobile-login-button').style.display = 'block';
-                document.getElementById('mobile-user-info').style.display = 'none';
-            });
-        }
-
-        function showUserInfo(user) {
-            document.getElementById('login-button').style.display = 'none';
-            document.getElementById('user-info').style.display = 'block';
-            document.getElementById('user-name').textContent = user.user_metadata.full_name;
-            document.getElementById('user-email').textContent = user.email;
-
-            document.getElementById('mobile-login-button').style.display = 'none';
-            document.getElementById('mobile-user-info').style.display = 'block';
-            document.getElementById('mobile-user-name').textContent = user.user_metadata.full_name;
-            document.getElementById('mobile-user-email').textContent = user.email;
-
-            // Hiển thị Admin Panel nếu người dùng là admin
-            if (user.app_metadata && user.app_metadata.roles && user.app_metadata.roles.includes('admin')) {
-                showAdminPanel();
-            }
-        }
-
-        function showAdminPanel() {
-            // Thêm mục Admin Panel vào menu
-            const adminMenuItem = document.createElement('li');
-            adminMenuItem.innerHTML = '<a href="/admin">Admin Panel</a>';
-            document.querySelector('.main-nav ul').appendChild(adminMenuItem);
-
-            const mobileAdminMenuItem = document.createElement('li');
-            mobileAdminMenuItem.innerHTML = '<a href="/admin">Admin Panel</a>';
-            document.querySelector('.mobile-nav ul').appendChild(mobileAdminMenuItem);
-        }
-
-        function login() {
-            window.netlifyIdentity.open();
-        }
-
-        function logout() {
-            window.netlifyIdentity.logout();
-        }
-
-        // Xử lý menu hamburger
-        document.querySelector('.hamburger-menu').addEventListener('click', function() {
-            document.querySelector('.mobile-nav').classList.toggle('active');
-        });
-    </script>
 </body>
 </html>
