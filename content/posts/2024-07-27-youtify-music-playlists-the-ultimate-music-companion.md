@@ -5,6 +5,8 @@ author: ChienLove
 views: 1
 thumbnail: https://is1-ssl.mzstatic.com/image/thumb/Purple211/v4/e8/07/90/e8079016-0add-2c0a-a3d0-a15b58fccb3c/AppIcon-1x_U007epad-0-0-85-220-0.png/300x300bb.jpg
 ---
+![youtify](https://s3-alpha.figma.com/hub/file/1438658854/48cb6566-fbc2-4575-a680-1711d8744184-cover.png "youtify")
+
 In a world saturated with music streaming apps, Youtify - Music & Playlists emerges as a refreshing and indispensable tool for every music lover. If you’re someone who lives and breathes music, Youtify is a game-changer that will transform your listening experience.
 
 **Unmatched Music Library**
