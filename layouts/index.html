@@ -44,23 +44,24 @@
     </div>
 
     <h2>Bài viết mới nhất</h2>
-    <div class="post-list">
-        {{ range first 10 (where .Site.RegularPages "Type" "in" (slice "posts")) }}
-            <div class="post-item">
-                <a href="{{ .Permalink }}" class="post-link">
-                    <img src="{{ .Params.FeaturedImage }}" alt="{{ .Title }}" class="post-image">
-                    <div class="post-item-content">
-                        <h3>{{ .Title }}</h3>
-                        <p>{{ .Summary }}</p>
-                    </div>
-                </a>
-                <div class="post-meta">
-                    <span class="post-date">{{ .Date.Format "02-01-2006" }}</span>
-                    <span class="post-author">{{ .Params.Author }}</span>
+<div class="post-list">
+    {{ range first 10 (where .Site.RegularPages "Type" "in" (slice "posts")) }}
+        <div class="post-item">
+            <a href="{{ .Permalink }}" class="post-link">
+                <img src="{{ .Params.FeaturedImage }}" alt="{{ .Title }}" class="post-image">
+                <div class="post-item-content">
+                    <span class="post-category">{{ .Params.Category }}</span>
+                    <h3>{{ .Title }}</h3>
+                    <p>{{ .Summary | truncate 150 }}</p>
                 </div>
+            </a>
+            <div class="post-meta">
+                <span class="post-date">{{ .Date.Format "January 02, 2006" }}</span>
+                <a class="read-more" href="{{ .Permalink }}">Read more</a>
             </div>
-        {{ end }}
-    </div>
+        </div>
+    {{ end }}
+</div>
     <!-- status -->
   <script>
   fetch('/api/check-status')  // Đường dẫn đến Netlify Function
