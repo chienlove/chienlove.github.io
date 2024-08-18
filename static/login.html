@@ -7,7 +7,7 @@
     <script type="text/javascript" src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -17,23 +17,35 @@
         }
         .container {
             background-color: white;
-            padding: 20px;
-            border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-width: 400px;
+            width: 100%;
+        }
+        h2 {
+            color: #333;
+            margin-bottom: 20px;
         }
         input {
             display: block;
             margin: 10px 0;
-            padding: 5px;
-            width: 200px;
+            padding: 10px;
+            width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
         }
         button {
             background-color: #007bff;
             color: white;
             border: none;
-            padding: 10px 15px;
-            border-radius: 3px;
+            padding: 12px 20px;
+            border-radius: 4px;
             cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+            transition: background-color 0.3s;
         }
         button:hover {
             background-color: #0056b3;
@@ -41,6 +53,22 @@
         #message {
             margin-top: 10px;
             color: red;
+            text-align: center;
+        }
+        .user-info {
+            text-align: center;
+        }
+        .avatar {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            display: block;
+            object-fit: cover;
+        }
+        .info-item {
+            margin: 10px 0;
+            color: #555;
         }
     </style>
 </head>
@@ -53,8 +81,13 @@
             <button onclick="login()">Đăng nhập</button>
             <p id="message"></p>
         </div>
-        <div id="userInfo" style="display: none;">
-            <h2>Chào mừng, <span id="userName"></span>!</h2>
+        <div id="userInfo" style="display: none;" class="user-info">
+            <img id="userAvatar" class="avatar" src="" alt="Avatar">
+            <h2 id="userName"></h2>
+            <p id="userEmail" class="info-item"></p>
+            <p id="userCreatedAt" class="info-item"></p>
+            <p id="userRole" class="info-item"></p>
+            <p id="userLastActivity" class="info-item"></p>
             <button onclick="logout()">Đăng xuất</button>
         </div>
     </div>
@@ -62,7 +95,6 @@
     <script>
         console.log('Script starting...');
 
-        // Khởi tạo Netlify Identity
         const netlifyIdentity = window.netlifyIdentity;
         netlifyIdentity.init();
         console.log('Netlify Identity initialized');
@@ -72,13 +104,19 @@
             const user = netlifyIdentity.currentUser();
             const loginForm = document.getElementById('loginForm');
             const userInfo = document.getElementById('userInfo');
-            const userName = document.getElementById('userName');
 
             if (user) {
                 console.log('User is logged in:', user.email);
                 loginForm.style.display = 'none';
                 userInfo.style.display = 'block';
-                userName.textContent = user.email;
+                
+                // Update user info
+                document.getElementById('userAvatar').src = user.user_metadata.avatar_url || 'https://via.placeholder.com/100';
+                document.getElementById('userName').textContent = user.user_metadata.full_name || user.email;
+                document.getElementById('userEmail').textContent = 'Email: ' + user.email;
+                document.getElementById('userCreatedAt').textContent = 'Ngày tạo: ' + new Date(user.created_at).toLocaleString();
+                document.getElementById('userRole').textContent = 'Role: ' + (user.app_metadata.roles ? user.app_metadata.roles.join(', ') : 'User');
+                document.getElementById('userLastActivity').textContent = 'Hoạt động gần đây: ' + new Date(user.last_sign_in_at).toLocaleString();
             } else {
                 console.log('No user logged in');
                 loginForm.style.display = 'block';
@@ -120,7 +158,6 @@
                 });
         }
 
-        // Xử lý sự kiện đăng nhập và đăng xuất
         netlifyIdentity.on('login', (user) => {
             console.log('Login event triggered:', user);
             updateUI();
@@ -131,13 +168,11 @@
             updateUI();
         });
 
-        // Cập nhật giao diện khi trang được tải
         document.addEventListener('DOMContentLoaded', () => {
             console.log('DOMContentLoaded event triggered');
             updateUI();
         });
 
-        // Kiểm tra trạng thái đăng nhập ngay lập tức
         updateUI();
     </script>
 </body>
