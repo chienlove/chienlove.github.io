@@ -48,7 +48,7 @@
     {{ range first 10 (where .Site.RegularPages "Type" "in" (slice "posts")) }}
         <div class="post-item">
             <a href="{{ .Permalink }}" class="post-link">
-                <img src="{{ .Params.FeaturedImage }}" alt="{{ .Title }}" class="post-image">
+                <img src="{{ .Params.thumbnail }}" alt="{{ .Title }}" class="post-image">
                 <div class="post-item-content">
                     <span class="post-category">{{ .Params.Category }}</span>
                     <h3>{{ .Title }}</h3>
