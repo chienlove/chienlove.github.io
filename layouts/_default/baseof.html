@@ -11,32 +11,46 @@
 <body>
     <header class="site-header">
         <div class="header-container">
-            <div class="mobile-menu-toggle" id="mobile-menu-toggle">
-                <i class="fas fa-bars"></i>
-            </div>
+            <!-- Logo -->
             <div class="logo">
                 <a href="/">
                     <img src="/images/logo.png" alt="{{ .Site.Title }}">
                 </a>
             </div>
-            <div class="search-toggle" id="search-toggle">
-                <i class="fas fa-search"></i>
+            
+            <!-- Tìm kiếm -->
+            <div class="search-bar">
+                <form action="/search" method="get">
+                    <input type="text" name="q" placeholder="Tìm kiếm apps & games">
+                    <button type="submit"><i class="fas fa-search"></i></button>
+                </form>
+            </div>
+            
+            <!-- Menu hamburger -->
+            <div class="mobile-menu-toggle" id="mobile-menu-toggle">
+                <i class="fas fa-bars"></i>
             </div>
         </div>
+
+        <!-- Menu chính -->
         <nav class="main-nav" id="main-nav">
             <ul>
                 <li><a href="/">Trang chủ</a></li>
                 <li><a href="/games">Games</a></li>
                 <li><a href="/apps">Apps</a></li>
                 <li><a href="/topics">Chủ đề</a></li>
+                
+                <!-- Admin panel (Chỉ hiển thị với tài khoản admin) -->
+                {{ if .Site.Params.isAdmin }}
+                <li><a href="/admin">Admin Panel</a></li>
+                {{ end }}
+
+                <!-- Đăng nhập -->
+                <li><a href="#" id="google-login" class="google-login-button">
+                    <i class="fas fa-sign-in-alt"></i> Đăng nhập bằng Google
+                </a></li>
             </ul>
         </nav>
-        <div class="search-bar" id="search-bar">
-            <form action="/search" method="get">
-                <input type="text" name="q" placeholder="Tìm kiếm apps & games">
-                <button type="submit"><i class="fas fa-search"></i></button>
-            </form>
-        </div>
     </header>
 
     <main class="container">
@@ -76,5 +90,23 @@
     </footer>
 
     <script src="/js/main.js"></script>
+    <script>
+        // JS để điều khiển menu hamburger và đăng nhập Google
+        document.getElementById('mobile-menu-toggle').addEventListener('click', function() {
+            document.getElementById('main-nav').classList.toggle('active');
+        });
+
+        document.getElementById('google-login').addEventListener('click', function() {
+            // Tích hợp Google Identity
+            netlifyIdentity.open();
+        });
+
+        // Kiểm tra quyền truy cập admin
+        netlifyIdentity.on('login', user => {
+            if (user.email.endsWith('@youradminemail.com')) {
+                document.querySelector('.main-nav ul').innerHTML += '<li><a href="/admin">Admin Panel</a></li>';
+            }
+        });
+    </script>
 </body>
 </html>
