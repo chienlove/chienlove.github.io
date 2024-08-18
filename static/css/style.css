@@ -1,172 +1,244 @@
-html, body {
-    height: 100%;
+:root {
+  --primary-color: #3498db;
+  --secondary-color: #2c3e50;
+  --text-color: #333;
+  --background-color: #f4f4f4;
+  --header-height: 80px;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 body {
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
+  font-family: 'Arial', sans-serif;
+  line-height: 1.6;
+  color: var(--text-color);
+  background-color: var(--background-color);
 }
 
-.container[role="main"] {
-    flex: 1 0 auto;
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
 }
 
-/* Header styles */
+/* Header */
 .site-header {
-    background-color: #333;
-    color: #fff;
-    padding: 10px 0;
-    position: fixed;
-    width: 100%;
-    top: 0;
-    z-index: 1000;
-    height: 70px;
+  background-color: #fff;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
 }
 
 .header-container {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 0 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: var(--header-height);
 }
 
 .logo img {
-    max-height: 50px;
-}
-
-.main-nav {
-    display: none;
-}
-
-.main-nav ul {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-}
-
-.main-nav ul li {
-    margin: 0 10px;
-}
-
-.main-nav ul li a {
-    color: #fff;
-    text-decoration: none;
-    font-weight: bold;
+  height: 50px;
 }
 
 .search-bar {
-    display: none;
-    padding: 10px 15px;
-    background-color: #333;
+  flex-grow: 1;
+  margin: 0 20px;
 }
 
 .search-bar form {
-    display: flex;
+  display: flex;
 }
 
-.search-bar input[type="text"] {
-    width: 200px;
-    padding: 5px;
-    border: none;
-    border-radius: 3px 0 0 3px;
+.search-bar input {
+  flex-grow: 1;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px 0 0 4px;
 }
 
 .search-bar button {
-    padding: 5px 10px;
-    background-color: #555;
-    border: none;
-    border-radius: 0 3px 3px 0;
-    cursor: pointer;
-    color: #fff;
+  padding: 10px 15px;
+  background-color: var(--primary-color);
+  color: #fff;
+  border: none;
+  border-radius: 0 4px 4px 0;
+  cursor: pointer;
 }
 
-.mobile-menu-toggle,
-.search-toggle {
-    cursor: pointer;
-    display: block;
+.main-nav ul {
+  display: flex;
+  list-style-type: none;
 }
 
-.open {
-    display: block !important;
+.main-nav li {
+  margin-left: 20px;
 }
 
-@media (min-width: 768px) {
-    .main-nav {
-        display: block;
-    }
-    .mobile-menu-toggle,
-    .search-toggle {
-        display: none;
-    }
-    .search-bar {
-        display: block;
-    }
-    .site-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background-color: #333; /* Ensure background color for desktop */
-    }
-    .header-container {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        width: 100%;
-    }
+.main-nav a {
+  text-decoration: none;
+  color: var(--text-color);
+  font-weight: bold;
 }
 
-/* Footer styles */
-footer {
-    background-color: #333;
-    color: #fff;
-    padding: 20px 0;
-    margin-top: auto; 
+.user-menu {
+  margin-left: 20px;
+}
+
+.hamburger-menu {
+  display: none;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+/* Mobile Navigation */
+.mobile-nav {
+  display: none;
+  position: fixed;
+  top: var(--header-height);
+  left: 0;
+  right: 0;
+  background-color: #fff;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  z-index: 999;
+}
+
+.mobile-nav.active {
+  display: block;
+}
+
+.mobile-nav ul {
+  list-style-type: none;
+}
+
+.mobile-nav li {
+  padding: 15px 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.mobile-nav a {
+  text-decoration: none;
+  color: var(--text-color);
+  font-weight: bold;
+}
+
+/* Main Content */
+main {
+  margin-top: calc(var(--header-height) + 20px);
+  padding: 20px 0;
+}
+
+/* Footer */
+.site-footer {
+  background-color: var(--secondary-color);
+  color: #fff;
+  padding: 40px 0 20px;
 }
 
 .footer-content {
-    display: flex;
-    justify-content: space-between;
-    flex-wrap: wrap;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
 }
 
 .footer-section {
-    flex: 1;
-    padding: 10px;
+  flex-basis: 30%;
+  margin-bottom: 20px;
 }
 
 .footer-section h3 {
-    border-bottom: 2px solid #555;
-    padding-bottom: 10px;
-    margin-bottom: 10px;
+  margin-bottom: 15px;
 }
 
 .footer-section ul {
-    list-style: none;
-    padding: 0;
+  list-style-type: none;
 }
 
-.footer-section ul li {
-    margin: 5px 0;
+.footer-section li {
+  margin-bottom: 10px;
 }
 
-.footer-section ul li a {
-    color: #fff;
-    text-decoration: none;
+.footer-section a {
+  color: #ddd;
+  text-decoration: none;
+}
+
+.social-icons {
+  display: flex;
+}
+
+.social-icons li {
+  margin-right: 15px;
+}
+
+.social-icons a {
+  font-size: 24px;
 }
 
 .footer-bottom {
+  text-align: center;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Responsive Design */
+@media screen and (max-width: 768px) {
+  .header-container {
+    flex-wrap: wrap;
+  }
+
+  .logo {
+    flex-basis: 100%;
     text-align: center;
-    padding: 10px;
-    border-top: 1px solid #555;
-    margin-top: 20px;
+    margin-bottom: 10px;
+  }
+
+  .search-bar {
+    flex-basis: 100%;
+    margin: 10px 0;
+  }
+
+  .main-nav {
+    display: none;
+  }
+
+  .hamburger-menu {
+    display: block;
+  }
+
+  .footer-section {
+    flex-basis: 100%;
+  }
 }
 
-.footer-bottom p {
-    margin: 0;
+/* User Menu Styles */
+.user-menu a {
+  text-decoration: none;
+  color: var(--primary-color);
+  font-weight: bold;
 }
 
+#user-info, #mobile-user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+#user-name, #mobile-user-name {
+  font-weight: bold;
+}
+
+#user-email, #mobile-user-email {
+  font-size: 0.9em;
+  color: #666;
+}
 /* App List Styles */
 .app-list {
     display: flex;
