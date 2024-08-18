@@ -6,7 +6,7 @@
     <title>{{ if .IsHome }}{{ .Site.Title }}{{ else }}{{ .Title }} - {{ .Site.Title }}{{ end }}</title>
     <link rel="stylesheet" href="/css/style.css?v={{ now.Unix }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-    {{ block "head" . }}{{ end }} <!-- Thêm block head để chèn CSS đặc thù -->
+    {{ block "head" . }}{{ end }}
 </head>
 <body>
     <header class="site-header">
@@ -17,7 +17,7 @@
                     <img src="/images/logo.png" alt="{{ .Site.Title }}">
                 </a>
             </div>
-            
+
             <!-- Tìm kiếm -->
             <div class="search-bar">
                 <form action="/search" method="get">
@@ -25,7 +25,7 @@
                     <button type="submit"><i class="fas fa-search"></i></button>
                 </form>
             </div>
-            
+
             <!-- Menu hamburger -->
             <div class="mobile-menu-toggle" id="mobile-menu-toggle">
                 <i class="fas fa-bars"></i>
@@ -39,15 +39,12 @@
                 <li><a href="/games">Games</a></li>
                 <li><a href="/apps">Apps</a></li>
                 <li><a href="/topics">Chủ đề</a></li>
-                
-                <!-- Nút đăng nhập -->
-                <li id="user-login">
-                    <a href="#" id="google-login"><i class="fas fa-sign-in-alt"></i> Đăng nhập bằng Google</a>
+
+                <!-- Nút đăng nhập Netlify Identity -->
+                <li id="identity-login">
+                    <a href="#" id="identity-login-btn"><i class="fas fa-sign-in-alt"></i> Đăng nhập</a>
                 </li>
-                <li id="admin-login" style="display:none;">
-                    <a href="#" id="github-login"><i class="fas fa-sign-in-alt"></i> Đăng nhập bằng GitHub</a>
-                </li>
-                
+
                 <!-- Hiển thị thông tin admin khi đã đăng nhập -->
                 <li id="admin-info" style="display:none;">
                     <a href="#" id="admin-account"><i class="fas fa-user-shield"></i> <span id="admin-name"></span></a>
@@ -104,32 +101,25 @@
             document.getElementById('main-nav').classList.toggle('active');
         });
 
-        // Google Identity for Users
-        document.getElementById('google-login').addEventListener('click', function() {
-            // Tích hợp đăng nhập Google cho người dùng
-            netlifyIdentity.open();
-        });
-
-        // GitHub Identity for Admin
-        document.getElementById('github-login').addEventListener('click', function() {
-            // Tích hợp đăng nhập GitHub cho admin
-            netlifyIdentity.open();
-        });
-
-        // Kiểm tra trạng thái đăng nhập và hiển thị menu tương ứng
+        // Xác thực Netlify Identity
         netlifyIdentity.on('init', user => {
             if (user) {
-                // Check if admin
-                if (user.email.endsWith('@storeios.net')) {
-                    document.getElementById('admin-login').style.display = 'none';
+                // Kiểm tra nếu là admin dựa trên tên miền email
+                if (user.app_metadata.roles && user.app_metadata.roles.includes('admin')) {
+                    document.getElementById('identity-login').style.display = 'none';
                     document.getElementById('admin-info').style.display = 'block';
                     document.getElementById('admin-name').innerText = user.user_metadata.full_name;
                 } else {
-                    document.getElementById('user-login').style.display = 'none';
+                    document.getElementById('identity-login').style.display = 'none';
                 }
             } else {
-                document.getElementById('admin-login').style.display = 'block';
+                document.getElementById('identity-login').style.display = 'block';
             }
+        });
+
+        // Xử lý đăng nhập qua Netlify Identity
+        document.getElementById('identity-login-btn').addEventListener('click', function() {
+            netlifyIdentity.open();
         });
 
         // Xử lý đăng xuất
