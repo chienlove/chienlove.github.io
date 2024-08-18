@@ -21,12 +21,6 @@
             border-radius: 5px;
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
-        input {
-            display: block;
-            margin: 10px 0;
-            padding: 5px;
-            width: 200px;
-        }
         button {
             background-color: #007bff;
             color: white;
@@ -38,20 +32,13 @@
         button:hover {
             background-color: #0056b3;
         }
-        #message {
-            margin-top: 10px;
-            color: red;
-        }
     </style>
 </head>
 <body>
     <div class="container">
-        <div id="loginForm">
+        <div id="loginButton">
             <h2>Đăng nhập</h2>
-            <input type="email" id="email" placeholder="Email" required>
-            <input type="password" id="password" placeholder="Mật khẩu" required>
-            <button onclick="login()">Đăng nhập</button>
-            <p id="message"></p>
+            <button onclick="openLoginModal()">Đăng nhập</button>
         </div>
         <div id="userInfo" style="display: none;">
             <h2>Chào mừng, <span id="userName"></span>!</h2>
@@ -66,58 +53,33 @@
         netlifyIdentity.init();
         console.log('Netlify Identity initialized');
 
-        // Kiểm tra trạng thái đăng nhập và cập nhật giao diện
         function updateUI() {
             console.log('Updating UI...');
             const user = netlifyIdentity.currentUser();
-            const loginForm = document.getElementById('loginForm');
+            const loginButton = document.getElementById('loginButton');
             const userInfo = document.getElementById('userInfo');
             const userName = document.getElementById('userName');
 
             if (user) {
                 console.log('User is logged in:', user.email);
-                loginForm.style.display = 'none';
+                loginButton.style.display = 'none';
                 userInfo.style.display = 'block';
                 userName.textContent = user.email;
             } else {
                 console.log('No user logged in');
-                loginForm.style.display = 'block';
+                loginButton.style.display = 'block';
                 userInfo.style.display = 'none';
             }
         }
 
-        function login() {
-            console.log('Login function called');
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            const messageElement = document.getElementById('message');
-
-            console.log('Attempting to log in with email:', email);
-
-            netlifyIdentity.login(email, password)
-                .then((user) => {
-                    console.log('Login successful:', user);
-                    messageElement.style.color = 'green';
-                    messageElement.textContent = 'Đăng nhập thành công!';
-                    updateUI();
-                })
-                .catch((error) => {
-                    console.error('Login error:', error);
-                    messageElement.style.color = 'red';
-                    messageElement.textContent = 'Đăng nhập thất bại: ' + error.message;
-                });
+        function openLoginModal() {
+            console.log('Opening login modal');
+            netlifyIdentity.open('login');
         }
 
         function logout() {
             console.log('Logout function called');
-            netlifyIdentity.logout()
-                .then(() => {
-                    console.log('Logout successful');
-                    updateUI();
-                })
-                .catch((error) => {
-                    console.error('Logout error:', error);
-                });
+            netlifyIdentity.logout();
         }
 
         // Xử lý sự kiện đăng nhập và đăng xuất
@@ -125,6 +87,7 @@
             console.log('Login event triggered:', user);
             updateUI();
         });
+
         netlifyIdentity.on('logout', () => {
             console.log('Logout event triggered');
             updateUI();
