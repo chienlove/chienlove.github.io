@@ -4,14 +4,6 @@ ddocument.addEventListener('DOMContentLoaded', () => {
   // Khởi tạo Netlify Identity
   netlifyIdentity.init();
 
-  // Ẩn widget đăng nhập mặc định
-  document.addEventListener('DOMContentLoaded', () => {
-    const identityWidget = document.querySelector('.netlify-identity-widget');
-    if (identityWidget) {
-      identityWidget.style.display = 'none';
-    }
-  });
-
   // Các phần còn lại của mã xử lý đăng nhập và đăng xuất
   const loginFormContainer = document.getElementById('login-form-container');
   const userInfoContainer = document.getElementById('user-info-container');
