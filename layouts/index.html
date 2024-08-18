@@ -60,7 +60,24 @@
                 </div>
             </a>
             <div class="post-meta">
-                <span class="post-date">{{ .Date.Format "January 02, 2006" }}</span>
+                <span class="post-date">
+                    <!-- Biểu tượng đồng hồ -->
+                    <i class="fa fa-clock-o" aria-hidden="true"></i>
+                    {{ $now := now }}
+                    {{ $postTime := .Date }}
+                    {{ $diff := $now.Sub $postTime }}
+                    {{ $days := $diff.Hours | div 24 }}
+
+                    {{ if lt $diff.Minutes 60 }}
+                        Vừa xong
+                    {{ else if eq $days 0 }}
+                        Hôm nay {{ $postTime.Format "15:04" }}
+                    {{ else if eq $days 1 }}
+                        Hôm qua {{ $postTime.Format "15:04" }}
+                    {{ else }}
+                        {{ $postTime.Format "Thứ Hai, 02 Tháng 01, 2006" }}
+                    {{ end }}
+                </span>
                 <a class="read-more" href="{{ .Permalink }}">Read more</a>
             </div>
         </div>
