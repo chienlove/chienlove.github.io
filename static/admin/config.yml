@@ -76,3 +76,9 @@ collections:
           {name: "plistUrl", label: "Plist URL", widget: "string", hint: "Nhập URL đầy đủ đến file .plist, ví dụ: https://storeios.net/plist/unc0ver.plist"},
           {name: "intermediate_page_url", label: "Intermediate Page URL", widget: "text", default: "/intermediate/:appId"}
         ]}
+load_config_file: false
+local_backend: true
+publish_mode: editorial_workflow
+
+cms_manual_init: true
+custom_css: /css/admin.css
