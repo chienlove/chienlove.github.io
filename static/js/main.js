@@ -1,40 +1,77 @@
-// Xử lý đăng nhập và hiển thị thông tin người dùng
+// Khởi tạo Netlify Identity
 if (window.netlifyIdentity) {
     window.netlifyIdentity.on("init", user => {
         if (!user) {
-            showLoginButton();
+            showLoginButtons();
+        } else {
+            if (isAdmin(user)) {
+                showAdminInfo(user);
+            } else {
+                showUserInfo(user);
+            }
+        }
+    });
+
+    window.netlifyIdentity.on("login", user => {
+        if (isAdmin(user)) {
+            showAdminInfo(user);
         } else {
             showUserInfo(user);
         }
     });
 
-    window.netlifyIdentity.on("login", user => {
-        showUserInfo(user);
-    });
-
     window.netlifyIdentity.on("logout", () => {
-        showLoginButton();
+        showLoginButtons();
     });
 }
 
-function showLoginButton() {
-    document.getElementById('login-button').style.display = 'block';
+function showLoginButtons() {
+    document.getElementById('google-login').style.display = 'block';
+    document.getElementById('admin-login').style.display = 'block';
     document.getElementById('user-info').style.display = 'none';
-    document.getElementById('mobile-login-button').style.display = 'block';
+    document.getElementById('mobile-google-login').style.display = 'block';
+    document.getElementById('mobile-admin-login').style.display = 'block';
     document.getElementById('mobile-user-info').style.display = 'none';
+    removeAdminPanel();
 }
 
 function showUserInfo(user) {
-    document.getElementById('login-button').style.display = 'none';
+    document.getElementById('google-login').style.display = 'none';
+    document.getElementById('admin-login').style.display = 'none';
     document.getElementById('user-info').style.display = 'block';
     document.getElementById('user-name').textContent = user.user_metadata.full_name;
-    document.getElementById('mobile-login-button').style.display = 'none';
+    document.getElementById('mobile-google-login').style.display = 'none';
+    document.getElementById('mobile-admin-login').style.display = 'none';
     document.getElementById('mobile-user-info').style.display = 'block';
     document.getElementById('mobile-user-name').textContent = user.user_metadata.full_name;
+}
 
-    if (user.app_metadata && user.app_metadata.roles && user.app_metadata.roles.includes('admin')) {
-        showAdminPanel();
-    }
+function showAdminInfo(user) {
+    document.getElementById('google-login').style.display = 'none';
+    document.getElementById('admin-login').style.display = 'none';
+    document.getElementById('user-info').style.display = 'block';
+    document.getElementById('user-name').textContent = `Admin: ${user.user_metadata.full_name}`;
+    document.getElementById('mobile-google-login').style.display = 'none';
+    document.getElementById('mobile-admin-login').style.display = 'none';
+    document.getElementById('mobile-user-info').style.display = 'block';
+    document.getElementById('mobile-user-name').textContent = `Admin: ${user.user_metadata.full_name}`;
+    showAdminPanel();
+}
+
+function isAdmin(user) {
+    return user.app_metadata && user.app_metadata.roles && user.app_metadata.roles.includes('admin');
+}
+
+function loginWithGoogle() {
+    window.netlifyIdentity.open('google');
+}
+
+function loginAsAdmin() {
+    window.netlifyIdentity.open();
+}
+
+function logout() {
+    window.netlifyIdentity.logout();
 }
 
 function showAdminPanel() {
@@ -53,12 +90,11 @@ function showAdminPanel() {
     mainContainer.insertAdjacentHTML('afterbegin', adminPanel);
 }
 
-function loginWithGoogle() {
-    window.netlifyIdentity.open();
-}
-
-function logout() {
-    window.netlifyIdentity.logout();
+function removeAdminPanel() {
+    const adminPanel = document.querySelector('.admin-panel');
+    if (adminPanel) {
+        adminPanel.remove();
+    }
 }
 
 // Xử lý menu hamburger

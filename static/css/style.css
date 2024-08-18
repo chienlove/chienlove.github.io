@@ -196,34 +196,6 @@ main {
     border-top: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* Admin Panel */
-.admin-panel {
-    background-color: #fff;
-    border-radius: 4px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    padding: 20px;
-    margin-top: 20px;
-}
-
-.admin-panel h2 {
-    margin-bottom: 20px;
-}
-
-.admin-menu {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-
-.admin-menu a {
-    display: inline-block;
-    padding: 10px 15px;
-    background-color: var(--primary-color);
-    color: #fff;
-    text-decoration: none;
-    border-radius: 4px;
-}
-
 /* Responsive Design */
 @media screen and (max-width: 768px) {
     .header-container {
@@ -252,6 +224,56 @@ main {
     .footer-section {
         flex-basis: 100%;
     }
+}
+/* User Menu Styles */
+.user-menu a {
+    text-decoration: none;
+    color: var(--primary-color);
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+}
+
+.user-menu a i {
+    margin-right: 5px;
+}
+
+#user-info, #mobile-user-info {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+#user-name, #mobile-user-name {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+/* Admin Panel Styles */
+.admin-panel {
+    background-color: #fff;
+    border-radius: 4px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.admin-panel h2 {
+    margin-bottom: 15px;
+}
+
+.admin-menu {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.admin-menu a {
+    padding: 10px 15px;
+    background-color: var(--primary-color);
+    color: #fff;
+    text-decoration: none;
+    border-radius: 4px;
 }
 /* App List Styles */
 .app-list {

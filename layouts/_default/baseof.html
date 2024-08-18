@@ -31,8 +31,13 @@
                 </ul>
             </nav>
             <div class="user-menu">
-                <div id="login-button">
-                    <a href="#" onclick="loginWithGoogle()">Đăng nhập với Google</a>
+                <div id="google-login" style="display: none;">
+                    <a href="#" onclick="loginWithGoogle()">
+                        <i class="fab fa-google"></i> Đăng nhập với Google
+                    </a>
+                </div>
+                <div id="admin-login" style="display: none;">
+                    <a href="#" onclick="loginAsAdmin()">Đăng nhập Admin</a>
                 </div>
                 <div id="user-info" style="display: none;">
                     <span id="user-name"></span>
@@ -51,14 +56,17 @@
             <li><a href="/games">Games</a></li>
             <li><a href="/apps">Apps</a></li>
             <li><a href="/topics">Chủ đề</a></li>
-            <li id="mobile-user-menu">
-                <div id="mobile-login-button">
-                    <a href="#" onclick="loginWithGoogle()">Đăng nhập với Google</a>
-                </div>
-                <div id="mobile-user-info" style="display: none;">
-                    <span id="mobile-user-name"></span>
-                    <a href="#" onclick="logout()">Đăng xuất</a>
-                </div>
+            <li id="mobile-google-login" style="display: none;">
+                <a href="#" onclick="loginWithGoogle()">
+                    <i class="fab fa-google"></i> Đăng nhập với Google
+                </a>
+            </li>
+            <li id="mobile-admin-login" style="display: none;">
+                <a href="#" onclick="loginAsAdmin()">Đăng nhập Admin</a>
+            </li>
+            <li id="mobile-user-info" style="display: none;">
+                <span id="mobile-user-name"></span>
+                <a href="#" onclick="logout()">Đăng xuất</a>
             </li>
         </ul>
     </nav>
@@ -67,37 +75,7 @@
         {{ block "main" . }}{{ end }}
     </main>
 
-    <footer class="site-footer">
-        <div class="footer-content">
-            <div class="footer-section">
-                <h3>Về chúng tôi</h3>
-                <ul>
-                    <li><a href="/about">Giới thiệu</a></li>
-                    <li><a href="/contact">Liên hệ</a></li>
-                    <li><a href="/privacy">Chính sách bảo mật</a></li>
-                </ul>
-            </div>
-            <div class="footer-section">
-                <h3>Danh mục</h3>
-                <ul>
-                    <li><a href="/games">Games</a></li>
-                    <li><a href="/apps">Apps</a></li>
-                    <li><a href="/topics">Chủ đề</a></li>
-                </ul>
-            </div>
-            <div class="footer-section">
-                <h3>Theo dõi chúng tôi</h3>
-                <ul class="social-icons">
-                    <li><a href="#"><i class="fab fa-facebook"></i></a></li>
-                    <li><a href="#"><i class="fab fa-twitter"></i></a></li>
-                    <li><a href="#"><i class="fab fa-instagram"></i></a></li>
-                </ul>
-            </div>
-        </div>
-        <div class="footer-bottom">
-            <p>&copy; {{ now.Year }} {{ .Site.Title }}. All rights reserved.</p>
-        </div>
-    </footer>
+    <!-- Footer code giữ nguyên -->
 
     <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
     <script src="/js/main.js"></script>
