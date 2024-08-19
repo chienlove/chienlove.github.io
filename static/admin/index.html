@@ -2,10 +2,61 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-  <link rel="stylesheet" href="/css/admin.css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Đăng nhập Admin</title>
     <script type="text/javascript" src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-    </head>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            max-width: 400px;
+            width: 100%;
+        }
+        h2 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        input {
+            display: block;
+            margin: 10px 0;
+            padding: 10px;
+            width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            width: 100%;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #message {
+            margin-top: 10px;
+            color: red;
+            text-align: center;
+        }
+    </style>
+</head>
 <body>
     <div class="container">
         <div id="loginForm">
@@ -21,20 +72,12 @@
         const netlifyIdentity = window.netlifyIdentity;
         netlifyIdentity.init();
 
-        function loadCMS() {
-            // Load Netlify CMS script
-            const script = document.createElement('script');
-            script.src = "https://unpkg.com/netlify-cms@^2.9.0/dist/netlify-cms.js";
-            document.body.appendChild(script);
-        }
-
         function updateUI() {
             const user = netlifyIdentity.currentUser();
 
             if (user) {
-                // Hide login form and load CMS
-                document.getElementById('loginForm').style.display = 'none';
-                loadCMS(); // Load CMS script
+                // Redirect to the Netlify CMS dashboard after login
+                window.location.href = '/admin/dashboard';
             } else {
                 document.getElementById('loginForm').style.display = 'block';
             }
@@ -46,7 +89,7 @@
             const messageElement = document.getElementById('message');
 
             netlifyIdentity.gotrue.login(email, password)
-                .then(() => {
+                .then((response) => {
                     messageElement.style.color = 'green';
                     messageElement.textContent = 'Đăng nhập thành công!';
                     updateUI();
