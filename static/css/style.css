@@ -6,7 +6,6 @@ body, html {
 }
 
 .container {
-    width: 95%;
     max-width: 1200px;
     margin: 0 auto;
     padding: 0 15px;
@@ -27,13 +26,17 @@ body, html {
     padding: 0 15px;
 }
 
+.logo {
+    flex: 1;
+}
+
 .logo img {
     height: 40px;
 }
 
 .search-bar {
-    flex-grow: 1;
-    max-width: 300px;
+    flex: 2; /* Cho phép khung tìm kiếm mở rộng */
+    max-width: 400px;
     margin: 0 20px;
 }
 
@@ -42,6 +45,11 @@ body, html {
     padding: 8px;
     border: 1px solid #ddd;
     border-radius: 4px;
+}
+
+.main-nav {
+    flex: 1;
+    text-align: right;
 }
 
 .main-nav ul {
