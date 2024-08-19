@@ -5,11 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Đăng nhập Admin</title>
     <script type="text/javascript" src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-  <style>/* Tinh chỉnh thanh điều hướng */
+  <style>/* Tinh chỉnh toàn bộ giao diện */
+html, body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f0f0f0; /* Màu nền trang */
+}
+
+/* Tinh chỉnh thanh điều hướng chính */
 .nc-navbar {
     background-color: #007bff;
     color: white;
     padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
 .nc-navbar .nc-logo {
@@ -18,38 +29,20 @@
     color: white;
 }
 
-.nc-navbar .nc-menu-item {
-    color: white;
-    font-size: 16px;
-    margin-left: 20px;
-    text-decoration: none;
-}
-
-.nc-navbar .nc-menu-item:hover {
-    text-decoration: underline;
-}
-
-/* Tinh chỉnh bảng điều khiển chính */
-.nc-main {
-    padding: 20px;
-    background-color: #f5f5f5;
-}
-
-.nc-main .nc-dashboard-header {
-    font-size: 28px;
-    font-weight: bold;
-    color: #333;
-    margin-bottom: 20px;
-}
-
-/* Tinh chỉnh danh sách các mục */
+/* Tinh chỉnh thanh bên (sidebar) */
 .nc-sidebar {
     background-color: #ffffff;
     border-right: 1px solid #ddd;
     padding: 20px;
     width: 250px;
+    position: fixed; /* Giữ thanh bên cố định */
+    height: 100%;
+    top: 0;
+    left: 0;
+    overflow-y: auto; /* Cuộn nội dung nếu quá dài */
 }
 
+/* Tinh chỉnh danh mục và các mục trong thanh bên */
 .nc-sidebar .nc-sidebar-item {
     margin-bottom: 15px;
 }
@@ -64,48 +57,21 @@
     text-decoration: underline;
 }
 
-/* Tinh chỉnh bảng nội dung */
+/* Tinh chỉnh nội dung chính */
 .nc-content {
-    padding: 20px;
     margin-left: 270px; /* Khoảng cách từ thanh bên */
+    padding: 20px;
     background-color: #ffffff;
     border-radius: 8px;
+    min-height: 100vh; /* Đảm bảo nội dung chiếm toàn bộ chiều cao */
 }
 
+/* Tinh chỉnh tiêu đề nội dung */
 .nc-content h1, .nc-content h2, .nc-content h3 {
     color: #007bff;
 }
 
-.nc-content .nc-card {
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    margin-bottom: 20px;
-    padding: 20px;
-    background-color: #ffffff;
-}
-
-.nc-content .nc-card:hover {
-    box-shadow: 0 6px 8px rgba(0,0,0,0.2);
-}
-
-/* Tinh chỉnh các nút */
-.nc-button {
-    background-color: #007bff;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 4px;
-    font-size: 16px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-}
-
-.nc-button:hover {
-    background-color: #0056b3;
-}
-
-/* Tinh chỉnh form */
+/* Tinh chỉnh các thẻ và form */
 .nc-form-group {
     margin-bottom: 20px;
 }
@@ -126,6 +92,22 @@
 .nc-form-group input:focus, .nc-form-group select:focus, .nc-form-group textarea:focus {
     border-color: #007bff;
     outline: none;
+}
+
+/* Tinh chỉnh các nút */
+.nc-button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+.nc-button:hover {
+    background-color: #0056b3;
 }</style>
     </head>
 <body>
