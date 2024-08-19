@@ -8,18 +8,30 @@
 <body>
   <script src="https://unpkg.com/netlify-cms@^2.10.192/dist/netlify-cms.js"></script>
   <script>
-  if (window.netlifyIdentity) {
-    const user = window.netlifyIdentity.currentUser();
-    if (user) {
-      window.CMS.init({
-        config: {
-          backend: {
-            name: 'git-gateway'
-          }
+  if (localStorage.getItem('netlify-cms-user')) {
+    // Người dùng đã đăng nhập, khởi tạo CMS ngay lập tức
+    window.CMS.init({
+      config: {
+        backend: {
+          name: 'git-gateway'
         }
-      });
-    } else {
-      window.location.href = "/admin";
-    }
+      }
+    });
+  } else if (window.netlifyIdentity) {
+    window.netlifyIdentity.on("init", user => {
+      if (!user) {
+        window.location.href = "/admin";
+      } else {
+        window.CMS.init({
+          config: {
+            backend: {
+              name: 'git-gateway'
+            }
+          }
+        });
+      }
+    });
   }
-</script></body></html>
+</script>
+</body>
+</html>
