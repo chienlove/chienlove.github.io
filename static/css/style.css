@@ -5,6 +5,13 @@ body, html {
     font-family: Arial, sans-serif;
 }
 
+.container {
+    width: 95%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 15px;
+}
+
 /* Header styles */
 .site-header {
     background-color: #f8f9fa;
@@ -26,6 +33,7 @@ body, html {
 
 .search-bar {
     flex-grow: 1;
+    max-width: 300px;
     margin: 0 20px;
 }
 
@@ -40,6 +48,7 @@ body, html {
     display: flex;
     list-style-type: none;
     padding: 0;
+    margin: 0;
 }
 
 .main-nav li {
@@ -60,6 +69,7 @@ body, html {
     background: none;
     border: none;
     cursor: pointer;
+    padding: 0;
 }
 
 .google-login-btn img {
@@ -84,6 +94,7 @@ body, html {
 .mobile-nav ul {
     list-style-type: none;
     padding: 0;
+    margin: 0;
 }
 
 .mobile-nav li {
@@ -126,10 +137,6 @@ body, html {
         display: block;
     }
 
-    .mobile-nav {
-        display: block;
-    }
-
     .header-container {
         flex-wrap: wrap;
     }
@@ -137,6 +144,7 @@ body, html {
     .search-bar {
         order: 3;
         width: 100%;
+        max-width: none;
         margin: 10px 0;
     }
 }
