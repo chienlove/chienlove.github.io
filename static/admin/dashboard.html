@@ -15,7 +15,7 @@
     if (window.netlifyIdentity) {
       window.netlifyIdentity.on("init", user => {
         if (!user) {
-          window.location.href = "/login.html";
+          window.location.href = "/admin";
         } else {
           window.CMS.init({
             config: {
