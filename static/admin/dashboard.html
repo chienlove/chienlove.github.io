@@ -6,14 +6,17 @@
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 </head>
 <body>
-  <script src="https://unpkg.com/netlify-cms@^2.9.0/dist/netlify-cms.js"></script>
+  <div id="loading" style="position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: white; z-index: 9999; display: flex; justify-content: center; align-items: center;">
+    Loading...
+  </div>
+
+  <script src="https://unpkg.com/netlify-cms@^2.10.192/dist/netlify-cms.js"></script>
   <script>
     if (window.netlifyIdentity) {
       window.netlifyIdentity.on("init", user => {
         if (!user) {
-          window.location.href = "/admin"; // Chuyển hướng về trang đăng nhập nếu chưa đăng nhập
+          window.location.href = "/login.html";
         } else {
-          // Cấu hình Netlify CMS để bỏ qua xác thực
           window.CMS.init({
             config: {
               backend: {
@@ -21,9 +24,15 @@
               }
             }
           });
+          window.CMS.registerEventListener({
+            name: 'onInit',
+            handler: () => {
+              document.getElementById('loading').style.display = 'none';
+              document.getElementById('nc-root').classList.add('loaded');
+            },
+          });
         }
       });
     }
   </script>
-</body>
-</html>
+</body></html>
