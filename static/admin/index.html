@@ -56,12 +56,13 @@
             text-align: center;
         }
       input:focus, textarea:focus {
-  outline: none;
+  outline: none; 
 }
       input, textarea {
   font-size: 16px;
 }
-    </style></head>
+    </style>
+</head>
 <body>
     <div class="container">
         <div id="loginForm">
@@ -75,39 +76,33 @@
     <script>
         const netlifyIdentity = window.netlifyIdentity;
         netlifyIdentity.init();
-
         function updateUI() {
             const user = netlifyIdentity.currentUser();
             if (user) {
-                // Chuyển hướng đến trang dashboard sau khi đăng nhập
+                // Redirect to the Netlify CMS dashboard after login
                 window.location.href = '/admin/dashboard';
             } else {
                 document.getElementById('loginForm').style.display = 'block';
             }
         }
-
         function login() {
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             const messageElement = document.getElementById('message');
-            netlifyIdentity.login({
-                email: email,
-                password: password
-            }).then(() => {
-                messageElement.style.color = 'green';
-                messageElement.textContent = 'Đăng nhập thành công!';
-                // Chờ một chút trước khi chuyển hướng để người dùng thấy thông báo
-                setTimeout(updateUI, 1000);
-            }).catch((error) => {
-                messageElement.style.color = 'red';
-                messageElement.textContent = 'Đăng nhập thất bại: ' + error.message;
-            });
+            netlifyIdentity.gotrue.login(email, password, true)
+                .then((response) => {
+                    messageElement.style.color = 'green';
+                    messageElement.textContent = 'Đăng nhập thành công!';
+                    updateUI();
+                })
+                .catch((error) => {
+                    messageElement.style.color = 'red';
+                    messageElement.textContent = 'Đăng nhập thất bại: ' + error.message;
+                });
         }
-
-        document.addEventListener('DOMContentLoaded', () => {
-            netlifyIdentity.on('init', updateUI);
-            netlifyIdentity.on('login', updateUI);
-        });
+        document.addEventListener('DOMContentLoaded', updateUI);
+        netlifyIdentity.on('login', updateUI);
+        netlifyIdentity.on('logout', updateUI);
     </script>
 </body>
 </html>
