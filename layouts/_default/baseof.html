@@ -3,24 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ if .IsHome }}{{ .Site.Title }}{{ else }}{{ .Title }} - {{ .Site.Title }}{{ end }}</title>
-    <link rel="stylesheet" href="/css/style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
-    {{ block "head" . }}{{ end }}
+    <title>{{ .Site.Title }}</title>
+    <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
     <header class="site-header">
         <div class="header-container">
             <div class="logo">
-                <a href="/">
-                    <img src="/images/logo.png" alt="{{ .Site.Title }}">
-                </a>
+                <a href="/"><img src="/images/logo.png" alt="{{ .Site.Title }}"></a>
             </div>
             <div class="search-bar">
-                <form action="/search" method="get">
-                    <input type="text" name="q" placeholder="Tìm kiếm apps & games">
-                    <button type="submit"><i class="fas fa-search"></i></button>
-                </form>
+                <input type="text" placeholder="Tìm kiếm apps & games">
             </div>
             <nav class="main-nav">
                 <ul>
@@ -31,22 +24,16 @@
                 </ul>
             </nav>
             <div class="user-menu">
-                <div id="google-login" style="display: none;">
-                    <a href="#" onclick="loginWithGoogle()">
-                        <i class="fab fa-google"></i> Đăng nhập với Google
-                    </a>
-                </div>
-                <div id="admin-login" style="display: none;">
-                    <a href="#" onclick="loginAsAdmin()">Đăng nhập Admin</a>
-                </div>
+                <button id="google-login" class="google-login-btn" onclick="loginWithGoogle()">
+                    <img src="/images/google-logo.svg" alt="Google Logo">
+                </button>
+                <button id="admin-login" style="display: none;" onclick="loginAsAdmin()">Đăng nhập Admin</button>
                 <div id="user-info" style="display: none;">
                     <span id="user-name"></span>
-                    <a href="#" onclick="logout()">Đăng xuất</a>
+                    <button onclick="logout()">Đăng xuất</button>
                 </div>
             </div>
-            <div class="hamburger-menu">
-                <i class="fas fa-bars"></i>
-            </div>
+            <button class="hamburger-menu">&#9776;</button>
         </div>
     </header>
 
@@ -56,14 +43,8 @@
             <li><a href="/games">Games</a></li>
             <li><a href="/apps">Apps</a></li>
             <li><a href="/topics">Chủ đề</a></li>
-            <li id="mobile-google-login" style="display: none;">
-                <a href="#" onclick="loginWithGoogle()">
-                    <i class="fab fa-google"></i> Đăng nhập với Google
-                </a>
-            </li>
-            <li id="mobile-admin-login" style="display: none;">
-                <a href="#" onclick="loginAsAdmin()">Đăng nhập Admin</a>
-            </li>
+            <li id="mobile-google-login"><a href="#" onclick="loginWithGoogle()">Đăng nhập với Google</a></li>
+            <li id="mobile-admin-login" style="display: none;"><a href="#" onclick="loginAsAdmin()">Đăng nhập Admin</a></li>
             <li id="mobile-user-info" style="display: none;">
                 <span id="mobile-user-name"></span>
                 <a href="#" onclick="logout()">Đăng xuất</a>
@@ -71,13 +52,21 @@
         </ul>
     </nav>
 
-    <main class="container">
+    <main class="container" role="main">
         {{ block "main" . }}{{ end }}
     </main>
 
-    <!-- Footer code giữ nguyên -->
+    <footer class="site-footer">
+        <div class="footer-content">
+            <p>&copy; 2024 {{ .Site.Title }}. Tất cả quyền được bảo lưu.</p>
+            <nav class="footer-nav">
+                <a href="/about">Về chúng tôi</a>
+                <a href="/contact">Liên hệ</a>
+                <a href="/privacy">Chính sách bảo mật</a>
+            </nav>
+        </div>
+    </footer>
 
-    <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
     <script src="/js/main.js"></script>
 </body>
 </html>
