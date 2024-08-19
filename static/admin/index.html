@@ -55,8 +55,7 @@
             color: red;
             text-align: center;
         }
-    </style>
-</head>
+    </style></head>
 <body>
     <div class="container">
         <div id="loginForm">
@@ -72,12 +71,20 @@
         const netlifyIdentity = window.netlifyIdentity;
         netlifyIdentity.init();
 
+        function loadCMS() {
+            // Load Netlify CMS script
+            const script = document.createElement('script');
+            script.src = "https://unpkg.com/netlify-cms@^2.9.0/dist/netlify-cms.js";
+            document.body.appendChild(script);
+        }
+
         function updateUI() {
             const user = netlifyIdentity.currentUser();
 
             if (user) {
-                // Redirect to the Netlify CMS dashboard after login
-                window.location.href = '/admin/';
+                // Hide login form and load CMS
+                document.getElementById('loginForm').style.display = 'none';
+                loadCMS(); // Load CMS script
             } else {
                 document.getElementById('loginForm').style.display = 'block';
             }
@@ -89,7 +96,7 @@
             const messageElement = document.getElementById('message');
 
             netlifyIdentity.gotrue.login(email, password)
-                .then((response) => {
+                .then(() => {
                     messageElement.style.color = 'green';
                     messageElement.textContent = 'Đăng nhập thành công!';
                     updateUI();
