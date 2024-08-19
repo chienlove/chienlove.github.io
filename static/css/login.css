@@ -1,4 +1,4 @@
-body {
+.login-page body {
   font-family: Arial, sans-serif;
   background-color: #f9f9f9;
   display: flex;
@@ -8,7 +8,7 @@ body {
   margin: 0;
 }
 
-.login-container {
+.login-page .login-container {
   background: #fff;
   border-radius: 8px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
@@ -17,7 +17,7 @@ body {
   text-align: center;
 }
 
-.login-form-container,
+.login-page .login-form-container,
 #user-info-container {
   display: flex;
   flex-direction: column;
