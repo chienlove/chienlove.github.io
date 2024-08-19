@@ -5,17 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ .Site.Title }}</title>
     <link rel="stylesheet" href="/css/style.css?v={{ now.Unix }}">
-   {{ block "head" . }}{{ end }}
+    {{ block "head" . }}{{ end }}
 </head>
 <body>
+    <!-- Header -->
     <header class="site-header">
         <div class="header-container">
+            <!-- Logo -->
             <div class="logo">
-                <a href="/"><img src="/images/logo.png" alt="{{ .Site.Title }}"></a>
+                <a href="/">
+                    <img src="/images/logo.png" alt="{{ .Site.Title }}">
+                </a>
             </div>
+
+            <!-- Search Bar -->
             <div class="search-bar">
                 <input type="text" placeholder="Tìm kiếm apps & games">
             </div>
+
+            <!-- Main Navigation -->
             <nav class="main-nav">
                 <ul>
                     <li><a href="/">Trang chủ</a></li>
@@ -24,6 +32,8 @@
                     <li><a href="/topics">Chủ đề</a></li>
                 </ul>
             </nav>
+
+            <!-- User Menu -->
             <div class="user-menu">
                 <button id="google-login" class="google-login-btn" onclick="loginWithGoogle()">
                     <img src="/images/google-logo.svg" alt="Google Logo">
@@ -34,18 +44,25 @@
                     <button onclick="logout()">Đăng xuất</button>
                 </div>
             </div>
+
+            <!-- Hamburger Menu for Mobile -->
             <button class="hamburger-menu">&#9776;</button>
         </div>
     </header>
 
+    <!-- Mobile Navigation -->
     <nav class="mobile-nav">
         <ul>
             <li><a href="/">Trang chủ</a></li>
             <li><a href="/games">Games</a></li>
             <li><a href="/apps">Apps</a></li>
             <li><a href="/topics">Chủ đề</a></li>
-            <li id="mobile-google-login"><a href="#" onclick="loginWithGoogle()">Đăng nhập với Google</a></li>
-            <li id="mobile-admin-login" style="display: none;"><a href="#" onclick="loginAsAdmin()">Đăng nhập Admin</a></li>
+            <li id="mobile-google-login">
+                <a href="#" onclick="loginWithGoogle()">Đăng nhập với Google</a>
+            </li>
+            <li id="mobile-admin-login" style="display: none;">
+                <a href="#" onclick="loginAsAdmin()">Đăng nhập Admin</a>
+            </li>
             <li id="mobile-user-info" style="display: none;">
                 <span id="mobile-user-name"></span>
                 <a href="#" onclick="logout()">Đăng xuất</a>
@@ -53,12 +70,14 @@
         </ul>
     </nav>
 
+    <!-- Main Content -->
     <div class="container">
         <main role="main">
             {{ block "main" . }}{{ end }}
         </main>
     </div>
 
+    <!-- Footer -->
     <footer class="site-footer">
         <div class="footer-content">
             <p>&copy; 2024 {{ .Site.Title }}. Tất cả quyền được bảo lưu.</p>
@@ -70,6 +89,7 @@
         </div>
     </footer>
 
+    <!-- Scripts -->
     <script src="/js/main.js"></script>
 </body>
 </html>
