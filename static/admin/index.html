@@ -86,20 +86,28 @@
             }
         }
         function login() {
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            const messageElement = document.getElementById('message');
-            netlifyIdentity.gotrue.login(email, password, true)
-                .then((response) => {
-                    messageElement.style.color = 'green';
-                    messageElement.textContent = 'Đăng nhập thành công!';
-                    updateUI();
-                })
-                .catch((error) => {
-                    messageElement.style.color = 'red';
-                    messageElement.textContent = 'Đăng nhập thất bại: ' + error.message;
-                });
-        }
+    const email = document.getElementById('email').value;
+    const password = document.getElementById('password').value;
+    const messageElement = document.getElementById('message');
+
+    netlifyIdentity.gotrue.login(email, password, true)
+        .then((response) => {
+            messageElement.style.color = 'green';
+            messageElement.textContent = 'Đăng nhập thành công!';
+            
+            // Lưu token xác thực vào localStorage
+            localStorage.setItem('netlifySiteURL', 'https://storeios.net');
+            localStorage.setItem('netlifyAppID', '8100e8e1-3511-4426-bd2e-5d28aa7428de');
+            localStorage.setItem('nf_jwt', response.token.access_token);
+            
+            // Chuyển hướng đến trang dashboard
+            window.location.href = '/admin/dashboard';
+        })
+        .catch((error) => {
+            messageElement.style.color = 'red';
+            messageElement.textContent = 'Đăng nhập thất bại: ' + error.message;
+        });
+}
         document.addEventListener('DOMContentLoaded', updateUI);
         netlifyIdentity.on('login', updateUI);
         netlifyIdentity.on('logout', updateUI);
