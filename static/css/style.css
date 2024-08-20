@@ -18,30 +18,36 @@ body, html {
     justify-content: space-between;
     padding: 10px 20px;
     background-color: #fff;
+    flex-wrap: wrap; /* Cho phép phần tử tự động xuống dòng nếu cần thiết */
 }
 
 .logo img {
     height: 50px;
+    max-width: 100px; /* Đảm bảo logo không quá to */
 }
 
 .search-bar {
     flex-grow: 1;
-    max-width: 600px; /* Giới hạn chiều dài tối đa của khung tìm kiếm */
-    margin: 0 20px;
+    margin: 0 10px;
+    max-width: 500px; /* Giới hạn chiều dài tối đa của khung tìm kiếm */
+    min-width: 150px; /* Giới hạn chiều dài tối thiểu */
 }
 
 .search-bar input {
-    width: 50%;
+    width: 100%;
     padding: 8px 15px;
     border-radius: 20px;
     border: 1px solid #ccc;
-    font-size: 14px;
+    font-size: 16px;
 }
 
 .main-nav ul {
     list-style-type: none;
     display: flex;
     gap: 20px;
+    margin: 0;
+    padding: 0;
+    flex-wrap: nowrap;
 }
 
 .main-nav a {
@@ -61,13 +67,14 @@ body, html {
     border: none;
     font-size: 24px;
     cursor: pointer;
+    padding: 10px;
+    display: none; /* Ẩn trên màn hình lớn */
 }
 
 .hamburger-menu:focus {
     outline: none;
 }
 
-/* Mobile Nav */
 .mobile-nav {
     display: none;
     position: absolute;
@@ -97,7 +104,6 @@ body, html {
     border-bottom: none;
 }
 
-/* Toggle mobile nav */
 .mobile-nav.open {
     display: block;
 }
@@ -107,17 +113,14 @@ body, html {
         display: none;
     }
 
-    .search-bar {
-        flex-grow: 1;
-        margin: 0;
-        max-width: 100%; /* Cho phép khung tìm kiếm mở rộng trên toàn bộ chiều rộng */
-    }
-}
-
-/* Desktop */
-@media (min-width: 769px) {
     .hamburger-menu {
-        display: none;
+        display: block; /* Hiển thị trên màn hình nhỏ */
+    }
+
+    .search-bar {
+        order: 2; /* Đặt khung tìm kiếm phía dưới logo trên màn hình nhỏ */
+        width: 100%;
+        margin: 10px 0;
     }
 }
 /* Footer styles */
