@@ -1,4 +1,4 @@
-/* Reset và styles chung */
+* Reset và styles chung */
 body, html {
     margin: 0;
     padding: 0;
@@ -26,34 +26,25 @@ body, html {
     padding: 0 15px;
 }
 
-.logo {
-    flex: 1;
-}
-
 .logo img {
     height: 40px;
 }
 
 .search-bar {
-    flex: 2; /* Chiếm không gian lớn hơn để ở giữa */
-    text-align: center; /* Căn giữa nội dung trong khung */
+    flex-grow: 1;
+    max-width: 300px;
+    margin: 0 20px;
 }
 
 .search-bar input {
     width: 100%;
-    max-width: 400px; /* Đặt giới hạn chiều rộng */
     padding: 8px;
     border: 1px solid #ddd;
     border-radius: 4px;
 }
 
-.main-nav {
-    flex: 1;
-    text-align: right; /* Đẩy menu sang phải */
-}
-
 .main-nav ul {
-    display: inline-flex; /* Chuyển từ flex sang inline-flex để dễ căn chỉnh */
+    display: flex;
     list-style-type: none;
     padding: 0;
     margin: 0;
@@ -68,7 +59,6 @@ body, html {
     color: #333;
 }
 
-/* User menu styles */
 .user-menu {
     display: flex;
     align-items: center;
@@ -86,7 +76,6 @@ body, html {
     height: 24px;
 }
 
-/* Hamburger menu styles */
 .hamburger-menu {
     display: none;
     background: none;
@@ -96,6 +85,48 @@ body, html {
 }
 
 /* Mobile nav styles */
+.mobile-nav {
+    display: none;
+    background-color: #f8f9fa;
+}
+
+.mobile-nav ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.mobile-nav li {
+    border-bottom: 1px solid #ddd;
+}
+
+.mobile-nav a {
+    display: block;
+    padding: 10px 15px;
+    text-decoration: none;
+    color: #333;
+}
+
+/* Footer styles */
+.site-footer {
+    background-color: #f8f9fa;
+    padding: 20px 0;
+    margin-top: 40px;
+}
+
+.footer-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.footer-nav a {
+    margin: 0 10px;
+    color: #333;
+    text-decoration: none;
+}
+
+/* Responsive styles */
 @media (max-width: 768px) {
     .main-nav, .user-menu {
         display: none;
@@ -112,6 +143,7 @@ body, html {
     .search-bar {
         order: 3;
         width: 100%;
+        max-width: none;
         margin: 10px 0;
     }
 }
