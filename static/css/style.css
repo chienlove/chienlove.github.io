@@ -25,7 +25,6 @@ body, html {
     justify-content: space-between;
     padding: 10px 20px;
     background-color: #fff;
-    position: relative;
 }
 
 .logo img {
@@ -34,13 +33,13 @@ body, html {
 
 .search-bar {
     flex-grow: 1;
+    max-width: 600px; /* Giới hạn chiều dài tối đa của khung tìm kiếm */
     margin: 0 20px;
-    position: relative;
 }
 
 .search-bar input {
     width: 100%;
-    padding: 10px;
+    padding: 8px 15px;
     border-radius: 20px;
     border: 1px solid #ccc;
     font-size: 16px;
@@ -118,6 +117,7 @@ body, html {
     .search-bar {
         flex-grow: 1;
         margin: 0;
+        max-width: 100%; /* Cho phép khung tìm kiếm mở rộng trên toàn bộ chiều rộng */
     }
 }
 
