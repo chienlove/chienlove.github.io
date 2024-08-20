@@ -11,7 +11,7 @@ body, html {
     padding: 0 5px;
 }
 
-/* Header styles */
+/* Header */
 .site-header {
     background-color: #333;
     color: #fff;
@@ -26,19 +26,26 @@ body, html {
 
 .logo img {
     max-height: 50px;
+    margin-right: 20px;
 }
 
 .search-bar {
     flex: 1;
     margin: 0 20px;
+    position: relative;
 }
 
 .search-bar input {
     width: 100%;
-    padding: 8px;
-    border: none;
-    border-radius: 4px;
+    padding: 8px 12px;
+    border-radius: 20px;
+    border: 1px solid #ccc;
     font-size: 16px;
+}
+
+.search-bar input:focus {
+    outline: none;
+    border-color: #888;
 }
 
 .main-nav ul {
@@ -72,6 +79,13 @@ body, html {
     border: none;
     color: #fff;
     cursor: pointer;
+    padding: 5px 10px;
+    transition: background 0.3s ease;
+}
+
+.user-menu button:hover {
+    background-color: #555;
+    border-radius: 4px;
 }
 
 .user-menu button img {
@@ -121,8 +135,8 @@ body, html {
     }
 
     .search-bar {
-        margin: 10px 0;
         order: 2;
+        margin: 10px 0;
     }
 
     .main-nav ul {
@@ -132,6 +146,7 @@ body, html {
     .hamburger-menu {
         display: block;
         order: 3;
+        color: #fff;
     }
 
     .hamburger-menu.active + .main-nav ul {
