@@ -1,7 +1,7 @@
 /* Reset mặc định */
 * {
     margin: 0;
-    padding: 0;
+    padding: 20px 5px;
     box-sizing: border-box;
 }
 
@@ -10,10 +10,9 @@ body {
     line-height: 1.6;
     background-color: #f4f4f4;
     color: #333;
-    margin: 0;
-    padding: 0;
 }
 
+/* Header Styles */
 .header-container {
     display: flex;
     align-items: center;
@@ -21,27 +20,36 @@ body {
     padding: 15px 20px;
     background-color: #333;
     color: #fff;
+    position: relative;
+    z-index: 1000;
 }
 
 .logo img {
     height: 50px;
 }
 
+.search-bar {
+    flex: 1;
+    margin: 0 20px;
+}
+
 .search-bar input {
     padding: 8px;
     border-radius: 20px;
     border: none;
-    width: 300px;
-    max-width: 100%;
+    width: 100%;
+    max-width: 300px;
+}
+
+.main-nav {
+    flex-grow: 1;
+    text-align: right;
 }
 
 .main-nav ul {
     display: flex;
     list-style: none;
-}
-
-.main-nav ul li {
-    margin-left: 20px;
+    gap: 20px;
 }
 
 .main-nav ul li a {
@@ -87,12 +95,20 @@ body {
 
 .mobile-nav {
     display: none;
+    position: fixed;
+    top: 0;
+    left: -100%;
+    height: 100%;
+    width: 80%;
+    max-width: 300px;
     background-color: #333;
-    padding: 10px;
-    position: absolute;
-    top: 100%;
-    width: 100%;
-    z-index: 1000;
+    transition: left 0.3s ease-in-out;
+    z-index: 999;
+    padding-top: 60px;
+}
+
+.mobile-nav.open {
+    left: 0;
 }
 
 .mobile-nav ul {
@@ -102,14 +118,14 @@ body {
 }
 
 .mobile-nav ul li {
-    padding: 10px 0;
+    border-bottom: 1px solid #555;
 }
 
 .mobile-nav ul li a {
     color: #fff;
     text-decoration: none;
     display: block;
-    padding: 10px;
+    padding: 15px 20px;
     transition: background-color 0.3s;
 }
 
@@ -141,30 +157,12 @@ body {
 
 /* Media Queries */
 @media (max-width: 768px) {
-    .header-container {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .main-nav ul {
+    .main-nav {
         display: none;
     }
 
     .hamburger-menu {
         display: block;
-    }
-
-    .mobile-nav {
-        display: none;
-    }
-
-    .mobile-nav.open {
-        display: block;
-    }
-
-    .search-bar {
-        width: 100%;
-        margin-top: 10px;
     }
 }
 /* App List Styles */
