@@ -6,14 +6,12 @@ body, html {
     background-color: #f4f4f4;
     color: #333;
 }
-
 /* Header Styles */
 .site-header {
     background-color: #333;
     color: #fff;
     padding: 10px 0;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
-    overflow: hidden; /* Thêm overflow để tránh lỗi phần tử tràn */
 }
 
 .header-container {
@@ -24,25 +22,28 @@ body, html {
     justify-content: space-between;
     padding: 0 20px;
     flex-wrap: nowrap;
-    overflow: hidden;
 }
 
 .logo img {
-    max-height: 40px; /* Giảm kích thước logo */
-    flex-shrink: 0; /* Ngăn logo bị thu nhỏ */
+    max-height: 40px;
 }
 
 .search-bar {
     flex: 1;
-    margin: 0 10px; /* Giảm margin để tiết kiệm không gian */
+    margin: 0 15px;
 }
 
 .search-bar input {
-    width: 60%;
-    padding: 8px 15px; /* Giảm padding để tiết kiệm không gian */
+    width: 100%;
+    padding: 8px 15px;
     border-radius: 25px;
     border: 1px solid #ccc;
-    font-size: 14px; /* Giảm font-size */
+    font-size: 14px;
+    box-sizing: border-box; /* Đảm bảo padding không làm tăng kích thước phần tử */
+}
+
+.main-nav {
+    flex-shrink: 0;
 }
 
 .main-nav ul {
@@ -51,21 +52,17 @@ body, html {
     padding: 0;
     display: flex;
     gap: 10px;
-    flex-shrink: 0;
+}
+
+.main-nav ul li {
+    margin: 0;
 }
 
 .main-nav ul li a {
     color: #fff;
     text-decoration: none;
-    padding: 8px 10px; /* Giảm padding */
+    padding: 8px 15px;
     transition: background-color 0.3s ease;
-}
-
-.user-menu {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-shrink: 0;
 }
 
 .hamburger-menu {
@@ -79,21 +76,38 @@ body, html {
 
 @media (max-width: 768px) {
     .header-container {
-        flex-direction: column;
-        align-items: flex-start;
+        flex-direction: row;
+        align-items: center;
     }
 
     .search-bar {
         margin: 10px 0;
-        width: 100%; /* Đảm bảo khung tìm kiếm chiếm toàn bộ chiều rộng */
+        width: 100%;
     }
 
     .main-nav {
         display: none;
+        width: 100%;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        background-color: #333;
+        flex-direction: column;
+        z-index: 1000;
+    }
+
+    .main-nav ul {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 10px;
     }
 
     .hamburger-menu {
         display: block;
+    }
+
+    .hamburger-menu.active + .main-nav {
+        display: flex;
     }
 }
 /* Footer Styles */
