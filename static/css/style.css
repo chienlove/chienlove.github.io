@@ -1,175 +1,184 @@
-/* Reset margin và padding mặc định */
+/* Reset CSS */
 * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-/* Thiết lập cơ bản cho body */
+/* Variable */
+:root {
+  --primary-color: #007bff;
+  --secondary-color: #6c757d;
+  --text-color: #333;
+  --bg-color: #f8f9fa;
+}
+
+/* Body */
 body {
-    font-family: Arial, sans-serif;
-    line-height: 1.6;
+  font-family: 'Roboto', sans-serif;
+  color: var(--text-color);
+  background-color: var(--bg-color);
 }
 
-/* Header container */
+/* Header */
+.site-header {
+  background-color: var(--primary-color);
+  padding: 16px 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
 .header-container {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 20px;
-    background-color: #333;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
 }
 
-/* Logo */
 .logo img {
-    max-width: 100px;
-}
-
-/* Thanh tìm kiếm */
-.search-bar {
-    flex: 1;
-    text-align: center;
+  max-height: 40px;
 }
 
 .search-bar input {
-    width: 100%;
-    max-width: 400px;
-    padding: 8px;
-    border-radius: 20px;
-    border: 1px solid #ccc;
+  width: 300px;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  font-size: 16px;
 }
 
-/* Navigation */
 .main-nav ul {
-    display: flex;
-    list-style: none;
+  display: flex;
+  list-style-type: none;
 }
 
-.main-nav ul li {
-    margin-left: 20px;
+.main-nav li a {
+  color: #fff;
+  text-decoration: none;
+  padding: 8px 16px;
+  transition: color 0.3s;
 }
 
-.main-nav ul li a {
-    color: white;
-    text-decoration: none;
-    padding: 8px 12px;
-    display: block;
-}
-
-/* User menu */
-.user-menu {
-    display: flex;
-    align-items: center;
+.main-nav li a:hover {
+  color: #e6e6e6;
 }
 
 .user-menu button {
-    background: none;
-    border: none;
-    cursor: pointer;
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  color: #fff;
+  font-size: 16px;
+  padding: 8px 16px;
+  transition: color 0.3s;
+}
+
+.user-menu button:hover {
+  color: #e6e6e6;
 }
 
 .hamburger-menu {
-    display: none;
-    font-size: 24px;
-    color: white;
-    background: none;
-    border: none;
-    cursor: pointer;
+  display: none;
+  background-color: transparent;
+  border: none;
+  color: #fff;
+  font-size: 24px;
+  cursor: pointer;
 }
 
-/* Mobile navigation */
-.mobile-nav {
-    display: none;
+/* Main Content */
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 20px;
 }
 
-.mobile-nav ul {
-    list-style: none;
-    padding: 10px;
-    background-color: #444;
-}
-
-.mobile-nav ul li {
-    margin-bottom: 10px;
-}
-
-.mobile-nav ul li a {
-    color: white;
-    text-decoration: none;
-}
-
-/* Responsive Styles */
-@media (max-width: 768px) {
-    .main-nav {
-        display: none;
-    }
-
-    .hamburger-menu {
-        display: block;
-    }
-
-    .mobile-nav {
-        display: none;
-        position: absolute;
-        top: 60px;
-        left: 0;
-        width: 100%;
-    }
-
-    .mobile-nav ul {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-    }
-
-    .hamburger-menu.active + .mobile-nav {
-        display: block;
-    }
-
-    .search-bar {
-        order: 3;
-        margin-top: 10px;
-        width: 100%;
-        text-align: center;
-    }
-
-    .search-bar input {
-        width: calc(100% - 20px);
-    }
-}
-/* Footer Styles */
+/* Footer */
 .site-footer {
-    background-color: #222;
-    color: #aaa;
-    padding: 20px 0;
-    margin-top: 50px;
+  background-color: var(--secondary-color);
+  color: #fff;
+  padding: 20px 0;
 }
 
 .footer-content {
-    max-width: 1200px;
-    margin: 0 auto;
-    text-align: center;
-    padding: 0 20px;
-}
-
-.footer-content p {
-    margin: 0;
-}
-
-.footer-nav {
-    margin-top: 10px;
-    display: flex;
-    justify-content: center;
-    gap: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 20px;
 }
 
 .footer-nav a {
-    color: #aaa;
-    text-decoration: none;
-    transition: color 0.3s ease;
+  color: #fff;
+  text-decoration: none;
+  margin-left: 16px;
+  transition: color 0.3s;
 }
 
 .footer-nav a:hover {
+  color: #e6e6e6;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .header-container {
+    flex-wrap: wrap;
+  }
+
+  .search-bar input {
+    width: 100%;
+    margin-top: 16px;
+  }
+
+  .main-nav {
+    display: none;
+  }
+
+  .user-menu {
+    display: none;
+  }
+
+  .hamburger-menu {
+    display: block;
+  }
+
+  .mobile-nav {
+    display: none;
+    background-color: var(--primary-color);
+    padding: 16px 0;
+    position: absolute;
+    top: 72px;
+    left: 0;
+    width: 100%;
+    z-index: 100;
+  }
+
+  .mobile-nav ul {
+    list-style-type: none;
+  }
+
+  .mobile-nav li a {
+    display: block;
     color: #fff;
+    text-decoration: none;
+    padding: 12px 20px;
+    transition: background-color 0.3s;
+  }
+
+  .mobile-nav li a:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+
+  .footer-content {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .footer-nav {
+    margin-top: 16px;
+  }
 }
 /* App List Styles */
 .app-list {
