@@ -13,6 +13,7 @@ body, html {
     color: #fff;
     padding: 10px 0;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+    overflow: hidden; /* Thêm overflow để tránh lỗi phần tử tràn */
 }
 
 .header-container {
@@ -22,24 +23,26 @@ body, html {
     align-items: center;
     justify-content: space-between;
     padding: 0 20px;
-    flex-wrap: nowrap; /* Ngăn xuống dòng */
+    flex-wrap: nowrap;
+    overflow: hidden;
 }
 
 .logo img {
-    max-height: 50px;
+    max-height: 40px; /* Giảm kích thước logo */
+    flex-shrink: 0; /* Ngăn logo bị thu nhỏ */
 }
 
 .search-bar {
     flex: 1;
-    margin: 0 20px;
+    margin: 0 10px; /* Giảm margin để tiết kiệm không gian */
 }
 
 .search-bar input {
     width: 100%;
-    padding: 10px 15px;
+    padding: 8px 15px; /* Giảm padding để tiết kiệm không gian */
     border-radius: 25px;
     border: 1px solid #ccc;
-    font-size: 16px;
+    font-size: 14px; /* Giảm font-size */
 }
 
 .main-nav ul {
@@ -47,38 +50,22 @@ body, html {
     margin: 0;
     padding: 0;
     display: flex;
-    gap: 20px;
-    flex-shrink: 0; /* Ngăn menu bị thu nhỏ */
-}
-
-.main-nav ul li {
-    display: inline;
+    gap: 10px;
+    flex-shrink: 0;
 }
 
 .main-nav ul li a {
     color: #fff;
     text-decoration: none;
-    padding: 10px 15px;
+    padding: 8px 10px; /* Giảm padding */
     transition: background-color 0.3s ease;
-}
-
-.main-nav ul li a:hover {
-    background-color: #444;
-    border-radius: 5px;
 }
 
 .user-menu {
     display: flex;
     align-items: center;
     gap: 10px;
-    flex-shrink: 0; /* Ngăn phần tử bị thu nhỏ */
-}
-
-.user-menu button {
-    background-color: transparent;
-    border: none;
-    color: #fff;
-    cursor: pointer;
+    flex-shrink: 0;
 }
 
 .hamburger-menu {
@@ -90,29 +77,25 @@ body, html {
     color: #fff;
 }
 
-/* Mobile Navigation */
-.mobile-nav {
-    display: none;
-    background-color: #333;
-    color: #fff;
-    padding: 10px 0;
-}
+@media (max-width: 768px) {
+    .header-container {
+        flex-direction: column;
+        align-items: flex-start;
+    }
 
-.mobile-nav ul {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-}
+    .search-bar {
+        margin: 10px 0;
+        width: 100%; /* Đảm bảo khung tìm kiếm chiếm toàn bộ chiều rộng */
+    }
 
-.mobile-nav ul li a {
-    color: #fff;
-    text-decoration: none;
-    padding: 10px 20px;
-}
+    .main-nav {
+        display: none;
+    }
 
+    .hamburger-menu {
+        display: block;
+    }
+}
 /* Footer Styles */
 .site-footer {
     background-color: #222;
