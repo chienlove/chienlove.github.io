@@ -7,8 +7,8 @@ body, html {
 }
 
 .site-header {
-  background-color: #fff;
-  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  background-color: #333;
+  color: #fff;
   padding: 1rem;
   display: flex;
   justify-content: space-between;
@@ -20,36 +20,20 @@ body, html {
   align-items: center;
 }
 
-.logo {
-  margin-right: 2rem;
-}
-
 .logo img {
-  max-height: 40px;
+  max-height: 50px;
 }
 
 .search-bar {
   flex-grow: 1;
-  max-width: 500px;
-  position: relative;
+  margin: 0 1rem;
 }
 
 .search-bar input {
   width: 100%;
-  padding: 0.5rem 1rem;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  font-size: 1rem;
-}
-
-.search-bar button {
-  position: absolute;
-  top: 50%;
-  right: 1rem;
-  transform: translateY(-50%);
-  background-color: transparent;
+  padding: 0.5rem;
   border: none;
-  cursor: pointer;
+  border-radius: 4px;
 }
 
 .user-menu {
@@ -62,28 +46,61 @@ body, html {
   margin-right: 0.5rem;
 }
 
-.user-menu a {
-  color: #333;
-  text-decoration: none;
+.user-menu button {
+  background-color: transparent;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+}
+
+.user-info {
   margin-left: 1rem;
 }
 
-/* Footer */
+/* Mobile Menu Styles */
+.mobile-menu {
+  display: none;
+  background-color: #333;
+  padding: 1rem;
+}
+
+.mobile-menu ul {
+  list-style-type: none;
+  padding: 0;
+  margin: 0;
+}
+
+.mobile-menu li {
+  margin-bottom: 0.5rem;
+}
+
+.mobile-menu a {
+  color: #fff;
+  text-decoration: none;
+}
+
+@media (max-width: 768px) {
+  .header-container {
+    display: none;
+  }
+
+  .mobile-menu {
+    display: block;
+  }
+}
+
+/* Footer Styles */
 .footer-content {
-  background-color: #f8f8f8;
-  padding: 2rem 0;
+  background-color: #f5f5f5;
+  padding: 1rem;
   text-align: center;
   font-size: 0.9rem;
 }
 
 .footer-content a {
-  color: #666;
-  text-decoration: none;
-  margin: 0 1rem;
-}
-
-.footer-content a:hover {
   color: #333;
+  text-decoration: none;
+  margin: 0 0.5rem;
 }
 /* App List Styles */
 .app-list {
