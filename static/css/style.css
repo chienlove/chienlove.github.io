@@ -1,104 +1,140 @@
-/* General Styles */
-body, html {
-    margin: 5;
+/* Reset margin và padding mặc định */
+* {
+    margin: 0;
     padding: 0;
-    font-family: 'Arial', sans-serif;
-    background-color: #f4f4f4;
-    color: #333;
-}
-/* Header Styles */
-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 10px 20px;
-  background-color: #333;
+    box-sizing: border-box;
 }
 
-.logo {
-  flex: 1;
-  display: flex;
-  align-items: center;
+/* Thiết lập cơ bản cho body */
+body {
+    font-family: Arial, sans-serif;
+    line-height: 1.6;
 }
 
-.search-container {
-  flex: 2;
-  text-align: center;
-}
-
-.search-container input {
-  width: 80%;
-  padding: 8px;
-  border-radius: 20px;
-  border: 1px solid #ccc;
-}
-
-.menu-toggle {
-  display: none;
-}
-
-.menu {
-  flex: 1;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.menu ul {
-  display: flex;
-  list-style-type: none;
-  margin: 0;
-  padding: 0;
-}
-
-.menu ul li {
-  margin-left: 20px;
-}
-
-.menu ul li a {
-  color: white;
-  text-decoration: none;
-}
-
-.menu-toggle-label {
-  display: none;
-}
-
-@media screen and (max-width: 768px) {
-  .search-container {
-    order: 3;
-    width: 100%;
-  }
-  
-  .menu {
-    display: none;
-    flex-direction: column;
-    align-items: center;
-  }
-
-  .menu ul {
-    flex-direction: column;
-  }
-
-  .menu ul li {
-    margin: 10px 0;
-  }
-
-  .menu-toggle {
-    display: block;
-    cursor: pointer;
-    margin-left: 10px;
-  }
-
-  .menu-toggle:checked + .menu {
+/* Header container */
+.header-container {
     display: flex;
-  }
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
+    background-color: #333;
+}
 
-  .menu-toggle-label {
-    display: block;
+/* Logo */
+.logo img {
+    max-width: 100px;
+}
+
+/* Thanh tìm kiếm */
+.search-bar {
+    flex: 1;
+    text-align: center;
+}
+
+.search-bar input {
+    width: 100%;
+    max-width: 400px;
+    padding: 8px;
+    border-radius: 20px;
+    border: 1px solid #ccc;
+}
+
+/* Navigation */
+.main-nav ul {
+    display: flex;
+    list-style: none;
+}
+
+.main-nav ul li {
+    margin-left: 20px;
+}
+
+.main-nav ul li a {
     color: white;
-    font-size: 1.5em;
+    text-decoration: none;
+    padding: 8px 12px;
+    display: block;
+}
+
+/* User menu */
+.user-menu {
+    display: flex;
+    align-items: center;
+}
+
+.user-menu button {
+    background: none;
+    border: none;
     cursor: pointer;
-  }
+}
+
+.hamburger-menu {
+    display: none;
+    font-size: 24px;
+    color: white;
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+/* Mobile navigation */
+.mobile-nav {
+    display: none;
+}
+
+.mobile-nav ul {
+    list-style: none;
+    padding: 10px;
+    background-color: #444;
+}
+
+.mobile-nav ul li {
+    margin-bottom: 10px;
+}
+
+.mobile-nav ul li a {
+    color: white;
+    text-decoration: none;
+}
+
+/* Responsive Styles */
+@media (max-width: 768px) {
+    .main-nav {
+        display: none;
+    }
+
+    .hamburger-menu {
+        display: block;
+    }
+
+    .mobile-nav {
+        display: none;
+        position: absolute;
+        top: 60px;
+        left: 0;
+        width: 100%;
+    }
+
+    .mobile-nav ul {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .hamburger-menu.active + .mobile-nav {
+        display: block;
+    }
+
+    .search-bar {
+        order: 3;
+        margin-top: 10px;
+        width: 100%;
+        text-align: center;
+    }
+
+    .search-bar input {
+        width: calc(100% - 20px);
+    }
 }
 /* Footer Styles */
 .site-footer {
@@ -134,30 +170,6 @@ header {
 
 .footer-nav a:hover {
     color: #fff;
-}
-
-/* Responsive Styles */
-@media (max-width: 768px) {
-    .header-container {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .search-bar {
-        margin: 10px 0;
-    }
-
-    .main-nav {
-        display: none;
-    }
-
-    .hamburger-menu {
-        display: block;
-    }
-
-    .mobile-nav {
-        display: block;
-    }
 }
 /* App List Styles */
 .app-list {
