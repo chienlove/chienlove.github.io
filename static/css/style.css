@@ -38,7 +38,7 @@ body, html {
 }
 
 .search-bar input {
-    width: 100%;
+    width: 60%;
     padding: 8px 15px; /* Giảm padding để tiết kiệm không gian */
     border-radius: 25px;
     border: 1px solid #ccc;
