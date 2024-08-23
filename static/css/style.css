@@ -16,6 +16,8 @@ body {
     background-color: #f8f9fa;
     border-bottom: 1px solid #e9ecef;
     padding: 10px 20px;
+    position: relative;
+    z-index: 1000; /* Ensures header is above other content */
 }
 
 .header-container {
@@ -23,6 +25,7 @@ body {
     align-items: center;
     justify-content: space-between;
     position: relative;
+    gap: 20px;
 }
 
 .logo {
@@ -36,6 +39,8 @@ body {
 .search-bar {
     flex: 2;
     text-align: center;
+    position: relative;
+    z-index: 1;
 }
 
 .search-bar input {
@@ -49,13 +54,15 @@ body {
 .main-nav {
     flex: 1;
     text-align: right;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
 }
 
 .main-nav ul {
     list-style: none;
     display: flex;
     gap: 20px;
-    justify-content: flex-end;
 }
 
 .main-nav ul li a {
@@ -68,27 +75,6 @@ body {
     color: #0056b3;
 }
 
-.user-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.btn-login,
-.btn-logout {
-    background-color: #007bff;
-    color: #fff;
-    border: none;
-    padding: 8px 12px;
-    border-radius: 5px;
-    cursor: pointer;
-}
-
-.btn-login:hover,
-.btn-logout:hover {
-    background-color: #0056b3;
-}
-
 .hamburger-menu {
     display: none;
     font-size: 24px;
@@ -96,6 +82,7 @@ body {
     background: none;
     border: none;
     color: #007bff;
+    z-index: 10; /* Ensure the button is above the search bar */
     position: absolute;
     right: 20px;
 }
@@ -110,6 +97,11 @@ body {
     background-color: #f8f9fa;
     border-top: 1px solid #e9ecef;
     padding: 10px 20px;
+    position: absolute;
+    top: 100%; /* Place it directly under the header */
+    left: 0;
+    width: 100%;
+    z-index: 999;
 }
 
 .mobile-nav ul {
@@ -159,26 +151,18 @@ body {
         display: block;
     }
 
-    .mobile-nav {
-        display: none;
-    }
-
-    .hamburger-menu.active + .mobile-nav {
-        display: block;
-    }
-
     .header-container {
         flex-wrap: wrap;
     }
 
     .search-bar {
-        order: 3;
+        order: 2;
         width: 100%;
         margin: 10px 0;
     }
 
-    .user-actions {
-        order: 2;
+    .hamburger-menu.active + .mobile-nav {
+        display: block;
     }
 }
 /* App List Styles */
