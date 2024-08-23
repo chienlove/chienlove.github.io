@@ -13,9 +13,9 @@ body {
 
 /* Header Styles */
 .site-header {
-    background-color: #f8f9fa; /* Màu nền cho header */
+    background-color: #343a40; /* Màu nền đậm hơn cho header */
     padding: 10px 20px;
-    border-bottom: 1px solid #e9ecef;
+    border-bottom: 1px solid #23272b;
     z-index: 1000;
     position: relative;
 }
@@ -37,12 +37,12 @@ body {
 .search-bar {
     flex: 2;
     display: flex;
-    justify-content: center; /* Đảm bảo khung tìm kiếm nằm chính giữa */
+    justify-content: center;
 }
 
 .search-bar input {
     width: 100%;
-    max-width: 400px;
+    max-width: 600px; /* Độ rộng tối đa của khung tìm kiếm */
     padding: 8px 15px;
     border-radius: 20px;
     border: 1px solid #ccc;
@@ -62,12 +62,12 @@ body {
 
 .main-nav ul li a {
     text-decoration: none;
-    color: #007bff;
+    color: #ffffff;
     font-weight: bold;
 }
 
 .main-nav ul li a:hover {
-    color: #0056b3;
+    color: #adb5bd;
 }
 
 .hamburger-menu {
@@ -76,12 +76,12 @@ body {
     cursor: pointer;
     background: none;
     border: none;
-    color: #007bff;
+    color: #ffffff;
     margin-left: 15px;
 }
 
 .hamburger-menu:hover {
-    color: #0056b3;
+    color: #adb5bd;
 }
 
 /* Sidebar Menu */
@@ -91,8 +91,8 @@ body {
     left: -250px;
     width: 250px;
     height: 100%;
-    background-color: #f8f9fa; /* Màu nền cho menu */
-    border-right: 1px solid #e9ecef;
+    background-color: #343a40; /* Màu nền đậm hơn cho menu */
+    border-right: 1px solid #23272b;
     transition: left 0.3s ease;
     z-index: 1001;
     padding: 20px;
@@ -108,13 +108,13 @@ body {
 
 .mobile-nav ul li a {
     text-decoration: none;
-    color: #007bff;
+    color: #ffffff;
     display: block;
     padding: 10px 0;
 }
 
 .mobile-nav ul li a:hover {
-    color: #0056b3;
+    color: #adb5bd;
 }
 
 /* Overlay when Sidebar is Active */
@@ -135,10 +135,10 @@ body {
 
 /* Footer Styles */
 .site-footer {
-    background-color: #f8f9fa; /* Màu nền cho footer */
+    background-color: #343a40; /* Màu nền đậm hơn cho footer */
     padding: 20px;
     text-align: center;
-    border-top: 1px solid #e9ecef;
+    border-top: 1px solid #23272b;
 }
 
 .footer-nav {
@@ -146,13 +146,13 @@ body {
 }
 
 .footer-nav a {
-    color: #007bff;
+    color: #ffffff;
     text-decoration: none;
     margin: 0 10px;
 }
 
 .footer-nav a:hover {
-    color: #0056b3;
+    color: #adb5bd;
 }
 
 /* Responsive Styles */
