@@ -1,9 +1,15 @@
-document.querySelector('.hamburger-menu').addEventListener('click', function () {
-    document.querySelector('.mobile-nav').classList.toggle('active');
-    document.querySelector('.sidebar-overlay').classList.toggle('active');
-});
+document.addEventListener('DOMContentLoaded', function () {
+    const hamburgerMenu = document.querySelector('.hamburger-menu');
+    const mobileNav = document.querySelector('.mobile-nav');
+    const sidebarOverlay = document.querySelector('.sidebar-overlay');
 
-document.querySelector('.sidebar-overlay').addEventListener('click', function () {
-    document.querySelector('.mobile-nav').classList.remove('active');
-    document.querySelector('.sidebar-overlay').classList.remove('active');
+    hamburgerMenu.addEventListener('click', function () {
+        mobileNav.classList.toggle('active');
+        sidebarOverlay.classList.toggle('active');
+    });
+
+    sidebarOverlay.addEventListener('click', function () {
+        mobileNav.classList.remove('active');
+        sidebarOverlay.classList.remove('active');
+    });
 });

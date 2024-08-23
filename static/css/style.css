@@ -24,6 +24,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    position: relative;
 }
 
 .logo {
@@ -36,8 +37,9 @@ body {
 
 .search-bar {
     flex: 2;
+    display: flex;
+    justify-content: center;
     text-align: center;
-    order: 2;
 }
 
 .search-bar input {
@@ -77,7 +79,6 @@ body {
     background: none;
     border: none;
     color: #007bff;
-    order: 3;
 }
 
 .hamburger-menu:hover {
@@ -166,17 +167,8 @@ body {
     }
 
     .search-bar {
-        order: 2;
         width: 100%;
         margin: 10px 0;
-    }
-
-    .header-container {
-        flex-direction: row;
-    }
-
-    .logo {
-        order: 1;
     }
 }
 /* App List Styles */
