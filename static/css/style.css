@@ -9,15 +9,14 @@ body {
     font-family: Arial, sans-serif;
     line-height: 1.6;
     color: #333;
-    overflow-x: hidden; /* Prevent horizontal scroll */
 }
 
 /* Header Styles */
 .site-header {
     background-color: #f8f9fa;
-    border-bottom: 1px solid #e9ecef;
     padding: 10px 20px;
     position: relative;
+    border-bottom: 1px solid #e9ecef;
     z-index: 1000;
 }
 
@@ -38,26 +37,27 @@ body {
 .search-bar {
     flex: 2;
     text-align: center;
+    order: 2;
 }
 
 .search-bar input {
     width: 100%;
-    max-width: 500px;
-    padding: 8px;
+    max-width: 400px;
+    padding: 8px 15px;
     border-radius: 20px;
     border: 1px solid #ccc;
 }
 
 .main-nav {
+    flex: 1;
     display: flex;
-    align-items: center;
     justify-content: flex-end;
 }
 
 .main-nav ul {
-    list-style: none;
     display: flex;
-    gap: 20px;
+    list-style: none;
+    gap: 15px;
 }
 
 .main-nav ul li a {
@@ -77,6 +77,7 @@ body {
     background: none;
     border: none;
     color: #007bff;
+    order: 3;
 }
 
 .hamburger-menu:hover {
@@ -87,7 +88,7 @@ body {
 .mobile-nav {
     position: fixed;
     top: 0;
-    left: -250px; /* Initially hide the sidebar */
+    left: -250px;
     width: 250px;
     height: 100%;
     background-color: #f8f9fa;
@@ -98,7 +99,7 @@ body {
 }
 
 .mobile-nav.active {
-    left: 0; /* Show the sidebar when active */
+    left: 0;
 }
 
 .mobile-nav ul {
@@ -135,9 +136,9 @@ body {
 /* Footer Styles */
 .site-footer {
     background-color: #f8f9fa;
-    border-top: 1px solid #e9ecef;
     padding: 20px;
     text-align: center;
+    border-top: 1px solid #e9ecef;
 }
 
 .footer-nav {
@@ -168,6 +169,14 @@ body {
         order: 2;
         width: 100%;
         margin: 10px 0;
+    }
+
+    .header-container {
+        flex-direction: row;
+    }
+
+    .logo {
+        order: 1;
     }
 }
 /* App List Styles */
