@@ -1,20 +1,16 @@
-document.addEventListener('DOMContentLoaded', function() {
-    const hamburger = document.querySelector('.hamburger-menu');
-    const mobileNav = document.querySelector('.mobile-nav');
-
-    hamburger.addEventListener('click', function() {
-        mobileNav.style.display = mobileNav.style.display === 'block' ? 'none' : 'block';
-    });
+document.querySelector('.hamburger-menu').addEventListener('click', function() {
+    this.classList.toggle('active');
+    document.querySelector('.mobile-nav').classList.toggle('show');
 });
 
-function loginWithGoogle() {
-    // Xử lý đăng nhập Google
-}
-
 function loginAsAdmin() {
-    // Xử lý đăng nhập Admin
+    // Logic to handle admin login
 }
 
 function logout() {
-    // Xử lý đăng xuất
+    // Logic to handle logout
+}
+
+function loginWithGoogle() {
+    // Logic to handle Google login
 }

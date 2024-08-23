@@ -1,24 +1,31 @@
+/* General Reset */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
 body {
     font-family: Arial, sans-serif;
     line-height: 1.6;
-    background-color: #f4f4f4;
     color: #333;
 }
 
 /* Header Styles */
+.site-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #e9ecef;
+    padding: 10px 20px;
+}
+
 .header-container {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 15px 20px;
-    background-color: #333;
-    color: #fff;
-    position: relative;
-    z-index: 1000;
 }
 
 .logo img {
-    height: 50px;
+    max-height: 50px;
 }
 
 .search-bar {
@@ -27,128 +34,108 @@ body {
 }
 
 .search-bar input {
+    width: 100%;
     padding: 8px;
     border-radius: 20px;
-    border: none;
-    width: 100%;
-    max-width: 300px;
-}
-
-.main-nav {
-    flex-grow: 1;
-    text-align: right;
+    border: 1px solid #ccc;
 }
 
 .main-nav ul {
-    display: flex;
     list-style: none;
+    display: flex;
     gap: 20px;
 }
 
 .main-nav ul li a {
-    color: #fff;
     text-decoration: none;
-    padding: 5px 10px;
-    transition: background-color 0.3s;
+    color: #007bff;
+    font-weight: bold;
 }
 
 .main-nav ul li a:hover {
-    background-color: #555;
-    border-radius: 5px;
+    color: #0056b3;
 }
 
-.user-menu {
+.user-actions {
     display: flex;
     align-items: center;
+    gap: 10px;
 }
 
-.user-menu button {
-    background: none;
-    border: none;
-    cursor: pointer;
-    margin-left: 10px;
-    padding: 5px 10px;
+.btn-login,
+.btn-logout {
+    background-color: #007bff;
     color: #fff;
-    transition: background-color 0.3s;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 5px;
+    cursor: pointer;
 }
 
-.user-menu button:hover {
-    background-color: #555;
-    border-radius: 5px;
+.btn-login:hover,
+.btn-logout:hover {
+    background-color: #0056b3;
 }
 
 .hamburger-menu {
     display: none;
     font-size: 24px;
-    color: #fff;
+    cursor: pointer;
     background: none;
     border: none;
-    cursor: pointer;
+    color: #007bff;
 }
 
+.hamburger-menu:hover {
+    color: #0056b3;
+}
+
+/* Mobile Nav Styles */
 .mobile-nav {
     display: none;
-    position: fixed;
-    top: 0;
-    left: -100%;
-    height: 100%;
-    width: 80%;
-    max-width: 300px;
-    background-color: #333;
-    transition: left 0.3s ease-in-out;
-    z-index: 999;
-    padding-top: 60px;
-}
-
-.mobile-nav.open {
-    left: 0;
+    background-color: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+    padding: 10px 20px;
 }
 
 .mobile-nav ul {
     list-style: none;
-    padding: 0;
-    margin: 0;
-}
-
-.mobile-nav ul li {
-    border-bottom: 1px solid #555;
 }
 
 .mobile-nav ul li a {
-    color: #fff;
     text-decoration: none;
+    color: #007bff;
     display: block;
-    padding: 15px 20px;
-    transition: background-color 0.3s;
+    padding: 10px 0;
 }
 
 .mobile-nav ul li a:hover {
-    background-color: #555;
+    color: #0056b3;
 }
 
+/* Footer Styles */
 .site-footer {
-    background-color: #333;
-    color: #fff;
+    background-color: #f8f9fa;
+    border-top: 1px solid #e9ecef;
     padding: 20px;
     text-align: center;
 }
 
-.site-footer .footer-nav {
+.footer-nav {
     margin-top: 10px;
 }
 
-.site-footer .footer-nav a {
-    color: #fff;
+.footer-nav a {
+    color: #007bff;
     text-decoration: none;
     margin: 0 10px;
-    transition: color 0.3s;
 }
 
-.site-footer .footer-nav a:hover {
-    color: #ddd;
+.footer-nav a:hover {
+    color: #0056b3;
 }
 
-/* Media Queries */
+/* Responsive Styles */
 @media (max-width: 768px) {
     .main-nav {
         display: none;
@@ -156,6 +143,28 @@ body {
 
     .hamburger-menu {
         display: block;
+    }
+
+    .mobile-nav {
+        display: none;
+    }
+
+    .hamburger-menu.active + .mobile-nav {
+        display: block;
+    }
+
+    .header-container {
+        flex-wrap: wrap;
+    }
+
+    .search-bar {
+        order: 3;
+        width: 100%;
+        margin: 10px 0;
+    }
+
+    .user-actions {
+        order: 2;
     }
 }
 /* App List Styles */

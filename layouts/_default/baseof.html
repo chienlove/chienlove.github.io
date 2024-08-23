@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ .Site.Title }}</title>
     <link rel="stylesheet" href="/css/style.css?v={{ now.Unix }}">
-   {{ block "head" . }}{{ end }}
+    {{ block "head" . }}{{ end }}
 </head>
 <body>
     <header class="site-header">
@@ -24,13 +24,14 @@
                     <li><a href="/topics">Chủ đề</a></li>
                 </ul>
             </nav>
-                <button id="admin-login" style="display: none;" onclick="loginAsAdmin()">Đăng nhập Admin</button>
-                <div id="user-info" style="display: none;">
+            <div class="user-actions">
+                <button id="admin-login" class="btn-login" onclick="loginAsAdmin()" style="display: none;">Đăng nhập Admin</button>
+                <div id="user-info" class="user-info" style="display: none;">
                     <span id="user-name"></span>
-                    <button onclick="logout()">Đăng xuất</button>
+                    <button class="btn-logout" onclick="logout()">Đăng xuất</button>
                 </div>
             </div>
-            <button class="hamburger-menu">&#9776;</button>
+            <button class="hamburger-menu" aria-label="Menu">&#9776;</button>
         </div>
     </header>
 
