@@ -9,6 +9,7 @@ body {
     font-family: Arial, sans-serif;
     line-height: 1.6;
     color: #333;
+    overflow-x: hidden; /* Prevent horizontal scroll */
 }
 
 /* Header Styles */
@@ -17,15 +18,13 @@ body {
     border-bottom: 1px solid #e9ecef;
     padding: 10px 20px;
     position: relative;
-    z-index: 1000; /* Ensures header is above other content */
+    z-index: 1000;
 }
 
 .header-container {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    position: relative;
-    gap: 20px;
 }
 
 .logo {
@@ -39,8 +38,6 @@ body {
 .search-bar {
     flex: 2;
     text-align: center;
-    position: relative;
-    z-index: 1;
 }
 
 .search-bar input {
@@ -52,8 +49,6 @@ body {
 }
 
 .main-nav {
-    flex: 1;
-    text-align: right;
     display: flex;
     align-items: center;
     justify-content: flex-end;
@@ -82,26 +77,28 @@ body {
     background: none;
     border: none;
     color: #007bff;
-    z-index: 10; /* Ensure the button is above the search bar */
-    position: absolute;
-    right: 20px;
 }
 
 .hamburger-menu:hover {
     color: #0056b3;
 }
 
-/* Mobile Nav Styles */
+/* Sidebar Menu */
 .mobile-nav {
-    display: none;
+    position: fixed;
+    top: 0;
+    left: -250px; /* Initially hide the sidebar */
+    width: 250px;
+    height: 100%;
     background-color: #f8f9fa;
-    border-top: 1px solid #e9ecef;
-    padding: 10px 20px;
-    position: absolute;
-    top: 100%; /* Place it directly under the header */
-    left: 0;
-    width: 100%;
-    z-index: 999;
+    border-right: 1px solid #e9ecef;
+    transition: left 0.3s ease;
+    z-index: 1001;
+    padding: 20px;
+}
+
+.mobile-nav.active {
+    left: 0; /* Show the sidebar when active */
 }
 
 .mobile-nav ul {
@@ -117,6 +114,22 @@ body {
 
 .mobile-nav ul li a:hover {
     color: #0056b3;
+}
+
+/* Overlay when Sidebar is Active */
+.sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: none;
+    z-index: 1000;
+}
+
+.sidebar-overlay.active {
+    display: block;
 }
 
 /* Footer Styles */
@@ -151,18 +164,10 @@ body {
         display: block;
     }
 
-    .header-container {
-        flex-wrap: wrap;
-    }
-
     .search-bar {
         order: 2;
         width: 100%;
         margin: 10px 0;
-    }
-
-    .hamburger-menu.active + .mobile-nav {
-        display: block;
     }
 }
 /* App List Styles */
