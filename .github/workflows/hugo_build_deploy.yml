@@ -59,8 +59,12 @@ jobs:
     - name: Install Wrangler CLI
       run: npm install -g wrangler
 
-    - name: Authenticate Wrangler
-      run: wrangler login --api-token ${{ secrets.CLOUDFLARE_API_TOKEN }}
-
     - name: Publish Cloudflare Worker
-      run: wrangler publish
+  env:
+    CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  run: |
+    # Cấu hình Wrangler với API token và account ID
+    echo "account_id = \"${{ secrets.CLOUDFLARE_ACCOUNT_ID }}\"" > wrangler.toml
+    
+    # Publish worker
+    wrangler publish
