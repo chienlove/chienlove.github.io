@@ -71,7 +71,8 @@ body {
     left: -250px;
     width: 250px;
     height: 100%;
-    background-color: #343a40;
+    background-color: #343a40; /* Màu nền đậm hơn cho menu */
+    border-right: 1px solid #23272b;
     transition: left 0.3s ease;
     z-index: 1001;
     padding: 20px;
@@ -79,6 +80,59 @@ body {
 
 .mobile-nav.active {
     left: 0;
+}
+
+.mobile-nav ul {
+    list-style: none;
+}
+
+.mobile-nav ul li a {
+    text-decoration: none;
+    color: #ffffff;
+    display: block;
+    padding: 10px 0;
+}
+
+.mobile-nav ul li a:hover {
+    color: #adb5bd;
+}
+
+/* Overlay when Sidebar is Active */
+.sidebar-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: none;
+    z-index: 1000;
+}
+
+.sidebar-overlay.active {
+    display: block;
+}
+
+/* Footer Styles */
+.site-footer {
+    background-color: #343a40; /* Màu nền đậm hơn cho footer */
+    padding: 20px;
+    text-align: center;
+    border-top: 1px solid #23272b;
+}
+
+.footer-nav {
+    margin-top: 10px;
+}
+
+.footer-nav a {
+    color: #ffffff;
+    text-decoration: none;
+    margin: 0 10px;
+}
+
+.footer-nav a:hover {
+    color: #adb5bd;
 }
 
 /* Responsive Styles */
@@ -92,8 +146,8 @@ body {
     }
 
     .search-bar {
+        width: 100%;
         margin: 10px 0;
-        padding: 0 10px;
     }
 }
 /* App List Styles */
