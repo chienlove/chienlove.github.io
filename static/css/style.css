@@ -135,6 +135,37 @@ body {
     color: #adb5bd;
 }
 
+/* Close button inside mobile nav */
+.close-menu {
+    font-size: 28px;
+    color: #ffffff;
+    background: none;
+    border: none;
+    cursor: pointer;
+    margin-bottom: 20px;
+}
+
+/* Mobile Nav Links */
+.mobile-nav ul {
+    list-style-type: none;
+}
+
+.mobile-nav ul li {
+    margin-bottom: 15px;
+}
+
+.mobile-nav ul li a {
+    color: #ffffff;
+    text-decoration: none;
+    font-size: 18px;
+    display: block;
+    transition: color 0.3s;
+}
+
+.mobile-nav ul li a:hover {
+    color: #d1d1d1;
+}
+
 /* Responsive Styles */
 @media (max-width: 768px) {
     .main-nav {
@@ -146,8 +177,8 @@ body {
     }
 
     .search-bar {
-        width: 100%;
         margin: 10px 0;
+        padding: 0 10px;
     }
 }
 /* App List Styles */
