@@ -14,7 +14,7 @@ jobs:
       with:
         submodules: true
         fetch-depth: 0
-        
+
     - name: Setup Node.js
       uses: actions/setup-node@v3
       with:
@@ -24,21 +24,21 @@ jobs:
       run: |
         npm install
         npm install faunadb
-        
+
     - name: Clear Hugo Cache and Public Folder
       run: |
         rm -rf public
         rm -rf .hugo_cache
-        
+
     - name: Setup Hugo
       uses: peaceiris/actions-hugo@v2
       with:
         hugo-version: 'latest'
         extended: true
-        
+
     - name: Build Hugo Site
       run: hugo --gc --minify --logLevel info
-      
+
     - name: Deploy to Netlify
       uses: nwtgck/actions-netlify@v2.0
       with:
@@ -54,3 +54,13 @@ jobs:
         NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
         NETLIFY_CLEAR_CACHE: 'true'
       timeout-minutes: 10
+
+    # Triển khai Cloudflare Workers
+    - name: Install Wrangler CLI
+      run: npm install -g wrangler
+
+    - name: Authenticate Wrangler
+      run: wrangler login --api-token ${{ secrets.CLOUDFLARE_API_TOKEN }}
+
+    - name: Publish Cloudflare Worker
+      run: wrangler publish
