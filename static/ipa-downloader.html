@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tải xuống IPA</title>
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+    <h1>Tải xuống IPA</h1>
+    <form id="downloadForm">
+        <input type="text" id="appleId" placeholder="Apple ID" required>
+        <input type="password" id="password" placeholder="Password" required>
+        <input type="text" id="appId" placeholder="App ID" required>
+        <input type="text" id="appVerId" placeholder="App Version ID">
+        <input type="text" id="code" placeholder="2FA Code (nếu cần)">
+        <button type="submit">Tải xuống</button>
+    </form>
+    <div id="result"></div>
+
+    <script src="/js/client.js"></script>
+    <script src="/js/index.js"></script>
+    <script src="/js/plist-worker.js"></script>
+    <script src="/js/Signature.js"></script>
+    <script src="/js/server.js"></script>
+</body>
+</html>
