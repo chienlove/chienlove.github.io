@@ -57,14 +57,15 @@ jobs:
       - name: Publish Cloudflare Worker
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: |
           cd ipa-downloader
           # Cài đặt Wrangler CLI
           npm install -g wrangler
-          # Kiểm tra và cài đặt dependencies nếu cần
-          npm install
-          # In nội dung của wrangler.toml để kiểm tra
+          # Thay thế account_id trong wrangler.toml
+          sed -i "s/\$CF_ACCOUNT_ID/${{ secrets.CLOUDFLARE_ACCOUNT_ID }}/g" wrangler.toml
+          # Kiểm tra nội dung wrangler.toml
           cat wrangler.toml
+          # Cài đặt dependencies nếu cần
+          npm install
           # Deploy worker
           wrangler deploy
