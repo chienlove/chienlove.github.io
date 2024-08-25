@@ -56,13 +56,13 @@ jobs:
         timeout-minutes: 10
     
       # Triển khai Cloudflare Workers
-- name: Install Wrangler CLI
-  run: npm install -g wrangler
+      - name: Install Wrangler CLI
+        run: npm install -g wrangler
 
-- name: Publish Cloudflare Worker
+      - name: Publish Cloudflare Worker
   env:
     CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-  run: |
+        run: |
     cd ipa-downloader
     echo "account_id = \"${{ secrets.CLOUDFLARE_ACCOUNT_ID }}\"" >> wrangler.toml
     wrangler publish
