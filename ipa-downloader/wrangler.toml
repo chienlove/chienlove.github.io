@@ -12,7 +12,8 @@ bucket_name = "ipa-downloads"
 [build]
 command = "npm install && npm run build"
 
-[build.upload]
-format = "modules"
+# Bạn có thể tạm thời xóa phần này nếu không cần thiết
+# [build.upload]
+# format = "modules"
 
-external = ["jszip", "node"]
+external = ["node"]
