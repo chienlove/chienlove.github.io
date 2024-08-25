@@ -4,6 +4,7 @@ on:
     branches:
       - master
   workflow_dispatch:
+
 jobs:
   build-deploy:
     runs-on: ubuntu-latest
@@ -53,22 +54,12 @@ jobs:
           NETLIFY_CLEAR_CACHE: 'true'
         timeout-minutes: 10
     
-      - name: Publish Cloudflare Worker
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      - name: Install Wrangler
+        run: npm install -g wrangler
+
+      - name: Deploy Worker
         run: |
           cd ipa-downloader
-          # Cài đặt Wrangler CLI nếu chưa có
-          npm install -g wrangler
-          
-          # Thay thế giá trị account_id trong wrangler.toml
-          sed -i "s/\$CF_ACCOUNT_ID/${{ secrets.CLOUDFLARE_ACCOUNT_ID }}/g" wrangler.toml
-          
-          # Kiểm tra nội dung file wrangler.toml để đảm bảo chính xác
-          cat wrangler.toml
-          
-          # Cài đặt dependencies nếu cần
-          npm install
-          
-          # Triển khai worker
-          wrangler deploy
+          wrangler publish
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
