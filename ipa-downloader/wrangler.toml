@@ -1,7 +1,7 @@
 name = "ipa-downloader"
 account_id = "b9b33e1228ae77e510897cc002c1735c"
 workers_dev = true
-main = "/ipa-downloader/src/index.js"
+main = "ipa-downloader/src/index.js"
 compatibility_date = "2024-07-31"
 node_compat = true
 
