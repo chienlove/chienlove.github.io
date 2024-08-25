@@ -61,8 +61,7 @@ jobs:
 
       - name: Deploy Worker
         run: |
-          cd worker
-          wrangler publish
+             wrangler deploy
         env:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
