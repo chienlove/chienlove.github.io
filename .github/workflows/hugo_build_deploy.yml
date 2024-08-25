@@ -60,7 +60,8 @@ jobs:
         run: npm install -g wrangler
 
       - name: Deploy Worker
-        run: wrangler publish
+        run: |
+             wrangler deploy
         env:
           CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
           CF_ACCOUNT_ID: ${{ secrets.CF_ACCOUNT_ID }}
