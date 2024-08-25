@@ -62,7 +62,7 @@ jobs:
           # Cài đặt Wrangler CLI
           npm install -g wrangler
           # Cập nhật account_id trong wrangler.toml
-          sed -i 's/account_id = ""/account_id = "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"/g' wrangler.toml
+          sed -i "s/account_id = \"\"/account_id = \"${{ secrets.CLOUDFLARE_ACCOUNT_ID }}\"/g" wrangler.toml
           # In nội dung của wrangler.toml để kiểm tra
           cat wrangler.toml
           # Cài đặt dependencies nếu cần
