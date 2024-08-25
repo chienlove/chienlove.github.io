@@ -1,17 +1,13 @@
-name = "ipa-downloader"
-account_id = "$CF_ACCOUNT_ID"
-workers_dev = true
-main = "ipa-downloader/src/index.js"
-compatibility_date = "2024-07-31"
-node_compat = true
-
-[[r2_buckets]]
-binding = "MY_BUCKET"
-bucket_name = "ipa-downloads"
-
-[build]
-command = "npm install && npm run build"
-
-[build.upload]
-format = "modules"
-external = ["jszip", "node"]
+- name: Publish Cloudflare Worker
+  env:
+    CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  run: |
+    cd ipa-downloader
+    # Cập nhật account_id trong wrangler.toml
+    sed -i 's/account_id = "$CF_ACCOUNT_ID"/account_id = "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}"/g' wrangler.toml
+    # In nội dung của wrangler.toml để kiểm tra
+    cat wrangler.toml
+    # Cài đặt dependencies nếu cần
+    npm install
+    # Deploy worker
+    wrangler deploy
