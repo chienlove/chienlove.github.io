@@ -12,7 +12,7 @@ document.getElementById('downloadForm').addEventListener('submit', async (e) => 
     };
 
     try {
-        const response = await fetch('https://boypink93.workers.dev', {
+        const response = await fetch('https://ipa-downloader.boypink93.workers.dev', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
