@@ -63,7 +63,7 @@ jobs:
 
       - name: Bundle JavaScript with esbuild
         run: |
-              npx esbuild ipa-downloader/src/index.js --bundle --platform=node --outfile=ipa-downloader/dist/index.js --external:jszip
+             npx esbuild ipa-downloader/src/index.js --bundle --platform=node --outfile=ipa-downloader/dist/index.js --external:jszip
       - name: Deploy Worker
         run: |
           cd ipa-downloader
