@@ -2,10 +2,10 @@
   "name": "ipa-downloader",
   "version": "1.0.0",
   "description": "IPA Downloader Cloudflare Worker",
-  "main": "ipa-downloader/dist/index.js",
+  "main": "dist/index.js",
   "scripts": {
     "build": "esbuild src/index.js --bundle --format=esm --outfile=dist/index.js",
-    "deploy": "wrangler deploy",
+    "deploy": "wrangler deploy dist/index.js",
     "dev": "wrangler dev"
   },
   "dependencies": {

@@ -1,5 +1,5 @@
 name = "ipa-downloader"
-main = "ipa-downloader/dist/index.js"
+main = "dist/index.js"
 compatibility_date = "2023-09-04"
 
 [vars]
