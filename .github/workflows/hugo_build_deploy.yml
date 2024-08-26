@@ -58,6 +58,9 @@ jobs:
       - name: Install Wrangler
         run: npm install -g wrangler
 
+      - name: Check src directory
+        run: ls -R src
+
       - name: Bundle JavaScript with esbuild
         run: |
           npx esbuild src/index.js --bundle --platform=node --outfile=dist/index.js
