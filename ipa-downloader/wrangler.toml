@@ -11,5 +11,3 @@ bucket_name = "ipa-downloads"
 
 [build]
 command = "npm install && npm run build"
-upload_format = "modules"
-external = ["jszip"]
