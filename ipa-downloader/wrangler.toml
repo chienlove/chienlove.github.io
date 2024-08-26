@@ -1,7 +1,7 @@
 name = "ipa-downloader"
 account_id = "b9b33e1228ae77e510897cc002c1735c"
 workers_dev = true
-main = "src/index.js"
+main = "dist/index.js"
 compatibility_date = "2024-07-31"
 node_compat = true
 
@@ -11,9 +11,3 @@ bucket_name = "ipa-downloads"
 
 [build]
 command = "npm install && npm run build"
-
-# Bạn có thể tạm thời xóa phần này nếu không cần thiết
-# [build.upload]
-# format = "modules"
-
-external = ["node"]
