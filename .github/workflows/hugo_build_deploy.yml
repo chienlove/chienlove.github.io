@@ -23,6 +23,8 @@ jobs:
         run: |
           npm install
           npm install faunadb
+          npm install jszip
+          npm install esbuild --save-dev
     
       - name: Clear Hugo Cache and Public Folder
         run: |
@@ -57,10 +59,15 @@ jobs:
       - name: Install Wrangler
         run: npm install -g wrangler
 
+      - name: Check src directory
+        run: ls -R ipa-downloader/src
+
+      - name: Bundle JavaScript with esbuild
+        run: |
+             npx esbuild ipa-downloader/src/index.js --bundle --platform=node --outfile=ipa-downloader/dist/index.js --external:jszip
       - name: Deploy Worker
         run: |
           cd ipa-downloader
-          ls -R
           wrangler deploy
         env:
-          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
