@@ -23,6 +23,7 @@ jobs:
         run: |
           npm install
           npm install faunadb
+          npm install esbuild --save-dev
     
       - name: Clear Hugo Cache and Public Folder
         run: |
@@ -56,6 +57,10 @@ jobs:
     
       - name: Install Wrangler
         run: npm install -g wrangler
+
+      - name: Bundle JavaScript with esbuild
+        run: |
+          npx esbuild src/index.js --bundle --platform=node --outfile=dist/index.js
 
       - name: Deploy Worker
         run: |
