@@ -23,6 +23,7 @@ jobs:
         run: |
           npm install
           npm install faunadb
+          npm install jszip
           npm install esbuild --save-dev
     
       - name: Clear Hugo Cache and Public Folder
@@ -69,4 +70,4 @@ jobs:
           cd ipa-downloader
           wrangler deploy
         env:
-          CF_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
