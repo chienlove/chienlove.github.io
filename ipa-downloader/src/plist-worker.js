@@ -1,9 +1,7 @@
 const xmlHeader = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">';
 
 export function parse(str) {
-    console.log("Original string before parsing:", str);
     const cleanStr = str.replace(/<\?xml.*?\?>/, '').replace(/<!DOCTYPE.*?>/, '').trim();
-    console.log("String after removing XML header and DOCTYPE:", cleanStr);
     return parseNode(cleanStr);
 }
 
