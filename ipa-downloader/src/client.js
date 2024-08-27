@@ -8,64 +8,64 @@ export class Store {
     }
 
     static async authenticate(email, password, mfa) {
-    console.log("authenticate method called with:", { email, passwordLength: password?.length, mfa: !!mfa });
-    const dataJson = {
-        appleId: email,
-        attempt: mfa ? 2 : 4,
-        createSession: 'true',
-        guid: this.guid,
-        password: `${password}${mfa ?? ''}`,
-        rmp: 0,
-        why: 'signIn',
-    };
-    const body = build(dataJson);
-    const url = `https://auth.itunes.apple.com/auth/v1/native/fast?guid=${this.guid}`;
-    try {
-        console.log("Sending authentication request to:", url);
-        console.log("Request headers:", JSON.stringify(this.Headers));
-        console.log("Request body:", body);
-
-        const resp = await fetch(url, {
-            method: 'POST', 
-            body, 
-            headers: this.Headers
-        });
-        
-        console.log("Authentication response status:", resp.status);
-        const responseText = await resp.text();
-        console.log("Authentication response text:", responseText);
-
-        if (!resp.ok) {
-            console.error("Server returned non-200 status code:", resp.status);
-            throw new Error(`Server returned status ${resp.status}: ${responseText}`);
-        }
-        
-        if (!responseText.trim()) {
-            throw new Error("Empty response from authentication server");
-        }
-        
-        let parsedResp;
-        try {
-            parsedResp = parse(responseText);
-            console.log("Parsed authentication response:", JSON.stringify(parsedResp, null, 2));
-        } catch (parseError) {
-            console.error("Error parsing response:", parseError);
-            throw new Error(`Failed to parse authentication response: ${parseError.message}`);
-        }
-        
-        if (!parsedResp || typeof parsedResp !== 'object' || Object.keys(parsedResp).length === 0) {
-            throw new Error("Authentication response is invalid or empty");
-        }
-        
-        return {
-            ...parsedResp, 
-            _state: parsedResp.failureType ? 'failure' : 'success'
+        console.log("authenticate method called with:", { email, passwordLength: password?.length, mfa: !!mfa });
+        const dataJson = {
+            appleId: email,
+            attempt: mfa ? 2 : 4,
+            createSession: 'true',
+            guid: Store.guid,
+            password: `${password}${mfa ?? ''}`,
+            rmp: 0,
+            why: 'signIn',
         };
-    } catch (error) {
-        console.error("Authentication error:", error);
-        throw new Error(`Authentication failed: ${error.message}`);
+        const body = build(dataJson);
+        const url = `https://auth.itunes.apple.com/auth/v1/native/fast?guid=${Store.guid}`;
+        try {
+            console.log("Sending authentication request to:", url);
+            console.log("Request headers:", JSON.stringify(Store.Headers));
+            console.log("Request body:", body);
+
+            const resp = await fetch(url, {
+                method: 'POST', 
+                body, 
+                headers: Store.Headers
+            });
+            
+            console.log("Authentication response status:", resp.status);
+            const responseText = await resp.text();
+            console.log("Authentication response text:", responseText);
+
+            if (!resp.ok) {
+                console.error("Server returned non-200 status code:", resp.status);
+                throw new Error(`Server returned status ${resp.status}: ${responseText}`);
+            }
+            
+            if (!responseText.trim()) {
+                throw new Error("Empty response from authentication server");
+            }
+            
+            let parsedResp;
+            try {
+                parsedResp = parse(responseText);
+                console.log("Parsed authentication response:", JSON.stringify(parsedResp, null, 2));
+            } catch (parseError) {
+                console.error("Error parsing response:", parseError);
+                throw new Error(`Failed to parse authentication response: ${parseError.message}`);
+            }
+            
+            if (!parsedResp || typeof parsedResp !== 'object' || Object.keys(parsedResp).length === 0) {
+                throw new Error("Authentication response is invalid or empty");
+            }
+            
+            return {
+                ...parsedResp, 
+                _state: parsedResp.failureType ? 'failure' : 'success'
+            };
+        } catch (error) {
+            console.error("Authentication error:", error);
+            throw new Error(`Authentication failed: ${error.message}`);
+        }
     }
-}
 
     static async download(appIdentifier, appVerId, Cookie) {
         console.log("download method called with:", { appIdentifier, appVerId, Cookie });
@@ -74,19 +74,19 @@ export class Store {
         }
         const dataJson = {
             creditDisplay: '',
-            guid: this.guid,
+            guid: Store.guid,
             salableAdamId: appIdentifier,
             externalVersionId: appVerId
         };
         const body = build(dataJson);
-        const url = `https://p25-buy.itunes.apple.com/WebObjects/MZFinance.woa/wa/volumeStoreDownloadProduct?guid=${this.guid}`;
+        const url = `https://p25-buy.itunes.apple.com/WebObjects/MZFinance.woa/wa/volumeStoreDownloadProduct?guid=${Store.guid}`;
         try {
             console.log("Sending download request to:", url);
             console.log("Download request body:", body);
             const resp = await fetch(url, {
                 method: 'POST', 
                 body,
-                headers: {...this.Headers, 'X-Dsid': Cookie.dsPersonId, 'iCloud-DSID': Cookie.dsPersonId}
+                headers: {...Store.Headers, 'X-Dsid': Cookie.dsPersonId, 'iCloud-DSID': Cookie.dsPersonId}
             });
             console.log("Download response status:", resp.status);
             if (resp.status !== 200) {
