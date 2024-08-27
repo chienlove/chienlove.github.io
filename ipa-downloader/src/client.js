@@ -13,37 +13,40 @@ export class Store {
             appleId: email,
             attempt: mfa ? 2 : 4,
             createSession: 'true',
-            guid: Store.guid,
+            guid: this.guid,
             password: `${password}${mfa ?? ''}`,
             rmp: 0,
             why: 'signIn',
         };
+        console.log("Data JSON being sent:", JSON.stringify(dataJson, null, 2));
+
         const body = build(dataJson);
-        const url = `https://auth.itunes.apple.com/auth/v1/native/fast?guid=${Store.guid}`;
+        console.log("Request body XML:", body);
+
+        const url = `https://auth.itunes.apple.com/auth/v1/native/fast?guid=${this.guid}`;
         try {
             console.log("Sending authentication request to:", url);
-            console.log("Request headers:", JSON.stringify(Store.Headers));
-            console.log("Request body:", body);
+            console.log("Request headers:", JSON.stringify(this.Headers));
 
             const resp = await fetch(url, {
                 method: 'POST', 
                 body, 
-                headers: Store.Headers
+                headers: this.Headers
             });
-            
+
             console.log("Authentication response status:", resp.status);
             const responseText = await resp.text();
-            console.log("Authentication response text:", responseText);
+            console.log("Raw authentication response text:", responseText);
 
             if (!resp.ok) {
                 console.error("Server returned non-200 status code:", resp.status);
                 throw new Error(`Server returned status ${resp.status}: ${responseText}`);
             }
-            
+
             if (!responseText.trim()) {
                 throw new Error("Empty response from authentication server");
             }
-            
+
             let parsedResp;
             try {
                 parsedResp = parse(responseText);
@@ -52,11 +55,11 @@ export class Store {
                 console.error("Error parsing response:", parseError);
                 throw new Error(`Failed to parse authentication response: ${parseError.message}`);
             }
-            
+
             if (!parsedResp || typeof parsedResp !== 'object' || Object.keys(parsedResp).length === 0) {
                 throw new Error("Authentication response is invalid or empty");
             }
-            
+
             return {
                 ...parsedResp, 
                 _state: parsedResp.failureType ? 'failure' : 'success'
@@ -74,34 +77,37 @@ export class Store {
         }
         const dataJson = {
             creditDisplay: '',
-            guid: Store.guid,
+            guid: this.guid,
             salableAdamId: appIdentifier,
             externalVersionId: appVerId
         };
         const body = build(dataJson);
-        const url = `https://p25-buy.itunes.apple.com/WebObjects/MZFinance.woa/wa/volumeStoreDownloadProduct?guid=${Store.guid}`;
+        console.log("Request body XML:", body);
+
+        const url = `https://p25-buy.itunes.apple.com/WebObjects/MZFinance.woa/wa/volumeStoreDownloadProduct?guid=${this.guid}`;
         try {
             console.log("Sending download request to:", url);
-            console.log("Download request body:", body);
             const resp = await fetch(url, {
                 method: 'POST', 
                 body,
-                headers: {...Store.Headers, 'X-Dsid': Cookie.dsPersonId, 'iCloud-DSID': Cookie.dsPersonId}
+                headers: {...this.Headers, 'X-Dsid': Cookie.dsPersonId, 'iCloud-DSID': Cookie.dsPersonId}
             });
             console.log("Download response status:", resp.status);
+
             if (resp.status !== 200) {
                 console.error("Server returned non-200 status code:", resp.status);
                 const errorText = await resp.text();
                 console.error("Error response from server:", errorText);
                 throw new Error(`Server returned status ${resp.status}: ${errorText}`);
             }
+
             const responseText = await resp.text();
-            console.log("Download response text:", responseText);
-            
+            console.log("Raw download response text:", responseText);
+
             if (!responseText.trim()) {
                 throw new Error("Empty response from download server");
             }
-            
+
             let parsedResp;
             try {
                 parsedResp = parse(responseText);
@@ -110,11 +116,11 @@ export class Store {
                 console.error("Error parsing download response:", parseError);
                 throw new Error(`Failed to parse download response: ${parseError.message}`);
             }
-            
+
             if (!parsedResp) {
                 throw new Error("Download response is empty or invalid");
             }
-            
+
             return {
                 ...parsedResp, 
                 _state: parsedResp.failureType ? 'failure' : 'success'
