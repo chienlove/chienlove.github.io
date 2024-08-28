@@ -4,4 +4,4 @@
 # Chuyển hướng yêu cầu đến trang intermediate
 /intermediate/:appId  /intermediate.html?appId=:appId  200
 # sub domain
-/ipadl/*  /ipa-downloader/:splat  301!
+/*  /ipa-downloader/:splat  301!
