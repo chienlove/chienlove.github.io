@@ -3,5 +3,3 @@
 
 # Chuyển hướng yêu cầu đến trang intermediate
 /intermediate/:appId  /intermediate.html?appId=:appId  200
-# sub domain
-/  /ipa-downloader  200

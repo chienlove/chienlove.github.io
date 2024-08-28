@@ -32,6 +32,13 @@
   from = "/:shortId"
   to = "/.netlify/functions/redirect/:shortId"
   status = 200
+
+[[redirects]]
+  from = "/"
+  to = "/ipa-downloader"
+  status = 200
+  force = true
+  conditions = {Host = "ipadl.storeios.net"}
   
 [dev]
   framework = "hugo"
