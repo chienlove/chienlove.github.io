@@ -34,7 +34,7 @@
   status = 200
 
 [[redirects]]
-  from = "/"
+  from = "/*"
   to = "/ipa-downloader.html"
   status = 200
   force = true
