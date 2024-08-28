@@ -11,6 +11,8 @@ document.getElementById('downloadForm').addEventListener('submit', async (e) => 
         CODE: document.getElementById('code').value
     };
 
+    console.log("Data being sent:", formData);
+
     try {
         const response = await fetch('https://ipa-downloader.boypink93.workers.dev', {
             method: 'POST',
@@ -20,7 +22,9 @@ document.getElementById('downloadForm').addEventListener('submit', async (e) => 
             body: JSON.stringify(formData)
         });
 
+        console.log("Raw response:", response);
         const data = await response.json();
+        console.log("Parsed response data:", data);
 
         if (response.ok) {
             result.innerHTML = `Tải xuống thành công: <a href="${data.url}" target="_blank">Tải xuống IPA</a>`;
@@ -28,6 +32,7 @@ document.getElementById('downloadForm').addEventListener('submit', async (e) => 
             result.textContent = `Lỗi: ${data.error}`;
         }
     } catch (error) {
+        console.error("Request failed:", error);
         result.textContent = `Lỗi: ${error.message}`;
     }
 });
