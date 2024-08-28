@@ -3,6 +3,8 @@ import { SignatureClient } from "./Signature.js";
 
 export default {
   async fetch(request, env, ctx) {
+    console.log("Nhận yêu cầu mới");
+
     // CORS handling
     if (request.method === "OPTIONS") {
       return new Response(null, {
@@ -20,49 +22,68 @@ export default {
     };
 
     if (request.method !== "POST") {
-      return new Response("Method Not Allowed", { status: 405, headers });
+      console.log("Phương thức không được phép:", request.method);
+      return new Response(JSON.stringify({ error: "Method Not Allowed" }), { status: 405, headers });
     }
 
     try {
+      console.log("Bắt đầu xử lý yêu cầu POST");
       const { APPLE_ID, PASSWORD, CODE, APPID, appVerId } = await request.json();
 
       if (!APPLE_ID || !PASSWORD || !APPID || !appVerId) {
+        console.error("Thiếu trường bắt buộc");
         throw new Error("Missing required fields");
       }
 
+      console.log("Bắt đầu xác thực");
       // Authenticate
       const user = await Store.authenticate(APPLE_ID, PASSWORD, CODE);
-      if (user._state !== "success") {
-        return new Response(JSON.stringify({ error: "Authentication failed" }), { status: 401, headers });
+      console.log("Kết quả xác thực:", user);
+      if (user.error) {
+        console.error("Xác thực thất bại:", user.error);
+        return new Response(JSON.stringify({ error: user.error, details: user.details }), { status: 401, headers });
       }
 
+      console.log("Xác thực thành công, bắt đầu tải xuống");
       // Download
       const app = await Store.download(APPID, appVerId, user);
-      if (app._state !== "success") {
-        return new Response(JSON.stringify({ error: "Download failed" }), { status: 400, headers });
+      console.log("Kết quả tải xuống:", app);
+      if (app.error) {
+        console.error("Tải xuống thất bại:", app.error);
+        return new Response(JSON.stringify({ error: app.error, details: app.details }), { status: 400, headers });
       }
 
       const songList0 = app?.songList[0];
       if (!songList0) {
+        console.error("Không tìm thấy danh sách bài hát trong dữ liệu ứng dụng");
         throw new Error("No song list found in the app data");
       }
 
       const uniqueString = crypto.randomUUID();
       const fileName = `${songList0.metadata.bundleDisplayName}_${songList0.metadata.bundleShortVersionString}_${uniqueString}.ipa`;
 
+      console.log("Bắt đầu xử lý chữ ký");
       const signatureClient = new SignatureClient(songList0, APPLE_ID);
       await signatureClient.loadBuffer(await (await fetch(songList0.URL)).arrayBuffer());
       signatureClient.appendMetadata();
       await signatureClient.appendSignature();
       const buffer = await signatureClient.getBuffer();
 
+      console.log("Lưu file vào R2");
       await env.R2.put(fileName, buffer);
 
       const url = `${env.DOMAIN}/${fileName}`;
+      console.log("URL tải xuống:", url);
 
       return new Response(JSON.stringify({ url }), { headers });
     } catch (error) {
-      return new Response(JSON.stringify({ error: error.message }), { status: 500, headers });
+      console.error("Lỗi chi tiết:", error);
+      return new Response(JSON.stringify({ 
+        error: error.message, 
+        stack: error.stack,
+        name: error.name,
+        cause: error.cause
+      }), { status: 500, headers });
     }
   },
 };
