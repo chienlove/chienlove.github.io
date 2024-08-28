@@ -1,8 +1,14 @@
 const xmlHeader = '<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">';
 
 export function parse(str) {
-    const cleanStr = str.replace(/<\?xml.*?\?>/, '').replace(/<!DOCTYPE.*?>/, '').trim();
-    return parseNode(cleanStr);
+    try {
+        const cleanStr = str.replace(/<\?xml.*?\?>/, '').replace(/<!DOCTYPE.*?>/, '').trim();
+        return parseNode(cleanStr);
+    } catch (error) {
+        console.error("Lỗi khi phân tích chuỗi:", error);
+        console.log("Chuỗi gây lỗi:", str);
+        throw new Error(`Không thể phân tích chuỗi: ${error.message}`);
+    }
 }
 
 function parseNode(str) {
