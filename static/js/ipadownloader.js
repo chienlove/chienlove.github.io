@@ -34,6 +34,9 @@ document.getElementById('downloadForm').addEventListener('submit', async (e) => 
             result.innerHTML = `Tải xuống thành công: <a href="${data.url}" target="_blank">Tải xuống IPA</a>`;
             document.getElementById('code').value = '';
             mfaInput.style.display = 'none';
+        } else if (data.needsMFA && formData.CODE) {
+            result.textContent = `Lỗi: Mã xác thực không hợp lệ hoặc hết hạn.`;
+            console.error("MFA Error details:", data);
         } else {
             result.textContent = `Lỗi: ${data.error || 'Không xác định'}`;
             console.error("Error details:", data);

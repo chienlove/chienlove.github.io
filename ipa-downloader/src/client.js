@@ -57,7 +57,7 @@ export class Store {
                 throw new Error("Phản hồi xác thực rỗng hoặc không hợp lệ");
             }
 
-            if (parsedResp.x2fa) {
+            if (parsedResp.x2fa && !mfa) {
                 return {
                     needsMFA: true,
                     _state: 'mfa_required'
@@ -160,9 +160,7 @@ export class Store {
             }
 
             if (!parsedResp.songList || !Array.isArray(parsedResp.songList) || parsedResp.songList.length === 0) {
-                throw new Error("Phản hồi tải xuống không chứa
-
- thông tin ứng dụng");
+                throw new Error("Phản hồi tải xuống không chứa thông tin ứng dụng");
             }
 
             return parsedResp;
