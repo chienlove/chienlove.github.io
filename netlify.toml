@@ -39,12 +39,6 @@
     to = "/ipa-downloader.html"
     status = 200
     force = true
-
-[[redirects]]
-  from = "/ipa-downloader.html"
-  to = "https://ipadl.storeios.net"
-  status = 301
-  force = true
   
 [dev]
   framework = "hugo"
