@@ -53,6 +53,10 @@ export class Store {
 
             console.log("Phản hồi xác thực đã được phân tích:", JSON.stringify(parsedResp, null, 2));
 
+            if (!parsedResp) {
+                throw new Error("Phản hồi xác thực rỗng hoặc không hợp lệ");
+            }
+
             if (parsedResp.x2fa) {
                 return {
                     needsMFA: true,
@@ -81,7 +85,11 @@ export class Store {
             };
         } catch (error) {
             console.error("Lỗi xác thực:", error);
-            throw new Error(`Xác thực thất bại: ${error.message}`);
+            return {
+                error: `Xác thực thất bại: ${error.message}`,
+                details: error,
+                _state: 'error'
+            };
         }
     }
 

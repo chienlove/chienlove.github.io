@@ -33,7 +33,11 @@ document.getElementById('downloadForm').addEventListener('submit', async (e) => 
         } else if (response.ok) {
             result.innerHTML = `Tải xuống thành công: <a href="${data.url}" target="_blank">Tải xuống IPA</a>`;
         } else {
-            result.textContent = `Lỗi: ${data.error}`;
+            let errorMessage = data.error || 'Lỗi không xác định';
+            if (data.details) {
+                errorMessage += '<br>Chi tiết: ' + JSON.stringify(data.details);
+            }
+            result.innerHTML = `Lỗi: ${errorMessage}`;
             console.error("Error details:", data);
         }
     } catch (error) {
