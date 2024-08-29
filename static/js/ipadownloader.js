@@ -29,15 +29,17 @@ document.getElementById('downloadForm').addEventListener('submit', async (e) => 
         if (data.needsMFA) {
             // Hiển thị trường nhập mã MFA
             document.getElementById('mfaInput').style.display = 'block';
-            result.textContent = 'Vui lòng nhập mã xác thực';
-        } else if (response.ok) {
+            result.textContent = 'Vui lòng nhập mã xác thực và bấm "Tải xuống" lại';
+            // Xóa mã CODE cũ để người dùng nhập mã mới
+            document.getElementById('code').value = '';
+        } else if (response.ok && data.url) {
             result.innerHTML = `Tải xuống thành công: <a href="${data.url}" target="_blank">Tải xuống IPA</a>`;
+            // Xóa mã CODE sau khi tải xuống thành công
+            document.getElementById('code').value = '';
+            // Ẩn trường nhập mã MFA
+            document.getElementById('mfaInput').style.display = 'none';
         } else {
-            let errorMessage = data.error || 'Lỗi không xác định';
-            if (data.details) {
-                errorMessage += '<br>Chi tiết: ' + JSON.stringify(data.details);
-            }
-            result.innerHTML = `Lỗi: ${errorMessage}`;
+            result.textContent = `Lỗi: ${data.error || 'Không xác định'}`;
             console.error("Error details:", data);
         }
     } catch (error) {

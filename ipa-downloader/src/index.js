@@ -37,19 +37,30 @@ export default {
 
       console.log("Bắt đầu xác thực");
       let user;
-      if (!CODE) {
-        user = await Store.authenticate(APPLE_ID, PASSWORD);
-      } else {
+      
+      // Thử xác thực với mật khẩu trước
+      user = await Store.authenticate(APPLE_ID, PASSWORD);
+      
+      // Nếu cần MFA và có mã CODE, thử xác thực lại với MFA
+      if (user.needsMFA && CODE) {
+        console.log("Cần MFA, thử xác thực lại với mã xác thực");
         user = await Store.authenticate(APPLE_ID, PASSWORD, CODE);
       }
 
       console.log("Kết quả xác thực:", user);
+      
       if (user.needsMFA) {
         return new Response(JSON.stringify({ needsMFA: true }), { status: 200, headers });
       }
+      
       if (user.error) {
         console.error("Xác thực thất bại:", user.error);
         return new Response(JSON.stringify({ error: user.error, details: user.details }), { status: 401, headers });
+      }
+
+      if (!user.v || !user.r || !user.s) {
+        console.error("Xác thực thành công nhưng thiếu thông tin cần thiết");
+        return new Response(JSON.stringify({ error: "Authentication successful but missing required data" }), { status: 500, headers });
       }
 
       console.log("Xác thực thành công, bắt đầu tải xuống");
