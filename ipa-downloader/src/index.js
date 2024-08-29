@@ -41,12 +41,17 @@ export default {
       console.log("Kết quả xác thực:", user);
 
       if (user.needsMFA) {
-        return new Response(JSON.stringify({ needsMFA: true }), { status: 200, headers });
+        return new Response(JSON.stringify({ needsMFA: true, mfaType: user.mfaType }), { status: 200, headers });
       }
 
       if (user.error) {
         console.error("Xác thực thất bại:", user.error);
         return new Response(JSON.stringify({ error: user.error, details: user.details }), { status: 401, headers });
+      }
+
+      if (user._state !== 'success') {
+        console.error("Xác thực không thành công:", user);
+        return new Response(JSON.stringify({ error: "Xác thực không thành công", details: user }), { status: 401, headers });
       }
 
       console.log("Xác thực thành công, bắt đầu tải xuống");

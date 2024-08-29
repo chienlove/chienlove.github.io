@@ -9,15 +9,15 @@ export class Store {
         console.log("Bắt đầu xác thực với:", { email, passwordLength: password?.length, mfa: !!mfa });
         const dataJson = {
             appleId: email,
-            attempt: mfa ? 2 : 4,
+            attempt: mfa ? 2 : 1,
             createSession: 'true',
             guid: this.guid,
-            password: `${password}${mfa ?? ''}`,
+            password: mfa ? mfa : password,
             rmp: 0,
             why: 'signIn',
         };
         const body = build(dataJson);
-        const url = `https://auth.itunes.apple.com/auth/v1/native/fast?guid=${this.guid}`;
+        const url = `https://p25-buy.itunes.apple.com/WebObjects/MZFinance.woa/wa/authenticate?guid=${this.guid}`;
 
         try {
             console.log("Gửi yêu cầu xác thực đến:", url);
@@ -59,20 +59,20 @@ export class Store {
                 throw new Error("Phản hồi xác thực không hợp lệ");
             }
 
-            if (parsedResp.failureType === 'MFA_REQUIRED') {
-                return { needsMFA: true };
+            if (parsedResp.m) {
+                return { needsMFA: true, mfaType: parsedResp.m };
             }
 
-            if (parsedResp.failureType || parsedResp.errorMessage) {
+            if (parsedResp.customerMessage || parsedResp.failureType) {
                 return {
-                    error: parsedResp.errorMessage || "Xác thực thất bại",
+                    error: parsedResp.customerMessage || "Xác thực thất bại",
                     details: parsedResp,
                     _state: 'failure'
                 };
             }
 
             // Kiểm tra các trường dữ liệu cần thiết
-            const requiredFields = ['v', 'r', 's'];
+            const requiredFields = ['passwordToken', 'dsPersonId'];
             for (const field of requiredFields) {
                 if (!parsedResp[field]) {
                     throw new Error(`Phản hồi xác thực thiếu trường dữ liệu cần thiết: ${field}`);
@@ -91,31 +91,19 @@ export class Store {
 
     static async download(appId, appVerId, user) {
         console.log("Bắt đầu tải xuống với:", { appId, appVerId });
-        const url = `https://p27-buy.itunes.apple.com/WebObjects/MZBuy.woa/wa/buyProduct?guid=${this.guid}`;
+        const url = `https://p25-buy.itunes.apple.com/WebObjects/MZBuy.woa/wa/buyProduct?guid=${this.guid}`;
         const dataJson = {
-            appExtVrsId: appVerId,
-            buyAndDownload: "",
             guid: this.guid,
-            hasAskedToFulfillPreorder: "true",
-            isInApp: "true",
-            kbsync: user.s,
-            machineName: "iPhone",
-            mediaSignature: user.r,
-            mtApp: "",
-            mtClientId: "",
-            mtEventTime: Date.now(),
-            mtPageId: "",
-            mtPageType: "",
-            needDiv: "",
-            origPage: "",
-            origPageStatus: "",
-            origPageTimestamp: "",
-            price: "0",
+            salableAdamId: appId,
+            appExtVrsId: appVerId,
             pricingParameters: "STDQ",
             productType: "C",
-            salableAdamId: appId,
-            sbsync: user.v,
-            signedRedownloadAttrs: "",
+            price: 0,
+            buyAndDownload: true,
+            hasAskedToFulfillPreorder: true,
+            // Thêm các trường xác thực từ user object
+            dsPersonId: user.dsPersonId,
+            passwordToken: user.passwordToken
         };
         const body = build(dataJson);
 
@@ -158,9 +146,9 @@ export class Store {
                 throw new Error("Phản hồi tải xuống không hợp lệ");
             }
 
-            if (parsedResp.failureType || parsedResp.errorMessage) {
+            if (parsedResp.failureType || parsedResp.customerMessage) {
                 return {
-                    error: parsedResp.errorMessage || "Tải xuống thất bại",
+                    error: parsedResp.customerMessage || "Tải xuống thất bại",
                     details: parsedResp,
                     _state: 'failure'
                 };
@@ -181,6 +169,8 @@ export class Store {
     static Headers = {
         'User-Agent': 'Configurator/2.15 (Macintosh; OS X 11.0.0; 16G29) AppleWebKit/2603.3.8',
         'Content-Type': 'application/x-www-form-urlencoded',
+        'X-Apple-Store-Front': '143441-19,32',
+        'X-Apple-I-MD-M': Store.guid,
     };
 }
 
