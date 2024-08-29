@@ -160,4 +160,22 @@ export class Store {
             }
 
             if (!parsedResp.songList || !Array.isArray(parsedResp.songList) || parsedResp.songList.length === 0) {
-                throw new Error("Phản hồi tải xuống không chứa |oai:code-citation|
+                throw new Error("Phản hồi tải xuống không chứa
+
+ thông tin ứng dụng");
+            }
+
+            return parsedResp;
+        } catch (error) {
+            console.error("Lỗi tải xuống:", error);
+            throw new Error(`Tải xuống thất bại: ${error.message}`);
+        }
+    }
+
+    static Headers = {
+        'User-Agent': 'Configurator/2.15 (Macintosh; OS X 11.0.0; 16G29) AppleWebKit/2603.3.8',
+        'Content-Type': 'application/x-www-form-urlencoded',
+    };
+}
+
+console.log("client.js đã được tải, đối tượng Store:", Store);

@@ -27,10 +27,9 @@ document.getElementById('downloadForm').addEventListener('submit', async (e) => 
         const data = await response.json();
         console.log("Parsed response data:", data);
 
-        if (data.needsMFA) {
+        if (data.needsMFA && !formData.CODE) {
             mfaInput.style.display = 'block';
             result.textContent = 'Vui lòng nhập mã xác thực và bấm "Tải xuống" lại';
-            document.getElementById('code').value = '';
         } else if (data.url) {
             result.innerHTML = `Tải xuống thành công: <a href="${data.url}" target="_blank">Tải xuống IPA</a>`;
             document.getElementById('code').value = '';
