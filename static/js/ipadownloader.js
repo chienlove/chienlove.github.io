@@ -30,6 +30,9 @@ document.getElementById('downloadForm').addEventListener('submit', async (e) => 
             result.innerHTML = `Tải xuống thành công: <a href="${data.url}" target="_blank">Tải xuống IPA</a>`;
         } else {
             result.textContent = `Lỗi: ${data.error}`;
+            if (data.details) {
+                console.error("Chi tiết lỗi:", data.details);
+            }
         }
     } catch (error) {
         console.error("Request failed:", error);
