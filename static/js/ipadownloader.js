@@ -26,13 +26,15 @@ document.getElementById('downloadForm').addEventListener('submit', async (e) => 
         const data = await response.json();
         console.log("Parsed response data:", data);
 
-        if (response.ok) {
+        if (data.needsMFA) {
+            // Hiển thị trường nhập mã MFA
+            document.getElementById('mfaInput').style.display = 'block';
+            result.textContent = 'Vui lòng nhập mã xác thực';
+        } else if (response.ok) {
             result.innerHTML = `Tải xuống thành công: <a href="${data.url}" target="_blank">Tải xuống IPA</a>`;
         } else {
             result.textContent = `Lỗi: ${data.error}`;
-            if (data.details) {
-                console.error("Chi tiết lỗi:", data.details);
-            }
+            console.error("Error details:", data);
         }
     } catch (error) {
         console.error("Request failed:", error);

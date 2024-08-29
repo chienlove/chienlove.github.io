@@ -12,10 +12,15 @@ export class Store {
             attempt: mfa ? 2 : 1,
             createSession: 'true',
             guid: this.guid,
-            password: `${password}${mfa || ''}`,
+            password: password,
             rmp: 0,
             why: 'signIn',
         };
+
+        if (mfa) {
+            dataJson.mfaCode = mfa;
+        }
+
         const body = build(dataJson);
         const url = `https://auth.itunes.apple.com/auth/v1/native/fast?guid=${this.guid}`;
 
@@ -35,28 +40,24 @@ export class Store {
             console.log("Nội dung phản hồi thô:", responseText);
 
             if (!resp.ok) {
-                console.error("Máy chủ trả về mã trạng thái không phải 200:", resp.status);
                 throw new Error(`Máy chủ trả về trạng thái ${resp.status}: ${responseText}`);
-            }
-
-            if (!responseText.trim()) {
-                throw new Error("Phản hồi từ máy chủ xác thực trống");
             }
 
             let parsedResp;
             try {
+                parsedResp = JSON.parse(responseText);
+            } catch (jsonError) {
+                console.log("Không thể phân tích JSON, thử phân tích bằng hàm parse tùy chỉnh");
                 parsedResp = parse(responseText);
-            } catch (parseError) {
-                console.error("Lỗi khi phân tích phản hồi:", parseError);
-                console.log("Nội dung phản hồi gây lỗi:", responseText);
-                throw new Error(`Không thể phân tích phản hồi xác thực: ${parseError.message}`);
             }
 
             console.log("Phản hồi xác thực đã được phân tích:", JSON.stringify(parsedResp, null, 2));
 
-            if (!parsedResp || typeof parsedResp !== 'object') {
-                console.error("Phản hồi đã phân tích không hợp lệ:", parsedResp);
-                throw new Error("Phản hồi xác thực không hợp lệ");
+            if (parsedResp.x2fa) {
+                return {
+                    needsMFA: true,
+                    _state: 'mfa_required'
+                };
             }
 
             if (parsedResp.failureType || parsedResp.errorMessage) {
@@ -67,7 +68,6 @@ export class Store {
                 };
             }
 
-            // Kiểm tra các trường dữ liệu cần thiết
             const requiredFields = ['v', 'r', 's'];
             for (const field of requiredFields) {
                 if (!parsedResp[field]) {
@@ -131,12 +131,7 @@ export class Store {
             console.log("Nội dung phản hồi thô:", responseText);
 
             if (!resp.ok) {
-                console.error("Máy chủ trả về mã trạng thái không phải 200:", resp.status);
                 throw new Error(`Máy chủ trả về trạng thái ${resp.status}: ${responseText}`);
-            }
-
-            if (!responseText.trim()) {
-                throw new Error("Phản hồi từ máy chủ tải xuống trống");
             }
 
             let parsedResp;
@@ -145,13 +140,7 @@ export class Store {
                 console.log("Phản hồi tải xuống đã được phân tích:", JSON.stringify(parsedResp, null, 2));
             } catch (parseError) {
                 console.error("Lỗi khi phân tích phản hồi tải xuống:", parseError);
-                console.log("Nội dung phản hồi gây lỗi:", responseText);
                 throw new Error(`Không thể phân tích phản hồi tải xuống: ${parseError.message}`);
-            }
-
-            if (!parsedResp || typeof parsedResp !== 'object') {
-                console.error("Phản hồi tải xuống đã phân tích không hợp lệ:", parsedResp);
-                throw new Error("Phản hồi tải xuống không hợp lệ");
             }
 
             if (parsedResp.failureType || parsedResp.errorMessage) {
@@ -162,7 +151,6 @@ export class Store {
                 };
             }
 
-            // Kiểm tra các trường dữ liệu cần thiết
             if (!parsedResp.songList || !Array.isArray(parsedResp.songList) || parsedResp.songList.length === 0) {
                 throw new Error("Phản hồi tải xuống không chứa thông tin ứng dụng");
             }
