@@ -7,4 +7,4 @@
 # sub domain
 https://ipadl.storeios.net/*   /ipa-downloader/:splat   200!
 
-*/ipa-downloader    https://ipadl.storeios.net/:splat    301
+/ipa-downloader    https://ipadl.storeios.net    301!
