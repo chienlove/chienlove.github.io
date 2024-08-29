@@ -6,92 +6,92 @@ export class Store {
     }
 
     static async authenticate(email, password, mfa) {
-        console.log("Bắt đầu xác thực với:", { email, passwordLength: password?.length, mfa: !!mfa });
-        const dataJson = {
-            appleId: email,
-            attempt: mfa ? 2 : 1,
-            createSession: 'true',
-            guid: this.guid,
-            password: password,
-            rmp: 0,
-            why: 'signIn',
-        };
+    console.log("Bắt đầu xác thực với:", { email, passwordLength: password?.length, mfa: !!mfa });
+    const dataJson = {
+        appleId: email,
+        attempt: mfa ? 2 : 1, // Xác định số lần thử dựa trên việc có mã xác thực không
+        createSession: 'true',
+        guid: this.guid,
+        password: password,
+        rmp: 0,
+        why: 'signIn',
+    };
 
-        if (mfa) {
-            dataJson.mfaCode = mfa;
-        }
-
-        const body = build(dataJson);
-        const url = `https://auth.itunes.apple.com/auth/v1/native/fast?guid=${this.guid}`;
-
-        try {
-            console.log("Gửi yêu cầu xác thực đến:", url);
-            console.log("Headers của yêu cầu:", JSON.stringify(this.Headers));
-            console.log("Body của yêu cầu:", body);
-
-            const resp = await fetch(url, {
-                method: 'POST', 
-                body, 
-                headers: this.Headers
-            });
-
-            console.log("Trạng thái phản hồi xác thực:", resp.status);
-            const responseText = await resp.text();
-            console.log("Nội dung phản hồi thô:", responseText);
-
-            if (!resp.ok) {
-                throw new Error(`Máy chủ trả về trạng thái ${resp.status}: ${responseText}`);
-            }
-
-            let parsedResp;
-            try {
-                parsedResp = JSON.parse(responseText);
-            } catch (jsonError) {
-                console.log("Không thể phân tích JSON, thử phân tích bằng hàm parse tùy chỉnh");
-                parsedResp = parse(responseText);
-            }
-
-            console.log("Phản hồi xác thực đã được phân tích:", JSON.stringify(parsedResp, null, 2));
-
-            if (!parsedResp) {
-                throw new Error("Phản hồi xác thực rỗng hoặc không hợp lệ");
-            }
-
-            if (parsedResp.x2fa && !mfa) {
-                return {
-                    needsMFA: true,
-                    _state: 'mfa_required'
-                };
-            }
-
-            if (parsedResp.failureType || parsedResp.errorMessage) {
-                return {
-                    error: parsedResp.errorMessage || "Xác thực thất bại",
-                    details: parsedResp,
-                    _state: 'failure'
-                };
-            }
-
-            const requiredFields = ['v', 'r', 's'];
-            for (const field of requiredFields) {
-                if (!parsedResp[field]) {
-                    throw new Error(`Phản hồi xác thực thiếu trường dữ liệu cần thiết: ${field}`);
-                }
-            }
-
-            return {
-                ...parsedResp, 
-                _state: 'success'
-            };
-        } catch (error) {
-            console.error("Lỗi xác thực:", error);
-            return {
-                error: `Xác thực thất bại: ${error.message}`,
-                details: error,
-                _state: 'error'
-            };
-        }
+    if (mfa) {
+        dataJson.mfaCode = mfa;
     }
+
+    const body = build(dataJson);
+    const url = `https://auth.itunes.apple.com/auth/v1/native/fast?guid=${this.guid}`;
+
+    try {
+        console.log("Gửi yêu cầu xác thực đến:", url);
+        console.log("Headers của yêu cầu:", JSON.stringify(this.Headers));
+        console.log("Body của yêu cầu:", body);
+
+        const resp = await fetch(url, {
+            method: 'POST', 
+            body, 
+            headers: this.Headers
+        });
+
+        console.log("Trạng thái phản hồi xác thực:", resp.status);
+        const responseText = await resp.text();
+        console.log("Nội dung phản hồi thô:", responseText);
+
+        if (!resp.ok) {
+            throw new Error(`Máy chủ trả về trạng thái ${resp.status}: ${responseText}`);
+        }
+
+        let parsedResp;
+        try {
+            parsedResp = JSON.parse(responseText);
+        } catch (jsonError) {
+            console.log("Không thể phân tích JSON, thử phân tích bằng hàm parse tùy chỉnh");
+            parsedResp = parse(responseText);
+        }
+
+        console.log("Phản hồi xác thực đã được phân tích:", JSON.stringify(parsedResp, null, 2));
+
+        if (!parsedResp) {
+            throw new Error("Phản hồi xác thực rỗng hoặc không hợp lệ");
+        }
+
+        if (parsedResp.x2fa && !mfa) {
+            return {
+                needsMFA: true,
+                _state: 'mfa_required'
+            };
+        }
+
+        if (parsedResp.failureType || parsedResp.errorMessage) {
+            return {
+                error: parsedResp.errorMessage || "Xác thực thất bại",
+                details: parsedResp,
+                _state: 'failure'
+            };
+        }
+
+        const requiredFields = ['v', 'r', 's'];
+        for (const field of requiredFields) {
+            if (!parsedResp[field]) {
+                throw new Error(`Phản hồi xác thực thiếu trường dữ liệu cần thiết: ${field}`);
+            }
+        }
+
+        return {
+            ...parsedResp, 
+            _state: 'success'
+        };
+    } catch (error) {
+        console.error("Lỗi xác thực:", error);
+        return {
+            error: `Xác thực thất bại: ${error.message}`,
+            details: error,
+            _state: 'error'
+        };
+    }
+}
 
     static async download(appId, appVerId, user) {
         console.log("Bắt đầu tải xuống với:", { appId, appVerId });
