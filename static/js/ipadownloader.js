@@ -2,7 +2,9 @@ document.getElementById('downloadForm').addEventListener('submit', async (e) => 
     e.preventDefault();
     const result = document.getElementById('result');
     const mfaInput = document.getElementById('mfaInput');
+    const submitButton = document.querySelector('button[type="submit"]');
     result.textContent = 'Đang xử lý...';
+    submitButton.disabled = true;
 
     const formData = {
         APPLE_ID: document.getElementById('appleId').value,
@@ -27,22 +29,23 @@ document.getElementById('downloadForm').addEventListener('submit', async (e) => 
         const data = await response.json();
         console.log("Parsed response data:", data);
 
-        if (data.needsMFA && !formData.CODE) {
+        if (data.needsMFA) {
             mfaInput.style.display = 'block';
             result.textContent = 'Vui lòng nhập mã xác thực và bấm "Tải xuống" lại';
         } else if (data.url) {
             result.innerHTML = `Tải xuống thành công: <a href="${data.url}" target="_blank">Tải xuống IPA</a>`;
             document.getElementById('code').value = '';
             mfaInput.style.display = 'none';
-        } else if (data.needsMFA && formData.CODE) {
-            result.textContent = `Lỗi: Mã xác thực không hợp lệ hoặc hết hạn.`;
-            console.error("MFA Error details:", data);
-        } else {
-            result.textContent = `Lỗi: ${data.error || 'Không xác định'}`;
+        } else if (data.error) {
+            result.textContent = `Lỗi: ${data.error}`;
             console.error("Error details:", data);
+        } else {
+            result.textContent = 'Lỗi không xác định. Vui lòng thử lại.';
         }
     } catch (error) {
         console.error("Request failed:", error);
         result.textContent = `Lỗi: ${error.message}`;
+    } finally {
+        submitButton.disabled = false;
     }
 });

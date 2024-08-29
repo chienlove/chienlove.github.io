@@ -37,13 +37,13 @@ export default {
 
       console.log("Bắt đầu xác thực");
       let user = await Store.authenticate(APPLE_ID, PASSWORD, CODE);
-      
+
       console.log("Kết quả xác thực:", user);
-      
+
       if (user.needsMFA) {
         return new Response(JSON.stringify({ needsMFA: true }), { status: 200, headers });
       }
-      
+
       if (user.error) {
         console.error("Xác thực thất bại:", user.error);
         return new Response(JSON.stringify({ error: user.error, details: user.details }), { status: 401, headers });
@@ -52,7 +52,7 @@ export default {
       console.log("Xác thực thành công, bắt đầu tải xuống");
       const app = await Store.download(APPID, appVerId, user);
       console.log("Kết quả tải xuống:", app);
-      
+
       if (app.error) {
         console.error("Tải xuống thất bại:", app.error);
         return new Response(JSON.stringify({ error: app.error, details: app.details }), { status: 400, headers });
