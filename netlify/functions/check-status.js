@@ -1,16 +1,21 @@
-const fetch = require('node-fetch');
+const puppeteer = require('puppeteer');
 
 exports.handler = async function(event, context) {
   const url = 'https://ipa-apps.me';
   
   try {
-    const response = await fetch(url, { headers: { 'Cache-Control': 'no-cache' } });
-    const text = await response.text();
+    const browser = await puppeteer.launch();
+    const page = await browser.newPage();
+    await page.goto(url, { waitUntil: 'networkidle2' });
+
+    const text = await page.content();
 
     let status = 'revoked';
     if (text.toLowerCase().includes('signed')) {
       status = 'signed';
     }
+
+    await browser.close();
 
     return {
       statusCode: 200,
