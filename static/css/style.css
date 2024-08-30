@@ -398,7 +398,8 @@ p {
 }
 
 h2 {
-  margin-bottom: 20px; /* Khoảng cách giữa tiêu đề và nội dung bên dưới */
+  margin-bottom: 20px;
+  padding-top: 20px;
 }
 
 #status {
