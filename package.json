@@ -21,6 +21,8 @@
     "plist": "^3.0.1",
     "getmac": "^2.0.0",
     "fetch-cookie": "^0.8.0",
-    "gray-matter": "^4.0.3"
+    "gray-matter": "^4.0.3",
+    "puppeteer-core": "^21.0.0",
+    "chrome-aws-lambda": "^10.1.0"
   }
 }
