@@ -10,6 +10,18 @@ body {
     line-height: 1.6;
     color: #333;
 }
+.container {
+    width: 100%;
+    padding: 0 10px; /* Điều chỉnh padding để nội dung không chạm sát mép */
+    margin: 0 auto;
+}
+
+@media (min-width: 768px) {
+    .container {
+        max-width: 1200px; /* Đặt lại max-width cho màn hình lớn hơn */
+        padding: 20px; /* Đặt padding lớn hơn cho màn hình lớn */
+    }
+}
 
 /* Header Styles */
 .site-header {
