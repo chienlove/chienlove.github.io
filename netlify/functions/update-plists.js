@@ -15,11 +15,8 @@ exports.handler = async function(event, context) {
   try {
     for (const [url, targetFilePath] of Object.entries(plistMappings)) {
       // Lấy nội dung plist từ URL
-      const { data: externalPlistContent } = await axios.get(url, {
-        headers: {
-          Accept: 'application/vnd.github.v3.raw',
-        },
-      });
+      const { data: externalPlistContent } = await axios.get(url);
+      console.log('External plist content:', externalPlistContent);
       
       // Phân tích nội dung plist từ URL
       const externalPlistData = plist.parse(externalPlistContent);
@@ -34,16 +31,18 @@ exports.handler = async function(event, context) {
           ref: branch,
         },
       });
+      console.log('Target plist data from GitHub:', fileData);
 
       // Phân tích nội dung plist từ GitHub
       const targetPlistData = plist.parse(fileData);
 
-      // Thực hiện các thay đổi cần thiết
+      // Cập nhật dữ liệu plist của tệp từ GitHub với dữ liệu từ URL
       targetPlistData.items[0].assets[0].url = externalPlistData.items[0].assets[0].url;
       targetPlistData.items[0].metadata['bundle-version'] = externalPlistData.items[0].metadata['bundle-version'];
 
       // Chuyển đổi plist thành chuỗi
       const updatedPlistContent = plist.build(targetPlistData);
+      console.log('Updated plist content:', updatedPlistContent);
 
       // Lấy SHA của tệp hiện tại để ghi đè
       const { data: fileMeta } = await axios.get(`https://api.github.com/repos/${owner}/${repo}/contents/${targetFilePath}`, {
@@ -73,6 +72,7 @@ exports.handler = async function(event, context) {
       body: JSON.stringify({ message: 'Plist files updated successfully' }),
     };
   } catch (error) {
+    console.error('Error updating plist files:', error);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: 'Failed to update plist files', details: error.message }),
