@@ -7,6 +7,7 @@ title = "storeios"
 
 [params]
   # Các tham số tùy chỉnh nếu cần
+  disqusShortname = "storeios"
 
 # Bỏ cấu hình menu không cần thiết
 
