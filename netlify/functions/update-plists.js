@@ -1,62 +1,71 @@
 const axios = require('axios');
-const fs = require('fs');
-const path = require('path');
 const plist = require('plist');
 
 exports.handler = async function(event, context) {
-  const mappings = {
-    'https://file.jb-apps.me/plist/Unc0ver_old.plist': 'unc0ver.plist',
-    'https://example.com/file2.plist': 'file2.plist',
-    // Thêm các ánh xạ khác
+  const owner = 'chienlove';
+  const repo = 'chienlove.github.io'; // Thay bằng tên repo của bạn
+  const branch = 'master'; // Nhánh mà bạn muốn cập nhật tệp
+
+  const plistMappings = {
+    'https://file.jb-apps.me/plist/Unc0ver.plist': 'static/plist/unc0ver.plist',
+    'https://file.jb-apps.me/plist/DopamineJB.plist': 'static/plist/dopamine.plist',
+    // Thêm các ánh xạ khác ở đây
   };
 
   try {
-    for (const [url, targetFile] of Object.entries(mappings)) {
-      // Lấy dữ liệu plist từ URL
-      const response = await axios.get(url);
-      const plistData = plist.parse(response.data);
-
-      const ipaLink = plistData?.items[0]?.assets[0]?.url;
-      const version = plistData?.items[0]?.metadata?.bundleVersion;
-      const identifier = plistData?.items[0]?.metadata?.bundleIdentifier;
-
-      const extractedData = {
-        assets: [
-          {
-            kind: 'software-package',
-            url: ipaLink,
-          },
-          // Bạn có thể thêm các asset khác ở đây
-        ],
-        metadata: {
-          'bundle-identifier': identifier,
-          'bundle-version': version,
-          kind: 'software',
-          // Bạn có thể thêm các thuộc tính metadata khác ở đây
+    for (const [url, targetFilePath] of Object.entries(plistMappings)) {
+      // Lấy nội dung plist từ URL
+      const { data: externalPlistContent } = await axios.get(url, {
+        headers: {
+          Accept: 'application/vnd.github.v3.raw',
         },
-      };
+      });
+      
+      // Phân tích nội dung plist từ URL
+      const externalPlistData = plist.parse(externalPlistContent);
 
-      // Đường dẫn tới file plist mục tiêu
-      const targetFilePath = path.join(__dirname, `../../static/plist/${targetFile}`);
-      const targetPlistContent = fs.readFileSync(targetFilePath, 'utf8');
-      const targetPlistData = plist.parse(targetPlistContent);
+      // Lấy nội dung của tệp plist từ GitHub
+      const { data: fileData } = await axios.get(`https://api.github.com/repos/${owner}/${repo}/contents/${targetFilePath}`, {
+        headers: {
+          Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+          Accept: 'application/vnd.github.v3.raw',
+        },
+        params: {
+          ref: branch,
+        },
+      });
 
-      // Tìm mục với bundle-identifier và ghi đè lên
-      const itemIndex = targetPlistData.items.findIndex(
-        item => item.metadata['bundle-identifier'] === identifier
-      );
+      // Phân tích nội dung plist từ GitHub
+      const targetPlistData = plist.parse(fileData);
 
-      if (itemIndex !== -1) {
-        // Ghi đè lên mục hiện có
-        targetPlistData.items[itemIndex] = extractedData;
-      } else {
-        // Nếu không tìm thấy, thêm mới
-        targetPlistData.items.push(extractedData);
-      }
+      // Thực hiện các thay đổi cần thiết
+      targetPlistData.items[0].assets[0].url = externalPlistData.items[0].assets[0].url;
+      targetPlistData.items[0].metadata['bundle-version'] = externalPlistData.items[0].metadata['bundle-version'];
 
-      // Ghi lại file plist đã cập nhật
+      // Chuyển đổi plist thành chuỗi
       const updatedPlistContent = plist.build(targetPlistData);
-      fs.writeFileSync(targetFilePath, updatedPlistContent);
+
+      // Lấy SHA của tệp hiện tại để ghi đè
+      const { data: fileMeta } = await axios.get(`https://api.github.com/repos/${owner}/${repo}/contents/${targetFilePath}`, {
+        headers: {
+          Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+        },
+        params: {
+          ref: branch,
+        },
+      });
+
+      // Ghi tệp đã cập nhật trở lại GitHub
+      await axios.put(`https://api.github.com/repos/${owner}/${repo}/contents/${targetFilePath}`, {
+        message: `Update ${targetFilePath} via Netlify Function`,
+        content: Buffer.from(updatedPlistContent).toString('base64'),
+        sha: fileMeta.sha,
+        branch: branch,
+      }, {
+        headers: {
+          Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+        },
+      });
     }
 
     return {
