@@ -20,6 +20,7 @@ exports.handler = async function(event, context) {
       
       // Phân tích nội dung plist từ URL
       const externalPlistData = plist.parse(externalPlistContent);
+      console.log('Parsed external plist data:', externalPlistData);
 
       // Lấy nội dung của tệp plist từ GitHub
       const { data: fileData } = await axios.get(`https://api.github.com/repos/${owner}/${repo}/contents/${targetFilePath}`, {
@@ -31,14 +32,29 @@ exports.handler = async function(event, context) {
           ref: branch,
         },
       });
-      console.log('Target plist data from GitHub:', fileData);
+      console.log('File data from GitHub:', fileData);
 
       // Phân tích nội dung plist từ GitHub
       const targetPlistData = plist.parse(fileData);
+      console.log('Parsed target plist data:', targetPlistData);
 
       // Cập nhật dữ liệu plist của tệp từ GitHub với dữ liệu từ URL
-      targetPlistData.items[0].assets[0].url = externalPlistData.items[0].assets[0].url;
-      targetPlistData.items[0].metadata['bundle-version'] = externalPlistData.items[0].metadata['bundle-version'];
+      // Đảm bảo rằng cấu trúc của targetPlistData và externalPlistData giống nhau
+      if (targetPlistData.items && externalPlistData.items) {
+        targetPlistData.items.forEach((item, index) => {
+          if (externalPlistData.items[index]) {
+            item.assets.forEach((asset, assetIndex) => {
+              if (externalPlistData.items[index].assets[assetIndex]) {
+                asset.url = externalPlistData.items[index].assets[assetIndex].url;
+              }
+            });
+            item.metadata['bundle-version'] = externalPlistData.items[index].metadata['bundle-version'];
+          }
+        });
+      } else {
+        // Nếu cấu trúc không khớp, có thể cần điều chỉnh theo dữ liệu thực tế
+        console.error('The structure of plist data is not as expected');
+      }
 
       // Chuyển đổi plist thành chuỗi
       const updatedPlistContent = plist.build(targetPlistData);
