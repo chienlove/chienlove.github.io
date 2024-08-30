@@ -1,40 +1,72 @@
-const fetch = require('node-fetch');
+const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
+const plist = require('plist');
 
-exports.handler = async (event, context) => {
-  const plistUrls = [
-    'https://file.jb-apps.me/plist/Unc0ver_old.plist',
-    'LINK_TO_PLIST_2',
-    'LINK_TO_PLIST_3'
-  ];
+exports.handler = async function(event, context) {
+  const mappings = {
+    'https://file.jb-apps.me/plist/Unc0ver_old.plist': 'unc0ver.plist',
+    'https://example.com/file2.plist': 'file2.plist',
+    // Thêm các ánh xạ khác
+  };
 
   try {
-    for (const url of plistUrls) {
-      const response = await fetch(url);
-      if (!response.ok) throw new Error('Network response was not ok');
+    for (const [url, targetFile] of Object.entries(mappings)) {
+      // Lấy dữ liệu plist từ URL
+      const response = await axios.get(url);
+      const plistData = plist.parse(response.data);
 
-      const plistContent = await response.text();
-      const fileName = path.basename(url); // Lấy tên file từ URL
-      const filePath = path.join(__dirname, '../static/plist/', fileName); // Đường dẫn lưu file
+      const ipaLink = plistData?.items[0]?.assets[0]?.url;
+      const version = plistData?.items[0]?.metadata?.bundleVersion;
+      const identifier = plistData?.items[0]?.metadata?.bundleIdentifier;
 
-      // Tạo thư mục nếu chưa tồn tại
-      fs.mkdirSync(path.dirname(filePath), { recursive: true });
+      const extractedData = {
+        assets: [
+          {
+            kind: 'software-package',
+            url: ipaLink,
+          },
+          // Bạn có thể thêm các asset khác ở đây
+        ],
+        metadata: {
+          'bundle-identifier': identifier,
+          'bundle-version': version,
+          kind: 'software',
+          // Bạn có thể thêm các thuộc tính metadata khác ở đây
+        },
+      };
 
-      // Lưu nội dung vào file
-      fs.writeFileSync(filePath, plistContent);
+      // Đường dẫn tới file plist mục tiêu
+      const targetFilePath = path.join(__dirname, `../../static/plist/${targetFile}`);
+      const targetPlistContent = fs.readFileSync(targetFilePath, 'utf8');
+      const targetPlistData = plist.parse(targetPlistContent);
+
+      // Tìm mục với bundle-identifier và ghi đè lên
+      const itemIndex = targetPlistData.items.findIndex(
+        item => item.metadata['bundle-identifier'] === identifier
+      );
+
+      if (itemIndex !== -1) {
+        // Ghi đè lên mục hiện có
+        targetPlistData.items[itemIndex] = extractedData;
+      } else {
+        // Nếu không tìm thấy, thêm mới
+        targetPlistData.items.push(extractedData);
+      }
+
+      // Ghi lại file plist đã cập nhật
+      const updatedPlistContent = plist.build(targetPlistData);
+      fs.writeFileSync(targetFilePath, updatedPlistContent);
     }
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ message: 'Tất cả file plist đã được cập nhật thành công!' }),
+      body: JSON.stringify({ message: 'Plist files updated successfully' }),
     };
   } catch (error) {
     return {
       statusCode: 500,
-      body: JSON.stringify({ message: 'Có lỗi xảy ra: ' + error.message }),
+      body: JSON.stringify({ error: 'Failed to update plist files', details: error.message }),
     };
   }
 };
-
-```

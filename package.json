@@ -23,6 +23,7 @@
     "fetch-cookie": "^0.8.0",
     "gray-matter": "^4.0.3",
     "puppeteer-core": "^10.1.0",
-    "chrome-aws-lambda": "^10.1.0"
+    "chrome-aws-lambda": "^10.1.0",
+    "plist": "^3.0.1"
   }
 }
