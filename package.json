@@ -23,7 +23,15 @@
     "fetch-cookie": "^0.8.0",
     "gray-matter": "^4.0.3",
     "puppeteer-core": "^10.1.0",
-    "chrome-aws-lambda": "^10.1.0",
-    "plist": "^3.0.1"
+    "chrome-aws-lambda": "^10.1.0"
+  },
+  "devDependencies": {
+    "@netlify/plugin-functions": "^1.3.0",
+    "@netlify/plugin-functions-install-core": "^1.0.8",
+    "@netlify/plugin-local-install-core": "^1.0.8",
+    "@netlify/plugin-sitemap": "^0.8.1",
+    "netlify-plugin-contextual-env": "^0.3.0",
+    "netlify-plugin-inline-functions-env": "^1.0.9",
+    "netlify-plugin-submit-sitemap": "^0.4.0"
   }
 }
