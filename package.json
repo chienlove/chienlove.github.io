@@ -25,5 +25,4 @@
     "puppeteer-core": "^10.1.0",
     "chrome-aws-lambda": "^10.1.0"
   }
-  }
 }
