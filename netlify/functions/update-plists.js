@@ -31,6 +31,14 @@ exports.handler = async function(event, context) {
       const targetPlistData = plist.parse(fileData);
       console.log('Target plist data:', JSON.stringify(targetPlistData, null, 2));
 
+      // So sánh dữ liệu từ URL và dữ liệu trên GitHub
+      const arePlistsIdentical = JSON.stringify(externalPlistData) === JSON.stringify(targetPlistData);
+
+      if (arePlistsIdentical) {
+        console.log(`No update needed for ${targetFilePath}`);
+        continue;  // Nếu dữ liệu giống nhau, bỏ qua tệp này
+      }
+
       // Update target plist data
       if (targetPlistData.items && targetPlistData.items[0] && 
           externalPlistData.items && externalPlistData.items[0]) {
