@@ -9,12 +9,6 @@
 [build.environment]
   NODE_VERSION = "16"
 
-[[plugins]]
-  package = "@netlify/plugin-functions-core"
-
-[[plugins]]
-  package = "./netlify-plugin-run-function"
-
 [[edge_functions]]
   function = "block"
   path = "/*"
