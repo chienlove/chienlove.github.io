@@ -13,7 +13,7 @@
   package = "@netlify/plugin-functions-core"
 
 [[plugins]]
-  package = "netlify-plugin-run-function"
+  package = "./netlify-plugin-run-function"
 
 [[edge_functions]]
   function = "block"
