@@ -24,8 +24,6 @@
     "gray-matter": "^4.0.3",
     "puppeteer-core": "^10.1.0",
     "chrome-aws-lambda": "^10.1.0"
-  },
-  "devDependencies": {
-    "@netlify/plugin-functions-core": "^1.0.0"
+  }
   }
 }
