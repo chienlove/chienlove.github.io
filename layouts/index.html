@@ -80,7 +80,15 @@
 {{ else if lt $days 7 }}
     {{ printf "%.0f" $days }} ngày trước
 {{ else }}
-    {{ $postTime.Format "Thứ 2, 02/01/2006" }}
+    {{ $dayOfWeek := $postTime.Format "Monday" }}
+{{ if eq $dayOfWeek "Monday" }} Thứ 2
+{{ else if eq $dayOfWeek "Tuesday" }} Thứ 3
+{{ else if eq $dayOfWeek "Wednesday" }} Thứ 4
+{{ else if eq $dayOfWeek "Thursday" }} Thứ 5
+{{ else if eq $dayOfWeek "Friday" }} Thứ 6
+{{ else if eq $dayOfWeek "Saturday" }} Thứ 7
+{{ else }} Chủ nhật
+{{ end }}
 {{ end }}
 </span>
                 <a class="read-more" href="{{ .Permalink }}">Read more</a>
