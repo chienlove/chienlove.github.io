@@ -10,7 +10,7 @@ exports.handler = async function(event, context) {
     'https://file.jb-apps.me/plist/Unc0ver.plist': 'static/plist/unc0ver.plist',
     'https://file.jb-apps.me/plist/DopamineJB.plist': 'static/plist/dopamine.plist',
     'https://file.jb-apps.me/plist/XinaA15.plist': 'static/plist/xinaa15.plist',
-    'https://file.jb-apps.me/plist/PhoenixJB.plist': 'static/plist/phoenix.plist'
+    'https://file.jb-apps.me/plist/PhoenixJB.plist': 'static/plist/phoenix.plist',
     'https://file.jb-apps.me/plist/Unc0ver_old.plist': 'static/plist/unc0ver_6.1.2.plist'
     // Thêm các ánh xạ khác ở đây
   };
