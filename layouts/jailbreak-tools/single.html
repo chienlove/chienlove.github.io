@@ -1,12 +1,17 @@
-{{ define "head" }}
-    <link rel="stylesheet" href="/css/jailbreak-tools.css?v={{ now.Unix }}">
-{{ end }}
-
 {{ define "main" }}
 <main role="main">
     <section class="tool-info">
-        <img src="{{ .Params.icon }}" alt="{{ .Title }} Icon" class="tool-icon">
-        <h1>{{ .Title }}</h1>
+        <div class="tool-header">
+            <img src="{{ .Params.icon }}" alt="{{ .Title }} Icon" class="tool-icon">
+            <div class="tool-name-and-details">
+                <h1 class="tool-title">{{ .Title }}</h1>
+                <div class="tool-version-dev">
+                    <span class="tool-version">{{ .Params.version }}</span>
+                    <span class="tool-developer">{{ with .Params.developer }}{{ . }}{{ else }}Không có thông tin{{ end }}</span>
+                </div>
+            </div>
+            <a href="#" class="get-button">GET</a>
+        </div>
 
         <h2>Mô tả</h2>
         <p>{{ .Params.short_description }}</p>
@@ -36,13 +41,14 @@
     </section>
 
     <section class="download-links">
-    <h2>Liên kết tải xuống</h2>
-    {{ if .Params.versions }}
-        {{ range .Params.versions }}
-            <a href="/download?appId={{ .appId }}" class="download-link">{{ .version }}</a>
+        <h2>Liên kết tải xuống</h2>
+        {{ if .Params.versions }}
+            {{ range .Params.versions }}
+                <a href="/download?appId={{ .appId }}" class="download-link">{{ .version }}</a>
+            {{ end }}
+        {{ else }}
+            <p>Không có liên kết tải xuống.</p>
         {{ end }}
-    {{ else }}
-        <p>Không có liên kết tải xuống.</p>
-    {{ end }}
+    </section>
 </main>
 {{ end }}

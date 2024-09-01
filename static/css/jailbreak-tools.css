@@ -1,36 +1,57 @@
-/* CSS cho phần thông tin công cụ */
-.tool-info {
-    margin: 20px auto;
-    max-width: 600px;
-    padding: 20px;
-    border-radius: 10px;
-    background-color: #ffffff;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+.tool-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding: 10px;
+    border-bottom: 1px solid #ccc;
 }
 
 .tool-icon {
-    width: 80px;
-    height: 80px;
-    display: block;
-    margin: 0 auto 10px;
-    border-radius: 15px;
+    width: 100px;
+    height: 100px;
+    border-radius: 20px;
+    margin-right: 20px;
 }
 
-h1 {
+.tool-name-and-details {
+    flex-grow: 1;
+}
+
+.tool-title {
+    margin: 0;
     font-size: 28px;
-    text-align: center;
-    margin-bottom: 15px;
 }
 
-h2, h3 {
-    font-size: 22px;
-    margin-top: 20px;
-    margin-bottom: 10px;
-}
-
-p {
+.tool-version-dev {
     font-size: 16px;
-    margin-bottom: 15px;
+    color: #666;
+    margin-top: 8px;
+}
+
+.tool-version {
+    display: block;
+}
+
+.tool-developer {
+    display: block;
+}
+
+.get-button {
+    padding: 10px 20px;
+    background-color: #ff3b30;
+    color: white;
+    text-transform: uppercase;
+    font-weight: bold;
+    border-radius: 20px;
+    text-decoration: none;
+}
+
+.screenshots img {
+    width: 100%;
+    height: auto;
+    border-radius: 10px;
+    margin-bottom: 10px;
 }
 
 .tool-details {
@@ -38,43 +59,20 @@ p {
 }
 
 .tool-details div {
-    font-size: 16px;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
 }
 
-/* CSS cho phần ảnh màn hình */
-.screenshots {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 10px;
-    margin-top: 20px;
-}
-
-.screenshots img {
-    width: 100%;
-    border-radius: 10px;
-    object-fit: cover;
-}
-
-/* CSS cho phần liên kết tải xuống */
 .download-links {
-    margin: 20px auto;
-    max-width: 600px;
-    text-align: center;
+    margin-top: 40px;
 }
 
 .download-link {
-    display: block;
-    background-color: #ff3b30;
-    color: #fff;
-    padding: 12px 0;
-    margin-bottom: 10px;
-    border-radius: 8px;
+    display: inline-block;
+    padding: 10px 15px;
+    background-color: #007aff;
+    color: white;
+    border-radius: 5px;
     text-decoration: none;
-    font-size: 18px;
-    transition: background-color 0.3s ease;
-}
-
-.download-link:hover {
-    background-color: #ff5e57;
+    margin-right: 10px;
+    margin-bottom: 10px;
 }
