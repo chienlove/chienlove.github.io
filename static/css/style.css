@@ -199,8 +199,8 @@ body {
 }
 
 .section-title {
-    font-size: 18px; /* Giảm kích thước tiêu đề */
-    color: #4CAF50; /* Màu tiêu đề xanh lá cây nhạt */
+    font-size: 20px;
+    color: #47b8e0;
     margin-bottom: 10px;
     padding-left: 10px;
     font-weight: bold;
@@ -209,6 +209,7 @@ body {
 .app-list {
     display: flex;
     flex-direction: column;
+    border-top: 1px solid #ddd; /* Thêm đường kẻ trên cùng */
 }
 
 .app-item {
@@ -216,13 +217,20 @@ body {
     justify-content: space-between;
     align-items: center;
     padding: 10px 0;
-    border-top: 1px solid #ddd;
-    padding-left: 10px; /* Thêm khoảng cách bên trái để đường kẻ không chạm vào icon */
     padding-right: 10px; /* Thêm khoảng cách bên phải */
+    border-bottom: 1px solid #ddd; /* Đường kẻ dưới cùng của từng ứng dụng */
+    padding-left: 10px;
 }
 
 .app-item:first-child {
     border-top: none;
+}
+
+.app-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 8px;
+    margin-right: 10px;
 }
 
 .app-link {
@@ -233,23 +241,16 @@ body {
     flex: 1;
 }
 
-.app-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 8px;
-    margin-right: 10px;
-}
-
 .app-item-content {
     display: flex;
     flex-direction: column;
 }
 
 .app-title {
-    font-size: 14px;
+    font-size: 16px;
     color: #333;
     margin: 0;
-    font-weight: bold; /* Đậm tên ứng dụng */
+    font-weight: bold;
 }
 
 .app-developer {
@@ -261,18 +262,18 @@ body {
 .app-meta {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    text-align: center;
-    min-width: 50px;
+    align-items: flex-end;
+    text-align: right;
 }
 
 .download-btn {
     display: inline-block;
     padding: 4px 12px;
-    background-color: #00C851; /* Màu nền xanh lá cây */
+    background-color: #00C851;
     color: #fff;
     border-radius: 12px;
-    font-size: 12px;
+    font-size: 14px;
+    font-weight: bold;
     text-decoration: none;
     margin-bottom: 4px;
 }
