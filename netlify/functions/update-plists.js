@@ -21,19 +21,23 @@ exports.handler = async function(event, context) {
   try {
     // Fetch hash file from GitHub
     let currentHashes = {};
-    try {
-      const { data: hashFileData } = await axios.get(`https://api.github.com/repos/${owner}/${repo}/contents/${hashFilePath}`, {
-        headers: { Authorization: `Bearer ${process.env.GITHUB_TOKEN}`, Accept: 'application/vnd.github.v3.raw' },
-        params: { ref: branch },
-      });
-      currentHashes = JSON.parse(hashFileData);
-    } catch (error) {
-      if (error.response && error.response.status === 404) {
-        console.log(`Hash file not found, initializing empty hash object.`);
-      } else {
-        throw error;
-      }
-    }
+try {
+  const { data: hashFileData } = await axios.get(`https://api.github.com/repos/${owner}/${repo}/contents/${hashFilePath}`, {
+    headers: { Authorization: `Bearer ${process.env.GITHUB_TOKEN}`, Accept: 'application/vnd.github.v3.raw' },
+    params: { ref: branch },
+  });
+
+  console.log('Raw hash file data:', hashFileData); // Debug xem dữ liệu thô trông như thế nào
+
+  currentHashes = JSON.parse(hashFileData);
+} catch (error) {
+  console.log('Error fetching or parsing hash file data:', error);
+  if (error.response && error.response.status === 404) {
+    console.log(`Hash file not found, initializing empty hash object.`);
+  } else {
+    throw error;
+  }
+}
 
     let updatedHashes = { ...currentHashes };
 
