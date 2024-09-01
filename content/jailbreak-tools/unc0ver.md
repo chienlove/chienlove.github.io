@@ -12,8 +12,8 @@ main_download:
   plistUrl: https://storeios.net/plist/unc0ver.plist
 other_versions:
   - version: 6.1.2
-    appId: unc0ver_old
-    plistUrl: https://storeios.net/plist/unc0ver_old.plist
+    appId: unc0ver612
+    plistUrl: https://storeios.net/plist/unc0ver612.plist
 status: Signed
 title: Unc0ver
 icon: /images/img_0911.jpeg
