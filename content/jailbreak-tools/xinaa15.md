@@ -9,7 +9,7 @@ keywords:
   - XinaA15
 main_download:
   version: 2.0.17
-  appId: XinaA15
+  appId: xinaa15
   plistUrl: https://storeios.net/plist/xinaa15.plist
 status: Signed
 title: XinaA15
