@@ -7,10 +7,11 @@
 }
 
 .tool-icon {
-    width: 60px;
-    height: 60px;
+    width: 80px;
+    height: 80px;
     border-radius: 10px;
     margin-right: 15px;
+    margin-left: 5px;
 }
 
 .tool-name-and-details {
@@ -32,14 +33,19 @@
 }
 
 .get-button {
-    display: inline-block;
-    padding: 10px 20px;
-    background-color: #e53e3e;
-    color: #fff;
-    text-align: center;
+    background-color: #0070c9;
+    color: white;
+    padding: 10px 15px;
     border-radius: 5px;
     text-decoration: none;
     font-weight: bold;
+    font-size: 16px;
+    display: inline-block;
+    transition: background-color 0.3s;
+}
+
+.get-button:hover {
+    background-color: #005cbf;
 }
 
 /* Description styles */
@@ -102,6 +108,9 @@
 
 .download-link:hover {
     background-color: #e2e8f0;
+}
+.h3 {
+    padding: 5px;
 }
 
 /* Utility classes */
