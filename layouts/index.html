@@ -1,16 +1,18 @@
 {{ define "main" }}
 <main class="container">
-    <h2>Ứng dụng</h2>
+    <h2 class="section-title">Xem nhiều</h2>
+    
+    <!-- Chuyên mục Ứng dụng -->
     <div class="app-list">
         {{ range first 10 (where .Site.RegularPages "Type" "in" (slice "apps")) }}
             <div class="app-item">
-                <a href="{{ .Permalink }}" class="app-link">
+                <div class="app-info">
                     <img src="{{ .Params.Icon }}" alt="{{ .Title }}" class="app-icon">
                     <div class="app-item-content">
-                        <h3>{{ .Title }}</h3>
-                        <p>{{ .Params.Developer }}</p>
+                        <h3 class="app-title">{{ .Title }}</h3>
+                        <p class="app-desc">{{ .Params.Description }}</p>
                     </div>
-                </a>
+                </div>
                 <div class="app-meta">
                     <a href="{{ .Permalink }}" class="download-btn">Tải</a>
                     <span class="app-version"><i class="fas fa-arrow-up"></i> {{ .Params.Version }}</span>
@@ -19,25 +21,21 @@
         {{ end }}
     </div>
 
-  <h2>Tool Jailbreak 
-  <span id="status" class="status">
-    <span id="status-icon" class="status-icon"></span>
-    <span id="status-text">Loading...</span>
-  </span>
-</h2>
+    <!-- Chuyên mục Tool Jailbreak -->
+    <h2 class="section-title">Tool Jailbreak</h2>
     <div class="app-list">
         {{ range first 10 (where .Site.RegularPages "Type" "in" (slice "jailbreak-tools")) }}
             <div class="app-item">
-                <a href="{{ .Permalink }}" class="app-link">
+                <div class="app-info">
                     <img src="{{ .Params.Icon }}" alt="{{ .Title }}" class="app-icon">
                     <div class="app-item-content">
-                        <h3>{{ .Title }}</h3>
-                        <p>{{ .Params.Developer }}</p>
+                        <h3 class="app-title">{{ .Title }}</h3>
+                        <p class="app-desc">{{ .Params.Description }}</p>
                     </div>
-                </a>
+                </div>
                 <div class="app-meta">
                     <a href="{{ .Permalink }}" class="download-btn">Tải</a>
-                    <span class="app-version"><i class="fas fa-arrow-up"></i> {{ .Params.main_download.version }}</span>
+                    <span class="app-version"><i class="fas fa-arrow-up"></i> {{ .Params.Version }}</span>
                 </div>
             </div>
         {{ end }}
