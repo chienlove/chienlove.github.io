@@ -85,9 +85,5 @@ collections:
           - {name: "appId", label: "App ID", widget: "string"}
           - {name: "plistUrl", label: "Plist URL", widget: "string", hint: "Nhập URL đầy đủ đến file .plist"}
 
-load_config_file: false
-local_backend: true
-publish_mode: editorial_workflow
-
 cms_manual_init: true
 custom_css: /css/admin.css
