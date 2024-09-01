@@ -64,7 +64,7 @@
     <!-- Other Versions Container -->
     {{ if .Params.other_versions }}
     <section class="tool-container download-links">
-        <h2>Các phiên bản khác</h2>
+        <h3>Các phiên bản khác</h3>
         {{ $versions := .Params.other_versions }}
         {{ if gt (len $versions) 0 }}
             {{ range $versions }}
