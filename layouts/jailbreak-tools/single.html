@@ -19,20 +19,24 @@
         </div>
         <h3>Mô tả</h3>
         <div id="description-container">
-            {{ $description := .Params.description | markdownify }}
-            {{ $words := split $description " " }}
-            {{ if gt (len $words) 50 }}
-                <div id="short-description">
-                    {{ delimit (first 50 $words) " " | safeHTML }}
-                    <span id="ellipsis">...</span>
-                </div>
-                <div id="full-description" class="hidden">
-                    {{ $description | safeHTML }}
-                </div>
-                <button id="read-more" class="read-more-button">Xem thêm</button>
-            {{ else }}
-                {{ $description | safeHTML }}
-            {{ end }}
+    {{ $description := .Params.description | markdownify }}
+    {{ $words := split $description " " }}
+    {{ if gt (len $words) 50 }}
+        <div id="short-description">
+            {{ delimit (first 50 $words) " " | safeHTML }}
+            <span id="ellipsis">...</span>
+            <button id="read-more" onclick="showFullDescription()">Xem thêm</button>
+        </div>
+        <div id="full-description" class="hidden">
+            {{ $description | safeHTML }}
+        </div>
+    {{ else }}
+        <div id="full-description">
+            {{ $description | safeHTML }}
+        </div>
+    {{ end }}
+</div>
+
         <h3>Ảnh màn hình</h3>
           <div class="screenshots">
             {{ if .Params.screenshots }}
@@ -62,25 +66,9 @@
     {{ end }}
 </main>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const readMoreBtn = document.getElementById('read-more');
-    const shortDescription = document.getElementById('short-description');
-    const fullDescription = document.getElementById('full-description');
-    const ellipsis = document.getElementById('ellipsis');
-
-    if (readMoreBtn) {
-        readMoreBtn.addEventListener('click', function() {
-            if (fullDescription.classList.contains('hidden')) {
-                fullDescription.classList.remove('hidden');
-                shortDescription.classList.add('hidden');
-                readMoreBtn.textContent = 'Thu gọn';
-            } else {
-                fullDescription.classList.add('hidden');
-                shortDescription.classList.remove('hidden');
-                readMoreBtn.textContent = 'Xem thêm';
-            }
-        });
+    function showFullDescription() {
+        document.getElementById('short-description').style.display = 'none';
+        document.getElementById('full-description').style.display = 'block';
     }
-});
 </script>
 {{ end }}
