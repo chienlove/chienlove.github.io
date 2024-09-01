@@ -27,8 +27,35 @@ exports.handler = async function(event, context) {
       const fileContents = await fileResponse.text();
       const { data } = matter(fileContents);
 
+      // Check in data.versions
       if (data.versions) {
         for (const version of data.versions) {
+          if (version.appId === appId) {
+            const redirectUrl = `/intermediate/${appId}?plistUrl=${encodeURIComponent(version.plistUrl)}`;
+            return {
+              statusCode: 302,
+              headers: {
+                Location: redirectUrl
+              }
+            };
+          }
+        }
+      }
+
+      // Check in data.main_download
+      if (data.main_download && data.main_download.appId === appId) {
+        const redirectUrl = `/intermediate/${appId}?plistUrl=${encodeURIComponent(data.main_download.plistUrl)}`;
+        return {
+          statusCode: 302,
+          headers: {
+            Location: redirectUrl
+          }
+        };
+      }
+
+      // Check in data.other_versions
+      if (data.other_versions) {
+        for (const version of data.other_versions) {
           if (version.appId === appId) {
             const redirectUrl = `/intermediate/${appId}?plistUrl=${encodeURIComponent(version.plistUrl)}`;
             return {
