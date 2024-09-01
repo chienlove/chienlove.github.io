@@ -68,7 +68,7 @@
         {{ if gt (len $versions) 0 }}
             {{ range $versions }}
                 <a href="/download?appId={{ .appId }}" class="download-link" target="_blank">
-                    {{ .Title }} {{ .version }}
+                    {{ printf "%s %s" $.Title .version }}
                 </a>
             {{ end }}
         {{ else }}
