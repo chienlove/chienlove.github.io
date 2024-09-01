@@ -54,36 +54,37 @@ collections:
       - {label: "Mô tả", name: "description", widget: "text", required: true}
 
   - name: "jailbreak-tools"
-  label: "Tool Jailbreak"
-  folder: "content/jailbreak-tools"
-  create: true
-  slug: "{{slug}}"
-  fields:
-    - {label: "Tên Tool", name: "title", widget: "string", required: true}
-    - {label: "Ngày đăng", name: "date", widget: "datetime", required: true}
-    - {label: "Icon", name: "icon", widget: "image", required: true}
-    - {label: "Ảnh màn hình", name: "screenshots", widget: "list", field: {label: "Ảnh", name: "image", widget: "image"}, required: false}
-    - {label: "Mô tả ngắn", name: "short_description", widget: "text", required: false}
-    - {label: "Mô tả chi tiết", name: "description", widget: "markdown", required: true}
-    - {label: "Nhà phát triển", name: "developer", widget: "string", required: true}
-    - {label: "Thể loại", name: "category", widget: "string", required: true}
-    - {label: "Kích thước", name: "size", widget: "string", required: true}
-    - {label: "iOS tương thích", name: "ios_compatible", widget: "string", required: true}
-    - {label: "Từ khóa", name: "keywords", widget: "list", required: false}
-    - name: "main_download"
-      label: "Liên kết tải xuống chính"
-      widget: "object"
-      fields:
-        - {name: "version", label: "Phiên bản", widget: "string"}
-        - {name: "appId", label: "App ID", widget: "string"}
-        - {name: "plistUrl", label: "Plist URL", widget: "string", hint: "Nhập URL đầy đủ đến file .plist, ví dụ: https://storeios.net/plist/unc0ver.plist"}
-    - name: "other_versions"
-      label: "Các phiên bản khác"
-      widget: "list"
-      fields:
-        - {name: "version", label: "Phiên bản", widget: "string"}
-        - {name: "appId", label: "App ID", widget: "string"}
-        - {name: "plistUrl", label: "Plist URL", widget: "string", hint: "Nhập URL đầy đủ đến file .plist"}
+    label: "Tool Jailbreak"
+    folder: "content/jailbreak-tools"
+    create: true
+    slug: "{{slug}}"
+    fields:
+      - {label: "Tên Tool", name: "title", widget: "string", required: true}
+      - {label: "Ngày đăng", name: "date", widget: "datetime", required: true}
+      - {label: "Icon", name: "icon", widget: "image", required: true}
+      - {label: "Ảnh màn hình", name: "screenshots", widget: "list", field: {label: "Ảnh", name: "image", widget: "image"}, required: false}
+      - {label: "Mô tả ngắn", name: "short_description", widget: "text", required: false}
+      - {label: "Mô tả chi tiết", name: "description", widget: "markdown", required: true}
+      - {label: "Nhà phát triển", name: "developer", widget: "string", required: true}
+      - {label: "Thể loại", name: "category", widget: "string", required: true}
+      - {label: "Kích thước", name: "size", widget: "string", required: true}
+      - {label: "iOS tương thích", name: "ios_compatible", widget: "string", required: true}
+      - {label: "Từ khóa", name: "keywords", widget: "list", required: false}
+      - name: "main_download"
+        label: "Liên kết tải xuống chính"
+        widget: "object"
+        fields:
+          - {name: "version", label: "Phiên bản", widget: "string"}
+          - {name: "appId", label: "App ID", widget: "string"}
+          - {name: "plistUrl", label: "Plist URL", widget: "string", hint: "Nhập URL đầy đủ đến file .plist, ví dụ: https://storeios.net/plist/unc0ver.plist"}
+      - name: "other_versions"
+        label: "Các phiên bản khác"
+        widget: "list"
+        fields:
+          - {name: "version", label: "Phiên bản", widget: "string"}
+          - {name: "appId", label: "App ID", widget: "string"}
+          - {name: "plistUrl", label: "Plist URL", widget: "string", hint: "Nhập URL đầy đủ đến file .plist"}
+
 load_config_file: false
 local_backend: true
 publish_mode: editorial_workflow
