@@ -9,7 +9,7 @@
 /* Tool header styles */
 .tool-header {
     display: flex;
-    align-items: center;
+    align-items: flex-start; /* Align items at the top */
     justify-content: space-between;
     padding: 15px 0;
     border-bottom: 1px solid #ddd;
@@ -37,8 +37,12 @@
     color: #666;
 }
 
-.tool-version-label, .tool-developer-label {
+.tool-version-label {
     font-weight: bold;
+    display: block;
+}
+
+.tool-developer-label {
     display: block;
 }
 
@@ -53,6 +57,7 @@
     display: inline-block;
     transition: background-color 0.3s;
     margin-left: 15px;
+    align-self: flex-end; /* Align the button to the bottom right */
 }
 
 .get-button:hover {
@@ -86,6 +91,14 @@
     border-radius: 5px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     border: 1px solid #ddd;
+}
+
+.tool-details-title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: bold;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #ddd;
 }
 
 .tool-details {

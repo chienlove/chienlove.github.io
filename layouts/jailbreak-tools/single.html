@@ -11,8 +11,8 @@
             <div class="tool-name-and-details">
                 <h1 class="tool-title">{{ .Title }}</h1>
                 <div class="tool-version-dev">
-                    <div class="tool-version-label">Version: <span class="tool-version">{{ .Params.main_download.version }}</span></div>
-                    <div class="tool-developer-label">Developer: <span class="tool-developer">{{ with .Params.developer }}{{ . }}{{ else }}Không có thông tin{{ end }}</span></div>
+                    <div class="tool-version-label">Version: {{ .Params.main_download.version }}</div>
+                    <div class="tool-developer-label">Developer: {{ with .Params.developer }}{{ . }}{{ else }}Không có thông tin{{ end }}</div>
                 </div>
             </div>
             {{ if .Params.main_download }}
@@ -51,7 +51,7 @@
             {{ end }}
         </div>
 
-        <h3>Thông tin</h3>
+        <h3 class="tool-details-title">Thông tin</h3>
         <div class="tool-details-container">
             <div class="tool-details"><strong>Nhà phát triển:</strong> {{ with .Params.developer }}{{ . }}{{ else }}Không có thông tin{{ end }}</div>
             <div class="tool-details"><strong>Thể loại:</strong> {{ with .Params.category }}{{ . }}{{ else }}Không có thông tin{{ end }}</div>
