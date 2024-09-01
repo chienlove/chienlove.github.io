@@ -27,11 +27,7 @@
         <div class="screenshots">
             {{ if .Params.screenshots }}
                 {{ range .Params.screenshots }}
-                    {{ if .image }}
-                        <img src="{{ .image }}" alt="Screenshot">
-                    {{ else }}
-                        <p>Ảnh không có sẵn.</p>
-                    {{ end }}
+                    <img src="{{ . }}" alt="Screenshot">
                 {{ end }}
             {{ else }}
                 <p>Không có ảnh màn hình.</p>
