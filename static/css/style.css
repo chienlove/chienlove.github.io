@@ -194,95 +194,84 @@ body {
     }
 }
 /* App List Styles */
+.container {
+    max-width: 500px;
+    margin: 0 auto;
+    padding: 20px;
+    font-family: Arial, sans-serif;
+}
+
+h2 {
+    font-size: 20px;
+    color: #1ca3ec;
+    margin-bottom: 20px;
+}
+
 .app-list {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 15px;
 }
 
 .app-item {
-    background-color: #fff;
-    border-radius: 10px;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    overflow: hidden;
-    transition: transform 0.3s;
     display: flex;
-    justify-content: space-between;
     align-items: center;
     padding: 10px;
-}
-
-.app-item:hover {
-    transform: translateY(-5px);
+    background-color: #fff;
+    border-radius: 10px;
+    box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
 }
 
 .app-link {
     display: flex;
     align-items: center;
+    flex: 1;
     text-decoration: none;
-    color: inherit;
-    flex-grow: 1;
 }
 
 .app-icon {
-    width: 60px;
-    height: 60px;
-    object-fit: cover;
+    width: 50px;
+    height: 50px;
     border-radius: 10px;
     margin-right: 15px;
 }
 
 .app-item-content {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
+    flex: 1;
 }
 
-.app-item-content h3 {
-    margin: 0;
-    font-size: 1.2em;
+.app-title {
+    font-size: 16px;
     color: #333;
+    margin: 0;
 }
 
-.app-item-content p {
-    margin: 5px 0;
-    color: #777;
+.app-desc {
+    font-size: 14px;
+    color: #999;
+    margin: 5px 0 0 0;
 }
 
 .app-meta {
     display: flex;
     flex-direction: column;
-    align-items: flex-end;
-    gap: 10px;
-    margin-left: auto;
-}
-
-.app-version {
-    background-color: #007bff;
-    color: #fff;
-    padding: 3px 8px;
-    border-radius: 3px;
-    font-size: 0.9em;
-    display: flex;
     align-items: center;
 }
 
-.app-version i {
-    margin-right: 5px;
-}
-
 .download-btn {
-    background-color: #28a745;
+    display: inline-block;
+    padding: 5px 10px;
+    background-color: #00C851;
     color: #fff;
-    padding: 8px 15px;
-    border-radius: 5px;
+    border-radius: 20px;
+    font-size: 14px;
     text-decoration: none;
-    transition: background-color 0.3s;
+    margin-bottom: 5px;
 }
 
-.download-btn:hover {
-    background-color: #218838;
+.app-version {
+    font-size: 12px;
+    color: #00C851;
 }
 
 /* Media Queries */
