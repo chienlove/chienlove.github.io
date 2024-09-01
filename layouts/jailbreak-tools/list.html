@@ -13,7 +13,7 @@
                     <p class="developer">{{ .Params.developer }}</p>
                     <p class="compatibility">{{ .Params.ios_compatible }}</p>
                 </div>
-                <span class="version">{{ index .Params.versions 0 "version" }}</span>
+                <span class="version">{{ .Params.main_download.version }}</span>
             </li>
             {{ end }}
         </ul>
