@@ -1,3 +1,17 @@
+./* General container styles */
+.tool-container {
+    margin-top: 20px;
+    background-color: #f9f9f9;
+    padding: 15px;
+    border-radius: 5px;
+}
+
+/* Tool information styles */
+.tool-info-container {
+    margin-bottom: 20px;
+}
+
+/* Tool header styles */
 .tool-header {
     display: flex;
     align-items: center;
@@ -67,9 +81,10 @@
 /* Tool details styles */
 .tool-details {
     margin-top: 20px;
-    background-color: #f9f9f9;
     padding: 15px;
     border-radius: 5px;
+    background-color: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .tool-details div {
@@ -93,6 +108,10 @@
 /* Download links styles */
 .download-links {
     margin-top: 20px;
+    padding: 15px;
+    background-color: #ffffff;
+    border-radius: 5px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 .download-link {
@@ -108,9 +127,6 @@
 
 .download-link:hover {
     background-color: #e2e8f0;
-}
-.h3 {
-    padding: 10px;
 }
 
 /* Utility classes */

@@ -1,10 +1,7 @@
-{{ define "head" }}
-    <link rel="stylesheet" href="/css/jailbreak-tools.css?v={{ now.Unix }}">
-{{ end }}
-
 {{ define "main" }}
 <main role="main">
-    <section class="tool-info">
+    <!-- Tool Information Container -->
+    <section class="tool-container tool-info-container">
         <div class="tool-header">
             <img src="{{ .Params.icon }}" alt="{{ .Title }} Icon" class="tool-icon">
             <div class="tool-name-and-details">
@@ -58,11 +55,11 @@
             <div><strong>iOS tương thích:</strong> {{ with .Params.ios_compatible }}{{ . }}{{ else }}Không có thông tin{{ end }}</div>
             <div><strong>Từ khóa:</strong> {{ if .Params.keywords }}{{ delimit .Params.keywords ", " }}{{ else }}Không có từ khóa{{ end }}</div>
         </div>
-
     </section>
-    
+
+    <!-- Other Versions Container -->
     {{ if .Params.other_versions }}
-    <section class="download-links">
+    <section class="tool-container download-links">
         <h2>Các phiên bản khác</h2>
         {{ $versions := .Params.other_versions }}
         {{ if gt (len $versions) 0 }}
