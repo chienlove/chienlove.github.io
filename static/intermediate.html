@@ -64,7 +64,10 @@
         document.body.innerHTML = '<div class="container"><h1>Error</h1><p>Invalid download link. Please try again.</p></div>';
         return;
     }
-    
+
+    // Xóa tham số URL sau khi lấy được plistUrl
+    window.history.replaceState({}, document.title, window.location.pathname);
+
     // Chỉ tạo một temp-token từ server
     fetch('/generate-token', {
         method: 'POST',

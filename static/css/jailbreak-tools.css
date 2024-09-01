@@ -45,6 +45,7 @@
 /* Description styles */
 #description-container {
     margin-top: 20px;
+    padding: 10px;
 }
 
 .read-more-button {
