@@ -25,10 +25,11 @@
         <div id="short-description">
             {{ delimit (first 50 $words) " " | safeHTML }}
             <span id="ellipsis">...</span>
-            <button id="read-more" onclick="showFullDescription()">Xem thêm</button>
+            <button id="toggle-description" onclick="toggleDescription()">Xem thêm</button>
         </div>
         <div id="full-description" class="hidden">
             {{ $description | safeHTML }}
+            <button id="toggle-description" onclick="toggleDescription()">Thu gọn</button>
         </div>
     {{ else }}
         <div id="full-description">
@@ -66,9 +67,20 @@
     {{ end }}
 </main>
 <script>
-    function showFullDescription() {
-        document.getElementById('short-description').style.display = 'none';
-        document.getElementById('full-description').style.display = 'block';
+    function toggleDescription() {
+        var shortDesc = document.getElementById('short-description');
+        var fullDesc = document.getElementById('full-description');
+        var toggleButton = document.getElementById('toggle-description');
+        
+        if (shortDesc.style.display === 'none') {
+            shortDesc.style.display = 'block';
+            fullDesc.style.display = 'none';
+            toggleButton.textContent = 'Xem thêm';
+        } else {
+            shortDesc.style.display = 'none';
+            fullDesc.style.display = 'block';
+            toggleButton.textContent = 'Thu gọn';
+        }
     }
 </script>
 {{ end }}
