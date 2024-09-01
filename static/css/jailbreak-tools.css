@@ -1,13 +1,9 @@
+/* General container styles */
 .tool-container {
     margin-top: 20px;
     background-color: #f9f9f9;
     padding: 15px;
     border-radius: 5px;
-}
-
-/* Tool information styles */
-.tool-info-container {
-    margin-bottom: 20px;
 }
 
 /* Tool header styles */
@@ -17,6 +13,10 @@
     justify-content: space-between;
     padding: 15px 0;
     border-bottom: 1px solid #ddd;
+}
+
+.tool-header .tool-details {
+    margin-left: 15px;
 }
 
 .tool-icon {
@@ -43,6 +43,10 @@
 .tool-version, .tool-developer {
     font-size: 14px;
     color: #666;
+}
+
+.tool-version-label, .tool-developer-label {
+    font-weight: bold;
 }
 
 .get-button {
@@ -78,16 +82,26 @@
 }
 
 /* Tool details styles */
-.tool-details {
-    margin-top: 20px;
-    padding: 15px;
-    border-radius: 5px;
-    background-color: #ffffff;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+.tool-info-container {
+    margin-bottom: 20px;
 }
 
-.tool-details div {
+.tool-details-container {
+    padding: 15px;
+    background-color: #ffffff;
+    border-radius: 5px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid #ddd;
+}
+
+.tool-details {
     margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #ddd;
+}
+
+.tool-details:last-child {
+    border-bottom: none;
 }
 
 /* Screenshots styles */
@@ -111,6 +125,7 @@
     background-color: #ffffff;
     border-radius: 5px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid #ddd;
 }
 
 .download-link {
@@ -131,4 +146,16 @@
 /* Utility classes */
 .hidden {
     display: none;
+}
+
+/* Ensure tool-info and download-links sections are equal in width */
+.tool-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+}
+
+.tool-info-container, .download-links {
+    width: 100%;
+    box-sizing: border-box;
 }
