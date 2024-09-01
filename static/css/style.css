@@ -206,20 +206,23 @@ body {
     font-weight: bold;
 }
 
-.app-list {
-    display: flex;
-    flex-direction: column;
-    border-top: 1px solid #ddd; /* Thêm đường kẻ trên cùng */
-}
-
 .app-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
     padding: 10px 0;
-    padding-right: 10px; /* Thêm khoảng cách bên phải */
-    border-bottom: 1px solid #ddd; /* Đường kẻ dưới cùng của từng ứng dụng */
-    padding-left: 10px;
+    padding-right: 10px;
+    position: relative; /* Thêm điều này để sử dụng ::after */
+}
+
+.app-item:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: 60px; /* Vị trí bắt đầu của đường kẻ, nằm sau icon */
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background-color: #ddd; /* Màu của đường kẻ ngăn cách */
 }
 
 .app-item:first-child {
@@ -269,7 +272,7 @@ body {
 .download-btn {
     display: inline-block;
     padding: 4px 12px;
-    background-color: #00C851;
+    background-color: #0070c9;
     color: #fff;
     border-radius: 12px;
     font-size: 14px;
