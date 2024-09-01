@@ -1,6 +1,7 @@
 {{ define "head" }}
     <link rel="stylesheet" href="/css/jailbreak-tools.css?v={{ now.Unix }}">
 {{ end }}
+
 {{ define "main" }}
 <main role="main">
     <section class="tool-info">
@@ -19,27 +20,27 @@
         </div>
         <h3>Mô tả</h3>
         <div id="description-container">
-    {{ $description := .Params.description | markdownify }}
-    {{ $words := split $description " " }}
-    {{ if gt (len $words) 50 }}
-        <div id="short-description">
-            {{ delimit (first 50 $words) " " | safeHTML }}
-            <span id="ellipsis">...</span>
-            <button id="toggle-description" onclick="toggleDescription()">Xem thêm</button>
+            {{ $description := .Params.description | markdownify }}
+            {{ $words := split $description " " }}
+            {{ if gt (len $words) 50 }}
+                <div id="short-description">
+                    {{ delimit (first 50 $words) " " | safeHTML }}
+                    <span id="ellipsis">...</span>
+                    <button id="toggle-description" onclick="toggleDescription()">Xem thêm</button>
+                </div>
+                <div id="full-description" class="hidden">
+                    {{ $description | safeHTML }}
+                    <button id="toggle-description" onclick="toggleDescription()">Thu gọn</button>
+                </div>
+            {{ else }}
+                <div id="full-description">
+                    {{ $description | safeHTML }}
+                </div>
+            {{ end }}
         </div>
-        <div id="full-description" class="hidden">
-            {{ $description | safeHTML }}
-            <button id="toggle-description" onclick="toggleDescription()">Thu gọn</button>
-        </div>
-    {{ else }}
-        <div id="full-description">
-            {{ $description | safeHTML }}
-        </div>
-    {{ end }}
-</div>
 
         <h3>Ảnh màn hình</h3>
-          <div class="screenshots">
+        <div class="screenshots">
             {{ if .Params.screenshots }}
                 {{ range .Params.screenshots }}
                     <img src="{{ . }}" alt="Screenshot">
@@ -48,7 +49,8 @@
                 <p>Không có ảnh màn hình.</p>
             {{ end }}
         </div>
-      <h3>Thông tin</h3>
+
+        <h3>Thông tin</h3>
         <div class="tool-details">
             <div><strong>Nhà phát triển:</strong> {{ with .Params.developer }}{{ . }}{{ else }}Không có thông tin{{ end }}</div>
             <div><strong>Thể loại:</strong> {{ with .Params.category }}{{ . }}{{ else }}Không có thông tin{{ end }}</div>
@@ -56,8 +58,9 @@
             <div><strong>iOS tương thích:</strong> {{ with .Params.ios_compatible }}{{ . }}{{ else }}Không có thông tin{{ end }}</div>
             <div><strong>Từ khóa:</strong> {{ if .Params.keywords }}{{ delimit .Params.keywords ", " }}{{ else }}Không có từ khóa{{ end }}</div>
         </div>
-        
+
     </section>
+    
     {{ if .Params.other_versions }}
     <section class="download-links">
         <h2>Các phiên bản khác</h2>
@@ -66,17 +69,25 @@
             {{ range $versions }}
                 {{ with .appId }}
                     <a href="/download?appId={{ .appId }}" class="download-link" target="_blank">
-                        {{ .version }}</a>
+                        {{ .version }}
+                    </a>
+                {{ else }}
+                    <p>Lỗi: Không có appId cho phiên bản {{ .version }}</p>
+                {{ end }}
+            {{ end }}
+        {{ else }}
+            <p>Không có phiên bản nào để hiển thị.</p>
         {{ end }}
     </section>
     {{ end }}
 </main>
+
 <script>
     function toggleDescription() {
         var shortDesc = document.getElementById('short-description');
         var fullDesc = document.getElementById('full-description');
-        var toggleButton = document.getElementById('toggle-description');
-        
+        var toggleButton = document.querySelector('#toggle-description');
+
         if (shortDesc.style.display === 'none') {
             shortDesc.style.display = 'block';
             fullDesc.style.display = 'none';
