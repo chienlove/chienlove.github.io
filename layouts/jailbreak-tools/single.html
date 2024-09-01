@@ -21,9 +21,9 @@
         <div id="description-container">
             {{ $description := .Params.description | markdownify }}
             {{ $words := split $description " " }}
-            {{ if gt (len $words) 150 }}
+            {{ if gt (len $words) 90 }}
                 <div id="short-description">
-                    {{ delimit (first 150 $words) " " | safeHTML }}
+                    {{ delimit (first 90 $words) " " | safeHTML }}
                     <span id="ellipsis">...</span>
                 </div>
                 <div id="full-description" class="hidden">
