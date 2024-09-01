@@ -4,8 +4,9 @@ const crypto = require('crypto');
 
 exports.handler = async function(event, context) {
   const owner = 'chienlove';
-  const repo = 'chienlove.github.io'; // Thay bằng tên repo của bạn
-  const branch = 'master'; // Nhánh mà bạn muốn cập nhật tệp
+  const repo = 'chienlove.github.io';
+  const branch = 'master';
+  const hashFilePath = 'static/plist_hashes.json'; // Tệp JSON để lưu trữ hash
 
   const plistMappings = {
     'https://file.jb-apps.me/plist/Unc0ver.plist': 'static/plist/unc0ver.plist',
@@ -14,10 +15,27 @@ exports.handler = async function(event, context) {
     'https://file.jb-apps.me/plist/PhoenixJB.plist': 'static/plist/phoenix.plist',
     'https://file.jb-apps.me/plist/Unc0ver_old.plist': 'static/plist/unc0ver_6.1.2.plist',
     'https://file.jb-apps.me/plist/FilzaEscaped15.plist': 'static/plist/filzaescaped15.plist'
-    // Thêm các ánh xạ khác ở đây
   };
 
   try {
+    // Fetch hash file from GitHub
+    let currentHashes = {};
+    try {
+      const { data: hashFileData } = await axios.get(`https://api.github.com/repos/${owner}/${repo}/contents/${hashFilePath}`, {
+        headers: { Authorization: `Bearer ${process.env.GITHUB_TOKEN}`, Accept: 'application/vnd.github.v3.raw' },
+        params: { ref: branch },
+      });
+      currentHashes = JSON.parse(hashFileData);
+    } catch (error) {
+      if (error.response && error.response.status === 404) {
+        console.log(`Hash file not found, initializing empty hash object.`);
+      } else {
+        throw error;
+      }
+    }
+
+    let updatedHashes = { ...currentHashes };
+
     for (const [url, targetFilePath] of Object.entries(plistMappings)) {
       console.log(`Processing ${url} -> ${targetFilePath}`);
 
@@ -27,7 +45,13 @@ exports.handler = async function(event, context) {
       const externalPlistHash = crypto.createHash('sha256').update(JSON.stringify(externalPlistData)).digest('hex');
       console.log('External plist hash:', externalPlistHash);
 
-      // Fetch GitHub plist content
+      // Check if the file needs updating
+      if (currentHashes[targetFilePath] === externalPlistHash) {
+        console.log(`No update needed for ${targetFilePath}`);
+        continue;  // Bỏ qua tệp này nếu hash trùng nhau
+      }
+
+      // Update target plist data nếu khác nhau hoặc nếu tệp không tồn tại
       let targetPlistData;
       try {
         const { data: fileData } = await axios.get(`https://api.github.com/repos/${owner}/${repo}/contents/${targetFilePath}`, {
@@ -35,27 +59,8 @@ exports.handler = async function(event, context) {
           params: { ref: branch },
         });
         targetPlistData = plist.parse(fileData);
-      } catch (error) {
-        if (error.response && error.response.status === 404) {
-          console.log(`Target file ${targetFilePath} not found, treating as a new file.`);
-          targetPlistData = null;
-        } else {
-          throw error;
-        }
-      }
 
-      const targetPlistHash = targetPlistData ? crypto.createHash('sha256').update(JSON.stringify(targetPlistData)).digest('hex') : null;
-      console.log('Target plist hash:', targetPlistHash);
-
-      // So sánh hash của dữ liệu từ URL và dữ liệu trên GitHub
-      if (targetPlistHash === externalPlistHash) {
-        console.log(`No update needed for ${targetFilePath}`);
-        continue;  // Nếu hash giống nhau, bỏ qua tệp này
-      }
-
-      // Update target plist data nếu khác nhau
-      if (targetPlistData) {
-        if (targetPlistData.items && targetPlistData.items[0] && 
+        if (targetPlistData.items && targetPlistData.items[0] &&
             externalPlistData.items && externalPlistData.items[0]) {
           const targetItem = targetPlistData.items[0];
           const externalItem = externalPlistData.items[0];
@@ -83,8 +88,13 @@ exports.handler = async function(event, context) {
           console.error('The structure of plist data is not as expected');
           continue;  // Skip to the next file if structure doesn't match
         }
-      } else {
-        targetPlistData = externalPlistData; // Nếu tệp chưa tồn tại, tạo mới
+      } catch (error) {
+        if (error.response && error.response.status === 404) {
+          console.log(`Target file ${targetFilePath} not found, treating as a new file.`);
+          targetPlistData = externalPlistData; // Tạo mới nếu tệp không tồn tại
+        } else {
+          throw error;
+        }
       }
 
       console.log('Updated target plist data:', JSON.stringify(targetPlistData, null, 2));
@@ -94,7 +104,7 @@ exports.handler = async function(event, context) {
 
       // Get current file SHA nếu tệp đã tồn tại
       let fileSha = null;
-      if (targetPlistHash) {
+      if (targetPlistData) {
         const { data: fileMeta } = await axios.get(`https://api.github.com/repos/${owner}/${repo}/contents/${targetFilePath}`, {
           headers: { Authorization: `Bearer ${process.env.GITHUB_TOKEN}` },
           params: { ref: branch },
@@ -113,17 +123,50 @@ exports.handler = async function(event, context) {
       });
 
       console.log(`Successfully updated ${targetFilePath}`);
+
+      // Update hash table with new hash
+      updatedHashes[targetFilePath] = externalPlistHash;
+    }
+
+    // Update hash file on GitHub nếu có sự thay đổi
+    if (JSON.stringify(currentHashes) !== JSON.stringify(updatedHashes)) {
+      const updatedHashContent = Buffer.from(JSON.stringify(updatedHashes, null, 2)).toString('base64');
+
+      // Get SHA of current hash file (if exists)
+      let hashFileSha = null;
+      try {
+        const { data: hashFileMeta } = await axios.get(`https://api.github.com/repos/${owner}/${repo}/contents/${hashFilePath}`, {
+          headers: { Authorization: `Bearer ${process.env.GITHUB_TOKEN}` },
+          params: { ref: branch },
+        });
+        hashFileSha = hashFileMeta.sha;
+      } catch (error) {
+        if (error.response && error.response.status !== 404) {
+          throw error;
+        }
+      }
+
+      await axios.put(`https://api.github.com/repos/${owner}/${repo}/contents/${hashFilePath}`, {
+        message: `Update plist hashes via Netlify Function`,
+        content: updatedHashContent,
+        sha: hashFileSha,
+        branch: branch,
+      }, {
+        headers: { Authorization: `Bearer ${process.env.GITHUB_TOKEN}` },
+      });
+
+      console.log('Successfully updated hash file.');
     }
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ message: 'Plist files updated successfully' }),
+      body: JSON.stringify({ message: 'Plist files and hash file updated successfully' }),
     };
   } catch (error) {
-    console.error('Error updating plist files:', error);
+    console.error('Error updating plist files or hash file:', error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Failed to update plist files', details: error.message }),
+      body: JSON.stringify({ error: 'Failed to update plist files or hash file', details: error.message }),
     };
   }
 };
