@@ -14,7 +14,7 @@
                 </div>
             </div>
             {{ if .Params.main_download }}
-            <a href="/download?appId={{ .Params.main_download.appId }}" class="get-button">GET</a>
+            <a href="/download?appId={{ .Params.main_download.appId }}" class="get-button" target="_blank">GET</a>
             {{ end }}
         </div>
         <h2>Mô tả</h2>
@@ -58,7 +58,7 @@
     <section class="download-links">
         <h2>Các phiên bản khác</h2>
         {{ range .Params.other_versions }}
-            <a href="/download?appId={{ .appId }}" class="download-link">{{ .version }}</a>
+            <a href="/download?appId={{ .appId }}" class="download-link" target="_blank">{{ .version }}</a>
         {{ end }}
     </section>
     {{ end }}
