@@ -182,7 +182,7 @@ body {
     }
 }
 /* App List Styles */
-.container {
+..container {
     max-width: 500px;
     margin: 0 auto;
     padding: 20px;
@@ -190,16 +190,24 @@ body {
     background-color: #f5f5f5;
 }
 
+.section {
+    margin-bottom: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #fff;
+    padding: 10px;
+}
+
 .section-title {
     font-size: 18px;
-    color: #47b8e0;
+    color: #333;
     margin-bottom: 10px;
+    padding-left: 10px;
 }
 
 .app-list {
-    display: block;
-    border-top: 1px solid #ddd;
-    background-color: #ffffff;
+    display: flex;
+    flex-direction: column;
 }
 
 .app-item {
@@ -207,12 +215,19 @@ body {
     justify-content: space-between;
     align-items: center;
     padding: 10px 0;
-    border-bottom: 1px solid #ddd;
+    border-top: 1px solid #ddd;
 }
 
-.app-info {
+.app-item:first-child {
+    border-top: none;
+}
+
+.app-link {
     display: flex;
     align-items: center;
+    text-decoration: none;
+    color: inherit;
+    flex: 1;
 }
 
 .app-icon {
@@ -234,8 +249,15 @@ body {
     font-weight: 500;
 }
 
+.app-developer {
+    font-size: 12px;
+    color: #666;
+    margin: 2px 0 0;
+}
+
 .app-meta {
     text-align: center;
+    min-width: 50px;
 }
 
 .download-btn {
