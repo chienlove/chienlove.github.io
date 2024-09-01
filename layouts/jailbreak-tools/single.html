@@ -61,8 +61,12 @@
     {{ if .Params.other_versions }}
     <section class="download-links">
         <h2>Các phiên bản khác</h2>
-        {{ range .Params.other_versions }}
-            <a href="/download?appId={{ .appId }}" class="download-link" target="_blank">{{ .version }}</a>
+        {{ $versions := .Params.other_versions }}
+        {{ if gt (len $versions) 0 }}
+            {{ range $versions }}
+                {{ with .appId }}
+                    <a href="/download?appId={{ .appId }}" class="download-link" target="_blank">
+                        {{ .version }}</a>
         {{ end }}
     </section>
     {{ end }}
