@@ -17,7 +17,7 @@
             <a href="/download?appId={{ .Params.main_download.appId }}" class="get-button" target="_blank">GET</a>
             {{ end }}
         </div>
-        <h2>Mô tả</h2>
+        <h3>Mô tả</h3>
         <div id="description-container">
             {{ $description := .Params.description | markdownify }}
             {{ $words := split $description " " }}
