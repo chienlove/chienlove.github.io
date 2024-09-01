@@ -18,8 +18,6 @@
             {{ end }}
         </div>
         <h2>Mô tả</h2>
-        <p>{{ .Params.short_description }}</p>
-        <h3>Mô tả chi tiết</h3>
         <div id="description-container">
             {{ $description := .Params.description | markdownify }}
             {{ $words := split $description " " }}
