@@ -2,16 +2,15 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 20px;
-    padding: 10px;
-    border-bottom: 1px solid #ccc;
+    padding: 15px 0;
+    border-bottom: 1px solid #ddd;
 }
 
 .tool-icon {
-    width: 100px;
-    height: 100px;
-    border-radius: 20px;
-    margin-right: 20px;
+    width: 60px;
+    height: 60px;
+    border-radius: 10px;
+    margin-right: 15px;
 }
 
 .tool-name-and-details {
@@ -20,59 +19,91 @@
 
 .tool-title {
     margin: 0;
-    font-size: 28px;
+    font-size: 24px;
 }
 
 .tool-version-dev {
-    font-size: 16px;
+    margin-top: 5px;
+}
+
+.tool-version, .tool-developer {
+    font-size: 14px;
     color: #666;
-    margin-top: 8px;
-}
-
-.tool-version {
-    display: block;
-}
-
-.tool-developer {
-    display: block;
 }
 
 .get-button {
+    display: inline-block;
     padding: 10px 20px;
-    background-color: #ff3b30;
-    color: white;
-    text-transform: uppercase;
-    font-weight: bold;
-    border-radius: 20px;
+    background-color: #e53e3e;
+    color: #fff;
+    text-align: center;
+    border-radius: 5px;
     text-decoration: none;
+    font-weight: bold;
 }
 
-.screenshots img {
-    width: 100%;
-    height: auto;
-    border-radius: 10px;
-    margin-bottom: 10px;
+/* Description styles */
+#description-container {
+    margin-top: 20px;
 }
 
+.read-more-button {
+    background-color: transparent;
+    border: none;
+    color: #e53e3e;
+    cursor: pointer;
+    padding: 0;
+    font-size: 14px;
+    margin-top: 10px;
+}
+
+/* Tool details styles */
 .tool-details {
     margin-top: 20px;
+    background-color: #f9f9f9;
+    padding: 15px;
+    border-radius: 5px;
 }
 
 .tool-details div {
     margin-bottom: 10px;
 }
 
+/* Screenshots styles */
+.screenshots {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.screenshots img {
+    max-width: calc(33.333% - 10px);
+    height: auto;
+    border-radius: 10px;
+}
+
+/* Download links styles */
 .download-links {
-    margin-top: 40px;
+    margin-top: 20px;
 }
 
 .download-link {
     display: inline-block;
     padding: 10px 15px;
-    background-color: #007aff;
-    color: white;
-    border-radius: 5px;
-    text-decoration: none;
+    background-color: #f3f4f6;
     margin-right: 10px;
     margin-bottom: 10px;
+    border-radius: 5px;
+    text-decoration: none;
+    color: #333;
+}
+
+.download-link:hover {
+    background-color: #e2e8f0;
+}
+
+/* Utility classes */
+.hidden {
+    display: none;
 }
