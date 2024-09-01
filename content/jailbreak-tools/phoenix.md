@@ -4,6 +4,20 @@ date: 2024-08-31T09:05:59.181Z
 icon: /images/img_1012.png
 screenshots:
   - /images/img_1013.png
+developer: Siguza & tihmstar
+size: 54Mb
+ios_compatible: 9.3.5 - 9.3.6
+keywords:
+  - Phoenix
+main_download:
+  version: "5.0"
+  appId: phoenix
+  plistUrl: https://storeios.net/plist/phoenix.plist
+versions:
+  - intermediate_page_url: /intermediate/:appId
+    version: "5.0"
+    appId: phoenix
+    plistUrl: https://storeios.net/plist/phoenix.plist
 description: >-
   ***Phoenix*** is a semi-untethered jailbreak tool designed for 32-bit iOS
   devices running iOS 9.3.5 or 9.3.6. Developed by Siguza and tihmstar, Phoenix
@@ -15,15 +29,5 @@ description: >-
 
 
   Phoenix stands out for its ease of use and compatibility with legacy devices that have been largely forgotten by the mainstream iOS community. It opens up possibilities for installing tweaks, themes, and apps that were otherwise inaccessible, breathing new life into older hardware. The tool’s reliance on known exploits makes it reliable yet safe for those looking to extend the functionality of their devices. Although iOS 9.3.5 and 9.3.6 are now considered outdated, Phoenix provides a valuable solution for users who wish to continue using their older devices with enhanced capabilities.
-developer: Siguza & tihmstar
 category: Tool jailbreak
-size: 54Mb
-ios_compatible: 9.3.5 - 9.3.6
-keywords:
-  - Phoenix
-versions:
-  - intermediate_page_url: /intermediate/:appId
-    version: "5.0"
-    appId: phoenix
-    plistUrl: https://storeios.net/plist/phoenix.plist
 ---
