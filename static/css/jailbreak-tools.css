@@ -15,16 +15,11 @@
     border-bottom: 1px solid #ddd;
 }
 
-.tool-header .tool-details {
-    margin-left: 15px;
-}
-
 .tool-icon {
     width: 80px;
     height: 80px;
     border-radius: 10px;
     margin-right: 15px;
-    margin-left: 5px;
 }
 
 .tool-name-and-details {
@@ -37,28 +32,27 @@
 }
 
 .tool-version-dev {
-    margin-top: 5px;
-}
-
-.tool-version, .tool-developer {
+    margin-top: 10px; /* Increased space between details and GET button */
     font-size: 14px;
     color: #666;
 }
 
 .tool-version-label, .tool-developer-label {
     font-weight: bold;
+    display: block;
 }
 
 .get-button {
     background-color: #0070c9;
     color: white;
-    padding: 10px 15px;
+    padding: 8px 12px; /* Adjusted padding */
     border-radius: 5px;
     text-decoration: none;
     font-weight: bold;
-    font-size: 16px;
+    font-size: 14px; /* Adjusted font size */
     display: inline-block;
     transition: background-color 0.3s;
+    margin-left: 15px;
 }
 
 .get-button:hover {
