@@ -67,13 +67,9 @@
         {{ $versions := .Params.other_versions }}
         {{ if gt (len $versions) 0 }}
             {{ range $versions }}
-                {{ with .appId }}
-                    <a href="/download?appId={{ .appId }}" class="download-link" target="_blank">
-                        {{ .version }}
-                    </a>
-                {{ else }}
-                    <p>Lỗi: Không có appId cho phiên bản {{ .version }}</p>
-                {{ end }}
+                <a href="/download?appId={{ .appId }}" class="download-link" target="_blank">
+                    {{ .Title }} {{ .version }}
+                </a>
             {{ end }}
         {{ else }}
             <p>Không có phiên bản nào để hiển thị.</p>
