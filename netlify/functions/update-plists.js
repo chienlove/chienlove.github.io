@@ -15,9 +15,10 @@ exports.handler = async function(event, context) {
     'https://file.jb-apps.me/plist/PhoenixJB.plist': 'static/plist/phoenix.plist',
     'https://file.jb-apps.me/plist/Unc0ver_old.plist': 'static/plist/unc0ver_6.1.2.plist',
     'https://file.jb-apps.me/plist/FilzaEscaped15.plist': 'static/plist/filzaescaped15.plist',
-    'https://file.jb-apps.me/plist/Taurine.plist': 'static/plist/taurine.plist',
-    'https://file.jb-apps.me/plist/Freya.plist': 'static/plist/freya.plist'
+    'https://file.jb-apps.me/plist/Taurine.plist': 'static/plist/taurine.plist'
   };
+
+  let updatesPerformed = false;
 
   try {
     // Fetch hash file from GitHub
@@ -146,6 +147,7 @@ exports.handler = async function(event, context) {
       });
 
       console.log(`Successfully updated ${targetFilePath}`);
+      updatesPerformed = true;
 
       // Update hash table with new hash
       updatedHashes[targetFilePath] = externalPlistHash;
@@ -179,12 +181,21 @@ exports.handler = async function(event, context) {
       });
 
       console.log('Successfully updated hash file.');
+      updatesPerformed = true;
     }
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ message: 'Plist files and hash file updated successfully' }),
-    };
+    // Determine the appropriate response based on whether updates were performed
+    if (updatesPerformed) {
+      return {
+        statusCode: 200,
+        body: JSON.stringify({ message: 'Plist files and/or hash file updated successfully' }),
+      };
+    } else {
+      return {
+        statusCode: 200,
+        body: JSON.stringify({ message: 'No updates were necessary. All files are up to date.' }),
+      };
+    }
   } catch (error) {
     console.error('Error updating plist files or hash file:', error);
     return {
