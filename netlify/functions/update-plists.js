@@ -6,7 +6,7 @@ exports.handler = async function(event, context) {
   const owner = 'chienlove';
   const repo = 'chienlove.github.io';
   const branch = 'master';
-  const hashFilePath = 'static/plist_hashes.json'; // Tệp JSON để lưu trữ hash
+  const hashFilePath = 'static/plist_hashes.json';
 
   const plistMappings = {
     'https://file.jb-apps.me/plist/Unc0ver.plist': 'static/plist/unc0ver.plist',
@@ -21,23 +21,40 @@ exports.handler = async function(event, context) {
   try {
     // Fetch hash file from GitHub
     let currentHashes = {};
-try {
-  const { data: hashFileData } = await axios.get(`https://api.github.com/repos/${owner}/${repo}/contents/${hashFilePath}`, {
-    headers: { Authorization: `Bearer ${process.env.GITHUB_TOKEN}`, Accept: 'application/vnd.github.v3.raw' },
-    params: { ref: branch },
-  });
+    try {
+      const response = await axios.get(`https://api.github.com/repos/${owner}/${repo}/contents/${hashFilePath}`, {
+        headers: { Authorization: `Bearer ${process.env.GITHUB_TOKEN}`, Accept: 'application/vnd.github.v3.raw' },
+        params: { ref: branch },
+      });
 
-  console.log('Raw hash file data:', hashFileData); // Debug xem dữ liệu thô trông như thế nào
+      console.log('Full GitHub API response:', response);
+      console.log('Content-Type:', response.headers['content-type']);
 
-  currentHashes = JSON.parse(hashFileData);
-} catch (error) {
-  console.log('Error fetching or parsing hash file data:', error);
-  if (error.response && error.response.status === 404) {
-    console.log(`Hash file not found, initializing empty hash object.`);
-  } else {
-    throw error;
-  }
-}
+      const hashFileData = response.data;
+      console.log('Raw hash file data:', hashFileData);
+
+      if (typeof hashFileData === 'string') {
+        currentHashes = JSON.parse(hashFileData);
+      } else if (typeof hashFileData === 'object') {
+        if (hashFileData.content) {
+          // If content is base64 encoded
+          const decodedContent = Buffer.from(hashFileData.content, 'base64').toString('utf8');
+          currentHashes = JSON.parse(decodedContent);
+        } else {
+          // If it's already an object, use it directly
+          currentHashes = hashFileData;
+        }
+      } else {
+        throw new Error('Unexpected data type for hash file');
+      }
+    } catch (error) {
+      console.log('Error fetching or parsing hash file data:', error);
+      if (error.response && error.response.status === 404) {
+        console.log(`Hash file not found, initializing empty hash object.`);
+      } else {
+        throw error;
+      }
+    }
 
     let updatedHashes = { ...currentHashes };
 
@@ -53,10 +70,10 @@ try {
       // Check if the file needs updating
       if (currentHashes[targetFilePath] === externalPlistHash) {
         console.log(`No update needed for ${targetFilePath}`);
-        continue;  // Bỏ qua tệp này nếu hash trùng nhau
+        continue;
       }
 
-      // Update target plist data nếu khác nhau hoặc nếu tệp không tồn tại
+      // Update target plist data if different or if file doesn't exist
       let targetPlistData;
       try {
         const { data: fileData } = await axios.get(`https://api.github.com/repos/${owner}/${repo}/contents/${targetFilePath}`, {
@@ -91,12 +108,12 @@ try {
           }
         } else {
           console.error('The structure of plist data is not as expected');
-          continue;  // Skip to the next file if structure doesn't match
+          continue;
         }
       } catch (error) {
         if (error.response && error.response.status === 404) {
           console.log(`Target file ${targetFilePath} not found, treating as a new file.`);
-          targetPlistData = externalPlistData; // Tạo mới nếu tệp không tồn tại
+          targetPlistData = externalPlistData;
         } else {
           throw error;
         }
@@ -107,7 +124,7 @@ try {
       // Convert updated plist to string
       const updatedPlistContent = plist.build(targetPlistData);
 
-      // Get current file SHA nếu tệp đã tồn tại
+      // Get current file SHA if file already exists
       let fileSha = null;
       if (targetPlistData) {
         const { data: fileMeta } = await axios.get(`https://api.github.com/repos/${owner}/${repo}/contents/${targetFilePath}`, {
@@ -117,7 +134,7 @@ try {
         fileSha = fileMeta.sha;
       }
 
-      // Update hoặc tạo mới file trên GitHub
+      // Update or create file on GitHub
       await axios.put(`https://api.github.com/repos/${owner}/${repo}/contents/${targetFilePath}`, {
         message: `Update ${targetFilePath} via Netlify Function`,
         content: Buffer.from(updatedPlistContent).toString('base64'),
@@ -133,7 +150,7 @@ try {
       updatedHashes[targetFilePath] = externalPlistHash;
     }
 
-    // Update hash file on GitHub nếu có sự thay đổi
+    // Update hash file on GitHub if there are changes
     if (JSON.stringify(currentHashes) !== JSON.stringify(updatedHashes)) {
       const updatedHashContent = Buffer.from(JSON.stringify(updatedHashes, null, 2)).toString('base64');
 
