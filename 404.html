@@ -1,166 +1,141 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset="utf-8">
-    <meta content='width=device-width, initial-scale=1.0, maximum-scale=2.0, user-scalable=0' name='viewport' />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>404 - Page Not Found</title>
-    <link rel="stylesheet" type="text/css" href="/css/style.css">
-    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.13.0/css/fontawesome.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.13.0/css/solid.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.13.0/css/brands.min.css">
     <style>
-        body, .navbar-brand, .nav-link, .form-label, .form-control, .btn, .text-white {
-            font-family: 'Nunito', sans-serif;
-        }
-        footer.footer {
-            margin-top: 20px;
-        }
-        #search-input {
-            width: 100%;
-            padding: 12px;
-            margin: 20px 0;
-        }
-        #search-button {
-            margin-bottom: 20px; /* Khoảng cách dưới nút tìm kiếm */
-        }
-        #search-results {
-            margin-top: 20px;
-        }
-        .search-result {
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Arial', sans-serif;
             display: flex;
+            justify-content: center;
             align-items: center;
-            padding: 10px;
-            border-bottom: 1px solid #ddd;
+            height: 100vh;
+            background: #f2f2f2;
+            color: #333;
         }
-        .search-result img {
-            border-radius: 23.3%;
-            margin-right: 10px;
+
+        .container {
+            text-align: center;
+            padding: 20px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
-        .search-result h3 {
+
+        .container h1 {
+            font-size: 72px;
             margin: 0;
+            color: #ff6b6b;
+        }
+
+        .container p {
             font-size: 18px;
-        }
-        .search-result p {
-            margin: 0;
+            margin: 20px 0;
             color: #666;
         }
-        .search-result a {
-            color: inherit;
+
+        .container a.button {
+            display: inline-block;
+            margin: 15px 0;
+            padding: 12px 30px;
+            color: #fff;
+            background: #ff6b6b;
             text-decoration: none;
+            border-radius: 50px;
+            font-size: 16px;
+            transition: background 0.3s;
         }
-        .search-title {
-            font-size: 1.5rem; /* Kích thước tiêu đề lớn hơn */
+
+        .container a.button:hover {
+            background: #e55b5b;
+        }
+
+        .container .search-box {
+            margin: 20px 0;
+            display: flex;
+            justify-content: center;
+        }
+
+        .container .search-box input[type="text"] {
+            padding: 10px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            width: 300px;
+            max-width: 100%;
+        }
+
+        .container .search-box input[type="submit"] {
+            padding: 10px 20px;
+            margin-left: 10px;
+            background: #ff6b6b;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .container .search-box input[type="submit"]:hover {
+            background: #e55b5b;
+        }
+
+        .container nav {
+            margin-top: 20px;
+        }
+
+        .container nav a {
+            margin: 0 15px;
+            text-decoration: none;
+            color: #ff6b6b;
             font-weight: bold;
-            margin-bottom: 10px;
+            transition: color 0.3s;
+        }
+
+        .container nav a:hover {
+            color: #e55b5b;
+        }
+
+        @media (max-width: 600px) {
+            .container h1 {
+                font-size: 48px;
+            }
+
+            .container p {
+                font-size: 16px;
+            }
+
+            .container .search-box {
+                flex-direction: column;
+            }
+
+            .container .search-box input[type="submit"] {
+                margin: 10px 0 0 0;
+                width: 100%;
+            }
         }
     </style>
 </head>
-
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark" style="background-color: #1E90FF;">
-        <div class="container">
-            <a class="navbar-brand" href="https://storeios.net/">StoreiOS</a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="#">link 1</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#">link 2</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#">link 3</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#">link 4</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#">link 5</a>
-                    </li>
-                </ul>
-            </div>
+    <div class="container">
+        <h1>404</h1>
+        <p>Oops! The page you are looking for doesn't exist.</p>
+        <a href="/" class="button">Go Back Home</a>
+        <div class="search-box">
+            <form action="/search" method="get">
+                <input type="text" name="q" placeholder="Search our site...">
+                <input type="submit" value="Search">
+            </form>
         </div>
-    </nav>
-
-    <div class="adsense-container">
-        <div class="adsense-content">
-          <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797"
-     crossorigin="anonymous"></script>
-<!-- Storeios ads -->
-<ins class="adsbygoogle"
-     style="display:block"
-     data-ad-client="ca-pub-3905625903416797"
-     data-ad-slot="5160182988"
-     data-ad-format="auto"
-     data-full-width-responsive="true"></ins>
-<script>
-     (adsbygoogle = window.adsbygoogle || []).push({});
-</script>
-        </div>
+        <nav>
+            <a href="/">Home</a>
+            <a href="/about">About Us</a>
+            <a href="/contact">Contact</a>
+            <a href="/blog">Blog</a>
+        </nav>
     </div>
-
-    <div class="container mt-4 text-center">
-        <h1>404 - Page Not Found</h1>
-        <p>Sorry, the page you are looking for does not exist.</p>
-        <input type="text" id="search-input" placeholder="Search for content...">
-        <button id="search-button" class="btn btn-primary">Search</button>
-        <div id="search-results"></div>
-    </div>
-
-    <script>
-        document.getElementById('search-button').addEventListener('click', function() {
-            const query = document.getElementById('search-input').value.toLowerCase();
-            const resultsContainer = document.getElementById('search-results');
-            resultsContainer.innerHTML = '';
-
-            fetch('/index.html')
-                .then(response => response.text())
-                .then(data => {
-                    const parser = new DOMParser();
-                    const doc = parser.parseFromString(data, 'text/html');
-                    const articles = doc.querySelectorAll('article');
-
-                    articles.forEach(article => {
-                        const titleElement = article.querySelector('.item-title');
-                        const subtitleElement = article.querySelector('.item-subtitle');
-                        const linkElement = article.querySelector('a');
-                        const imgElement = article.querySelector('img');
-
-                        if (titleElement && subtitleElement && linkElement && imgElement) {
-                            const title = titleElement.textContent.toLowerCase();
-                            const content = subtitleElement.textContent.toLowerCase();
-                            const link = linkElement.getAttribute('onclick').match(/location='(.*?)'/)[1];
-                            const imgSrc = imgElement.src;
-
-                            if (title.includes(query) || content.includes(query)) {
-                                const result = document.createElement('div');
-                                result.classList.add('search-result');
-                                result.innerHTML = `
-                                    <img src="${imgSrc}" width="60">
-                                    <div>
-                                        <h3><a href="${link}">${titleElement.textContent}</a></h3>
-                                        <p>${subtitleElement.textContent}</p>
-                                    </div>
-                                `;
-                                resultsContainer.appendChild(result);
-                            }
-                        }
-                    });
-
-                    if (resultsContainer.innerHTML === '') {
-                        resultsContainer.innerHTML = '<p>No results found.</p>';
-                    }
-                })
-                .catch(error => console.error('Error fetching the index file:', error));
-        });
-    </script>
-
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.0/dist/js/bootstrap.min.js"></script>
 </body>
 </html>
