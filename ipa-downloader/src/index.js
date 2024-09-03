@@ -41,6 +41,7 @@ export default {
       console.log("Kết quả xác thực:", user);
 
       if (user.needsMFA) {
+        console.log("MFA được yêu cầu. Loại MFA:", user.mfaType);
         return new Response(JSON.stringify({ needsMFA: true, mfaType: user.mfaType }), { status: 200, headers });
       }
 
