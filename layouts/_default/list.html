@@ -7,9 +7,9 @@
     <section class="categories">
         <h1>Các danh mục</h1>
         <ul>
-            {{ range .Site.Taxonomies.categories }}
+            {{ range $name, $taxonomy := .Site.Taxonomies.categories }}
                 <li>
-                    <a href="{{ .Page.Permalink }}">{{ .Term }} ({{ len .Pages }})</a>
+                    <a href="{{ $taxonomy.Page.Permalink }}">{{ $name }} ({{ len $taxonomy.Pages }})</a>
                 </li>
             {{ end }}
         </ul>
