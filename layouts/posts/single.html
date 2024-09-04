@@ -5,10 +5,8 @@
 {{ define "main" }}
 <article class="post-container">
     <nav class="breadcrumb">
-        <a href="/">Trang chủ</a> &gt; 
-        {{ range .Params.categories }}
-        <a href="/categories/{{ . | urlize }}">{{ . }}</a> &gt; 
-        {{ end }}
+        <a href="/">Home</a> &gt;
+        <a href="/posts">Posts</a> &gt;
         <span>{{ .Title }}</span>
     </nav>
 

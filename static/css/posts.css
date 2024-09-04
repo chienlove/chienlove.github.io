@@ -5,7 +5,6 @@
     color: #555;
     padding: 5px 0;
     border-bottom: 1px solid #ddd;
-    list-style: none;
     display: flex;
     gap: 5px;
 }
@@ -39,7 +38,7 @@
 }
 
 .post-header h1 {
-    font-size: 1.3rem; /* Giảm kích thước tiêu đề */
+    font-size: 1.5rem;
     margin-bottom: 10px;
     color: #333;
 }
