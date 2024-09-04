@@ -1,14 +1,24 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ .Title }}</title>
+    <title>Danh mục - {{ .Title }}</title>
 </head>
 <body>
+    <h1>Danh mục: {{ .Title }}</h1>
     <ul>
         {{ range .Pages }}
-            <li><a href="{{ .Permalink }}">{{ .Title }}</a></li>
+            <li>
+                <a href="{{ .Permalink }}">{{ .Title }}</a>
+            </li>
+        {{ end }}
+    </ul>
+    <h2>Các danh mục</h2>
+    <ul>
+        {{ $categories := .Site.Taxonomies.categories }}
+        {{ range $name, $taxonomy := $categories }}
+            <li>
+                <a href="{{ $.Site.BaseURL }}categories/{{ $name | urlize }}">{{ $name }}</a> ({{ len $taxonomy }})
+            </li>
         {{ end }}
     </ul>
 </body>
