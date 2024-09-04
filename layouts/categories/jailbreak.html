@@ -1,0 +1,18 @@
+{{ define "head" }}
+    <link rel="stylesheet" href="/css/category.css?v={{ now.Unix }}">
+{{ end }}
+
+{{ define "main" }}
+<main>
+    <section class="category-content">
+        <h1>Jailbreak</h1>
+        <ul>
+            {{ range .Pages }}
+                <li>
+                    <a href="{{ .Permalink }}">{{ .Title }}</a>
+                </li>
+            {{ end }}
+        </ul>
+    </section>
+</main>
+{{ end }}

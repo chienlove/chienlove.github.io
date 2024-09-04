@@ -9,7 +9,7 @@
         <ul>
             {{ range $name, $taxonomy := .Site.Taxonomies.categories }}
                 <li>
-                    <a href="{{ $taxonomy.Page.Permalink }}">{{ $name }} ({{ len $taxonomy.Pages }})</a>
+                    <a href="{{ (index (index .Site.Taxonomies.categories $name).Pages 0).Permalink }}">{{ $name }} ({{ len $taxonomy.Pages }})</a>
                 </li>
             {{ end }}
         </ul>
