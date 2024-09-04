@@ -5,17 +5,16 @@
 {{ define "main" }}
 <main>
     <section class="category-posts">
-        <h1>{{ .Title }}</h1>
-        <ul>
-            {{ range .Pages }}
-                <li>
-                    <a href="{{ .Permalink }}">{{ .Title }}</a>
-                    <p>{{ .Summary }}</p>
-                </li>
-            {{ else }}
-                <p>Không có bài viết nào trong danh mục này.</p>
-            {{ end }}
-        </ul>
-    </section>
-</main>
+    <h1>{{ .Title }}</h1>
+    <ul>
+        {{ range .Pages }}
+            <li>
+                <a href="{{ .Permalink }}">{{ .Title }}</a>
+                <p>{{ .Summary }}</p>
+            </li>
+        {{ else }}
+            <p>Không có bài viết nào trong danh mục này.</p>
+        {{ end }}
+    </ul>
+</section></main>
 {{ end }}
