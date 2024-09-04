@@ -5,11 +5,9 @@
 {{ define "main" }}
 
 <nav class="breadcrumb">
-  <a href="/">Home</a>
-  <span class="separator">&gt;</span>
-  <a href="/posts">Posts</a>
-  <span class="separator">&gt;</span>
-  <span class="current">{{ .Title }}</span>
+  <div class="breadcrumb-item"><a href="/">Home</a></div>
+  <div class="breadcrumb-item"><a href="/posts">Folder</a></div>
+  <div class="breadcrumb-item active"><span>Page</span></div>
 </nav>
 
 <div class="post-container">
