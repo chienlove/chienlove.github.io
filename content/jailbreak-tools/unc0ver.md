@@ -16,7 +16,7 @@ other_versions:
     plistUrl: https://storeios.net/plist/unc0ver_6.1.2.plist
 status: Signed
 title: Unc0ver
-icon: /images/img_0911.jpeg
+icon: /images/unc0ver.png
 short_description: Unc0ver tool jailbreak for iOS 11.0 - 14.8
 versions:
   - intermediate_page_url: /intermediate/unc0ver
