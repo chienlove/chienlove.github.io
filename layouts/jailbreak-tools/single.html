@@ -1,12 +1,5 @@
 {{ define "head" }}
     <link rel="stylesheet" href="/css/jailbreak-tools.css?v={{ now.Unix }}">
-<title>
-       {{ if or (in .Params.categories "Jailbreak") }}
-    <p>Download {{ .Title }} for iOS | {{ .Site.Title }}</p>
-  {{ else }}
-            {{ .Title }} | {{ .Site.Title }}
-{{ end }}
-    </title>
 {{ end }}
 
 {{ define "main" }}
