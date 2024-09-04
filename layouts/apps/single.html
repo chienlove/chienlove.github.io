@@ -1,6 +1,7 @@
 {{ define "head" }}
-    <link rel="stylesheet" href="{{ "css/apps.css" | relURL }}">
+    <link rel="stylesheet" href="/css/apps.css?v={{ now.Unix }}">
 {{ end }}
+
 {{ define "main" }}
 <div class="app-container">
     <header class="app-header">

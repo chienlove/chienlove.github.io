@@ -1,0 +1,39 @@
+/* Các kiểu đặc thù cho danh mục và bài viết */
+main {
+    max-width: 800px;
+    margin: 20px auto;
+    background: #fff;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+h1, h2 {
+    margin-bottom: 20px;
+    font-size: 1.5em;
+    color: #333;
+}
+
+ul {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+.category-item {
+    margin-bottom: 10px;
+}
+
+.category-item a {
+    color: #007bff;
+    text-decoration: none;
+    font-weight: bold;
+}
+
+.category-item a:hover {
+    text-decoration: underline;
+}
+
+.post-date {
+    color: #777;
+    font-size: 0.9em;
+}
