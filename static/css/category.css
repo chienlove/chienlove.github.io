@@ -1,52 +1,33 @@
-/* Đảm bảo CSS không bị ghi đè từ baseof.html */
-
 .categories {
-    margin: 20px 0;
+    margin: 20px;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #f9f9f9;
 }
 
 .categories h1 {
-    font-size: 1.8em;
-    color: #333;
-}
-
-.categories ul {
-    list-style-type: none;
-    padding-left: 0;
-}
-
-.category-item {
+    font-size: 1.5em;
     margin-bottom: 10px;
 }
 
-.category-item a {
-    color: #007bff;
+ul {
+    list-style-type: none;
+    padding: 0;
+}
+
+ul li {
+    margin-bottom: 15px;
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+}
+
+ul li a {
     text-decoration: none;
+    color: #007bff;
     font-weight: bold;
 }
 
-.category-item a:hover {
+ul li a:hover {
     text-decoration: underline;
-}
-
-.posts {
-    margin: 20px 0;
-}
-
-.posts h1 {
-    font-size: 1.8em;
-    color: #333;
-}
-
-.posts ul {
-    list-style-type: none;
-    padding-left: 0;
-}
-
-.posts li {
-    margin-bottom: 10px;
-}
-
-.post-date {
-    color: #777;
-    font-size: 0.9em;
 }
