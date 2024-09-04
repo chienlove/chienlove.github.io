@@ -1,12 +1,16 @@
 {{ define "head" }}
     <link rel="stylesheet" href="/css/jailbreak-tools.css?v={{ now.Unix }}">
+<title>
+        {{ if eq .Section "jailbreak" }}
+            Download {{ .Title }} for iOS | {{ .Site.Title }}
+        {{ else }}
+            {{ .Title }} | {{ .Site.Title }}
+        {{ end }}
+    </title>
 {{ end }}
 
 {{ define "main" }}
 <main role="main">
-    {{ if or (in .Params.categories "jailbreak") (in .Params.categories "app") }}
-    <p>Download {{ .Title }} for iOS</p>
-{{ end }}
     <section class="tool-container tool-info-container">
         <div class="tool-header">
             <img src="{{ .Params.icon }}" alt="{{ .Title }} Icon" class="tool-icon">
