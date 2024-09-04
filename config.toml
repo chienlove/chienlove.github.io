@@ -24,4 +24,5 @@ title = "storeios"
   posts = "/posts/:slug/"
 
 [taxonomies]
-  author = "authors"
+category = "categories"
+tag = "tags"
