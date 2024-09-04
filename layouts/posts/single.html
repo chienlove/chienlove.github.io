@@ -3,47 +3,45 @@
 {{ end }}
 
 {{ define "main" }}
-<article class="post-container">
-    <nav class="breadcrumb">
-        <a href="/">Home</a> &gt;
-        <a href="/posts">Posts</a> &gt;
-        <span>{{ .Title }}</span>
-    </nav>
 
-    <header class="post-header">
-        <h1>{{ .Title }}</h1>
-        <div class="post-meta">
-            <span class="post-date">
-                <i class="fa fa-clock"></i> {{ .Date.Format "02-01-2006 15:04" }}
-            </span>
-            <span class="post-author">
-                <i class="fa fa-check-circle"></i> {{ .Params.author }}
-            </span>
-        </div>
-    </header>
+<nav class="breadcrumb">
+  <a href="/" class="breadcrumb-item">Home</a>
+  <a href="/posts" class="breadcrumb-item">Posts</a>
+  <span class="breadcrumb-item active">{{ .Title }}</span>
+</nav>
 
-    {{ if .Params.thumbnail }}
-    <div class="post-thumbnail">
-        <img src="{{ .Params.thumbnail }}" alt="{{ .Title }}">
+<div class="post-container">
+  <header class="post-header">
+    <h1>{{ .Title }}</h1>
+    <div class="post-meta">
+      <span class="post-date"><i class="fa fa-clock"></i>{{ .Date.Format "02-01-2006 15:04" }}</span>
+      <span class="post-author"><i class="fa fa-user"></i>{{ .Params.author }}</span>
     </div>
-    {{ end }}
+  </header>
 
-    <section class="post-content">
-        {{ .Content }}
-    </section>
+  {{ if .Params.thumbnail }}
+  <div class="post-thumbnail">
+    <img src="{{ .Params.thumbnail }}" alt="{{ .Title }}">
+  </div>
+  {{ end }}
 
-    <footer class="post-footer">
-        <div class="post-tags">
-            {{ range .Params.tags }}
-            <a href="/tags/{{ . | urlize }}" class="post-tag">{{ . }}</a>
-            {{ end }}
-        </div>
-        <div class="post-share">
-            <span>Chia sẻ:</span>
-            <a href="https://facebook.com/sharer/sharer.php?u={{ .Permalink }}" target="_blank" class="social-icon facebook-icon"></a>
-            <a href="https://twitter.com/intent/tweet?url={{ .Permalink }}" target="_blank" class="social-icon twitter-icon"></a>
-            <a href="https://www.linkedin.com/shareArticle?mini=true&url={{ .Permalink }}" target="_blank" class="social-icon linkedin-icon"></a>
-        </div>
-    </footer>
-</article>
+  <div class="post-content">
+    {{ .Content }}
+  </div>
+
+  <footer class="post-footer">
+    <div class="post-tags">
+      {{ range .Params.tags }}
+        <a href="/tags/{{ . | urlize }}" class="post-tag">{{ . }}</a>
+      {{ end }}
+    </div>
+    <div class="post-share">
+      <span>Share:</span>
+      <a href="https://facebook.com/sharer/sharer.php?u={{ .Permalink }}" class="social-icon facebook-icon" target="_blank"></a>
+      <a href="https://twitter.com/intent/tweet?url={{ .Permalink }}" class="social-icon twitter-icon" target="_blank"></a>
+      <a href="https://www.linkedin.com/shareArticle?mini=true&url={{ .Permalink }}" class="social-icon linkedin-icon" target="_blank"></a>
+    </div>
+  </footer>
+</div>
+
 {{ end }}
