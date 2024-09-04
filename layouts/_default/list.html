@@ -1,2 +1,17 @@
-<a href="{{ .Permalink }}">{{ .Title }}</a>
+{{ define "main" }}
+<main>
+    <section class="posts">
+        <h1>Bài viết trong danh mục "{{ .Title }}"</h1>
+        <ul>
+            {{ range .Pages }}
+                <li>
+                    <a href="{{ .Permalink }}">{{ .Title }}</a>
                     <p class="post-date">{{ .Date.Format "02 Jan 2006" }}</p>
+                </li>
+            {{ else }}
+                <li>Không có bài viết nào trong danh mục này.</li>
+            {{ end }}
+        </ul>
+    </section>
+</main>
+{{ end }}
