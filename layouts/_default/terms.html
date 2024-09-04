@@ -10,7 +10,8 @@
             {{ with .Site.Taxonomies.categories }}
                 {{ range $name, $taxonomy := . }}
                     <li>
-                        <a href="{{ (index $taxonomy.Pages 0).Permalink }}">{{ $name }} ({{ len $taxonomy.Pages }})</a>
+                        <!-- Sửa đổi liên kết để đến trang danh mục -->
+                        <a href="{{ $taxonomy.Page.Permalink }}">{{ $name }} ({{ len $taxonomy.Pages }})</a>
                     </li>
                 {{ end }}
             {{ end }}
