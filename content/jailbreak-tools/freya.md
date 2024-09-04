@@ -20,7 +20,7 @@ description: >-
 
   * tested apps or tools for setuid permssions: crackerxi for hooking and decrypting app. (working) vnodebypass for hiding jailbreak files detection, after manually chmod to app binary(working) . A-bypass for hiding jb detection. installed but not sure if working. what apps to test? filza file manager - to copy and move files around the system, to view properties or to set permissions etc of a process.... THESE ARE VERY BUGGY and tend to fail and crash the app or just not work. Resort to Mterminal or ssh to do these things manually with bash. IDK what filza's problem is tbh(although it works fine with other jailbreaks. i.e. set permissions copy and mv files without a hitch)
 developer: pwned4ever
-category: Tool jailbreak
+categories: Jailbreak
 size: Updating…
 ios_compatible: 11.0 - 12.5.6
 keywords:
@@ -29,4 +29,5 @@ main_download:
   version: 1.3.8
   appId: freya
   plistUrl: https://storeios.net/plist/freya.plist
+category: Tool jailbreak
 ---
