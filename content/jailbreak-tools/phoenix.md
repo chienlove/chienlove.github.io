@@ -1,7 +1,7 @@
 ---
 title: Phoenix
 date: 2024-08-31T09:05:59.181Z
-icon: /images/img_1012.png
+icon: /images/phoenix.png
 screenshots:
   - /images/img_1013.png
 developer: Siguza & tihmstar
