@@ -1,18 +1,15 @@
 {{ define "main" }}
 <main>
-    <section class="jailbreak-category">
-        <h1>Bài viết trong danh mục "jailbreak"</h1>
-        <p class="post-count">Số bài viết: {{ len .Pages }}</p>
+    <section class="category-posts">
+        <h1>{{ .Title }}</h1>
         <ul>
-            {{ if .Pages }}
-                {{ range .Pages }}
-                    <li>
-                        <a href="{{ .Permalink }}">{{ .Title }}</a>
-                        <p class="post-date">{{ .Date.Format "02 Jan 2006" }}</p>
-                    </li>
-                {{ end }}
+            {{ range .Pages }}
+                <li>
+                    <a href="{{ .Permalink }}">{{ .Title }}</a>
+                    <p>{{ .Summary }}</p>
+                </li>
             {{ else }}
-                <li>Không có bài viết nào trong danh mục này.</li>
+                <p>Không có bài viết nào trong danh mục này.</p>
             {{ end }}
         </ul>
     </section>
