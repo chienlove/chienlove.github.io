@@ -4,7 +4,7 @@
 
 {{ define "main" }}
 <main role="main">
-    {{ if or (eq .Params.categories "jailbreak") }}
+    {{ if in .Params.categories "Jailbreak" }}
     <p>Download {{ .Title }} for iOS</p>
 {{ end }}
     <section class="tool-container tool-info-container">
