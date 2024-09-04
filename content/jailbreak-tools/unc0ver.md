@@ -27,5 +27,6 @@ description: "**Unc0ver** là một bản bẻ khoá, có nghĩa là bạn có 
   bất cứ điều gì bạn muốn đối với thiết bị iOS của mình. Cho phép bạn thay đổi
   những gì bạn muốn và hoạt động trong phạm vi mục đích của bạn, unc0ver mở ra
   sức mạnh thực sự của iDevice của bạn"
+categories: Jailbreak
 category: "Tool jailbreak "
 ---
