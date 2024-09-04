@@ -1,41 +1,51 @@
 {{ define "head" }}
     <link rel="stylesheet" href="{{ "css/posts.css" | relURL }}">
 {{ end }}
+
 {{ define "main" }}
-<main class="container">
-  <header class="post-header">
-    <h1>{{ .Title }}</h1>
-    <div class="post-meta">
-      <a href="/posts" class="back-to-posts">Trở về danh sách bài viết</a>
-      <div class="author-info">
-        <strong>{{ range .Params.authors }}{{ . }}{{ end }}</strong>
-        {{ if .Params.author_icon }}
-          <img src="{{ .Params.author_icon }}" alt="Icon" class="author-icon">
-        {{ else }}
-          <img src="/images/verify.png" alt="Default Icon" class="author-icon">
+<article class="post-container">
+    <nav class="breadcrumb">
+        <a href="/">Trang chủ</a> &gt; 
+        {{ range .Params.categories }}
+        <a href="/categories/{{ . | urlize }}">{{ . }}</a> &gt; 
         {{ end }}
-      </div>
-      <p class="post-date">{{ .Params.date.Format "2 January 2006" }}</p>
-      <p class="post-views">Lượt xem: {{ .Params.views }}</p>
+        <span>{{ .Title }}</span>
+    </nav>
+
+    <header class="post-header">
+        <h1>{{ .Title }}</h1>
+        <div class="post-meta">
+            <span class="post-date">
+                <i class="icon-clock"></i> {{ .Date.Format "02-01-2006 15:04" }}
+            </span>
+            <span class="post-author">
+                <i class="icon-check-circle"></i> {{ .Params.author }}
+            </span>
+        </div>
+    </header>
+
+    {{ if .Params.thumbnail }}
+    <div class="post-thumbnail">
+        <img src="{{ .Params.thumbnail }}" alt="{{ .Title }}">
     </div>
-  </header>
-
-  <article class="post-content">
-    {{ .Content }}
-  </article>
-
-  <!-- Social share links and related posts -->
-  <div class="social-share">
-    <a href="https://twitter.com/share?url={{ .Permalink }}" target="_blank">Twitter</a>
-    <a href="https://facebook.com/sharer/sharer.php?u={{ .Permalink }}" target="_blank">Facebook</a>
-    <!-- Add other social media links here -->
-  </div>
-
-  <h3>Bài viết cùng chuyên mục</h3>
-  <ul class="related-posts">
-    {{ range where .Site.RegularPages "Params.categories" "in" .Params.categories }}
-      <li><a href="{{ .Permalink }}">{{ .Title }}</a></li>
     {{ end }}
-  </ul>
-</main>
+
+    <section class="post-content">
+        {{ .Content }}
+    </section>
+
+    <footer class="post-footer">
+        <div class="post-tags">
+            {{ range .Params.tags }}
+            <a href="/tags/{{ . | urlize }}" class="post-tag">{{ . }}</a>
+            {{ end }}
+        </div>
+        <div class="post-share">
+            <span>Chia sẻ:</span>
+            <a href="https://facebook.com/sharer/sharer.php?u={{ .Permalink }}" target="_blank" class="social-icon facebook-icon"></a>
+            <a href="https://twitter.com/intent/tweet?url={{ .Permalink }}" target="_blank" class="social-icon twitter-icon"></a>
+            <a href="https://www.linkedin.com/shareArticle?mini=true&url={{ .Permalink }}" target="_blank" class="social-icon linkedin-icon"></a>
+        </div>
+    </footer>
+</article>
 {{ end }}

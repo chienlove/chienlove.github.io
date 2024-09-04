@@ -1,162 +1,132 @@
-/* posts.css */
-
-/* Reset default margin and padding */
-body, h1, p, a {
-  margin: 0;
-  padding: 0;
+.post-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
-body {
-  font-family: Arial, sans-serif;
-  line-height: 1.6;
-  color: #333;
-  background-color: #f9f9f9;
+.breadcrumb {
+    font-size: 14px;
+    margin-bottom: 20px;
+    color: #555;
 }
 
-.container {
-  width: 100%;
-  max-width: 100%;
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box; /* Ensure padding and borders are included in element's total width and height */
+.breadcrumb a {
+    color: #007bff;
+    text-decoration: none;
+}
+
+.breadcrumb a:hover {
+    text-decoration: underline;
 }
 
 .post-header {
-  background: #fff;
-  padding: 20px;
-  border-bottom: 2px solid #e1e1e1;
-  position: relative; /* Ensure header doesn't overlap content */
-  width: 100%;
-  box-sizing: border-box; /* Include padding and borders in width calculation */
-  z-index: 1; /* Ensure header stays on top */
+    margin-bottom: 20px;
 }
 
 .post-header h1 {
-  font-size: 2.5rem;
-  color: #333;
-  margin-bottom: 10px;
-  padding-top: 80px; /* Add padding to ensure title is not covered by fixed header */
+    font-size: 2.5rem;
+    margin-bottom: 10px;
+    color: #333;
 }
 
 .post-meta {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  margin-top: 10px;
+    display: flex;
+    align-items: center;
+    font-size: 14px;
+    color: #777;
 }
 
-.back-to-posts {
-  color: #007bff;
-  text-decoration: none;
-  font-weight: bold;
-  margin-bottom: 10px;
-  font-size: 1rem;
+.post-meta span {
+    margin-right: 15px;
+    display: flex;
+    align-items: center;
 }
 
-.back-to-posts:hover {
-  text-decoration: underline;
+.icon-clock, .icon-check-circle {
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
+    margin-right: 5px;
 }
 
-.author-info {
-  display: flex;
-  align-items: center;
-  margin-bottom: 10px;
+.icon-clock::before {
+    content: "\f017";
 }
 
-.author-info strong {
-  font-size: 1.1rem;
-  color: #333;
-  margin-right: 5px;
+.icon-check-circle::before {
+    content: "\f058";
+    color: #28a745;
 }
 
-.author-icon {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.post-date,
-.post-views {
-  font-size: 0.9rem;
-  color: #666;
+.post-thumbnail img {
+    width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin-bottom: 20px;
 }
 
 .post-content {
-  background: #fff;
-  padding: 20px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  width: 100%;
-  box-sizing: border-box; /* Include padding and borders in width calculation */
+    line-height: 1.6;
+    font-size: 16px;
+    color: #333;
 }
 
-.post-content h2 {
-  font-size: 2rem;
-  color: #333;
-  margin-bottom: 15px;
+.post-footer {
+    margin-top: 40px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-.post-content p {
-  margin-bottom: 15px;
+.post-tags {
+    display: flex;
+    flex-wrap: wrap;
 }
 
-.social-share {
-  margin-top: 20px;
-  display: flex;
-  gap: 10px;
+.post-tag {
+    background-color: #007bff;
+    color: #fff;
+    padding: 5px 10px;
+    border-radius: 3px;
+    margin-right: 10px;
+    text-decoration: none;
+    font-size: 14px;
+    margin-bottom: 10px;
 }
 
-.social-share a {
-  color: #333;
-  text-decoration: none;
-  font-size: 1.2rem;
-  display: flex;
-  align-items: center;
+.post-tag:hover {
+    background-color: #0056b3;
 }
 
-.social-share a:hover {
-  color: #007bff;
+.post-share {
+    display: flex;
+    align-items: center;
 }
 
-.social-share .fa {
-  margin-right: 8px;
+.post-share span {
+    margin-right: 10px;
+    font-size: 16px;
+    color: #333;
 }
 
-.related-posts {
-  list-style-type: none;
-  padding: 0;
-  margin: 20px 0;
+.social-icon {
+    width: 32px;
+    height: 32px;
+    display: inline-block;
+    margin-right: 10px;
+    background-size: contain;
 }
 
-.related-posts li {
-  margin-bottom: 10px;
+.facebook-icon {
+    background-image: url('/icons/facebook.png');
 }
 
-.related-posts a {
-  color: #007bff;
-  text-decoration: none;
+.twitter-icon {
+    background-image: url('/icons/twitter.png');
 }
 
-.related-posts a:hover {
-  text-decoration: underline;
-}
-
-/* Full-screen adjustments */
-@media (min-width: 768px) {
-  .post-header {
-    padding: 20px 40px; /* Adjust padding for larger screens */
-  }
-}
-
-@media (max-width: 767px) {
-  .post-header h1 {
-    font-size: 1.8rem;
-  }
-
-  .post-meta {
-    flex-direction: column;
-    align-items: flex-start;
-  }
+.linkedin-icon {
+    background-image: url('/icons/linkedin.png');
 }
