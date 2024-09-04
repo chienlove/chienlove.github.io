@@ -8,10 +8,26 @@
         <h1>Các danh mục</h1>
         <ul>
             {{ range $name, $taxonomy := .Site.Taxonomies.categories }}
-    <li>
-        <a href="{{ $taxonomy.Page.Permalink }}">{{ $name }} ({{ len $taxonomy.Pages }})</a>
-    </li>
-{{ end }}
+                <li>
+                    <a href="{{ $taxonomy.Page.Permalink }}">{{ $name }} ({{ len $taxonomy.Pages }})</a>
+                </li>
+            {{ end }}
+        </ul>
+    </section>
+</main>
+
+<main>
+    <section class="category-posts">
+        <h1>{{ .Title }}</h1>
+        <ul>
+            {{ range .Pages }}
+                <li>
+                    <a href="{{ .Permalink }}">{{ .Title }}</a>
+                    <p>{{ .Summary }}</p>
+                </li>
+            {{ else }}
+                <p>Không có bài viết nào trong danh mục này.</p>
+            {{ end }}
         </ul>
     </section>
 </main>
