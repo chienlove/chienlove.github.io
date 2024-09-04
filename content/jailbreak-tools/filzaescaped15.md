@@ -6,7 +6,7 @@ description: "**FilzaEscaped15** is a jailbreak file manager with root access.
   This allows you to edit iPhone / iPad system files, install tweaks, and modify
   your device."
 developer: AppleDry05
-category: Tool jailbreak
+categories: Jailbreak
 size: 58Mb
 ios_compatible: 15.0 - 15.1.1
 keywords:
@@ -15,4 +15,5 @@ main_download:
   version: "1.0"
   appId: filzaescaped15
   plistUrl: https://storeios.net/plist/filzaescaped15.plist
+category: Tool jailbreak
 ---
