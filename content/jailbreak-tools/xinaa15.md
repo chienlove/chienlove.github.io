@@ -1,6 +1,6 @@
 ---
 date: 2024-08-17T16:59:44.894Z
-icon: /images/img_0928.webp
+icon: /images/XinaA15.png
 short_description: The Xina tool is supported for A12+ devices running iOS 15.0 up to 15.4.1.
 developer: NotDarkn
 size: Updating…
