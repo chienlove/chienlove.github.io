@@ -1,46 +1,31 @@
 /* Breadcrumb */
 .breadcrumb {
-    display: flex;
-    padding: 10px 0;
+    font-size: 14px;
     margin-bottom: 20px;
-    list-style: none;
-    background-color: #f8f9fa;
-    border-radius: 4px;
+    color: #555;
+    padding: 5px 0;
+    border-bottom: 1px solid #ddd;
+    display: flex;
+    align-items: center;
 }
 
-.breadcrumb-item {
-    font-size: 14px;
+.breadcrumb a {
     color: #007bff;
     text-decoration: none;
-    background-color: #e9ecef;
-    padding: 8px 15px;
-    position: relative;
-    margin-right: 10px;
+    margin-right: 5px;
 }
 
-.breadcrumb-item::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: -10px;
-    bottom: 0;
-    width: 20px;
-    background-color: #e9ecef;
-    transform: skew(-20deg);
-    z-index: 1;
-}
-
-.breadcrumb-item:last-child {
-    background-color: #fff;
-    color: #6c757d;
-}
-
-.breadcrumb-item:last-child::after {
-    background-color: #fff;
-}
-
-.breadcrumb-item:hover {
+.breadcrumb a:hover {
     text-decoration: underline;
+}
+
+.breadcrumb .separator {
+    color: #333;
+    margin: 0 5px;
+}
+
+.breadcrumb .current {
+    color: #333;
 }
 
 /* Post Container */
@@ -59,7 +44,7 @@
 }
 
 .post-header h1 {
-    font-size: 2rem;
+    font-size: 1.5rem;
     margin-bottom: 10px;
     color: #333;
 }
@@ -68,7 +53,7 @@
     display: flex;
     align-items: center;
     font-size: 14px;
-    color: #6c757d;
+    color: #777;
 }
 
 .post-meta span {
@@ -78,7 +63,19 @@
 }
 
 .fa {
+    font-family: 'Font Awesome 5 Free';
+    font-weight: 900;
     margin-right: 5px;
+    display: inline-block;
+}
+
+.fa-clock::before {
+    content: "\f017";
+}
+
+.fa-check-circle::before {
+    content: "\f058";
+    color: #1877f2;  /* Facebook blue */
 }
 
 /* Post Thumbnail */
@@ -102,18 +99,16 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    flex-wrap: wrap;
 }
 
 .post-tags {
     display: flex;
     flex-wrap: wrap;
-    margin-bottom: 10px;
 }
 
 .post-tag {
-    background-color: #e9ecef;
-    color: #495057;
+    background-color: #f0f2f5;
+    color: #050505;
     padding: 5px 10px;
     border-radius: 3px;
     margin-right: 10px;
@@ -123,7 +118,7 @@
 }
 
 .post-tag:hover {
-    background-color: #dee2e6;
+    background-color: #e4e6eb;
 }
 
 .post-share {
@@ -134,7 +129,7 @@
 .post-share span {
     margin-right: 10px;
     font-size: 16px;
-    color: #6c757d;
+    color: #333;
 }
 
 .social-icon {
@@ -143,12 +138,6 @@
     display: inline-block;
     margin-right: 10px;
     background-size: contain;
-    opacity: 0.7;
-    transition: opacity 0.3s ease;
-}
-
-.social-icon:hover {
-    opacity: 1;
 }
 
 .facebook-icon {

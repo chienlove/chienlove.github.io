@@ -5,9 +5,11 @@
 {{ define "main" }}
 
 <nav class="breadcrumb">
-  <a href="/" class="breadcrumb-item">Home</a>
-  <a href="/posts" class="breadcrumb-item">Posts</a>
-  <span class="breadcrumb-item active">{{ .Title }}</span>
+  <a href="/">Home</a>
+  <span class="separator">&gt;</span>
+  <a href="/posts">Posts</a>
+  <span class="separator">&gt;</span>
+  <span class="current">{{ .Title }}</span>
 </nav>
 
 <div class="post-container">
@@ -15,7 +17,7 @@
     <h1>{{ .Title }}</h1>
     <div class="post-meta">
       <span class="post-date"><i class="fa fa-clock"></i>{{ .Date.Format "02-01-2006 15:04" }}</span>
-      <span class="post-author"><i class="fa fa-user"></i>{{ .Params.author }}</span>
+      <span class="post-author"><i class="fa fa-check-circle"></i>{{ .Params.author }}</span>
     </div>
   </header>
 
