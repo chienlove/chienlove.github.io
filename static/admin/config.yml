@@ -35,7 +35,7 @@ collections:
       - {label: "Mô tả chi tiết", name: "description", widget: "markdown", required: true}
       - {label: "Nhà phát triển", name: "developer", widget: "string", required: true}
       - {label: "Thể loại", name: "category", widget: "select", options: ["Ứng dụng", "Games", "Tool jailbreak", "Thủ thuật", "File ipa", "Khác"], required: true}
-      - {label: "Chuyên mục", name: "categories", widget: "relation", collection: "category", search_fields: ["title"], value_field: "title", multiple: true, required: true}
+      - {label: "Thể loại", name: "categories", widget: "string", required: true}
       - {label: "Phiên bản", name: "version", widget: "string", required: true}
       - {label: "Kích thước", name: "size", widget: "string", required: true}
       - {label: "iOS tương thích", name: "requirements", widget: "string", required: true}
@@ -56,7 +56,7 @@ collections:
       - {label: "Mô tả ngắn", name: "short_description", widget: "text", required: false}
       - {label: "Mô tả chi tiết", name: "description", widget: "markdown", required: true}
       - {label: "Nhà phát triển", name: "developer", widget: "string", required: true}
-      - {label: "Thể loại", name: "category", widget: "string", required: true}
+      - {label: "Thể loại", name: "categories", widget: "string", required: true}
       - {label: "Kích thước", name: "size", widget: "string", required: true}
       - {label: "iOS tương thích", name: "ios_compatible", widget: "string", required: true}
       - {label: "Từ khóa", name: "keywords", widget: "list", required: false}
