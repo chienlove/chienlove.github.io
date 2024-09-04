@@ -4,7 +4,9 @@
 
 {{ define "main" }}
 <main role="main">
-    <!-- Tool Information Container -->
+    {{ if or (in .Params.categories "jailbreak")  }}
+  <p>Download tool jailbreak {{ .Title }} for iOS</p>
+{{ end }}
     <section class="tool-container tool-info-container">
         <div class="tool-header">
             <img src="{{ .Params.icon }}" alt="{{ .Title }} Icon" class="tool-icon">
