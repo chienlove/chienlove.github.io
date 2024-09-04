@@ -20,5 +20,6 @@ versions:
     plistUrl: https://storeios.net/plist/dopamine.plist
 description: "**Dopamine** is A jailbreak for arm64e (A12 - A15) and M1
   Supported on devices on iOS 15.0 through 15.4.1 A rootless jailbreak"
+categories: Jailbreak
 category: "Tool jailbreak "
 ---
