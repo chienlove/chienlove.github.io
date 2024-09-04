@@ -1,8 +1,9 @@
 {{ define "main" }}
 <main>
     <h1>{{ .Title }}</h1>
-    {{ $categoryName := .Title | lower }}
-    {{ if eq $categoryName "jailbreak" }}
+     {{ $layout := .Params.layout | default "default" }}
+    
+    {{ if eq $layout "jailbreak" }}
         {{ partial "categories/jailbreak.html" . }}
     {{ else }}
         {{ partial "categories/category.html" . }}
