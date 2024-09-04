@@ -1,33 +1,32 @@
 .categories {
-    margin: 20px;
+    max-width: 800px;
+    margin: 0 auto;
     padding: 20px;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    background-color: #f9f9f9;
 }
 
 .categories h1 {
-    font-size: 1.5em;
-    margin-bottom: 10px;
+    font-size: 2em;
+    margin-bottom: 20px;
+    text-align: center;
+    color: #333;
 }
 
-ul {
+.categories ul {
     list-style-type: none;
     padding: 0;
 }
 
-ul li {
-    margin-bottom: 15px;
-    padding: 10px;
-    border-bottom: 1px solid #ddd;
+.categories li {
+    font-size: 1.2em;
+    margin-bottom: 10px;
 }
 
-ul li a {
+.categories a {
     text-decoration: none;
     color: #007bff;
-    font-weight: bold;
+    transition: color 0.3s ease;
 }
 
-ul li a:hover {
-    text-decoration: underline;
+.categories a:hover {
+    color: #0056b3;
 }
