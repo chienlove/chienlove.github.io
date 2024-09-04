@@ -5,6 +5,9 @@
     color: #555;
     padding: 5px 0;
     border-bottom: 1px solid #ddd;
+    list-style: none;
+    display: flex;
+    gap: 5px;
 }
 
 .breadcrumb a {
@@ -36,7 +39,7 @@
 }
 
 .post-header h1 {
-    font-size: 2rem; /* Điều chỉnh kích thước tiêu đề nhỏ lại */
+    font-size: 1.3rem; /* Giảm kích thước tiêu đề */
     margin-bottom: 10px;
     color: #333;
 }
