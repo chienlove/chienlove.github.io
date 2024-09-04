@@ -1,7 +1,7 @@
 {{ define "head" }}
     <link rel="stylesheet" href="/css/jailbreak-tools.css?v={{ now.Unix }}">
 <title>
-        {{ if eq .Section "jailbreak" }}
+        {{ if eq .categories "Jailbreak" }}
             Download {{ .Title }} for iOS | {{ .Site.Title }}
         {{ else }}
             {{ .Title }} | {{ .Site.Title }}
