@@ -9,7 +9,7 @@
         <ul>
             {{ range .Site.Taxonomies.categories }}
                 <li>
-                    <a href="{{ .Page.Permalink }}">{{ .Name }} ({{ len .Pages }})</a>
+                    <a href="{{ .Page.Permalink }}">{{ .Term.Name }} ({{ len .Pages }})</a>
                 </li>
             {{ end }}
         </ul>
