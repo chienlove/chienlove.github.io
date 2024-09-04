@@ -1,0 +1,22 @@
+{{ define "main" }}
+<main>
+    <section class="category-jailbreak">
+        <h1>Danh mục Jailbreak</h1>
+        <ul>
+            {{ range .Pages }}
+                <li>
+                    <a href="{{ .Permalink }}">
+                        <img src="{{ .Params.icon }}" alt="{{ .Title }} Icon" class="post-icon" />
+                        <h2>{{ .Title }}</h2>
+                    </a>
+                    <div class="post-meta">
+                        <span class="post-version">Version: {{ .Params.version }}</span>
+                        <span class="post-developer">Developer: {{ .Params.developer }}</span>
+                    </div>
+                    <p>{{ .Summary }}</p>
+                </li>
+            {{ end }}
+        </ul>
+    </section>
+</main>
+{{ end }}
