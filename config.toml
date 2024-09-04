@@ -21,7 +21,7 @@ title = "storeios"
   gc = true
 
 [permalinks]
-  posts = "/posts/:slug/"
+  posts = "/:slug/"
   categories = "/categories/:slug/"
 
 [taxonomies]
