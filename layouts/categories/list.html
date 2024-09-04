@@ -10,7 +10,7 @@
             {{ $categories := .Site.Taxonomies.categories }}
             {{ range $name, $taxonomy := $categories }}
                 <li class="category-item">
-                    <a href="{{ $.Site.BaseURL }}categories/{{ $name | urlize }}">{{ $name }}</a> ({{ len $taxonomy }})
+                    <a href="{{ $.Site.BaseURL }}/categories/{{ $name | urlize }}">{{ $name }}</a> ({{ len $taxonomy }})
                 </li>
             {{ end }}
         </ul>
