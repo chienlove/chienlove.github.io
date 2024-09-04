@@ -12,7 +12,6 @@ main_download:
   version: 2.2.2
   appId: dopamine
   plistUrl: https://storeios.net/plist/dopamine.plist
-status: Signed
 versions:
   - intermediate_page_url: /intermediate/:appId
     version: 2.2.2
@@ -21,5 +20,4 @@ versions:
 description: "**Dopamine** is A jailbreak for arm64e (A12 - A15) and M1
   Supported on devices on iOS 15.0 through 15.4.1 A rootless jailbreak"
 categories: Jailbreak
-category: "Tool jailbreak "
 ---

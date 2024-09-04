@@ -4,9 +4,9 @@
 
 {{ define "main" }}
 <main role="main">
-    {{ if or (in ( .File.Path | lower ) "/jailbreak-tools/") }}
-            <p>Download {{ .Title }} for iOS</p>
-        {{ end }}
+    {{ if or (eq .Params.categories "jailbreak") }}
+    <p>Download {{ .Title }} for iOS</p>
+{{ end }}
     <section class="tool-container tool-info-container">
         <div class="tool-header">
             <img src="{{ .Params.icon }}" alt="{{ .Title }} Icon" class="tool-icon">
