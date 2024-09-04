@@ -4,18 +4,10 @@
 
 {{ define "main" }}
 <main>
-    <section class="category-posts">
-        <h1>{{ .Title }}</h1>
-        <ul>
-            {{ range .Pages }}
-                <li>
-                    <a href="{{ .Permalink }}">{{ .Title }}</a>
-                    <p>{{ .Summary }}</p>
-                </li>
-            {{ else }}
-                <p>Không có bài viết nào trong danh mục này.</p>
-            {{ end }}
-        </ul>
-    </section>
+    {{ if eq .Title "jailbreak" }}
+        {{ partial "categories/jailbreak.html" . }}
+    {{ else }}
+        {{ partial "categories/category.html" . }} <!-- hoặc mẫu danh mục mặc định khác -->
+    {{ end }}
 </main>
 {{ end }}
