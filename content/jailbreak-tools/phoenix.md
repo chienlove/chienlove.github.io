@@ -29,5 +29,6 @@ description: >-
 
 
   Phoenix stands out for its ease of use and compatibility with legacy devices that have been largely forgotten by the mainstream iOS community. It opens up possibilities for installing tweaks, themes, and apps that were otherwise inaccessible, breathing new life into older hardware. The tool’s reliance on known exploits makes it reliable yet safe for those looking to extend the functionality of their devices. Although iOS 9.3.5 and 9.3.6 are now considered outdated, Phoenix provides a valuable solution for users who wish to continue using their older devices with enhanced capabilities.
+categories: Jailbreak
 category: Tool jailbreak
 ---
