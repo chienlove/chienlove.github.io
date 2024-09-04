@@ -1,5 +1,5 @@
 {{ define "head" }}
-    <link rel="stylesheet" href="{{ "css/posts.css" | relURL }}">
+    <link rel="stylesheet" href="/css/jailbreak-tools.css?v={{ now.Unix }}">
 {{ end }}
 
 {{ define "main" }}
@@ -16,10 +16,10 @@
         <h1>{{ .Title }}</h1>
         <div class="post-meta">
             <span class="post-date">
-                <i class="icon-clock"></i> {{ .Date.Format "02-01-2006 15:04" }}
+                <i class="fa fa-clock"></i> {{ .Date.Format "02-01-2006 15:04" }}
             </span>
             <span class="post-author">
-                <i class="icon-check-circle"></i> {{ .Params.author }}
+                <i class="fa fa-check-circle"></i> {{ .Params.author }}
             </span>
         </div>
     </header>
