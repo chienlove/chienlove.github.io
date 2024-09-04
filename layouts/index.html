@@ -6,7 +6,7 @@
         <div class="app-list">
             {{ range first 10 (where .Site.RegularPages "Type" "in" (slice "apps")) }}
                 <div class="app-item">
-                    <a href="{{ .Permalink }}">{{ .Title }} class="app-link">
+                    <a href="{{ .Permalink }}" class="app-link">
                         <img src="{{ .Params.Icon }}" alt="{{ .Title }}" class="app-icon">
                         <div class="app-item-content">
                             <h3 class="app-title">{{ .Title }}</h3>
