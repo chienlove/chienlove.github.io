@@ -4,10 +4,11 @@
 
 {{ define "main" }}
 <main>
-    {{ if eq .Title "jailbreak" }}
+    {{ $category := .Params.category }}
+    {{ if eq $category "jailbreak" }}
         {{ partial "categories/jailbreak.html" . }}
     {{ else }}
-        {{ partial "categories/category.html" . }} <!-- hoặc mẫu danh mục mặc định khác -->
+        {{ partial "category.html" . }}
     {{ end }}
 </main>
 {{ end }}
