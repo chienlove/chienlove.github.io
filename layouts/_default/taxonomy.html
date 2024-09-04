@@ -1,12 +1,17 @@
 {{ define "main" }}
 <main>
-    <h1>{{ .Title }}</h1>
-     {{ $layout := .Params.layout | default "default" }}
-    
-    {{ if eq $layout "jailbreak" }}
-        {{ partial "categories/jailbreak.html" . }}
-    {{ else }}
-        {{ partial "categories/category.html" . }}
-    {{ end }}
+    <section class="category-posts">
+        <h1>{{ .Title }}</h1>
+        <ul>
+            {{ range .Pages }}
+                <li>
+                    <a href="{{ .Permalink }}">{{ .Title }}</a>
+                    <p>{{ .Summary }}</p>
+                </li>
+            {{ else }}
+                <p>Không có bài viết nào trong danh mục này.</p>
+            {{ end }}
+        </ul>
+    </section>
 </main>
 {{ end }}
