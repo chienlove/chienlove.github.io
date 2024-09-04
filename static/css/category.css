@@ -1,20 +1,15 @@
-/* Các kiểu đặc thù cho danh mục và bài viết */
-main {
-    max-width: 800px;
-    margin: 20px auto;
-    background: #fff;
-    padding: 20px;
-    border-radius: 5px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+/* Đảm bảo CSS không bị ghi đè từ baseof.html */
+
+.categories {
+    margin: 20px 0;
 }
 
-h1, h2 {
-    margin-bottom: 20px;
-    font-size: 1.5em;
+.categories h1 {
+    font-size: 1.8em;
     color: #333;
 }
 
-ul {
+.categories ul {
     list-style-type: none;
     padding-left: 0;
 }
@@ -31,6 +26,24 @@ ul {
 
 .category-item a:hover {
     text-decoration: underline;
+}
+
+.posts {
+    margin: 20px 0;
+}
+
+.posts h1 {
+    font-size: 1.8em;
+    color: #333;
+}
+
+.posts ul {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+.posts li {
+    margin-bottom: 10px;
 }
 
 .post-date {

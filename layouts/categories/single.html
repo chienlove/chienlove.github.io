@@ -1,0 +1,19 @@
+{{ define "head" }}
+    <link rel="stylesheet" href="/css/category.css?v={{ now.Unix }}">
+{{ end }}
+
+{{ define "main" }}
+<main>
+    <section class="categories">
+        <h1>Danh sách các danh mục</h1>
+        <ul>
+            {{ $categories := .Site.Taxonomies.categories }}
+            {{ range $name, $taxonomy := $categories }}
+                <li class="category-item">
+                    <a href="{{ $.Site.BaseURL }}categories/{{ $name | urlize }}">{{ $name }}</a> ({{ len $taxonomy }})
+                </li>
+            {{ end }}
+        </ul>
+    </section>
+</main>
+{{ end }}
