@@ -4,7 +4,8 @@
 
 {{ define "main" }}
 <main role="main">
-    {{ if in .Params.categories "Jailbreak" }}
+    {{ $categories := slice "Jailbreak" }}
+{{ if intersect .Params.categories $categories | len | gt 0 }}
     <p>Download {{ .Title }} for iOS</p>
 {{ end }}
     <section class="tool-container tool-info-container">
