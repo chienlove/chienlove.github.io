@@ -1,0 +1,14 @@
+{{ define "main" }}
+<main>
+    <section class="categories">
+        <h1>Các danh mục</h1>
+        <ul>
+            {{ range $name, $taxonomy := .Site.Taxonomies.categories }}
+                <li>
+                    <a href="{{ $taxonomy.Page.Permalink }}">{{ $name }} ({{ len $taxonomy.Pages }})</a>
+                </li>
+            {{ end }}
+        </ul>
+    </section>
+</main>
+{{ end }}
