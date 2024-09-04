@@ -1,0 +1,11 @@
+{{ define "main" }}
+<main>
+    <h1>{{ .Title }}</h1>
+    {{ $categoryName := .Title | lower }}
+    {{ if eq $categoryName "jailbreak" }}
+        {{ partial "categories/jailbrrak.html" . }}
+    {{ else }}
+        {{ partial "categories/category.html" . }}
+    {{ end }}
+</main>
+{{ end }}
