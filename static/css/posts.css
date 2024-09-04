@@ -6,12 +6,13 @@
     padding: 5px 0;
     border-bottom: 1px solid #ddd;
     display: flex;
-    gap: 5px;
+    align-items: center;
 }
 
 .breadcrumb a {
     color: #007bff;
     text-decoration: none;
+    margin-right: 5px;
 }
 
 .breadcrumb a:hover {
@@ -20,6 +21,7 @@
 
 .breadcrumb span {
     color: #333;
+    margin-right: 5px;
 }
 
 /* Post Container */
@@ -38,7 +40,7 @@
 }
 
 .post-header h1 {
-    font-size: 1.5rem;
+    font-size: 1.2rem;
     margin-bottom: 10px;
     color: #333;
 }
