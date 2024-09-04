@@ -23,7 +23,7 @@ title = "storeios"
 [permalinks]
   posts = "/:slug/"
   apps = "/:slung/"
-  jailbreak-toôls = "/:slung/"
+  jailbreak-tools = "/:slung/"
   categories = "/categories/:slug/"
 
 [taxonomies]
