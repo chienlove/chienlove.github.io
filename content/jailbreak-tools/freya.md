@@ -1,7 +1,7 @@
 ---
 title: Freya
 date: 2024-09-03T23:09:39.409Z
-icon: /images/img_1032.png
+icon: /images/freya.png
 description: >-
   A Complete fully open-sourced iOS 11.0 - 12.5.6 jailbreak.
 
