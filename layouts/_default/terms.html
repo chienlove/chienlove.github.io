@@ -8,10 +8,10 @@
         <h1>Các danh mục</h1>
         <ul>
             {{ range .Site.Taxonomies.categories }}
-                {{ $taxonomy := . }}
+                {{ $category := . }}
                 <li>
-                    <!-- Liên kết đến trang danh mục tương ứng -->
-                    <a href="{{ $taxonomy.Page.Permalink }}">{{ $taxonomy.Term.Name }} ({{ len $taxonomy.Pages }})</a>
+                    <!-- Liên kết đến trang danh mục -->
+                    <a href="{{ (index $category.Pages 0).Permalink }}">{{ $category.Name }} ({{ len $category.Pages }})</a>
                 </li>
             {{ end }}
         </ul>
