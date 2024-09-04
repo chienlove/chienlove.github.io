@@ -7,12 +7,12 @@
     <section class="categories">
         <h1>Các danh mục</h1>
         <ul>
-            {{ range .Site.Taxonomies.categories }}
-                {{ $term := . }}
-                <li>
-                    <!-- Liên kết đến trang danh mục -->
-                    <a href="{{ (index $term.Pages 0).Permalink }}">{{ $term.Name }} ({{ len $term.Pages }})</a>
-                </li>
+            {{ with .Site.Taxonomies.categories }}
+                {{ range $name, $taxonomy := . }}
+                    <li>
+                        <a href="{{ (index $taxonomy.Pages 0).Permalink }}">{{ $name }} ({{ len $taxonomy.Pages }})</a>
+                    </li>
+                {{ end }}
             {{ end }}
         </ul>
     </section>
