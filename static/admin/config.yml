@@ -43,15 +43,6 @@ collections:
       - {label: "Liên kết tải App Store", name: "app_store_link", widget: "string", required: true}
       - {label: "Từ khóa", name: "tags", widget: "list", required: false}
 
-  - name: "category"
-    label: "Chuyên mục"
-    folder: "content/categories"
-    create: true
-    slug: "{{slug}}"
-    fields:
-      - {label: "Tên chuyên mục", name: "title", widget: "string", required: true}
-      - {label: "Mô tả", name: "description", widget: "text", required: true}
-
   - name: "jailbreak-tools"
     label: "Tool Jailbreak"
     folder: "content/jailbreak-tools"
