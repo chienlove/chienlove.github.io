@@ -11,7 +11,7 @@
             <key>kind</key>
             <string>software-package</string>
             <key>url</key>
-            <string>https://file.jb-apps.me/ipa/DopamineJB.ipa</string>
+            <string>https://file.jb-apps.me/ipa/NekoJB.ipa</string>
           </dict>
           <dict>
             <key>kind</key>
@@ -33,7 +33,7 @@
         <key>metadata</key>
         <dict>
           <key>bundle-identifier</key>
-          <string>com.DopamineJB.ipa-apps-TZM7u9i8i8i8n7i9o9o1979o9ub2en12395</string>
+          <string>com.NekoJB.ipa-apps-TZM7u9i8i8i8n7i9o9o1979o9ub2en12395</string>
           <key>bundle-version</key>
           <string>1</string>
           <key>kind</key>
