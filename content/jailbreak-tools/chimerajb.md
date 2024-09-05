@@ -1,7 +1,7 @@
 ---
 title: ChimeraJB
 date: 2024-09-05T13:37:26.478Z
-icon: /images/img_1041.png
+icon: /images/chimera.png
 description: Chimera is the first true iOS 12 jailbreak to not only feature a
   CoreTrust bypass so that binaries don't need to be resigned, but to also
   support A12 devices, including iPhone Xs, iPhone Xʀ, and the newest iPads.
