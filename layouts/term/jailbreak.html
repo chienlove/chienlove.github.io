@@ -1,15 +1,5 @@
-{{ define "main" }}
-<main>
-    <section class="category-jailbreak">
-        <h1>Jailbreak</h1>
-        <p>Trang danh sách bài viết tùy chỉnh cho danh mục Jailbreak</p>
-        <ul>
-            {{ range .Pages }}
-                <li>
-                    <a href="{{ .Permalink }}">{{ .Title }}</a>
-                </li>
-            {{ end }}
-        </ul>
-    </section>
-</main>
+{{ with .CurrentSection.Pages }}
+  {{ range . }}
+    <a href="{{ .Permalink }}">{{ .Title }}</a>
+  {{ end }}
 {{ end }}
