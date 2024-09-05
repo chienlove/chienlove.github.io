@@ -1,0 +1,14 @@
+{{ define "main" }}
+<main class="game-category">
+    <h1>Danh mục Game</h1>
+    <div class="game-list">
+        {{ range .Pages }}
+            <article class="game-item">
+                <h2><a href="{{ .Permalink }}">{{ .Title }}</a></h2>
+                <p>{{ .Summary }}</p>
+                <span class="game-date">{{ .Date.Format "02/01/2006" }}</span>
+            </article>
+        {{ end }}
+    </div>
+</main>
+{{ end }}
