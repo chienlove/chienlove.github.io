@@ -11,7 +11,7 @@
                 {{ range $name, $taxonomy := . }}
                     <li>
                         <!-- Sửa đổi liên kết để đến trang danh mục -->
-                        <a href="{{ $taxonomy.Page.Permalink }}">{{ $name }} ({{ len $taxonomy.Pages }})</a>
+                        <a href="{{ printf "/categories/%s/" $name | relURL }}">{{ $name }} ({{ len $taxonomy.Pages }})</a>
                     </li>
                 {{ end }}
             {{ end }}
