@@ -1,7 +1,7 @@
 ---
 title: Taurine
 date: 2024-09-05T12:49:02.216Z
-icon: /images/img_1039.png
+icon: /images/taurine.png
 description: Taurine is a fast, supercharged experience, using libhooker and
   extensive testing to ensure the best possible jailbreaking experience.
 developer: CoolStar
