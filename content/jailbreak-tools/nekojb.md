@@ -1,7 +1,7 @@
 ---
 title: NekoJB
 date: 2024-09-05T13:05:23.646Z
-icon: /images/1725540972676.391.png
+icon: /images/neko.png
 short_description: Semi-untethered jailbreak for arm64 devices running iOS 15.0 - iOS 15.8
 description: >-
   nekoJB semi-untethered jailbreak is based on kfd exploit and it supports arm64
