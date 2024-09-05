@@ -4,25 +4,24 @@
 
 {{ define "main" }}
 <main>
-    <section class="category-posts">
-        <h1>{{ .Title }}</h1>
-        
-        {{ $layout := .Params.layout | default "default" }}
-        
-        {{ if eq $layout "jailbreak" }}
-            {{ partial "categories/jailbreak.html" . }}
-        {{ else }}
-            <ul>
-                {{ range .Pages }}
-                    <li>
-                        <a href="{{ .Permalink }}">{{ .Title }}</a>
-                        <p>{{ .Summary }}</p>
-                    </li>
-                {{ else }}
-                    <p>Không có bài viết nào trong danh mục này.</p>
-                {{ end }}
-            </ul>
-        {{ end }}
-    </section>
+    <h1>{{ .Title }}</h1>
+    {{ $category := .Title | lower }}
+    <!-- Debug information -->
+    <p>Debug: Current category is {{ $category }}</p>
+    {{ if eq $category "jailbreak" }}
+        <p>Debug: Using jailbreak template</p>
+        {{ partial "category-jailbreak.html" . }}
+    {{ else if eq $category "game" }}
+        <p>Debug: Using game template</p>
+        {{ partial "category-game.html" . }}
+    {{ else }}
+        <p>Debug: Using default template</p>
+        <!-- Default list layout -->
+        <ul>
+            {{ range .Pages }}
+                <li><a href="{{ .Permalink }}">{{ .Title }}</a></li>
+            {{ end }}
+        </ul>
+    {{ end }}
 </main>
 {{ end }}
