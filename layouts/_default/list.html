@@ -6,8 +6,7 @@
 <main>
     <h1>{{ .Title }}</h1>
     {{ $category := .Title | lower }}
-    <!-- Debug information -->
-    
+    {{ if eq $category "jailbreak" }}
         {{ partial "category-jailbreak.html" . }}
     {{ else if eq $category "game" }}
         <p>Debug: Using game template</p>
