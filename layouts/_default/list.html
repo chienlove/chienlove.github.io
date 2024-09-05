@@ -4,7 +4,6 @@
 
 {{ define "main" }}
 <main>
-    <h1>{{ .Title }}</h1>
     {{ $category := .Title | lower }}
     {{ if eq $category "jailbreak" }}
         {{ partial "category-jailbreak.html" . }}

@@ -96,3 +96,108 @@
     margin: 5px 0 0;
     color: #6c757d;
 }
+
+/* App List Styles */
+.container {
+    max-width: 500px;
+    margin: 0 auto;
+    padding: 5px;
+    font-family: Arial, sans-serif;
+    background-color: #f5f5f5;
+}
+
+.section {
+    margin-bottom: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background-color: #fff;
+    padding: 10px;
+}
+
+.section-title {
+    font-size: 20px;
+    color: #47b8e0;
+    margin-bottom: 10px;
+    padding-left: 10px;
+    font-weight: bold;
+}
+
+.app-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 0;
+    padding-right: 10px;
+    position: relative; /* Thêm điều này để sử dụng ::after */
+}
+
+.app-item:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: 60px; /* Vị trí bắt đầu của đường kẻ, nằm sau icon */
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background-color: #ddd; /* Màu của đường kẻ ngăn cách */
+}
+
+.app-item:first-child {
+    border-top: none;
+}
+
+.app-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 8px;
+    margin-right: 10px;
+}
+
+.app-link {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    color: inherit;
+    flex: 1;
+}
+
+.app-item-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.app-title {
+    font-size: 16px;
+    color: #333;
+    margin: 0;
+    font-weight: bold;
+}
+
+.app-developer {
+    font-size: 12px;
+    color: #666;
+    margin: 2px 0 0;
+}
+
+.app-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    text-align: right;
+}
+
+.download-btn {
+    display: inline-block;
+    padding: 4px 12px;
+    background-color: #0070c9;
+    color: #fff;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: bold;
+    text-decoration: none;
+    margin-bottom: 4px;
+}
+
+.app-version {
+    font-size: 12px;
+    color: #00C851;
+}

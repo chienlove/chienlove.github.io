@@ -1,122 +1,23 @@
-<style>
-    .jailbreak-category {
-        font-family: Arial, sans-serif;
-        max-width: 600px;
-        margin: 0 auto;
-        padding: 20px;
-        background-color: white;
-        border-radius: 10px;
-        box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-    .jailbreak-header {
-        display: flex;
-        align-items: center;
-        margin-bottom: 20px;
-        padding: 10px;
-        background-color: #f0f0f0;
-        border-radius: 8px;
-    }
-    .jailbreak-header h2 {
-        color: #3498db;
-        margin: 0;
-        font-size: 24px;
-    }
-    .revoked-badge {
-        background-color: #e74c3c;
-        color: white;
-        padding: 5px 10px;
-        border-radius: 5px;
-        margin-left: 10px;
-        font-size: 14px;
-    }
-    .jailbreak-list {
-        list-style-type: none;
-        padding: 0;
-    }
-    .jailbreak-item {
-        padding: 15px 0;
-        display: flex;
-        align-items: center;
-        border-bottom: 1px solid #e0e0e0;
-    }
-    .jailbreak-item:last-child {
-        border-bottom: none;
-    }
-    .jailbreak-icon-container {
-        position: relative;
-        margin-right: 15px;
-    }
-    .jailbreak-icon {
-        width: 50px;
-        height: 50px;
-        border-radius: 10px;
-    }
-    .new-badge {
-        position: absolute;
-        top: -5px;
-        left: -5px;
-        background-color: #e74c3c;
-        color: white;
-        font-size: 10px;
-        padding: 2px 5px;
-        border-radius: 3px;
-    }
-    .jailbreak-info {
-        flex-grow: 1;
-    }
-    .jailbreak-name {
-        font-weight: bold;
-        margin: 0 0 5px 0;
-    }
-    .jailbreak-author {
-        color: #7f8c8d;
-        font-size: 14px;
-        margin: 0;
-    }
-    .download-container {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-end;
-    }
-    .download-btn {
-        background-color: #3498db;
-        color: white;
-        border: none;
-        padding: 8px 15px;
-        border-radius: 5px;
-        cursor: pointer;
-        font-size: 14px;
-        margin-bottom: 5px;
-    }
-    .jailbreak-version {
-        color: #2ecc71;
-        font-size: 12px;
-    }
-</style>
-
-<div class="jailbreak-category">
-    <div class="jailbreak-header">
-        <h2>Tool Jailbreak</h2>
-        <span class="revoked-badge">REVOKED</span>
-    </div>
-    <ul class="jailbreak-list">
-        {{ range .Pages }}
-        <li class="jailbreak-item">
-            <div class="jailbreak-icon-container">
-                <img src="{{ .Params.icon }}" alt="{{ .Title }} icon" class="jailbreak-icon">
-                {{ if .Params.isNew }}
-                <span class="new-badge">NEW</span>
-                {{ end }}
-            </div>
-            <div class="jailbreak-info">
-                <h3 class="jailbreak-name">{{ .Title }}</h3>
-                <p class="jailbreak-author">{{ .Params.Developer }}</p>
-            </div>
-            <div class="download-container">
-                <button class="download-btn">Tải</button>
-                <span class="jailbreak-version">↑ {{ .Params.main_download.version }}</span>
-            </div>
-        </li>
-        {{ end }}
-    </ul>
-</div>
+<div class="section">
+        <h2 class="section-title">
+            Tool Jailbreak
+            <span id="status" class="status">
+                <span id="status-icon" class="status-icon"></span>
+                <span id="status-text">Loading...</span>
+            </span>
+        </h2>
+        <div class="app-list">
+            {{ range .Pages }}
+                <div class="app-item">
+                    <a href="{{ .Permalink }}" class="app-link">
+                        <img src="{{ .Params.Icon }}" alt="{{ .Title }}" class="app-icon">
+                        <div class="app-item-content">
+                            <h3 class="app-title">{{ .Title }}</h3>
+                            <p class="app-developer">{{ .Params.Developer }}</p>
+                        </div>
+                    </a>
+                    <div class="app-meta">
+                        <a href="{{ .Permalink }}" class="download-btn">Tải</a>
+                        <span class="app-version"><i class="fas fa-arrow-up"></i> {{ .Params.main_download.version }}</span>
+                    </div>
+                </div>
