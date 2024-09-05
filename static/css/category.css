@@ -201,3 +201,34 @@
     font-size: 12px;
     color: #00C851;
 }
+
+/* Styles chung cho quảng cáo */
+.adsbygoogle {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    margin: 0 auto;
+}
+
+/* Styles cho điện thoại (mặc định) */
+@media screen and (max-width: 767px) {
+    .adsbygoogle {
+        height: 100px; /* Chiều cao cố định cho banner trên điện thoại */
+    }
+}
+
+/* Styles cho máy tính bảng */
+@media screen and (min-width: 768px) and (max-width: 1023px) {
+    .adsbygoogle {
+        height: 120px; /* Chiều cao tăng lên cho máy tính bảng */
+    }
+}
+
+/* Styles cho máy tính để bàn */
+@media screen and (min-width: 1024px) {
+    .adsbygoogle {
+        height: 150px; /* Chiều cao lớn nhất cho màn hình lớn */
+        max-width: 970px; /* Giới hạn chiều rộng tối đa trên màn hình lớn */
+    }
+}
