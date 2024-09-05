@@ -37,56 +37,73 @@
       }
     });
   }
-</script>
-  <script>CMS.registerWidget('fileSize', {
-  // Hàm này render trường nhập liệu
-  control: ({ value, onChange }) => {
-    const [size, setSize] = React.useState(value || '');
-    const [loading, setLoading] = React.useState(false);
+  </script>
+  <script>
+    // Đoạn mã mới cho widget fileSize
+    CMS.registerWidget('fileSize', {
+      control: ({ value, onChange, field, forID }) => {
+        const [size, setSize] = React.useState(value || '');
+        const [loading, setLoading] = React.useState(false);
 
-    const updateSize = async () => {
-      setLoading(true);
-      const plistUrl = document.querySelector('[name="main_download.plistUrl"]').value;
-      if (!plistUrl) {
-        alert('Vui lòng nhập Plist URL trước');
-        setLoading(false);
-        return;
-      }
-      try {
-        const response = await fetch(`/.netlify/functions/getIpaSize?url=${encodeURIComponent(plistUrl)}`);
-        const data = await response.json();
-        if (data.size) {
-          setSize(data.size);
-          onChange(data.size);
-        } else {
-          throw new Error(data.error || 'Không thể lấy kích thước file');
-        }
-      } catch (error) {
-        alert(`Lỗi: ${error.message}`);
-      }
-      setLoading(false);
-    };
+        React.useEffect(() => {
+          // Lắng nghe sự thay đổi của trường plistUrl
+          const plistUrlField = document.querySelector('[name="main_download.plistUrl"]');
+          if (plistUrlField) {
+            const observer = new MutationObserver((mutations) => {
+              mutations.forEach((mutation) => {
+                if (mutation.type === 'attributes' && mutation.attributeName === 'value') {
+                  updateSize(mutation.target.value);
+                }
+              });
+            });
+            observer.observe(plistUrlField, { attributes: true });
 
-    return h('div', {},
-      h('input', {
-        type: 'text',
-        value: size,
-        onChange: (e) => {
-          setSize(e.target.value);
-          onChange(e.target.value);
-        },
-        disabled: loading
-      }),
-      h('button', {
-        onClick: updateSize,
-        disabled: loading
-      }, loading ? 'Đang cập nhật...' : 'Cập nhật kích thước')
-    );
-  },
-  // Hàm này xác định giá trị được lưu
-  fromBlock: (value) => value,
-  // Hàm này xác định giá trị hiển thị trong preview
-  toBlock: (value) => value,
-});</script>
+            // Cập nhật kích thước ban đầu nếu có URL
+            if (plistUrlField.value) {
+              updateSize(plistUrlField.value);
+            }
+
+            return () => observer.disconnect();
+          }
+        }, []);
+
+        const updateSize = async (plistUrl) => {
+          if (!plistUrl) return;
+          setLoading(true);
+          try {
+            const response = await fetch(`/.netlify/functions/getIpaSize?url=${encodeURIComponent(plistUrl)}`);
+            const data = await response.json();
+            if (data.size) {
+              setSize(data.size);
+              onChange(data.size);
+            } else {
+              throw new Error(data.error || 'Không thể lấy kích thước file');
+            }
+          } catch (error) {
+            console.error(`Lỗi: ${error.message}`);
+            setSize('Không thể lấy kích thước');
+            onChange('Không thể lấy kích thước');
+          }
+          setLoading(false);
+        };
+
+        return h('div', {},
+          h('input', {
+            type: 'text',
+            id: forID,
+            value: size,
+            onChange: (e) => {
+              setSize(e.target.value);
+              onChange(e.target.value);
+            },
+            disabled: true
+          }),
+          loading && h('span', {}, ' Đang cập nhật...')
+        );
+      },
+      fromBlock: (value) => value,
+      toBlock: (value) => value,
+    });
+  </script>
 </body>
 </html>
