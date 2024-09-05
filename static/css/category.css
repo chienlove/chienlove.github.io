@@ -188,15 +188,13 @@
 .download-btn {
     display: inline-block;
     padding: 4px 12px;
-    background-color: #0071e3;
+    background-color: #0070c9;
     color: #fff;
     border-radius: 12px;
     font-size: 14px;
-    font-weight: 500;
+    font-weight: bold;
     text-decoration: none;
-    text-align: center;
-    min-width: 80px;
-    transition: all 0.2s ease;
+    margin-bottom: 4px;
 }
 
 .download-btn:hover {
