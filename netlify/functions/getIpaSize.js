@@ -1,10 +1,10 @@
 const axios = require('axios');
+const plist = require('plist');
 
 exports.handler = async function(event, context) {
-  // Lấy URL của file IPA từ query parameters
-  const ipaUrl = event.queryStringParameters.url;
+  const url = event.queryStringParameters.url;
 
-  if (!ipaUrl) {
+  if (!url) {
     return {
       statusCode: 400,
       body: JSON.stringify({ error: 'URL không được cung cấp' })
@@ -12,6 +12,15 @@ exports.handler = async function(event, context) {
   }
 
   try {
+    let ipaUrl = url;
+    
+    // Nếu là URL .plist, trích xuất URL IPA từ nó
+    if (url.endsWith('.plist')) {
+      const plistResponse = await axios.get(url);
+      const plistData = plist.parse(plistResponse.data);
+      ipaUrl = plistData.items[0].assets[0].url;
+    }
+
     const response = await axios.head(ipaUrl);
     const fileSize = response.headers['content-length'];
 
