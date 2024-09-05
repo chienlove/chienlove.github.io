@@ -1,14 +1,20 @@
-{{ define "main" }}
-<main class="game-category">
-    <h1>Danh mục Jailbreak</h1>
-    <div class="game-list">
-        {{ range .Pages }}
-            <article class="game-item">
-                <h2><a href="{{ .Permalink }}">{{ .Title }}</a></h2>
-                <p>{{ .Summary }}</p>
-                <span class="game-date">{{ .Date.Format "02/01/2006" }}</span>
-            </article>
-        {{ end }}
-    </div>
-</main>
-{{ end }}
+<!-- Debug information -->
+<p>Debug: Inside jailbreak partial template</p>
+<p>Debug: Number of pages: {{ len .Pages }}</p>
+
+<div class="jailbreak-category">
+    <h2>Jailbreak Articles</h2>
+    {{ if .Pages }}
+        <ul class="jailbreak-list">
+            {{ range .Pages }}
+                <li class="jailbreak-item">
+                    <h3><a href="{{ .Permalink }}">{{ .Title }}</a></h3>
+                    <p>{{ .Summary }}</p>
+                    <span class="jailbreak-date">{{ .Date.Format "02/01/2006" }}</span>
+                </li>
+            {{ end }}
+        </ul>
+    {{ else }}
+        <p>No articles found in this category.</p>
+    {{ end }}
+</div>
