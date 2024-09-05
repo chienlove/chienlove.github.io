@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kiểm tra kích thước file IPA</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        #result {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <h1>Kiểm tra kích thước file IPA</h1>
+    <input type="text" id="ipaUrl" placeholder="Nhập URL của file IPA">
+    <button onclick="checkFileSize()">Kiểm tra</button>
+    <div id="result"></div>
+
+    <script>
+        async function checkFileSize() {
+            const ipaUrl = document.getElementById('ipaUrl').value;
+            const resultDiv = document.getElementById('result');
+            
+            if (!ipaUrl) {
+                resultDiv.textContent = 'Vui lòng nhập URL của file IPA';
+                return;
+            }
+
+            resultDiv.textContent = 'Đang kiểm tra...';
+
+            try {
+                const response = await fetch(`/.netlify/functions/getIpaSize?url=${encodeURIComponent(ipaUrl)}`);
+                const data = await response.json();
+
+                if (data.size) {
+                    resultDiv.textContent = `Kích thước file: ${data.size}`;
+                } else if (data.error) {
+                    resultDiv.textContent = `Lỗi: ${data.error}`;
+                }
+            } catch (error) {
+                resultDiv.textContent = 'Có lỗi xảy ra khi kiểm tra kích thước file';
+            }
+        }
+    </script>
+</body>
+</html>
