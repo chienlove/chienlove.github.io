@@ -4,6 +4,8 @@
   <title>Netlify CMS Admin</title>
   <link rel="stylesheet" href="css/admin.css">
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script src="https://unpkg.com/react@16/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@16/umd/react-dom.production.min.js"></script>
   <style>
     .netlify-identity-button {
       display: none !important;
@@ -13,97 +15,87 @@
 <body>
   <script src="https://unpkg.com/netlify-cms@^2.10.192/dist/netlify-cms.js"></script>
   <script>
-  if (localStorage.getItem('netlify-cms-user')) {
-    // Người dùng đã đăng nhập, khởi tạo CMS ngay lập tức
-    window.CMS.init({
+    // Đoạn mã mới cho widget fileSize và khởi tạo CMS
+    CMS.registerPreviewStyle("https://unpkg.com/@tailwindcss/typography@0.4.x/dist/typography.min.css");
+    CMS.registerPreviewStyle("https://unpkg.com/tailwindcss@^2/dist/tailwind.min.css");
+
+    CMS.init({
       config: {
         backend: {
           name: 'git-gateway'
         }
       }
     });
-  } else if (window.netlifyIdentity) {
-    window.netlifyIdentity.on("init", user => {
-      if (!user) {
-        window.location.href = "/admin";
-      } else {
-        window.CMS.init({
-          config: {
-            backend: {
-              name: 'git-gateway'
-            }
-          }
-        });
-      }
-    });
-  }
-  </script>
-  <script>
-    // Đoạn mã mới cho widget fileSize
-    CMS.registerWidget('fileSize', {
-      control: ({ value, onChange, field, forID }) => {
-        const [size, setSize] = React.useState(value || '');
-        const [loading, setLoading] = React.useState(false);
 
-        React.useEffect(() => {
-          // Lắng nghe sự thay đổi của trường plistUrl
-          const plistUrlField = document.querySelector('[name="main_download.plistUrl"]');
-          if (plistUrlField) {
-            const observer = new MutationObserver((mutations) => {
-              mutations.forEach((mutation) => {
-                if (mutation.type === 'attributes' && mutation.attributeName === 'value') {
-                  updateSize(mutation.target.value);
-                }
-              });
-            });
-            observer.observe(plistUrlField, { attributes: true });
-
-            // Cập nhật kích thước ban đầu nếu có URL
-            if (plistUrlField.value) {
-              updateSize(plistUrlField.value);
-            }
-
-            return () => observer.disconnect();
-          }
-        }, []);
-
-        const updateSize = async (plistUrl) => {
-          if (!plistUrl) return;
-          setLoading(true);
-          try {
-            const response = await fetch(`/.netlify/functions/getIpaSize?url=${encodeURIComponent(plistUrl)}`);
-            const data = await response.json();
-            if (data.size) {
-              setSize(data.size);
-              onChange(data.size);
-            } else {
-              throw new Error(data.error || 'Không thể lấy kích thước file');
-            }
-          } catch (error) {
-            console.error(`Lỗi: ${error.message}`);
-            setSize('Không thể lấy kích thước');
-            onChange('Không thể lấy kích thước');
-          }
-          setLoading(false);
-        };
-
-        return h('div', {},
-          h('input', {
-            type: 'text',
-            id: forID,
-            value: size,
-            onChange: (e) => {
-              setSize(e.target.value);
-              onChange(e.target.value);
-            },
-            disabled: true
-          }),
-          loading && h('span', {}, ' Đang cập nhật...')
-        );
+    CMS.registerEventListener({
+      name: 'preSave',
+      handler: async ({ entry }) => {
+        // Bạn có thể thêm logic xử lý trước khi lưu ở đây nếu cần
       },
-      fromBlock: (value) => value,
-      toBlock: (value) => value,
     });
+
+    window.CMS.registerWidget('fileSize', {
+  control: ({ value, onChange, field, forID }) => {
+    const [size, setSize] = React.useState(value || '');
+    const [loading, setLoading] = React.useState(false);
+
+    React.useEffect(() => {
+      const plistUrlField = document.querySelector('[name="main_download.plistUrl"]');
+      if (plistUrlField) {
+        const observer = new MutationObserver((mutations) => {
+          mutations.forEach((mutation) => {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'value') {
+              updateSize(mutation.target.value);
+            }
+          });
+        });
+        observer.observe(plistUrlField, { attributes: true });
+
+        if (plistUrlField.value) {
+          updateSize(plistUrlField.value);
+        }
+
+        return () => observer.disconnect();
+      }
+    }, []);
+
+    const updateSize = async (plistUrl) => {
+      if (!plistUrl) return;
+      setLoading(true);
+      try {
+        const response = await fetch(`/.netlify/functions/getIpaSize?url=${encodeURIComponent(plistUrl)}`);
+        const data = await response.json();
+        if (data.size) {
+          setSize(data.size);
+          onChange(data.size);
+        } else {
+          throw new Error(data.error || 'Không thể lấy kích thước file');
+        }
+      } catch (error) {
+        console.error(`Lỗi: ${error.message}`);
+        setSize('Không thể lấy kích thước');
+        onChange('Không thể lấy kích thước');
+      }
+      setLoading(false);
+    };
+
+    return React.createElement('div', {},
+      React.createElement('input', {
+        type: 'text',
+        id: forID,
+        value: size,
+        onChange: (e) => {
+          setSize(e.target.value);
+          onChange(e.target.value);
+        },
+        disabled: true
+      }),
+      loading && React.createElement('span', {}, ' Đang cập nhật...')
+    );
+  },
+  fromBlock: (value) => value,
+  toBlock: (value) => value,
+});
   </script>
 </body>
 </html>
