@@ -188,13 +188,19 @@
 .download-btn {
     display: inline-block;
     padding: 4px 12px;
-    background-color: #0070c9;
+    background-color: #0071e3;
     color: #fff;
     border-radius: 12px;
     font-size: 14px;
-    font-weight: bold;
+    font-weight: 500;
     text-decoration: none;
-    margin-bottom: 4px;
+    text-align: center;
+    min-width: 80px;
+    transition: all 0.2s ease;
+}
+
+.download-btn:hover {
+    background-color: #0077ED;
 }
 
 .app-version {
@@ -202,33 +208,72 @@
     color: #00C851;
 }
 
-/* Styles chung cho quảng cáo */
+/* Container cho quảng cáo */
+.ad-container {
+    max-width: 300px;
+    margin: 20px auto;
+    overflow: hidden;
+}
+
+/* Styles cho quảng cáo */
 .adsbygoogle {
     display: block;
     width: 100%;
-    max-width: 100%;
-    height: auto;
-    margin: 0 auto;
+    height: 100px;
+    background-color: #f8f9fa;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    overflow: hidden;
 }
 
-/* Styles cho điện thoại (mặc định) */
+/* Hiệu ứng hover */
+.adsbygoogle:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Responsive design */
 @media screen and (max-width: 767px) {
+    .ad-container {
+        max-width: 250px;
+    }
     .adsbygoogle {
-        height: 100px; /* Chiều cao cố định cho banner trên điện thoại */
+        height: 80px;
     }
 }
 
-/* Styles cho máy tính bảng */
 @media screen and (min-width: 768px) and (max-width: 1023px) {
+    .ad-container {
+        max-width: 280px;
+    }
     .adsbygoogle {
-        height: 120px; /* Chiều cao tăng lên cho máy tính bảng */
+        height: 90px;
     }
 }
 
-/* Styles cho máy tính để bàn */
-@media screen and (min-width: 1024px) {
-    .adsbygoogle {
-        height: 150px; /* Chiều cao lớn nhất cho màn hình lớn */
-        max-width: 970px; /* Giới hạn chiều rộng tối đa trên màn hình lớn */
-    }
+/* Thêm một overlay mờ để tạo cảm giác "premium" */
+.adsbygoogle::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0) 100%);
+    pointer-events: none;
+}
+
+/* Thêm một nhãn "Ad" nhỏ để tuân thủ quy định */
+.adsbygoogle::after {
+    content: 'Ad';
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background-color: rgba(0, 0, 0, 0.5);
+    color: white;
+    font-size: 10px;
+    padding: 2px 4px;
+    border-radius: 3px;
+    opacity: 0.7;
 }
