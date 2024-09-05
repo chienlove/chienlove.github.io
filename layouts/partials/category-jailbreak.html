@@ -81,9 +81,9 @@
             <img src="{{ .Params.icon }}" alt="{{ .Title }} icon" class="jailbreak-icon">
             <div class="jailbreak-info">
                 <h3 class="jailbreak-name">{{ .Title }}</h3>
-                <p class="jailbreak-author">{{ .Params.author }}</p>
+                <p class="jailbreak-author">{{ .Params.Developer }}</p>
             </div>
-            <span class="jailbreak-version">↑ {{ .Params.version }}</span>
+            <span class="jailbreak-version">↑ {{ .Params.main_download.version }}</span>
             <button class="download-btn">Tải</button>
         </li>
         {{ end }}
