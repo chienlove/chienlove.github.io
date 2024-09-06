@@ -15,40 +15,23 @@
 <body>
   <script src="https://unpkg.com/netlify-cms@^2.10.192/dist/netlify-cms.js"></script>
   <script>
+    let fileSize = null;
+
     // Hàm lấy kích thước file từ API
-    const updateFileSize = async (entry) => {
-      const mainDownload = entry.getIn(['data', 'main_download']);
-      
-      if (!mainDownload) {
-        console.error('main_download không tồn tại');
-        return entry;  // Trả về entry nguyên gốc
-      }
-
-      const plistUrl = mainDownload.get('plistUrl');
-      if (!plistUrl) {
-        console.error('plistUrl không tồn tại');
-        return entry;  // Trả về entry nguyên gốc
-      }
-
-      console.log(`Đang lấy kích thước từ URL: ${plistUrl}`);
-
+    const fetchFileSize = async (plistUrl) => {
       try {
         const response = await fetch(`/api/getIpaSize?url=${encodeURIComponent(plistUrl)}`);
         const data = await response.json();
         console.log('API response:', data);
 
         if (data.size) {
-          // Cập nhật kích thước file trực tiếp vào CMS thông qua API quản lý bài viết
-          const updatedEntry = entry.setIn(['data', 'size'], data.size);
-          console.log('Cập nhật kích thước:', data.size);
-          return updatedEntry; // Trả về entry đã cập nhật
+          fileSize = data.size; // Lưu kích thước file vào biến toàn cục
+          console.log('Kích thước IPA:', fileSize);
         } else {
           console.error('Không thể lấy kích thước file từ API');
-          return entry;
         }
       } catch (error) {
         console.error(`Lỗi: ${error.message}`);
-        return entry;
       }
     };
 
@@ -56,19 +39,16 @@
     CMS.registerEventListener({
       name: 'preSave',
       handler: async ({ entry }) => {
-        console.log('Sự kiện preSave kích hoạt');
-        const updatedEntry = await updateFileSize(entry);
-        return updatedEntry; // Trả về entry đã cập nhật
-      },
-    });
-
-    // Đăng ký sự kiện change để cập nhật kích thước khi plistUrl thay đổi
-    CMS.registerEventListener({
-      name: 'change',
-      handler: async ({ entry }) => {
-        console.log('Sự kiện change kích hoạt');
-        const updatedEntry = await updateFileSize(entry);
-        return updatedEntry; // Trả về entry đã cập nhật
+        const mainDownload = entry.getIn(['data', 'main_download']);
+        if (mainDownload && mainDownload.get('plistUrl')) {
+          const plistUrl = mainDownload.get('plistUrl');
+          await fetchFileSize(plistUrl); // Gọi API để lấy kích thước file
+          
+          if (fileSize) {
+            entry = entry.setIn(['data', 'size'], fileSize); // Cập nhật kích thước trong entry
+            console.log('Kích thước file đã cập nhật:', fileSize);
+          }
+        }
       },
     });
 
@@ -76,9 +56,16 @@
     CMS.registerEventListener({
       name: 'load',
       handler: async ({ entry }) => {
-        console.log('Sự kiện load kích hoạt');
-        const updatedEntry = await updateFileSize(entry);
-        return updatedEntry; // Trả về entry đã cập nhật
+        const mainDownload = entry.getIn(['data', 'main_download']);
+        if (mainDownload && mainDownload.get('plistUrl')) {
+          const plistUrl = mainDownload.get('plistUrl');
+          await fetchFileSize(plistUrl); // Lấy kích thước file khi bài viết được mở
+          
+          if (fileSize) {
+            entry = entry.setIn(['data', 'size'], fileSize); // Cập nhật kích thước trong entry
+            console.log('Kích thước file đã cập nhật:', fileSize);
+          }
+        }
       },
     });
 
