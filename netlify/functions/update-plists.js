@@ -18,7 +18,7 @@ exports.handler = async function(event, context) {
     'https://file.jb-apps.me/plist/Taurine.plist': 'static/plist/taurine.plist',
     'https://file.jb-apps.me/plist/NekoJB.plist': 'static/plist/neko.plist',
     'https://file.jb-apps.me/plist/ChimeraJB.plist': 'static/plist/chimera.plist',
-    'https://file.jb-apps.me/plist/Odyssey.plist': 'static/plist/odyssey.plist'
+    'https://file.jb-apps.me/plist/OdysseyJB.plist': 'static/plist/odyssey.plist'
   };
 
   let updatesPerformed = false;
