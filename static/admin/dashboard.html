@@ -18,15 +18,20 @@
     // Hàm lấy kích thước file từ API
     const updateFileSize = async (entry) => {
       const mainDownload = entry.getIn(['data', 'main_download']);
-
+      
       // Kiểm tra nếu 'main_download' không tồn tại
-      if (!mainDownload || !mainDownload.get('plistUrl')) {
-        console.error('main_download hoặc plistUrl không tồn tại');
+      if (!mainDownload) {
+        console.error('main_download không tồn tại');
         return;
       }
 
       const plistUrl = mainDownload.get('plistUrl');
-      console.log(`Fetching IPA size from URL: ${plistUrl}`);
+      if (!plistUrl) {
+        console.error('plistUrl không tồn tại');
+        return;
+      }
+
+      console.log(`Đang lấy kích thước từ URL: ${plistUrl}`);
 
       try {
         const response = await fetch(`/api/getIpaSize?url=${encodeURIComponent(plistUrl)}`);
@@ -35,24 +40,26 @@
 
         if (data.size) {
           // Cập nhật kích thước file
-          entry.get('data').set('size', data.size);
-          console.log('Updated size:', data.size); // Kiểm tra log cập nhật kích thước
+          entry = entry.setIn(['data', 'size'], data.size);
+          console.log('Cập nhật kích thước:', data.size);
         } else {
           throw new Error(data.error || 'Không thể lấy kích thước file');
         }
       } catch (error) {
         console.error(`Lỗi: ${error.message}`);
-        entry.get('data').set('size', 'Không thể lấy kích thước');
+        entry = entry.setIn(['data', 'size'], 'Không thể lấy kích thước');
       }
+
+      return entry; // Trả lại entry đã cập nhật
     };
 
     // Đăng ký sự kiện preSave để cập nhật kích thước file trước khi lưu
     CMS.registerEventListener({
       name: 'preSave',
       handler: async ({ entry }) => {
-        console.log('preSave triggered');
-        await updateFileSize(entry);
-        console.log('Size updated on preSave');
+        console.log('Sự kiện preSave kích hoạt');
+        const updatedEntry = await updateFileSize(entry);
+        return updatedEntry; // Trả lại entry đã cập nhật cho sự kiện preSave
       },
     });
 
@@ -60,10 +67,9 @@
     CMS.registerEventListener({
       name: 'change',
       handler: ({ entry }) => {
-        console.log('change event triggered');
+        console.log('Sự kiện change kích hoạt');
         if (entry.getIn(['data', 'main_download']) && entry.getIn(['data', 'main_download', 'plistUrl'])) {
           updateFileSize(entry);
-          console.log('Size updated on change');
         }
       },
     });
@@ -71,11 +77,11 @@
     // Đăng ký sự kiện load để cập nhật kích thước khi bài viết cũ được mở
     CMS.registerEventListener({
       name: 'load',
-      handler: ({ entry }) => {
-        console.log('load event triggered');
+      handler: async ({ entry }) => {
+        console.log('Sự kiện load kích hoạt');
         if (entry.getIn(['data', 'main_download']) && entry.getIn(['data', 'main_download', 'plistUrl'])) {
-          updateFileSize(entry);
-          console.log('Size updated on load');
+          const updatedEntry = await updateFileSize(entry);
+          return updatedEntry; // Trả lại entry đã cập nhật cho sự kiện load
         }
       },
     });
