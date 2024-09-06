@@ -3,6 +3,9 @@ partial: false
 path: content/jailbreak-tools/odyssey.md
 meta:
   path: content/jailbreak-tools/odyssey.md
+date: 2024-09-06T10:48:12.270Z
+developer: CoolStar
+ios_compatible: 13.0 - 13.7
 isModification: null
 raw: >
   ---
@@ -29,6 +32,8 @@ raw: >
     appId: odyssey
     plistUrl: https://storeios.net/plist/odyssey.plist
   ---
+keywords:
+  - Odyssey
 data:
   size: Không thể lấy kích thước
   ios_compatible: 13.0 - 13.7
@@ -48,6 +53,10 @@ data:
     including A12 & A13 devices.
 author: ""
 slug: odyssey
+main_download:
+  version: 1.4.0
+  appId: odyssey
+  plistUrl: https://storeios.net/plist/odyssey.plist
 newRecord: false
 status: ""
 mediaFiles:
@@ -156,7 +165,13 @@ mediaFiles:
     path: static/images/verify.png
     key: 0d87eabf-0331-4674-bc04-1b899f6c2901
 label: null
+title: Odyssey
+icon: /images/img_1044.jpeg
 updatedOn: ""
+description: Odyssey is a snappy, responsive experience that you can't find
+  anywhere else, with support for all iOS versions from iOS 13.0-13.7, including
+  A12 & A13 devices.
+categories: Jailbreak
 i18n: {}
 collection: jailbreak-tools
 ---
