@@ -22,7 +22,7 @@ exports.handler = async function(event) {
       const plistResponse = await axios.get(url);
       console.log('Phản hồi từ plist:', plistResponse.data); // Log dữ liệu plist nhận được
 
-      // Kiểm tra xem phản hồi có phải là một tài liệu XML hợp lệ không
+      // Kiểm tra xem phản hồi có phải là tài liệu XML hợp lệ không
       if (!plistResponse.data || !plistResponse.data.startsWith('<?xml')) {
         console.error('Phản hồi không phải là tài liệu XML hợp lệ');
         return {
@@ -32,21 +32,29 @@ exports.handler = async function(event) {
       }
 
       // Phân tích nội dung plist
-      const plistData = plist.parse(plistResponse.data);
-      console.log('Dữ liệu plist đã phân tích:', plistData); // Log dữ liệu plist sau khi phân tích
+      try {
+        const plistData = plist.parse(plistResponse.data);
+        console.log('Dữ liệu plist đã phân tích:', plistData); // Log dữ liệu plist sau khi phân tích
 
-      // Trích xuất URL IPA từ file plist
-      const ipaAsset = plistData.items && plistData.items[0].assets.find(asset => asset.kind === 'software-package');
-      if (!ipaAsset || !ipaAsset.url) {
-        console.error('Không thể tìm thấy URL IPA trong file plist');
+        // Trích xuất URL IPA từ file plist
+        const ipaAsset = plistData.items && plistData.items[0].assets.find(asset => asset.kind === 'software-package');
+        if (!ipaAsset || !ipaAsset.url) {
+          console.error('Không thể tìm thấy URL IPA trong file plist');
+          return {
+            statusCode: 400,
+            body: JSON.stringify({ error: 'Không thể tìm thấy URL IPA trong file plist' }),
+          };
+        }
+
+        ipaUrl = ipaAsset.url;
+        console.log('URL IPA đã trích xuất:', ipaUrl); // Log URL IPA
+      } catch (parseError) {
+        console.error('Lỗi khi phân tích cú pháp plist:', parseError.message);
         return {
-          statusCode: 400,
-          body: JSON.stringify({ error: 'Không thể tìm thấy URL IPA trong file plist' }),
+          statusCode: 500,
+          body: JSON.stringify({ error: `Lỗi khi phân tích cú pháp plist: ${parseError.message}` }),
         };
       }
-
-      ipaUrl = ipaAsset.url;
-      console.log('URL IPA đã trích xuất:', ipaUrl); // Log URL IPA
     }
 
     // Gửi yêu cầu HEAD để lấy kích thước file IPA
