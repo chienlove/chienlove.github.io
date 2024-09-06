@@ -18,13 +18,14 @@
     // Hàm gọi API Netlify Function để lấy kích thước file IPA
     const fetchFileSize = async (plistUrl) => {
       try {
+        console.log('Gọi API để lấy kích thước với URL:', plistUrl);
         const response = await fetch(`/api/getIpaSize?url=${encodeURIComponent(plistUrl)}`);
         const data = await response.json();
         if (data.size) {
-          console.log('Kích thước nhận từ API:', data.size);
+          console.log('API trả về kích thước:', data.size);
           return data.size;
         } else {
-          console.error('Không thể lấy kích thước từ API');
+          console.error('API không trả về kích thước hợp lệ');
           return null;
         }
       } catch (error) {
@@ -36,7 +37,7 @@
     // Widget tùy chỉnh cho nút "Cập nhật kích thước"
     const SizeUpdateControl = createClass({
       handleClick: async function() {
-        const { value, forID, setActiveStyle, setInactiveStyle, entry, onChange } = this.props;
+        const { entry, onChange } = this.props;
 
         // Lấy URL plist từ entry
         const mainDownload = entry.getIn(['data', 'main_download']);
@@ -47,7 +48,8 @@
           const fileSize = await fetchFileSize(plistUrl);  // Gọi API để lấy kích thước
 
           if (fileSize) {
-            onChange(fileSize);  // Cập nhật giá trị kích thước
+            console.log('Cập nhật kích thước trong entry:', fileSize);
+            onChange(entry.setIn(['data', 'size'], fileSize));  // Cập nhật giá trị kích thước
             alert('Kích thước đã được cập nhật: ' + fileSize);
           } else {
             alert('Không thể cập nhật kích thước file');
