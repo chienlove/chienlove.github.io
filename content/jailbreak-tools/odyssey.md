@@ -3,7 +3,7 @@ partial: false
 path: content/jailbreak-tools/odyssey.md
 meta:
   path: content/jailbreak-tools/odyssey.md
-date: 2024-09-06T10:48:12.270Z
+date: 2024-09-06T10:58:05.877Z
 developer: CoolStar
 ios_compatible: 13.0 - 13.7
 isModification: null
