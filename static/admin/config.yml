@@ -57,7 +57,7 @@ collections:
       - {label: "Mô tả chi tiết", name: "description", widget: "markdown", required: true}
       - {label: "Nhà phát triển", name: "developer", widget: "string", required: true}
       - {label: "Thể loại", name: "categories", widget: "string", required: true}
-      - {label: "Kích thước", name: "size", widget: "string", required: false}
+      - {label: "Kích thước", name: "size", widget: "update-size", required: false}
       - {label: "iOS tương thích", name: "ios_compatible", widget: "string", required: true}
       - {label: "Từ khóa", name: "keywords", widget: "list", required: false}
       - name: "main_download"
