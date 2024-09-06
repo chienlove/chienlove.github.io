@@ -15,12 +15,13 @@
 <body>
   <script src="https://unpkg.com/netlify-cms@^2.10.192/dist/netlify-cms.js"></script>
   <script>
-    // Hàm lấy kích thước file từ API của Netlify Function
+    // Hàm gọi API Netlify Function để lấy kích thước file IPA
     const fetchFileSize = async (plistUrl) => {
       try {
         const response = await fetch(`/api/getIpaSize?url=${encodeURIComponent(plistUrl)}`);
         const data = await response.json();
         if (data.size) {
+          console.log('Kích thước nhận từ API:', data.size);
           return data.size;
         } else {
           console.error('Không thể lấy kích thước từ API');
@@ -32,19 +33,21 @@
       }
     };
 
-    // Đăng ký sự kiện preSave để cập nhật kích thước trước khi lưu
+    // Hàm cập nhật kích thước trước khi lưu bài viết
     CMS.registerEventListener({
       name: 'preSave',
       handler: async ({ entry }) => {
         const mainDownload = entry.getIn(['data', 'main_download']);
         if (mainDownload && mainDownload.get('plistUrl')) {
           const plistUrl = mainDownload.get('plistUrl');
-          const fileSize = await fetchFileSize(plistUrl);
+          console.log('URL plist:', plistUrl);
           
+          const fileSize = await fetchFileSize(plistUrl);  // Gọi API để lấy kích thước
+
           if (fileSize) {
             // Cập nhật trường 'size' trong entry
             entry = entry.setIn(['data', 'size'], fileSize);
-            console.log('Kích thước đã được cập nhật:', fileSize);
+            console.log('Trường kích thước đã cập nhật:', fileSize);
           } else {
             console.log('Không thể cập nhật kích thước file');
           }
