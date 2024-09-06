@@ -16,9 +16,14 @@ exports.handler = async function(event) {
     
     // Nếu là URL .plist, trích xuất URL IPA từ nó
     if (url.endsWith('.plist')) {
+      console.log('Đang xử lý file plist...');
+
       const plistResponse = await axios.get(url);
       const plistData = plist.parse(plistResponse.data);
-      ipaUrl = plistData.items[0].assets[0].url;
+
+      // Trích xuất URL IPA từ file plist theo cấu trúc
+      ipaUrl = plistData.items[0].assets.find(asset => asset.kind === 'software-package').url;
+      console.log('URL IPA đã trích xuất:', ipaUrl);
     }
 
     // Gửi yêu cầu HEAD để lấy kích thước file IPA
