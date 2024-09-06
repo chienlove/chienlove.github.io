@@ -15,55 +15,38 @@
 <body>
   <script src="https://unpkg.com/netlify-cms@^2.10.192/dist/netlify-cms.js"></script>
   <script>
-    let fileSize = null;
-
-    // Hàm lấy kích thước file từ API
+    // Hàm lấy kích thước file từ API của Netlify Function
     const fetchFileSize = async (plistUrl) => {
       try {
         const response = await fetch(`/api/getIpaSize?url=${encodeURIComponent(plistUrl)}`);
         const data = await response.json();
-        console.log('API response:', data);
-
         if (data.size) {
-          fileSize = data.size; // Lưu kích thước file vào biến toàn cục
-          console.log('Kích thước IPA:', fileSize);
+          return data.size;
         } else {
-          console.error('Không thể lấy kích thước file từ API');
+          console.error('Không thể lấy kích thước từ API');
+          return null;
         }
       } catch (error) {
-        console.error(`Lỗi: ${error.message}`);
+        console.error('Lỗi khi gọi API:', error);
+        return null;
       }
     };
 
-    // Đăng ký sự kiện preSave để cập nhật kích thước file trước khi lưu
+    // Đăng ký sự kiện preSave để cập nhật kích thước trước khi lưu
     CMS.registerEventListener({
       name: 'preSave',
       handler: async ({ entry }) => {
         const mainDownload = entry.getIn(['data', 'main_download']);
         if (mainDownload && mainDownload.get('plistUrl')) {
           const plistUrl = mainDownload.get('plistUrl');
-          await fetchFileSize(plistUrl); // Gọi API để lấy kích thước file
+          const fileSize = await fetchFileSize(plistUrl);
           
           if (fileSize) {
-            entry = entry.setIn(['data', 'size'], fileSize); // Cập nhật kích thước trong entry
-            console.log('Kích thước file đã cập nhật:', fileSize);
-          }
-        }
-      },
-    });
-
-    // Đăng ký sự kiện load để cập nhật kích thước khi bài viết cũ được mở
-    CMS.registerEventListener({
-      name: 'load',
-      handler: async ({ entry }) => {
-        const mainDownload = entry.getIn(['data', 'main_download']);
-        if (mainDownload && mainDownload.get('plistUrl')) {
-          const plistUrl = mainDownload.get('plistUrl');
-          await fetchFileSize(plistUrl); // Lấy kích thước file khi bài viết được mở
-          
-          if (fileSize) {
-            entry = entry.setIn(['data', 'size'], fileSize); // Cập nhật kích thước trong entry
-            console.log('Kích thước file đã cập nhật:', fileSize);
+            // Cập nhật trường 'size' trong entry
+            entry = entry.setIn(['data', 'size'], fileSize);
+            console.log('Kích thước đã được cập nhật:', fileSize);
+          } else {
+            console.log('Không thể cập nhật kích thước file');
           }
         }
       },
