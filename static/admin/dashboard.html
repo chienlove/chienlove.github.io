@@ -33,29 +33,49 @@
       }
     };
 
-    // Hàm cập nhật kích thước trước khi lưu bài viết
-    CMS.registerEventListener({
-      name: 'preSave',
-      handler: async ({ entry }) => {
-        const mainDownload = entry.getIn(['data', 'main_download']);
-        if (mainDownload && mainDownload.get('plistUrl')) {
-          const plistUrl = mainDownload.get('plistUrl');
-          console.log('URL plist:', plistUrl);
-          
-          const fileSize = await fetchFileSize(plistUrl);  // Gọi API để lấy kích thước
+    // Thêm nút vào CMS để cập nhật kích thước
+    CMS.registerWidget('update-size-button', () => {
+      return class UpdateSizeButton extends React.Component {
+        constructor(props) {
+          super(props);
+          this.handleClick = this.handleClick.bind(this);
+        }
 
-          if (fileSize) {
-            // Cập nhật trường 'size' trong entry
-            entry = entry.setIn(['data', 'size'], fileSize);
-            console.log('Trường kích thước đã cập nhật:', fileSize);
+        // Hàm xử lý khi nhấn nút
+        async handleClick() {
+          const { entry, onChange } = this.props;
+          const mainDownload = entry.getIn(['data', 'main_download']);
+          
+          if (mainDownload && mainDownload.get('plistUrl')) {
+            const plistUrl = mainDownload.get('plistUrl');
+            console.log('URL plist:', plistUrl);
+
+            const fileSize = await fetchFileSize(plistUrl);  // Gọi API để lấy kích thước
+
+            if (fileSize) {
+              // Cập nhật trường 'size' trong entry
+              const updatedEntry = entry.setIn(['data', 'size'], fileSize);
+              onChange(updatedEntry);  // Cập nhật bài viết với kích thước mới
+              alert('Kích thước đã được cập nhật: ' + fileSize);
+            } else {
+              alert('Không thể cập nhật kích thước file');
+            }
           } else {
-            console.log('Không thể cập nhật kích thước file');
+            alert('URL plist không tồn tại');
           }
         }
-      },
+
+        render() {
+          return (
+            <button type="button" onClick={this.handleClick} className="nc-generic-button">
+              Cập nhật kích thước
+            </button>
+          );
+        }
+      }
     });
 
-    // Khởi tạo CMS với cấu hình
+    // Khởi tạo CMS với cấu hình và thêm widget
     CMS.init({
       config: {
         backend: {
