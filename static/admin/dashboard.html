@@ -52,6 +52,7 @@
       handler: async ({ entry }) => {
         console.log('preSave triggered');
         await updateFileSize(entry);
+        console.log('Size updated on preSave');
       },
     });
 
@@ -59,8 +60,10 @@
     CMS.registerEventListener({
       name: 'change',
       handler: ({ entry }) => {
+        console.log('change event triggered');
         if (entry.getIn(['data', 'main_download']) && entry.getIn(['data', 'main_download', 'plistUrl'])) {
           updateFileSize(entry);
+          console.log('Size updated on change');
         }
       },
     });
@@ -69,8 +72,10 @@
     CMS.registerEventListener({
       name: 'load',
       handler: ({ entry }) => {
+        console.log('load event triggered');
         if (entry.getIn(['data', 'main_download']) && entry.getIn(['data', 'main_download', 'plistUrl'])) {
           updateFileSize(entry);
+          console.log('Size updated on load');
         }
       },
     });
