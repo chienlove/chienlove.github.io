@@ -19,7 +19,6 @@
     const updateFileSize = async (entry) => {
       const mainDownload = entry.getIn(['data', 'main_download']);
       
-      // Kiểm tra nếu 'main_download' không tồn tại
       if (!mainDownload) {
         console.error('main_download không tồn tại');
         return;
@@ -36,10 +35,10 @@
       try {
         const response = await fetch(`/api/getIpaSize?url=${encodeURIComponent(plistUrl)}`);
         const data = await response.json();
-        console.log('API response:', data); // Kiểm tra phản hồi API
+        console.log('API response:', data);
 
         if (data.size) {
-          // Cập nhật kích thước file
+          // Cập nhật kích thước file trong entry
           entry = entry.setIn(['data', 'size'], data.size);
           console.log('Cập nhật kích thước:', data.size);
         } else {
@@ -49,21 +48,19 @@
         console.error(`Lỗi: ${error.message}`);
         entry = entry.setIn(['data', 'size'], 'Không thể lấy kích thước');
       }
-
-      return entry; // Trả lại entry đã cập nhật
     };
 
-    // Đăng ký sự kiện preSave để cập nhật kích thước file trước khi lưu
+    // Đăng ký sự kiện preSave
     CMS.registerEventListener({
       name: 'preSave',
       handler: async ({ entry }) => {
         console.log('Sự kiện preSave kích hoạt');
-        const updatedEntry = await updateFileSize(entry);
-        return updatedEntry; // Trả lại entry đã cập nhật cho sự kiện preSave
+        await updateFileSize(entry);
+        // Không trả về entry, chỉ xử lý kích thước
       },
     });
 
-    // Đăng ký sự kiện change để cập nhật kích thước khi plistUrl thay đổi
+    // Đăng ký sự kiện change
     CMS.registerEventListener({
       name: 'change',
       handler: ({ entry }) => {
@@ -74,14 +71,13 @@
       },
     });
 
-    // Đăng ký sự kiện load để cập nhật kích thước khi bài viết cũ được mở
+    // Đăng ký sự kiện load
     CMS.registerEventListener({
       name: 'load',
       handler: async ({ entry }) => {
         console.log('Sự kiện load kích hoạt');
         if (entry.getIn(['data', 'main_download']) && entry.getIn(['data', 'main_download', 'plistUrl'])) {
-          const updatedEntry = await updateFileSize(entry);
-          return updatedEntry; // Trả lại entry đã cập nhật cho sự kiện load
+          await updateFileSize(entry);
         }
       },
     });
