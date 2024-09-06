@@ -1,13 +1,13 @@
 const axios = require('axios');
 const plist = require('plist');
 
-exports.handler = async function(event, context) {
+exports.handler = async function(event) {
   const url = event.queryStringParameters.url;
 
   if (!url) {
     return {
       statusCode: 400,
-      body: JSON.stringify({ error: 'URL không được cung cấp' })
+      body: JSON.stringify({ error: 'URL không được cung cấp' }),
     };
   }
 
@@ -21,24 +21,26 @@ exports.handler = async function(event, context) {
       ipaUrl = plistData.items[0].assets[0].url;
     }
 
+    // Gửi yêu cầu HEAD để lấy kích thước file IPA
     const response = await axios.head(ipaUrl);
     const fileSize = response.headers['content-length'];
 
     if (fileSize) {
-      // Chuyển đổi byte sang MB
       const fileSizeMB = (parseInt(fileSize) / (1024 * 1024)).toFixed(2);
-      
       return {
         statusCode: 200,
-        body: JSON.stringify({ size: `${fileSizeMB} MB` })
+        body: JSON.stringify({ size: `${fileSizeMB} MB` }),
       };
     } else {
-      throw new Error('Không thể lấy kích thước file');
+      return {
+        statusCode: 404,
+        body: JSON.stringify({ error: 'Không thể lấy kích thước file' }),
+      };
     }
   } catch (error) {
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Có lỗi khi lấy kích thước file' })
+      body: JSON.stringify({ error: 'Lỗi khi lấy kích thước file' }),
     };
   }
 };
