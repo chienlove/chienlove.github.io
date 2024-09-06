@@ -3,60 +3,381 @@ partial: false
 path: content/jailbreak-tools/odyssey.md
 meta:
   path: content/jailbreak-tools/odyssey.md
-date: 2024-09-06T10:58:05.877Z
-developer: CoolStar
-ios_compatible: 13.0 - 13.7
 isModification: null
 raw: >
   ---
 
+  partial: false
+
+  path: content/jailbreak-tools/odyssey.md
+
+  meta:
+    path: content/jailbreak-tools/odyssey.md
+  date: 2024-09-06T10:58:05.877Z
+
+  developer: CoolStar
+
+  ios_compatible: 13.0 - 13.7
+
+  isModification: null
+
+  raw: >
+    ---
+
+    title: Odyssey
+
+    date: 2024-09-06T02:29:25.420Z
+
+    icon: /images/img_1044.jpeg
+
+    description: Odyssey is a snappy, responsive experience that you can't find
+      anywhere else, with support for all iOS versions from iOS 13.0-13.7, including
+      A12 & A13 devices.
+    developer: CoolStar
+
+    categories: Jailbreak
+
+    ios_compatible: 13.0 - 13.7
+
+    keywords:
+      - Odyssey
+    main_download:
+      version: 1.4.2
+      appId: odyssey
+      plistUrl: https://storeios.net/plist/odyssey.plist
+    ---
+  keywords:
+    - Odyssey
+  data:
+    size: Không thể lấy kích thước
+    ios_compatible: 13.0 - 13.7
+    keywords:
+      - Odyssey
+    developer: CoolStar
+    main_download:
+      version: 1.4.2
+      appId: odyssey
+      plistUrl: https://storeios.net/plist/odyssey.plist
+    date: 2024-09-06T03:05:01.346Z
+    title: Odyssey
+    icon: /images/img_1044.jpeg
+    categories: Jailbreak
+    description: Odyssey is a snappy, responsive experience that you can't find
+      anywhere else, with support for all iOS versions from iOS 13.0-13.7,
+      including A12 & A13 devices.
+  author: ""
+
+  slug: odyssey
+
+  main_download:
+    version: 1.4.0
+    appId: odyssey
+    plistUrl: https://storeios.net/plist/odyssey.plist
+  newRecord: false
+
+  status: ""
+
+  mediaFiles:
+    - id: 3b470d76f9adb40e6826746cab951d887b41c292
+      name: XinaA15.png
+      size: 9368
+      displayURL:
+        id: 3b470d76f9adb40e6826746cab951d887b41c292
+        path: static/images/XinaA15.png
+      path: static/images/XinaA15.png
+      key: 3e0bb05d-43bb-4156-9645-d6aad6e6db29
+    - id: 701cafdf0cc60be209fbf8041dd1b65805575f29
+      name: access_denied.png
+      size: 991797
+      displayURL:
+        id: 701cafdf0cc60be209fbf8041dd1b65805575f29
+        path: static/images/access_denied.png
+      path: static/images/access_denied.png
+      key: 96dcbc28-940d-4cd5-9be3-b3e60a37809c
+    - id: 529e8756123b677195904435d0653a9f9e0eda03
+      name: chimera.png
+      size: 20249
+      displayURL:
+        id: 529e8756123b677195904435d0653a9f9e0eda03
+        path: static/images/chimera.png
+      path: static/images/chimera.png
+      key: 06ed378b-f0a3-404c-ac03-58bb3f176e57
+    - id: d1f86319d71d98f42e39b8c3a07d2bbcc22d94f9
+      name: dopamine.png
+      size: 840194
+      displayURL:
+        id: d1f86319d71d98f42e39b8c3a07d2bbcc22d94f9
+        path: static/images/dopamine.png
+      path: static/images/dopamine.png
+      key: dba6b473-be99-421d-896e-d03e326e8c39
+    - id: f358e5e8d81bec1f5f87c4af7703b2389e1b278c
+      name: filza.png
+      size: 14477
+      displayURL:
+        id: f358e5e8d81bec1f5f87c4af7703b2389e1b278c
+        path: static/images/filza.png
+      path: static/images/filza.png
+      key: e9d20323-6b8d-472e-8c57-f4f3f8e91f23
+    - id: 5051e491021754b76861ee0dbc2b6cf12f176867
+      name: freya.png
+      size: 28718
+      displayURL:
+        id: 5051e491021754b76861ee0dbc2b6cf12f176867
+        path: static/images/freya.png
+      path: static/images/freya.png
+      key: 1c4be356-4920-45a0-9e8d-77d7d17b54a4
+    - id: f415b3b0918f0c27e902d24beaa21136b7e72e5a
+      name: img_1013.png
+      size: 9247
+      displayURL:
+        id: f415b3b0918f0c27e902d24beaa21136b7e72e5a
+        path: static/images/img_1013.png
+      path: static/images/img_1013.png
+      key: 630c6d31-1651-4e3b-9b15-db015ea974fc
+    - id: 8508747e40ae731207de5b680d87fc80ac701e07
+      name: img_1044.jpeg
+      size: 14026
+      displayURL:
+        id: 8508747e40ae731207de5b680d87fc80ac701e07
+        path: static/images/img_1044.jpeg
+      path: static/images/img_1044.jpeg
+      key: 6005b81d-0095-4861-8c65-0db9acd793a1
+    - id: d81547884e037e9e0cfcee5d7d5cd8786cf2170e
+      name: neko.png
+      size: 18939
+      displayURL:
+        id: d81547884e037e9e0cfcee5d7d5cd8786cf2170e
+        path: static/images/neko.png
+      path: static/images/neko.png
+      key: a7870670-c0e3-4058-ba64-5309ac30d882
+    - id: 966cd9679aa150a73f2b8ba54651302effa90e6b
+      name: phoenix.png
+      size: 133246
+      displayURL:
+        id: 966cd9679aa150a73f2b8ba54651302effa90e6b
+        path: static/images/phoenix.png
+      path: static/images/phoenix.png
+      key: d57af6ca-2c22-469c-a343-c09c483740e7
+    - id: 13760f130b5ef7ff470242012d006160da3cdc03
+      name: taurine.png
+      size: 976321
+      displayURL:
+        id: 13760f130b5ef7ff470242012d006160da3cdc03
+        path: static/images/taurine.png
+      path: static/images/taurine.png
+      key: 0e6a3483-2e8c-47dc-a213-38d0ce7019df
+    - id: 42efd4ec4f4515a04a59d256571d1b3cde486ab8
+      name: unc0ver.png
+      size: 535779
+      displayURL:
+        id: 42efd4ec4f4515a04a59d256571d1b3cde486ab8
+        path: static/images/unc0ver.png
+      path: static/images/unc0ver.png
+      key: f22481de-3577-464a-9276-d1931d173735
+    - id: c9b77f27860371bd62f9f8b129706ab56349d313
+      name: verify.png
+      size: 7319
+      displayURL:
+        id: c9b77f27860371bd62f9f8b129706ab56349d313
+        path: static/images/verify.png
+      path: static/images/verify.png
+      key: 0d87eabf-0331-4674-bc04-1b899f6c2901
+  label: null
+
   title: Odyssey
 
-  date: 2024-09-06T02:29:25.420Z
-
   icon: /images/img_1044.jpeg
+
+  updatedOn: ""
 
   description: Odyssey is a snappy, responsive experience that you can't find
     anywhere else, with support for all iOS versions from iOS 13.0-13.7, including
     A12 & A13 devices.
-  developer: CoolStar
-
   categories: Jailbreak
 
-  ios_compatible: 13.0 - 13.7
+  i18n: {}
 
-  keywords:
-    - Odyssey
-  main_download:
-    version: 1.4.2
-    appId: odyssey
-    plistUrl: https://storeios.net/plist/odyssey.plist
+  collection: jailbreak-tools
+
   ---
-keywords:
-  - Odyssey
 data:
-  size: Không thể lấy kích thước
+  partial: false
+  path: content/jailbreak-tools/odyssey.md
+  meta:
+    path: content/jailbreak-tools/odyssey.md
   ios_compatible: 13.0 - 13.7
+  isModification: null
+  raw: >
+    ---
+
+    title: Odyssey
+
+    date: 2024-09-06T02:29:25.420Z
+
+    icon: /images/img_1044.jpeg
+
+    description: Odyssey is a snappy, responsive experience that you can't find
+      anywhere else, with support for all iOS versions from iOS 13.0-13.7, including
+      A12 & A13 devices.
+    developer: CoolStar
+
+    categories: Jailbreak
+
+    ios_compatible: 13.0 - 13.7
+
+    keywords:
+      - Odyssey
+    main_download:
+      version: 1.4.2
+      appId: odyssey
+      plistUrl: https://storeios.net/plist/odyssey.plist
+    ---
   keywords:
     - Odyssey
+  data:
+    size: Không thể lấy kích thước
+    ios_compatible: 13.0 - 13.7
+    keywords:
+      - Odyssey
+    developer: CoolStar
+    main_download:
+      version: 1.4.2
+      appId: odyssey
+      plistUrl: https://storeios.net/plist/odyssey.plist
+    date: 2024-09-06T03:05:01.346Z
+    title: Odyssey
+    icon: /images/img_1044.jpeg
+    categories: Jailbreak
+    description: Odyssey is a snappy, responsive experience that you can't find
+      anywhere else, with support for all iOS versions from iOS 13.0-13.7,
+      including A12 & A13 devices.
   developer: CoolStar
+  author: ""
+  slug: odyssey
   main_download:
-    version: 1.4.2
+    version: 1.4.0
     appId: odyssey
     plistUrl: https://storeios.net/plist/odyssey.plist
-  date: 2024-09-06T03:05:01.346Z
+  date: 2024-09-06T11:05:42.453Z
+  newRecord: false
+  status: ""
+  mediaFiles:
+    - id: 3b470d76f9adb40e6826746cab951d887b41c292
+      name: XinaA15.png
+      size: 9368
+      displayURL:
+        id: 3b470d76f9adb40e6826746cab951d887b41c292
+        path: static/images/XinaA15.png
+      path: static/images/XinaA15.png
+      key: 3e0bb05d-43bb-4156-9645-d6aad6e6db29
+    - id: 701cafdf0cc60be209fbf8041dd1b65805575f29
+      name: access_denied.png
+      size: 991797
+      displayURL:
+        id: 701cafdf0cc60be209fbf8041dd1b65805575f29
+        path: static/images/access_denied.png
+      path: static/images/access_denied.png
+      key: 96dcbc28-940d-4cd5-9be3-b3e60a37809c
+    - id: 529e8756123b677195904435d0653a9f9e0eda03
+      name: chimera.png
+      size: 20249
+      displayURL:
+        id: 529e8756123b677195904435d0653a9f9e0eda03
+        path: static/images/chimera.png
+      path: static/images/chimera.png
+      key: 06ed378b-f0a3-404c-ac03-58bb3f176e57
+    - id: d1f86319d71d98f42e39b8c3a07d2bbcc22d94f9
+      name: dopamine.png
+      size: 840194
+      displayURL:
+        id: d1f86319d71d98f42e39b8c3a07d2bbcc22d94f9
+        path: static/images/dopamine.png
+      path: static/images/dopamine.png
+      key: dba6b473-be99-421d-896e-d03e326e8c39
+    - id: f358e5e8d81bec1f5f87c4af7703b2389e1b278c
+      name: filza.png
+      size: 14477
+      displayURL:
+        id: f358e5e8d81bec1f5f87c4af7703b2389e1b278c
+        path: static/images/filza.png
+      path: static/images/filza.png
+      key: e9d20323-6b8d-472e-8c57-f4f3f8e91f23
+    - id: 5051e491021754b76861ee0dbc2b6cf12f176867
+      name: freya.png
+      size: 28718
+      displayURL:
+        id: 5051e491021754b76861ee0dbc2b6cf12f176867
+        path: static/images/freya.png
+      path: static/images/freya.png
+      key: 1c4be356-4920-45a0-9e8d-77d7d17b54a4
+    - id: f415b3b0918f0c27e902d24beaa21136b7e72e5a
+      name: img_1013.png
+      size: 9247
+      displayURL:
+        id: f415b3b0918f0c27e902d24beaa21136b7e72e5a
+        path: static/images/img_1013.png
+      path: static/images/img_1013.png
+      key: 630c6d31-1651-4e3b-9b15-db015ea974fc
+    - id: 8508747e40ae731207de5b680d87fc80ac701e07
+      name: img_1044.jpeg
+      size: 14026
+      displayURL:
+        id: 8508747e40ae731207de5b680d87fc80ac701e07
+        path: static/images/img_1044.jpeg
+      path: static/images/img_1044.jpeg
+      key: 6005b81d-0095-4861-8c65-0db9acd793a1
+    - id: d81547884e037e9e0cfcee5d7d5cd8786cf2170e
+      name: neko.png
+      size: 18939
+      displayURL:
+        id: d81547884e037e9e0cfcee5d7d5cd8786cf2170e
+        path: static/images/neko.png
+      path: static/images/neko.png
+      key: a7870670-c0e3-4058-ba64-5309ac30d882
+    - id: 966cd9679aa150a73f2b8ba54651302effa90e6b
+      name: phoenix.png
+      size: 133246
+      displayURL:
+        id: 966cd9679aa150a73f2b8ba54651302effa90e6b
+        path: static/images/phoenix.png
+      path: static/images/phoenix.png
+      key: d57af6ca-2c22-469c-a343-c09c483740e7
+    - id: 13760f130b5ef7ff470242012d006160da3cdc03
+      name: taurine.png
+      size: 976321
+      displayURL:
+        id: 13760f130b5ef7ff470242012d006160da3cdc03
+        path: static/images/taurine.png
+      path: static/images/taurine.png
+      key: 0e6a3483-2e8c-47dc-a213-38d0ce7019df
+    - id: 42efd4ec4f4515a04a59d256571d1b3cde486ab8
+      name: unc0ver.png
+      size: 535779
+      displayURL:
+        id: 42efd4ec4f4515a04a59d256571d1b3cde486ab8
+        path: static/images/unc0ver.png
+      path: static/images/unc0ver.png
+      key: f22481de-3577-464a-9276-d1931d173735
+    - id: c9b77f27860371bd62f9f8b129706ab56349d313
+      name: verify.png
+      size: 7319
+      displayURL:
+        id: c9b77f27860371bd62f9f8b129706ab56349d313
+        path: static/images/verify.png
+      path: static/images/verify.png
+      key: 0d87eabf-0331-4674-bc04-1b899f6c2901
+  label: null
   title: Odyssey
   icon: /images/img_1044.jpeg
+  updatedOn: ""
   categories: Jailbreak
   description: Odyssey is a snappy, responsive experience that you can't find
     anywhere else, with support for all iOS versions from iOS 13.0-13.7,
     including A12 & A13 devices.
+  i18n: {}
+  collection: jailbreak-tools
 author: ""
 slug: odyssey
-main_download:
-  version: 1.4.0
-  appId: odyssey
-  plistUrl: https://storeios.net/plist/odyssey.plist
 newRecord: false
 status: ""
 mediaFiles:
@@ -67,7 +388,7 @@ mediaFiles:
       id: 3b470d76f9adb40e6826746cab951d887b41c292
       path: static/images/XinaA15.png
     path: static/images/XinaA15.png
-    key: 3e0bb05d-43bb-4156-9645-d6aad6e6db29
+    key: 91dd4848-6ea8-4056-af9d-08a79991efc6
   - id: 701cafdf0cc60be209fbf8041dd1b65805575f29
     name: access_denied.png
     size: 991797
@@ -75,7 +396,7 @@ mediaFiles:
       id: 701cafdf0cc60be209fbf8041dd1b65805575f29
       path: static/images/access_denied.png
     path: static/images/access_denied.png
-    key: 96dcbc28-940d-4cd5-9be3-b3e60a37809c
+    key: 62fae75d-8bf6-48d8-b347-444bbc592e6c
   - id: 529e8756123b677195904435d0653a9f9e0eda03
     name: chimera.png
     size: 20249
@@ -83,7 +404,7 @@ mediaFiles:
       id: 529e8756123b677195904435d0653a9f9e0eda03
       path: static/images/chimera.png
     path: static/images/chimera.png
-    key: 06ed378b-f0a3-404c-ac03-58bb3f176e57
+    key: 2a1f70da-978d-4249-995c-3c4e1f641b96
   - id: d1f86319d71d98f42e39b8c3a07d2bbcc22d94f9
     name: dopamine.png
     size: 840194
@@ -91,7 +412,7 @@ mediaFiles:
       id: d1f86319d71d98f42e39b8c3a07d2bbcc22d94f9
       path: static/images/dopamine.png
     path: static/images/dopamine.png
-    key: dba6b473-be99-421d-896e-d03e326e8c39
+    key: 77431d5c-55ce-4230-9a08-8d1cc7d0e975
   - id: f358e5e8d81bec1f5f87c4af7703b2389e1b278c
     name: filza.png
     size: 14477
@@ -99,7 +420,7 @@ mediaFiles:
       id: f358e5e8d81bec1f5f87c4af7703b2389e1b278c
       path: static/images/filza.png
     path: static/images/filza.png
-    key: e9d20323-6b8d-472e-8c57-f4f3f8e91f23
+    key: 61a8e2e1-4638-4152-9ed3-8b67f734da67
   - id: 5051e491021754b76861ee0dbc2b6cf12f176867
     name: freya.png
     size: 28718
@@ -107,7 +428,7 @@ mediaFiles:
       id: 5051e491021754b76861ee0dbc2b6cf12f176867
       path: static/images/freya.png
     path: static/images/freya.png
-    key: 1c4be356-4920-45a0-9e8d-77d7d17b54a4
+    key: b5b752e9-7eb3-4330-be96-77e61edba6fe
   - id: f415b3b0918f0c27e902d24beaa21136b7e72e5a
     name: img_1013.png
     size: 9247
@@ -115,7 +436,7 @@ mediaFiles:
       id: f415b3b0918f0c27e902d24beaa21136b7e72e5a
       path: static/images/img_1013.png
     path: static/images/img_1013.png
-    key: 630c6d31-1651-4e3b-9b15-db015ea974fc
+    key: b0dfbdcb-925a-4955-bb75-01ba7a74f6a1
   - id: 8508747e40ae731207de5b680d87fc80ac701e07
     name: img_1044.jpeg
     size: 14026
@@ -123,7 +444,7 @@ mediaFiles:
       id: 8508747e40ae731207de5b680d87fc80ac701e07
       path: static/images/img_1044.jpeg
     path: static/images/img_1044.jpeg
-    key: 6005b81d-0095-4861-8c65-0db9acd793a1
+    key: ab8a9b6c-3128-44da-883a-176ba41032e9
   - id: d81547884e037e9e0cfcee5d7d5cd8786cf2170e
     name: neko.png
     size: 18939
@@ -131,7 +452,7 @@ mediaFiles:
       id: d81547884e037e9e0cfcee5d7d5cd8786cf2170e
       path: static/images/neko.png
     path: static/images/neko.png
-    key: a7870670-c0e3-4058-ba64-5309ac30d882
+    key: 976af923-6a3d-424d-817d-1e9ed12ae871
   - id: 966cd9679aa150a73f2b8ba54651302effa90e6b
     name: phoenix.png
     size: 133246
@@ -139,7 +460,7 @@ mediaFiles:
       id: 966cd9679aa150a73f2b8ba54651302effa90e6b
       path: static/images/phoenix.png
     path: static/images/phoenix.png
-    key: d57af6ca-2c22-469c-a343-c09c483740e7
+    key: f1c57981-3f4e-4473-b2db-255b185c9eea
   - id: 13760f130b5ef7ff470242012d006160da3cdc03
     name: taurine.png
     size: 976321
@@ -147,7 +468,7 @@ mediaFiles:
       id: 13760f130b5ef7ff470242012d006160da3cdc03
       path: static/images/taurine.png
     path: static/images/taurine.png
-    key: 0e6a3483-2e8c-47dc-a213-38d0ce7019df
+    key: f6a167cd-5272-4ce3-b3e1-3483cb8dafbf
   - id: 42efd4ec4f4515a04a59d256571d1b3cde486ab8
     name: unc0ver.png
     size: 535779
@@ -155,7 +476,7 @@ mediaFiles:
       id: 42efd4ec4f4515a04a59d256571d1b3cde486ab8
       path: static/images/unc0ver.png
     path: static/images/unc0ver.png
-    key: f22481de-3577-464a-9276-d1931d173735
+    key: ae8c7c19-16f6-4cb6-9b94-d1a7dcd95801
   - id: c9b77f27860371bd62f9f8b129706ab56349d313
     name: verify.png
     size: 7319
@@ -163,15 +484,9 @@ mediaFiles:
       id: c9b77f27860371bd62f9f8b129706ab56349d313
       path: static/images/verify.png
     path: static/images/verify.png
-    key: 0d87eabf-0331-4674-bc04-1b899f6c2901
+    key: 6e05256a-7bbd-428f-b478-bf7c3f5320ac
 label: null
-title: Odyssey
-icon: /images/img_1044.jpeg
 updatedOn: ""
-description: Odyssey is a snappy, responsive experience that you can't find
-  anywhere else, with support for all iOS versions from iOS 13.0-13.7, including
-  A12 & A13 devices.
-categories: Jailbreak
 i18n: {}
 collection: jailbreak-tools
 ---
