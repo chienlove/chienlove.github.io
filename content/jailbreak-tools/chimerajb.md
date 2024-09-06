@@ -8,7 +8,7 @@ description: Chimera is the first true iOS 12 jailbreak to not only feature a
   Chimera doesn't tamper with user files, making it safer than alternatives.
 developer: CoolStar
 categories: Jailbreak
-size: Updating…
+size: ""
 ios_compatible: 12.0 - 12.5.7
 keywords:
   - ChimeraJB
