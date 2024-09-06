@@ -38,17 +38,18 @@
         console.log('API response:', data);
 
         if (data.size) {
-          // Cập nhật kích thước file trong entry
-          entry = entry.setIn(['data', 'size'], data.size);
+          // Cập nhật kích thước file trực tiếp vào CMS thông qua API quản lý bài viết
+          const updatedEntry = entry.setIn(['data', 'size'], data.size);
           console.log('Cập nhật kích thước:', data.size);
+          return updatedEntry; // Trả về entry đã cập nhật
         } else {
           console.error('Không thể lấy kích thước file từ API');
+          return entry;
         }
       } catch (error) {
         console.error(`Lỗi: ${error.message}`);
+        return entry;
       }
-
-      return entry;  // Trả về entry đã được cập nhật
     };
 
     // Đăng ký sự kiện preSave để cập nhật kích thước file trước khi lưu
