@@ -26,13 +26,17 @@
       }
 
       const plistUrl = mainDownload.get('plistUrl');
+      console.log(`Fetching IPA size from URL: ${plistUrl}`);
 
       try {
         const response = await fetch(`/api/getIpaSize?url=${encodeURIComponent(plistUrl)}`);
         const data = await response.json();
+        console.log('API response:', data); // Kiểm tra phản hồi API
+
         if (data.size) {
           // Cập nhật kích thước file
           entry.get('data').set('size', data.size);
+          console.log('Updated size:', data.size); // Kiểm tra log cập nhật kích thước
         } else {
           throw new Error(data.error || 'Không thể lấy kích thước file');
         }
@@ -42,18 +46,24 @@
       }
     };
 
-    // Đăng ký sự kiện preSave
+    // Đăng ký sự kiện preSave để cập nhật kích thước file trước khi lưu
     CMS.registerEventListener({
       name: 'preSave',
       handler: async ({ entry }) => {
-        // Kiểm tra và cập nhật kích thước file trước khi lưu
         if (entry.get('main_download')) {
           await updateFileSize(entry);
+        }
+        // Thêm log để kiểm tra xem kích thước đã được cập nhật
+        const size = entry.get('data').get('size');
+        if (size) {
+          console.log('Kích thước đã được cập nhật trước khi lưu:', size);
+        } else {
+          console.error('Kích thước không được cập nhật');
         }
       },
     });
 
-    // Đăng ký sự kiện change để theo dõi khi URL plist thay đổi
+    // Đăng ký sự kiện change để cập nhật kích thước khi plistUrl thay đổi
     CMS.registerEventListener({
       name: 'change',
       handler: ({ entry }) => {
