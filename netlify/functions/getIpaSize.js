@@ -18,14 +18,16 @@ exports.handler = async function(event) {
     if (url.endsWith('.plist')) {
       console.log('Đang xử lý file plist từ URL:', url);
 
+      // Gửi yêu cầu GET để tải nội dung file plist
       const plistResponse = await axios.get(url);
-      console.log('Phản hồi từ plist:', plistResponse.data); // Log dữ liệu plist
+      console.log('Phản hồi từ plist:', plistResponse.data); // Log dữ liệu plist nhận được
 
+      // Phân tích nội dung plist
       const plistData = plist.parse(plistResponse.data);
-      console.log('Dữ liệu plist đã phân tích:', plistData);
+      console.log('Dữ liệu plist đã phân tích:', plistData); // Log dữ liệu plist sau khi phân tích
 
-      // Trích xuất URL IPA từ file plist
-      const ipaAsset = plistData.items[0].assets.find(asset => asset.kind === 'software-package');
+      // Trích xuất URL IPA từ file plist (kiểu "software-package")
+      const ipaAsset = plistData.items && plistData.items[0].assets.find(asset => asset.kind === 'software-package');
       if (!ipaAsset || !ipaAsset.url) {
         console.error('Không thể tìm thấy URL IPA trong file plist');
         return {
@@ -33,14 +35,15 @@ exports.handler = async function(event) {
           body: JSON.stringify({ error: 'Không thể tìm thấy URL IPA trong file plist' }),
         };
       }
+
       ipaUrl = ipaAsset.url;
-      console.log('URL IPA đã trích xuất:', ipaUrl);
+      console.log('URL IPA đã trích xuất:', ipaUrl); // Log URL IPA
     }
 
     // Gửi yêu cầu HEAD để lấy kích thước file IPA
     console.log('Đang gửi yêu cầu HEAD tới URL IPA:', ipaUrl);
     const response = await axios.head(ipaUrl);
-    console.log('Phản hồi từ yêu cầu HEAD:', response.headers);
+    console.log('Phản hồi từ yêu cầu HEAD:', response.headers); // Log phản hồi từ HEAD
 
     const fileSize = response.headers['content-length'];
     if (fileSize) {
@@ -60,7 +63,7 @@ exports.handler = async function(event) {
     console.error('Lỗi trong quá trình xử lý:', error.message);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Lỗi khi lấy kích thước file' }),
+      body: JSON.stringify({ error: `Lỗi khi lấy kích thước file: ${error.message}` }),
     };
   }
 };
