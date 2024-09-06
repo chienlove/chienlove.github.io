@@ -13,10 +13,10 @@ exports.handler = async function(event) {
 
   try {
     let ipaUrl = url;
-    
+
     // Nếu là URL .plist, trích xuất URL IPA từ nó
     if (url.endsWith('.plist')) {
-      console.log('Đang xử lý file plist...');
+      console.log('Đang xử lý file plist từ URL:', url);
 
       const plistResponse = await axios.get(url);
       console.log('Phản hồi từ plist:', plistResponse.data); // Log dữ liệu plist
@@ -24,15 +24,25 @@ exports.handler = async function(event) {
       const plistData = plist.parse(plistResponse.data);
       console.log('Dữ liệu plist đã phân tích:', plistData);
 
-      // Trích xuất URL IPA từ file plist theo cấu trúc
-      ipaUrl = plistData.items[0].assets.find(asset => asset.kind === 'software-package').url;
+      // Trích xuất URL IPA từ file plist
+      const ipaAsset = plistData.items[0].assets.find(asset => asset.kind === 'software-package');
+      if (!ipaAsset || !ipaAsset.url) {
+        console.error('Không thể tìm thấy URL IPA trong file plist');
+        return {
+          statusCode: 400,
+          body: JSON.stringify({ error: 'Không thể tìm thấy URL IPA trong file plist' }),
+        };
+      }
+      ipaUrl = ipaAsset.url;
       console.log('URL IPA đã trích xuất:', ipaUrl);
     }
 
     // Gửi yêu cầu HEAD để lấy kích thước file IPA
+    console.log('Đang gửi yêu cầu HEAD tới URL IPA:', ipaUrl);
     const response = await axios.head(ipaUrl);
-    const fileSize = response.headers['content-length'];
+    console.log('Phản hồi từ yêu cầu HEAD:', response.headers);
 
+    const fileSize = response.headers['content-length'];
     if (fileSize) {
       const fileSizeMB = (parseInt(fileSize) / (1024 * 1024)).toFixed(2);
       return {
