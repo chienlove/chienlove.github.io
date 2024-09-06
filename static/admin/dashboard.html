@@ -17,7 +17,7 @@
   <script>
     // Hàm lấy kích thước file từ API
     const updateFileSize = async (entry) => {
-      const mainDownload = entry.get('main_download');
+      const mainDownload = entry.getIn(['data', 'main_download']);
 
       // Kiểm tra nếu 'main_download' không tồn tại
       if (!mainDownload || !mainDownload.get('plistUrl')) {
@@ -50,9 +50,8 @@
     CMS.registerEventListener({
       name: 'preSave',
       handler: async ({ entry }) => {
-        if (entry.get('main_download')) {
-          await updateFileSize(entry);
-        }
+        console.log('preSave triggered');
+        await updateFileSize(entry);
       },
     });
 
@@ -60,17 +59,17 @@
     CMS.registerEventListener({
       name: 'change',
       handler: ({ entry }) => {
-        if (entry.get('main_download') && entry.get('main_download').get('plistUrl')) {
+        if (entry.getIn(['data', 'main_download']) && entry.getIn(['data', 'main_download', 'plistUrl'])) {
           updateFileSize(entry);
         }
       },
     });
 
-    // Thêm sự kiện load để cập nhật kích thước khi bài viết cũ được mở
+    // Đăng ký sự kiện load để cập nhật kích thước khi bài viết cũ được mở
     CMS.registerEventListener({
       name: 'load',
       handler: ({ entry }) => {
-        if (entry.get('main_download') && entry.get('main_download').get('plistUrl')) {
+        if (entry.getIn(['data', 'main_download']) && entry.getIn(['data', 'main_download', 'plistUrl'])) {
           updateFileSize(entry);
         }
       },
