@@ -19,7 +19,10 @@ exports.handler = async function(event) {
       console.log('Đang xử lý file plist...');
 
       const plistResponse = await axios.get(url);
+      console.log('Phản hồi từ plist:', plistResponse.data); // Log dữ liệu plist
+
       const plistData = plist.parse(plistResponse.data);
+      console.log('Dữ liệu plist đã phân tích:', plistData);
 
       // Trích xuất URL IPA từ file plist theo cấu trúc
       ipaUrl = plistData.items[0].assets.find(asset => asset.kind === 'software-package').url;
@@ -37,12 +40,14 @@ exports.handler = async function(event) {
         body: JSON.stringify({ size: `${fileSizeMB} MB` }),
       };
     } else {
+      console.error('Không thể tìm thấy kích thước file');
       return {
         statusCode: 404,
-        body: JSON.stringify({ error: 'Không thể lấy kích thước file' }),
+        body: JSON.stringify({ error: 'Không thể tìm thấy kích thước file' }),
       };
     }
   } catch (error) {
+    console.error('Lỗi trong quá trình xử lý:', error.message);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: 'Lỗi khi lấy kích thước file' }),
