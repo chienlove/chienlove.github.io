@@ -53,19 +53,22 @@
         if (entry.get('main_download')) {
           await updateFileSize(entry);
         }
-        // Thêm log để kiểm tra xem kích thước đã được cập nhật
-        const size = entry.get('data').get('size');
-        if (size) {
-          console.log('Kích thước đã được cập nhật trước khi lưu:', size);
-        } else {
-          console.error('Kích thước không được cập nhật');
-        }
       },
     });
 
     // Đăng ký sự kiện change để cập nhật kích thước khi plistUrl thay đổi
     CMS.registerEventListener({
       name: 'change',
+      handler: ({ entry }) => {
+        if (entry.get('main_download') && entry.get('main_download').get('plistUrl')) {
+          updateFileSize(entry);
+        }
+      },
+    });
+
+    // Thêm sự kiện load để cập nhật kích thước khi bài viết cũ được mở
+    CMS.registerEventListener({
+      name: 'load',
       handler: ({ entry }) => {
         if (entry.get('main_download') && entry.get('main_download').get('plistUrl')) {
           updateFileSize(entry);
