@@ -33,49 +33,40 @@
       }
     };
 
-    // Thêm nút vào CMS để cập nhật kích thước
-    CMS.registerWidget('update-size-button', () => {
-      return class UpdateSizeButton extends React.Component {
-        constructor(props) {
-          super(props);
-          this.handleClick = this.handleClick.bind(this);
-        }
+    // Widget tùy chỉnh cho nút "Cập nhật kích thước"
+    const SizeUpdateControl = createClass({
+      handleClick: async function() {
+        const { value, forID, setActiveStyle, setInactiveStyle, entry, onChange } = this.props;
 
-        // Hàm xử lý khi nhấn nút
-        async handleClick() {
-          const { entry, onChange } = this.props;
-          const mainDownload = entry.getIn(['data', 'main_download']);
-          
-          if (mainDownload && mainDownload.get('plistUrl')) {
-            const plistUrl = mainDownload.get('plistUrl');
-            console.log('URL plist:', plistUrl);
+        // Lấy URL plist từ entry
+        const mainDownload = entry.getIn(['data', 'main_download']);
+        if (mainDownload && mainDownload.get('plistUrl')) {
+          const plistUrl = mainDownload.get('plistUrl');
+          console.log('URL plist:', plistUrl);
 
-            const fileSize = await fetchFileSize(plistUrl);  // Gọi API để lấy kích thước
+          const fileSize = await fetchFileSize(plistUrl);  // Gọi API để lấy kích thước
 
-            if (fileSize) {
-              // Cập nhật trường 'size' trong entry
-              const updatedEntry = entry.setIn(['data', 'size'], fileSize);
-              onChange(updatedEntry);  // Cập nhật bài viết với kích thước mới
-              alert('Kích thước đã được cập nhật: ' + fileSize);
-            } else {
-              alert('Không thể cập nhật kích thước file');
-            }
+          if (fileSize) {
+            onChange(fileSize);  // Cập nhật giá trị kích thước
+            alert('Kích thước đã được cập nhật: ' + fileSize);
           } else {
-            alert('URL plist không tồn tại');
+            alert('Không thể cập nhật kích thước file');
           }
+        } else {
+          alert('URL plist không tồn tại');
         }
+      },
 
-        render() {
-          return (
-            <button type="button" onClick={this.handleClick} className="nc-generic-button">
-              Cập nhật kích thước
-            </button>
-          );
-        }
+      render: function() {
+        return h('div', {},
+          h('button', { type: 'button', onClick: this.handleClick }, 'Cập nhật kích thước')
+        );
       }
     });
 
-    // Khởi tạo CMS với cấu hình và thêm widget
+    CMS.registerWidget('update-size', SizeUpdateControl);
+
+    // Khởi tạo CMS với cấu hình
     CMS.init({
       config: {
         backend: {
