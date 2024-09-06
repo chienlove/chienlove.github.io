@@ -2,14 +2,18 @@ const validTokens = new Map();
 
 export default async (request, context) => {
   const url = new URL(request.url);
+  
+  // Kiểm tra nếu yêu cầu đến từ Netlify bằng cách kiểm tra User-Agent hoặc header đặc biệt
+  const isNetlifyRequest = request.headers.get('user-agent')?.includes('Netlify') || 
+                           request.headers.get('X-Netlify-Request') === 'true';
 
-  // Handle token generation
+  // Xử lý việc tạo token
   if (request.method === 'POST' && url.pathname === '/generate-token') {
     const token = generateToken();
-    const expirationTime = Date.now() + 30000; // Token expires in 30 seconds
+    const expirationTime = Date.now() + 30000; // Token hết hạn sau 30 giây
     validTokens.set(token, { expirationTime, url: url.searchParams.get('url') });
     
-    // Schedule token cleanup after expiration time
+    // Đặt thời gian hết hạn token và xoá token khi hết hạn
     setTimeout(() => {
       validTokens.delete(token);
     }, expirationTime - Date.now());
@@ -17,7 +21,7 @@ export default async (request, context) => {
     return new Response(token, { status: 200 });
   }
 
-  // Handle the itms-services request with token
+  // Xử lý yêu cầu itms-services với token
   if (url.searchParams.get('action') === 'download-manifest') {
     const plistToken = url.searchParams.get('token');
     const plistUrl = decodeURIComponent(url.searchParams.get('url'));
@@ -25,9 +29,9 @@ export default async (request, context) => {
     if (plistToken && validTokens.has(plistToken)) {
       const tokenData = validTokens.get(plistToken);
 
-      // Ensure token is used only for the intended URL and is still valid
+      // Đảm bảo token chỉ được sử dụng cho URL cụ thể và vẫn còn hiệu lực
       if (Date.now() < tokenData.expirationTime && tokenData.url === plistUrl) {
-        validTokens.delete(plistToken); // Immediately delete token after use
+        validTokens.delete(plistToken); // Xoá token ngay sau khi sử dụng
         
         const response = await fetch(plistUrl);
         const plistContent = await response.text();
@@ -41,21 +45,25 @@ export default async (request, context) => {
           }
         });
       } else {
-        validTokens.delete(plistToken); // Clean up expired or invalid token
-        return new Response('Token expired or invalid', { status: 403 });
+        validTokens.delete(plistToken); // Xoá token hết hạn hoặc không hợp lệ
+        return new Response('Token hết hạn hoặc không hợp lệ', { status: 403 });
       }
     } else {
-      return new Response('Invalid or expired token', { status: 403 });
+      return new Response('Token không hợp lệ hoặc đã hết hạn', { status: 403 });
     }
   }
 
-  // Block direct access to plist files without token
+  // Chặn truy cập trực tiếp vào các file plist nếu không có token hợp lệ
   if (url.pathname.endsWith('.plist') || url.pathname.startsWith('/plist')) {
     const plistToken = url.searchParams.get('token');
 
-    if (!plistToken || !validTokens.has(plistToken)) {
-      return Response.redirect('/access-denied', 302);
+    // Nếu là yêu cầu từ Netlify hoặc token hợp lệ, bỏ qua việc chặn
+    if (isNetlifyRequest || (plistToken && validTokens.has(plistToken))) {
+      return context.next();
     }
+
+    // Nếu không có token hợp lệ và không phải yêu cầu từ Netlify, chặn truy cập
+    return Response.redirect('/access-denied', 302);
   }
 
   return context.next();
