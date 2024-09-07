@@ -11,7 +11,7 @@
 
 [[edge_functions]]
   function = "block"
-  path = "/"
+  path = "/api/*"
 
 [[redirects]]
   from = "/api/*"
