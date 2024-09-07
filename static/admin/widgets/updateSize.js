@@ -1,52 +1,46 @@
-import React from 'react';
-import { TextControl } from '@wordpress/components';
+var createClass = window.createClass;
+var h = window.h;
 
-const UpdateSizeControl = ({ onChange, value }) => {
-  const [isUpdating, setIsUpdating] = React.useState(false);
+var UpdateSizeControl = createClass({
+  handleChange: function(e) {
+    this.props.onChange(e.target.value);
+  },
 
-  const updateSize = async () => {
-    setIsUpdating(true);
-    const plistUrl = document.querySelector('input[name="main_download.plistUrl"]').value;
+  updateSize: function() {
+    var self = this;
+    var plistUrl = document.querySelector('input[name="main_download.plistUrl"]').value;
     
     if (!plistUrl) {
       alert('Vui lòng nhập URL Plist trước khi cập nhật kích thước.');
-      setIsUpdating(false);
       return;
     }
 
-    try {
-      const response = await fetch(`/.netlify/functions/getIpaSize?url=${encodeURIComponent(plistUrl)}`);
-      const data = await response.json();
-      
-      if (data.error) {
-        throw new Error(data.error);
-      }
-      
-      onChange(data.size);
-    } catch (error) {
-      console.error('Error updating size:', error);
-      alert(`Lỗi khi cập nhật kích thước: ${error.message}`);
-    } finally {
-      setIsUpdating(false);
-    }
-  };
+    fetch('/.netlify/functions/getIpaSize?url=' + encodeURIComponent(plistUrl))
+      .then(function(response) { return response.json(); })
+      .then(function(data) {
+        if (data.error) {
+          throw new Error(data.error);
+        }
+        self.props.onChange(data.size);
+      })
+      .catch(function(error) {
+        console.error('Error updating size:', error);
+        alert('Lỗi khi cập nhật kích thước: ' + error.message);
+      });
+  },
 
-  return (
-    <div>
-      <TextControl
-        label="Kích thước"
-        value={value || ''}
-        onChange={onChange}
-      />
-      <button onClick={updateSize} disabled={isUpdating}>
-        {isUpdating ? 'Đang cập nhật...' : 'Cập nhật kích thước'}
-      </button>
-    </div>
-  );
-};
+  render: function() {
+    var value = this.props.value || '';
 
-// Đảm bảo export đúng cách
-export default UpdateSizeControl;
+    return h('div', {},
+      h('input', {
+        type: 'text',
+        value: value,
+        onChange: this.handleChange
+      }),
+      h('button', { onClick: this.updateSize }, 'Cập nhật kích thước')
+    );
+  }
+});
 
-// Nếu sử dụng CMS.registerWidget, thêm dòng sau
-window.updateSizeControl = UpdateSizeControl;
+CMS.registerWidget('update-size', UpdateSizeControl);
