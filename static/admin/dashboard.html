@@ -11,10 +11,11 @@
   <script src="https://unpkg.com/netlify-cms@^2.10.192/dist/netlify-cms.js"></script>
   
   <script>
-    const UpdateSizeControl = createClass({
+    const DebugUpdateSizeControl = createClass({
   getInitialState() {
     return {
       inputValue: this.props.value || '',
+      debugMessage: ''
     };
   },
 
@@ -22,25 +23,42 @@
     this.setState({ inputValue: e.target.value });
   },
 
+  setDebugMessage(message) {
+    this.setState({ debugMessage: message });
+    console.log(message); // Log để dễ dàng debug
+  },
+
   handleUpdateSize: async function() {
-    const plistUrl = document.querySelector('[name="main_download.plistUrl"]').value;
-    if (!plistUrl) {
-      alert('Vui lòng nhập URL Plist trước');
+    this.setDebugMessage('Bắt đầu cập nhật kích thước...');
+    
+    const plistUrlInput = document.querySelector('[name="main_download.plistUrl"]');
+    if (!plistUrlInput) {
+      this.setDebugMessage('Không tìm thấy trường URL Plist');
       return;
     }
 
+    const plistUrl = plistUrlInput.value;
+    if (!plistUrl) {
+      this.setDebugMessage('URL Plist trống. Vui lòng nhập URL Plist trước');
+      return;
+    }
+
+    this.setDebugMessage('Đang gọi API để lấy kích thước...');
     try {
-      const fileSize = await fetchFileSize(plistUrl);
-      if (fileSize) {
-        this.props.onChange(fileSize);
-        this.setState({ inputValue: fileSize });
-        alert('Kích thước đã được cập nhật: ' + fileSize);
+      const response = await fetch(`/.netlify/functions/getIpaSize?url=${encodeURIComponent(plistUrl)}`);
+      const data = await response.json();
+      
+      if (data.size) {
+        this.setDebugMessage(`Kích thước nhận được: ${data.size}`);
+        this.props.onChange(data.size);
+        this.setState({ inputValue: data.size });
+      } else if (data.error) {
+        this.setDebugMessage(`Lỗi: ${data.error}`);
       } else {
-        alert('Không thể cập nhật kích thước file');
+        this.setDebugMessage('Không nhận được kích thước hợp lệ từ API');
       }
     } catch (error) {
-      console.error('Lỗi khi cập nhật kích thước:', error);
-      alert('Đã xảy ra lỗi khi cập nhật kích thước');
+      this.setDebugMessage(`Lỗi khi gọi API: ${error.message}`);
     }
   },
 
@@ -50,21 +68,22 @@
       h('input', {
         type: 'text',
         id: forID,
-        className: 'update-size-input',
+        className: 'debug-update-size-input',
         value: this.state.inputValue,
         onChange: this.handleInputChange,
-        style: { width: '200px' }  // Giới hạn chiều rộng của input
+        style: { width: '200px' }
       }),
       h('button', {
-        className: 'update-size-button',
+        className: 'debug-update-size-button',
         onClick: this.handleUpdateSize,
         style: { marginLeft: '10px' }
-      }, 'Cập nhật kích thước')
+      }, 'Cập nhật kích thước'),
+      h('div', { style: { marginTop: '10px', color: 'red' } }, this.state.debugMessage)
     );
   }
 });
 
-CMS.registerWidget('update-size', UpdateSizeControl);
+CMS.registerWidget('update-size', DebugUpdateSizeControl);
 
     // Khởi tạo CMS
     CMS.init();
