@@ -11,70 +11,60 @@
   <script src="https://unpkg.com/netlify-cms@^2.10.192/dist/netlify-cms.js"></script>
   
   <script>
-    // Hàm gọi API Netlify Function để lấy kích thước file IPA
-    const fetchFileSize = async (plistUrl) => {
-      try {
-        console.log('Gọi API để lấy kích thước với URL:', plistUrl);
-        const response = await fetch(`/.netlify/functions/getIpaSize?url=${encodeURIComponent(plistUrl)}`);
-        const data = await response.json();
-        if (data.size) {
-          console.log('API trả về kích thước:', data.size);
-          return data.size;
-        } else {
-          console.error('API không trả về kích thước hợp lệ');
-          return null;
-        }
-      } catch (error) {
-        console.error('Lỗi khi gọi API:', error);
-        return null;
-      }
-    };
-
-    // Widget tùy chỉnh cho nút "Cập nhật kích thước"
     const UpdateSizeControl = createClass({
-      handleUpdateSize: async function() {
-        const { value, onChange, forID, field } = this.props;
-        const plistUrl = document.querySelector('[name="main_download.plistUrl"]').value;
-        if (!plistUrl) {
-          alert('Vui lòng nhập URL Plist trước');
-          return;
-        }
+  getInitialState() {
+    return {
+      inputValue: this.props.value || '',
+    };
+  },
 
-        const fileSize = await fetchFileSize(plistUrl);
-        if (fileSize) {
-          onChange(fileSize);
-          alert('Kích thước đã được cập nhật: ' + fileSize);
-        } else {
-          alert('Không thể cập nhật kích thước file');
-        }
-      },
+  handleInputChange(e) {
+    this.setState({ inputValue: e.target.value });
+  },
 
-      render: function() {
-        const { value, onChange, forID, classNameWrapper, field } = this.props;
-        return h('div', { className: classNameWrapper },
-          h('input', {
-            type: 'text',
-            id: forID,
-            className: 'update-size-input',
-            value: value || '',
-            onChange: e => onChange(e.target.value)
-          }),
-          h('button', {
-            className: 'update-size-button',
-            onClick: this.handleUpdateSize
-          }, 'Cập nhật kích thước')
-        );
+  handleUpdateSize: async function() {
+    const plistUrl = document.querySelector('[name="main_download.plistUrl"]').value;
+    if (!plistUrl) {
+      alert('Vui lòng nhập URL Plist trước');
+      return;
+    }
+
+    try {
+      const fileSize = await fetchFileSize(plistUrl);
+      if (fileSize) {
+        this.props.onChange(fileSize);
+        this.setState({ inputValue: fileSize });
+        alert('Kích thước đã được cập nhật: ' + fileSize);
+      } else {
+        alert('Không thể cập nhật kích thước file');
       }
-    });
+    } catch (error) {
+      console.error('Lỗi khi cập nhật kích thước:', error);
+      alert('Đã xảy ra lỗi khi cập nhật kích thước');
+    }
+  },
 
-    const UpdateSizePreview = createClass({
-      render: function() {
-        return h('div', {}, this.props.value);
-      }
-    });
+  render: function() {
+    const { forID, classNameWrapper } = this.props;
+    return h('div', { className: classNameWrapper },
+      h('input', {
+        type: 'text',
+        id: forID,
+        className: 'update-size-input',
+        value: this.state.inputValue,
+        onChange: this.handleInputChange,
+        style: { width: '200px' }  // Giới hạn chiều rộng của input
+      }),
+      h('button', {
+        className: 'update-size-button',
+        onClick: this.handleUpdateSize,
+        style: { marginLeft: '10px' }
+      }, 'Cập nhật kích thước')
+    );
+  }
+});
 
-    // Đăng ký widget tùy chỉnh
-    CMS.registerWidget('update-size', UpdateSizeControl, UpdateSizePreview);
+CMS.registerWidget('update-size', UpdateSizeControl);
 
     // Khởi tạo CMS
     CMS.init();
