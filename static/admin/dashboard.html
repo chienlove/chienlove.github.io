@@ -31,7 +31,7 @@
     };
 
     // Widget tùy chỉnh cho nút "Cập nhật kích thước"
-    const CustomUpdateSizeControl = createClass({
+    const UpdateSizeControl = createClass({
       handleUpdateSize: async function() {
         const { value, onChange, forID, field } = this.props;
         const plistUrl = document.querySelector('[name="main_download.plistUrl"]').value;
@@ -55,26 +55,26 @@
           h('input', {
             type: 'text',
             id: forID,
-            className: 'custom-update-size-input',
+            className: 'update-size-input',
             value: value || '',
             onChange: e => onChange(e.target.value)
           }),
           h('button', {
-            className: 'custom-update-size-button',
+            className: 'update-size-button',
             onClick: this.handleUpdateSize
           }, 'Cập nhật kích thước')
         );
       }
     });
 
-    const CustomUpdateSizePreview = createClass({
+    const UpdateSizePreview = createClass({
       render: function() {
         return h('div', {}, this.props.value);
       }
     });
 
     // Đăng ký widget tùy chỉnh
-    CMS.registerWidget('custom-update-size', CustomUpdateSizeControl, CustomUpdateSizePreview);
+    CMS.registerWidget('update-size', UpdateSizeControl, UpdateSizePreview);
 
     // Khởi tạo CMS
     CMS.init();
