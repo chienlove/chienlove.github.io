@@ -3,7 +3,7 @@ title: Odyssey
 date: 2024-09-06T13:09:18.505Z
 icon: /images/img_1044.jpeg
 description: Jxjxjxjdjdkdjdjdnxjxjxjdjdxjjđkjdjd
-developer: Dkkđjjs
+developer: CoolStar
 categories: Jailbreak
 size:
   partial: false
