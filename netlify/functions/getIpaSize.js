@@ -19,12 +19,11 @@ exports.handler = async function(event) {
       console.log('Đang xử lý file plist từ URL:', url);
 
       // Gửi yêu cầu GET để tải nội dung file plist
-      const plistResponse = await axios.get(url, { responseType: 'arraybuffer' }); // Nhận phản hồi dưới dạng Buffer
+      const plistResponse = await axios.get(url, { responseType: 'arraybuffer' });
       
       console.log('Mã trạng thái HTTP:', plistResponse.status); 
       console.log('Header của phản hồi:', plistResponse.headers);
 
-      // Kiểm tra header Content-Type để đảm bảo server trả về đúng loại nội dung
       const contentType = plistResponse.headers['content-type'];
       console.log('Loại nội dung:', contentType);
 
@@ -33,7 +32,7 @@ exports.handler = async function(event) {
       
       console.log('Nội dung trả về từ server:', plistText);
 
-      // Kiểm tra xem phản hồi có phải là tài liệu XML hợp lệ không
+      // Kiểm tra nếu nội dung không phải là XML hợp lệ
       if (!contentType.includes('application/xml') && !plistText.startsWith('<?xml')) {
         console.error('Phản hồi không phải là tài liệu XML hợp lệ');
         return {
@@ -66,13 +65,15 @@ exports.handler = async function(event) {
     console.log('Phản hồi từ yêu cầu HEAD:', response.headers);
 
     const fileSize = response.headers['content-length'];
+
+    // Kiểm tra và trả về chính xác kích thước file
     if (fileSize) {
       const fileSizeMB = (parseInt(fileSize) / (1024 * 1024)).toFixed(2);
       
       // Chỉ trả về kích thước file
       return {
         statusCode: 200,
-        body: JSON.stringify({ size: `${fileSizeMB} MB` }),
+        body: JSON.stringify({ size: `${fileSizeMB} MB` }), // Trả về chính xác kích thước file
       };
     } else {
       console.error('Không thể tìm thấy kích thước file');
