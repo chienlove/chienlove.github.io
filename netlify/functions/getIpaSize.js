@@ -3,7 +3,6 @@ const plist = require('plist');
 
 exports.handler = async function(event) {
   const url = event.queryStringParameters.url;
-
   if (!url) {
     return {
       statusCode: 400,
@@ -13,32 +12,36 @@ exports.handler = async function(event) {
 
   try {
     let ipaUrl = url;
-
     // Nếu là URL .plist, trích xuất URL IPA từ nó
     if (url.endsWith('.plist')) {
       console.log('Đang xử lý file plist từ URL:', url);
-
-      // Gửi yêu cầu GET để tải nội dung file plist
-      const plistResponse = await axios.get(url, { responseType: 'arraybuffer' }); // Nhận phản hồi dưới dạng Buffer
       
-      console.log('Mã trạng thái HTTP:', plistResponse.status); 
-      console.log('Header của phản hồi:', plistResponse.headers);
+      // Sử dụng block.js để lấy nội dung plist
+      const blockResponse = await axios.get(`https://storeios.net/api/block`, {
+        params: {
+          action: 'download-manifest',
+          url: encodeURIComponent(url)
+        },
+        headers: {
+          'X-Internal-Secret': process.env.INTERNAL_SECRET
+        }
+      });
 
-      // Kiểm tra header Content-Type để đảm bảo server trả về đúng loại nội dung
-      const contentType = plistResponse.headers['content-type'];
+      console.log('Mã trạng thái HTTP từ block.js:', blockResponse.status);
+      console.log('Header của phản hồi từ block.js:', blockResponse.headers);
+
+      const contentType = blockResponse.headers['content-type'];
       console.log('Loại nội dung:', contentType);
 
-      // Chuyển Buffer thành chuỗi sử dụng UTF-8 encoding
-      const plistText = Buffer.from(plistResponse.data, 'binary').toString('utf8');
-      
-      console.log('Nội dung trả về từ server:', plistText);
+      const plistText = blockResponse.data;
+      console.log('Nội dung trả về từ block.js:', plistText);
 
       // Kiểm tra xem phản hồi có phải là tài liệu XML hợp lệ không
-      if (!contentType.includes('application/xml') && !plistText.startsWith('<?xml')) {
-        console.error('Phản hồi không phải là tài liệu XML hợp lệ');
+      if (!contentType.includes('application/x-plist') && !plistText.startsWith('<?xml')) {
+        console.error('Phản hồi không phải là tài liệu plist hợp lệ');
         return {
           statusCode: 500,
-          body: JSON.stringify({ error: `Phản hồi không phải là tài liệu XML hợp lệ. Content-Type: ${contentType}, Mã trạng thái HTTP: ${plistResponse.status}` }),
+          body: JSON.stringify({ error: `Phản hồi không phải là tài liệu plist hợp lệ. Content-Type: ${contentType}, Mã trạng thái HTTP: ${blockResponse.status}` }),
         };
       }
 
@@ -55,7 +58,6 @@ exports.handler = async function(event) {
           body: JSON.stringify({ error: 'Không thể tìm thấy URL IPA trong file plist' }),
         };
       }
-
       ipaUrl = ipaAsset.url;
       console.log('URL IPA đã trích xuất:', ipaUrl);
     }
@@ -64,7 +66,6 @@ exports.handler = async function(event) {
     console.log('Đang gửi yêu cầu HEAD tới URL IPA:', ipaUrl);
     const response = await axios.head(ipaUrl);
     console.log('Phản hồi từ yêu cầu HEAD:', response.headers);
-
     const fileSize = response.headers['content-length'];
     if (fileSize) {
       const fileSizeMB = (parseInt(fileSize) / (1024 * 1024)).toFixed(2);

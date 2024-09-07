@@ -1,26 +1,18 @@
 const validTokens = new Map();
+const INTERNAL_SECRET = process.env.INTERNAL_SECRET; // Đặt điều này trong biến môi trường Netlify
 
 export default async (request, context) => {
   const url = new URL(request.url);
 
-  // Log chi tiết để kiểm tra yêu cầu từ Netlify
-  console.log('Yêu cầu từ URL:', url.toString());
-  console.log('User-Agent:', request.headers.get('user-agent'));
-  console.log('X-Netlify-Request:', request.headers.get('X-Netlify-Request'));
+  // Kiểm tra xem yêu cầu có phải từ một Netlify Function khác không
+  const isInternalRequest = request.headers.get('X-Internal-Secret') === INTERNAL_SECRET;
 
-  // Kiểm tra nếu yêu cầu đến từ Netlify bằng cách kiểm tra User-Agent hoặc header đặc biệt
-  const isNetlifyRequest = request.headers.get('user-agent')?.includes('Netlify') || 
-                           request.headers.get('X-Netlify-Request') === 'true';
-
-  console.log('Có phải yêu cầu từ Netlify không:', isNetlifyRequest);
-
-  // Xử lý việc tạo token
+  // Handle token generation
   if (request.method === 'POST' && url.pathname === '/generate-token') {
     const token = generateToken();
-    const expirationTime = Date.now() + 30000; // Token hết hạn sau 30 giây
+    const expirationTime = Date.now() + 30000; // Token expires in 30 seconds
     validTokens.set(token, { expirationTime, url: url.searchParams.get('url') });
     
-    // Đặt thời gian hết hạn token và xoá token khi hết hạn
     setTimeout(() => {
       validTokens.delete(token);
     }, expirationTime - Date.now());
@@ -28,50 +20,44 @@ export default async (request, context) => {
     return new Response(token, { status: 200 });
   }
 
-  // Xử lý yêu cầu itms-services với token
+  // Handle the itms-services request with token
   if (url.searchParams.get('action') === 'download-manifest') {
     const plistToken = url.searchParams.get('token');
     const plistUrl = decodeURIComponent(url.searchParams.get('url'));
 
-    if (plistToken && validTokens.has(plistToken)) {
-      const tokenData = validTokens.get(plistToken);
-
-      // Đảm bảo token chỉ được sử dụng cho URL cụ thể và vẫn còn hiệu lực
-      if (Date.now() < tokenData.expirationTime && tokenData.url === plistUrl) {
-        validTokens.delete(plistToken); // Xoá token ngay sau khi sử dụng
-        
-        const response = await fetch(plistUrl);
-        const plistContent = await response.text();
-
-        return new Response(plistContent, {
-          status: 200,
-          headers: {
-            'Content-Type': 'application/x-plist',
-            'Cache-Control': 'no-store',
-            'Pragma': 'no-cache'
-          }
-        });
-      } else {
-        validTokens.delete(plistToken); // Xoá token hết hạn hoặc không hợp lệ
-        return new Response('Token expired or invalid', { status: 403 });
+    if ((plistToken && validTokens.has(plistToken)) || isInternalRequest) {
+      if (!isInternalRequest) {
+        const tokenData = validTokens.get(plistToken);
+        if (Date.now() >= tokenData.expirationTime || tokenData.url !== plistUrl) {
+          validTokens.delete(plistToken);
+          return new Response('Token expired or invalid', { status: 403 });
+        }
+        validTokens.delete(plistToken);
       }
+      
+      const response = await fetch(plistUrl);
+      const plistContent = await response.text();
+
+      return new Response(plistContent, {
+        status: 200,
+        headers: {
+          'Content-Type': 'application/x-plist',
+          'Cache-Control': 'no-store',
+          'Pragma': 'no-cache'
+        }
+      });
     } else {
       return new Response('Invalid or expired token', { status: 403 });
     }
   }
 
-  // Chặn truy cập trực tiếp vào các file plist nếu không có token hợp lệ, ngoại trừ các yêu cầu từ Netlify
+  // Block direct access to plist files without token or internal secret
   if (url.pathname.endsWith('.plist') || url.pathname.startsWith('/plist')) {
     const plistToken = url.searchParams.get('token');
 
-    // Nếu là yêu cầu từ Netlify hoặc token hợp lệ, bỏ qua việc chặn
-    if (!isNetlifyRequest && (!plistToken || !validTokens.has(plistToken))) {
-      console.log('Chặn yêu cầu không hợp lệ hoặc không phải từ Netlify');
-      return Response.redirect('/access-denied', 302); // Chặn nếu không có token hợp lệ và không phải yêu cầu từ Netlify
+    if ((!plistToken || !validTokens.has(plistToken)) && !isInternalRequest) {
+      return Response.redirect('/access-denied', 302);
     }
-
-    // Nếu là yêu cầu từ Netlify, tiếp tục
-    console.log('Cho phép yêu cầu từ Netlify hoặc token hợp lệ');
   }
 
   return context.next();
