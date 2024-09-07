@@ -12,7 +12,7 @@
 # Cấu hình cho Edge Function
 [[edge_functions]]
   function = "block"
-  path = "/edge-block/*"  # Sử dụng đường dẫn khác cho Edge Function
+  path = "/test-block/*"
 
 # Cấu hình cho các redirects tới Netlify Functions
 [[redirects]]
