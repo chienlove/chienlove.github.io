@@ -8,7 +8,6 @@
 
 [build.environment]
   NODE_VERSION = "16"
-  INTERNAL_SECRET = ${INTERNAL_SECRET}
 
 [[edge_functions]]
   function = "block"
