@@ -1,8 +1,10 @@
 const validTokens = new Map();
-const INTERNAL_SECRET = process.env.INTERNAL_SECRET; // Đặt điều này trong biến môi trường Netlify
 
 export default async (request, context) => {
   const url = new URL(request.url);
+
+  // Lấy INTERNAL_SECRET từ context.env thay vì process.env
+  const INTERNAL_SECRET = context.env.INTERNAL_SECRET;
 
   // Kiểm tra xem yêu cầu có phải từ một Netlify Function khác không
   const isInternalRequest = request.headers.get('X-Internal-Secret') === INTERNAL_SECRET;
