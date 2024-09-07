@@ -3,12 +3,17 @@ const validTokens = new Map();
 export default async (request, context) => {
   const url = new URL(request.url);
 
+  // Bỏ qua các yêu cầu đến /api/ để cho phép Netlify Functions truy cập
+  if (url.pathname.startsWith('/api/')) {
+    return context.next();
+  }
+
   // Handle token generation
   if (request.method === 'POST' && url.pathname === '/generate-token') {
     const token = generateToken();
     const expirationTime = Date.now() + 30000; // Token expires in 30 seconds
     validTokens.set(token, { expirationTime, url: url.searchParams.get('url') });
-    
+
     // Schedule token cleanup after expiration time
     setTimeout(() => {
       validTokens.delete(token);
@@ -28,7 +33,7 @@ export default async (request, context) => {
       // Ensure token is used only for the intended URL and is still valid
       if (Date.now() < tokenData.expirationTime && tokenData.url === plistUrl) {
         validTokens.delete(plistToken); // Immediately delete token after use
-        
+
         const response = await fetch(plistUrl);
         const plistContent = await response.text();
 

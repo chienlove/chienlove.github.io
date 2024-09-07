@@ -11,8 +11,8 @@
 
 # Cấu hình cho Edge Function[[edge_functions]]
 [[edge_functions]]
-path = "/block"
-function = "block"
+  function = "block"
+  path = "/"
 
 # Cấu hình cho các redirects tới Netlify Functions
 [[redirects]]
