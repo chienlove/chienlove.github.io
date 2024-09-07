@@ -3,14 +3,16 @@ const validTokens = new Map();
 export default async (request, context) => {
   const url = new URL(request.url);
 
-  // Lấy INTERNAL_SECRET từ context.env thay vì process.env
-  const INTERNAL_SECRET = context.env.INTERNAL_SECRET;
+  // Kiểm tra nếu INTERNAL_SECRET tồn tại trong context.env
+  const INTERNAL_SECRET = context.env?.INTERNAL_SECRET;
 
-  // Kiểm tra xem yêu cầu có phải từ một Netlify Function khác không bằng cách kiểm tra header X-Internal-Secret
+  if (!INTERNAL_SECRET) {
+    console.error('INTERNAL_SECRET chưa được cấu hình.');
+    return new Response('Internal server error: INTERNAL_SECRET is missing', { status: 500 });
+  }
+
+  // Kiểm tra xem yêu cầu có phải từ một Netlify Function khác không
   const isInternalRequest = request.headers.get('X-Internal-Secret') === INTERNAL_SECRET;
-  
-  // Log để kiểm tra xem yêu cầu có phải là nội bộ không
-  console.log('Yêu cầu có phải từ nội bộ không:', isInternalRequest);
 
   // Xử lý việc tạo token
   if (request.method === 'POST' && url.pathname === '/generate-token') {
