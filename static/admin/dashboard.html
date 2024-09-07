@@ -1,25 +1,21 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Netlify CMS Admin</title>
-  <link rel="stylesheet" href="css/admin.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Content Manager</title>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-  <script src="https://unpkg.com/react@16/umd/react.production.min.js"></script>
-  <script src="https://unpkg.com/react-dom@16/umd/react-dom.production.min.js"></script>
-  <style>
-    .netlify-identity-button {
-      display: none !important;
-    }
-  </style>
 </head>
 <body>
+  <!-- Include the script that builds the page and powers Netlify CMS -->
   <script src="https://unpkg.com/netlify-cms@^2.10.192/dist/netlify-cms.js"></script>
+  
   <script>
     // Hàm gọi API Netlify Function để lấy kích thước file IPA
     const fetchFileSize = async (plistUrl) => {
       try {
         console.log('Gọi API để lấy kích thước với URL:', plistUrl);
-        const response = await fetch(`/api/getIpaSize?url=${encodeURIComponent(plistUrl)}`);
+        const response = await fetch(`/.netlify/functions/getIpaSize?url=${encodeURIComponent(plistUrl)}`);
         const data = await response.json();
         if (data.size) {
           console.log('API trả về kích thước:', data.size);
@@ -35,47 +31,53 @@
     };
 
     // Widget tùy chỉnh cho nút "Cập nhật kích thước"
-    const SizeUpdateControl = createClass({
-      handleClick: async function() {
-        const { entry, onChange } = this.props;
+    const CustomUpdateSizeControl = createClass({
+      handleUpdateSize: async function() {
+        const { value, onChange, forID, field } = this.props;
+        const plistUrl = document.querySelector('[name="main_download.plistUrl"]').value;
+        if (!plistUrl) {
+          alert('Vui lòng nhập URL Plist trước');
+          return;
+        }
 
-        // Lấy URL plist từ entry
-        const mainDownload = entry.getIn(['data', 'main_download']);
-        if (mainDownload && mainDownload.get('plistUrl')) {
-          const plistUrl = mainDownload.get('plistUrl');
-          console.log('URL plist:', plistUrl);
-
-          const fileSize = await fetchFileSize(plistUrl);  // Gọi API để lấy kích thước
-
-          if (fileSize) {
-            console.log('Cập nhật kích thước trong entry:', fileSize);
-            onChange(entry.setIn(['data', 'size'], fileSize));  // Cập nhật giá trị kích thước
-            alert('Kích thước đã được cập nhật: ' + fileSize);
-          } else {
-            alert('Không thể cập nhật kích thước file');
-          }
+        const fileSize = await fetchFileSize(plistUrl);
+        if (fileSize) {
+          onChange(fileSize);
+          alert('Kích thước đã được cập nhật: ' + fileSize);
         } else {
-          alert('URL plist không tồn tại');
+          alert('Không thể cập nhật kích thước file');
         }
       },
 
       render: function() {
-        return h('div', {},
-          h('button', { type: 'button', onClick: this.handleClick }, 'Cập nhật kích thước')
+        const { value, onChange, forID, classNameWrapper, field } = this.props;
+        return h('div', { className: classNameWrapper },
+          h('input', {
+            type: 'text',
+            id: forID,
+            className: 'custom-update-size-input',
+            value: value || '',
+            onChange: e => onChange(e.target.value)
+          }),
+          h('button', {
+            className: 'custom-update-size-button',
+            onClick: this.handleUpdateSize
+          }, 'Cập nhật kích thước')
         );
       }
     });
 
-    CMS.registerWidget('update-size', SizeUpdateControl);
-
-    // Khởi tạo CMS với cấu hình
-    CMS.init({
-      config: {
-        backend: {
-          name: 'git-gateway',
-        },
-      },
+    const CustomUpdateSizePreview = createClass({
+      render: function() {
+        return h('div', {}, this.props.value);
+      }
     });
+
+    // Đăng ký widget tùy chỉnh
+    CMS.registerWidget('custom-update-size', CustomUpdateSizeControl, CustomUpdateSizePreview);
+
+    // Khởi tạo CMS
+    CMS.init();
   </script>
 </body>
 </html>
