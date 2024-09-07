@@ -20,9 +20,14 @@ exports.handler = async function(event) {
 
       // Gửi yêu cầu GET để tải nội dung file plist
       const plistResponse = await axios.get(url);
-      console.log('Mã trạng thái HTTP:', plistResponse.status); // Log mã trạng thái HTTP
+      
+      // Log mã trạng thái HTTP
+      console.log('Mã trạng thái HTTP:', plistResponse.status); 
+      
+      // Log toàn bộ header của phản hồi
+      console.log('Header của phản hồi:', plistResponse.headers);
 
-      // Log toàn bộ nội dung phản hồi từ server để kiểm tra nội dung
+      // Log toàn bộ nội dung phản hồi từ server
       console.log('Nội dung trả về từ server:', plistResponse.data); 
 
       // Kiểm tra xem phản hồi có phải là tài liệu XML hợp lệ không
@@ -36,7 +41,7 @@ exports.handler = async function(event) {
 
       // Phân tích nội dung plist
       const plistData = plist.parse(plistResponse.data);
-      console.log('Dữ liệu plist đã phân tích:', plistData); // Log dữ liệu plist sau khi phân tích
+      console.log('Dữ liệu plist đã phân tích:', plistData);
 
       // Trích xuất URL IPA từ file plist
       const ipaAsset = plistData.items && plistData.items[0].assets.find(asset => asset.kind === 'software-package');
@@ -49,13 +54,13 @@ exports.handler = async function(event) {
       }
 
       ipaUrl = ipaAsset.url;
-      console.log('URL IPA đã trích xuất:', ipaUrl); // Log URL IPA
+      console.log('URL IPA đã trích xuất:', ipaUrl);
     }
 
     // Gửi yêu cầu HEAD để lấy kích thước file IPA
     console.log('Đang gửi yêu cầu HEAD tới URL IPA:', ipaUrl);
     const response = await axios.head(ipaUrl);
-    console.log('Phản hồi từ yêu cầu HEAD:', response.headers); // Log phản hồi từ HEAD
+    console.log('Phản hồi từ yêu cầu HEAD:', response.headers);
 
     const fileSize = response.headers['content-length'];
     if (fileSize) {
