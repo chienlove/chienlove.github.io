@@ -22,6 +22,9 @@ exports.handler = async function(event) {
       const plistResponse = await axios.get(url);
       console.log('Mã trạng thái HTTP:', plistResponse.status); // Log mã trạng thái HTTP
 
+      // Log toàn bộ nội dung phản hồi từ server để kiểm tra nội dung
+      console.log('Nội dung trả về từ server:', plistResponse.data); 
+
       // Kiểm tra xem phản hồi có phải là tài liệu XML hợp lệ không
       if (!plistResponse.data || !plistResponse.data.startsWith('<?xml')) {
         console.error('Phản hồi không phải là tài liệu XML hợp lệ');
