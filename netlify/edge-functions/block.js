@@ -3,8 +3,8 @@ const validTokens = new Map();
 export default async (request, context) => {
   const url = new URL(request.url);
 
-  // Kiểm tra nếu INTERNAL_SECRET tồn tại trong context.env
-  const INTERNAL_SECRET = context.env?.INTERNAL_SECRET;
+  // Thử lấy INTERNAL_SECRET từ Deno.env
+  const INTERNAL_SECRET = Deno.env.get('INTERNAL_SECRET');
 
   if (!INTERNAL_SECRET) {
     console.error('INTERNAL_SECRET chưa được cấu hình.');
