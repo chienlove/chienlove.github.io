@@ -9,10 +9,10 @@
 [build.environment]
   NODE_VERSION = "16"
 
-# Cấu hình cho Edge Function
+# Cấu hình cho Edge Function[[edge_functions]]
 [[edge_functions]]
-  function = "block"
-  path = "/test-block/*"
+path = "/"
+function = "block"
 
 # Cấu hình cho các redirects tới Netlify Functions
 [[redirects]]
