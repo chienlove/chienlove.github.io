@@ -68,6 +68,8 @@ exports.handler = async function(event) {
     const fileSize = response.headers['content-length'];
     if (fileSize) {
       const fileSizeMB = (parseInt(fileSize) / (1024 * 1024)).toFixed(2);
+      
+      // Chỉ trả về kích thước file
       return {
         statusCode: 200,
         body: JSON.stringify({ size: `${fileSizeMB} MB` }),
