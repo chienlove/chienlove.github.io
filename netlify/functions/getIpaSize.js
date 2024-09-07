@@ -19,19 +19,18 @@ exports.handler = async function(event) {
       console.log('Đang xử lý file plist từ URL:', url);
 
       // Gửi yêu cầu GET để tải nội dung file plist
-      const plistResponse = await axios.get(url);
+      const plistResponse = await axios.get(url, { responseType: 'arraybuffer' }); // Nhận phản hồi dưới dạng Buffer
       
-      // Log mã trạng thái HTTP
       console.log('Mã trạng thái HTTP:', plistResponse.status); 
-      
-      // Log toàn bộ header của phản hồi
       console.log('Header của phản hồi:', plistResponse.headers);
 
-      // Log toàn bộ nội dung phản hồi từ server
-      console.log('Nội dung trả về từ server:', plistResponse.data); 
+      // Chuyển Buffer thành chuỗi sử dụng UTF-8 encoding
+      const plistText = Buffer.from(plistResponse.data, 'binary').toString('utf8');
+      
+      console.log('Nội dung trả về từ server:', plistText);
 
       // Kiểm tra xem phản hồi có phải là tài liệu XML hợp lệ không
-      if (!plistResponse.data || !plistResponse.data.startsWith('<?xml')) {
+      if (!plistText.startsWith('<?xml')) {
         console.error('Phản hồi không phải là tài liệu XML hợp lệ');
         return {
           statusCode: 500,
@@ -40,7 +39,7 @@ exports.handler = async function(event) {
       }
 
       // Phân tích nội dung plist
-      const plistData = plist.parse(plistResponse.data);
+      const plistData = plist.parse(plistText);
       console.log('Dữ liệu plist đã phân tích:', plistData);
 
       // Trích xuất URL IPA từ file plist
