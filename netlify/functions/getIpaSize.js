@@ -14,32 +14,24 @@ exports.handler = async function(event) {
   try {
     let ipaUrl = url;
 
-    // Nếu là URL .plist, trích xuất URL IPA từ nó
+    // Nếu URL là .plist, trích xuất URL IPA
     if (url.endsWith('.plist')) {
-      console.log('Đang xử lý file plist từ URL:', url);
-
-      // Gửi yêu cầu GET để tải nội dung file plist
       const plistResponse = await axios.get(url, { responseType: 'arraybuffer' });
-
-      // Kiểm tra header Content-Type để đảm bảo server trả về đúng loại nội dung
       const contentType = plistResponse.headers['content-type'];
-      
-      // Chuyển Buffer thành chuỗi sử dụng UTF-8 encoding
       const plistText = Buffer.from(plistResponse.data, 'binary').toString('utf8');
-      
-      // Kiểm tra nếu nội dung không phải là XML hợp lệ
+
+      // Kiểm tra tính hợp lệ của XML
       if (!contentType.includes('application/xml') && !plistText.startsWith('<?xml')) {
-        console.error('Phản hồi không phải là tài liệu XML hợp lệ');
         return {
           statusCode: 500,
-          body: JSON.stringify({ error: `Phản hồi không hợp lệ. Content-Type: ${contentType}, HTTP Status: ${plistResponse.status}` }),
+          body: JSON.stringify({ error: 'Phản hồi không phải là tài liệu XML hợp lệ' }),
         };
       }
 
       // Phân tích nội dung plist
       const plistData = plist.parse(plistText);
 
-      // Trích xuất URL IPA từ file plist
+      // Trích xuất URL IPA
       const ipaAsset = plistData.items && plistData.items[0].assets.find(asset => asset.kind === 'software-package');
       if (!ipaAsset || !ipaAsset.url) {
         return {
@@ -55,14 +47,14 @@ exports.handler = async function(event) {
     const response = await axios.head(ipaUrl);
     const fileSize = response.headers['content-length'];
 
-    // Kiểm tra và trả về kích thước file
+    // Trả về kích thước file dưới dạng MB
     if (fileSize) {
       const fileSizeMB = (parseInt(fileSize) / (1024 * 1024)).toFixed(2);
       
       // Trả về JSON chỉ có kích thước file
       return {
         statusCode: 200,
-        body: JSON.stringify({ size: `${fileSizeMB} MB` }), // Chỉ trả về kích thước file
+        body: JSON.stringify({ size: `${fileSizeMB} MB` }),
       };
     } else {
       return {
@@ -71,11 +63,10 @@ exports.handler = async function(event) {
       };
     }
   } catch (error) {
-    // Log chi tiết về lỗi và trả về thông báo lỗi đơn giản
-    console.error('Lỗi trong quá trình xử lý:', error);
+    // Chỉ trả về lỗi, không trả về thông tin bổ sung
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Có lỗi xảy ra khi lấy kích thước file' }),
+      body: JSON.stringify({ error: 'Lỗi xảy ra khi xử lý yêu cầu' }),
     };
   }
 };
