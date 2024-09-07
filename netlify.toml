@@ -9,10 +9,12 @@
 [build.environment]
   NODE_VERSION = "16"
 
+# Cấu hình cho Edge Function
 [[edge_functions]]
   function = "block"
-  path = "/api/*"
+  path = "/edge-block/*"  # Sử dụng đường dẫn khác cho Edge Function
 
+# Cấu hình cho các redirects tới Netlify Functions
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
