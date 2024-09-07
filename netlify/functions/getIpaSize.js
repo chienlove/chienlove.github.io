@@ -15,58 +15,52 @@ exports.handler = async function(event) {
     let ipaUrl = url;
 
     // Nếu URL là .plist, trích xuất URL IPA
-    if (url.endsWith('.plist')) {
-      const plistResponse = await axios.get(url, { responseType: 'arraybuffer' });
+    if (url.toLowerCase().endsWith('.plist')) {
+      const plistResponse = await axios.get(url, { 
+        responseType: 'arraybuffer',
+        headers: { 'User-Agent': 'Mozilla/5.0' } // Thêm User-Agent
+      });
       const contentType = plistResponse.headers['content-type'];
       const plistText = Buffer.from(plistResponse.data, 'binary').toString('utf8');
 
       // Kiểm tra tính hợp lệ của XML
-      if (!contentType.includes('application/xml') && !plistText.startsWith('<?xml')) {
-        return {
-          statusCode: 500,
-          body: JSON.stringify({ error: 'Phản hồi không phải là tài liệu XML hợp lệ' }),
-        };
+      if (!contentType.includes('application/xml') && !contentType.includes('text/xml') && !plistText.trim().startsWith('<?xml')) {
+        throw new Error('Phản hồi không phải là tài liệu XML hợp lệ');
       }
 
       // Phân tích nội dung plist
       const plistData = plist.parse(plistText);
 
       // Trích xuất URL IPA
-      const ipaAsset = plistData.items && plistData.items[0].assets.find(asset => asset.kind === 'software-package');
-      if (!ipaAsset || !ipaAsset.url) {
-        return {
-          statusCode: 400,
-          body: JSON.stringify({ error: 'Không thể tìm thấy URL IPA trong file plist' }),
-        };
+      const ipaAsset = plistData.items?.[0]?.assets?.find(asset => asset.kind === 'software-package');
+      if (!ipaAsset?.url) {
+        throw new Error('Không thể tìm thấy URL IPA trong file plist');
       }
 
       ipaUrl = ipaAsset.url;
     }
 
     // Gửi yêu cầu HEAD để lấy kích thước file IPA
-    const response = await axios.head(ipaUrl);
+    const response = await axios.head(ipaUrl, {
+      headers: { 'User-Agent': 'Mozilla/5.0' } // Thêm User-Agent
+    });
     const fileSize = response.headers['content-length'];
 
     // Trả về kích thước file dưới dạng MB
     if (fileSize) {
       const fileSizeMB = (parseInt(fileSize) / (1024 * 1024)).toFixed(2);
-      
-      // Trả về JSON chỉ có kích thước file
       return {
         statusCode: 200,
         body: JSON.stringify({ size: `${fileSizeMB} MB` }),
       };
     } else {
-      return {
-        statusCode: 404,
-        body: JSON.stringify({ error: 'Không thể tìm thấy kích thước file' }),
-      };
+      throw new Error('Không thể tìm thấy kích thước file');
     }
   } catch (error) {
-    // Chỉ trả về lỗi, không trả về thông tin bổ sung
+    console.error('Error:', error.message);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Lỗi xảy ra khi xử lý yêu cầu' }),
+      body: JSON.stringify({ error: error.message || 'Lỗi xảy ra khi xử lý yêu cầu' }),
     };
   }
 };
