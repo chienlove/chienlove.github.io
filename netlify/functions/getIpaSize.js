@@ -24,17 +24,21 @@ exports.handler = async function(event) {
       console.log('Mã trạng thái HTTP:', plistResponse.status); 
       console.log('Header của phản hồi:', plistResponse.headers);
 
+      // Kiểm tra header Content-Type để đảm bảo server trả về đúng loại nội dung
+      const contentType = plistResponse.headers['content-type'];
+      console.log('Loại nội dung:', contentType);
+
       // Chuyển Buffer thành chuỗi sử dụng UTF-8 encoding
       const plistText = Buffer.from(plistResponse.data, 'binary').toString('utf8');
       
       console.log('Nội dung trả về từ server:', plistText);
 
       // Kiểm tra xem phản hồi có phải là tài liệu XML hợp lệ không
-      if (!plistText.startsWith('<?xml')) {
+      if (!contentType.includes('application/xml') && !plistText.startsWith('<?xml')) {
         console.error('Phản hồi không phải là tài liệu XML hợp lệ');
         return {
           statusCode: 500,
-          body: JSON.stringify({ error: `Phản hồi không phải là tài liệu XML hợp lệ. Mã trạng thái HTTP: ${plistResponse.status}` }),
+          body: JSON.stringify({ error: `Phản hồi không phải là tài liệu XML hợp lệ. Content-Type: ${contentType}, Mã trạng thái HTTP: ${plistResponse.status}` }),
         };
       }
 
