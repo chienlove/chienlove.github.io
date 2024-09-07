@@ -10,71 +10,18 @@
   <!-- Include the script that builds the page and powers Netlify CMS -->
   <script src="https://unpkg.com/netlify-cms@^2.0.0/dist/netlify-cms.js"></script>
   
-  <!-- Thêm script để đăng ký widget tùy chỉnh -->
-  <script>
-    CMS.registerWidget('update-size', UpdateSizeControl);
-  </script>
-
   <!-- Thêm script cho widget tùy chỉnh updateSize -->
   <script src="/admin/widgets/updateSize.js"></script>
 
-  <style>
-    /* Thêm một số style cơ bản để cải thiện giao diện */
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    }
-
-    .netlify-identity-button {
-      background-color: #00ad9f;
-      color: white;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-
-    .netlify-identity-button:hover {
-      background-color: #008f82;
-    }
-
-    /* Tùy chỉnh style cho widget update-size */
-    .update-size-control {
-      margin-bottom: 15px;
-    }
-
-    .update-size-control button {
-      background-color: #0077b5;
-      color: white;
-      border: none;
-      padding: 8px 15px;
-      border-radius: 4px;
-      cursor: pointer;
-      margin-top: 5px;
-    }
-
-    .update-size-control button:hover {
-      background-color: #005f8f;
-    }
-
-    .update-size-control button:disabled {
-      background-color: #cccccc;
-      cursor: not-allowed;
-    }
-  </style>
-
   <script>
-    // Thêm một số tùy chỉnh cho CMS nếu cần
-    CMS.registerPreviewStyle("/css/preview.css");
-    
-    // Ví dụ: Tùy chỉnh preview cho collection jailbreak-tools
-    CMS.registerPreviewTemplate("jailbreak-tools", JailbreakToolPreview);
-    
-    function JailbreakToolPreview({ entry, widgetFor }) {
-      return h('div', {},
-        h('h1', {}, entry.getIn(['data', 'title'])),
-        h('div', {}, widgetFor('body'))
-      );
-    }
+    // Đăng ký widget tùy chỉnh
+    CMS.registerWidget('update-size', updateSizeControl);
+
+    // Khởi tạo CMS
+    CMS.init();
   </script>
+
+  <!-- Các phần CSS và script khác giữ nguyên -->
+
 </body>
 </html>

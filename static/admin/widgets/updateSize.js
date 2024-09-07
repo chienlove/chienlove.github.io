@@ -45,4 +45,8 @@ const UpdateSizeControl = ({ onChange, value }) => {
   );
 };
 
+// Đảm bảo export đúng cách
 export default UpdateSizeControl;
+
+// Nếu sử dụng CMS.registerWidget, thêm dòng sau
+window.updateSizeControl = UpdateSizeControl;
