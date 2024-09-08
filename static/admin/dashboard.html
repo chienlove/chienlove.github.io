@@ -14,8 +14,10 @@
   <script>
     CMS.registerWidget('update-size', createClass({
       handleClick() {
-        // Lấy URL plist từ CMS
+        // Lấy URL plist từ form dữ liệu hiện tại, không phải từ entry đã lưu
         const plistUrl = this.props.entry.getIn(['data', 'main_download', 'plistUrl']);
+        
+        // Kiểm tra nếu URL đã được nhập
         if (!plistUrl) {
           alert('Vui lòng nhập URL plist.');
           return;
