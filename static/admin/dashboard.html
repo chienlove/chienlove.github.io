@@ -8,33 +8,34 @@
 <body>
   <!-- Include the script that builds the page and powers Netlify CMS -->
   <script src="https://unpkg.com/netlify-cms@^2.0.0/dist/netlify-cms.js"></script>
-
   <!-- Tích hợp trực tiếp script cho widget tùy chỉnh updateSize -->
   <script>
     CMS.registerWidget('update-size', createClass({
       handleClick() {
-        // In ra toàn bộ entry hiện tại để kiểm tra
-        console.log('Entry data:', this.props.entry.get('data').toJS());
-
+        // Lấy toàn bộ dữ liệu entry
+        const entryData = this.props.entry.get('data');
+        
         // Lấy URL plist từ form dữ liệu hiện tại
-        const plistUrl = this.props.entry.getIn(['data', 'main_download', 'plistUrl']);
-
+        const plistUrl = entryData.getIn(['main_download', 'plistUrl']);
+        
         // Kiểm tra nếu URL đã được nhập
         if (!plistUrl) {
-          alert('Vui lòng nhập URL plist.');
+          alert('Vui lòng nhập URL plist trong phần "Liên kết tải xuống chính".');
           return;
         }
-
-        // In ra URL plist để kiểm tra
-        console.log('Plist URL:', plistUrl);
-
+        
         // Gọi API để cập nhật kích thước
         fetch(`/api/getIpaSize?url=${encodeURIComponent(plistUrl)}`)
           .then(response => response.json())
           .then(data => {
             if (data.size) {
               // Cập nhật giá trị vào trường kích thước file (size)
-              this.props.onChange(data.size);
+              const newData = entryData.set('size', data.size);
+              this.props.onChange(newData);
+              
+              // Cập nhật form
+              this.props.entry.get('data').clear().merge(newData);
+              
               alert('Kích thước đã được cập nhật: ' + data.size);
             } else {
               alert('Không thể lấy kích thước file.');
@@ -45,12 +46,14 @@
             alert('Có lỗi xảy ra khi cập nhật kích thước.');
           });
       },
-
       render() {
-        return h('button', { type: 'button', onClick: this.handleClick.bind(this) }, 'Cập nhật kích thước');
+        const currentSize = this.props.entry.getIn(['data', 'size']);
+        return h('div', {},
+          h('button', { type: 'button', onClick: this.handleClick.bind(this) }, 'Cập nhật kích thước'),
+          currentSize ? h('span', {}, ` Kích thước hiện tại: ${currentSize}`) : null
+        );
       }
     }));
-
     // Khởi tạo CMS
     CMS.init();
   </script>
