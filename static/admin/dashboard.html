@@ -2,7 +2,6 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Content Manager</title>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 </head>
@@ -30,19 +29,21 @@
         fetch(`/api/getIpaSize?url=${encodeURIComponent(plistUrl)}`)
           .then(response => response.json())
           .then(data => {
-            if (data.size) {
-              // Cập nhật giá trị vào trường kích thước file (size)
-              this.props.onChange(data.size);
-              alert('Kích thước đã được cập nhật: ' + data.size);
-            } else {
-              alert('Không thể lấy kích thước file.');
-            }
-          })
-          .catch(error => {
-            console.error(error);
-            alert('Có lỗi xảy ra khi cập nhật kích thước.');
-          });
-      },
+  if (data.size) {
+    // Lấy dữ liệu hiện tại
+    const updatedData = this.props.entry.get('data').toJS();
+    
+    // Cập nhật trường "size" với giá trị mới
+    updatedData.size = data.size;
+
+    // Sử dụng `this.props.onChange` để cập nhật toàn bộ dữ liệu
+    this.props.onChange(fromJS(updatedData));
+
+    alert('Kích thước đã được cập nhật: ' + data.size);
+  } else {
+    alert('Không thể lấy kích thước file.');
+  }
+})
 
       render() {
         return h('button', { type: 'button', onClick: this.handleClick.bind(this) }, 'Cập nhật kích thước');
