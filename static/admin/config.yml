@@ -35,7 +35,6 @@ collections:
       - {label: "Mô tả chi tiết", name: "description", widget: "markdown", required: true}
       - {label: "Nhà phát triển", name: "developer", widget: "string", required: true}
       - {label: "Thể loại", name: "category", widget: "select", options: ["Ứng dụng", "Games", "Tool jailbreak", "Thủ thuật", "File ipa", "Khác"], required: true}
-      - {label: "Thể loại", name: "categories", widget: "string", required: true}
       - {label: "Phiên bản", name: "version", widget: "string", required: true}
       - {label: "Kích thước", name: "size", widget: "string", required: true}
       - {label: "iOS tương thích", name: "requirements", widget: "string", required: true}
@@ -43,7 +42,6 @@ collections:
       - {label: "Liên kết tải App Store", name: "app_store_link", widget: "string", required: true}
       - {label: "Từ khóa", name: "tags", widget: "list", required: false}
 
-  collections:
   - name: "jailbreak-tools"
     label: "Tool Jailbreak"
     folder: "content/jailbreak-tools"
@@ -58,7 +56,7 @@ collections:
       - {label: "Mô tả chi tiết", name: "description", widget: "markdown", required: true}
       - {label: "Nhà phát triển", name: "developer", widget: "string", required: true}
       - {label: "Thể loại", name: "categories", widget: "string", required: true}
-      - {label: "Kích thước", name: "size", widget: "string", required: false}  # Đổi thành string để hiển thị kích thước
+      - {label: "Kích thước", name: "size", widget: "string", required: false}  # Trường kích thước
       - {label: "Cập nhật kích thước", name: "update-size", widget: "update-size", required: false}  # Thêm nút cập nhật
       - {label: "iOS tương thích", name: "ios_compatible", widget: "string", required: true}
       - {label: "Từ khóa", name: "keywords", widget: "list", required: false}
@@ -81,4 +79,4 @@ cms_manual_init: true
 custom_css: /css/admin.css
 custom_widgets:
   - name: update-size
-    file: "/admin/widgets/updateSize.js"
+    file: "/admin/widgets/updateSize.js"  # Đảm bảo rằng custom widget này được tải
