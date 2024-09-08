@@ -9,11 +9,41 @@
 <body>
   <!-- Include the script that builds the page and powers Netlify CMS -->
   <script src="https://unpkg.com/netlify-cms@^2.0.0/dist/netlify-cms.js"></script>
-  
-  <!-- Thêm script cho widget tùy chỉnh updateSize -->
-  <script src="/admin/widgets/updateSize.js"></script>
 
+  <!-- Tích hợp trực tiếp script cho widget tùy chỉnh updateSize -->
   <script>
+    CMS.registerWidget('update-size', createClass({
+      handleClick() {
+        // Lấy URL plist từ CMS
+        const plistUrl = this.props.entry.getIn(['data', 'main_download', 'plistUrl']);
+        if (!plistUrl) {
+          alert('Vui lòng nhập URL plist.');
+          return;
+        }
+
+        // Gọi API để cập nhật kích thước
+        fetch(`/api/getIpaSize?url=${encodeURIComponent(plistUrl)}`)
+          .then(response => response.json())
+          .then(data => {
+            if (data.size) {
+              // Cập nhật giá trị vào trường kích thước file (size)
+              this.props.onChange(data.size);
+              alert('Kích thước đã được cập nhật: ' + data.size);
+            } else {
+              alert('Không thể lấy kích thước file.');
+            }
+          })
+          .catch(error => {
+            console.error(error);
+            alert('Có lỗi xảy ra khi cập nhật kích thước.');
+          });
+      },
+
+      render() {
+        return h('button', { type: 'button', onClick: this.handleClick.bind(this) }, 'Cập nhật kích thước');
+      }
+    }));
+
     // Khởi tạo CMS
     CMS.init();
   </script>
