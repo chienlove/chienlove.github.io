@@ -13,21 +13,14 @@
     CMS.registerWidget('update-size', createClass({
       handleClick() {
         console.log('Button clicked');
-        // Lấy toàn bộ dữ liệu entry
-        const entryData = this.props.entry.get('data');
-        console.log('Entry data:', entryData.toJS());
         
-        // Lấy URL plist từ form dữ liệu hiện tại
-        let plistUrl = entryData.getIn(['main_download', 'plistUrl']);
+        // Lấy dữ liệu form hiện tại
+        const formData = this.props.form.getIn(['formState', 'values']);
+        console.log('Form data:', formData.toJS());
         
-        // Nếu không tìm thấy URL trong dữ liệu entry, thử lấy từ form fields
-        if (!plistUrl) {
-          console.log('PlistUrl not found in entry data, checking form fields');
-          const formData = this.props.form.getIn(['main_download', 'plistUrl']);
-          plistUrl = formData ? formData.get('value') : null;
-        }
-        
-        console.log('PlistUrl:', plistUrl);
+        // Lấy URL plist từ form data
+        let plistUrl = formData.getIn(['main_download', 'plistUrl']);
+        console.log('PlistUrl from form:', plistUrl);
         
         // Kiểm tra nếu URL đã được nhập
         if (!plistUrl) {
@@ -51,15 +44,15 @@
             if (data.size) {
               // Cập nhật giá trị vào trường kích thước file (size)
               console.log('Updating size:', data.size);
-              this.props.onChange(data.size);
               
               // Cập nhật form field
-              if (this.props.form && this.props.form.setFieldValue) {
-                console.log('Updating form field');
-                this.props.form.setFieldValue('size', data.size);
-              } else {
-                console.log('Form or setFieldValue not available');
-              }
+              this.props.form.setFieldValue('size', data.size);
+              
+              // Cập nhật giá trị widget
+              this.props.onChange(data.size);
+              
+              // Buộc cập nhật component
+              this.forceUpdate();
               
               alert('Kích thước đã được cập nhật: ' + data.size);
             } else {
@@ -73,7 +66,7 @@
           });
       },
       render() {
-        const currentSize = this.props.value || this.props.entry.getIn(['data', 'size']);
+        const currentSize = this.props.value || this.props.form.getFieldValue('size');
         console.log('Current size:', currentSize);
         return h('div', {},
           h('button', { type: 'button', onClick: this.handleClick.bind(this) }, 'Cập nhật kích thước'),
