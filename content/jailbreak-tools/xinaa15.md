@@ -1,4 +1,5 @@
 ---
+title: XinaA15
 date: 2024-09-06T02:02:43.426Z
 icon: /images/XinaA15.png
 short_description: The Xina tool is supported for A12+ devices running iOS 15.0 up to 15.4.1.
@@ -566,6 +567,7 @@ size:
   updatedOn: ""
   i18n: {}
   collection: jailbreak-tools
+update-size: 42.36 MB
 ios_compatible: 15.0 - 15.4.1
 keywords:
   - XinaA15
@@ -574,7 +576,6 @@ main_download:
   appId: xinaa15
   plistUrl: https://storeios.net/plist/xinaa15.plist
 status: Signed
-title: XinaA15
 versions:
   - intermediate_page_url: /intermediate/:appId
     version: 2.0.17
