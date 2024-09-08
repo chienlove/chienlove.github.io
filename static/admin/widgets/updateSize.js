@@ -1,46 +1,21 @@
-var createClass = window.createClass;
-var h = window.h;
+document.getElementById("updateSizeButton").addEventListener("click", async function() {
+  const plistUrl = document.getElementById("plistUrlInput").value; // Lấy URL từ input của người dùng
+  if (!plistUrl) {
+    alert("Vui lòng nhập URL plist hoặc IPA.");
+    return;
+  }
 
-var UpdateSizeControl = createClass({
-  handleChange: function(e) {
-    this.props.onChange(e.target.value);
-  },
+  try {
+    const response = await fetch(`/api/getIpaSize?url=${encodeURIComponent(plistUrl)}`);
+    const result = await response.json();
 
-  updateSize: function() {
-    var self = this;
-    var plistUrl = document.querySelector('input[name="main_download.plistUrl"]').value;
-    
-    if (!plistUrl) {
-      alert('Vui lòng nhập URL Plist trước khi cập nhật kích thước.');
-      return;
+    if (response.ok) {
+      document.getElementById("fileSizeField").value = result.size; // Tự động điền kích thước vào trường kích thước
+    } else {
+      alert(`Lỗi: ${result.error}`);
     }
-
-    fetch('/.netlify/functions/getIpaSize?url=' + encodeURIComponent(plistUrl))
-      .then(function(response) { return response.json(); })
-      .then(function(data) {
-        if (data.error) {
-          throw new Error(data.error);
-        }
-        self.props.onChange(data.size);
-      })
-      .catch(function(error) {
-        console.error('Error updating size:', error);
-        alert('Lỗi khi cập nhật kích thước: ' + error.message);
-      });
-  },
-
-  render: function() {
-    var value = this.props.value || '';
-
-    return h('div', {},
-      h('input', {
-        type: 'text',
-        value: value,
-        onChange: this.handleChange
-      }),
-      h('button', { onClick: this.updateSize }, 'Cập nhật kích thước')
-    );
+  } catch (error) {
+    console.error("Error:", error);
+    alert("Có lỗi xảy ra khi cập nhật kích thước.");
   }
 });
-
-CMS.registerWidget('update-size', UpdateSizeControl);
