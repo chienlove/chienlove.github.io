@@ -2,6 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Content Manager</title>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 </head>
@@ -13,11 +14,8 @@
   <script>
     CMS.registerWidget('update-size', createClass({
       handleClick() {
-        // In ra toàn bộ entry hiện tại để kiểm tra
-        console.log('Entry data:', this.props.entry.get('data').toJS());
-
-        // Lấy URL plist từ form dữ liệu hiện tại
-        const plistUrl = this.props.entry.getIn(['data', 'main_download', 'plistUrl']);
+        // Lấy URL plist từ formData để đảm bảo lấy được dữ liệu trong bài viết mới
+        const plistUrl = this.props.formData.main_download.plistUrl;
 
         // Kiểm tra nếu URL đã được nhập
         if (!plistUrl) {
