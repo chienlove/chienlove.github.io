@@ -14,11 +14,11 @@
     CMS.registerWidget('update-size', createClass({
       handleClick() {
         console.log('Button clicked');
-
+        
         // Lấy giá trị plistUrl từ field main_download.plistUrl
         const plistUrl = this.props.entry.getIn(['data', 'main_download', 'plistUrl']);
         console.log('PlistUrl:', plistUrl);
-
+        
         // Kiểm tra nếu URL đã được nhập
         if (!plistUrl) {
           console.log('No plistUrl found');
@@ -42,9 +42,11 @@
               // Cập nhật giá trị vào trường kích thước file (size)
               console.log('Updating size:', data.size);
               
-              // Cập nhật giá trị widget
-              const updatedEntry = this.props.entry.get('data').set('size', data.size);
-              this.props.onChange(updatedEntry);
+              // Cập nhật giá trị trong entry
+              this.props.onChange(data.size);
+              
+              // Cập nhật giá trị trong form
+              this.props.entry.setIn(['data', 'size'], data.size);
               
               alert('Kích thước đã được cập nhật: ' + data.size);
             } else {
@@ -58,7 +60,7 @@
           });
       },
       render() {
-        const currentSize = this.props.entry.getIn(['data', 'size']) || '';
+        const currentSize = this.props.value || '';
         console.log('Current size:', currentSize);
         return h('div', {},
           h('button', { type: 'button', onClick: this.handleClick.bind(this) }, 'Cập nhật kích thước'),
