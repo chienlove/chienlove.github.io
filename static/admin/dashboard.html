@@ -16,8 +16,7 @@
         console.log('Button clicked');
 
         // Lấy giá trị plistUrl từ field main_download.plistUrl
-        const entryData = this.props.entry.get('data');
-        const plistUrl = entryData && entryData.getIn(['main_download', 'plistUrl']);
+        const plistUrl = this.props.entry.getIn(['data', 'main_download', 'plistUrl']);
         console.log('PlistUrl:', plistUrl);
 
         // Kiểm tra nếu URL đã được nhập
@@ -43,9 +42,9 @@
               // Cập nhật giá trị vào trường kích thước file (size)
               console.log('Updating size:', data.size);
               
-              // Kiểm tra nếu this.props.value tồn tại trước khi cập nhật giá trị
-              const currentValue = this.props.value || this.props.entry.get('data');
-              this.props.onChange(currentValue.set('size', data.size));
+              // Cập nhật giá trị widget
+              const updatedEntry = this.props.entry.get('data').set('size', data.size);
+              this.props.onChange(updatedEntry);
               
               alert('Kích thước đã được cập nhật: ' + data.size);
             } else {
@@ -59,8 +58,7 @@
           });
       },
       render() {
-        // Kiểm tra current size từ giá trị hiện tại của trường
-        const currentSize = this.props.value ? this.props.value.get('size') : '';
+        const currentSize = this.props.entry.getIn(['data', 'size']) || '';
         console.log('Current size:', currentSize);
         return h('div', {},
           h('button', { type: 'button', onClick: this.handleClick.bind(this) }, 'Cập nhật kích thước'),
