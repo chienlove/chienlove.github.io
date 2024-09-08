@@ -12,13 +12,14 @@
   <!-- Tích hợp trực tiếp script cho widget tùy chỉnh updateSize -->
   <script>
     CMS.registerWidget('update-size', createClass({
-      handleUpdate() {
-        console.log('Update button clicked');
+      handleClick() {
+        console.log('Button clicked');
         
-        // Lấy giá trị plistUrl từ field main_download.plistUrl
-        const plistUrl = this.props.entry.getIn(['data', 'main_download', 'plistUrl']);
+        // Lấy giá trị plistUrl từ field main_download.plistUrl (kiểm tra kỹ việc lấy giá trị)
+        const mainDownload = this.props.entry.getIn(['data', 'main_download']);
+        const plistUrl = mainDownload ? mainDownload.get('plistUrl') : null;
         console.log('PlistUrl:', plistUrl);
-        
+
         // Kiểm tra nếu URL đã được nhập
         if (!plistUrl) {
           console.log('No plistUrl found');
@@ -42,8 +43,8 @@
               // Cập nhật giá trị vào trường kích thước file (size)
               console.log('Updating size:', data.size);
               
-              // Cập nhật giá trị widget
-              this.props.onChange(data.size);
+              // Cập nhật giá trị field kích thước file
+              this.props.onChange(this.props.value.set('size', data.size));
               
               alert('Kích thước đã được cập nhật: ' + data.size);
             } else {
@@ -57,15 +58,11 @@
           });
       },
       render() {
-        const currentSize = this.props.value || this.props.entry.getIn(['data', 'size']) || '';
+        const currentSize = this.props.value ? this.props.value.get('size') : '';
         console.log('Current size:', currentSize);
         return h('div', {},
-          h('span', {}, `Kích thước hiện tại: ${currentSize || 'Chưa có'}`),
-          h('button', { 
-            type: 'button', 
-            onClick: this.handleUpdate.bind(this),
-            style: { marginLeft: '10px' }
-          }, 'Cập nhật lại')
+          h('button', { type: 'button', onClick: this.handleClick.bind(this) }, 'Cập nhật kích thước'),
+          currentSize ? h('span', {}, ` Kích thước hiện tại: ${currentSize}`) : null
         );
       }
     }));
