@@ -2,6 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Content Manager</title>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 </head>
@@ -11,11 +12,11 @@
   <!-- Tích hợp trực tiếp script cho widget tùy chỉnh updateSize -->
   <script>
     CMS.registerWidget('update-size', createClass({
-      handleClick() {
-        console.log('Button clicked');
+      handleUpdate() {
+        console.log('Update button clicked');
         
         // Lấy giá trị plistUrl từ field main_download.plistUrl
-        const plistUrl = this.props.value.get('main_download').get('plistUrl');
+        const plistUrl = this.props.entry.getIn(['data', 'main_download', 'plistUrl']);
         console.log('PlistUrl:', plistUrl);
         
         // Kiểm tra nếu URL đã được nhập
@@ -56,11 +57,15 @@
           });
       },
       render() {
-        const currentSize = this.props.value || '';
+        const currentSize = this.props.value || this.props.entry.getIn(['data', 'size']) || '';
         console.log('Current size:', currentSize);
         return h('div', {},
-          h('button', { type: 'button', onClick: this.handleClick.bind(this) }, 'Cập nhật kích thước'),
-          currentSize ? h('span', {}, ` Kích thước hiện tại: ${currentSize}`) : null
+          h('span', {}, `Kích thước hiện tại: ${currentSize || 'Chưa có'}`),
+          h('button', { 
+            type: 'button', 
+            onClick: this.handleUpdate.bind(this),
+            style: { marginLeft: '10px' }
+          }, 'Cập nhật lại')
         );
       }
     }));
