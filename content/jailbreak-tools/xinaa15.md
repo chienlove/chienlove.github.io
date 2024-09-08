@@ -11,6 +11,7 @@ description: "**XinaA15** is a rootless jailbreak with tweak injection support.
   propеrly, twеaks will rеquirе an updatе that includеs rootlеss support."
 developer: NotDarkn
 categories: jailbreak
+update-size: 42.36 MB
 ios_compatible: 15.0 - 15.4.1
 keywords:
   - Xinaa15
