@@ -12,63 +12,57 @@
   <!-- Tích hợp trực tiếp script cho widget tùy chỉnh updateSize -->
   <script>
     CMS.registerWidget('update-size', createClass({
+      componentDidMount() {
+        // Lắng nghe sự thay đổi của trường plistUrl
+        this.props.onChange(this.props.value);
+      },
       handleClick() {
-        console.log('Button clicked');
+        const collection = this.props.field.get('collection');
+        const entry = this.props.entry;
         
-        // Lấy giá trị plistUrl từ field main_download.plistUrl
-        const plistUrl = this.props.entry.getIn(['data', 'main_download', 'plistUrl']);
-        console.log('PlistUrl:', plistUrl);
+        // Lấy giá trị plistUrl
+        const plistUrl = entry.getIn(['data', 'main_download', 'plistUrl']);
         
-        // Kiểm tra nếu URL đã được nhập
         if (!plistUrl) {
-          console.log('No plistUrl found');
           alert('Vui lòng nhập URL plist trong phần "Liên kết tải xuống chính".');
           return;
         }
         
-        // Gọi API để cập nhật kích thước
-        console.log('Calling API with URL:', plistUrl);
         fetch(`/api/getIpaSize?url=${encodeURIComponent(plistUrl)}`)
-          .then(response => {
-            console.log('API response received');
-            if (!response.ok) {
-              throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-          })
+          .then(response => response.json())
           .then(data => {
-            console.log('API data:', data);
             if (data.size) {
-              // Cập nhật giá trị vào trường kích thước file (size)
-              console.log('Updating size:', data.size);
+              // Cập nhật giá trị size trong entry
+              const newEntry = entry.setIn(['data', 'size'], data.size);
               
-              // Cập nhật giá trị trong entry
-              this.props.onChange(data.size);
+              // Cập nhật entry trong CMS
+              CMS.entry.persistence.updateEntry(newEntry.toJS());
               
-              // Cập nhật giá trị trong form
-              this.props.entry.setIn(['data', 'size'], data.size);
-              
+              // Thông báo cho người dùng
               alert('Kích thước đã được cập nhật: ' + data.size);
+              
+              // Cập nhật giá trị widget
+              this.props.onChange(data.size);
             } else {
-              console.log('No size data received');
               alert('Không thể lấy kích thước file.');
             }
           })
           .catch(error => {
-            console.error('Error in API call:', error);
+            console.error('Error:', error);
             alert('Có lỗi xảy ra khi cập nhật kích thước: ' + error.message);
           });
       },
       render() {
-        const currentSize = this.props.value || '';
-        console.log('Current size:', currentSize);
+        const entry = this.props.entry;
+        const currentSize = entry.getIn(['data', 'size']) || '';
+        
         return h('div', {},
           h('button', { type: 'button', onClick: this.handleClick.bind(this) }, 'Cập nhật kích thước'),
-          currentSize ? h('span', {}, ` Kích thước hiện tại: ${currentSize}`) : null
+          h('span', {}, ` Kích thước hiện tại: ${currentSize}`)
         );
       }
     }));
-    // Khởi tạo CMS
+    
     CMS.init();
   </script>
 </body>
