@@ -2,7 +2,6 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Content Manager</title>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 </head>
@@ -14,8 +13,11 @@
   <script>
     CMS.registerWidget('update-size', createClass({
       handleClick() {
-        // Lấy URL plist từ formData để đảm bảo lấy được dữ liệu trong bài viết mới
-        const plistUrl = this.props.formData.main_download.plistUrl;
+        // In ra toàn bộ entry hiện tại để kiểm tra
+        console.log('Entry data:', this.props.entry.get('data').toJS());
+
+        // Lấy URL plist từ form dữ liệu hiện tại
+        const plistUrl = this.props.entry.getIn(['data', 'main_download', 'plistUrl']);
 
         // Kiểm tra nếu URL đã được nhập
         if (!plistUrl) {
@@ -30,21 +32,14 @@
         fetch(`/api/getIpaSize?url=${encodeURIComponent(plistUrl)}`)
           .then(response => response.json())
           .then(data => {
-  if (data.size) {
-    // Lấy dữ liệu hiện tại
-    const updatedData = this.props.entry.get('data').toJS();
-    
-    // Cập nhật trường "size" với giá trị mới
-    updatedData.size = data.size;
-
-    // Sử dụng `this.props.onChange` để cập nhật toàn bộ dữ liệu
-    this.props.onChange(fromJS(updatedData));
-
-    alert('Kích thước đã được cập nhật: ' + data.size);
-  } else {
-    alert('Không thể lấy kích thước file.');
-  }
-})
+            if (data.size) {
+              // Cập nhật giá trị vào trường kích thước file (size)
+              this.props.onChange(data.size);
+              alert('Kích thước đã được cập nhật: ' + data.size);
+            } else {
+              alert('Không thể lấy kích thước file.');
+            }
+          })
           .catch(error => {
             console.error(error);
             alert('Có lỗi xảy ra khi cập nhật kích thước.');
