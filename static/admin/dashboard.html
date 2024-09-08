@@ -12,47 +12,69 @@
   <script>
     CMS.registerWidget('update-size', createClass({
       handleClick() {
+        console.log('Button clicked');
         // Lấy toàn bộ dữ liệu entry
         const entryData = this.props.entry.get('data');
+        console.log('Entry data:', entryData.toJS());
         
         // Lấy URL plist từ form dữ liệu hiện tại
         let plistUrl = entryData.getIn(['main_download', 'plistUrl']);
         
         // Nếu không tìm thấy URL trong dữ liệu entry, thử lấy từ form fields
         if (!plistUrl) {
+          console.log('PlistUrl not found in entry data, checking form fields');
           const formData = this.props.form.getIn(['main_download', 'plistUrl']);
           plistUrl = formData ? formData.get('value') : null;
         }
         
+        console.log('PlistUrl:', plistUrl);
+        
         // Kiểm tra nếu URL đã được nhập
         if (!plistUrl) {
+          console.log('No plistUrl found');
           alert('Vui lòng nhập URL plist trong phần "Liên kết tải xuống chính".');
           return;
         }
         
         // Gọi API để cập nhật kích thước
+        console.log('Calling API with URL:', plistUrl);
         fetch(`/api/getIpaSize?url=${encodeURIComponent(plistUrl)}`)
-          .then(response => response.json())
+          .then(response => {
+            console.log('API response received');
+            if (!response.ok) {
+              throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+          })
           .then(data => {
+            console.log('API data:', data);
             if (data.size) {
               // Cập nhật giá trị vào trường kích thước file (size)
+              console.log('Updating size:', data.size);
               this.props.onChange(data.size);
               
               // Cập nhật form field
-              this.props.form.setFieldValue('size', data.size);
+              if (this.props.form && this.props.form.setFieldValue) {
+                console.log('Updating form field');
+                this.props.form.setFieldValue('size', data.size);
+              } else {
+                console.log('Form or setFieldValue not available');
+              }
               
               alert('Kích thước đã được cập nhật: ' + data.size);
             } else {
+              console.log('No size data received');
               alert('Không thể lấy kích thước file.');
             }
           })
           .catch(error => {
-            console.error(error);
-            alert('Có lỗi xảy ra khi cập nhật kích thước.');
+            console.error('Error in API call:', error);
+            alert('Có lỗi xảy ra khi cập nhật kích thước: ' + error.message);
           });
       },
       render() {
         const currentSize = this.props.value || this.props.entry.getIn(['data', 'size']);
+        console.log('Current size:', currentSize);
         return h('div', {},
           h('button', { type: 'button', onClick: this.handleClick.bind(this) }, 'Cập nhật kích thước'),
           currentSize ? h('span', {}, ` Kích thước hiện tại: ${currentSize}`) : null
