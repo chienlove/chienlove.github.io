@@ -16,7 +16,13 @@
         const entryData = this.props.entry.get('data');
         
         // Lấy URL plist từ form dữ liệu hiện tại
-        const plistUrl = entryData.getIn(['main_download', 'plistUrl']);
+        let plistUrl = entryData.getIn(['main_download', 'plistUrl']);
+        
+        // Nếu không tìm thấy URL trong dữ liệu entry, thử lấy từ form fields
+        if (!plistUrl) {
+          const formData = this.props.form.getIn(['main_download', 'plistUrl']);
+          plistUrl = formData ? formData.get('value') : null;
+        }
         
         // Kiểm tra nếu URL đã được nhập
         if (!plistUrl) {
@@ -30,11 +36,10 @@
           .then(data => {
             if (data.size) {
               // Cập nhật giá trị vào trường kích thước file (size)
-              const newData = entryData.set('size', data.size);
-              this.props.onChange(newData);
+              this.props.onChange(data.size);
               
-              // Cập nhật form
-              this.props.entry.get('data').clear().merge(newData);
+              // Cập nhật form field
+              this.props.form.setFieldValue('size', data.size);
               
               alert('Kích thước đã được cập nhật: ' + data.size);
             } else {
@@ -47,7 +52,7 @@
           });
       },
       render() {
-        const currentSize = this.props.entry.getIn(['data', 'size']);
+        const currentSize = this.props.value || this.props.entry.getIn(['data', 'size']);
         return h('div', {},
           h('button', { type: 'button', onClick: this.handleClick.bind(this) }, 'Cập nhật kích thước'),
           currentSize ? h('span', {}, ` Kích thước hiện tại: ${currentSize}`) : null
