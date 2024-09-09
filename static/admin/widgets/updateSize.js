@@ -2,8 +2,9 @@ CMS.registerWidget('update-size', createClass({
       handleClick() {
         console.log('Button clicked');
 
-        // Lấy giá trị plistUrl từ field main_download.plistUrl
-        const plistUrl = this.props.entry.getIn(['data', 'main_download', 'plistUrl']);
+        // Kiểm tra entry để đảm bảo giá trị đã được lưu
+        const mainDownload = this.props.entry.getIn(['data', 'main_download']);
+        const plistUrl = mainDownload ? mainDownload.get('plistUrl') : null;
         console.log('PlistUrl:', plistUrl);
 
         // Kiểm tra nếu URL đã được nhập
