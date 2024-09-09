@@ -27,9 +27,6 @@
           .then(data => {
             if (data.size) {
               // Cập nhật giá trị size trong entry
-              const newEntry = entry.setIn(['data', 'size'], data.size);
-              
-              // Cập nhật entry trong CMS
               this.props.onChange(data.size);
               
               // Thông báo cho người dùng
