@@ -1,50 +1,36 @@
-const UpdateSizeWidget = createClass({
-  componentDidMount() {
-    // Lắng nghe sự thay đổi của trường plistUrl
-    this.props.onChange(this.props.value);
-  },
-
+// Đăng ký widget 'update-size'
+CMS.registerWidget('update-size', createClass({
   handleClick() {
-    const entry = this.props.entry;
-    
-    // Lấy giá trị plistUrl
-    const plistUrl = entry.getIn(['data', 'main_download', 'plistUrl']);
+    // Logic xử lý khi bấm nút cập nhật kích thước
+    const plistUrl = this.props.entry.getIn(['data', 'main_download', 'plistUrl']);
     
     if (!plistUrl) {
       alert('Vui lòng nhập URL plist trong phần "Liên kết tải xuống chính".');
       return;
     }
     
+    // Gọi API cập nhật kích thước
     fetch(`/api/getIpaSize?url=${encodeURIComponent(plistUrl)}`)
       .then(response => response.json())
       .then(data => {
         if (data.size) {
-          // Cập nhật giá trị size trong entry
-          const newEntry = entry.setIn(['data', 'size'], data.size);
-          this.props.onChange(newEntry.get('data'));
-          
-          // Thông báo cho người dùng
+          const updatedEntry = this.props.entry.get('data').set('size', data.size);
+          this.props.onChange(updatedEntry);
           alert('Kích thước đã được cập nhật: ' + data.size);
         } else {
           alert('Không thể lấy kích thước file.');
         }
       })
-      .catch(error => {
-        console.error('Error:', error);
-        alert('Có lỗi xảy ra khi cập nhật kích thước: ' + error.message);
-      });
+      .catch(error => alert('Có lỗi xảy ra: ' + error.message));
   },
-
   render() {
-    const entry = this.props.entry;
-    const currentSize = entry.getIn(['data', 'size']) || 'Chưa cập nhật';
-    
+    const currentSize = this.props.entry.getIn(['data', 'size']) || '';
     return h('div', {},
       h('button', { type: 'button', onClick: this.handleClick.bind(this) }, 'Cập nhật kích thước'),
-      h('span', {}, ` Kích thước hiện tại: ${currentSize}`)
+      currentSize ? h('span', {}, ` Kích thước hiện tại: ${currentSize}`) : null
     );
   }
-});
+}));
 
-CMS.registerWidget('update-size', UpdateSizeWidget);
+// Khởi tạo CMS (có thể trong file khác hoặc ngay sau đoạn trên)
 CMS.init();
