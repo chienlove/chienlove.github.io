@@ -26,8 +26,8 @@ CMS.registerWidget('update-size', createClass({
         if (data.size) {
           console.log('Updating size:', data.size);
           
-          // Update the 'size' field directly
-          this.props.onChange(data.size);
+          // Update the 'size' field
+          this.props.onChange(this.props.entry.get('data').set('size', data.size));
           
           alert('Kích thước đã được cập nhật: ' + data.size);
         } else {
@@ -41,7 +41,7 @@ CMS.registerWidget('update-size', createClass({
       });
   },
   render() {
-    const currentSize = this.props.value || '';
+    const currentSize = this.props.entry.getIn(['data', 'size']) || '';
     console.log('Current size:', currentSize);
     return h('div', {},
       h('button', { type: 'button', onClick: this.handleClick }, 'Cập nhật kích thước'),
