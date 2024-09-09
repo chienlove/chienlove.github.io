@@ -53,7 +53,7 @@
         <h3 class="tool-details-title">Thông tin</h3>
         <div class="tool-details-container">
             <div class="tool-details"><strong>Nhà phát triển:</strong> {{ with .Params.developer }}{{ . }}{{ else }}Không có thông tin{{ end }}</div>
-            <div class="tool-details"><strong>Thể loại:</strong> {{ with .Params.category }}{{ . }}{{ else }}Không có thông tin{{ end }}</div>
+            <div class="tool-details"><strong>Thể loại:</strong> {{ with .Params.categories }}{{ . }}{{ else }}Không có thông tin{{ end }}</div>
             <div class="tool-details"><strong>Kích thước:</strong> {{ with .Params.size }}{{ . }}{{ else }}Không có thông tin{{ end }}</div>
             <div class="tool-details"><strong>iOS tương thích:</strong> {{ with .Params.ios_compatible }}{{ . }}{{ else }}Không có thông tin{{ end }}</div>
             <div class="tool-details"><strong>Từ khóa:</strong> {{ if .Params.keywords }}{{ delimit .Params.keywords ", " }}{{ else }}Không có từ khóa{{ end }}</div>
