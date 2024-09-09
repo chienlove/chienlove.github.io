@@ -2,7 +2,6 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Content Manager</title>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 </head>
@@ -12,12 +11,7 @@
   <!-- Tích hợp trực tiếp script cho widget tùy chỉnh updateSize -->
   <script>
     CMS.registerWidget('update-size', createClass({
-      componentDidMount() {
-        // Lắng nghe sự thay đổi của trường plistUrl
-        this.props.onChange(this.props.value);
-      },
       handleClick() {
-        const collection = this.props.field.get('collection');
         const entry = this.props.entry;
         
         // Lấy giá trị plistUrl
@@ -36,13 +30,10 @@
               const newEntry = entry.setIn(['data', 'size'], data.size);
               
               // Cập nhật entry trong CMS
-              CMS.entry.persistence.updateEntry(newEntry.toJS());
+              this.props.onChange(data.size);
               
               // Thông báo cho người dùng
               alert('Kích thước đã được cập nhật: ' + data.size);
-              
-              // Cập nhật giá trị widget
-              this.props.onChange(data.size);
             } else {
               alert('Không thể lấy kích thước file.');
             }
@@ -53,8 +44,7 @@
           });
       },
       render() {
-        const entry = this.props.entry;
-        const currentSize = entry.getIn(['data', 'size']) || '';
+        const currentSize = this.props.value || 'Chưa cập nhật';
         
         return h('div', {},
           h('button', { type: 'button', onClick: this.handleClick.bind(this) }, 'Cập nhật kích thước'),
