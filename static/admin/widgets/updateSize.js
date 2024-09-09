@@ -26,14 +26,12 @@ CMS.registerWidget('update-size', createClass({
           .then(data => {
             console.log('API data:', data);
             if (data.size) {
-              // Cập nhật giá trị vào trường kích thước file (size)
               console.log('Updating size:', data.size);
 
-              // Cập nhật trường widget "size" bằng cách sử dụng API của CMS
-              this.props.entry.get('data').set('size', data.size);
-              
-              // Gọi lại hàm onChange để cập nhật giá trị trong CMS
-              this.props.onChange(this.props.entry.get('data').set('size', data.size));
+              // Sử dụng setIn để cập nhật giá trị đúng trong CMS
+              this.props.onChange(
+                this.props.entry.get('data').setIn(['size'], data.size)
+              );
               
               alert('Kích thước đã được cập nhật: ' + data.size);
             } else {
