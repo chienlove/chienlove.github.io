@@ -47,3 +47,4 @@ const UpdateSizeWidget = createClass({
 });
 
 CMS.registerWidget('update-size', UpdateSizeWidget);
+CMS.init();
