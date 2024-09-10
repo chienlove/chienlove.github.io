@@ -10,7 +10,7 @@ CMS.registerWidget('update-size', createClass({
 
     this.setState({ loading: true });
 
-    fetch(`/api/getIpaSize?url=${encodeURIComponent(plistUrl)}`)
+    fetch(`/.netlify/functions/getIpaSize?url=${encodeURIComponent(plistUrl)}`)
       .then(response => {
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -19,7 +19,7 @@ CMS.registerWidget('update-size', createClass({
       })
       .then(data => {
         if (data.size) {
-          // Update the 'size' field
+          // Cập nhật giá trị của trường
           this.props.onChange(data.size);
           alert('Kích thước đã được cập nhật: ' + data.size);
         } else {
@@ -36,16 +36,21 @@ CMS.registerWidget('update-size', createClass({
   },
 
   render() {
-    const { value } = this.props;
     const loading = this.state?.loading;
 
     return h('div', {},
+      h('input', {
+        type: 'text',
+        value: this.props.value || '',
+        onChange: e => this.props.onChange(e.target.value),
+        disabled: loading,
+        style: { marginRight: '10px' }
+      }),
       h('button', { 
         type: 'button', 
         onClick: this.handleClick,
         disabled: loading 
-      }, loading ? 'Đang cập nhật...' : 'Cập nhật kích thước'),
-      value ? h('span', {}, ` Kích thước hiện tại: ${value}`) : null
+      }, loading ? 'Đang cập nhật...' : 'Cập nhật kích thước')
     );
   }
 }));
