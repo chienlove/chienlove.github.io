@@ -16,11 +16,14 @@ CMS.registerWidget('update-size', createClass({
     } else {
       // Nếu không tìm thấy URL, yêu cầu người dùng nhập
       plistUrl = prompt("Vui lòng nhập URL plist:");
-    }
-
-    if (!plistUrl) {
-      alert('Không thể lấy URL plist. Vui lòng đảm bảo bạn đã nhập URL trong phần "Liên kết tải xuống chính".');
-      return;
+      
+      // Nếu URL được nhập, lưu nó vào trường plistUrl
+      if (plistUrl) {
+        this.props.onChange({ plistUrl }); // Lưu URL plist vào entry
+      } else {
+        alert('Không thể lấy URL plist. Vui lòng đảm bảo bạn đã nhập URL trong phần "Liên kết tải xuống chính".');
+        return;
+      }
     }
 
     this.setState({ loading: true });
@@ -34,7 +37,7 @@ CMS.registerWidget('update-size', createClass({
       })
       .then(data => {
         if (data.size) {
-          this.props.onChange(data.size);
+          this.props.onChange({ size: data.size }); // Cập nhật kích thước file
           alert('Kích thước đã được cập nhật: ' + data.size);
         } else {
           throw new Error('Không nhận được dữ liệu kích thước từ API.');
