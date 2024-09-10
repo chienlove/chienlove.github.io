@@ -1,9 +1,19 @@
 CMS.registerWidget('update-size', createClass({
+  getInitialState() {
+    return { loading: false };
+  },
+
   handleClick() {
-    const entry = this.props.entry;
-    const collection = this.props.collection;
-    const mainDownload = entry.getIn(['data', 'main_download']);
-    const plistUrl = mainDownload ? mainDownload.get('plistUrl') : null;
+    let plistUrl;
+    if (this.props.entry.get('isFetching') === true) {
+      // Đang tạo bài viết mới
+      const formData = this.props.fieldsMetaData.getIn(['main_download', 'data']);
+      plistUrl = formData ? formData.get('plistUrl') : null;
+    } else {
+      // Đang chỉnh sửa bài viết đã tồn tại
+      const mainDownload = this.props.entry.getIn(['data', 'main_download']);
+      plistUrl = mainDownload ? mainDownload.get('plistUrl') : null;
+    }
 
     if (!plistUrl) {
       alert('Vui lòng nhập URL plist trong phần "Liên kết tải xuống chính".');
@@ -21,7 +31,6 @@ CMS.registerWidget('update-size', createClass({
       })
       .then(data => {
         if (data.size) {
-          // Cập nhật giá trị của trường size
           this.props.onChange(data.size);
           alert('Kích thước đã được cập nhật: ' + data.size);
         } else {
@@ -38,21 +47,37 @@ CMS.registerWidget('update-size', createClass({
   },
 
   render() {
-    const loading = this.state?.loading;
+    const { value, onChange, forID, classNameWrapper, setActiveStyle, setInactiveStyle } = this.props;
+    const { loading } = this.state;
 
-    return h('div', { className: 'size-update-widget' },
+    return h(
+      'div',
+      {
+        className: `${classNameWrapper} size-update-widget`,
+        style: { display: 'flex', alignItems: 'center' }
+      },
       h('input', {
         type: 'text',
-        value: this.props.value || '',
-        onChange: e => this.props.onChange(e.target.value),
+        id: forID,
+        className: classNameWrapper,
+        value: value || '',
+        onChange: e => onChange(e.target.value),
+        onFocus: setActiveStyle,
+        onBlur: setInactiveStyle,
         disabled: loading,
-        style: { marginRight: '10px', width: '150px' }
+        style: { marginRight: '10px', width: '150px', padding: '5px' }
       }),
-      h('button', { 
-        type: 'button', 
-        onClick: this.handleClick,
-        disabled: loading 
-      }, loading ? 'Đang cập nhật...' : 'Cập nhật kích thước')
+      h(
+        'button',
+        {
+          className: `${classNameWrapper} btn`,
+          type: 'button',
+          onClick: this.handleClick,
+          disabled: loading,
+          style: { padding: '5px 10px' }
+        },
+        loading ? 'Đang cập nhật...' : 'Cập nhật kích thước'
+      )
     );
   }
 }));
