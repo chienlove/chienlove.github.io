@@ -18,20 +18,11 @@ exports.handler = async function(event) {
     if (url.toLowerCase().endsWith('.plist')) {
       const plistResponse = await axios.get(url, { 
         responseType: 'arraybuffer',
-        headers: { 'User-Agent': 'Mozilla/5.0' } // Thêm User-Agent
+        headers: { 'User-Agent': 'Mozilla/5.0' }
       });
-      const contentType = plistResponse.headers['content-type'];
       const plistText = Buffer.from(plistResponse.data, 'binary').toString('utf8');
-
-      // Kiểm tra tính hợp lệ của XML
-      if (!contentType.includes('application/xml') && !contentType.includes('text/xml') && !plistText.trim().startsWith('<?xml')) {
-        throw new Error('Phản hồi không phải là tài liệu XML hợp lệ');
-      }
-
-      // Phân tích nội dung plist
       const plistData = plist.parse(plistText);
 
-      // Trích xuất URL IPA
       const ipaAsset = plistData.items?.[0]?.assets?.find(asset => asset.kind === 'software-package');
       if (!ipaAsset?.url) {
         throw new Error('Không thể tìm thấy URL IPA trong file plist');
@@ -42,11 +33,10 @@ exports.handler = async function(event) {
 
     // Gửi yêu cầu HEAD để lấy kích thước file IPA
     const response = await axios.head(ipaUrl, {
-      headers: { 'User-Agent': 'Mozilla/5.0' } // Thêm User-Agent
+      headers: { 'User-Agent': 'Mozilla/5.0' }
     });
     const fileSize = response.headers['content-length'];
 
-    // Trả về kích thước file dưới dạng MB
     if (fileSize) {
       const fileSizeMB = (parseInt(fileSize) / (1024 * 1024)).toFixed(2);
       return {
