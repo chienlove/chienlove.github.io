@@ -21,9 +21,8 @@ CMS.registerWidget('update-size', createClass({
       })
       .then(data => {
         if (data.size) {
-          // Cập nhật giá trị của trường size trong entry
-          const newEntry = entry.setIn(['data', 'size'], data.size);
-          this.props.onChange(newEntry);
+          // Cập nhật giá trị của trường size
+          this.props.onChange(data.size);
           alert('Kích thước đã được cập nhật: ' + data.size);
         } else {
           throw new Error('Không nhận được dữ liệu kích thước từ API.');
@@ -39,20 +38,15 @@ CMS.registerWidget('update-size', createClass({
   },
 
   render() {
-    const entry = this.props.entry;
-    const size = entry.getIn(['data', 'size']);
     const loading = this.state?.loading;
 
-    return h('div', {},
+    return h('div', { className: 'size-update-widget' },
       h('input', {
         type: 'text',
-        value: size || '',
-        onChange: e => {
-          const newEntry = entry.setIn(['data', 'size'], e.target.value);
-          this.props.onChange(newEntry);
-        },
+        value: this.props.value || '',
+        onChange: e => this.props.onChange(e.target.value),
         disabled: loading,
-        style: { marginRight: '10px' }
+        style: { marginRight: '10px', width: '150px' }
       }),
       h('button', { 
         type: 'button', 
