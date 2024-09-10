@@ -3,7 +3,7 @@ title: Dopamine
 date: 2024-09-06T01:50:12.282Z
 icon: /images/dopamine.png
 developer: opa334
-size: ""
+size: 47.45 MB
 ios_compatible: 15.0 - 16.6.1
 ios_version: 15.0 - 15.4.1
 keywords:
