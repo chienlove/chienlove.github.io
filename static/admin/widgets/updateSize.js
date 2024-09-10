@@ -5,18 +5,21 @@ CMS.registerWidget('update-size', createClass({
 
   handleClick() {
     let plistUrl;
-    if (this.props.entry.get('isFetching') === true) {
-      // Đang tạo bài viết mới
-      const formData = this.props.fieldsMetaData.getIn(['main_download', 'data']);
-      plistUrl = formData ? formData.get('plistUrl') : null;
+    const entry = this.props.entry;
+    const fieldsMetaData = this.props.fieldsMetaData;
+
+    // Thử lấy URL plist từ nhiều nguồn khác nhau
+    if (entry.getIn(['data', 'main_download', 'plistUrl'])) {
+      plistUrl = entry.getIn(['data', 'main_download', 'plistUrl']);
+    } else if (fieldsMetaData && fieldsMetaData.getIn(['main_download', 'data', 'plistUrl'])) {
+      plistUrl = fieldsMetaData.getIn(['main_download', 'data', 'plistUrl']);
     } else {
-      // Đang chỉnh sửa bài viết đã tồn tại
-      const mainDownload = this.props.entry.getIn(['data', 'main_download']);
-      plistUrl = mainDownload ? mainDownload.get('plistUrl') : null;
+      // Nếu không tìm thấy URL, yêu cầu người dùng nhập
+      plistUrl = prompt("Vui lòng nhập URL plist:");
     }
 
     if (!plistUrl) {
-      alert('Vui lòng nhập URL plist trong phần "Liên kết tải xuống chính".');
+      alert('Không thể lấy URL plist. Vui lòng đảm bảo bạn đã nhập URL trong phần "Liên kết tải xuống chính".');
       return;
     }
 
