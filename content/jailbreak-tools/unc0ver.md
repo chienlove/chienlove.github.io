@@ -1,7 +1,7 @@
 ---
 date: 2024-08-05T07:01:04.071Z
 developer: pwn20pwd
-size: 60Mb
+size: 51.99 MB
 ios_compatible: 11.0 - 14.8
 ios_version: 11.0 trở lên
 keywords:
