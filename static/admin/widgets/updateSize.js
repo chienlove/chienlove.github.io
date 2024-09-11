@@ -1,7 +1,7 @@
 CMS.registerWidget('update-size', createClass({
   getInitialState() {
     return {
-      plistUrl: this.props.value || '',  // Lấy giá trị khởi tạo từ CMS
+      plistUrl: this.props.value || '',  // Lấy giá trị plist URL từ prop hoặc khởi tạo rỗng
       loading: false
     };
   },
@@ -9,12 +9,12 @@ CMS.registerWidget('update-size', createClass({
   handlePlistUrlChange(event) {
     const plistUrl = event.target.value;
     this.setState({ plistUrl });  // Cập nhật state
-    // Lưu plistUrl vào entry ngay khi thay đổi
+    // Cập nhật ngay giá trị plistUrl vào CMS
     this.props.onChange(plistUrl);
   },
 
   handleClick() {
-    const { plistUrl } = this.state;
+    const { plistUrl } = this.state;  // Lấy từ state
 
     if (!plistUrl) {
       alert('Vui lòng nhập URL plist trong phần "Liên kết tải xuống chính".');
@@ -27,7 +27,7 @@ CMS.registerWidget('update-size', createClass({
       .then(response => response.json())
       .then(data => {
         if (data.size) {
-          this.props.onChange(data.size);  // Cập nhật kích thước file
+          this.props.onChange(data.size);  // Cập nhật kích thước file trong CMS
           alert('Kích thước đã được cập nhật: ' + data.size);
         } else {
           throw new Error('Không nhận được dữ liệu kích thước từ API.');
@@ -49,7 +49,7 @@ CMS.registerWidget('update-size', createClass({
       h('input', {
         type: 'text',
         value: plistUrl,
-        onChange: this.handlePlistUrlChange.bind(this),  // Lưu link plist khi thay đổi
+        onChange: this.handlePlistUrlChange.bind(this),  // Lưu link plist ngay khi thay đổi
         disabled: loading,
         style: { marginRight: '10px', width: '150px', padding: '5px' }
       }),
