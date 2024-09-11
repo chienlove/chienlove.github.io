@@ -5,10 +5,10 @@ CMS.registerWidget('update-size', createClass({
   handleClick() {
     const entry = this.props.entry;
     const mainDownload = entry.getIn(['data', 'main_download']);
-    const plistUrl = mainDownload ? mainDownload.get('plistUrl') : null;
+    const plistUrl = mainDownload ? mainDownload.get('plistUrl') : '';
 
     if (!plistUrl) {
-      alert('Không tìm thấy URL plist. Vui lòng điền URL plist trong phần "Liên kết tải xuống chính" trước khi cập nhật kích thước.');
+      alert('Vui lòng điền URL plist vào trường "Plist URL" trong phần "Liên kết tải xuống chính" trước khi cập nhật kích thước.');
       return;
     }
 
