@@ -7,12 +7,16 @@ CMS.registerWidget('update-size', createClass({
 
   handleClick() {
     const entry = this.props.entry;
-    const plistUrl = entry.getIn(['data', 'main_download', 'plistUrl']);  // Lấy plistUrl từ dữ liệu bài viết
+    const mainDownload = entry.getIn(['data', 'main_download']);
+    const plistUrl = mainDownload ? mainDownload.get('plistUrl') : null;
 
     if (!plistUrl) {
       alert('Vui lòng nhập URL plist trong phần "Liên kết tải xuống chính".');
       return;
     }
+
+    // Lưu dữ liệu cục bộ trước khi gọi API
+    this.props.onChange(plistUrl);
 
     this.setState({ loading: true });
 
