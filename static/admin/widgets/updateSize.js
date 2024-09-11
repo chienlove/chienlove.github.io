@@ -4,8 +4,13 @@ CMS.registerWidget('update-size', createClass({
   },
   handleClick() {
     const entry = this.props.entry;
+    const collection = this.props.collection;
     const mainDownload = entry.getIn(['data', 'main_download']);
     const plistUrl = mainDownload ? mainDownload.get('plistUrl') : '';
+
+    console.log('Current entry:', entry.toJS());
+    console.log('Main download:', mainDownload ? mainDownload.toJS() : 'Not found');
+    console.log('Plist URL:', plistUrl);
 
     if (!plistUrl) {
       alert('Vui lòng điền URL plist vào trường "Plist URL" trong phần "Liên kết tải xuống chính" trước khi cập nhật kích thước.');
@@ -40,7 +45,7 @@ CMS.registerWidget('update-size', createClass({
   },
   render() {
     const { loading } = this.state;
-    const size = this.props.entry.getIn(['data', 'size']);
+    const size = this.props.value || 'Chưa có kích thước';
 
     return h('div', {},
       h('button', { 
@@ -49,7 +54,7 @@ CMS.registerWidget('update-size', createClass({
         disabled: loading 
       }, loading ? 'Đang cập nhật...' : 'Cập nhật kích thước'),
       h('span', { style: { marginLeft: '10px' } }, 
-        size ? `Kích thước hiện tại: ${size}` : 'Chưa có kích thước'
+        `Kích thước hiện tại: ${size}`
       )
     );
   }
