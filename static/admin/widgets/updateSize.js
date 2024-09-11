@@ -1,8 +1,7 @@
 CMS.registerWidget('update-size', createClass({
   getInitialState() {
     return {
-      loading: false,
-      plistUrl: '', // Lưu trạng thái của plistUrl
+      loading: false
     };
   },
 
@@ -16,35 +15,33 @@ CMS.registerWidget('update-size', createClass({
       return;
     }
 
-    // Lưu trạng thái plistUrl
-    this.setState({ plistUrl }, () => {
-      this.setState({ loading: true });
+    // Lưu dữ liệu cục bộ trước khi gọi API
+    this.props.onChange(plistUrl);
 
-      // Gọi API để lấy kích thước IPA từ plistUrl sau khi đã lưu
-      fetch(`/.netlify/functions/getIpaSize?url=${encodeURIComponent(this.state.plistUrl)}`)
-        .then(response => response.json())
-        .then(data => {
-          if (data.size) {
-            this.props.onChange(data.size);  // Cập nhật kích thước file trong CMS
-            alert('Kích thước đã được cập nhật: ' + data.size);
-          } else {
-            throw new Error('Không nhận được dữ liệu kích thước từ API.');
-          }
-        })
-        .catch(error => {
-          console.error('Error in API call:', error);
-          alert('Có lỗi xảy ra khi cập nhật kích thước: ' + error.message);
-        })
-        .finally(() => {
-          this.setState({ loading: false });
-        });
-    });
+    this.setState({ loading: true });
+
+    fetch(`/.netlify/functions/getIpaSize?url=${encodeURIComponent(plistUrl)}`)
+      .then(response => response.json())
+      .then(data => {
+        if (data.size) {
+          this.props.onChange(data.size);  // Cập nhật kích thước file trong CMS
+          alert('Kích thước đã được cập nhật: ' + data.size);
+        } else {
+          throw new Error('Không nhận được dữ liệu kích thước từ API.');
+        }
+      })
+      .catch(error => {
+        console.error('Error in API call:', error);
+        alert('Có lỗi xảy ra khi cập nhật kích thước: ' + error.message);
+      })
+      .finally(() => {
+        this.setState({ loading: false });
+      });
   },
 
   render() {
     const loading = this.state.loading;
 
-    // Không hiển thị khung nhập cho URL plist nữa
     return h('div', { className: 'size-update-widget', style: { display: 'flex', alignItems: 'center' } },
       h('button', { 
         type: 'button', 
