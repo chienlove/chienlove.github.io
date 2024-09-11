@@ -1,17 +1,23 @@
 CMS.registerWidget('update-size', createClass({
+  getInitialState() {
+    return { loading: false, plistUrl: '' };
+  },
+  componentDidMount() {
+    // Lấy plistUrl từ localStorage khi component được mount
+    const savedPlistUrl = localStorage.getItem('plistUrl');
+    if (savedPlistUrl) {
+      this.setState({ plistUrl: savedPlistUrl });
+    }
+  },
   handleClick() {
     const entry = this.props.entry;
-    const collection = this.props.collection;
     const mainDownload = entry.getIn(['data', 'main_download']);
-    const plistUrl = mainDownload ? mainDownload.get('plistUrl') : null;
-
+    const plistUrl = mainDownload ? mainDownload.get('plistUrl') : this.state.plistUrl;
     if (!plistUrl) {
       alert('Vui lòng nhập URL plist trong phần "Liên kết tải xuống chính".');
       return;
     }
-
     this.setState({ loading: true });
-
     fetch(`/.netlify/functions/getIpaSize?url=${encodeURIComponent(plistUrl)}`)
       .then(response => {
         if (!response.ok) {
@@ -37,22 +43,21 @@ CMS.registerWidget('update-size', createClass({
         this.setState({ loading: false });
       });
   },
-
+  handlePlistUrlChange(e) {
+    const plistUrl = e.target.value;
+    this.setState({ plistUrl });
+    // Lưu plistUrl vào localStorage
+    localStorage.setItem('plistUrl', plistUrl);
+  },
   render() {
-    const entry = this.props.entry;
-    const size = entry.getIn(['data', 'size']);
-    const loading = this.state?.loading;
-
+    const { loading, plistUrl } = this.state;
     return h('div', {},
       h('input', {
         type: 'text',
-        value: size || '',
-        onChange: e => {
-          const newEntry = entry.setIn(['data', 'size'], e.target.value);
-          this.props.onChange(newEntry);
-        },
-        disabled: loading,
-        style: { marginRight: '10px' }
+        value: plistUrl,
+        onChange: this.handlePlistUrlChange,
+        placeholder: 'Nhập URL plist',
+        style: { marginRight: '10px', width: '300px' }
       }),
       h('button', { 
         type: 'button', 
@@ -62,5 +67,4 @@ CMS.registerWidget('update-size', createClass({
     );
   }
 }));
-
 CMS.init();
