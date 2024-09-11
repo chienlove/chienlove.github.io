@@ -1,22 +1,17 @@
 CMS.registerWidget('update-size', createClass({
   getInitialState() {
-    return { loading: false, plistUrl: '' };
-  },
-  componentDidMount() {
-    // Lấy plistUrl từ localStorage khi component được mount
-    const savedPlistUrl = localStorage.getItem('plistUrl');
-    if (savedPlistUrl) {
-      this.setState({ plistUrl: savedPlistUrl });
-    }
+    return { loading: false };
   },
   handleClick() {
     const entry = this.props.entry;
     const mainDownload = entry.getIn(['data', 'main_download']);
-    const plistUrl = mainDownload ? mainDownload.get('plistUrl') : this.state.plistUrl;
+    const plistUrl = mainDownload ? mainDownload.get('plistUrl') : null;
+
     if (!plistUrl) {
-      alert('Vui lòng nhập URL plist trong phần "Liên kết tải xuống chính".');
+      alert('Không tìm thấy URL plist. Vui lòng điền URL plist trong phần "Liên kết tải xuống chính" trước khi cập nhật kích thước.');
       return;
     }
+
     this.setState({ loading: true });
     fetch(`/.netlify/functions/getIpaSize?url=${encodeURIComponent(plistUrl)}`)
       .then(response => {
@@ -43,27 +38,19 @@ CMS.registerWidget('update-size', createClass({
         this.setState({ loading: false });
       });
   },
-  handlePlistUrlChange(e) {
-    const plistUrl = e.target.value;
-    this.setState({ plistUrl });
-    // Lưu plistUrl vào localStorage
-    localStorage.setItem('plistUrl', plistUrl);
-  },
   render() {
-    const { loading, plistUrl } = this.state;
+    const { loading } = this.state;
+    const size = this.props.entry.getIn(['data', 'size']);
+
     return h('div', {},
-      h('input', {
-        type: 'text',
-        value: plistUrl,
-        onChange: this.handlePlistUrlChange,
-        placeholder: 'Nhập URL plist',
-        style: { marginRight: '10px', width: '300px' }
-      }),
       h('button', { 
         type: 'button', 
         onClick: this.handleClick,
         disabled: loading 
-      }, loading ? 'Đang cập nhật...' : 'Cập nhật kích thước')
+      }, loading ? 'Đang cập nhật...' : 'Cập nhật kích thước'),
+      h('span', { style: { marginLeft: '10px' } }, 
+        size ? `Kích thước hiện tại: ${size}` : 'Chưa có kích thước'
+      )
     );
   }
 }));

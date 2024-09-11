@@ -78,4 +78,4 @@ cms_manual_init: true
 custom_css: /css/admin.css
 custom_widgets:
   - name: update-size
-    file: "/admin/widgets/updateSize.js"  # Đảm bảo rằng custom widget này được tải
+    file: "/admin/widgets/updateSize.js"
