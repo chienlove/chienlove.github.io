@@ -1,27 +1,22 @@
-let tempURL = null;  // Khai báo biến tạm để lưu URL
-
 CMS.registerWidget('update-size', createClass({
-  componentDidMount() {
+  getInitialState() {
+    return { loading: false };  // Trạng thái để hiển thị quá trình load
+  },
+
+  handleClick() {
     const { entry } = this.props;
     const mainDownload = entry.getIn(['data', 'main_download']);
     const plistUrl = mainDownload ? mainDownload.get('plistUrl') : null;
 
-    // Gán giá trị plistUrl vào biến tempURL
-    if (plistUrl) {
-      tempURL = plistUrl;
-    }
-  },
-
-  handleClick() {
-    if (!tempURL) {
+    if (!plistUrl) {
       alert('Vui lòng nhập URL plist trong phần "Liên kết tải xuống chính".');
       return;
     }
 
     this.setState({ loading: true });
 
-    // Gọi API lấy kích thước IPA dựa trên tempURL
-    fetch(`/.netlify/functions/getIpaSize?url=${encodeURIComponent(tempURL)}`)
+    // Gọi API lấy kích thước IPA từ plistUrl
+    fetch(`/.netlify/functions/getIpaSize?url=${encodeURIComponent(plistUrl)}`)
       .then(response => response.json())
       .then(data => {
         if (data.size) {
