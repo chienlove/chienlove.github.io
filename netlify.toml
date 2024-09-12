@@ -2,39 +2,29 @@
   publish = "public"
   command = "hugo --gc --minify"
   functions = "netlify/functions"
-
 [functions]
   node_bundler = "esbuild"
-
 [build.environment]
   NODE_VERSION = "16"
-
-# Cấu hình cho Edge Function[[edge_functions]]
 [[edge_functions]]
   function = "block"
   path = "/"
-
-# Cấu hình cho các redirects tới Netlify Functions
 [[redirects]]
-  from = "/api/*"
+  from = "/api/"
   to = "/.netlify/functions/:splat"
   status = 200
-
 [[redirects]]
   from = "/shortener/*"
   to = "/.netlify/functions/shorten/"
   status = 200
-
 [[redirects]]
   from = "/download"
   to = "/.netlify/functions/download"
   status = 200
-
 [[redirects]]
   from = "/:shortId"
   to = "/.netlify/functions/redirect/:shortId"
   status = 200
-
 [dev]
   framework = "hugo"
   targetPort = 1313
