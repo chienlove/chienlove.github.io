@@ -1,16 +1,13 @@
 CMS.registerWidget('update-size', createClass({
-  componentDidMount() {
-    // Lấy dữ liệu từ localStorage khi component được tải lên
-    const storedPlistUrl = localStorage.getItem('plistUrl');
-    if (storedPlistUrl) {
-      this.props.onChange(storedPlistUrl);
-    }
+  getInitialState() {
+    return {
+      loading: false
+    };
   },
 
   handleClick() {
     const entry = this.props.entry;
-    const mainDownload = entry.getIn(['data', 'main_download']);
-    const plistUrl = mainDownload ? mainDownload.get('plistUrl') : null;
+    const plistUrl = entry.getIn(['data', 'main_download', 'plistUrl']);  // Lấy plistUrl từ dữ liệu bài viết
 
     if (!plistUrl) {
       alert('Vui lòng nhập URL plist trong phần "Liên kết tải xuống chính".');
@@ -19,14 +16,11 @@ CMS.registerWidget('update-size', createClass({
 
     this.setState({ loading: true });
 
-    // Tự động lưu URL plist vào localStorage
-    localStorage.setItem('plistUrl', plistUrl);
-
     fetch(`/.netlify/functions/getIpaSize?url=${encodeURIComponent(plistUrl)}`)
       .then(response => response.json())
       .then(data => {
         if (data.size) {
-          this.props.onChange(data.size);
+          this.props.onChange(data.size);  // Cập nhật kích thước file trong CMS
           alert('Kích thước đã được cập nhật: ' + data.size);
         } else {
           throw new Error('Không nhận được dữ liệu kích thước từ API.');
@@ -42,23 +36,12 @@ CMS.registerWidget('update-size', createClass({
   },
 
   render() {
-    const loading = this.state?.loading;
+    const loading = this.state.loading;
+
     return h('div', { className: 'size-update-widget', style: { display: 'flex', alignItems: 'center' } },
-      h('input', {
-        type: 'text',
-        value: this.props.value || '',
-        onChange: e => {
-          const newValue = e.target.value;
-          this.props.onChange(newValue);
-          // Cập nhật dữ liệu plist vào localStorage khi thay đổi
-          localStorage.setItem('plistUrl', newValue);
-        },
-        disabled: loading,
-        style: { marginRight: '10px', width: '150px', padding: '5px' }
-      }),
       h('button', { 
         type: 'button', 
-        onClick: this.handleClick,
+        onClick: this.handleClick.bind(this),  // Bấm nút để cập nhật kích thước
         disabled: loading,
         style: { padding: '5px 10px' }
       }, loading ? 'Đang cập nhật...' : 'Cập nhật kích thước')
