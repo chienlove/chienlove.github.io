@@ -1,4 +1,4 @@
-CMS.registerWidget('update-size', createClass({
+CCMS.registerWidget('update-size', createClass({
   getInitialState() {
     return { loading: false };
   },
@@ -14,7 +14,6 @@ CMS.registerWidget('update-size', createClass({
     } else if (fieldsMetaData && fieldsMetaData.getIn(['main_download', 'data', 'plistUrl'])) {
       plistUrl = fieldsMetaData.getIn(['main_download', 'data', 'plistUrl']);
     } else {
-      // Nếu không tìm thấy URL, yêu cầu người dùng nhập
       plistUrl = prompt("Vui lòng nhập URL plist:");
     }
 
@@ -25,28 +24,42 @@ CMS.registerWidget('update-size', createClass({
 
     this.setState({ loading: true });
 
-    fetch(`/.netlify/functions/getIpaSize?url=${encodeURIComponent(plistUrl)}`)
-      .then(response => {
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        return response.json();
-      })
-      .then(data => {
-        if (data.size) {
-          this.props.onChange(data.size);
-          alert('Kích thước đã được cập nhật: ' + data.size);
-        } else {
-          throw new Error('Không nhận được dữ liệu kích thước từ API.');
-        }
-      })
-      .catch(error => {
-        console.error('Error in API call:', error);
-        alert('Có lỗi xảy ra khi cập nhật kích thước: ' + error.message);
-      })
-      .finally(() => {
-        this.setState({ loading: false });
-      });
+    // Gọi API để tạo token
+    fetch('/generate-token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: plistUrl })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.token) {
+        // Sau khi có token, gọi API để lấy kích thước IPA
+        return fetch(`/.netlify/functions/getIpaSize?url=${encodeURIComponent(plistUrl)}&token=${data.token}`);
+      } else {
+        throw new Error('Không nhận được token.');
+      }
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    })
+    .then(data => {
+      if (data.size) {
+        this.props.onChange(data.size);
+        alert('Kích thước đã được cập nhật: ' + data.size);
+      } else {
+        throw new Error('Không nhận được dữ liệu kích thước từ API.');
+      }
+    })
+    .catch(error => {
+      console.error('Error in API call:', error);
+      alert('Có lỗi xảy ra khi cập nhật kích thước: ' + error.message);
+    })
+    .finally(() => {
+      this.setState({ loading: false });
+    });
   },
 
   render() {
@@ -84,5 +97,4 @@ CMS.registerWidget('update-size', createClass({
     );
   }
 }));
-
 CMS.init();
