@@ -1,12 +1,25 @@
 CMS.registerWidget('update-size', createClass({
   getInitialState() {
-    return { loading: false };  // Trạng thái để hiển thị quá trình load
+    return {
+      loading: false,
+      plistUrl: ''  // Biến lưu URL plist tạm thời
+    };
   },
 
-  handleClick() {
+  // Đồng bộ dữ liệu plistUrl khi nhập vào trường URL plist
+  componentDidUpdate(prevProps) {
     const { entry } = this.props;
     const mainDownload = entry.getIn(['data', 'main_download']);
     const plistUrl = mainDownload ? mainDownload.get('plistUrl') : null;
+
+    // Kiểm tra nếu plistUrl có thay đổi thì cập nhật vào state
+    if (plistUrl !== this.state.plistUrl) {
+      this.setState({ plistUrl });
+    }
+  },
+
+  handleClick() {
+    const { plistUrl } = this.state;
 
     if (!plistUrl) {
       alert('Vui lòng nhập URL plist trong phần "Liên kết tải xuống chính".');
@@ -37,13 +50,13 @@ CMS.registerWidget('update-size', createClass({
   },
 
   render() {
-    const { loading } = this.state;
+    const { loading, plistUrl } = this.state;
 
     return h('div', { className: 'size-update-widget', style: { display: 'flex', alignItems: 'center' } },
       h('button', { 
         type: 'button', 
         onClick: this.handleClick.bind(this), 
-        disabled: loading,
+        disabled: loading || !plistUrl,  // Chỉ cho phép bấm nút khi đã có URL plist
         style: { padding: '5px 10px' }
       }, loading ? 'Đang cập nhật...' : 'Cập nhật kích thước')
     );
