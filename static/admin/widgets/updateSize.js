@@ -1,77 +1,84 @@
 CMS.registerWidget('update-size', createClass({
   getInitialState() {
-    return {
-      loading: false,
-      plistUrl: '', // Biến lưu URL plist từ entry hoặc localStorage
-    };
+    return { loading: false, tempPlistUrl: '' };
   },
-
   componentDidMount() {
-    const { entry } = this.props;
-
-    // Kiểm tra sự tồn tại của entry
-    if (!entry) {
-      console.error('Entry không tồn tại.');
-      return;
-    }
-
-    // Lấy giá trị từ localStorage nếu có
-    const savedPlistUrl = localStorage.getItem('tempURL');
-
-    // Lấy giá trị từ main_download trong entry
-    const mainDownload = entry.getIn(['data', 'main_download']);
-    const plistUrlFromEntry = mainDownload && mainDownload.has('plistUrl') ? mainDownload.get('plistUrl') : '';
-
-    // Nếu có giá trị từ localStorage, ưu tiên giá trị đó, nếu không lấy từ entry
-    const plistUrl = savedPlistUrl || plistUrlFromEntry;
-
-    if (plistUrl) {
-      this.setState({ plistUrl });
-      // Cập nhật giá trị vào localStorage để lưu trữ
-      localStorage.setItem('tempURL', plistUrl);
-    }
+    const mainDownload = this.props.entry.getIn(['data', 'main_download']);
+    const plistUrl = mainDownload ? mainDownload.get('plistUrl') : '';
+    this.setState({ tempPlistUrl: plistUrl });
   },
+  handlePlistUrlChange(e) {
+    this.setState({ tempPlistUrl: e.target.value });
+  },
+  handleClick() {
+    const entry = this.props.entry;
+    const mainDownload = entry.getIn(['data', 'main_download']);
+    let plistUrl = mainDownload ? mainDownload.get('plistUrl') : null;
 
-  async handleClick() {
-    const { plistUrl } = this.state;
+    // Nếu không có plistUrl trong entry, sử dụng tempPlistUrl từ state
+    if (!plistUrl) {
+      plistUrl = this.state.tempPlistUrl;
+    }
 
     if (!plistUrl) {
-      alert('Vui lòng nhập URL plist trong phần "Liên kết tải xuống chính".');
+      alert('Vui lòng nhập URL plist trước khi cập nhật kích thước.');
       return;
     }
 
     this.setState({ loading: true });
-
-    try {
-      const response = await fetch(`/.netlify/functions/getIpaSize?url=${encodeURIComponent(plistUrl)}`);
-      const data = await response.json();
-
-      if (data.size) {
-        // Cập nhật kích thước file IPA vào CMS
-        this.props.onChange(this.props.entry.setIn(['data', 'size'], data.size));
-        alert('Kích thước đã được cập nhật: ' + data.size);
-      } else {
-        alert('Không nhận được kích thước từ API. Vui lòng kiểm tra URL.');
-        throw new Error('Không nhận được kích thước từ API.');
-      }
-    } catch (error) {
-      console.error('Error in API call:', error);
-      alert('Có lỗi xảy ra khi cập nhật kích thước: ' + error.message + '. Vui lòng thử lại sau.');
-    } finally {
-      this.setState({ loading: false });
-    }
+    fetch(`/.netlify/functions/getIpaSize?url=${encodeURIComponent(plistUrl)}`)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (data.size) {
+          // Cập nhật giá trị của trường size trong entry
+          let newEntry = entry.setIn(['data', 'size'], data.size);
+          
+          // Nếu main_download chưa tồn tại, tạo nó và set plistUrl
+          if (!mainDownload) {
+            newEntry = newEntry.setIn(['data', 'main_download', 'plistUrl'], plistUrl);
+          }
+          
+          this.props.onChange(newEntry);
+          alert('Kích thước đã được cập nhật: ' + data.size);
+        } else {
+          throw new Error('Không nhận được dữ liệu kích thước từ API.');
+        }
+      })
+      .catch(error => {
+        console.error('Error in API call:', error);
+        alert('Có lỗi xảy ra khi cập nhật kích thước: ' + error.message);
+      })
+      .finally(() => {
+        this.setState({ loading: false });
+      });
   },
-
   render() {
-    const { loading, plistUrl } = this.state;
+    const { loading, tempPlistUrl } = this.state;
+    const size = this.props.entry.getIn(['data', 'size']);
+    const mainDownload = this.props.entry.getIn(['data', 'main_download']);
+    const plistUrl = mainDownload ? mainDownload.get('plistUrl') : '';
 
-    return h('div', { className: 'size-update-widget', style: { display: 'flex', flexDirection: 'column', gap: '10px' } },
-      h('button', {
-        type: 'button',
-        onClick: this.handleClick.bind(this),
-        disabled: loading || !plistUrl, // Chỉ cho phép bấm nút khi đã có URL plist
-        style: { padding: '5px 10px', cursor: plistUrl ? 'pointer' : 'not-allowed' }
-      }, loading ? 'Đang cập nhật...' : 'Cập nhật kích thước')
+    return h('div', {},
+      h('input', {
+        type: 'text',
+        value: plistUrl || tempPlistUrl,
+        onChange: this.handlePlistUrlChange,
+        placeholder: 'Nhập URL plist',
+        style: { marginRight: '10px', width: '300px' }
+      }),
+      h('button', { 
+        type: 'button', 
+        onClick: this.handleClick,
+        disabled: loading 
+      }, loading ? 'Đang cập nhật...' : 'Cập nhật kích thước'),
+      h('div', { style: { marginTop: '10px' } }, 
+        `Kích thước hiện tại: ${size || 'Chưa có'}`
+      )
     );
   }
 }));
