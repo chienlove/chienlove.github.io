@@ -2,39 +2,48 @@ CMS.registerWidget('update-size', createClass({
   getInitialState() {
     return {
       loading: false,
-      plistUrl: '', // Trạng thái để lưu URL plist
+      plistUrl: '', // Lưu URL plist từ trường 'main_download.plistUrl'
     };
   },
 
-  componentDidUpdate(prevProps) {
-    // Kiểm tra nếu URL plist thay đổi, tự động lưu vào state
+  componentDidMount() {
+    // Khi widget được tải, lấy giá trị plistUrl từ bài viết và lưu vào state
     const entry = this.props.entry;
     const mainDownload = entry.getIn(['data', 'main_download']);
     const plistUrl = mainDownload ? mainDownload.get('plistUrl') : '';
+    this.setState({ plistUrl });
+  },
 
-    if (plistUrl !== this.state.plistUrl) {
-      this.setState({ plistUrl });  // Cập nhật URL plist mới vào state
+  componentDidUpdate(prevProps) {
+    // Mỗi khi dữ liệu bài viết thay đổi, cập nhật lại URL plist nếu có
+    const entry = this.props.entry;
+    const mainDownload = entry.getIn(['data', 'main_download']);
+    const newPlistUrl = mainDownload ? mainDownload.get('plistUrl') : '';
+
+    if (newPlistUrl !== this.state.plistUrl) {
+      this.setState({ plistUrl: newPlistUrl });
     }
   },
 
   handleClick() {
-    // Kiểm tra URL plist từ state đã có chưa
+    // Lấy URL plist từ state
     const { plistUrl } = this.state;
 
     if (!plistUrl) {
+      // Thông báo nếu chưa có URL plist
       alert('Vui lòng nhập URL plist trong phần "Liên kết tải xuống chính".');
       return;
     }
 
-    // Bắt đầu quá trình cập nhật
+    // Bắt đầu cập nhật
     this.setState({ loading: true });
 
-    // Gọi API để lấy kích thước IPA từ plistUrl
+    // Gọi API để lấy kích thước từ URL plist
     fetch(`/.netlify/functions/getIpaSize?url=${encodeURIComponent(plistUrl)}`)
       .then(response => response.json())
       .then(data => {
         if (data.size) {
-          this.props.onChange(data.size);  // Cập nhật kích thước file trong CMS
+          this.props.onChange(data.size);  // Cập nhật kích thước trong CMS
           alert('Kích thước đã được cập nhật: ' + data.size);
         } else {
           throw new Error('Không nhận được dữ liệu kích thước từ API.');
