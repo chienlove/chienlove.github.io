@@ -1,31 +1,30 @@
 CMS.registerWidget('update-size', createClass({
   getInitialState() {
-    return { loading: false, tempPlistUrl: '' };
+    return { loading: false };
   },
-  componentDidMount() {
-    const mainDownload = this.props.entry.getIn(['data', 'main_download']);
-    const plistUrl = mainDownload ? mainDownload.get('plistUrl') : '';
-    this.setState({ tempPlistUrl: plistUrl });
-  },
-  handlePlistUrlChange(e) {
-    this.setState({ tempPlistUrl: e.target.value });
-  },
-  handleClick() {
-    const entry = this.props.entry;
-    const mainDownload = entry.getIn(['data', 'main_download']);
-    let plistUrl = mainDownload ? mainDownload.get('plistUrl') : null;
 
-    // Nếu không có plistUrl trong entry, sử dụng tempPlistUrl từ state
-    if (!plistUrl) {
-      plistUrl = this.state.tempPlistUrl;
+  handleClick() {
+    let plistUrl;
+    const entry = this.props.entry;
+    const fieldsMetaData = this.props.fieldsMetaData;
+
+    // Thử lấy URL plist từ nhiều nguồn khác nhau
+    if (entry.getIn(['data', 'main_download', 'plistUrl'])) {
+      plistUrl = entry.getIn(['data', 'main_download', 'plistUrl']);
+    } else if (fieldsMetaData && fieldsMetaData.getIn(['main_download', 'data', 'plistUrl'])) {
+      plistUrl = fieldsMetaData.getIn(['main_download', 'data', 'plistUrl']);
+    } else {
+      // Nếu không tìm thấy URL, yêu cầu người dùng nhập
+      plistUrl = prompt("Vui lòng nhập URL plist:");
     }
 
     if (!plistUrl) {
-      alert('Vui lòng nhập URL plist trước khi cập nhật kích thước.');
+      alert('Không thể lấy URL plist. Vui lòng đảm bảo bạn đã nhập URL trong phần "Liên kết tải xuống chính".');
       return;
     }
 
     this.setState({ loading: true });
+
     fetch(`/.netlify/functions/getIpaSize?url=${encodeURIComponent(plistUrl)}`)
       .then(response => {
         if (!response.ok) {
@@ -35,15 +34,7 @@ CMS.registerWidget('update-size', createClass({
       })
       .then(data => {
         if (data.size) {
-          // Cập nhật giá trị của trường size trong entry
-          let newEntry = entry.setIn(['data', 'size'], data.size);
-          
-          // Nếu main_download chưa tồn tại, tạo nó và set plistUrl
-          if (!mainDownload) {
-            newEntry = newEntry.setIn(['data', 'main_download', 'plistUrl'], plistUrl);
-          }
-          
-          this.props.onChange(newEntry);
+          this.props.onChange(data.size);
           alert('Kích thước đã được cập nhật: ' + data.size);
         } else {
           throw new Error('Không nhận được dữ liệu kích thước từ API.');
@@ -57,29 +48,41 @@ CMS.registerWidget('update-size', createClass({
         this.setState({ loading: false });
       });
   },
-  render() {
-    const { loading, tempPlistUrl } = this.state;
-    const size = this.props.entry.getIn(['data', 'size']);
-    const mainDownload = this.props.entry.getIn(['data', 'main_download']);
-    const plistUrl = mainDownload ? mainDownload.get('plistUrl') : '';
 
-    return h('div', {},
+  render() {
+    const { value, onChange, forID, classNameWrapper, setActiveStyle, setInactiveStyle } = this.props;
+    const { loading } = this.state;
+
+    return h(
+      'div',
+      {
+        className: `${classNameWrapper} size-update-widget`,
+        style: { display: 'flex', alignItems: 'center' }
+      },
       h('input', {
         type: 'text',
-        value: plistUrl || tempPlistUrl,
-        onChange: this.handlePlistUrlChange,
-        placeholder: 'Nhập URL plist',
-        style: { marginRight: '10px', width: '300px' }
+        id: forID,
+        className: classNameWrapper,
+        value: value || '',
+        onChange: e => onChange(e.target.value),
+        onFocus: setActiveStyle,
+        onBlur: setInactiveStyle,
+        disabled: loading,
+        style: { marginRight: '10px', width: '150px', padding: '5px' }
       }),
-      h('button', { 
-        type: 'button', 
-        onClick: this.handleClick,
-        disabled: loading 
-      }, loading ? 'Đang cập nhật...' : 'Cập nhật kích thước'),
-      h('div', { style: { marginTop: '10px' } }, 
-        `Kích thước hiện tại: ${size || 'Chưa có'}`
+      h(
+        'button',
+        {
+          className: `${classNameWrapper} btn`,
+          type: 'button',
+          onClick: this.handleClick,
+          disabled: loading,
+          style: { padding: '5px 10px' }
+        },
+        loading ? 'Đang cập nhật...' : 'Cập nhật kích thước'
       )
     );
   }
 }));
+
 CMS.init();
