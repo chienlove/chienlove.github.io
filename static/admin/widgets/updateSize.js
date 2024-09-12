@@ -7,19 +7,17 @@ CMS.registerWidget('update-size', createClass({
 
   handleClick() {
     const entry = this.props.entry;
-    const mainDownload = entry.getIn(['data', 'main_download']);
-    const plistUrl = mainDownload ? mainDownload.get('plistUrl') : null;
+    const plistUrl = entry.getIn(['data', 'main_download', 'plistUrl']);  // Lấy plistUrl từ dữ liệu bài viết
 
     if (!plistUrl) {
       alert('Vui lòng nhập URL plist trong phần "Liên kết tải xuống chính".');
       return;
     }
 
-    // Lưu dữ liệu cục bộ trước khi gọi API
-    this.props.onChange(plistUrl);
-
+    // Bắt đầu cập nhật
     this.setState({ loading: true });
 
+    // Gọi API để lấy kích thước IPA từ plistUrl
     fetch(`/.netlify/functions/getIpaSize?url=${encodeURIComponent(plistUrl)}`)
       .then(response => response.json())
       .then(data => {
@@ -42,6 +40,7 @@ CMS.registerWidget('update-size', createClass({
   render() {
     const loading = this.state.loading;
 
+    // Không hiển thị khung nhập cho URL plist nữa
     return h('div', { className: 'size-update-widget', style: { display: 'flex', alignItems: 'center' } },
       h('button', { 
         type: 'button', 
