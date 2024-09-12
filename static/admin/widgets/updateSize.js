@@ -2,22 +2,28 @@ CMS.registerWidget('update-size', createClass({
   getInitialState() {
     return {
       loading: false,
-      plistUrl: '', // Biến lưu URL plist tạm thời
+      plistUrl: '', // Biến lưu URL plist từ entry hoặc localStorage
     };
   },
 
-  // Đảm bảo rằng URL plist đang được lưu lại từ entry khi thay đổi
   componentDidMount() {
     const { entry } = this.props;
+    
+    // Lấy giá trị từ localStorage nếu có
+    const savedPlistUrl = localStorage.getItem('tempURL');
+    
+    // Lấy giá trị từ main_download trong entry
     const mainDownload = entry.getIn(['data', 'main_download']);
-    const plistUrl = mainDownload ? mainDownload.get('plistUrl') : '';
+    const plistUrlFromEntry = mainDownload ? mainDownload.get('plistUrl') : '';
 
-    this.setState({ plistUrl }); // Cập nhật giá trị plistUrl vào state
-  },
+    // Nếu có giá trị từ localStorage, ưu tiên giá trị đó, nếu không lấy từ entry
+    const plistUrl = savedPlistUrl || plistUrlFromEntry;
 
-  handlePlistUrlChange(event) {
-    // Khi người dùng nhập URL plist, cập nhật vào state
-    this.setState({ plistUrl: event.target.value });
+    if (plistUrl) {
+      this.setState({ plistUrl });
+      // Cập nhật giá trị vào localStorage để lưu trữ
+      localStorage.setItem('tempURL', plistUrl);
+    }
   },
 
   handleClick() {
@@ -55,13 +61,6 @@ CMS.registerWidget('update-size', createClass({
     const { loading, plistUrl } = this.state;
 
     return h('div', { className: 'size-update-widget', style: { display: 'flex', flexDirection: 'column', gap: '10px' } },
-      h('input', {
-        type: 'text',
-        value: plistUrl, // Giá trị URL plist từ state
-        onChange: this.handlePlistUrlChange.bind(this), // Khi người dùng nhập, cập nhật giá trị
-        placeholder: 'Nhập URL plist...',
-        style: { padding: '5px' }
-      }),
       h('button', {
         type: 'button',
         onClick: this.handleClick.bind(this),
