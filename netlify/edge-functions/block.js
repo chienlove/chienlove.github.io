@@ -7,13 +7,20 @@ export default async (request, context) => {
   if (request.method === 'POST' && url.pathname === '/generate-token') {
     const token = generateToken();
     const expirationTime = Date.now() + 30000; // Token expires in 30 seconds
-    validTokens.set(token, { expirationTime, url: url.searchParams.get('url') });
+    const requestedUrl = url.searchParams.get('url');
+    
+    // Validate requested URL
+    if (!requestedUrl || !requestedUrl.endsWith('.plist')) {
+      return new Response('Invalid URL', { status: 400 });
+    }
+    
+    validTokens.set(token, { expirationTime, url: requestedUrl });
     
     // Schedule token cleanup after expiration time
     setTimeout(() => {
       validTokens.delete(token);
-    }, expirationTime - Date.now());
-
+    }, 30000);
+    
     return new Response(token, { status: 200 });
   }
 
@@ -21,46 +28,48 @@ export default async (request, context) => {
   if (url.searchParams.get('action') === 'download-manifest') {
     const plistToken = url.searchParams.get('token');
     const plistUrl = decodeURIComponent(url.searchParams.get('url'));
-
-    if (plistToken && validTokens.has(plistToken)) {
+    
+    if (!plistToken || !plistUrl) {
+      return new Response('Missing token or URL', { status: 400 });
+    }
+    
+    if (validTokens.has(plistToken)) {
       const tokenData = validTokens.get(plistToken);
-
       // Ensure token is used only for the intended URL and is still valid
       if (Date.now() < tokenData.expirationTime && tokenData.url === plistUrl) {
         validTokens.delete(plistToken); // Immediately delete token after use
         
-        const response = await fetch(plistUrl);
-        const plistContent = await response.text();
-
-        return new Response(plistContent, {
-          status: 200,
-          headers: {
-            'Content-Type': 'application/x-plist',
-            'Cache-Control': 'no-store',
-            'Pragma': 'no-cache'
+        try {
+          const response = await fetch(plistUrl);
+          if (!response.ok) {
+            throw new Error('Failed to fetch PLIST');
           }
-        });
-      } else {
-        validTokens.delete(plistToken); // Clean up expired or invalid token
-        return new Response('Token expired or invalid', { status: 403 });
+          const plistContent = await response.text();
+          return new Response(plistContent, {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/x-plist',
+              'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+              'Pragma': 'no-cache'
+            }
+          });
+        } catch (error) {
+          return new Response('Error fetching PLIST', { status: 500 });
+        }
       }
-    } else {
-      return new Response('Invalid or expired token', { status: 403 });
     }
+    
+    return new Response('Invalid or expired token', { status: 403 });
   }
 
-  // Block direct access to plist files without token
-  if (url.pathname.endsWith('.plist') || url.pathname.startsWith('/plist')) {
-    const plistToken = url.searchParams.get('token');
-
-    if (!plistToken || !validTokens.has(plistToken)) {
-      return Response.redirect('/access-denied', 302);
-    }
+  // Block all direct access to plist files or plist directory
+  if (url.pathname.endsWith('.plist') || url.pathname.startsWith('/plist/')) {
+    return new Response('Access Denied', { status: 403 });
   }
 
   return context.next();
 };
 
 function generateToken() {
-  return Math.random().toString(36).substr(2, 10);
+  return crypto.randomUUID();
 }
