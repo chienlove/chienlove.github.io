@@ -8,13 +8,19 @@ CMS.registerWidget('update-size', createClass({
 
   componentDidMount() {
     const { entry } = this.props;
-    
+
+    // Kiểm tra sự tồn tại của entry
+    if (!entry) {
+      console.error('Entry không tồn tại.');
+      return;
+    }
+
     // Lấy giá trị từ localStorage nếu có
     const savedPlistUrl = localStorage.getItem('tempURL');
-    
+
     // Lấy giá trị từ main_download trong entry
     const mainDownload = entry.getIn(['data', 'main_download']);
-    const plistUrlFromEntry = mainDownload ? mainDownload.get('plistUrl') : '';
+    const plistUrlFromEntry = mainDownload && mainDownload.has('plistUrl') ? mainDownload.get('plistUrl') : '';
 
     // Nếu có giá trị từ localStorage, ưu tiên giá trị đó, nếu không lấy từ entry
     const plistUrl = savedPlistUrl || plistUrlFromEntry;
@@ -26,7 +32,7 @@ CMS.registerWidget('update-size', createClass({
     }
   },
 
-  handleClick() {
+  async handleClick() {
     const { plistUrl } = this.state;
 
     if (!plistUrl) {
@@ -36,25 +42,24 @@ CMS.registerWidget('update-size', createClass({
 
     this.setState({ loading: true });
 
-    // Gọi API để lấy kích thước IPA từ plistUrl
-    fetch(`/.netlify/functions/getIpaSize?url=${encodeURIComponent(plistUrl)}`)
-      .then(response => response.json())
-      .then(data => {
-        if (data.size) {
-          // Cập nhật kích thước file IPA vào CMS
-          this.props.onChange(this.props.entry.setIn(['data', 'size'], data.size));
-          alert('Kích thước đã được cập nhật: ' + data.size);
-        } else {
-          throw new Error('Không nhận được kích thước từ API.');
-        }
-      })
-      .catch(error => {
-        console.error('Error in API call:', error);
-        alert('Có lỗi xảy ra khi cập nhật kích thước: ' + error.message);
-      })
-      .finally(() => {
-        this.setState({ loading: false });
-      });
+    try {
+      const response = await fetch(`/.netlify/functions/getIpaSize?url=${encodeURIComponent(plistUrl)}`);
+      const data = await response.json();
+
+      if (data.size) {
+        // Cập nhật kích thước file IPA vào CMS
+        this.props.onChange(this.props.entry.setIn(['data', 'size'], data.size));
+        alert('Kích thước đã được cập nhật: ' + data.size);
+      } else {
+        alert('Không nhận được kích thước từ API. Vui lòng kiểm tra URL.');
+        throw new Error('Không nhận được kích thước từ API.');
+      }
+    } catch (error) {
+      console.error('Error in API call:', error);
+      alert('Có lỗi xảy ra khi cập nhật kích thước: ' + error.message + '. Vui lòng thử lại sau.');
+    } finally {
+      this.setState({ loading: false });
+    }
   },
 
   render() {
