@@ -1,32 +1,8 @@
 CMS.registerWidget('update-size', createClass({
-  getInitialState() {
-    return {
-      loading: false,
-      plistUrl: '',  // Lưu giá trị plistUrl từ trường chính
-    };
-  },
-
-  componentDidMount() {
-    // Lấy giá trị plistUrl khi component được mount
-    const entry = this.props.entry;
-    const mainDownload = entry.getIn(['data', 'main_download']);
-    const plistUrl = mainDownload ? mainDownload.get('plistUrl') : '';
-    this.setState({ plistUrl });
-  },
-
-  componentDidUpdate(prevProps) {
-    // Cập nhật nếu giá trị plistUrl thay đổi
-    const entry = this.props.entry;
-    const mainDownload = entry.getIn(['data', 'main_download']);
-    const newPlistUrl = mainDownload ? mainDownload.get('plistUrl') : '';
-
-    if (newPlistUrl !== this.state.plistUrl) {
-      this.setState({ plistUrl: newPlistUrl });
-    }
-  },
-
   handleClick() {
-    const { plistUrl } = this.state;
+    const { entry, onChange } = this.props;
+    const mainDownload = entry.getIn(['data', 'main_download']);
+    const plistUrl = mainDownload ? mainDownload.get('plistUrl') : null;
 
     if (!plistUrl) {
       alert('Vui lòng nhập URL plist trong phần "Liên kết tải xuống chính".');
@@ -35,20 +11,24 @@ CMS.registerWidget('update-size', createClass({
 
     this.setState({ loading: true });
 
-    // Gọi API lấy kích thước file IPA
-    fetch(`/.netlify/functions/getIpaSize?url=${encodeURIComponent(plistUrl)}`)
+    // Lưu dữ liệu vào CMS
+    this.props.onChange(entry.setIn(['data', 'main_download', 'plistUrl'], plistUrl));
+    this.props.onChange(entry.persist())  // Lưu dữ liệu trước khi tiếp tục
+
+      // Gọi API để lấy kích thước IPA
+      .then(() => fetch(`/.netlify/functions/getIpaSize?url=${encodeURIComponent(plistUrl)}`))
       .then(response => response.json())
       .then(data => {
         if (data.size) {
-          this.props.onChange(data.size);  // Cập nhật kích thước
+          onChange(data.size);  // Cập nhật kích thước file IPA
           alert('Kích thước đã được cập nhật: ' + data.size);
         } else {
-          throw new Error('Không tìm thấy kích thước.');
+          throw new Error('Không nhận được kích thước từ API.');
         }
       })
       .catch(error => {
-        console.error('Error:', error);
-        alert('Lỗi khi cập nhật kích thước: ' + error.message);
+        console.error('Error in API call:', error);
+        alert('Có lỗi xảy ra khi cập nhật kích thước: ' + error.message);
       })
       .finally(() => {
         this.setState({ loading: false });
