@@ -2,33 +2,34 @@ CMS.registerWidget('update-size', createClass({
   getInitialState() {
     return {
       loading: false,
-      plistUrl: '', // Lưu trạng thái URL plist cục bộ
+      plistUrl: '', // Trạng thái để lưu URL plist
     };
   },
 
-  componentDidMount() {
-    // Lấy URL plist từ dữ liệu bài viết (nếu đã có)
+  componentDidUpdate(prevProps) {
+    // Kiểm tra nếu URL plist thay đổi, tự động lưu vào state
     const entry = this.props.entry;
-    const plistUrl = entry.getIn(['data', 'main_download', 'plistUrl']) || '';
-    
-    // Lưu URL plist vào state và localStorage ngay khi người dùng điền vào
-    this.setState({ plistUrl });
-    localStorage.setItem('plistUrl', plistUrl); // Lưu cục bộ
+    const mainDownload = entry.getIn(['data', 'main_download']);
+    const plistUrl = mainDownload ? mainDownload.get('plistUrl') : '';
+
+    if (plistUrl !== this.state.plistUrl) {
+      this.setState({ plistUrl });  // Cập nhật URL plist mới vào state
+    }
   },
 
   handleClick() {
-    // Lấy URL plist đã lưu trong localStorage
-    const plistUrl = localStorage.getItem('plistUrl');
+    // Kiểm tra URL plist từ state đã có chưa
+    const { plistUrl } = this.state;
 
     if (!plistUrl) {
       alert('Vui lòng nhập URL plist trong phần "Liên kết tải xuống chính".');
       return;
     }
 
-    // Bắt đầu cập nhật
+    // Bắt đầu quá trình cập nhật
     this.setState({ loading: true });
 
-    // Gọi API để lấy kích thước IPA từ plistUrl đã lưu cục bộ
+    // Gọi API để lấy kích thước IPA từ plistUrl
     fetch(`/.netlify/functions/getIpaSize?url=${encodeURIComponent(plistUrl)}`)
       .then(response => response.json())
       .then(data => {
@@ -51,7 +52,6 @@ CMS.registerWidget('update-size', createClass({
   render() {
     const loading = this.state.loading;
 
-    // Không hiển thị khung nhập cho URL plist nữa
     return h('div', { className: 'size-update-widget', style: { display: 'flex', alignItems: 'center' } },
       h('button', { 
         type: 'button', 
