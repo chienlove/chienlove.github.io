@@ -1,26 +1,32 @@
+let tempURL = null;  // Khai báo biến tạm để lưu URL
+
 CMS.registerWidget('update-size', createClass({
-  handleClick() {
-    const { entry, onChange } = this.props;
+  componentDidMount() {
+    const { entry } = this.props;
     const mainDownload = entry.getIn(['data', 'main_download']);
     const plistUrl = mainDownload ? mainDownload.get('plistUrl') : null;
 
-    if (!plistUrl) {
+    // Gán giá trị plistUrl vào biến tempURL
+    if (plistUrl) {
+      tempURL = plistUrl;
+    }
+  },
+
+  handleClick() {
+    if (!tempURL) {
       alert('Vui lòng nhập URL plist trong phần "Liên kết tải xuống chính".');
       return;
     }
 
     this.setState({ loading: true });
 
-    // Lưu dữ liệu vào CMS
-    this.props.onChange(entry.setIn(['data', 'main_download', 'plistUrl'], plistUrl));
-    this.props.onChange(entry.persist())  // Lưu dữ liệu trước khi tiếp tục
-
-      // Gọi API để lấy kích thước IPA
-      .then(() => fetch(`/.netlify/functions/getIpaSize?url=${encodeURIComponent(plistUrl)}`))
+    // Gọi API lấy kích thước IPA dựa trên tempURL
+    fetch(`/.netlify/functions/getIpaSize?url=${encodeURIComponent(tempURL)}`)
       .then(response => response.json())
       .then(data => {
         if (data.size) {
-          onChange(data.size);  // Cập nhật kích thước file IPA
+          // Cập nhật kích thước file IPA vào CMS
+          this.props.onChange(this.props.entry.setIn(['data', 'size'], data.size));
           alert('Kích thước đã được cập nhật: ' + data.size);
         } else {
           throw new Error('Không nhận được kích thước từ API.');
