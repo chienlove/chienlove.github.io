@@ -328,7 +328,7 @@ body {
 .post-item {
     background-color: #fff;
     /* Đã bỏ border ở đây */
-    border-radius: 8px;
+    border-radius: 5px;
     overflow: hidden;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
@@ -351,7 +351,7 @@ body {
 }
 
 .post-item-content {
-    padding: 15px;
+    padding: 0px;
 }
 
 .post-category {
@@ -388,8 +388,7 @@ body {
 }
 
 .post-date {
-    display: flex;
-    align-items: center;
+    display: inline-block;
     font-size: 12px;
     color: #888;
     margin-bottom: 8px;
