@@ -1,4 +1,4 @@
-const chromium = require('chrome-aws-lambda');
+const chromium = require('@sparticuz/chromium');
 const puppeteer = require('puppeteer-core');
 
 exports.handler = async function(event, context) {
@@ -7,12 +7,12 @@ exports.handler = async function(event, context) {
   let browser = null;
 
   try {
-    // Khởi chạy trình duyệt headless với chrome-aws-lambda
+    // Launch the headless browser with @sparticuz/chromium
     browser = await puppeteer.launch({
       args: chromium.args,
       defaultViewport: chromium.defaultViewport,
       executablePath: await chromium.executablePath,
-      headless: chromium.headless,
+      headless: true,
     });
 
     const page = await browser.newPage();
@@ -24,8 +24,6 @@ exports.handler = async function(event, context) {
     if (text.toLowerCase().includes('signed')) {
       status = 'signed';
     }
-
-    await browser.close();
 
     return {
       statusCode: 200,
@@ -41,4 +39,4 @@ exports.handler = async function(event, context) {
       await browser.close();
     }
   }
-};
+}
