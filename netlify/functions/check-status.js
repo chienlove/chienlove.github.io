@@ -1,46 +1,56 @@
-const axios = require('axios');
-const cheerio = require('cheerio');
+const https = require('https');
+
 const URL = 'https://ipa-apps.me';
 
 exports.handler = async function(event, context) {
-  try {
-    const response = await axios.get(URL, {
-      timeout: 10000, // Đặt thời gian chờ là 10 giây
+  return new Promise((resolve, reject) => {
+    const req = https.get(URL, {
+      timeout: 5000,
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
       }
+    }, (res) => {
+      let data = '';
+
+      res.on('data', (chunk) => {
+        data += chunk;
+        // Chỉ đọc một phần nhỏ của dữ liệu
+        if (data.length > 1000) {
+          req.destroy();
+          checkStatus(data, resolve);
+        }
+      });
+
+      res.on('end', () => {
+        checkStatus(data, resolve);
+      });
     });
-    
-    if (response.status !== 200) {
-      throw new Error(`Không thể tải trang: ${response.status}`);
-    }
 
-    // Sử dụng cheerio để tải và phân tích HTML
-    const $ = cheerio.load(response.data);
-    
-    // Tìm văn bản có chứa từ "signed"
-    const bodyText = $('body').text().toLowerCase();
-    const status = bodyText.includes('signed') ? 'signed' : 'revoked';
+    req.on('error', (error) => {
+      console.error('Lỗi:', error);
+      resolve({
+        statusCode: 500,
+        body: JSON.stringify({ error: 'Lỗi khi kết nối đến trang web', details: error.message }),
+        headers: { 'Content-Type': 'application/json' }
+      });
+    });
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ status }),
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    };
-  } catch (error) {
-    console.error('Lỗi:', error);
-    return {
-      statusCode: error.response?.status || 500,
-      body: JSON.stringify({ 
-        error: 'Lỗi khi lấy dữ liệu', 
-        details: error.message,
-        stack: error.stack // Thêm stack trace để debug
-      }),
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    };
-  }
+    req.on('timeout', () => {
+      req.destroy();
+      resolve({
+        statusCode: 504,
+        body: JSON.stringify({ error: 'Timeout khi kết nối đến trang web' }),
+        headers: { 'Content-Type': 'application/json' }
+      });
+    });
+  });
 };
+
+function checkStatus(data, resolve) {
+  const status = data.toLowerCase().includes('signed') ? 'signed' : 'revoked';
+  resolve({
+    statusCode: 200,
+    body: JSON.stringify({ status }),
+    headers: { 'Content-Type': 'application/json' }
+  });
+}
