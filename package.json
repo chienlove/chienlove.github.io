@@ -26,6 +26,7 @@
     "chrome-aws-lambda": "^10.1.0",
     "firebase": "^9.0.0",
     "firebase-admin": "^11.0.0",
-    "@wordpress/components": "^23.9.0"
+    "@wordpress/components": "^23.9.0",
+    "cheerio": "^1.0.0-rc.12"
   }
 }
