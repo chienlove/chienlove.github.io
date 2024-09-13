@@ -1,4 +1,4 @@
-CCMS.registerWidget('update-size', createClass({
+CMS.registerWidget('update-size', createClass({
   getInitialState() {
     return { loading: false };
   },
