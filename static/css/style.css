@@ -327,7 +327,7 @@ body {
 
 .post-item {
     background-color: #fff;
-    border: 1px solid #e9ecef;
+    /* Đã bỏ border ở đây */
     border-radius: 8px;
     overflow: hidden;
     transition: transform 0.3s ease, box-shadow 0.3s ease;
@@ -390,6 +390,9 @@ body {
 .post-date {
     display: flex;
     align-items: center;
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 8px;
 }
 
 .post-date::before {
