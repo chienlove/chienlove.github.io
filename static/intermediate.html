@@ -49,7 +49,6 @@
         <p>Please wait for <span id="countdown">10</span> seconds.</p>
         <a href="#" id="download-link">Click here to install</a>
     </div>
-
     <script>
 (function() {
     let countdown = 10;
@@ -64,11 +63,10 @@
         document.body.innerHTML = '<div class="container"><h1>Error</h1><p>Invalid download link. Please try again.</p></div>';
         return;
     }
-
-    // Xóa tham số URL sau khi lấy được plistUrl
+    // Remove URL parameters after getting plistUrl
     window.history.replaceState({}, document.title, window.location.pathname);
-
-    // Chỉ tạo một temp-token từ server
+    
+    // Generate a temp-token from server
     fetch('/generate-token', {
         method: 'POST',
         headers: {
@@ -76,15 +74,17 @@
         },
         body: JSON.stringify({ url: plistUrl })
     })
-    .then(response => response.text())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error('Failed to get token');
+        }
+        return response.text();
+    })
     .then(tempToken => {
         if (!tempToken) {
-            console.error('Failed to get token');
-            document.body.innerHTML = '<div class="container"><h1>Error</h1><p>Failed to get download token. Please try again later.</p></div>';
-            return;
+            throw new Error('Empty token received');
         }
-
-        const installLink = `itms-services://?action=download-manifest&url=${encodeURIComponent(plistUrl + "?token=" + tempToken)}`;
+        const installLink = `itms-services://?action=download-manifest&url=${encodeURIComponent(plistUrl)}&token=${encodeURIComponent(tempToken)}`;
         downloadLink.href = installLink;
         
         function updateCountdown() {
@@ -99,17 +99,19 @@
         }
         
         updateCountdown();
-
-        // Chỉ kích hoạt tải và xóa token sau khi nhấp chuột
+        // Activate download and delete token after click
         downloadLink.addEventListener('click', function(e) {
             e.preventDefault();
             window.location.href = installLink;
+            // Optionally, you can send a request to delete the token here
+            // fetch('/delete-token', { method: 'POST', body: JSON.stringify({ token: tempToken }) });
         });
     })
     .catch(error => {
         console.error('Error:', error);
-        document.body.innerHTML = '<div class="container"><h1>Error</h1><p>An error occurred. Please try again later.</p></div>';
+        document.body.innerHTML = `<div class="container"><h1>Error</h1><p>${error.message || 'An error occurred. Please try again later.'}</p></div>`;
     });
 })();
-</script></body>
+    </script>
+</body>
 </html>
