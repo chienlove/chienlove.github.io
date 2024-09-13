@@ -1,27 +1,18 @@
-const chromium = require('@sparticuz/chromium');
-const puppeteer = require('puppeteer-core');
+const axios = require('axios');
 
 exports.handler = async function(event, context) {
   const url = 'https://ipa-apps.me';
 
-  let browser = null;
-
   try {
-    // Launch the headless browser with @sparticuz/chromium
-    browser = await puppeteer.launch({
-      args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
-      executablePath: await chromium.executablePath,
-      headless: true,
-    });
+    // Gửi yêu cầu GET đến trang web
+    const response = await axios.get(url);
 
-    const page = await browser.newPage();
-    await page.goto(url, { waitUntil: 'networkidle2' });
+    // Lấy nội dung của trang
+    const pageContent = response.data;
 
-    const text = await page.content();
-
+    // Kiểm tra xem trang có chứa từ "signed" không
     let status = 'revoked';
-    if (text.toLowerCase().includes('signed')) {
+    if (pageContent.toLowerCase().includes('signed')) {
       status = 'signed';
     }
 
@@ -30,13 +21,10 @@ exports.handler = async function(event, context) {
       body: JSON.stringify({ status }),
     };
   } catch (error) {
+    console.error('Error fetching the page:', error);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: 'Error fetching data', details: error.message }),
     };
-  } finally {
-    if (browser) {
-      await browser.close();
-    }
   }
-}
+};
