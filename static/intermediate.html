@@ -59,8 +59,7 @@
     const plistUrl = urlParams.get('plistUrl');
     
     if (!plistUrl) {
-        console.error('No plistUrl provided');
-        document.body.innerHTML = '<div class="container"><h1>Error</h1><p>Invalid download link. Please try again.</p></div>';
+        showError('No plistUrl provided. Invalid download link.');
         return;
     }
     // Remove URL parameters after getting plistUrl
@@ -76,7 +75,7 @@
     })
     .then(response => {
         if (!response.ok) {
-            throw new Error('Failed to get token');
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
         return response.text();
     })
@@ -99,18 +98,21 @@
         }
         
         updateCountdown();
-        // Activate download and delete token after click
+        
         downloadLink.addEventListener('click', function(e) {
             e.preventDefault();
             window.location.href = installLink;
-            // Optionally, you can send a request to delete the token here
-            // fetch('/delete-token', { method: 'POST', body: JSON.stringify({ token: tempToken }) });
         });
     })
     .catch(error => {
         console.error('Error:', error);
-        document.body.innerHTML = `<div class="container"><h1>Error</h1><p>${error.message || 'An error occurred. Please try again later.'}</p></div>`;
+        showError(`Failed to get token: ${error.message}`);
     });
+
+    function showError(message) {
+        console.error(message);
+        document.body.innerHTML = `<div class="container"><h1>Error</h1><p>${message}</p><p>Please try again later or contact support if the problem persists.</p></div>`;
+    }
 })();
     </script>
 </body>
