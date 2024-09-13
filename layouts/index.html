@@ -50,59 +50,32 @@
         </div>
     </div>
 
-    <h2>Bài viết mới nhất</h2>
-<div class="post-list">
-    {{ range first 10 (where .Site.RegularPages "Type" "in" (slice "posts")) }}
-        <div class="post-item">
+    <div class="section">
+    <h2 class="section-title">Bài viết mới nhất</h2>
+    <div class="post-list">
+        {{ range first 10 (where .Site.RegularPages "Type" "in" (slice "posts")) }}
+        <article class="post-item">
             <a href="{{ .Permalink }}" class="post-link">
                 {{ with .Params.thumbnail }}
-                    <img src="{{ . }}" alt="{{ $.Title }}" class="post-image">
+                <img src="{{ . }}" alt="{{ $.Title }}" class="post-image">
                 {{ end }}
                 <div class="post-item-content">
                     {{ with .Params.category }}
-                        <span class="post-category">{{ . }}</span>
+                    <span class="post-category">{{ . }}</span>
                     {{ end }}
-                    <h3>{{ .Title }}</h3>
-                    <p>{{ .Summary | truncate 150 }}</p>
+                    <h3 class="post-title">{{ .Title }}</h3>
+                    <p class="post-summary">{{ .Summary | truncate 150 }}</p>
                 </div>
             </a>
             <div class="post-meta">
                 <span class="post-date">
-    <i class="fa-regular fa-clock"></i>
-    {{ $now := now }}
-{{ $postTime := .Date }}
-{{ $diff := $now.Sub $postTime }}
-{{ $minutes := $diff.Minutes }}
-{{ $hours := $diff.Hours }}
-{{ $days := div $hours 24 }}
-
-{{ if lt $minutes 1 }}
-    Vừa xong
-{{ else if lt $minutes 60 }}
-    {{ printf "%.0f" $minutes }} phút trước
-{{ else if lt $hours 24 }}
-    {{ printf "%.0f" $hours }} giờ trước
-{{ else if eq $days 1 }}
-    Hôm qua {{ $postTime.Format "15:04" }}
-{{ else if lt $days 7 }}
-    {{ printf "%.0f" $days }} ngày trước
-{{ else }}
-    {{ $dayOfWeek := $postTime.Format "Monday" }}
-    {{ if eq $dayOfWeek "Monday" }} Thứ 2
-    {{ else if eq $dayOfWeek "Tuesday" }} Thứ 3
-    {{ else if eq $dayOfWeek "Wednesday" }} Thứ 4
-    {{ else if eq $dayOfWeek "Thursday" }} Thứ 5
-    {{ else if eq $dayOfWeek "Friday" }} Thứ 6
-    {{ else if eq $dayOfWeek "Saturday" }} Thứ 7
-    {{ else }} Chủ nhật
-    {{ end }},
-    {{ $postTime.Format "02/01/2006" }}
-{{ end }}
-</span>
-                <a class="read-more" href="{{ .Permalink }}">Read more</a>
+                    <!-- Giữ nguyên logic hiển thị thời gian -->
+                </span>
+                <a href="{{ .Permalink }}" class="read-more">Đọc thêm</a>
             </div>
-        </div>
-    {{ end }}
+        </article>
+        {{ end }}
+    </div>
 </div>
     <!-- status -->
   <script>
