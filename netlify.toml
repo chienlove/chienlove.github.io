@@ -2,29 +2,50 @@
   publish = "public"
   command = "hugo --gc --minify"
   functions = "netlify/functions"
+
 [functions]
   node_bundler = "esbuild"
+
 [build.environment]
   NODE_VERSION = "16"
+
 [[edge_functions]]
   function = "block"
-  path = "/"
+  path = "/*"
+
 [[redirects]]
   from = "/api/"
   to = "/.netlify/functions/:splat"
   status = 200
+
 [[redirects]]
   from = "/shortener/*"
   to = "/.netlify/functions/shorten/"
   status = 200
+
 [[redirects]]
   from = "/download"
   to = "/.netlify/functions/download"
   status = 200
+
 [[redirects]]
   from = "/:shortId"
   to = "/.netlify/functions/redirect/:shortId"
   status = 200
+
+[[headers]]
+  for = "/*.plist"
+  [headers.values]
+    Content-Type = "application/octet-stream"
+    Content-Disposition = "attachment"
+    X-Content-Type-Options = "nosniff"
+
+[[headers]]
+  for = "/plist/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Content-Security-Policy = "default-src 'none'"
+
 [dev]
   framework = "hugo"
   targetPort = 1313
