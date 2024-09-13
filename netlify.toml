@@ -15,7 +15,7 @@
 
 
 [[redirects]]
-  from = "/api/"
+  from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
 
@@ -46,11 +46,6 @@
   [headers.values]
     X-Content-Type-Options = "nosniff"
     Content-Security-Policy = "default-src 'none'"
-
-[[headers]]
-for = "/*.js"
-[headers.values]
-Cache-Control = "no-cache"
 
 [dev]
   framework = "hugo"
