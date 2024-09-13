@@ -46,6 +46,11 @@
     X-Content-Type-Options = "nosniff"
     Content-Security-Policy = "default-src 'none'"
 
+[[headers]]
+for = "/*.js"
+[headers.values]
+Cache-Control = "no-cache"
+
 [dev]
   framework = "hugo"
   targetPort = 1313
