@@ -64,8 +64,8 @@ export default async (request, context) => {
 
   // Block all direct access to plist files or plist directory
   if (url.pathname.endsWith('.plist') || url.pathname.startsWith('/plist/')) {
-    return new Response('Access Denied', { status: 403 });
-  }
+      return Response.redirect('/access-denied', 302);
+    }
 
   return context.next();
 };
