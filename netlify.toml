@@ -13,6 +13,10 @@
   function = "block"
   path = "/*"
 
+[[edge_functions]]
+  function = "cache-control"
+  path = "/*.js"
+
 [[redirects]]
   from = "/api/"
   to = "/.netlify/functions/:splat"
