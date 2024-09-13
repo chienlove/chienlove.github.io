@@ -2,14 +2,14 @@ const chromium = require('@sparticuz/chromium');
 const puppeteer = require('puppeteer-core');
 
 const URL = 'https://ipa-apps.me';
-const TIMEOUT = 10000; // 10 seconds
+const TIMEOUT = 10000; // 10 giây
 
 exports.handler = async function(event, context) {
   let browser = null;
-  
+
   try {
     browser = await puppeteer.launch({
-      args: chromium.args,
+      args: [...chromium.args, '--no-sandbox', '--disable-setuid-sandbox'],
       defaultViewport: chromium.defaultViewport,
       executablePath: await chromium.executablePath(),
       headless: chromium.headless,
@@ -21,7 +21,7 @@ exports.handler = async function(event, context) {
     const response = await page.goto(URL, { waitUntil: 'networkidle2' });
 
     if (!response.ok()) {
-      throw new Error(`Failed to load page: ${response.status()} ${response.statusText()}`);
+      throw new Error(`Không tải được trang: ${response.status()} ${response.statusText()}`);
     }
 
     const content = await page.content();
@@ -33,10 +33,10 @@ exports.handler = async function(event, context) {
     };
 
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Lỗi:', error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Error fetching data', details: error.message }),
+      body: JSON.stringify({ error: 'Lỗi khi lấy dữ liệu', details: error.message }),
     };
   } finally {
     if (browser) {
