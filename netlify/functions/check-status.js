@@ -14,8 +14,9 @@ exports.handler = async function(event, context) {
 
       res.on('data', (chunk) => {
         data += chunk;
-        // Chỉ đọc một phần nhỏ của dữ liệu
-        if (data.length > 1000) {
+
+        // Tăng giới hạn dữ liệu lên 5000 ký tự để đảm bảo có đủ dữ liệu để phân tích
+        if (data.length > 5000) {
           req.destroy();
           checkStatus(data, resolve);
         }
@@ -47,7 +48,13 @@ exports.handler = async function(event, context) {
 };
 
 function checkStatus(data, resolve) {
-  const status = data.toLowerCase().includes('signed') ? 'signed' : 'revoked';
+  // Ghi log dữ liệu trả về để kiểm tra
+  console.log("Data received:", data);
+
+  // Kiểm tra linh hoạt cả "signed" và "SIGNED"
+  const status = data.toLowerCase().includes('signed') || data.includes('SIGNED') ? 'signed' : 'revoked';
+
+  // Trả về trạng thái
   resolve({
     statusCode: 200,
     body: JSON.stringify({ status }),
