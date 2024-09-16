@@ -16,7 +16,7 @@ exports.handler = async function(event, context) {
         data += chunk;
 
         // Tăng giới hạn dữ liệu lên 5000 ký tự để đảm bảo có đủ dữ liệu để phân tích
-        if (data.length > 1000) {
+        if (data.length > 2000) {
           req.destroy();
           checkStatus(data, resolve);
         }
