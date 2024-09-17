@@ -38,7 +38,23 @@ export default {
       console.log("Bắt đầu xác thực");
       let user;
       if (CODE && scnt && xAppleSessionToken) {
-        user = await Store.handleMFA(APPLE_ID, CODE, scnt, xAppleSessionToken);
+        try {
+          user = await Store.handleMFA(APPLE_ID, CODE, scnt, xAppleSessionToken);
+          if (user.needsMFA) {
+            return new Response(JSON.stringify({
+              needsMFA: true,
+              authType: user.authType,
+              scnt: user.scnt,
+              xAppleSessionToken: user.xAppleSessionToken
+            }), { status: 200, headers });
+          }
+          if (!user || user.error) {
+            throw new Error(user?.error || 'MFA failed');
+          }
+        } catch (mfaError) {
+          console.error("MFA error:", mfaError);
+          return new Response(JSON.stringify({ error: mfaError.message }), { status: 401, headers });
+        }
       } else {
         user = await Store.authenticate(APPLE_ID, PASSWORD);
       }

@@ -105,19 +105,27 @@ export class Store {
     }
 
     static Headers = {
-        'User-Agent': 'iTunes/12.12.4 (Macintosh; OS X 10.15.7) AppleWebKit/537.36 (KHTML, like Gecko)',
-        'Content-Type': 'application/json',
-        'X-Apple-Store-Front': '143441-19,32',
-        'X-Apple-I-MD-M': Store.guid,
-        'Accept': 'application/json, text/javascript',
-        'Accept-Language': 'en-US,en;q=0.9',
-        'Connection': 'keep-alive',
-        'X-Apple-I-MD': Store.generateAppleIMD(),
-        'X-Apple-I-MD-RINFO': '17106176',
-        'X-Requested-With': 'XMLHttpRequest',
-        'Origin': 'https://idmsa.apple.com',
-        'Referer': 'https://idmsa.apple.com/',
-    };
+    'User-Agent': 'iTunes/12.12.4 (Macintosh; OS X 10.15.7) AppleWebKit/537.36 (KHTML, like Gecko)',
+    'Content-Type': 'application/json',
+    'X-Apple-Store-Front': '143441-19,32',
+    'X-Apple-I-MD-M': Store.guid,
+    'Accept': 'application/json',
+    'Accept-Language': 'en-us',
+    'Connection': 'keep-alive',
+    'X-Apple-I-MD': Store.generateAppleIMD(),
+    'X-Apple-I-MD-RINFO': '17106176',
+    'X-Requested-With': 'XMLHttpRequest',
+    'Origin': 'https://idmsa.apple.com',
+    'Referer': 'https://idmsa.apple.com/',
+    'X-Apple-Widget-Key': Store.generateWidgetKey(),
+    'X-Apple-I-FD-Client-Info': JSON.stringify({
+        'U': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.114 Safari/537.36',
+        'L': 'en-US',
+        'Z': 'GMT+07:00',
+        'V': '1.1',
+        'F': ''
+    })
+};
 
     static generateSessionId() {
         return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {

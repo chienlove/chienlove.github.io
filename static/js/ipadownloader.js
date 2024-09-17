@@ -47,6 +47,10 @@ document.getElementById('downloadForm').addEventListener('submit', async (e) => 
         } else if (data.error) {
             result.textContent = `Lỗi: ${data.error}`;
             console.error("Error details:", data);
+            if (data.error.includes('MFA failed')) {
+                mfaInput.style.display = 'block';
+                result.textContent += '. Vui lòng thử lại mã xác thực.';
+            }
         } else {
             result.textContent = 'Lỗi không xác định. Vui lòng thử lại.';
         }
