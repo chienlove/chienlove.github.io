@@ -28,21 +28,31 @@ export default {
 
     try {
       console.log("Bắt đầu xử lý yêu cầu POST");
-      const { APPLE_ID, PASSWORD, CODE, APPID, appVerId } = await request.json();
+      const { APPLE_ID, PASSWORD, CODE, APPID, appVerId, scnt, xAppleSessionToken } = await request.json();
 
-      if (!APPLE_ID || !PASSWORD || !APPID || !appVerId) {
+      if (!APPLE_ID || (!PASSWORD && !CODE) || !APPID || !appVerId) {
         console.error("Thiếu trường bắt buộc");
         throw new Error("Missing required fields");
       }
 
       console.log("Bắt đầu xác thực");
-      let user = await Store.authenticate(APPLE_ID, PASSWORD, CODE);
+      let user;
+      if (CODE && scnt && xAppleSessionToken) {
+        user = await Store.handleMFA(APPLE_ID, CODE, scnt, xAppleSessionToken);
+      } else {
+        user = await Store.authenticate(APPLE_ID, PASSWORD);
+      }
 
       console.log("Kết quả xác thực:", user);
 
       if (user.needsMFA) {
-        console.log("MFA được yêu cầu. Loại MFA:", user.mfaType);
-        return new Response(JSON.stringify({ needsMFA: true, mfaType: user.mfaType }), { status: 200, headers });
+        console.log("MFA được yêu cầu. Loại MFA:", user.authType);
+        return new Response(JSON.stringify({
+          needsMFA: true,
+          authType: user.authType,
+          scnt: user.scnt,
+          xAppleSessionToken: user.xAppleSessionToken
+        }), { status: 200, headers });
       }
 
       if (user.error) {

@@ -8,16 +8,13 @@ export class Store {
     static async authenticate(email, password, mfa) {
         console.log("Bắt đầu xác thực với:", { email, passwordLength: password?.length, mfa: !!mfa });
         const dataJson = {
-            appleId: email,
-            attempt: mfa ? 2 : 1,
-            createSession: 'true',
-            guid: this.guid,
+            accountName: email,
             password: mfa ? mfa : password,
-            rmp: 0,
-            why: 'signIn',
+            rememberMe: true,
+            trustTokens: []
         };
-        const body = build(dataJson);
-        const url = `https://p25-buy.itunes.apple.com/WebObjects/MZFinance.woa/wa/authenticate?guid=${this.guid}`;
+        const body = JSON.stringify(dataJson);
+        const url = `https://idmsa.apple.com/appleauth/auth/signin`;
 
         try {
             console.log("Gửi yêu cầu xác thực đến:", url);
@@ -27,10 +24,21 @@ export class Store {
             const resp = await fetch(url, {
                 method: 'POST', 
                 body, 
-                headers: this.Headers
+                headers: {
+                    ...this.Headers,
+                    'X-Apple-ID-Session-Id': this.generateSessionId(),
+                    'X-Apple-Widget-Key': this.generateWidgetKey()
+                }
             });
 
             console.log("Trạng thái phản hồi xác thực:", resp.status);
+            
+            if (resp.status === 409) {
+                const scnt = resp.headers.get('scnt');
+                const xAppleSessionToken = resp.headers.get('x-apple-session-token');
+                return { needsMFA: true, scnt, xAppleSessionToken };
+            }
+
             const responseText = await resp.text();
             console.log("Nội dung phản hồi thô:", responseText);
 
@@ -45,7 +53,7 @@ export class Store {
 
             let parsedResp;
             try {
-                parsedResp = parse(responseText);
+                parsedResp = JSON.parse(responseText);
             } catch (parseError) {
                 console.error("Lỗi khi phân tích phản hồi:", parseError);
                 console.log("Nội dung phản hồi gây lỗi:", responseText);
@@ -59,24 +67,16 @@ export class Store {
                 throw new Error("Phản hồi xác thực không hợp lệ");
             }
 
-            if (parsedResp.m) {
-                return { needsMFA: true, mfaType: parsedResp.m };
+            if (parsedResp.authType === "hsa2") {
+                return { needsMFA: true, authType: parsedResp.authType };
             }
 
-            if (parsedResp.customerMessage || parsedResp.failureType) {
+            if (parsedResp.serviceErrors || parsedResp.hasError) {
                 return {
-                    error: parsedResp.customerMessage || "Xác thực thất bại",
+                    error: parsedResp.serviceErrors?.[0]?.message || "Xác thực thất bại",
                     details: parsedResp,
                     _state: 'failure'
                 };
-            }
-
-            // Kiểm tra các trường dữ liệu cần thiết
-            const requiredFields = ['passwordToken', 'dsPersonId'];
-            for (const field of requiredFields) {
-                if (!parsedResp[field]) {
-                    throw new Error(`Phản hồi xác thực thiếu trường dữ liệu cần thiết: ${field}`);
-                }
             }
 
             return {
@@ -89,19 +89,58 @@ export class Store {
         }
     }
 
+    static async handleMFA(email, code, scnt, xAppleSessionToken) {
+        const url = 'https://idmsa.apple.com/appleauth/auth/verify/trusteddevice/securitycode';
+        const headers = {
+            ...this.Headers,
+            'scnt': scnt,
+            'X-Apple-ID-Session-Id': xAppleSessionToken,
+        };
+        const body = JSON.stringify({ securityCode: { code } });
+
+        const resp = await fetch(url, { method: 'POST', headers, body });
+        
+        if (resp.status === 204) {
+            // MFA successful, proceed with signin
+            return this.authenticate(email, code, true);
+        } else {
+            const responseText = await resp.text();
+            throw new Error(`MFA failed: ${resp.status} ${responseText}`);
+        }
+    }
+
     static async download(appId, appVerId, user) {
         // Phương thức download giữ nguyên như cũ
     }
 
     static Headers = {
-        'User-Agent': 'Configurator/2.15 (Macintosh; OS X 11.0.0; 16G29) AppleWebKit/2603.3.8',
-        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': 'iTunes/12.12.4 (Macintosh; OS X 10.15.7) AppleWebKit/537.36 (KHTML, like Gecko)',
+        'Content-Type': 'application/json',
         'X-Apple-Store-Front': '143441-19,32',
         'X-Apple-I-MD-M': Store.guid,
-        'Accept': 'application/xml',
+        'Accept': 'application/json',
         'Accept-Language': 'en-us',
-        'Connection': 'keep-alive'
+        'Connection': 'keep-alive',
+        'X-Apple-I-MD': this.generateAppleIMD(),
+        'X-Apple-I-MD-RINFO': '17106176',
     };
+
+    static generateSessionId() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+
+    static generateWidgetKey() {
+        // This is a placeholder. You need to implement the actual logic to generate a valid widget key.
+        return 'your_generated_widget_key_here';
+    }
+
+    static generateAppleIMD() {
+        // This is a placeholder. You need to implement the actual logic to generate a valid X-Apple-I-MD.
+        return 'your_generated_apple_imd_here';
+    }
 }
 
 console.log("client.js đã được tải, đối tượng Store:", Store);

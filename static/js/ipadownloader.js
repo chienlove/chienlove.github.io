@@ -11,7 +11,9 @@ document.getElementById('downloadForm').addEventListener('submit', async (e) => 
         PASSWORD: document.getElementById('password').value,
         APPID: document.getElementById('appId').value,
         appVerId: document.getElementById('appVerId').value,
-        CODE: document.getElementById('code').value
+        CODE: document.getElementById('code').value,
+        scnt: localStorage.getItem('scnt'),
+        xAppleSessionToken: localStorage.getItem('xAppleSessionToken')
     };
 
     console.log("Data being sent:", { ...formData, PASSWORD: '********' });
@@ -31,11 +33,15 @@ document.getElementById('downloadForm').addEventListener('submit', async (e) => 
 
         if (data.needsMFA) {
             mfaInput.style.display = 'block';
-            result.textContent = 'Vui lòng nhập mã xác thực và bấm "Tải xuống" lại';
+            localStorage.setItem('scnt', data.scnt);
+            localStorage.setItem('xAppleSessionToken', data.xAppleSessionToken);
+            result.textContent = `Vui lòng nhập mã xác thực ${data.authType} và bấm "Tải xuống" lại`;
         } else if (data.url) {
             result.innerHTML = `Tải xuống thành công: <a href="${data.url}" target="_blank">Tải xuống IPA</a>`;
             document.getElementById('code').value = '';
             mfaInput.style.display = 'none';
+            localStorage.removeItem('scnt');
+            localStorage.removeItem('xAppleSessionToken');
         } else if (data.error) {
             result.textContent = `Lỗi: ${data.error}`;
             console.error("Error details:", data);
