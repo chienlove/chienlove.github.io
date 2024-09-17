@@ -9,7 +9,7 @@ export class Store {
         console.log("Bắt đầu xác thực với:", { email, passwordLength: password?.length, mfa: !!mfa });
         const dataJson = {
             accountName: email,
-            password: mfa ? mfa : password,
+            password: password,
             rememberMe: true,
             trustTokens: []
         };
@@ -47,10 +47,6 @@ export class Store {
                 throw new Error(`Máy chủ trả về trạng thái ${resp.status}: ${responseText}`);
             }
 
-            if (!responseText.trim()) {
-                throw new Error("Phản hồi từ máy chủ xác thực trống");
-            }
-
             let parsedResp;
             try {
                 parsedResp = JSON.parse(responseText);
@@ -61,11 +57,6 @@ export class Store {
             }
 
             console.log("Phản hồi xác thực đã được phân tích:", JSON.stringify(parsedResp, null, 2));
-
-            if (!parsedResp || typeof parsedResp !== 'object') {
-                console.error("Phản hồi đã phân tích không hợp lệ:", parsedResp);
-                throw new Error("Phản hồi xác thực không hợp lệ");
-            }
 
             if (parsedResp.authType === "hsa2") {
                 return { needsMFA: true, authType: parsedResp.authType };
@@ -102,7 +93,7 @@ export class Store {
         
         if (resp.status === 204) {
             // MFA successful, proceed with signin
-            return this.authenticate(email, code, true);
+            return this.authenticate(email, null, true);
         } else {
             const responseText = await resp.text();
             throw new Error(`MFA failed: ${resp.status} ${responseText}`);
@@ -118,11 +109,14 @@ export class Store {
         'Content-Type': 'application/json',
         'X-Apple-Store-Front': '143441-19,32',
         'X-Apple-I-MD-M': Store.guid,
-        'Accept': 'application/json',
-        'Accept-Language': 'en-us',
+        'Accept': 'application/json, text/javascript',
+        'Accept-Language': 'en-US,en;q=0.9',
         'Connection': 'keep-alive',
-        'X-Apple-I-MD': this.generateAppleIMD(),
+        'X-Apple-I-MD': Store.generateAppleIMD(),
         'X-Apple-I-MD-RINFO': '17106176',
+        'X-Requested-With': 'XMLHttpRequest',
+        'Origin': 'https://idmsa.apple.com',
+        'Referer': 'https://idmsa.apple.com/',
     };
 
     static generateSessionId() {
@@ -133,13 +127,11 @@ export class Store {
     }
 
     static generateWidgetKey() {
-        // This is a placeholder. You need to implement the actual logic to generate a valid widget key.
-        return 'your_generated_widget_key_here';
+        return '83545bf919730e51dbfba24e7e8a78d2';
     }
 
     static generateAppleIMD() {
-        // This is a placeholder. You need to implement the actual logic to generate a valid X-Apple-I-MD.
-        return 'your_generated_apple_imd_here';
+        return btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))));
     }
 }
 

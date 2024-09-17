@@ -35,10 +35,12 @@ document.getElementById('downloadForm').addEventListener('submit', async (e) => 
             mfaInput.style.display = 'block';
             localStorage.setItem('scnt', data.scnt);
             localStorage.setItem('xAppleSessionToken', data.xAppleSessionToken);
-            result.textContent = `Vui lòng nhập mã xác thực ${data.authType} và bấm "Tải xuống" lại`;
+            result.textContent = `Vui lòng nhập mã xác thực ${data.authType || ''} và bấm "Tải xuống" lại`;
+            document.getElementById('password').value = ''; // Clear password field
         } else if (data.url) {
             result.innerHTML = `Tải xuống thành công: <a href="${data.url}" target="_blank">Tải xuống IPA</a>`;
             document.getElementById('code').value = '';
+            document.getElementById('password').value = '';
             mfaInput.style.display = 'none';
             localStorage.removeItem('scnt');
             localStorage.removeItem('xAppleSessionToken');
