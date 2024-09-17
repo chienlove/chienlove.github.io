@@ -1,28 +1,38 @@
 const puppeteer = require('puppeteer');
 
 (async () => {
-  const browser = await puppeteer.launch({ headless: true });
+  // Khởi chạy trình duyệt Puppeteer
+  const browser = await puppeteer.launch({
+    headless: false, // Chạy trình duyệt trong chế độ không headless để xem giao diện
+    args: ['--no-sandbox', '--disable-setuid-sandbox'] // Thêm các tham số cấu hình nếu cần
+  });
   const page = await browser.newPage();
 
-  // Thiết lập User-Agent nếu cần
+  // Thay đổi User-Agent nếu cần
   await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36');
 
-  // Thiết lập cookies nếu cần
-  await page.setCookie({
-    name: 'cookie_name',
-    value: 'cookie_value',
-    domain: 'zalo.video'
+  // Thiết lập các headers nếu cần
+  await page.setExtraHTTPHeaders({
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Connection': 'keep-alive'
   });
 
+  // Truy cập vào liên kết video
   try {
     await page.goto('https://zalo.video/s/jZrFD33t', {
-      waitUntil: 'networkidle2',
-      timeout: 60000
+      waitUntil: 'networkidle2', // Chờ cho đến khi không còn yêu cầu mạng nào
+      timeout: 60000 // Thay đổi thời gian chờ nếu cần
     });
 
-    // Thực hiện các thao tác cần thiết để tìm liên kết video
+    // Chờ trang tải hoàn tất (nếu cần)
+    await page.waitForTimeout(5000); // Chờ 5 giây trước khi tiếp tục
+
+    // Tìm liên kết video từ nội dung trang
     const videoLink = await page.evaluate(() => {
+      // Tìm phần tử video trên trang
       const video = document.querySelector('video');
+      // Trả về URL của video nếu tìm thấy
       return video ? video.src : null;
     });
 
@@ -31,5 +41,6 @@ const puppeteer = require('puppeteer');
     console.error('Error during page load or evaluation:', error);
   }
 
+  // Đóng trình duyệt
   await browser.close();
 })();
