@@ -29,8 +29,11 @@
 
         async function getDownloadToken() {
             try {
+                console.log('Attempting to get download token...');
                 const urlParams = new URLSearchParams(window.location.search);
                 const plistUrl = urlParams.get('url');
+                
+                console.log('PLIST URL:', plistUrl);
                 
                 if (!plistUrl) {
                     throw new Error('No URL provided');
@@ -44,20 +47,28 @@
                     body: JSON.stringify({ url: plistUrl })
                 });
 
+                console.log('Response status:', response.status);
+
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
 
                 const token = await response.text();
+                console.log('Token received:', token);
+
                 const encodedPlistUrl = encodeURIComponent(plistUrl);
                 downloadLink.href = `itms-services://?action=download-manifest&url=${encodedPlistUrl}&token=${token}`;
                 downloadLink.style.display = 'inline';
             } catch (error) {
                 console.error('Failed to get token:', error);
-                downloadLink.textContent = 'Error. Please try again later';
-                downloadLink.href = '#';
-                downloadLink.style.display = 'inline';
+                displayError('Error. Please try again later');
             }
+        }
+
+        function displayError(message) {
+            downloadLink.textContent = message;
+            downloadLink.href = '#';
+            downloadLink.style.display = 'inline';
         }
 
         updateCountdown();
