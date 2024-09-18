@@ -33,20 +33,21 @@ CMS.registerWidget('update-size', createClass({
     .then(response => response.text())  // Nhận token
     .then(token => {
       if (token) {
-        // Sau khi nhận token, nối token vào URL plist
-        const tempUrl = `${plistUrl}?token=${token}`;
         console.log('Token:', token); // Log kiểm tra token
-        console.log('URL với token:', tempUrl); // Log kiểm tra URL đầy đủ
 
-        // Gọi API để lấy kích thước IPA với token
-        return fetch(`/.netlify/functions/getIpaSize?url=${encodeURIComponent(tempUrl)}`);
+        // Tạo URL mới với token
+        const urlWithToken = new URL(plistUrl);
+        urlWithToken.searchParams.append('token', token);
+        
+        // Gọi API để lấy kích thước IPA với URL đã có token
+        return fetch(`/.netlify/functions/getIpaSize?url=${encodeURIComponent(urlWithToken.toString())}`);
       } else {
         throw new Error('Không nhận được token.');
       }
     })
     .then(response => {
       if (!response.ok) {
-        return response.text().then(text => {  // Nhận phản hồi lỗi chi tiết
+        return response.text().then(text => {
           throw new Error(`HTTP error! status: ${response.status} - ${text}`);
         });
       }

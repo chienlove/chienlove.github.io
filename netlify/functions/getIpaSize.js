@@ -1,36 +1,27 @@
 const axios = require('axios');
 const plist = require('plist');
 
-// Đảm bảo validTokens được chia sẻ với các chức năng khác (như trong hàm generate-token)
-const validTokens = new Map();
-
 exports.handler = async function(event) {
-  const url = event.queryStringParameters.url;
-  const token = event.queryStringParameters.token;
+  const urlWithToken = event.queryStringParameters.url;
 
-  if (!url || !token) {
-    console.log('Thiếu URL hoặc token:', { url, token }); // Log lỗi nếu thiếu tham số
+  if (!urlWithToken) {
+    console.log('Thiếu URL:', { urlWithToken }); // Log lỗi nếu thiếu tham số
     return {
       statusCode: 400,
-      body: JSON.stringify({ error: 'URL hoặc token không được cung cấp' }),
-    };
-  }
-
-  // Kiểm tra token có hợp lệ không
-  if (!validTokens.has(token)) {
-    console.log('Token không hợp lệ hoặc đã hết hạn:', token); // Log lỗi token
-    return {
-      statusCode: 403,
-      body: JSON.stringify({ error: 'Token không hợp lệ hoặc đã hết hạn' }),
+      body: JSON.stringify({ error: 'URL không được cung cấp' }),
     };
   }
 
   try {
-    let ipaUrl = url;
+    const url = new URL(urlWithToken);
+    const token = url.searchParams.get('token');
+    url.searchParams.delete('token'); // Xóa token khỏi URL để sử dụng cho các yêu cầu tiếp theo
+
+    let ipaUrl = url.toString();
 
     // Nếu URL là .plist, trích xuất URL IPA
-    if (url.toLowerCase().endsWith('.plist')) {
-      const plistResponse = await axios.get(url, { 
+    if (ipaUrl.toLowerCase().endsWith('.plist')) {
+      const plistResponse = await axios.get(ipaUrl, { 
         responseType: 'arraybuffer',
         headers: { 'User-Agent': 'Mozilla/5.0' }
       });
@@ -54,9 +45,6 @@ exports.handler = async function(event) {
     if (fileSize) {
       const fileSizeMB = (parseInt(fileSize) / (1024 * 1024)).toFixed(2);
       
-      // Xóa token sau khi sử dụng thành công
-      validTokens.delete(token);
-
       console.log('Kích thước file IPA:', fileSizeMB, 'MB');
       return {
         statusCode: 200,
