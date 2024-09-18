@@ -75,6 +75,7 @@
         const countdownElement = document.getElementById('countdown');
         const downloadLink = document.getElementById('download-link');
         let countdownInterval;
+        let plistUrl, token;
 
         function updateCountdown() {
             countdownElement.textContent = countdown;
@@ -97,15 +98,26 @@
         }
 
         function setupDirectInstall() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const plistUrl = urlParams.get('plistUrl');
-            const token = urlParams.get('token');
-
             if (plistUrl && token) {
-                downloadLink.href = `itms-services://?action=download-manifest&url=${encodeURIComponent(plistUrl)}&token=${token}`;
+                downloadLink.onclick = function(e) {
+                    e.preventDefault();
+                    window.location.href = `itms-services://?action=download-manifest&url=${encodeURIComponent(plistUrl)}&token=${token}`;
+                };
             } else {
                 downloadLink.style.display = 'none';
             }
+        }
+
+        // Extract plistUrl and token from URL, then remove them
+        const urlParams = new URLSearchParams(window.location.search);
+        plistUrl = urlParams.get('plistUrl');
+        token = urlParams.get('token');
+        
+        if (plistUrl && token) {
+            urlParams.delete('plistUrl');
+            urlParams.delete('token');
+            const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+            history.replaceState(null, '', newUrl);
         }
 
         startCountdown();
