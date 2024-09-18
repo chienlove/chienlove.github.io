@@ -35,6 +35,8 @@ CMS.registerWidget('update-size', createClass({
       if (token) {
         // Sau khi nhận token, nối token vào URL plist
         const tempUrl = `${plistUrl}?token=${token}`;
+        console.log('Token:', token); // Log kiểm tra token
+        console.log('URL với token:', tempUrl); // Log kiểm tra URL đầy đủ
 
         // Gọi API để lấy kích thước IPA với token
         return fetch(`/.netlify/functions/getIpaSize?url=${encodeURIComponent(tempUrl)}`);
@@ -44,7 +46,9 @@ CMS.registerWidget('update-size', createClass({
     })
     .then(response => {
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        return response.text().then(text => {  // Nhận phản hồi lỗi chi tiết
+          throw new Error(`HTTP error! status: ${response.status} - ${text}`);
+        });
       }
       return response.json();
     })
