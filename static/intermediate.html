@@ -68,14 +68,12 @@
         <h1>Chuẩn bị tải xuống...</h1>
         <p>Vui lòng chờ <span id="countdown">10</span> giây.</p>
         <a href="#" id="download-link" class="button disabled">Nhấn vào đây để cài đặt</a>
-        <a href="#" id="direct-install" class="button">Cài đặt trực tiếp</a>
     </div>
 
     <script>
         let countdown = 10;
         const countdownElement = document.getElementById('countdown');
         const downloadLink = document.getElementById('download-link');
-        const directInstall = document.getElementById('direct-install');
         let countdownInterval;
 
         function updateCountdown() {
@@ -86,6 +84,7 @@
                 clearInterval(countdownInterval);
                 downloadLink.classList.remove('disabled');
                 downloadLink.classList.add('pulse');
+                setupDirectInstall();
             }
         }
 
@@ -97,46 +96,25 @@
             downloadLink.classList.remove('pulse');
         }
 
+        function setupDirectInstall() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const plistUrl = urlParams.get('plistUrl');
+            const token = urlParams.get('token');
+
+            if (plistUrl && token) {
+                downloadLink.href = `itms-services://?action=download-manifest&url=${encodeURIComponent(plistUrl)}&token=${token}`;
+            } else {
+                downloadLink.style.display = 'none';
+            }
+        }
+
         startCountdown();
 
-        downloadLink.addEventListener('click', async function(e) {
-            e.preventDefault();
-            if (countdown > 0) return;
-
-            try {
-                const response = await fetch('/generate-token', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ url: window.location.href }),
-                });
-                
-                if (response.ok) {
-                    const token = await response.text();
-                    const currentUrl = new URL(window.location.href);
-                    currentUrl.searchParams.set('token', token);
-                    window.location.href = currentUrl.toString();
-                } else {
-                    throw new Error('Failed to generate token');
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Đã xảy ra lỗi. Vui lòng thử lại sau.');
-                startCountdown(); // Restart countdown on error
+        downloadLink.addEventListener('click', function(e) {
+            if (countdown > 0) {
+                e.preventDefault();
             }
         });
-
-        // Handle direct install link
-        const urlParams = new URLSearchParams(window.location.search);
-        const token = urlParams.get('token');
-        const url = urlParams.get('url');
-
-        if (token && url) {
-            directInstall.href = `itms-services://?action=download-manifest&url=${encodeURIComponent(url)}&token=${token}`;
-        } else {
-            directInstall.style.display = 'none';
-        }
     </script>
 </body>
 </html>
