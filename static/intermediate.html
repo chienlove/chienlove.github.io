@@ -1,16 +1,61 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Preparing your download...</title>
+    <title>Chuẩn bị tải xuống...</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f4f4;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            text-align: center;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        p {
+            font-size: 18px;
+            color: #666;
+        }
+
+        #download-link {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+
+        #download-link:hover {
+            background-color: #0056b3;
+        }
+    </style>
 </head>
 <body>
-    ::: container
-    <h1>Preparing your download...</h1>
-    <p>Please wait for <span id="countdown">10</span> seconds.</p>
-    <a href="#" id="download-link" style="display: none;">Click here to install</a>
-    :::
+    <div class="container">
+        <h1>Chuẩn bị tải xuống...</h1>
+        <p>Vui lòng chờ <span id="countdown">10</span> giây.</p>
+        <a href="#" id="download-link" style="display: none;">Nhấn vào đây để cài đặt</a>
+    </div>
 
     <script>
         const countdownElement = document.getElementById('countdown');
@@ -29,14 +74,14 @@
 
         async function getDownloadToken() {
             try {
-                console.log('Attempting to get download token...');
+                console.log('Đang cố gắng lấy token tải xuống...');
                 const urlParams = new URLSearchParams(window.location.search);
                 const plistUrl = urlParams.get('url');
                 
                 console.log('PLIST URL:', plistUrl);
                 
                 if (!plistUrl) {
-                    throw new Error('No URL provided');
+                    throw new Error('Không có URL nào được cung cấp');
                 }
 
                 const response = await fetch('/generate-token', {
@@ -47,21 +92,21 @@
                     body: JSON.stringify({ url: plistUrl })
                 });
 
-                console.log('Response status:', response.status);
+                console.log('Trạng thái phản hồi:', response.status);
 
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    throw new Error(`Lỗi HTTP! Trạng thái: ${response.status}`);
                 }
 
                 const token = await response.text();
-                console.log('Token received:', token);
+                console.log('Token nhận được:', token);
 
                 const encodedPlistUrl = encodeURIComponent(plistUrl);
                 downloadLink.href = `itms-services://?action=download-manifest&url=${encodedPlistUrl}&token=${token}`;
                 downloadLink.style.display = 'inline';
             } catch (error) {
-                console.error('Failed to get token:', error);
-                displayError('Error. Please try again later');
+                console.error('Lấy token thất bại:', error);
+                displayError('Lỗi. Vui lòng thử lại sau.');
             }
         }
 
