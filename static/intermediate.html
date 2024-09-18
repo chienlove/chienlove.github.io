@@ -4,50 +4,105 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chuẩn bị tải xuống</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.js"></script>
     <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .container {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+        h1 {
+            color: #4a5568;
+            margin-bottom: 1rem;
+        }
+        p {
+            color: #718096;
+            margin-bottom: 1.5rem;
+        }
+        #countdown {
+            font-weight: bold;
+            color: #4299e1;
+        }
+        .button {
+            background-color: #48bb78;
+            color: white;
+            padding: 0.75rem 1.5rem;
+            border-radius: 9999px;
+            text-decoration: none;
+            font-weight: bold;
+            display: inline-block;
+            transition: background-color 0.3s, transform 0.3s;
+            margin: 0.5rem;
+        }
+        .button:hover {
+            background-color: #38a169;
+            transform: scale(1.05);
+        }
+        .button.disabled {
+            background-color: #a0aec0;
+            cursor: not-allowed;
+        }
         @keyframes pulse {
             0%, 100% { transform: scale(1); }
             50% { transform: scale(1.05); }
         }
+        .pulse {
+            animation: pulse 2s infinite;
+        }
     </style>
 </head>
-<body class="bg-gradient-to-r from-blue-500 to-purple-600 min-h-screen flex items-center justify-center">
-    <div class="bg-white p-8 rounded-lg shadow-2xl max-w-md w-full text-center">
-        <h1 class="text-3xl font-bold mb-6 text-gray-800">Chuẩn bị tải xuống...</h1>
-        <p class="text-xl mb-6 text-gray-600">Vui lòng chờ <span id="countdown" class="font-bold text-blue-600">10</span> giây.</p>
-        <a href="#" id="download-link" class="hidden bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-full transition duration-300 ease-in-out transform hover:scale-105 inline-block animate-pulse">
-            Nhấn vào đây để cài đặt
-        </a>
+<body>
+    <div class="container">
+        <h1>Chuẩn bị tải xuống...</h1>
+        <p>Vui lòng chờ <span id="countdown">10</span> giây.</p>
+        <a href="#" id="download-link" class="button disabled">Nhấn vào đây để cài đặt</a>
+        <a href="#" id="direct-install" class="button">Cài đặt trực tiếp</a>
     </div>
 
     <script>
         let countdown = 10;
         const countdownElement = document.getElementById('countdown');
         const downloadLink = document.getElementById('download-link');
-        let tokenRequested = false;
+        const directInstall = document.getElementById('direct-install');
+        let countdownInterval;
 
         function updateCountdown() {
             countdownElement.textContent = countdown;
             if (countdown > 0) {
                 countdown--;
-                setTimeout(updateCountdown, 1000);
             } else {
-                downloadLink.classList.remove('hidden');
-                downloadLink.classList.add('inline-block');
+                clearInterval(countdownInterval);
+                downloadLink.classList.remove('disabled');
+                downloadLink.classList.add('pulse');
             }
         }
 
-        updateCountdown();
+        function startCountdown() {
+            countdown = 10;
+            updateCountdown();
+            countdownInterval = setInterval(updateCountdown, 1000);
+            downloadLink.classList.add('disabled');
+            downloadLink.classList.remove('pulse');
+        }
+
+        startCountdown();
 
         downloadLink.addEventListener('click', async function(e) {
             e.preventDefault();
-            if (tokenRequested) {
-                alert('Token đã hết hạn. Vui lòng tải lại trang để bắt đầu lại.');
-                return;
-            }
+            if (countdown > 0) return;
 
-            tokenRequested = true;
             try {
                 const response = await fetch('/generate-token', {
                     method: 'POST',
@@ -68,8 +123,20 @@
             } catch (error) {
                 console.error('Error:', error);
                 alert('Đã xảy ra lỗi. Vui lòng thử lại sau.');
+                startCountdown(); // Restart countdown on error
             }
         });
+
+        // Handle direct install link
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+        const url = urlParams.get('url');
+
+        if (token && url) {
+            directInstall.href = `itms-services://?action=download-manifest&url=${encodeURIComponent(url)}&token=${token}`;
+        } else {
+            directInstall.style.display = 'none';
+        }
     </script>
 </body>
 </html>
