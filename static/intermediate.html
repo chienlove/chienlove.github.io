@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preparing your download...</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        .container {
+            text-align: center;
+            background-color: white;
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        #countdown {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #007bff;
+        }
+        #download-link {
+            display: none;
+            margin-top: 1rem;
+            padding: 0.5rem 1rem;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: background-color 0.3s;
+        }
+        #download-link:hover {
+            background-color: #0056b3;
+        }
+    </style>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797"
+     crossorigin="anonymous"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>Preparing your download...</h1>
+        <p>Please wait for <span id="countdown">10</span> seconds.</p>
+        <a href="#" id="download-link">Click here to install</a>
+    </div>
+    <script>
+(function() {
+    let countdown = 10;
+    const countdownElement = document.getElementById('countdown');
+    const downloadLink = document.getElementById('download-link');
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const plistUrl = urlParams.get('plistUrl');
+
+    if (!plistUrl) {
+        showError('No plistUrl provided. Invalid download link.');
+        return;
+    }
+    // Remove URL parameters after getting plistUrl
+    window.history.replaceState({}, document.title, window.location.pathname);
+
+    // Generate a temp-token from server
+    fetch('/generate-token', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ url: plistUrl })
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.text();
+    })
+    .then(tempToken => {
+        if (!tempToken) {
+            throw new Error('Empty token received');
+        }
+        const installLink = `itms-services://?action=download-manifest&url=${encodeURIComponent(plistUrl)}&token=${encodeURIComponent(tempToken)}`;
+        downloadLink.href = installLink;
+
+        function updateCountdown() {
+            countdownElement.textContent = countdown;
+            if (countdown <= 0) {
+                downloadLink.style.display = 'inline-block';
+                downloadLink.focus();
+            } else {
+                countdown--;
+                setTimeout(updateCountdown, 1000);
+            }
+        }
+
+        updateCountdown();
+
+        downloadLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            window.location.href = installLink;
+        });
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showError(`Failed to get token: ${error.message}`);
+    });
+
+    function showError(message) {
+        console.error(message);
+        document.body.innerHTML = `<div class="container"><h1>Error</h1><p>${message}</p><p>Please try again later or contact support if the problem persists.</p></div>`;
+    }
+})();
+    </script>
+</body>
+</html>
