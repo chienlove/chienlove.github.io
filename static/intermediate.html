@@ -78,7 +78,7 @@
             document.body.innerHTML = '<div class="container"><h1>Error</h1><p>Failed to get download token. Please try again later.</p></div>';
             return;
         }
-        const installLink = itms-services://?action=download-manifest&url=${encodeURIComponent(plistUrl + "?token=" + tempToken)};
+        const installLink = `itms-services://?action=download-manifest&url=${encodeURIComponent(plistUrl + "?token=" + tempToken)}`;
         downloadLink.href = installLink;
         function updateCountdown() {
             countdownElement.textContent = countdown;
