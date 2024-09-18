@@ -85,7 +85,7 @@
             clearInterval(countdownInterval);
             downloadLink.classList.remove('disabled');
             downloadLink.classList.add('pulse');
-            setupDirectInstall();
+            setupDirectInstall();  // Thiết lập liên kết tải về sau khi đếm ngược
         }
     }
 
@@ -101,30 +101,40 @@
         if (plistUrl && token) {
             downloadLink.onclick = function(e) {
                 e.preventDefault();
+                // Chuyển hướng đến URL với token sau khi đếm ngược
                 window.location.href = `itms-services://?action=download-manifest&url=${encodeURIComponent(plistUrl)}&token=${token}`;
             };
         } else {
-            downloadLink.style.display = 'none';
+            downloadLink.classList.add('disabled');
+            downloadLink.textContent = 'Lỗi: Thiếu thông tin cài đặt';
         }
     }
 
+    // Lấy plistUrl và token từ URL
     const urlParams = new URLSearchParams(window.location.search);
     plistUrl = urlParams.get('plistUrl');
     token = urlParams.get('token');
-    
+
+    // Nếu tìm thấy plistUrl và token, thiết lập lại URL để không hiển thị token công khai
     if (plistUrl && token) {
         urlParams.delete('plistUrl');
         urlParams.delete('token');
         const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
         history.replaceState(null, '', newUrl);
+    } else {
+        // Hiển thị thông báo nếu không có thông tin cài đặt hợp lệ
+        downloadLink.textContent = 'Lỗi: Không tìm thấy thông tin cài đặt';
+        downloadLink.classList.add('disabled');
     }
 
     startCountdown();
 
+    // Ngăn người dùng bấm nút trước khi đếm ngược kết thúc
     downloadLink.addEventListener('click', function(e) {
         if (countdown > 0) {
             e.preventDefault();
         }
     });
-</script></body>
+</script>
+</body>
 </html>
