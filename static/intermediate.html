@@ -9,7 +9,7 @@
     ::: container
     <h1>Preparing your download...</h1>
     <p>Please wait for <span id="countdown">10</span> seconds.</p>
-    <a href="#" id="download-link">Click here to install</a>
+    <a href="#" id="download-link" style="display: none;">Click here to install</a>
     :::
 
     <script>
@@ -51,12 +51,12 @@
                 const token = await response.text();
                 const encodedPlistUrl = encodeURIComponent(plistUrl);
                 downloadLink.href = `itms-services://?action=download-manifest&url=${encodedPlistUrl}&token=${token}`;
-                downloadLink.click(); // Automatically trigger the download
+                downloadLink.style.display = 'inline';
             } catch (error) {
                 console.error('Failed to get token:', error);
-                downloadLink.textContent = 'Error: Please try again later';
+                downloadLink.textContent = 'Error. Please try again later';
                 downloadLink.href = '#';
-                downloadLink.style.display = 'inline-block';
+                downloadLink.style.display = 'inline';
             }
         }
 
