@@ -10,7 +10,7 @@ export default async (request, context) => {
     const requestedUrl = url.searchParams.get('url');
     
     // Validate requested URL
-    if (!requestedUrl || !requestedUrl.endsWith('.plist')) {
+    if (!requestedUrl || !isValidPlistUrl(requestedUrl)) {
       return new Response('Invalid URL', { status: 400 });
     }
     
@@ -27,7 +27,7 @@ export default async (request, context) => {
   // Handle the itms-services request with token
   if (url.searchParams.get('action') === 'download-manifest') {
     const plistToken = url.searchParams.get('token');
-    const plistUrl = decodeURIComponent(url.searchParams.get('url'));
+    const plistUrl = url.searchParams.get('url');
     
     if (!plistToken || !plistUrl) {
       return new Response('Missing token or URL', { status: 400 });
@@ -64,12 +64,21 @@ export default async (request, context) => {
 
   // Block all direct access to plist files or plist directory
   if (url.pathname.endsWith('.plist') || url.pathname.startsWith('/plist/')) {
-      return Response.redirect('/access-denied', 302);
-    }
+    return Response.redirect('/access-denied', 302);
+  }
 
   return context.next();
 };
 
 function generateToken() {
   return crypto.randomUUID();
+}
+
+function isValidPlistUrl(url) {
+  try {
+    const parsedUrl = new URL(url);
+    return parsedUrl.pathname.endsWith('.plist');
+  } catch {
+    return false;
+  }
 }
