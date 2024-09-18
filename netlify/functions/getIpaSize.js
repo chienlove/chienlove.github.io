@@ -5,7 +5,7 @@ exports.handler = async function(event) {
   const urlWithToken = event.queryStringParameters.url;
 
   if (!urlWithToken) {
-    console.log('Thiếu URL:', { urlWithToken }); // Log lỗi nếu thiếu tham số
+    console.log('Thiếu URL:', { urlWithToken });
     return {
       statusCode: 400,
       body: JSON.stringify({ error: 'URL không được cung cấp' }),
@@ -26,6 +26,13 @@ exports.handler = async function(event) {
         headers: { 'User-Agent': 'Mozilla/5.0' }
       });
       const plistText = Buffer.from(plistResponse.data, 'binary').toString('utf8');
+      
+      // Kiểm tra xem nội dung có phải là plist hợp lệ không
+      if (!plistText.trim().startsWith('<?xml')) {
+        console.error('Nội dung plist không hợp lệ:', plistText);
+        throw new Error('Nội dung nhận được không phải là plist hợp lệ');
+      }
+
       const plistData = plist.parse(plistText);
 
       const ipaAsset = plistData.items?.[0]?.assets?.find(asset => asset.kind === 'software-package');

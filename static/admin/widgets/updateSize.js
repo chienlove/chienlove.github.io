@@ -8,7 +8,6 @@ CMS.registerWidget('update-size', createClass({
     const entry = this.props.entry;
     const fieldsMetaData = this.props.fieldsMetaData;
 
-    // Lấy URL plist từ các nguồn khác nhau
     if (entry.getIn(['data', 'main_download', 'plistUrl'])) {
       plistUrl = entry.getIn(['data', 'main_download', 'plistUrl']);
     } else if (fieldsMetaData && fieldsMetaData.getIn(['main_download', 'data', 'plistUrl'])) {
@@ -30,17 +29,31 @@ CMS.registerWidget('update-size', createClass({
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url: plistUrl })
     })
-    .then(response => response.text())  // Nhận token
+    .then(response => response.text())
     .then(token => {
       if (token) {
-        console.log('Token:', token); // Log kiểm tra token
+        console.log('Token:', token);
 
-        // Tạo URL mới với token
+        // Tạo URL mới với token và action
         const urlWithToken = new URL(plistUrl);
         urlWithToken.searchParams.append('token', token);
+        urlWithToken.searchParams.append('action', 'download-manifest');
         
-        // Gọi API để lấy kích thước IPA với URL đã có token
-        return fetch(`/.netlify/functions/getIpaSize?url=${encodeURIComponent(urlWithToken.toString())}`);
+        // Kiểm tra xem có thể truy cập plist không
+        return fetch(urlWithToken.toString())
+          .then(response => {
+            if (!response.ok) {
+              throw new Error(`Không thể truy cập plist: ${response.status}`);
+            }
+            return response.text();
+          })
+          .then(plistContent => {
+            if (!plistContent.trim().startsWith('<?xml')) {
+              throw new Error('Nội dung plist không hợp lệ');
+            }
+            // Nếu plist hợp lệ, tiếp tục với getIpaSize
+            return fetch(`/.netlify/functions/getIpaSize?url=${encodeURIComponent(urlWithToken.toString())}`);
+          });
       } else {
         throw new Error('Không nhận được token.');
       }
