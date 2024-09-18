@@ -8,7 +8,7 @@ CMS.registerWidget('update-size', createClass({
     const entry = this.props.entry;
     const fieldsMetaData = this.props.fieldsMetaData;
 
-    // Thử lấy URL plist từ nhiều nguồn khác nhau
+    // Lấy URL plist từ các nguồn khác nhau
     if (entry.getIn(['data', 'main_download', 'plistUrl'])) {
       plistUrl = entry.getIn(['data', 'main_download', 'plistUrl']);
     } else if (fieldsMetaData && fieldsMetaData.getIn(['main_download', 'data', 'plistUrl'])) {
@@ -24,17 +24,20 @@ CMS.registerWidget('update-size', createClass({
 
     this.setState({ loading: true });
 
-    // Gọi API để tạo token
+    // Gọi API để tạo token cho URL plist
     fetch('/generate-token', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url: plistUrl })
     })
-    .then(response => response.json())
-    .then(data => {
-      if (data.token) {
-        // Sau khi có token, gọi API để lấy kích thước IPA
-        return fetch(`/.netlify/functions/getIpaSize?url=${encodeURIComponent(plistUrl)}&token=${data.token}`);
+    .then(response => response.text())  // Nhận token
+    .then(token => {
+      if (token) {
+        // Sau khi nhận token, nối token vào URL plist
+        const tempUrl = `${plistUrl}?token=${token}`;
+
+        // Gọi API để lấy kích thước IPA với token
+        return fetch(`/.netlify/functions/getIpaSize?url=${encodeURIComponent(tempUrl)}`);
       } else {
         throw new Error('Không nhận được token.');
       }
@@ -54,7 +57,7 @@ CMS.registerWidget('update-size', createClass({
       }
     })
     .catch(error => {
-      console.error('Error in API call:', error);
+      console.error('Lỗi khi gọi API:', error);
       alert('Có lỗi xảy ra khi cập nhật kích thước: ' + error.message);
     })
     .finally(() => {
@@ -97,4 +100,5 @@ CMS.registerWidget('update-size', createClass({
     );
   }
 }));
+
 CMS.init();
