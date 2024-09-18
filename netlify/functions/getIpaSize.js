@@ -1,13 +1,24 @@
 const axios = require('axios');
 const plist = require('plist');
 
+const validTokens = new Map(); // Thêm logic xác thực token ở đây
+
 exports.handler = async function(event) {
   const url = event.queryStringParameters.url;
+  const token = event.queryStringParameters.token; // Nhận token từ query string
 
-  if (!url) {
+  if (!url || !token) {
     return {
       statusCode: 400,
-      body: JSON.stringify({ error: 'URL không được cung cấp' }),
+      body: JSON.stringify({ error: 'URL hoặc token không được cung cấp' }),
+    };
+  }
+
+  // Kiểm tra token hợp lệ
+  if (!validTokens.has(token)) {
+    return {
+      statusCode: 403,
+      body: JSON.stringify({ error: 'Token không hợp lệ hoặc đã hết hạn' }),
     };
   }
 
@@ -39,6 +50,10 @@ exports.handler = async function(event) {
 
     if (fileSize) {
       const fileSizeMB = (parseInt(fileSize) / (1024 * 1024)).toFixed(2);
+      
+      // Xóa token sau khi sử dụng thành công
+      validTokens.delete(token);
+
       return {
         statusCode: 200,
         body: JSON.stringify({ size: `${fileSizeMB} MB` }),
