@@ -12,32 +12,26 @@ exports.handler = async function(event, context) {
     return { statusCode: 400, body: JSON.stringify({ error: 'URL plist không được cung cấp' }) };
   }
 
-  console.log('Received plist URL:', plistUrl);
-
   try {
     const host = event.headers.host;
-    const proto = event.headers['x-forwarded-proto'] || 'https';  // Ensure correct protocol
+    const proto = event.headers['x-forwarded-proto'] || 'https';
     const baseUrl = `${proto}://${host}`;
     const tokenUrl = `${baseUrl}/generate-token`;
 
-    // Generate token
-    const tokenResponse = await axios.post(tokenUrl, null, {
-      params: { url: plistUrl }
+    // Gọi API tạo token
+    const tokenResponse = await axios.post(tokenUrl, {
+      url: plistUrl
     });
-    
-    if (tokenResponse.status !== 200) {
-      throw new Error(`Token generation failed with status: ${tokenResponse.status}`);
+
+    if (tokenResponse.status !== 200 || !tokenResponse.data) {
+      throw new Error(`Failed to generate token with status: ${tokenResponse.status}`);
     }
 
     const token = tokenResponse.data;
-    console.log('Generated token:', token);
+    const urlWithToken = `${plistUrl}?token=${encodeURIComponent(token)}`;
 
-    // Fetch plist file using token
-    const urlWithToken = new URL(plistUrl);
-    urlWithToken.searchParams.append('token', token);
-    urlWithToken.searchParams.append('action', 'download-manifest');
-
-    const plistResponse = await axios.get(urlWithToken.toString(), {
+    // Fetch plist file với token
+    const plistResponse = await axios.get(urlWithToken, {
       headers: { 'User-Agent': 'Mozilla/5.0' }
     });
 
@@ -58,6 +52,7 @@ exports.handler = async function(event, context) {
       throw new Error('Không thể tìm thấy URL IPA trong file plist');
     }
 
+    // Lấy kích thước file IPA
     const ipaResponse = await axios.head(ipaAsset.url);
     const fileSize = ipaResponse.headers['content-length'];
 
@@ -72,7 +67,6 @@ exports.handler = async function(event, context) {
     };
 
   } catch (error) {
-    console.error('Error:', error.message);
     return {
       statusCode: 500,
       body: JSON.stringify({ error: error.message || 'Lỗi xảy ra khi xử lý yêu cầu' }),
