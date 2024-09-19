@@ -13,16 +13,23 @@ exports.handler = async function(event) {
   }
 
   try {
-    // Sử dụng proxy server để truy cập plist
-    const proxyUrl = `https://api.allorigins.win/raw?url=${encodeURIComponent(plistUrl)}`;
-    const plistResponse = await axios.get(proxyUrl, {
+    // Generate token
+    const tokenResponse = await axios.post(`${process.env.BASE_URL}/generate-token?url=${encodeURIComponent(plistUrl)}`);
+    const token = tokenResponse.data;
+
+    // Create URL with token and action
+    const urlWithToken = new URL(plistUrl);
+    urlWithToken.searchParams.append('token', token);
+    urlWithToken.searchParams.append('action', 'download-manifest');
+
+    // Fetch plist content
+    const plistResponse = await axios.get(urlWithToken.toString(), {
       headers: { 'User-Agent': 'Mozilla/5.0' }
     });
 
     const plistContent = plistResponse.data;
 
     if (typeof plistContent !== 'string' || !plistContent.trim().startsWith('<?xml')) {
-      console.error('Nội dung plist không hợp lệ:', plistContent);
       throw new Error('Nội dung nhận được không phải là plist hợp lệ');
     }
 
@@ -33,11 +40,9 @@ exports.handler = async function(event) {
       throw new Error('Không thể tìm thấy URL IPA trong file plist');
     }
 
-    // Sử dụng proxy server để lấy thông tin về file IPA
-    const ipaProxyUrl = `https://api.allorigins.win/head?url=${encodeURIComponent(ipaAsset.url)}`;
-    const ipaResponse = await axios.get(ipaProxyUrl);
-
-    const fileSize = ipaResponse.data.headers['content-length'];
+    // Get IPA file size
+    const ipaResponse = await axios.head(ipaAsset.url);
+    const fileSize = ipaResponse.headers['content-length'];
 
     if (fileSize) {
       const fileSizeMB = (parseInt(fileSize) / (1024 * 1024)).toFixed(2);

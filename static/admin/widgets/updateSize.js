@@ -23,40 +23,11 @@ CMS.registerWidget('update-size', createClass({
 
     this.setState({ loading: true });
 
-    // Gọi API để tạo token cho URL plist
-    fetch('/generate-token', {
+    // Gọi API getIpaSize
+    fetch('/.netlify/functions/getIpaSize', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: plistUrl })
-    })
-    .then(response => response.text())
-    .then(token => {
-      if (token) {
-        console.log('Token:', token);
-
-        // Tạo URL mới với token và action
-        const urlWithToken = new URL(plistUrl);
-        urlWithToken.searchParams.append('token', token);
-        urlWithToken.searchParams.append('action', 'download-manifest');
-        
-        // Kiểm tra xem có thể truy cập plist không
-        return fetch(urlWithToken.toString())
-          .then(response => {
-            if (!response.ok) {
-              throw new Error(`Không thể truy cập plist: ${response.status}`);
-            }
-            return response.text();
-          })
-          .then(plistContent => {
-            if (!plistContent.trim().startsWith('<?xml')) {
-              throw new Error('Nội dung plist không hợp lệ');
-            }
-            // Nếu plist hợp lệ, tiếp tục với getIpaSize
-            return fetch(`/.netlify/functions/getIpaSize?url=${encodeURIComponent(urlWithToken.toString())}`);
-          });
-      } else {
-        throw new Error('Không nhận được token.');
-      }
+      body: JSON.stringify({ plistUrl: plistUrl })
     })
     .then(response => {
       if (!response.ok) {
