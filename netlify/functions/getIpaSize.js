@@ -14,7 +14,7 @@ exports.handler = async function(event) {
 
   try {
     // Generate token
-    const tokenResponse = await axios.post(`${process.env.BASE_URL}/generate-token?url=${encodeURIComponent(plistUrl)}`);
+    const tokenResponse = await axios.post(`${process.env.SITE_URL}/generate-token?url=${encodeURIComponent(plistUrl)}`);
     const token = tokenResponse.data;
 
     // Create URL with token and action
