@@ -24,9 +24,20 @@ exports.handler = async function(event, context) {
     console.log('Generating token using URL:', tokenUrl);
 
     // Generate token
-    const tokenResponse = await axios.post(tokenUrl, null, {
-      params: { url: plistUrl }
-    });
+    let tokenResponse;
+    try {
+      tokenResponse = await axios.post(tokenUrl, null, {
+        params: { url: plistUrl }
+      });
+      console.log('Token generation response:', tokenResponse.status, tokenResponse.data);
+    } catch (error) {
+      console.error('Error generating token:', error.message);
+      if (error.response) {
+        console.error('Token generation error response:', error.response.status, error.response.data);
+      }
+      throw new Error('Lỗi khi tạo token');
+    }
+
     const token = tokenResponse.data;
     console.log('Token generated:', token);
 
@@ -38,9 +49,19 @@ exports.handler = async function(event, context) {
 
     // Fetch plist content
     console.log('Fetching plist content...');
-    const plistResponse = await axios.get(urlWithToken.toString(), {
-      headers: { 'User-Agent': 'Mozilla/5.0' }
-    });
+    let plistResponse;
+    try {
+      plistResponse = await axios.get(urlWithToken.toString(), {
+        headers: { 'User-Agent': 'Mozilla/5.0' }
+      });
+      console.log('Plist fetch response:', plistResponse.status);
+    } catch (error) {
+      console.error('Error fetching plist:', error.message);
+      if (error.response) {
+        console.error('Plist fetch error response:', error.response.status, error.response.data);
+      }
+      throw new Error('Lỗi khi truy cập file plist');
+    }
 
     const plistContent = plistResponse.data;
     console.log('Plist content received');
@@ -62,7 +83,18 @@ exports.handler = async function(event, context) {
 
     // Get IPA file size
     console.log('Getting IPA file size...');
-    const ipaResponse = await axios.head(ipaAsset.url);
+    let ipaResponse;
+    try {
+      ipaResponse = await axios.head(ipaAsset.url);
+      console.log('IPA head response:', ipaResponse.status);
+    } catch (error) {
+      console.error('Error getting IPA file size:', error.message);
+      if (error.response) {
+        console.error('IPA size fetch error response:', error.response.status, error.response.data);
+      }
+      throw new Error('Lỗi khi lấy kích thước file IPA');
+    }
+
     const fileSize = ipaResponse.headers['content-length'];
 
     if (fileSize) {
@@ -80,7 +112,7 @@ exports.handler = async function(event, context) {
     console.error('Error:', error.message);
     console.error('Error stack:', error.stack);
     if (error.response) {
-      console.error('Error response:', error.response.data);
+      console.error('Error response:', error.response.status, error.response.data);
     }
     return {
       statusCode: 500,
