@@ -50,10 +50,7 @@ window.addEventListener('message', event => {
 });
 
 async function handleUpload() {
-    if (!token) {
-        setStatus('Please log in to upload files');
-        return;
-    }
+    if (!checkToken()) return;
 
     const fileInput = document.getElementById('fileInput');
     const file = fileInput.files[0];
@@ -86,7 +83,8 @@ async function createRelease() {
             method: 'POST',
             headers: {
                 'Authorization': `token ${token}`,
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Accept': 'application/vnd.github.v3+json'
             },
             body: JSON.stringify({
                 tag_name: 'v' + new Date().getTime(),
@@ -113,17 +111,22 @@ async function uploadFile(file, uploadUrl) {
     document.getElementById('progressBar').style.display = 'block';
 
     console.log('Starting file upload...');
-    console.log('Upload URL:', uploadUrl.replace('{?name,label}', '') + `?name=${encodeURIComponent(file.name)}`);
+    
+    // Xử lý uploadUrl
+    const finalUploadUrl = uploadUrl.split('{')[0] + `?name=${encodeURIComponent(file.name)}`;
+    console.log('Final Upload URL:', finalUploadUrl);
+
     console.log('File name:', file.name);
     console.log('File size:', file.size);
     console.log('File type:', file.type);
 
     try {
-        const response = await fetch(uploadUrl.replace('{?name,label}', '') + `?name=${encodeURIComponent(file.name)}`, {
+        const response = await fetch(finalUploadUrl, {
             method: 'POST',
             headers: {
                 'Authorization': `token ${token}`,
-                'Content-Type': file.type || 'application/octet-stream'
+                'Content-Type': file.type || 'application/octet-stream',
+                'Accept': 'application/vnd.github.v3+json'
             },
             body: file
         });
@@ -154,4 +157,12 @@ function setStatus(message) {
 function updateProgress(percentage) {
     const progressBar = document.querySelector('#progressBar div');
     progressBar.style.width = `${percentage}%`;
+}
+
+function checkToken() {
+    if (!token) {
+        setStatus('No token found. Please log in.');
+        return false;
+    }
+    return true;
 }
