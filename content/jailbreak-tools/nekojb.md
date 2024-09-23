@@ -40,7 +40,7 @@ description: >-
   iPod touch 7th Gen
 developer: HAHALOSAH
 categories: Jailbreak
-size: Updating
+size: 7.33 MB
 ios_compatible: 15.0 - 15.8
 keywords:
   - NekoJB
