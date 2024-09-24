@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tìm kiếm ID phiên bản ứng dụng</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+    label {
+      display: block;
+      margin-top: 20px;
+      font-weight: bold;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    button {
+      background-color: #28a745;
+      color: white;
+      padding: 10px;
+      border: none;
+      border-radius: 5px;
+      margin-top: 20px;
+      width: 100%;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #218838;
+    }
+    .result {
+      margin-top: 20px;
+    }
+    .error {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>Tìm kiếm ID phiên bản</h1>
+    <form id="searchForm">
+      <label for="appId">Nhập App ID:</label>
+      <input type="text" id="appId" name="appId" placeholder="Nhập ID của ứng dụng trên App Store" required>
+      <button type="submit">Tìm kiếm</button>
+    </form>
+    <div class="result" id="result"></div>
+  </div>
+
+  <script>
+    document.getElementById('searchForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const appId = document.getElementById('appId').value;
+      const resultDiv = document.getElementById('result');
+      resultDiv.innerHTML = '';  // Clear any previous results
+
+      fetch(`https://api.timbrd.com/apple/app-version/index.php?id=${appId}`)
+        .then(response => response.json())
+        .then(data => {
+          if (data.length > 0) {
+            let output = '<h2>Kết quả tìm kiếm</h2><ul>';
+            data.forEach(version => {
+              output += `<li>ID phiên bản: ${version.id} - Version: ${version.version}</li>`;
+            });
+            output += '</ul>';
+            resultDiv.innerHTML = output;
+          } else {
+            resultDiv.innerHTML = '<p class="error">Không tìm thấy phiên bản nào cho App ID này.</p>';
+          }
+        })
+        .catch(error => {
+          resultDiv.innerHTML = `<p class="error">Lỗi: ${error.message}</p>`;
+        });
+    });
+  </script>
+
+</body>
+</html>
