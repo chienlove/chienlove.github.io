@@ -82,7 +82,7 @@
         if (data.length > 0) {
           let output = '<h2>Kết quả tìm kiếm</h2><ul>';
           data.forEach(version => {
-            output += `<li>ID phiên bản: ${version.id || "Không có"} - Version: ${version.version || "Không có"}</li>`;
+            output += `<li>ID phiên bản: ${version.external_identifier || "Không có"} - Version: ${version.bundle_version || "Không có"}</li>`;
           });
           output += '</ul>';
           resultDiv.innerHTML = output;
