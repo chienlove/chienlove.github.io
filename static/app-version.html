@@ -75,13 +75,14 @@
     const resultDiv = document.getElementById('result');
     resultDiv.innerHTML = '';  // Clear previous results
 
-    fetch(`/.netlify/functions/getAppVersions?id=${appId}`)
+    fetch(`/api/getAppVersions?id=${appId}`)
       .then(response => response.json())
       .then(data => {
+        console.log(data); // Kiểm tra dữ liệu trả về trong console
         if (data.length > 0) {
           let output = '<h2>Kết quả tìm kiếm</h2><ul>';
           data.forEach(version => {
-            output += `<li>ID phiên bản: ${version.id} - Version: ${version.version}</li>`;
+            output += `<li>ID phiên bản: ${version.id || "Không có"} - Version: ${version.version || "Không có"}</li>`;
           });
           output += '</ul>';
           resultDiv.innerHTML = output;
