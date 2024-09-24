@@ -29,25 +29,30 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 window.addEventListener('message', event => {
-    if (event.data.type === 'oauth') {
-        const code = event.data.code;
-        fetch('/.netlify/functions/get-token', {
-            method: 'POST',
-            body: JSON.stringify({ code }),
-            headers: { 'Content-Type': 'application/json' }
-        })
-        .then(response => response.json())
-        .then(data => {
-            token = data.access_token;
-            localStorage.setItem('github_token', token);
-            window.location.reload();
-        })
-        .catch(error => {
-            console.error('Error getting token:', error);
-            setStatus('Failed to get access token');
-        });
-    }
-});
+     if (event.data.type === 'oauth') {
+       const code = event.data.code;
+       fetch('/.netlify/functions/get-token', {
+         method: 'POST',
+         body: JSON.stringify({ code }),
+         headers: { 'Content-Type': 'application/json' }
+       })
+       .then(response => response.json())
+       .then(data => {
+         if (data.access_token) {
+           token = data.access_token;
+           localStorage.setItem('github_token', token);
+           checkAuth(); // Gọi lại hàm này để cập nhật UI
+           setStatus('Login successful');
+         } else {
+           throw new Error('No access token received');
+         }
+       })
+       .catch(error => {
+         console.error('Error getting token:', error);
+         setStatus('Failed to get access token');
+       });
+     }
+   });
 
 async function handleUpload() {
     if (!checkToken()) return;
