@@ -134,11 +134,10 @@ async function uploadFile(file, uploadUrl) {
     setStatus('Uploading file...');
     document.getElementById('progressBar').style.display = 'block';
 
-    console.log('Starting file upload...');
-    console.log('Upload URL:', uploadUrl);
-    
-    // Xử lý uploadUrl
-    const finalUploadUrl = uploadUrl.split('{')[0];
+    console.log(`Uploading file: ${file.name}, size: ${file.size}, type: ${file.type}`);
+
+    // Xử lý uploadUrl để thêm tên file
+    const finalUploadUrl = `${uploadUrl.split('{')[0]}?name=${encodeURIComponent(file.name)}`;
     console.log('Final Upload URL:', finalUploadUrl);
 
     const formData = new FormData();
@@ -149,14 +148,10 @@ async function uploadFile(file, uploadUrl) {
             method: 'POST',
             headers: {
                 'Authorization': `token ${token}`,
-                'Content-Type': file.type || 'application/octet-stream',
                 'Accept': 'application/vnd.github.v3+json'
             },
             body: formData
         });
-
-        console.log('Response status:', response.status);
-        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
 
         if (!response.ok) {
             const errorText = await response.text();
