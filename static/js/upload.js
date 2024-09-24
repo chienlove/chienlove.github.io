@@ -137,7 +137,7 @@ async function uploadFile(file, uploadUrl) {
     console.log(`Uploading file: ${file.name}, size: ${file.size}, type: ${file.type}`);
 
     // Xử lý uploadUrl để thêm tên file
-    const finalUploadUrl = `${uploadUrl.split('{')[0]}?name=${encodeURIComponent(file.name)}`;
+    const finalUploadUrl = uploadUrl.replace('{?name,label}', `?name=${encodeURIComponent(file.name)}`);
     console.log('Final Upload URL:', finalUploadUrl);
 
     const formData = new FormData();
