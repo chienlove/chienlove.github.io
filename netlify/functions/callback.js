@@ -10,18 +10,25 @@ exports.handler = async function(event, context) {
     body: `
       <html>
         <body>
-          <p>Authentication successful. This window will close automatically.</p>
+          <p id="message">Authentication successful. Processing...</p>
           <script>
             function sendMessageAndClose() {
               if (window.opener) {
                 window.opener.postMessage({ type: 'oauth', code: '${code}' }, '*');
-                setTimeout(() => window.close(), 1000);
+                document.getElementById('message').textContent = 'Authentication successful. You can close this window.';
               } else {
-                document.body.innerHTML += '<p>Please close this window and refresh the original page.</p>';
+                document.getElementById('message').textContent = 'Authentication successful. Please close this window and refresh the original page.';
               }
             }
-            // Delay the execution to ensure the message is sent
-            setTimeout(sendMessageAndClose, 500);
+            // Gọi hàm ngay lập tức
+            sendMessageAndClose();
+            
+            // Thêm một listener để nhận phản hồi từ cửa sổ chính
+            window.addEventListener('message', function(event) {
+              if (event.data === 'token_received') {
+                window.close();
+              }
+            });
           </script>
         </body>
       </html>

@@ -3,6 +3,7 @@ const REDIRECT_URI = 'https://storeios.net/.netlify/functions/callback'; // repl
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB max file size
 
 let token = localStorage.getItem('github_token');
+let authWindow = null;
 
 function checkAuth() {
     console.log("Checking auth, token:", token);
@@ -24,7 +25,7 @@ function login() {
     const height = 600;
     const left = (screen.width / 2) - (width / 2);
     const top = (screen.height / 2) - (height / 2);
-    window.open(`https://github.com/login/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&scope=repo`, 'GitHub OAuth', `width=${width},height=${height},left=${left},top=${top}`);
+    authWindow = window.open(`https://github.com/login/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&scope=repo`, 'GitHub OAuth', `width=${width},height=${height},left=${left},top=${top}`);
 }
 
 window.addEventListener('message', event => {
@@ -45,6 +46,10 @@ window.addEventListener('message', event => {
                 console.log("Token saved:", token);
                 checkAuth();
                 setStatus('Login successful');
+                // Gửi phản hồi đến cửa sổ xác thực
+                if (authWindow) {
+                    authWindow.postMessage('token_received', '*');
+                }
             } else {
                 throw new Error('No access token received');
             }
