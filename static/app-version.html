@@ -69,31 +69,31 @@
   </div>
 
   <script>
-    document.getElementById('searchForm').addEventListener('submit', function(e) {
-      e.preventDefault();
-      const appId = document.getElementById('appId').value;
-      const resultDiv = document.getElementById('result');
-      resultDiv.innerHTML = '';  // Clear any previous results
+  document.getElementById('searchForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const appId = document.getElementById('appId').value;
+    const resultDiv = document.getElementById('result');
+    resultDiv.innerHTML = '';  // Clear previous results
 
-      fetch(`https://api.timbrd.com/apple/app-version/index.php?id=${appId}`)
-        .then(response => response.json())
-        .then(data => {
-          if (data.length > 0) {
-            let output = '<h2>Kết quả tìm kiếm</h2><ul>';
-            data.forEach(version => {
-              output += `<li>ID phiên bản: ${version.id} - Version: ${version.version}</li>`;
-            });
-            output += '</ul>';
-            resultDiv.innerHTML = output;
-          } else {
-            resultDiv.innerHTML = '<p class="error">Không tìm thấy phiên bản nào cho App ID này.</p>';
-          }
-        })
-        .catch(error => {
-          resultDiv.innerHTML = `<p class="error">Lỗi: ${error.message}</p>`;
-        });
-    });
-  </script>
+    fetch(`/.netlify/functions/getAppVersions?id=${appId}`)
+      .then(response => response.json())
+      .then(data => {
+        if (data.length > 0) {
+          let output = '<h2>Kết quả tìm kiếm</h2><ul>';
+          data.forEach(version => {
+            output += `<li>ID phiên bản: ${version.id} - Version: ${version.version}</li>`;
+          });
+          output += '</ul>';
+          resultDiv.innerHTML = output;
+        } else {
+          resultDiv.innerHTML = '<p class="error">Không tìm thấy phiên bản nào cho App ID này.</p>';
+        }
+      })
+      .catch(error => {
+        resultDiv.innerHTML = `<p class="error">Lỗi: ${error.message}</p>`;
+      });
+  });
+</script>
 
 </body>
 </html>
