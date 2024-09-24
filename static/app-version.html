@@ -4,20 +4,28 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tìm kiếm Ứng dụng App Store</title>
-    <link rel="stylesheet" href="/css/app-version.css">
+    <link rel="stylesheet" href="/css/app-version.css?v=1.0">
 </head>
 <body>
 
-    <h1>Tìm kiếm Ứng dụng trên App Store</h1>
-    
-    <form id="searchForm">
-        <input type="text" id="searchTerm" placeholder="Nhập App ID, tên ứng dụng hoặc URL App Store">
-        <button type="submit">Tìm kiếm</button>
-    </form>
-    
-    <div id="result"></div>
+    <div class="container">
+        <h1>Tìm kiếm ID phiên bản ứng dụng</h1>
+        
+        <form id="searchForm">
+            <input type="text" id="searchTerm" placeholder="Nhập App ID, tên ứng dụng hoặc URL App Store">
+            <button type="submit">Tìm kiếm</button>
+        </form>
+
+        <div id="appInfo" class="app-info"></div> <!-- Hiển thị thông tin ứng dụng -->
+        <div id="result"></div> <!-- Kết quả tìm kiếm ứng dụng -->
+        <div id="pagination" class="pagination"></div> <!-- Phân trang cho kết quả phiên bản -->
+
+    </div>
 
     <script>
+        let currentPage = 1;
+        let perPage = 15;
+
         document.getElementById('searchForm').addEventListener('submit', function(e) {
             e.preventDefault();
             const searchTerm = document.getElementById('searchTerm').value;
@@ -46,7 +54,7 @@
                 apps.forEach(app => {
                     output += `<tr>
                         <td><img src="${app.artworkUrl60}" alt="${app.trackName} icon"></td>
-                        <td><a href="#" onclick="getAppVersions(${app.trackId})">${app.trackName}</a></td>
+                        <td><a href="#" onclick="getAppVersions(${app.trackId}, '${app.trackName}', '${app.artistName}', '${app.version}', '${app.releaseNotes}')">${app.trackName}</a></td>
                         <td>${app.artistName}</td>
                     </tr>`;
                 });
@@ -57,12 +65,21 @@
             }
         }
 
-        function getAppVersions(appId) {
+        function getAppVersions(appId, appName, artistName, latestVersion, releaseNotes) {
+            // Hiển thị thông tin chi tiết của ứng dụng
+            document.getElementById('appInfo').innerHTML = `
+                <h2>Thông tin Ứng dụng</h2>
+                <p><strong>Tên:</strong> ${appName}</p>
+                <p><strong>Tác giả:</strong> ${artistName}</p>
+                <p><strong>Phiên bản mới nhất:</strong> ${latestVersion}</p>
+                <p><strong>Mô tả cập nhật:</strong> ${releaseNotes}</p>
+            `;
+
             // Gọi Netlify Function để lấy các phiên bản của ứng dụng
             fetch(`/api/getAppVersions?id=${appId}`)
                 .then(response => response.json())
                 .then(data => {
-                    displayAppVersions(data);
+                    paginateVersions(data, currentPage);
                 })
                 .catch(error => {
                     console.error('Lỗi:', error);
@@ -70,13 +87,17 @@
                 });
         }
 
-        function displayAppVersions(versions) {
+        function paginateVersions(versions, page) {
+            const totalVersions = versions.length;
+            const start = (page - 1) * perPage;
+            const end = start + perPage;
+
             const resultDiv = document.getElementById('result');
             resultDiv.innerHTML = '';  // Xóa kết quả trước
 
-            if (versions.length > 0) {
+            if (totalVersions > 0) {
                 let output = '<table><tr><th>Phiên bản</th><th>ID Phiên bản</th><th>Ngày phát hành</th></tr>';
-                versions.forEach(version => {
+                versions.slice(start, end).forEach(version => {
                     output += `<tr>
                         <td>${version.bundle_version}</td>
                         <td>${version.external_identifier}</td>
@@ -85,9 +106,23 @@
                 });
                 output += '</table>';
                 resultDiv.innerHTML = output;
+
+                // Phân trang
+                const paginationDiv = document.getElementById('pagination');
+                paginationDiv.innerHTML = '';
+                const totalPages = Math.ceil(totalVersions / perPage);
+
+                for (let i = 1; i <= totalPages; i++) {
+                    paginationDiv.innerHTML += `<button onclick="changePage(${i})">${i}</button>`;
+                }
             } else {
                 resultDiv.innerHTML = '<p>Không tìm thấy phiên bản nào cho ứng dụng này.</p>';
             }
+        }
+
+        function changePage(page) {
+            currentPage = page;
+            getAppVersions(document.getElementById('appId').value);  // Lấy lại thông tin phiên bản với trang mới
         }
     </script>
 </body>
