@@ -108,16 +108,21 @@ async function createRelease() {
             body: JSON.stringify({
                 tag_name: 'v' + new Date().getTime(),
                 name: 'Release ' + new Date().toISOString(),
-                body: 'Uploaded from web interface'
+                body: 'Uploaded from web interface',
+                draft: false,
+                prerelease: false
             })
         });
 
         if (!response.ok) {
             const errorText = await response.text();
+            console.error('Create release error response:', errorText);
             throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
         }
 
-        return await response.json();
+        const releaseData = await response.json();
+        console.log('Release created successfully:', releaseData);
+        return releaseData;
     } catch (error) {
         setStatus(`Failed to create release: ${error.message}`);
         console.error('Create release error:', error);
@@ -130,14 +135,14 @@ async function uploadFile(file, uploadUrl) {
     document.getElementById('progressBar').style.display = 'block';
 
     console.log('Starting file upload...');
+    console.log('Upload URL:', uploadUrl);
     
     // Xử lý uploadUrl
-    const finalUploadUrl = uploadUrl.split('{')[0] + `?name=${encodeURIComponent(file.name)}`;
+    const finalUploadUrl = uploadUrl.split('{')[0];
     console.log('Final Upload URL:', finalUploadUrl);
 
-    console.log('File name:', file.name);
-    console.log('File size:', file.size);
-    console.log('File type:', file.type);
+    const formData = new FormData();
+    formData.append('file', file);
 
     try {
         const response = await fetch(finalUploadUrl, {
@@ -147,7 +152,7 @@ async function uploadFile(file, uploadUrl) {
                 'Content-Type': file.type || 'application/octet-stream',
                 'Accept': 'application/vnd.github.v3+json'
             },
-            body: file
+            body: formData
         });
 
         console.log('Response status:', response.status);
