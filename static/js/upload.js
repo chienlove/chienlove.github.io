@@ -5,6 +5,7 @@ const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB max file size
 let token = localStorage.getItem('github_token');
 
 function checkAuth() {
+    console.log("Checking auth, token:", token);
     if (!token) {
         document.getElementById('uploadButton').style.display = 'none';
         document.getElementById('fileInput').style.display = 'none';
@@ -19,40 +20,48 @@ function checkAuth() {
 }
 
 function login() {
-    window.open(`https://github.com/login/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&scope=repo`, 'GitHub OAuth', 'width=600,height=600');
+    const width = 600;
+    const height = 600;
+    const left = (screen.width / 2) - (width / 2);
+    const top = (screen.height / 2) - (height / 2);
+    window.open(`https://github.com/login/oauth/authorize?client_id=${CLIENT_ID}&redirect_uri=${REDIRECT_URI}&scope=repo`, 'GitHub OAuth', `width=${width},height=${height},left=${left},top=${top}`);
 }
 
+window.addEventListener('message', event => {
+    console.log("Received message:", event.data);
+    if (event.data.type === 'oauth') {
+        const code = event.data.code;
+        fetch('/.netlify/functions/get-token', {
+            method: 'POST',
+            body: JSON.stringify({ code }),
+            headers: { 'Content-Type': 'application/json' }
+        })
+        .then(response => response.json())
+        .then(data => {
+            console.log("Received token data:", data);
+            if (data.access_token) {
+                token = data.access_token;
+                localStorage.setItem('github_token', token);
+                console.log("Token saved:", token);
+                checkAuth();
+                setStatus('Login successful');
+            } else {
+                throw new Error('No access token received');
+            }
+        })
+        .catch(error => {
+            console.error('Error getting token:', error);
+            setStatus('Failed to get access token');
+        });
+    }
+});
+
 document.addEventListener('DOMContentLoaded', function() {
+    console.log("DOM loaded, checking auth");
     checkAuth();
     document.getElementById('uploadButton').addEventListener('click', handleUpload);
     document.getElementById('loginButton').addEventListener('click', login);
 });
-
-window.addEventListener('message', event => {
-     if (event.data.type === 'oauth') {
-       const code = event.data.code;
-       fetch('/.netlify/functions/get-token', {
-         method: 'POST',
-         body: JSON.stringify({ code }),
-         headers: { 'Content-Type': 'application/json' }
-       })
-       .then(response => response.json())
-       .then(data => {
-         if (data.access_token) {
-           token = data.access_token;
-           localStorage.setItem('github_token', token);
-           checkAuth(); // Gọi lại hàm này để cập nhật UI
-           setStatus('Login successful');
-         } else {
-           throw new Error('No access token received');
-         }
-       })
-       .catch(error => {
-         console.error('Error getting token:', error);
-         setStatus('Failed to get access token');
-       });
-     }
-   });
 
 async function handleUpload() {
     if (!checkToken()) return;
