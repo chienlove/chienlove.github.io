@@ -3,127 +3,236 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tìm kiếm Ứng dụng App Store</title>
-    <link rel="stylesheet" href="/css/app-version.css?v=1.0">
+    <title>Tìm kiếm ID phiên bản ứng dụng</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+        }
+
+        .search-form {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        .search-input {
+            padding: 12px;
+            width: 60%;
+            max-width: 500px;
+            font-size: 16px;
+            border: 1px solid #bdc3c7;
+            border-radius: 5px 0 0 5px;
+            outline: none;
+        }
+
+        .search-button {
+            padding: 12px 20px;
+            font-size: 16px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 0 5px 5px 0;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .search-button:hover {
+            background-color: #2980b9;
+        }
+
+        .app-info {
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .result-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .result-table th, .result-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #ecf0f1;
+        }
+
+        .result-table th {
+            background-color: #34495e;
+            color: #ffffff;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .result-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .result-table tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .app-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 10px;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 30px;
+        }
+
+        .pagination button {
+            padding: 10px 15px;
+            margin: 0 5px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .pagination button:hover {
+            background-color: #2980b9;
+        }
+
+        .pagination button:disabled {
+            background-color: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        .pagination-info {
+            margin: 0 15px;
+            font-size: 14px;
+            color: #7f8c8d;
+        }
+
+        .error {
+            color: #e74c3c;
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .search-input {
+                width: 70%;
+            }
+
+            .result-table {
+                font-size: 14px;
+            }
+
+            .pagination button {
+                padding: 8px 12px;
+            }
+        }
+    </style>
 </head>
 <body>
-
     <div class="container">
         <h1>Tìm kiếm ID phiên bản ứng dụng</h1>
         
-        <form id="searchForm">
-            <input type="text" id="searchTerm" placeholder="Nhập App ID, tên ứng dụng hoặc URL App Store">
-            <button type="submit">Tìm kiếm</button>
+        <form class="search-form">
+            <input type="text" class="search-input" placeholder="Nhập ID phiên bản...">
+            <button type="submit" class="search-button">Tìm kiếm</button>
         </form>
 
-        <div id="appInfo" class="app-info"></div> <!-- Hiển thị thông tin ứng dụng -->
-        <div id="result"></div> <!-- Kết quả tìm kiếm ứng dụng -->
-        <div id="pagination" class="pagination"></div> <!-- Phân trang cho kết quả phiên bản -->
+        <div id="appInfo" class="app-info"></div>
 
+        <table id="result" class="result-table">
+            <thead>
+                <tr>
+                    <th>Icon</th>
+                    <th>Tên ứng dụng</th>
+                    <th>Phiên bản</th>
+                    <th>Ngày phát hành</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Kết quả tìm kiếm sẽ được thêm vào đây -->
+            </tbody>
+        </table>
+
+        <div id="pagination" class="pagination">
+            <button id="prevPage" disabled>Trang trước</button>
+            <span class="pagination-info">Trang <span id="currentPage">1</span> / <span id="totalPages">1</span></span>
+            <button id="nextPage">Trang sau</button>
+        </div>
     </div>
 
     <script>
+        // JavaScript code để xử lý tìm kiếm và phân trang sẽ được thêm vào đây
+        // Ví dụ:
         let currentPage = 1;
-        let perPage = 15;
+        const itemsPerPage = 50;
+        let totalItems = 0;
 
-        document.getElementById('searchForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            const searchTerm = document.getElementById('searchTerm').value;
-            searchApp(searchTerm);
+        function updatePagination() {
+            const totalPages = Math.ceil(totalItems / itemsPerPage);
+            document.getElementById('currentPage').textContent = currentPage;
+            document.getElementById('totalPages').textContent = totalPages;
+            document.getElementById('prevPage').disabled = currentPage === 1;
+            document.getElementById('nextPage').disabled = currentPage === totalPages;
+        }
+
+        document.getElementById('prevPage').addEventListener('click', () => {
+            if (currentPage > 1) {
+                currentPage--;
+                // Gọi hàm để tải dữ liệu trang mới
+                loadPage(currentPage);
+            }
         });
 
-        function searchApp(term) {
-            // API tìm kiếm ứng dụng từ iTunes API
-            fetch(`https://itunes.apple.com/search?term=${term}&entity=software`)
-                .then(response => response.json())
-                .then(data => {
-                    displaySearchResults(data.results);
-                })
-                .catch(error => {
-                    console.error('Lỗi:', error);
-                    document.getElementById('result').innerHTML = `<p class="error">Lỗi khi tìm kiếm ứng dụng: ${error.message}</p>`;
-                });
-        }
-
-        function displaySearchResults(apps) {
-            const resultDiv = document.getElementById('result');
-            resultDiv.innerHTML = ''; // Xóa kết quả cũ
-
-            if (apps.length > 0) {
-                let output = '<table><tr><th>Icon</th><th>Tên ứng dụng</th><th>Tác giả</th></tr>';
-                apps.forEach(app => {
-                    output += `<tr>
-                        <td><img src="${app.artworkUrl60}" alt="${app.trackName} icon"></td>
-                        <td><a href="#" onclick="getAppVersions(${app.trackId}, '${app.trackName}', '${app.artistName}', '${app.version}', '${app.releaseNotes}')">${app.trackName}</a></td>
-                        <td>${app.artistName}</td>
-                    </tr>`;
-                });
-                output += '</table>';
-                resultDiv.innerHTML = output;
-            } else {
-                resultDiv.innerHTML = '<p>Không tìm thấy ứng dụng nào.</p>';
+        document.getElementById('nextPage').addEventListener('click', () => {
+            const totalPages = Math.ceil(totalItems / itemsPerPage);
+            if (currentPage < totalPages) {
+                currentPage++;
+                // Gọi hàm để tải dữ liệu trang mới
+                loadPage(currentPage);
             }
+        });
+
+        function loadPage(page) {
+            // Thực hiện tải dữ liệu cho trang được chọn
+            // Cập nhật bảng kết quả và thông tin phân trang
+            updatePagination();
         }
 
-        function getAppVersions(appId, appName, artistName, latestVersion, releaseNotes) {
-            // Hiển thị thông tin chi tiết của ứng dụng
-            document.getElementById('appInfo').innerHTML = `
-                <h2>Thông tin Ứng dụng</h2>
-                <p><strong>Tên:</strong> ${appName}</p>
-                <p><strong>Tác giả:</strong> ${artistName}</p>
-                <p><strong>Phiên bản mới nhất:</strong> ${latestVersion}</p>
-                <p><strong>Mô tả cập nhật:</strong> ${releaseNotes}</p>
-            `;
-
-            // Gọi Netlify Function để lấy các phiên bản của ứng dụng
-            fetch(`/api/getAppVersions?id=${appId}`)
-                .then(response => response.json())
-                .then(data => {
-                    paginateVersions(data, currentPage);
-                })
-                .catch(error => {
-                    console.error('Lỗi:', error);
-                    document.getElementById('result').innerHTML = `<p class="error">Lỗi khi lấy thông tin phiên bản: ${error.message}</p>`;
-                });
-        }
-
-        function paginateVersions(versions, page) {
-            const totalVersions = versions.length;
-            const start = (page - 1) * perPage;
-            const end = start + perPage;
-
-            const resultDiv = document.getElementById('result');
-            resultDiv.innerHTML = '';  // Xóa kết quả trước
-
-            if (totalVersions > 0) {
-                let output = '<table><tr><th>Phiên bản</th><th>ID Phiên bản</th><th>Ngày phát hành</th></tr>';
-                versions.slice(start, end).forEach(version => {
-                    output += `<tr>
-                        <td>${version.bundle_version}</td>
-                        <td>${version.external_identifier}</td>
-                        <td>${version.created_at}</td>
-                    </tr>`;
-                });
-                output += '</table>';
-                resultDiv.innerHTML = output;
-
-                // Phân trang
-                const paginationDiv = document.getElementById('pagination');
-                paginationDiv.innerHTML = '';
-                const totalPages = Math.ceil(totalVersions / perPage);
-
-                for (let i = 1; i <= totalPages; i++) {
-                    paginationDiv.innerHTML += `<button onclick="changePage(${i})">${i}</button>`;
-                }
-            } else {
-                resultDiv.innerHTML = '<p>Không tìm thấy phiên bản nào cho ứng dụng này.</p>';
-            }
-        }
-
-        function changePage(page) {
-            currentPage = page;
-            getAppVersions(document.getElementById('appId').value);  // Lấy lại thông tin phiên bản với trang mới
-        }
+        // Khởi tạo trang
+        updatePagination();
     </script>
 </body>
 </html>
