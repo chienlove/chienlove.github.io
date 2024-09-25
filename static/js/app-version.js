@@ -46,7 +46,22 @@ let currentPage = 1;
                 .then(data => {
                     if (data.results.length > 0) {
                         const app = data.results[0];  // Lấy thông tin ứng dụng
-                        displayAppInfo(app);         // Hiển thị thông tin ứng dụng
+
+                        // Chuyển đổi dung lượng từ bytes sang MB
+                        const fileSizeMB = (app.fileSizeBytes / (1024 * 1024)).toFixed(2); 
+
+                        // Hiển thị thông tin ứng dụng
+                        document.getElementById('appInfo').innerHTML = `
+                            <h2>Thông tin Ứng dụng</h2>
+                            <p><strong>Tên:</strong> ${app.trackName}</p>
+                            <p><strong>Tác giả:</strong> ${app.artistName}</p>
+                            <p><strong>Phiên bản mới nhất:</strong> ${app.version}</p>
+                            <p><strong>Mô tả cập nhật:</strong> ${app.releaseNotes}</p>
+                            <p><strong>Ngày phát hành:</strong> ${new Date(app.releaseDate).toLocaleDateString()}</p>
+                            <p><strong>Dung lượng:</strong> ${fileSizeMB} MB</p>
+                            <p><strong>Bundle ID:</strong> ${app.bundleId}</p>
+                            <p><strong>iOS tối thiểu:</strong> ${app.minimumOsVersion}</p>
+                        `;
                     } else {
                         document.getElementById('appInfo').innerHTML = '<p>Không tìm thấy thông tin ứng dụng.</p>';
                     }
@@ -128,51 +143,40 @@ let currentPage = 1;
                 });
         }
 
-        function displayAppInfo(app) {
-            document.getElementById('appInfo').innerHTML = `
-                <h2>Thông tin Ứng dụng</h2>
-                <p><strong>Tên:</strong> ${app.trackName}</p>
-                <p><strong>Tác giả:</strong> ${app.artistName}</p>
-                <p><strong>Phiên bản mới nhất:</strong> ${app.version}</p>
-                <p><strong>Mô tả cập nhật:</strong> ${app.releaseNotes}</p>
-            `;
-        }
+        function paginateVersions(page) {
+            currentPage = page;
+            const totalVersions = versions.length;
+            const start = (currentPage - 1) * perPage;
+            const end = start + perPage;
 
-    function paginateVersions(page) {
-        currentPage = page;
-        const totalVersions = versions.length;
-        const start = (currentPage - 1) * perPage;
-        const end = start + perPage;
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = '';  // Xóa kết quả trước
 
-        const resultDiv = document.getElementById('result');
-        resultDiv.innerHTML = '';  // Xóa kết quả trước
+            if (totalVersions > 0) {
+                let output = '<table><tr><th>Phiên bản</th><th>ID Phiên bản</th><th>Ngày phát hành</th></tr>';
+                versions.slice(start, end).forEach(version => {
+                    output += `<tr>
+                        <td>${version.bundle_version}</td>
+                        <td>${version.external_identifier}</td>
+                        <td>${version.created_at}</td>
+                    </tr>`;
+                });
+                output += '</table>';
+                resultDiv.innerHTML = output;
 
-        if (totalVersions > 0) {
-            let output = '<table><tr><th>Phiên bản</th><th>ID Phiên bản</th><th>Ngày phát hành</th></tr>';
-            versions.slice(start, end).forEach(version => {
-                output += `<tr>
-                    <td>${version.bundle_version}</td>
-                    <td>${version.external_identifier}</td>
-                    <td>${version.created_at}</td>
-                </tr>`;
-            });
-            output += '</table>';
-            resultDiv.innerHTML = output;
+                // Phân trang
+                const paginationDiv = document.getElementById('pagination');
+                paginationDiv.innerHTML = '';
+                const totalPages = Math.ceil(totalVersions / perPage);
 
-            // Phân trang
-            const paginationDiv = document.getElementById('pagination');
-            paginationDiv.innerHTML = '';
-            const totalPages = Math.ceil(totalVersions / perPage);
-
-            for (let i = 1; i <= totalPages; i++) {
-                paginationDiv.innerHTML += `<button onclick="changePage(${i})" class="${i === currentPage ? 'active' : ''}">${i}</button>`;
+                for (let i = 1; i <= totalPages; i++) {
+                    paginationDiv.innerHTML += `<button onclick="changePage(${i})" class="${i === currentPage ? 'active' : ''}">${i}</button>`;
+                }
+            } else {
+                resultDiv.innerHTML = '<p>Không tìm thấy phiên bản nào cho ứng dụng này.</p>';
             }
-        } else {
-            resultDiv.innerHTML = '<p>Không tìm thấy phiên bản nào cho ứng dụng này.</p>';
         }
-    }
 
-    function changePage(page) {
-        currentPage = page;
-        paginateVersions(currentPage);  // Gọi lại phân trang với trang mới
-    }
+        function changePage(page) {
+            currentPage = page;
+            paginateVersions(currentPage);
