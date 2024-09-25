@@ -28,7 +28,7 @@ form {
 }
 
 input[type="text"] {
-    padding: 10px;
+    padding: 6px;
     width: 400px;
     font-size: 16px;
     border: 1px solid #ccc;
@@ -87,6 +87,7 @@ img {
 .pagination {
     display: flex;
     justify-content: center;
+    flex-wrap: wrap; /* Đảm bảo các nút không bị cuộn theo chiều ngang */
     margin-top: 20px;
 }
 
@@ -98,10 +99,12 @@ img {
     border: none;
     border-radius: 5px;
     cursor: pointer;
+    transition: background-color 0.3s ease;
 }
 
 .pagination button.active {
-    background-color: #0056b3;
+    background-color: #28a745; /* Màu khác để đánh dấu trang hiện tại */
+    font-weight: bold;
 }
 
 .pagination button:hover {

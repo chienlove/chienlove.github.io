@@ -87,38 +87,38 @@
         }
 
         function paginateVersions(page) {
-            currentPage = page;
-            const totalVersions = versions.length;
-            const start = (currentPage - 1) * perPage;
-            const end = start + perPage;
+    currentPage = page;
+    const totalVersions = versions.length;
+    const start = (currentPage - 1) * perPage;
+    const end = start + perPage;
 
-            const resultDiv = document.getElementById('result');
-            resultDiv.innerHTML = '';  // Xóa kết quả trước
+    const resultDiv = document.getElementById('result');
+    resultDiv.innerHTML = '';  // Xóa kết quả trước
 
-            if (totalVersions > 0) {
-                let output = '<table><tr><th>Phiên bản</th><th>ID Phiên bản</th><th>Ngày phát hành</th></tr>';
-                versions.slice(start, end).forEach(version => {
-                    output += `<tr>
-                        <td>${version.bundle_version}</td>
-                        <td>${version.external_identifier}</td>
-                        <td>${version.created_at}</td>
-                    </tr>`;
-                });
-                output += '</table>';
-                resultDiv.innerHTML = output;
+    if (totalVersions > 0) {
+        let output = '<table><tr><th>Phiên bản</th><th>ID Phiên bản</th><th>Ngày phát hành</th></tr>';
+        versions.slice(start, end).forEach(version => {
+            output += `<tr>
+                <td>${version.bundle_version}</td>
+                <td>${version.external_identifier}</td>
+                <td>${version.created_at}</td>
+            </tr>`;
+        });
+        output += '</table>';
+        resultDiv.innerHTML = output;
 
-                // Phân trang
-                const paginationDiv = document.getElementById('pagination');
-                paginationDiv.innerHTML = '';
-                const totalPages = Math.ceil(totalVersions / perPage);
+        // Phân trang
+        const paginationDiv = document.getElementById('pagination');
+        paginationDiv.innerHTML = '';
+        const totalPages = Math.ceil(totalVersions / perPage);
 
-                for (let i = 1; i <= totalPages; i++) {
-                    paginationDiv.innerHTML += `<button onclick="changePage(${i})" class="${i === currentPage ? 'active' : ''}">${i}</button>`;
-                }
-            } else {
-                resultDiv.innerHTML = '<p>Không tìm thấy phiên bản nào cho ứng dụng này.</p>';
-            }
+        for (let i = 1; i <= totalPages; i++) {
+            paginationDiv.innerHTML += `<button onclick="changePage(${i})" class="${i === currentPage ? 'active' : ''}">${i}</button>`;
         }
+    } else {
+        resultDiv.innerHTML = '<p>Không tìm thấy phiên bản nào cho ứng dụng này.</p>';
+    }
+}
 
         function changePage(page) {
             currentPage = page;
