@@ -4,49 +4,53 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tìm kiếm Ứng dụng App Store</title>
-    <link rel="stylesheet" href="/css/app-version.css?v=1.4">
+    <link rel="stylesheet" href="/css/app-version.css?v=1.5">
 </head>
 <body>
-
     <div class="container">
         <h1>Tìm kiếm Ứng dụng trên App Store</h1>
-      <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797"
-             crossorigin="anonymous"></script>
-        <!-- Storeios ads -->
+        
+        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797"
+                crossorigin="anonymous"></script>
         <ins class="adsbygoogle"
-             style="display:block;width:300px;height:50px"
+             style="display:block;width:100%;height:50px"
              data-ad-client="ca-pub-3905625903416797"
-             data-ad-slot="5160182988"
-             data-ad-format="auto"
-             data-full-width-responsive="true"></ins>
+             data-ad-slot="5160182988"></ins>
         <script>
              (adsbygoogle = window.adsbygoogle || []).push({});
         </script>
-    </script>
         
         <form id="searchForm">
             <input type="text" id="searchTerm" placeholder="Nhập App ID, tên ứng dụng hoặc URL App Store">
             <button type="submit">Tìm kiếm</button>
         </form>
 
-        <div id="loading" style="display: none;">Đang tìm kiếm...</div> <!-- Thông báo đang tìm kiếm -->
-        <div id="appInfo" class="app-info"></div> <!-- Hiển thị thông tin ứng dụng -->
-        <div id="result"></div> <!-- Kết quả tìm kiếm ứng dụng -->
-        <div id="pagination" class="pagination"></div> <!-- Phân trang cho kết quả phiên bản -->
+        <div id="loading" style="display: none;">Đang tìm kiếm...</div>
+        <div id="error" class="error" style="display: none;"></div>
+        <div id="appInfo" class="app-info"></div>
+        <div id="result"></div>
+        <div id="pagination" class="pagination"></div>
 
+        <div class="user-guide">
+            <h2>Hướng dẫn sử dụng</h2>
+            <ol>
+                <li>Nhập App ID, tên ứng dụng hoặc URL App Store vào ô tìm kiếm.</li>
+                <li>Nhấn nút "Tìm kiếm" hoặc nhấn Enter.</li>
+                <li>Đợi kết quả hiển thị. Thông tin ứng dụng sẽ xuất hiện nếu tìm thấy.</li>
+                <li>Nếu có nhiều kết quả, sử dụng phần phân trang để xem thêm.</li>
+                <li>Để tìm kiếm ứng dụng khác, chỉ cần nhập thông tin mới và tìm kiếm lại.</li>
+            </ol>
+        </div>
     </div>
-  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797"
+
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797"
              crossorigin="anonymous"></script>
-        <!-- Storeios ads -->
-        <ins class="adsbygoogle"
-             style="display:block;width:300px;height:250px"
-             data-ad-client="ca-pub-3905625903416797"
-             data-ad-slot="5160182988"
-             data-ad-format="auto"
-             data-full-width-responsive="true"></ins>
-        <script>
-             (adsbygoogle = window.adsbygoogle || []).push({});
-        </script>
+    <ins class="adsbygoogle"
+         style="display:block;width:100%;height:250px"
+         data-ad-client="ca-pub-3905625903416797"
+         data-ad-slot="5160182988"></ins>
+    <script>
+         (adsbygoogle = window.adsbygoogle || []).push({});
     </script>
 
     <script src="/js/app-version.js"></script>
