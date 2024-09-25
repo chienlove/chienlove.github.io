@@ -87,12 +87,13 @@ img {
 .pagination {
     display: flex;
     justify-content: center;
+    flex-wrap: wrap;
     margin: 20px 0;
 }
 
 .pagination button {
     padding: 10px 15px;
-    margin: 0 5px;
+    margin: 5px;
     background-color: #007bff;
     color: white;
     border: none;
