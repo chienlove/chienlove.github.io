@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tìm kiếm Ứng dụng App Store</title>
-    <link rel="stylesheet" href="/css/app-version.css?v=1.0">
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
@@ -25,6 +25,7 @@
     <script>
         let currentPage = 1;
         const perPage = 50;
+        let versions = [];
 
         document.getElementById('searchForm').addEventListener('submit', function(e) {
             e.preventDefault();
@@ -73,10 +74,11 @@
                 <p><strong>Mô tả cập nhật:</strong> ${releaseNotes}</p>
             `;
 
-            fetch(`/api/getAppVersions?id=${appId}`)
+            fetch(`/.netlify/functions/getAppVersions?id=${appId}`)
                 .then(response => response.json())
                 .then(data => {
-                    paginateVersions(data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)), currentPage);
+                    versions = data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+                    paginateVersions(currentPage);
                 })
                 .catch(error => {
                     console.error('Lỗi:', error);
@@ -84,9 +86,10 @@
                 });
         }
 
-        function paginateVersions(versions, page) {
+        function paginateVersions(page) {
+            currentPage = page;
             const totalVersions = versions.length;
-            const start = (page - 1) * perPage;
+            const start = (currentPage - 1) * perPage;
             const end = start + perPage;
 
             const resultDiv = document.getElementById('result');
@@ -110,7 +113,7 @@
                 const totalPages = Math.ceil(totalVersions / perPage);
 
                 for (let i = 1; i <= totalPages; i++) {
-                    paginationDiv.innerHTML += `<button onclick="changePage(${i})">${i}</button>`;
+                    paginationDiv.innerHTML += `<button onclick="changePage(${i})" class="${i === currentPage ? 'active' : ''}">${i}</button>`;
                 }
             } else {
                 resultDiv.innerHTML = '<p>Không tìm thấy phiên bản nào cho ứng dụng này.</p>';
@@ -119,7 +122,7 @@
 
         function changePage(page) {
             currentPage = page;
-            paginateVersions(versions, currentPage);  // Gọi lại phân trang với trang mới
+            paginateVersions(currentPage);  // Gọi lại phân trang với trang mới
         }
     </script>
 </body>
