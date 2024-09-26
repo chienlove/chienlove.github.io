@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tìm kiếm Ứng dụng App Store</title>
+    <title>Tìm kiếm thông tin ID phiên bản (Version), bundleID,...của Ứng dụng App Store</title>
     <link rel="stylesheet" href="/css/app-version.css?v=1.5">
 </head>
 <body>
     <div class="container">
-        <h1>Tìm kiếm Ứng dụng trên App Store</h1>
+        <h1>Tìm kiếm ID Version, BundleID... của Ứng dụng trên App Store</h1>
         
         <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797"
                 crossorigin="anonymous"></script>
@@ -24,7 +24,7 @@
             <input type="text" id="searchTerm" placeholder="Nhập App ID, tên ứng dụng hoặc URL App Store">
             <button type="submit">Tìm kiếm</button>
         </form>
-      
+      <div id="loading" style="display: none;">Đang tìm kiếm...</div>
        <div class="user-guide">
             <h2>Hướng dẫn sử dụng</h2>
             <ol>
@@ -37,7 +37,6 @@
         </div>
     </div>
   
-        <div id="loading" style="display: none;">Đang tìm kiếm...</div>
         <div id="error" class="error" style="display: none;"></div>
         <div id="appInfo" class="app-info"></div>
         <div id="result"></div>
