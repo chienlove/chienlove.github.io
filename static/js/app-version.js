@@ -179,4 +179,5 @@ let currentPage = 1;
 
         function changePage(page) {
             currentPage = page;
-            paginateVersions(currentPage);
+            paginateVersions(currentPage);  // Gọi lại phân trang với trang mới
+        }
