@@ -15,11 +15,6 @@
   path = "/*"
 
 [[redirects]]
-  from = "https://find.storeios.net/*"
-  to = "/find/:splat"
-  status = 200
-
-[[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
@@ -51,6 +46,16 @@
   [headers.values]
     X-Content-Type-Options = "nosniff"
     Content-Security-Policy = "default-src 'none'"
+
+[[headers]]
+  for = "/*.css"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
+
+[[headers]]
+  for = "/*.js"
+  [headers.values]
+    Cache-Control = "no-cache, no-store, must-revalidate"
 
 [dev]
   framework = "hugo"
