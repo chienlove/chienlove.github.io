@@ -48,12 +48,12 @@
     Content-Security-Policy = "default-src 'none'"
 
 [[headers]]
-  for = "/*.css"
+  for = "/css/*"
   [headers.values]
     Cache-Control = "no-cache, no-store, must-revalidate"
 
 [[headers]]
-  for = "/*.js"
+  for = "/js/*"
   [headers.values]
     Cache-Control = "no-cache, no-store, must-revalidate"
 
