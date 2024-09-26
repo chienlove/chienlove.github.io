@@ -12,7 +12,6 @@
       min-height: 100vh;
       background-color: #f0f0f0;
     }
-
     .container {
       background-color: #fff;
       padding: 20px;
@@ -20,7 +19,6 @@
       box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
       text-align: center;
     }
-
     input[type="text"] {
       width: 100%;
       padding: 10px;
@@ -28,7 +26,6 @@
       border: 1px solid #ccc;
       border-radius: 4px;
     }
-
     button {
       background-color: #007bff;
       color: #fff;
@@ -37,21 +34,23 @@
       border-radius: 4px;
       cursor: pointer;
     }
-
     button:hover {
       background-color: #0069d9;
     }
-
     .video-container {
       margin-top: 20px;
       width: 500px;
       height: 300px;
+      display: none;
     }
-
     video {
       width: 100%;
       height: 100%;
       object-fit: cover;
+    }
+    .error {
+      color: red;
+      margin-top: 10px;
     }
   </style>
 </head>
@@ -61,8 +60,10 @@
     <p>Dán URL video TikTok vào đây:</p>
     <input type="text" id="videoUrl" placeholder="Dán URL video TikTok...">
     <button id="downloadButton">Tải Xuống</button>
-
-    <div class="video-container">
+    
+    <div class="error" id="errorMsg"></div>
+    
+    <div class="video-container" id="videoContainer">
       <video id="videoPlayer" controls></video>
     </div>
 
@@ -73,23 +74,33 @@
     const videoUrlInput = document.getElementById('videoUrl');
     const downloadButton = document.getElementById('downloadButton');
     const videoPlayer = document.getElementById('videoPlayer');
+    const videoContainer = document.getElementById('videoContainer');
     const downloadLink = document.getElementById('downloadLink');
+    const errorMsg = document.getElementById('errorMsg');
 
     downloadButton.addEventListener('click', () => {
       const videoUrl = videoUrlInput.value;
 
-      fetch('/.netlify/functions/downloadVideo', {
+      fetch('/api/downloadVideo', {
         method: 'POST',
         body: JSON.stringify({ url: videoUrl })
       })
       .then(response => response.json())
       .then(data => {
+        if (data.error) {
+          errorMsg.textContent = 'Lỗi tải video, vui lòng thử lại.';
+          videoContainer.style.display = 'none';
+          return;
+        }
         videoPlayer.src = data.videoUrl;
+        videoContainer.style.display = 'block';
         downloadLink.href = data.videoUrl;
         downloadLink.style.display = 'block';
+        errorMsg.textContent = '';
       })
       .catch(error => {
-        console.error('Lỗi tải video:', error);
+        console.error('Error downloading video:', error);
+        errorMsg.textContent = 'Lỗi tải video, vui lòng thử lại.';
       });
     });
   </script>
