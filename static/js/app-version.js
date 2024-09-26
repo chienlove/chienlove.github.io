@@ -113,11 +113,15 @@ let currentPage = 1;
         function getAppVersions(appId, appName, artistName, latestVersion, releaseNotes) {
             document.getElementById('appInfo').innerHTML = `
                 <h2>Thông tin Ứng dụng</h2>
-                <p><strong>Tên:</strong> ${appName}</p>
-                <p><strong>Tác giả:</strong> ${artistName}</p>
-                <p><strong>Phiên bản mới nhất:</strong> ${latestVersion}</p>
-                <p><strong>Mô tả cập nhật:</strong> ${releaseNotes}</p>
-            `;
+                            <p><strong>Tên:</strong> ${app.trackName}</p>
+                            <p><strong>Tác giả:</strong> ${app.artistName}</p>
+                            <p><strong>Phiên bản mới nhất:</strong> ${app.version}</p>
+                            <p><strong>Mô tả cập nhật:</strong> ${app.releaseNotes}</p>
+                            <p><strong>Ngày phát hành:</strong> ${new Date(app.releaseDate).toLocaleDateString()}</p>
+                            <p><strong>Dung lượng:</strong> ${fileSizeMB} MB</p>
+                            <p><strong>Bundle ID:</strong> ${app.bundleId}</p>
+                            <p><strong>iOS tối thiểu:</strong> ${app.minimumOsVersion}</p>
+                        `;
 
             fetchTimbrdVersion(appId);  // Gọi API của Timbrd để lấy phiên bản
         }
