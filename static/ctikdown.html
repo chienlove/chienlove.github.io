@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>TikTok Video Downloader</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background-color: #f0f0f0;
+    }
+
+    .container {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      text-align: center;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 10px;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    button {
+      background-color: #007bff;
+      color: #fff;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #0069d9;
+    }
+
+    .video-container {
+      margin-top: 20px;
+      width: 500px;
+      height: 300px;
+    }
+
+    video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>TikTok Video Downloader</h1>
+    <p>Dán URL video TikTok vào đây:</p>
+    <input type="text" id="videoUrl" placeholder="Dán URL video TikTok...">
+    <button id="downloadButton">Tải Xuống</button>
+
+    <div class="video-container">
+      <video id="videoPlayer" controls></video>
+    </div>
+
+    <a id="downloadLink" href="" download="tiktok_video.mp4" style="display: none;">Tải video</a>
+  </div>
+
+  <script>
+    const videoUrlInput = document.getElementById('videoUrl');
+    const downloadButton = document.getElementById('downloadButton');
+    const videoPlayer = document.getElementById('videoPlayer');
+    const downloadLink = document.getElementById('downloadLink');
+
+    downloadButton.addEventListener('click', () => {
+      const videoUrl = videoUrlInput.value;
+
+      fetch('/.netlify/functions/downloadVideo', {
+        method: 'POST',
+        body: JSON.stringify({ url: videoUrl })
+      })
+      .then(response => response.json())
+      .then(data => {
+        videoPlayer.src = data.videoUrl;
+        downloadLink.href = data.videoUrl;
+        downloadLink.style.display = 'block';
+      })
+      .catch(error => {
+        console.error('Lỗi tải video:', error);
+      });
+    });
+  </script>
+</body>
+</html>

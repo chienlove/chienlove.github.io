@@ -27,6 +27,9 @@
     "firebase": "^9.0.0",
     "firebase-admin": "^11.0.0",
     "@wordpress/components": "^23.9.0",
-    "cheerio": "^1.0.0-rc.12"
+    "cheerio": "^1.0.0-rc.12",
+    "fs": "^0.0.1-security",
+    "stream": "^0.0.2",
+    "util": "^0.12.4"
   }
 }
