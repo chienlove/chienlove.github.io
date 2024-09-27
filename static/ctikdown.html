@@ -81,23 +81,20 @@
   downloadButton.addEventListener('click', () => {
     const videoUrl = videoUrlInput.value;
 
-    fetch('/.netlify/functions/downloadVideo', {
+    fetch('/api/downloadVideo', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url: videoUrl })
     })
-    .then(response => {
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      return response.json();
-    })
+    .then(response => response.json())
     .then(data => {
       if (data.error) {
         errorMsg.textContent = 'Lỗi tải video, vui lòng thử lại.';
         videoContainer.style.display = 'none';
         return;
       }
+
+      // Cập nhật link video từ R2
       videoPlayer.src = data.videoUrl;
       videoContainer.style.display = 'block';
       downloadLink.href = data.videoUrl;
@@ -109,5 +106,6 @@
       errorMsg.textContent = 'Lỗi tải video, vui lòng thử lại.';
     });
   });
-</script></body>
+</script>
+</body>
 </html>
