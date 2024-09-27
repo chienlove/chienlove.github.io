@@ -13,12 +13,12 @@ exports.handler = async (event, context) => {
     // Tải video từ API TikTok
     const response = await axios.get(url, { responseType: 'stream' });
 
-    // Lưu trữ video tạm thời vào /tmp
+    // Lưu video tạm thời vào /tmp
     const videoPath = '/tmp/tiktok_video.mp4';
     const writeStream = fs.createWriteStream(videoPath);
     await pump(response.data, writeStream);
 
-    console.log('Video downloaded successfully, preparing to serve...');
+    console.log('Video downloaded successfully to:', videoPath);
 
     // Trả về đường dẫn để video tải về
     return {
