@@ -1,5 +1,5 @@
-const axios = require('axios');
 const AWS = require('aws-sdk');
+const axios = require('axios');
 const { promisify } = require('util');
 const { pipeline } = require('stream');
 const pump = promisify(pipeline);
@@ -9,7 +9,7 @@ const r2 = new AWS.S3({
   accessKeyId: process.env.R2_ACCESS_KEY,
   secretAccessKey: process.env.R2_SECRET_KEY,
   endpoint: process.env.R2_ENDPOINT,
-  region: 'auto', // Hoặc sử dụng một trong các region phù hợp như 'wnam', 'enam', etc.
+  region: 'auto',
   s3ForcePathStyle: true, // Cloudflare R2 yêu cầu điều này
 });
 
@@ -33,17 +33,20 @@ exports.handler = async (event, context) => {
       Key: videoKey,
       Body: response.data,
       ContentType: 'video/mp4',
-      ACL: 'public-read', // Cho phép truy cập công khai để tải về
+      ACL: 'public-read',
     }).promise();
 
     console.log(`Video uploaded successfully to R2: ${videoKey}`);
 
-    // Trả về link video từ R2
+    // Tạo URL tải video
     const videoUrl = `https://${process.env.R2_BUCKET_NAME}.${process.env.R2_ENDPOINT}/${videoKey}`;
+
+    // Xóa các phần thừa khỏi URL
+    const cleanedVideoUrl = videoUrl.replace(/https:\/\//g, 'https://');
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ videoUrl }),
+      body: JSON.stringify({ videoUrl: cleanedVideoUrl }),
     };
   } catch (error) {
     console.error('Error downloading or uploading video:', error.message);
