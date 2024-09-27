@@ -8,9 +8,9 @@ const pump = promisify(pipeline);
 const r2 = new AWS.S3({
   accessKeyId: process.env.R2_ACCESS_KEY,
   secretAccessKey: process.env.R2_SECRET_KEY,
-  endpoint: process.env.R2_ENDPOINT,
+  endpoint: process.env.R2_ENDPOINT, // Endpoint không có https://
   region: 'auto',
-  s3ForcePathStyle: true, // Cloudflare R2 yêu cầu điều này
+  s3ForcePathStyle: true,
 });
 
 exports.handler = async (event, context) => {
@@ -29,8 +29,8 @@ exports.handler = async (event, context) => {
 
     // Tải video lên R2
     await r2.upload({
-      Bucket: process.env.R2_BUCKET_NAME,
-      Key: videoKey,
+      Bucket: process.env.R2_BUCKET_NAME, // Tên bucket
+      Key: videoKey, // Đường dẫn file
       Body: response.data,
       ContentType: 'video/mp4',
       ACL: 'public-read',
@@ -41,12 +41,9 @@ exports.handler = async (event, context) => {
     // Tạo URL tải video
     const videoUrl = `https://${process.env.R2_BUCKET_NAME}.${process.env.R2_ENDPOINT}/${videoKey}`;
 
-    // Xóa các phần thừa khỏi URL
-    const cleanedVideoUrl = videoUrl.replace(/https:\/\//g, 'https://');
-
     return {
       statusCode: 200,
-      body: JSON.stringify({ videoUrl: cleanedVideoUrl }),
+      body: JSON.stringify({ videoUrl }),
     };
   } catch (error) {
     console.error('Error downloading or uploading video:', error.message);
