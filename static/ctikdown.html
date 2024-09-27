@@ -41,7 +41,6 @@
       margin-top: 20px;
       width: 500px;
       height: 300px;
-      display: none;
     }
     video {
       width: 100%;
@@ -63,7 +62,7 @@
     
     <div class="error" id="errorMsg"></div>
     
-    <div class="video-container" id="videoContainer">
+    <div class="video-container" id="videoContainer" style="display: none;">
       <video id="videoPlayer" controls></video>
     </div>
 
@@ -71,41 +70,51 @@
   </div>
 
   <script>
-  const videoUrlInput = document.getElementById('videoUrl');
-  const downloadButton = document.getElementById('downloadButton');
-  const videoPlayer = document.getElementById('videoPlayer');
-  const videoContainer = document.getElementById('videoContainer');
-  const downloadLink = document.getElementById('downloadLink');
-  const errorMsg = document.getElementById('errorMsg');
+    const videoUrlInput = document.getElementById('videoUrl');
+    const downloadButton = document.getElementById('downloadButton');
+    const videoPlayer = document.getElementById('videoPlayer');
+    const videoContainer = document.getElementById('videoContainer');
+    const downloadLink = document.getElementById('downloadLink');
+    const errorMsg = document.getElementById('errorMsg');
 
-  downloadButton.addEventListener('click', () => {
-    const videoUrl = videoUrlInput.value;
+    // Thêm logging khi bấm nút tải video
+    downloadButton.addEventListener('click', () => {
+      const videoUrl = videoUrlInput.value;
+      console.log(`Fetching video for URL: ${videoUrl}`); // Kiểm tra URL được nhập
 
-    fetch('/api/downloadVideo', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: videoUrl })
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (data.error) {
-        errorMsg.textContent = 'Lỗi tải video, vui lòng thử lại.';
+      fetch('/.netlify/functions/downloadVideo', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ url: videoUrl })
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.error) {
+          throw new Error(data.error);
+        }
+
+        console.log(`Video URL received: ${data.videoUrl}`);
+
+        // Hiển thị video trong trình phát
+        videoPlayer.src = data.videoUrl;
+        videoContainer.style.display = 'block';
+
+        // Cập nhật liên kết tải về
+        downloadLink.href = data.videoUrl;
+        downloadLink.style.display = 'block';
+
+        // Xóa thông báo lỗi nếu có
+        errorMsg.textContent = '';
+      })
+      .catch(error => {
+        console.error('Error downloading video:', error.message);
+        errorMsg.textContent = `Lỗi tải video: ${error.message}`;
         videoContainer.style.display = 'none';
-        return;
-      }
-
-      // Cập nhật link video từ R2
-      videoPlayer.src = data.videoUrl;
-      videoContainer.style.display = 'block';
-      downloadLink.href = data.videoUrl;
-      downloadLink.style.display = 'block';
-      errorMsg.textContent = '';
-    })
-    .catch(error => {
-      console.error('Error downloading video:', error);
-      errorMsg.textContent = 'Lỗi tải video, vui lòng thử lại.';
+        downloadLink.style.display = 'none';
+      });
     });
-  });
-</script>
+  </script>
 </body>
 </html>
