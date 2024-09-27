@@ -9,7 +9,7 @@ const r2 = new AWS.S3({
   accessKeyId: process.env.R2_ACCESS_KEY,
   secretAccessKey: process.env.R2_SECRET_KEY,
   endpoint: process.env.R2_ENDPOINT,
-  s3ForcePathStyle: true, // R2 yêu cầu điều này
+  s3ForcePathStyle: true, // Cloudflare R2 yêu cầu điều này
 });
 
 exports.handler = async (event, context) => {
@@ -23,6 +23,8 @@ exports.handler = async (event, context) => {
 
     // Tạo tên file duy nhất
     const videoKey = `tiktok_videos/${Date.now()}.mp4`;
+
+    console.log('Uploading video to R2...');
 
     // Tải video lên R2
     await r2.upload({
@@ -43,10 +45,10 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({ videoUrl }),
     };
   } catch (error) {
-    console.error('Error downloading or uploading video:', error);
+    console.error('Error downloading or uploading video:', error.message);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: 'Error downloading or uploading video' }),
+      body: JSON.stringify({ error: 'Error downloading or uploading video', details: error.message }),
     };
   }
 };
