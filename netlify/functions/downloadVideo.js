@@ -9,9 +9,9 @@ const pump = promisify(pipeline);
 const r2 = new AWS.S3({
   accessKeyId: process.env.R2_ACCESS_KEY,
   secretAccessKey: process.env.R2_SECRET_KEY,
-  endpoint: process.env.R2_ENDPOINT,  // Ví dụ: b9b33e1228ae77e510897cc002c1735c.r2.cloudflarestorage.com
+  endpoint: process.env.R2_ENDPOINT,  // Đúng định dạng: không có https://
   region: 'auto',
-  s3ForcePathStyle: true,
+  s3ForcePathStyle: true,  // Bắt buộc cho Cloudflare R2
 });
 
 exports.handler = async (event, context) => {
@@ -23,7 +23,7 @@ exports.handler = async (event, context) => {
     // Tạo đường dẫn lưu tạm thời
     const videoPath = `/tmp/tiktok_video_${Date.now()}.mp4`;
 
-    // Tải video từ API TikTok và lưu vào /tmp
+    // Tải video từ TikTok và lưu vào /tmp
     const response = await axios.get(url, { responseType: 'stream' });
     const writeStream = fs.createWriteStream(videoPath);
     await pump(response.data, writeStream);
@@ -32,7 +32,7 @@ exports.handler = async (event, context) => {
     const fileStats = fs.statSync(videoPath);
     console.log(`Video downloaded successfully, size: ${fileStats.size} bytes`);
 
-    if (fileStats.size < 2048) {  // Kiểm tra xem file có quá nhỏ không
+    if (fileStats.size < 2048) {  // Kiểm tra nếu file quá nhỏ
       throw new Error('Downloaded video size is too small, likely an error.');
     }
 
@@ -41,14 +41,14 @@ exports.handler = async (event, context) => {
 
     console.log('Uploading video to R2...');
 
-    // Đọc lại video từ /tmp và tải lên R2
+    // Đọc video từ /tmp và tải lên R2
     const fileStream = fs.createReadStream(videoPath);
     await r2.upload({
-      Bucket: process.env.R2_BUCKET_NAME,
-      Key: videoKey,
+      Bucket: process.env.R2_BUCKET_NAME,  // Tên bucket R2
+      Key: videoKey,  // Đường dẫn file trên R2
       Body: fileStream,
       ContentType: 'video/mp4',
-      ACL: 'public-read',
+      ACL: 'public-read',  // Quyền công khai
     }).promise();
 
     console.log(`Video uploaded successfully to R2: ${videoKey}`);
