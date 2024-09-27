@@ -9,6 +9,7 @@ const r2 = new AWS.S3({
   accessKeyId: process.env.R2_ACCESS_KEY,
   secretAccessKey: process.env.R2_SECRET_KEY,
   endpoint: process.env.R2_ENDPOINT,
+  region: 'auto', // Hoặc sử dụng một trong các region phù hợp như 'wnam', 'enam', etc.
   s3ForcePathStyle: true, // Cloudflare R2 yêu cầu điều này
 });
 
