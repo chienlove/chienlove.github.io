@@ -71,38 +71,43 @@
   </div>
 
   <script>
-    const videoUrlInput = document.getElementById('videoUrl');
-    const downloadButton = document.getElementById('downloadButton');
-    const videoPlayer = document.getElementById('videoPlayer');
-    const videoContainer = document.getElementById('videoContainer');
-    const downloadLink = document.getElementById('downloadLink');
-    const errorMsg = document.getElementById('errorMsg');
+  const videoUrlInput = document.getElementById('videoUrl');
+  const downloadButton = document.getElementById('downloadButton');
+  const videoPlayer = document.getElementById('videoPlayer');
+  const videoContainer = document.getElementById('videoContainer');
+  const downloadLink = document.getElementById('downloadLink');
+  const errorMsg = document.getElementById('errorMsg');
 
-    downloadButton.addEventListener('click', () => {
-      const videoUrl = videoUrlInput.value;
+  downloadButton.addEventListener('click', () => {
+    const videoUrl = videoUrlInput.value;
 
-      fetch('/api/downloadVideo', {
-        method: 'POST',
-        body: JSON.stringify({ url: videoUrl })
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.error) {
-          errorMsg.textContent = 'Lỗi tải video, vui lòng thử lại.';
-          videoContainer.style.display = 'none';
-          return;
-        }
-        videoPlayer.src = data.videoUrl;
-        videoContainer.style.display = 'block';
-        downloadLink.href = data.videoUrl;
-        downloadLink.style.display = 'block';
-        errorMsg.textContent = '';
-      })
-      .catch(error => {
-        console.error('Error downloading video:', error);
+    fetch('/.netlify/functions/downloadVideo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: videoUrl })
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      return response.json();
+    })
+    .then(data => {
+      if (data.error) {
         errorMsg.textContent = 'Lỗi tải video, vui lòng thử lại.';
-      });
+        videoContainer.style.display = 'none';
+        return;
+      }
+      videoPlayer.src = data.videoUrl;
+      videoContainer.style.display = 'block';
+      downloadLink.href = data.videoUrl;
+      downloadLink.style.display = 'block';
+      errorMsg.textContent = '';
+    })
+    .catch(error => {
+      console.error('Error downloading video:', error);
+      errorMsg.textContent = 'Lỗi tải video, vui lòng thử lại.';
     });
-  </script>
-</body>
+  });
+</script></body>
 </html>
