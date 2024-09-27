@@ -70,51 +70,40 @@
   </div>
 
   <script>
-    const videoUrlInput = document.getElementById('videoUrl');
-    const downloadButton = document.getElementById('downloadButton');
-    const videoPlayer = document.getElementById('videoPlayer');
-    const videoContainer = document.getElementById('videoContainer');
-    const downloadLink = document.getElementById('downloadLink');
-    const errorMsg = document.getElementById('errorMsg');
+document.getElementById('downloadBtn').addEventListener('click', async () => {
+  const url = document.getElementById('tiktokUrl').value;
+  const errorMsg = document.getElementById('errorMsg');
+  const videoContainer = document.getElementById('videoContainer');
+  const downloadLink = document.getElementById('downloadLink');
 
-    // Thêm logging khi bấm nút tải video
-    downloadButton.addEventListener('click', () => {
-      const videoUrl = videoUrlInput.value;
-      console.log(`Fetching video for URL: ${videoUrl}`); // Kiểm tra URL được nhập
+  errorMsg.textContent = '';
+  videoContainer.style.display = 'none';
+  downloadLink.style.display = 'none';
 
-      fetch('/.netlify/functions/downloadVideo', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({ url: videoUrl })
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.error) {
-          throw new Error(data.error);
-        }
-
-        console.log(`Video URL received: ${data.videoUrl}`);
-
-        // Hiển thị video trong trình phát
-        videoPlayer.src = data.videoUrl;
-        videoContainer.style.display = 'block';
-
-        // Cập nhật liên kết tải về
-        downloadLink.href = data.videoUrl;
-        downloadLink.style.display = 'block';
-
-        // Xóa thông báo lỗi nếu có
-        errorMsg.textContent = '';
-      })
-      .catch(error => {
-        console.error('Error downloading video:', error.message);
-        errorMsg.textContent = `Lỗi tải video: ${error.message}`;
-        videoContainer.style.display = 'none';
-        downloadLink.style.display = 'none';
-      });
+  try {
+    const response = await fetch('/api/downloadVideo', {
+      method: 'POST',
+      body: JSON.stringify({ url }),
     });
-  </script>
-</body>
+
+    if (!response.ok) {
+      throw new Error('Network response was not ok');
+    }
+
+    const data = await response.json();
+
+    if (data.error) {
+      throw new Error(data.error);
+    }
+
+    videoContainer.innerHTML = `<video controls src="${data.videoUrl}"></video>`;
+    videoContainer.style.display = 'block';
+
+    downloadLink.href = data.videoUrl;
+    downloadLink.style.display = 'inline-block';
+  } catch (error) {
+    errorMsg.textContent = `Error: ${error.message}`;
+  }
+});
+</script></body>
 </html>

@@ -5,14 +5,28 @@ const { promisify } = require('util');
 const { pipeline } = require('stream');
 const pump = promisify(pipeline);
 
-// Cấu hình kết nối với R2
 const r2 = new AWS.S3({
   accessKeyId: process.env.R2_ACCESS_KEY,
   secretAccessKey: process.env.R2_SECRET_KEY,
-  endpoint: process.env.R2_ENDPOINT,  // Đúng định dạng: không có https://
+  endpoint: process.env.R2_ENDPOINT,
   region: 'auto',
-  s3ForcePathStyle: true,  // Bắt buộc cho Cloudflare R2
+  s3ForcePathStyle: true,
 });
+
+async function getActualVideoUrl(tiktokUrl) {
+  try {
+    const response = await axios.get(tiktokUrl, {
+      maxRedirects: 5,
+      validateStatus: function (status) {
+        return status >= 200 && status < 300 || status === 302;
+      }
+    });
+    return response.request.res.responseUrl;
+  } catch (error) {
+    console.error('Error getting actual video URL:', error);
+    throw error;
+  }
+}
 
 exports.handler = async (event, context) => {
   const { url } = JSON.parse(event.body);
@@ -20,40 +34,42 @@ exports.handler = async (event, context) => {
   try {
     console.log('Fetching video from TikTok URL:', url);
 
-    // Tạo đường dẫn lưu tạm thời
+    const actualVideoUrl = await getActualVideoUrl(url);
+    console.log('Actual video URL:', actualVideoUrl);
+
     const videoPath = `/tmp/tiktok_video_${Date.now()}.mp4`;
 
-    // Tải video từ TikTok và lưu vào /tmp
-    const response = await axios.get(url, { responseType: 'stream' });
+    const response = await axios.get(actualVideoUrl, { 
+      responseType: 'stream',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
+    });
     const writeStream = fs.createWriteStream(videoPath);
     await pump(response.data, writeStream);
 
-    // Kiểm tra kích thước file
     const fileStats = fs.statSync(videoPath);
     console.log(`Video downloaded successfully, size: ${fileStats.size} bytes`);
 
-    if (fileStats.size < 2048) {  // Kiểm tra nếu file quá nhỏ
+    if (fileStats.size < 10000) {
       throw new Error('Downloaded video size is too small, likely an error.');
     }
 
-    // Tạo tên file duy nhất cho video
     const videoKey = `tiktok_videos/${Date.now()}.mp4`;
 
     console.log('Uploading video to R2...');
 
-    // Đọc video từ /tmp và tải lên R2
     const fileStream = fs.createReadStream(videoPath);
     await r2.upload({
-      Bucket: process.env.R2_BUCKET_NAME,  // Tên bucket R2
-      Key: videoKey,  // Đường dẫn file trên R2
+      Bucket: process.env.R2_BUCKET_NAME,
+      Key: videoKey,
       Body: fileStream,
       ContentType: 'video/mp4',
-      ACL: 'public-read',  // Quyền công khai
+      ACL: 'public-read',
     }).promise();
 
     console.log(`Video uploaded successfully to R2: ${videoKey}`);
 
-    // Tạo URL tải video từ R2
     const videoUrl = `https://${process.env.R2_BUCKET_NAME}.${process.env.R2_ENDPOINT}/${videoKey}`;
 
     return {
