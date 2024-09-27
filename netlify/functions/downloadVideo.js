@@ -5,11 +5,14 @@ const { promisify } = require('util');
 const { pipeline } = require('stream');
 const pump = promisify(pipeline);
 
+const PUBLIC_BUCKET_URL = process.env.PUBLIC_BUCKET_URL || 'https://pub-74c4980e4731417d93dc9a8bbc6315eb.r2.dev';
+
 const r2 = new AWS.S3({
   accessKeyId: process.env.R2_ACCESS_KEY,
   secretAccessKey: process.env.R2_SECRET_KEY,
   endpoint: process.env.R2_ENDPOINT,
   region: 'auto',
+  signatureVersion: 'v4',
   s3ForcePathStyle: true,
 });
 
@@ -65,12 +68,11 @@ exports.handler = async (event, context) => {
       Key: videoKey,
       Body: fileStream,
       ContentType: 'video/mp4',
-      ACL: 'public-read',
     }).promise();
 
     console.log(`Video uploaded successfully to R2: ${videoKey}`);
 
-    const videoUrl = `https://${process.env.R2_BUCKET_NAME}.${process.env.R2_ENDPOINT}/${videoKey}`;
+    const videoUrl = `${PUBLIC_BUCKET_URL}/${videoKey}`;
 
     return {
       statusCode: 200,

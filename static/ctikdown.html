@@ -10,11 +10,34 @@
             max-width: 800px;
             margin: 0 auto;
             padding: 20px;
+            background-color: #f0f2f5;
         }
         .container {
-            background-color: #f0f0f0;
+            background-color: white;
             padding: 20px;
-            border-radius: 5px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #1da1f2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0c85d0;
         }
         .error {
             color: red;
@@ -23,6 +46,9 @@
         .video-container {
             margin-top: 20px;
         }
+        video {
+            max-width: 100%;
+        }
         #downloadLink {
             display: inline-block;
             margin-top: 10px;
@@ -30,7 +56,10 @@
             background-color: #4CAF50;
             color: white;
             text-decoration: none;
-            border-radius: 5px;
+            border-radius: 4px;
+        }
+        #downloadLink:hover {
+            background-color: #45a049;
         }
     </style>
 </head>
@@ -44,7 +73,7 @@
         <div id="errorMsg" class="error"></div>
         
         <div id="videoContainer" class="video-container" style="display: none;">
-            <video id="videoPlayer" controls style="max-width: 100%;"></video>
+            <video id="videoPlayer" controls></video>
         </div>
         
         <a id="downloadLink" href="#" download="tiktok_video.mp4" style="display: none;">Tải video</a>
@@ -90,6 +119,7 @@
                     throw new Error('Không nhận được URL video');
                 }
 
+                console.log('Video URL:', data.videoUrl);
                 videoPlayer.src = data.videoUrl;
                 videoContainer.style.display = 'block';
 
