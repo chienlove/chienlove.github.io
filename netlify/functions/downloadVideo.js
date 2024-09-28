@@ -4,6 +4,7 @@ const fs = require('fs');
 const { promisify } = require('util');
 const { pipeline } = require('stream');
 const pump = promisify(pipeline);
+const TikTokScraper = require('tiktok-scraper');
 
 const PUBLIC_BUCKET_URL = process.env.PUBLIC_BUCKET_URL || 'https://pub-74c4980e4731417d93dc9a8bbc6315eb.r2.dev';
 
@@ -16,27 +17,15 @@ const r2 = new AWS.S3({
   s3ForcePathStyle: true,
 });
 
-async function getActualVideoUrl(tiktokUrl) {
+async function getVideoInfo(tiktokUrl) {
   try {
-    const response = await axios.get(tiktokUrl, {
-      maxRedirects: 5,
-      validateStatus: function (status) {
-        return status >= 200 && status < 300 || status === 302;
-      },
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-      }
-    });
-    
-    const html = response.data;
-    const videoUrlMatch = html.match(/"playAddr":"([^"]+)"/);
-    if (videoUrlMatch && videoUrlMatch[1]) {
-      return videoUrlMatch[1].replace(/\\u002F/g, '/');
+    const videoMeta = await TikTokScraper.getVideoMeta(tiktokUrl);
+    if (videoMeta && videoMeta.collector && videoMeta.collector[0]) {
+      return videoMeta.collector[0].videoUrl;
     }
-    
-    throw new Error('Could not find video URL in TikTok page');
+    throw new Error('Could not find video URL in TikTok response');
   } catch (error) {
-    console.error('Error getting actual video URL:', error);
+    console.error('Error getting video info from TikTok:', error);
     throw error;
   }
 }
@@ -45,14 +34,14 @@ exports.handler = async (event, context) => {
   const { url } = JSON.parse(event.body);
 
   try {
-    console.log('Fetching video from TikTok URL:', url);
+    console.log('Fetching video info from TikTok URL:', url);
 
-    const actualVideoUrl = await getActualVideoUrl(url);
-    console.log('Actual video URL:', actualVideoUrl);
+    const videoUrl = await getVideoInfo(url);
+    console.log('Video URL:', videoUrl);
 
     const videoPath = `/tmp/tiktok_video_${Date.now()}.mp4`;
 
-    const response = await axios.get(actualVideoUrl, { 
+    const response = await axios.get(videoUrl, { 
       responseType: 'stream',
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
@@ -75,7 +64,7 @@ exports.handler = async (event, context) => {
     console.log('Uploading video to R2...');
 
     const fileStream = fs.createReadStream(videoPath);
-    await r2.upload({
+    const uploadResult = await r2.upload({
       Bucket: process.env.R2_BUCKET_NAME,
       Key: videoKey,
       Body: fileStream,
@@ -83,12 +72,13 @@ exports.handler = async (event, context) => {
     }).promise();
 
     console.log(`Video uploaded successfully to R2: ${videoKey}`);
+    console.log('Upload result:', JSON.stringify(uploadResult));
 
-    const videoUrl = `${PUBLIC_BUCKET_URL}/${videoKey}`;
+    const finalVideoUrl = `${PUBLIC_BUCKET_URL}/${videoKey}`;
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ videoUrl }),
+      body: JSON.stringify({ videoUrl: finalVideoUrl }),
     };
   } catch (error) {
     console.error('Error downloading or uploading video:', error.message);
