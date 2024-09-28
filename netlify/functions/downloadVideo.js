@@ -22,6 +22,9 @@ async function getActualVideoUrl(tiktokUrl) {
       maxRedirects: 5,
       validateStatus: function (status) {
         return status >= 200 && status < 300 || status === 302;
+      },
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
       }
     });
     return response.request.res.responseUrl;
@@ -54,7 +57,7 @@ exports.handler = async (event, context) => {
     const fileStats = fs.statSync(videoPath);
     console.log(`Video downloaded successfully, size: ${fileStats.size} bytes`);
 
-    if (fileStats.size < 10000) {
+    if (fileStats.size < 100000) { // Increased minimum size check to 100KB
       throw new Error('Downloaded video size is too small, likely an error.');
     }
 

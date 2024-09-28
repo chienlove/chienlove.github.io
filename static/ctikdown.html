@@ -7,129 +7,71 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            max-width: 800px;
+            max-width: 600px;
             margin: 0 auto;
             padding: 20px;
-            background-color: #f0f2f5;
-        }
-        .container {
-            background-color: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        h1 {
-            color: #333;
-        }
-        input[type="text"] {
-            width: 100%;
-            padding: 10px;
-            margin: 10px 0;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-        }
-        button {
-            background-color: #1da1f2;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #0c85d0;
         }
         .error {
             color: red;
-            margin-top: 10px;
+            display: none;
         }
         .video-container {
             margin-top: 20px;
         }
-        video {
-            max-width: 100%;
-        }
         #downloadLink {
-            display: inline-block;
+            display: none;
             margin-top: 10px;
-            padding: 10px 20px;
-            background-color: #4CAF50;
-            color: white;
-            text-decoration: none;
-            border-radius: 4px;
-        }
-        #downloadLink:hover {
-            background-color: #45a049;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>TikTok Video Downloader</h1>
-        <p>Dán URL video TikTok vào đây:</p>
-        <input type="text" id="tiktokUrl" placeholder="https://www.tiktok.com/@user/video/1234567890123456789">
-        <button id="downloadBtn">Tải Xuống</button>
-        
-        <div id="errorMsg" class="error"></div>
-        
-        <div id="videoContainer" class="video-container" style="display: none;">
-            <video id="videoPlayer" controls></video>
-        </div>
-        
-        <a id="downloadLink" href="#" download="tiktok_video.mp4" style="display: none;">Tải video</a>
+    <h1>TikTok Video Downloader</h1>
+    
+    <input type="text" id="tiktokUrl" placeholder="Dán URL video TikTok vào đây">
+    <button onclick="downloadVideo()">Tải Xuống</button>
+    
+    <p id="errorMsg" class="error"></p>
+    
+    <div id="videoContainer" class="video-container" style="display: none;">
+        <video id="videoPlayer" controls style="max-width: 100%;"></video>
     </div>
+    
+    <a id="downloadLink" href="#" download="tiktok_video.mp4" style="display: none;">Tải video</a>
 
     <script>
-        document.getElementById('downloadBtn').addEventListener('click', async () => {
+        async function downloadVideo() {
             const url = document.getElementById('tiktokUrl').value;
             const errorMsg = document.getElementById('errorMsg');
             const videoContainer = document.getElementById('videoContainer');
             const videoPlayer = document.getElementById('videoPlayer');
             const downloadLink = document.getElementById('downloadLink');
 
-            errorMsg.textContent = '';
+            errorMsg.style.display = 'none';
             videoContainer.style.display = 'none';
             downloadLink.style.display = 'none';
-
-            if (!url) {
-                errorMsg.textContent = 'Vui lòng nhập URL video TikTok';
-                return;
-            }
 
             try {
                 const response = await fetch('/.netlify/functions/downloadVideo', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
                     body: JSON.stringify({ url }),
+                    headers: { 'Content-Type': 'application/json' }
                 });
 
                 if (!response.ok) {
-                    throw new Error('Network response was not ok');
+                    throw new Error('Failed to download video');
                 }
 
                 const data = await response.json();
-
-                if (data.error) {
-                    throw new Error(data.error);
-                }
-
-                if (!data.videoUrl) {
-                    throw new Error('Không nhận được URL video');
-                }
-
-                console.log('Video URL:', data.videoUrl);
                 videoPlayer.src = data.videoUrl;
                 videoContainer.style.display = 'block';
-
+                
                 downloadLink.href = data.videoUrl;
-                downloadLink.style.display = 'inline-block';
+                downloadLink.style.display = 'block';
             } catch (error) {
-                console.error('Error:', error);
-                errorMsg.textContent = `Lỗi: ${error.message}`;
+                errorMsg.textContent = 'Error: ' + error.message;
+                errorMsg.style.display = 'block';
             }
-        });
+        }
     </script>
 </body>
 </html>
