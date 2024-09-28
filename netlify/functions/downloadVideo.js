@@ -16,24 +16,29 @@ async function getActualVideoUrl(tiktokUrl) {
   try {
     const response = await axios.get(tiktokUrl, {
       maxRedirects: 5,
-      validateStatus: function (status) {
-        return status >= 200 && status < 300 || status === 302;
-      },
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
       }
     });
 
     const htmlContent = response.data;
+    
+    // In ra nội dung HTML để kiểm tra
+    console.log('HTML Content:', htmlContent);
 
-    // Tìm video URL từ nội dung HTML trả về
-    const videoUrlMatch = htmlContent.match(/playAddr\":\"(https:[^"]+)/);
+    // Sử dụng regex để tìm URL video từ HTML
+    const videoUrlMatch = htmlContent.match(/"playAddr":"(https:[^"]+)"/);
     if (!videoUrlMatch || videoUrlMatch.length < 2) {
       throw new Error('Could not find video URL in HTML');
     }
 
-    const videoUrl = videoUrlMatch[1].replace(/\\u002F/g, '/'); // Chuyển đổi ký tự thoát
+    // Chuyển đổi ký tự thoát trong URL
+    const videoUrl = videoUrlMatch[1].replace(/\\u002F/g, '/');
 
+    // In ra URL video để kiểm tra
+    console.log('Actual video URL:', videoUrl);
+
+    // Kiểm tra URL có đuôi .mp4 không
     if (!videoUrl.endsWith('.mp4')) {
       throw new Error('The URL is not a valid MP4 file.');
     }
