@@ -22,9 +22,6 @@
             display: none;
             margin-top: 10px;
         }
-        #loadingIndicator {
-            display: none;
-        }
     </style>
 </head>
 <body>
@@ -33,7 +30,6 @@
     <input type="text" id="tiktokUrl" placeholder="Dán URL video TikTok vào đây">
     <button onclick="downloadVideo()">Tải Xuống</button>
     
-    <p id="loadingIndicator">Đang xử lý, vui lòng đợi...</p>
     <p id="errorMsg" class="error"></p>
     
     <div id="videoContainer" class="video-container" style="display: none;">
@@ -49,12 +45,10 @@
             const videoContainer = document.getElementById('videoContainer');
             const videoPlayer = document.getElementById('videoPlayer');
             const downloadLink = document.getElementById('downloadLink');
-            const loadingIndicator = document.getElementById('loadingIndicator');
 
             errorMsg.style.display = 'none';
             videoContainer.style.display = 'none';
             downloadLink.style.display = 'none';
-            loadingIndicator.style.display = 'block';
 
             try {
                 const response = await fetch('/.netlify/functions/downloadVideo', {
@@ -64,8 +58,7 @@
                 });
 
                 if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.details || 'Failed to download video');
+                    throw new Error('Failed to download video');
                 }
 
                 const data = await response.json();
@@ -74,18 +67,9 @@
                 
                 downloadLink.href = data.videoUrl;
                 downloadLink.style.display = 'block';
-
-                // Check video size
-                const videoResponse = await fetch(data.videoUrl, { method: 'HEAD' });
-                const videoSize = videoResponse.headers.get('content-length');
-                if (videoSize < 1000000) { // Less than 1MB
-                    throw new Error(`Video size is too small: ${videoSize} bytes`);
-                }
             } catch (error) {
                 errorMsg.textContent = 'Error: ' + error.message;
                 errorMsg.style.display = 'block';
-            } finally {
-                loadingIndicator.style.display = 'none';
             }
         }
     </script>
