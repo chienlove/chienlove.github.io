@@ -27,7 +27,14 @@ async function getActualVideoUrl(tiktokUrl) {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
       }
     });
-    return response.request.res.responseUrl;
+    
+    const html = response.data;
+    const videoUrlMatch = html.match(/"playAddr":"([^"]+)"/);
+    if (videoUrlMatch && videoUrlMatch[1]) {
+      return videoUrlMatch[1].replace(/\\u002F/g, '/');
+    }
+    
+    throw new Error('Could not find video URL in TikTok page');
   } catch (error) {
     console.error('Error getting actual video URL:', error);
     throw error;
@@ -48,16 +55,18 @@ exports.handler = async (event, context) => {
     const response = await axios.get(actualVideoUrl, { 
       responseType: 'stream',
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Referer': 'https://www.tiktok.com/'
       }
     });
+    
     const writeStream = fs.createWriteStream(videoPath);
     await pump(response.data, writeStream);
 
     const fileStats = fs.statSync(videoPath);
     console.log(`Video downloaded successfully, size: ${fileStats.size} bytes`);
 
-    if (fileStats.size < 100000) { // Increased minimum size check to 100KB
+    if (fileStats.size < 1000000) { // Increased minimum size check to 1MB
       throw new Error('Downloaded video size is too small, likely an error.');
     }
 
