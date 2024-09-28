@@ -1,12 +1,7 @@
 const AWS = require('aws-sdk');
 const axios = require('axios');
-const fs = require('fs');
-const { promisify } = require('util');
-const { pipeline } = require('stream');
-const pump = promisify(pipeline);
 
-const PUBLIC_BUCKET_URL = process.env.PUBLIC_BUCKET_URL || 'https://pub-74c4980e4731417d93dc9a8bbc6315eb.r2.dev';
-
+// Cấu hình R2
 const r2 = new AWS.S3({
   accessKeyId: process.env.R2_ACCESS_KEY,
   secretAccessKey: process.env.R2_SECRET_KEY,
@@ -16,6 +11,10 @@ const r2 = new AWS.S3({
   s3ForcePathStyle: true,
 });
 
+// URL public để truy cập file đã upload
+const PUBLIC_BUCKET_URL = process.env.PUBLIC_BUCKET_URL || 'https://pub-74c4980e4731417d93dc9a8bbc6315eb.r2.dev';
+
+// Hàm để lấy URL video thực tế từ TikTok
 async function getActualVideoUrl(tiktokUrl) {
   try {
     const response = await axios.get(tiktokUrl, {
@@ -34,58 +33,43 @@ async function getActualVideoUrl(tiktokUrl) {
   }
 }
 
+// Handler chính để xử lý yêu cầu Netlify Function
 exports.handler = async (event, context) => {
   const { url } = JSON.parse(event.body);
 
   try {
     console.log('Fetching video from TikTok URL:', url);
 
+    // Lấy URL thực tế của video
     const actualVideoUrl = await getActualVideoUrl(url);
     console.log('Actual video URL:', actualVideoUrl);
 
-    const videoPath = `/tmp/tiktok_video_${Date.now()}.mp4`;
-const response = await axios.get(actualVideoUrl, { 
-  responseType: 'stream',
-  headers: {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-  }
-});
+    // Tải video từ URL thực tế
+    const response = await axios.get(actualVideoUrl, { 
+      responseType: 'stream',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+      }
+    });
 
-// Kiểm tra trạng thái phản hồi
-if (response.status !== 200) {
-  throw new Error(`Failed to download video, status code: ${response.status}`);
-}
-
-const writeStream = fs.createWriteStream(videoPath);
-await pump(response.data, writeStream);
-
-if (!fs.existsSync(videoPath)) {
-  throw new Error('Downloaded video file does not exist.');
-}
-
-const fileStats = fs.statSync(videoPath);
-console.log(`Video downloaded successfully, size: ${fileStats.size} bytes`);
-
-if (fileStats.size < 100000) {
-  throw new Error('Downloaded video size is too small, likely an error.');
-}
-
+    // Tạo key cho video để upload lên R2
     const videoKey = `tiktok_videos/${Date.now()}.mp4`;
+    console.log('Uploading video to R2 directly from stream...');
 
-    console.log('Uploading video to R2...');
-
-    const fileStream = fs.createReadStream(videoPath);
+    // Upload trực tiếp video từ stream lên R2
     await r2.upload({
       Bucket: process.env.R2_BUCKET_NAME,
       Key: videoKey,
-      Body: fileStream,
+      Body: response.data,
       ContentType: 'video/mp4',
     }).promise();
 
     console.log(`Video uploaded successfully to R2: ${videoKey}`);
 
+    // Tạo URL public để truy cập video đã upload
     const videoUrl = `${PUBLIC_BUCKET_URL}/${videoKey}`;
 
+    // Trả về URL video cho phía client
     return {
       statusCode: 200,
       body: JSON.stringify({ videoUrl }),
