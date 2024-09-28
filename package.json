@@ -31,6 +31,6 @@
     "fs": "^0.0.1-security",
     "stream": "^0.0.2",
     "util": "^0.12.4",
-    "tiktok-scraper": "^1.4.23"
+    "tiktok-downloader": "^0.0.4"
   }
 }

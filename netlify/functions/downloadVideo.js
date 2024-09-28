@@ -4,7 +4,7 @@ const fs = require('fs');
 const { promisify } = require('util');
 const { pipeline } = require('stream');
 const pump = promisify(pipeline);
-const TikTokScraper = require('tiktok-scraper');
+const TikTokDownloader = require('tiktok-downloader');
 
 const PUBLIC_BUCKET_URL = process.env.PUBLIC_BUCKET_URL || 'https://pub-74c4980e4731417d93dc9a8bbc6315eb.r2.dev';
 
@@ -19,9 +19,9 @@ const r2 = new AWS.S3({
 
 async function getVideoInfo(tiktokUrl) {
   try {
-    const videoMeta = await TikTokScraper.getVideoMeta(tiktokUrl);
-    if (videoMeta && videoMeta.collector && videoMeta.collector[0]) {
-      return videoMeta.collector[0].videoUrl;
+    const videoMeta = await TikTokDownloader.getInfo(tiktokUrl);
+    if (videoMeta && videoMeta.video) {
+      return videoMeta.video;
     }
     throw new Error('Could not find video URL in TikTok response');
   } catch (error) {
