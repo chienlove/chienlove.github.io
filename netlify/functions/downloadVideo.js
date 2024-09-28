@@ -11,7 +11,6 @@ const r2 = new AWS.S3({
   s3ForcePathStyle: true,
 });
 
-// URL public để truy cập file đã upload
 const PUBLIC_BUCKET_URL = process.env.PUBLIC_BUCKET_URL || 'https://pub-74c4980e4731417d93dc9a8bbc6315eb.r2.dev';
 
 // Hàm để lấy URL video thực tế từ TikTok
@@ -26,9 +25,17 @@ async function getActualVideoUrl(tiktokUrl) {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
       }
     });
-    return response.request.res.responseUrl;
+    
+    const finalUrl = response.request.res.responseUrl;
+    
+    // Kiểm tra nếu URL trả về không phải là video mà là HTML (có thể là trang lỗi)
+    if (!finalUrl.endsWith('.mp4')) {
+      throw new Error('The URL is not a valid MP4 file.');
+    }
+    
+    return finalUrl;
   } catch (error) {
-    console.error('Error getting actual video URL:', error);
+    console.error('Error getting actual video URL:', error.message);
     throw error;
   }
 }
@@ -51,6 +58,11 @@ exports.handler = async (event, context) => {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
       }
     });
+
+    // Kiểm tra content-type để đảm bảo rằng đó là file video MP4
+    if (response.headers['content-type'] !== 'video/mp4') {
+      throw new Error('The response is not a valid MP4 file.');
+    }
 
     // Tạo key cho video để upload lên R2
     const videoKey = `tiktok_videos/${Date.now()}.mp4`;
