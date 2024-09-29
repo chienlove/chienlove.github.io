@@ -1,5 +1,3 @@
-import { build, parse } from './plist-worker.js';
-
 export class Store {
     static get guid() {
         return 'XXXXXXXXXXXXXXXX'.replace(/X/g, () => Math.floor(Math.random() * 16).toString(16));
@@ -18,9 +16,6 @@ export class Store {
 
         try {
             console.log("Gửi yêu cầu xác thực đến:", url);
-            console.log("Headers của yêu cầu:", JSON.stringify(this.Headers));
-            console.log("Body của yêu cầu:", body);
-
             const resp = await fetch(url, {
                 method: 'POST', 
                 body, 
@@ -39,23 +34,12 @@ export class Store {
                 return { needsMFA: true, scnt, xAppleSessionToken };
             }
 
-            const responseText = await resp.text();
-            console.log("Nội dung phản hồi thô:", responseText);
-
             if (!resp.ok) {
-                console.error("Máy chủ trả về mã trạng thái không phải 200:", resp.status);
+                const responseText = await resp.text();
                 throw new Error(`Máy chủ trả về trạng thái ${resp.status}: ${responseText}`);
             }
 
-            let parsedResp;
-            try {
-                parsedResp = JSON.parse(responseText);
-            } catch (parseError) {
-                console.error("Lỗi khi phân tích phản hồi:", parseError);
-                console.log("Nội dung phản hồi gây lỗi:", responseText);
-                throw new Error(`Không thể phân tích phản hồi xác thực: ${parseError.message}`);
-            }
-
+            const parsedResp = await resp.json();
             console.log("Phản hồi xác thực đã được phân tích:", JSON.stringify(parsedResp, null, 2));
 
             if (parsedResp.authType === "hsa2") {
@@ -76,7 +60,7 @@ export class Store {
             };
         } catch (error) {
             console.error("Lỗi xác thực:", error);
-            throw new Error(`Xác thực thất bại: ${error.message}`);
+            throw error;
         }
     }
 
@@ -92,7 +76,6 @@ export class Store {
         const resp = await fetch(url, { method: 'POST', headers, body });
         
         if (resp.status === 204) {
-            // MFA successful, proceed with signin
             return this.authenticate(email, null, true);
         } else {
             const responseText = await resp.text();
@@ -101,31 +84,32 @@ export class Store {
     }
 
     static async download(appId, appVerId, user) {
-        // Phương thức download giữ nguyên như cũ
+        // Implement the download logic here
+        // This method should return the download URL or throw an error
     }
 
     static Headers = {
-    'User-Agent': 'iTunes/12.12.4 (Macintosh; OS X 10.15.7) AppleWebKit/537.36 (KHTML, like Gecko)',
-    'Content-Type': 'application/json',
-    'X-Apple-Store-Front': '143441-19,32',
-    'X-Apple-I-MD-M': Store.guid,
-    'Accept': 'application/json',
-    'Accept-Language': 'en-us',
-    'Connection': 'keep-alive',
-    'X-Apple-I-MD': Store.generateAppleIMD(),
-    'X-Apple-I-MD-RINFO': '17106176',
-    'X-Requested-With': 'XMLHttpRequest',
-    'Origin': 'https://idmsa.apple.com',
-    'Referer': 'https://idmsa.apple.com/',
-    'X-Apple-Widget-Key': Store.generateWidgetKey(),
-    'X-Apple-I-FD-Client-Info': JSON.stringify({
-        'U': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.114 Safari/537.36',
-        'L': 'en-US',
-        'Z': 'GMT+07:00',
-        'V': '1.1',
-        'F': ''
-    })
-};
+        'User-Agent': 'iTunes/12.12.4 (iPhone; iOS 15.0; Scale/3.00)',
+        'Content-Type': 'application/json',
+        'X-Apple-Store-Front': '143441-19,32',
+        'X-Apple-I-MD-M': Store.guid,
+        'Accept': 'application/json',
+        'Accept-Language': 'en-us',
+        'Connection': 'keep-alive',
+        'X-Apple-I-MD': Store.generateAppleIMD(),
+        'X-Apple-I-MD-RINFO': '17106176',
+        'X-Requested-With': 'XMLHttpRequest',
+        'Origin': 'https://idmsa.apple.com',
+        'Referer': 'https://idmsa.apple.com/',
+        'X-Apple-Widget-Key': Store.generateWidgetKey(),
+        'X-Apple-I-FD-Client-Info': JSON.stringify({
+            'U': 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1',
+            'L': 'en-US',
+            'Z': 'GMT+07:00',
+            'V': '1.1',
+            'F': ''
+        })
+    };
 
     static generateSessionId() {
         return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
@@ -142,5 +126,3 @@ export class Store {
         return btoa(String.fromCharCode(...crypto.getRandomValues(new Uint8Array(32))));
     }
 }
-
-console.log("client.js đã được tải, đối tượng Store:", Store);

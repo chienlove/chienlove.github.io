@@ -1,11 +1,9 @@
 import { Store } from "./client.js";
-import { SignatureClient } from "./Signature.js";
 
 export default {
   async fetch(request, env, ctx) {
     console.log("Nhận yêu cầu mới");
 
-    // CORS handling
     if (request.method === "OPTIONS") {
       return new Response(null, {
         headers: {
@@ -40,17 +38,6 @@ export default {
       if (CODE && scnt && xAppleSessionToken) {
         try {
           user = await Store.handleMFA(APPLE_ID, CODE, scnt, xAppleSessionToken);
-          if (user.needsMFA) {
-            return new Response(JSON.stringify({
-              needsMFA: true,
-              authType: user.authType,
-              scnt: user.scnt,
-              xAppleSessionToken: user.xAppleSessionToken
-            }), { status: 200, headers });
-          }
-          if (!user || user.error) {
-            throw new Error(user?.error || 'MFA failed');
-          }
         } catch (mfaError) {
           console.error("MFA error:", mfaError);
           return new Response(JSON.stringify({ error: mfaError.message }), { status: 401, headers });
@@ -90,24 +77,11 @@ export default {
         return new Response(JSON.stringify({ error: app.error, details: app.details }), { status: 400, headers });
       }
 
-      const songList0 = app?.songList[0];
-      if (!songList0) {
-        console.error("Không tìm thấy danh sách bài hát trong dữ liệu ứng dụng");
-        throw new Error("No song list found in the app data");
-      }
-
       const uniqueString = crypto.randomUUID();
-      const fileName = `${songList0.metadata.bundleDisplayName}_${songList0.metadata.bundleShortVersionString}_${uniqueString}.ipa`;
-
-      console.log("Bắt đầu xử lý chữ ký");
-      const signatureClient = new SignatureClient(songList0, APPLE_ID);
-      await signatureClient.loadBuffer(await (await fetch(songList0.URL)).arrayBuffer());
-      signatureClient.appendMetadata();
-      await signatureClient.appendSignature();
-      const buffer = await signatureClient.getBuffer();
+      const fileName = `${app.metadata.bundleDisplayName}_${app.metadata.bundleShortVersionString}_${uniqueString}.ipa`;
 
       console.log("Lưu file vào R2");
-      await env.R2.put(fileName, buffer);
+      await env.R2.put(fileName, app.buffer);
 
       const url = `${env.DOMAIN}/${fileName}`;
       console.log("URL tải xuống:", url);
