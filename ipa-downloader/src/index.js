@@ -7,15 +7,15 @@ export default {
     if (request.method === "OPTIONS") {
       return new Response(null, {
         headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "POST, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type",
+          "Access-Control-Allow-Origin": "https://storeios.net", // Cho phép storeios.net
+          "Access-Control-Allow-Methods": "POST, GET, OPTIONS", // Chấp nhận các phương thức
+          "Access-Control-Allow-Headers": "Content-Type, Authorization", // Chấp nhận các tiêu đề
         },
       });
     }
 
     const headers = {
-      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Origin": "https://storeios.net", // Cho phép storeios.net
       "Content-Type": "application/json",
     };
 
