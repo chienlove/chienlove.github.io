@@ -13,16 +13,6 @@ function extractAppIdFromUrl(url) {
     return match ? match[1] : null;
 }
 
-// Hàm thiết lập timeout cho fetch
-function fetchWithTimeout(url, options = {}, timeout = 10000) {  // timeout mặc định là 10 giây
-    return Promise.race([
-        fetch(url, options),
-        new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Request timed out')), timeout)
-        )
-    ]);
-}
-
 document.getElementById('searchForm').addEventListener('submit', function(e) {
     e.preventDefault();
     const searchTerm = document.getElementById('searchTerm').value.trim();
@@ -51,7 +41,7 @@ document.getElementById('searchForm').addEventListener('submit', function(e) {
 
 // Hàm tìm thông tin ứng dụng từ iTunes bằng appId
 function fetchAppInfoFromiTunes(appId) {
-    fetchWithTimeout(`https://itunes.apple.com/lookup?id=${appId}`, {}, 10000)  // Timeout sau 10 giây
+    fetch(`https://itunes.apple.com/lookup?id=${appId}`)
         .then(response => response.json())
         .then(data => {
             if (data.results.length > 0) {
@@ -86,7 +76,7 @@ function fetchAppInfoFromiTunes(appId) {
 
 // Hàm tìm ứng dụng từ iTunes bằng tên ứng dụng
 function searchApp(term) {
-    fetchWithTimeout(`https://itunes.apple.com/search?term=${term}&entity=software`, {}, 10000)  // Timeout sau 10 giây
+    fetch(`https://itunes.apple.com/search?term=${term}&entity=software`)
         .then(response => response.json())
         .then(data => {
             document.getElementById('loading').style.display = 'none';  // Tắt thông báo loading
@@ -140,7 +130,7 @@ function getAppVersions(appId, appName, artistName, latestVersion, releaseNotes)
 // Gọi API Timbrd với appId để lấy các phiên bản
 function fetchTimbrdVersion(appId) {
     document.getElementById('loading').style.display = 'block';  // Hiển thị thông báo loading
-    fetchWithTimeout(`/api/getAppVersions?id=${appId}`, {}, 10000)  // Timeout sau 10 giây
+    fetch(`/api/getAppVersions?id=${appId}`)
         .then(response => response.json())
         .then(data => {
             if (data && data.length > 0) {
@@ -163,38 +153,36 @@ function paginateVersions(page) {
     const totalVersions = versions.length;
     const start = (currentPage - 1) * perPage;
     const end = start + perPage;
-    const paginatedVersions = versions.slice(start, end);
 
     const resultDiv = document.getElementById('result');
-    resultDiv.innerHTML = '';  // Xóa kết quả cũ
+    resultDiv.innerHTML = '';  // Xóa kết quả trước
 
-    let output = '<table><tr><th>Phiên bản</th><th>Ngày phát hành</th><th>Kích thước</th></tr>';
-    paginatedVersions.forEach(version => {
-        output += `<tr>
-            <td>${version.version}</td>
-            <td>${new Date(version.created_at).toLocaleDateString()}</td>
-            <td>${(version.size / (1024 * 1024)).toFixed(2)} MB</td>
-        </tr>`;
-    });
-    output += '</table>';
-    resultDiv.innerHTML = output;
+    if (totalVersions > 0) {
+        let output = '<table><tr><th>Phiên bản</th><th>ID Phiên bản</th><th>Ngày phát hành</th></tr>';
+        versions.slice(start, end).forEach(version => {
+            output += `<tr>
+                <td>${version.bundle_version}</td>
+                <td>${version.external_identifier}</td>
+                <td>${version.created_at}</td>
+            </tr>`;
+        });
+        output += '</table>';
+        resultDiv.innerHTML = output;
 
-    renderPagination(totalVersions);
+        // Phân trang
+        const paginationDiv = document.getElementById('pagination');
+        paginationDiv.innerHTML = '';
+        const totalPages = Math.ceil(totalVersions / perPage);
+
+        for (let i = 1; i <= totalPages; i++) {
+            paginationDiv.innerHTML += `<button onclick="changePage(${i})" class="${i === currentPage ? 'active' : ''}">${i}</button>`;
+        }
+    } else {
+        resultDiv.innerHTML = '<p>Không tìm thấy phiên bản nào cho ứng dụng này.</p>';
+    }
 }
 
-function renderPagination(totalVersions) {
-    const totalPages = Math.ceil(totalVersions / perPage);
-    const paginationDiv = document.getElementById('pagination');
-    paginationDiv.innerHTML = '';  // Xóa phân trang cũ
-
-    for (let i = 1; i <= totalPages; i++) {
-        const pageLink = document.createElement('a');
-        pageLink.href = '#';
-        pageLink.textContent = i;
-        pageLink.addEventListener('click', function(e) {
-            e.preventDefault();
-            paginateVersions(i);
-        });
-        paginationDiv.appendChild(pageLink);
-    }
+function changePage(page) {
+    currentPage = page;
+    paginateVersions(currentPage);  // Gọi lại phân trang với trang mới
 }
