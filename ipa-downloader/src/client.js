@@ -3,8 +3,8 @@ export class Store {
         return 'XXXXXXXXXXXXXXXX'.replace(/X/g, () => Math.floor(Math.random() * 16).toString(16));
     }
 
-    static async authenticate(email, password, mfa) {
-        console.log("Bắt đầu xác thực với:", { email, passwordLength: password?.length, mfa: !!mfa });
+    static async authenticate(email, password) {
+        console.log("Bắt đầu xác thực với:", { email, passwordLength: password?.length });
         const dataJson = {
             accountName: email,
             password: password,
@@ -26,16 +26,65 @@ export class Store {
                 }
             });
 
-            // Rest of the authenticate method remains the same
-            // ...
+            const data = await resp.json();
+            console.log("Kết quả xác thực:", JSON.stringify(data));
+
+            if (resp.status === 200) {
+                return { _state: 'success', ...data };
+            } else if (resp.status === 409 && data.authType) {
+                return {
+                    needsMFA: true,
+                    authType: data.authType,
+                    scnt: resp.headers.get('scnt'),
+                    xAppleSessionToken: resp.headers.get('x-apple-session-token')
+                };
+            } else {
+                const errorMessage = data.serviceErrors?.[0]?.message || data.message || 'Unknown error';
+                console.error("Lỗi xác thực:", errorMessage);
+                return { error: errorMessage, details: data };
+            }
         } catch (error) {
             console.error("Lỗi xác thực:", error);
-            throw error;
+            return { error: error.message, details: error };
         }
     }
 
-    // Other methods remain the same
-    // ...
+    static async handleMFA(email, code, scnt, xAppleSessionToken) {
+        console.log("Xử lý MFA cho:", email);
+        const url = `https://idmsa.apple.com/appleauth/auth/verify/trusteddevice/securitycode`;
+        const body = JSON.stringify({ code });
+
+        try {
+            const resp = await fetch(url, {
+                method: 'POST',
+                body,
+                headers: {
+                    ...this.getHeaders(),
+                    'scnt': scnt,
+                    'X-Apple-Session-Token': xAppleSessionToken
+                }
+            });
+
+            const data = await resp.json();
+            console.log("Kết quả MFA:", JSON.stringify(data));
+
+            if (resp.status === 200) {
+                return { _state: 'success', ...data };
+            } else {
+                return { error: data.serviceErrors?.[0]?.message || 'MFA failed', details: data };
+            }
+        } catch (error) {
+            console.error("Lỗi MFA:", error);
+            return { error: error.message, details: error };
+        }
+    }
+
+    static async download(appId, appVerId, user) {
+        console.log("Bắt đầu tải xuống cho appId:", appId);
+        // Implement download logic here
+        // This is a placeholder and should be replaced with actual download logic
+        return { buffer: new ArrayBuffer(0), metadata: { bundleDisplayName: 'App', bundleShortVersionString: '1.0' } };
+    }
 
     static getHeaders() {
         return {
