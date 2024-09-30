@@ -46,7 +46,12 @@ export default {
         user = await Store.authenticate(APPLE_ID, PASSWORD);
       }
 
-      console.log("Kết quả xác thực:", user);
+      console.log("Kết quả xác thực:", JSON.stringify(user));
+
+      if (!user) {
+        console.error("Xác thực thất bại: User không được trả về");
+        return new Response(JSON.stringify({ error: "Authentication failed", details: "No user returned" }), { status: 401, headers });
+      }
 
       if (user.needsMFA) {
         console.log("MFA được yêu cầu. Loại MFA:", user.authType);
@@ -64,13 +69,13 @@ export default {
       }
 
       if (user._state !== 'success') {
-        console.error("Xác thực không thành công:", user);
+        console.error("Xác thực không thành công:", JSON.stringify(user));
         return new Response(JSON.stringify({ error: "Xác thực không thành công", details: user }), { status: 401, headers });
       }
 
       console.log("Xác thực thành công, bắt đầu tải xuống");
       const app = await Store.download(APPID, appVerId, user);
-      console.log("Kết quả tải xuống:", app);
+      console.log("Kết quả tải xuống:", JSON.stringify(app));
 
       if (app.error) {
         console.error("Tải xuống thất bại:", app.error);
