@@ -37,6 +37,7 @@ document.getElementById('downloadForm').addEventListener('submit', async (e) => 
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'Authorization': 'Bearer YOUR_TOKEN' // Thêm token xác thực nếu cần
             },
             body: JSON.stringify(formData)
         });

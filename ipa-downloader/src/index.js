@@ -4,21 +4,25 @@ export default {
   async fetch(request, env, ctx) {
     console.log("Nhận yêu cầu mới");
 
+    // Xử lý yêu cầu preflight (OPTIONS)
     if (request.method === "OPTIONS") {
       return new Response(null, {
         headers: {
-          "Access-Control-Allow-Origin": "https://storeios.net", // Cho phép storeios.net
-          "Access-Control-Allow-Methods": "POST, GET, OPTIONS", // Chấp nhận các phương thức
-          "Access-Control-Allow-Headers": "Content-Type, Authorization", // Chấp nhận các tiêu đề
+          "Access-Control-Allow-Origin": "https://storeios.net", // Chỉ cho phép từ storeios.net
+          "Access-Control-Allow-Methods": "POST, GET, OPTIONS", // Cho phép các phương thức
+          "Access-Control-Allow-Headers": "Content-Type, Authorization", // Thêm tiêu đề Authorization
         },
       });
     }
 
     const headers = {
-      "Access-Control-Allow-Origin": "https://storeios.net", // Cho phép storeios.net
+      "Access-Control-Allow-Origin": "https://storeios.net", // Cho phép từ storeios.net
       "Content-Type": "application/json",
+      "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, Authorization", // Đảm bảo có Authorization
     };
 
+    // Chỉ cho phép phương thức POST
     if (request.method !== "POST") {
       console.log("Phương thức không được phép:", request.method);
       return new Response(JSON.stringify({ error: "Method Not Allowed" }), { status: 405, headers });
