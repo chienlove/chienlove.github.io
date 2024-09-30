@@ -51,7 +51,9 @@ document.getElementById('downloadForm').addEventListener('submit', async (e) => 
 
         if (data.needsMFA) {
             // Yêu cầu nhập mã xác thực MFA
-            mfaInput.style.display = 'block';
+            if (mfaInput) {
+                mfaInput.style.display = 'block';
+            }
             localStorage.setItem('scnt', data.scnt);
             localStorage.setItem('xAppleSessionToken', data.xAppleSessionToken);
             result.textContent = `Vui lòng nhập mã xác thực ${data.authType || ''} và bấm "Tải xuống" lại`;
@@ -61,7 +63,9 @@ document.getElementById('downloadForm').addEventListener('submit', async (e) => 
             result.innerHTML = `Tải xuống thành công: <a href="${data.url}" target="_blank">Tải xuống IPA</a>`;
             document.getElementById('code').value = ''; // Xóa mã xác thực
             document.getElementById('password').value = ''; // Xóa trường mật khẩu
-            mfaInput.style.display = 'none'; // Ẩn trường MFA
+            if (mfaInput) {
+                mfaInput.style.display = 'none'; // Ẩn trường MFA
+            }
             localStorage.removeItem('scnt'); // Xóa scnt sau khi tải thành công
             localStorage.removeItem('xAppleSessionToken'); // Xóa token phiên
         } else {

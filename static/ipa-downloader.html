@@ -85,6 +85,9 @@
             color: #2d3748;
             text-align: center;
         }
+      #mfaInput {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -102,12 +105,15 @@
         <label for="appVerId">Phiên bản ứng dụng (App Version ID)</label>
         <input type="text" id="appVerId" placeholder="App Version ID" required>
 
-        <label for="code">Mã 2FA (nếu cần)</label>
-        <input type="text" id="code" placeholder="2FA Code (nếu cần)">
+        <div id="mfaInput">
+            <label for="code">Mã 2FA (nếu cần)</label>
+            <input type="text" id="code" placeholder="2FA Code (nếu cần)">
+        </div>
 
         <button type="submit">Tải xuống</button>
     </form>
     <div id="result"></div>
+
     <script src="/js/ipadownloader.js"></script>
 </body>
 </html>
