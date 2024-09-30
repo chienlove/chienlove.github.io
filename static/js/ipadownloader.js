@@ -42,34 +42,35 @@ document.getElementById('downloadForm').addEventListener('submit', async (e) => 
         });
 
         console.log("Phản hồi ban đầu:", response);
-        const data = await response.json();
-        console.log("Dữ liệu phản hồi đã phân tích:", data);
 
-        if (!response.ok) {
-            throw new Error(data.error || `Lỗi HTTP! trạng thái: ${response.status}`);
-        }
+        // Kiểm tra xem có phản hồi không và có nội dung JSON không
+        if (response.ok) {
+            const data = await response.json();
+            console.log("Dữ liệu phản hồi đã phân tích:", data);
 
-        if (data.needsMFA) {
-            // Yêu cầu nhập mã xác thực MFA
-            if (mfaInput) {
-                mfaInput.style.display = 'block';
+            if (data.needsMFA) {
+                // Yêu cầu nhập mã xác thực MFA
+                if (mfaInput) {
+                    mfaInput.style.display = 'block';
+                }
+                localStorage.setItem('scnt', data.scnt);
+                localStorage.setItem('xAppleSessionToken', data.xAppleSessionToken);
+                result.textContent = `Vui lòng nhập mã xác thực ${data.authType || ''} và bấm "Tải xuống" lại`;
+                // Không xóa mật khẩu sau khi MFA được yêu cầu
+            } else if (data.url) {
+                // Tải xuống thành công
+                result.innerHTML = `Tải xuống thành công: <a href="${data.url}" target="_blank">Tải xuống IPA</a>`;
+                document.getElementById('code').value = ''; // Xóa mã xác thực
+                if (mfaInput) {
+                    mfaInput.style.display = 'none'; // Ẩn trường MFA
+                }
+                localStorage.removeItem('scnt'); // Xóa scnt sau khi tải thành công
+                localStorage.removeItem('xAppleSessionToken'); // Xóa token phiên
+            } else {
+                throw new Error(data.error || 'Lỗi không xác định');
             }
-            localStorage.setItem('scnt', data.scnt);
-            localStorage.setItem('xAppleSessionToken', data.xAppleSessionToken);
-            result.textContent = `Vui lòng nhập mã xác thực ${data.authType || ''} và bấm "Tải xuống" lại`;
-            document.getElementById('password').value = ''; // Xóa trường mật khẩu sau khi nhập MFA
-        } else if (data.url) {
-            // Tải xuống thành công
-            result.innerHTML = `Tải xuống thành công: <a href="${data.url}" target="_blank">Tải xuống IPA</a>`;
-            document.getElementById('code').value = ''; // Xóa mã xác thực
-            document.getElementById('password').value = ''; // Xóa trường mật khẩu
-            if (mfaInput) {
-                mfaInput.style.display = 'none'; // Ẩn trường MFA
-            }
-            localStorage.removeItem('scnt'); // Xóa scnt sau khi tải thành công
-            localStorage.removeItem('xAppleSessionToken'); // Xóa token phiên
         } else {
-            throw new Error(data.error || 'Lỗi không xác định');
+            throw new Error('Phản hồi không hợp lệ từ máy chủ.');
         }
     } catch (error) {
         console.error("Yêu cầu thất bại:", error);
