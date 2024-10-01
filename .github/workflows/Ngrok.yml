@@ -1,0 +1,41 @@
+name: Ngrok with GitHub Actions
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+    - name: Install Node.js
+      uses: actions/setup-node@v2
+      with:
+        node-version: '16'  # Bạn có thể thay đổi phiên bản Node.js tại đây
+    - name: Install dependencies
+      run: |
+        npm install
+    - name: Debug environment
+      run: |
+        node -v  # Kiểm tra phiên bản Node.js
+        npm -v   # Kiểm tra phiên bản npm
+        uname -a # Kiểm tra hệ điều hành
+    - name: Start local server
+      run: |
+        npm start &
+        sleep 5
+    - name: Download Ngrok
+      run: |
+        curl -s https://ngrok-agent.s3.amazonaws.com/ngrok.asc | sudo tee /etc/apt/trusted.gpg.d/ngrok.asc >/dev/null && \
+        echo "deb https://ngrok-agent.s3.amazonaws.com buster main" | sudo tee /etc/apt/sources.list.d/ngrok.list && \
+        sudo apt-get update && sudo apt-get install ngrok
+    - name: Authenticate Ngrok with token
+      run: |
+        ngrok config add-authtoken 2iVEKm9hNdVHe87oeUrun0U29Sc_4U4omHDmCnSUmRJhaCMmP
+    - name: Start Ngrok
+      run: |
+        ngrok http 8080 > /dev/null &
+name: Get Ngrok public URL run: | sleep 3 NGROK_URL=$(curl -s http://127.0.0.1:4040/api/tunnels | jq -r '.tunnels[0].public_url') echo "Ngrok URL: $NGROK_URL" echo "NGROK_URL=$NGROK_URL" >> $GITHUB_ENV
+name: Display Ngrok URL run: | echo "Access your app at: ${{ env.NGROK_URL }}"
