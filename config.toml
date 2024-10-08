@@ -29,3 +29,12 @@ title = "storeios"
 [taxonomies]
 category = "categories"
 tag = "tags"
+
+[outputs]
+  home = ["HTML", "JSON"]
+
+[outputFormats]
+  [outputFormats.JSON]
+    mediaType = "application/json"
+    baseName = "index"
+    isPlainText = true
