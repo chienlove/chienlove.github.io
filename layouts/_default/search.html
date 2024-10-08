@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tìm kiếm</title>
+    <style>
+        /* Một số CSS cơ bản để trang tìm kiếm đẹp hơn */
+        #search-box {
+            width: 100%;
+            padding: 10px;
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+        #search-results li {
+            list-style-type: none;
+            margin-bottom: 10px;
+        }
+        #search-results li a {
+            text-decoration: none;
+            color: blue;
+        }
+    </style>
+</head>
+<body>
+
+<section>
+    <h1>Tìm kiếm</h1>
+    <input type="text" id="search-box" placeholder="Nhập từ khóa tìm kiếm..." />
+    <div>
+        <h2>Kết quả tìm kiếm</h2>
+        <ul id="search-results"></ul>
+    </div>
+</section>
+
+<section>
+    <h2>Lịch sử tìm kiếm</h2>
+    <ul id="search-history"></ul>
+</section>
+
+<section>
+    <h2>Xu hướng tìm kiếm</h2>
+    <ul id="search-trends"></ul>
+</section>
+
+<script src="https://unpkg.com/lunr/lunr.js"></script>
+<script>
+    let idx;
+    let data;
+
+    // Lấy dữ liệu JSON từ file index.json
+    fetch('/index.json')
+        .then(response => response.json())
+        .then(jsonData => {
+            data = jsonData;
+            // Tạo chỉ mục tìm kiếm Lunr.js
+            idx = lunr(function () {
+                this.ref('url');
+                this.field('title');
+                this.field('content');
+                this.field('tags');
+                
+                jsonData.forEach(function (doc) {
+                    this.add(doc);
+                }, this);
+            });
+        });
+
+    // Khi người dùng nhập vào ô tìm kiếm
+    document.getElementById('search-box').addEventListener('input', function () {
+        const query = this.value;
+        const results = idx.search(query);
+
+        // Hiển thị kết quả tìm kiếm
+        document.getElementById('search-results').innerHTML = results.map(result => {
+            const ref = result.ref;
+            const item = data.find(d => d.url === ref);
+            return `<li><a href="${item.url}">${item.title}</a></li>`;
+        }).join('');
+
+        // Lưu lịch sử tìm kiếm
+        saveSearchHistory(query);
+    });
+
+    // Lưu lịch sử tìm kiếm vào LocalStorage
+    function saveSearchHistory(query) {
+        if (!query) return;
+
+        let history = JSON.parse(localStorage.getItem('searchHistory')) || [];
+        if (!history.includes(query)) {
+            history.push(query);
+        }
+
+        // Giới hạn lịch sử tìm kiếm tối đa 10 từ khóa
+        if (history.length > 10) {
+            history.shift();
+        }
+
+        let trends = JSON.parse(localStorage.getItem('searchTrends')) || {};
+        trends[query] = (trends[query] || 0) + 1;
+
+        // Lưu lịch sử và xu hướng
+        localStorage.setItem('searchHistory', JSON.stringify(history));
+        localStorage.setItem('searchTrends', JSON.stringify(trends));
+
+        displaySearchHistory();
+        displaySearchTrends();
+    }
+
+    // Hiển thị lịch sử tìm kiếm
+    function displaySearchHistory() {
+        let history = JSON.parse(localStorage.getItem('searchHistory')) || [];
+        document.getElementById('search-history').innerHTML = history.map(query => `<li>${query}</li>`).join('');
+    }
+
+    // Hiển thị xu hướng tìm kiếm (từ khóa được tìm kiếm nhiều nhất)
+    function displaySearchTrends() {
+        let trends = JSON.parse(localStorage.getItem('searchTrends')) || {};
+        let sortedTrends = Object.keys(trends).sort((a, b) => trends[b] - trends[a]);
+
+        document.getElementById('search-trends').innerHTML = sortedTrends.slice(0, 5).map(query => `<li>${query} (${trends[query]})</li>`).join('');
+    }
+
+    // Hiển thị lịch sử và xu hướng khi trang được tải
+    displaySearchHistory();
+    displaySearchTrends();
+</script>
+
+</body>
+</html>
