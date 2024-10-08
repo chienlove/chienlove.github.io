@@ -5,45 +5,97 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tìm kiếm</title>
     <style>
+        /* Định dạng cho toàn bộ trang */
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f9f9f9;
+            color: #333;
+            padding: 0;
+            margin: 0;
+        }
+
+        h1 {
+            text-align: center;
+            margin-top: 50px;
+            font-size: 36px;
+            color: #333;
+        }
+
+        #search-section {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+
         #search-box {
             width: 100%;
-            padding: 10px;
+            padding: 15px;
             font-size: 18px;
-            margin-bottom: 20px;
-        }
-        #autocomplete-results {
             border: 1px solid #ddd;
-            max-height: 200px;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            outline: none;
+            transition: all 0.2s ease-in-out;
+        }
+
+        #search-box:focus {
+            border-color: #3498db;
+            box-shadow: 0 2px 8px rgba(52, 152, 219, 0.2);
+        }
+
+        #results-container {
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #fff;
+            max-height: 400px;
             overflow-y: auto;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            display: none; /* Chỉ hiện khi có kết quả */
         }
-        #autocomplete-results li {
-            list-style-type: none;
-            padding: 8px;
+
+        .result-item {
+            display: flex;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid #f0f0f0;
             cursor: pointer;
+            transition: background-color 0.2s ease;
         }
-        #autocomplete-results li:hover {
-            background-color: #f0f0f0;
+
+        .result-item:hover {
+            background-color: #f9f9f9;
         }
-        #search-results li {
-            list-style-type: none;
-            margin-bottom: 10px;
+
+        .result-item img {
+            width: 40px;
+            height: 40px;
+            margin-right: 15px;
+            object-fit: cover;
+            border-radius: 50%;
+            background-color: #e0e0e0;
         }
-        #search-results li a {
-            text-decoration: none;
-            color: blue;
+
+        .result-item-title {
+            font-size: 18px;
+            color: #333;
+        }
+
+        .no-results {
+            padding: 20px;
+            text-align: center;
+            color: #999;
+            font-size: 16px;
         }
     </style>
 </head>
 <body>
 
-<section>
+<section id="search-section">
     <h1>Tìm kiếm</h1>
-    <input type="text" id="search-box" placeholder="Nhập từ khóa tìm kiếm..." autocomplete="off" />
-    <ul id="autocomplete-results"></ul>
-    <div>
-        <h2>Kết quả tìm kiếm</h2>
-        <ul id="search-results"></ul>
-    </div>
+    <input type="text" id="search-box" placeholder="Nhập từ khóa để tìm kiếm..." autocomplete="off" />
+    <div id="results-container"></div>
 </section>
 
 <script src="https://unpkg.com/lunr/lunr.js"></script>
@@ -51,18 +103,18 @@
     let idx;
     let data;
 
-    // Lấy dữ liệu JSON từ file index.json
+    // Fetch dữ liệu JSON từ file index.json
     fetch('/index.json')
         .then(response => response.json())
         .then(jsonData => {
             data = jsonData;
-            // Tạo chỉ mục tìm kiếm Lunr.js
+            // Tạo chỉ mục tìm kiếm với Lunr.js
             idx = lunr(function () {
                 this.ref('url');
                 this.field('title');
                 this.field('content');
                 this.field('tags');
-                
+
                 jsonData.forEach(function (doc) {
                     this.add(doc);
                 }, this);
@@ -70,62 +122,43 @@
         });
 
     const searchBox = document.getElementById('search-box');
-    const autocompleteResults = document.getElementById('autocomplete-results');
+    const resultsContainer = document.getElementById('results-container');
 
     // Khi người dùng nhập vào ô tìm kiếm
     searchBox.addEventListener('input', function () {
         const query = searchBox.value.trim();
         if (query.length < 2) {
-            autocompleteResults.innerHTML = '';  // Không gợi ý nếu từ khóa quá ngắn
+            resultsContainer.style.display = 'none';  // Ẩn gợi ý nếu từ khóa quá ngắn
+            resultsContainer.innerHTML = '';
             return;
         }
 
-        const results = idx.search(query);
-
-        // Hiển thị gợi ý tự hoàn thành (autocomplete)
-        autocompleteResults.innerHTML = results.map(result => {
-            const ref = result.ref;
-            const item = data.find(d => d.url === ref);
-            return `<li data-url="${item.url}">${item.title}</li>`;
-        }).join('');
-
-        // Gắn sự kiện khi người dùng chọn một gợi ý
-        document.querySelectorAll('#autocomplete-results li').forEach(item => {
-            item.addEventListener('click', function () {
-                searchBox.value = this.textContent;
-                performSearch();
-                autocompleteResults.innerHTML = '';  // Ẩn danh sách gợi ý sau khi chọn
-            });
-        });
-    });
-
-    // Khi người dùng nhấn Enter, thực hiện tìm kiếm
-    searchBox.addEventListener('keypress', function (e) {
-        if (e.key === 'Enter') {
-            performSearch();
-        }
-    });
-
-    // Hàm thực hiện tìm kiếm và hiển thị kết quả
-    function performSearch() {
-        const query = searchBox.value.trim();
-        if (!query) {
-            document.getElementById('search-results').innerHTML = "<li>Vui lòng nhập từ khóa để tìm kiếm</li>";
-            return;
-        }
         const results = idx.search(query);
 
         if (results.length > 0) {
             // Hiển thị kết quả tìm kiếm
-            document.getElementById('search-results').innerHTML = results.map(result => {
+            resultsContainer.innerHTML = results.map(result => {
                 const ref = result.ref;
                 const item = data.find(d => d.url === ref);
-                return `<li><a href="${item.url}">${item.title}</a></li>`;
+                return `<div class="result-item" data-url="${item.url}">
+                            <img src="https://via.placeholder.com/40" alt="icon">
+                            <div class="result-item-title">${item.title}</div>
+                        </div>`;
             }).join('');
+            resultsContainer.style.display = 'block';  // Hiển thị khung kết quả
+
+            // Gắn sự kiện khi người dùng chọn một gợi ý
+            document.querySelectorAll('.result-item').forEach(item => {
+                item.addEventListener('click', function () {
+                    window.location.href = this.getAttribute('data-url');
+                });
+            });
         } else {
-            document.getElementById('search-results').innerHTML = "<li>Không tìm thấy kết quả phù hợp</li>";
+            // Hiển thị thông báo không có kết quả
+            resultsContainer.innerHTML = `<div class="no-results">Không tìm thấy kết quả phù hợp</div>`;
+            resultsContainer.style.display = 'block';  // Hiển thị khung kết quả
         }
-    }
+    });
 </script>
 
 </body>
