@@ -3,31 +3,117 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Upload to GitHub Release</title>
+    <title>GitHub Release Upload</title>
     <style>
-        #progressBar {
-            width: 300px;
-            height: 20px;
-            background-color: #f0f0f0;
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f6f8fa;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+        }
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 4px;
+        }
+        .status.error {
+            background: #ffe6e6;
+            color: #cc0000;
+        }
+        .status.success {
+            background: #e6ffe6;
+            color: #006600;
+        }
+        .status.info {
+            background: #e6f3ff;
+            color: #004d99;
+        }
+        .progress-container {
+            width: 100%;
+            background: #f0f0f0;
+            border-radius: 4px;
+            margin: 10px 0;
             display: none;
         }
-        #progressBar div {
-            height: 100%;
-            background-color: #4CAF50;
-            width: 0;
+        .progress-bar {
+            width: 0%;
+            height: 20px;
+            background: #2ea44f;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+        .upload-info {
+            margin: 10px 0;
+            font-size: 0.9em;
+            color: #666;
+        }
+        button {
+            background: #2ea44f;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        button:hover {
+            background: #2c974b;
+        }
+        button:disabled {
+            background: #94d3a2;
+            cursor: not-allowed;
+        }
+        input[type="file"] {
+            margin: 10px 0;
+        }
+        .file-info {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            display: none;
+        }
+        .download-link {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 8px 16px;
+            background: #0366d6;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+        }
+        .download-link:hover {
+            background: #0255b3;
         }
     </style>
 </head>
 <body>
-    <h1>Upload to GitHub Release</h1>
+    <div class="container">
+        <h1>Upload to GitHub Release</h1>
+        
+        <div id="loginSection">
+            <button id="loginButton">Login with GitHub</button>
+        </div>
 
-    <button id="loginButton">Login with GitHub</button>
-    <input type="file" id="fileInput" style="display: none;">
-    <button id="uploadButton" style="display: none;">Upload File</button>
+        <div id="uploadSection" style="display: none;">
+            <input type="file" id="fileInput" />
+            <div id="fileInfo" class="file-info"></div>
+            <button id="uploadButton">Upload to Release</button>
+        </div>
 
-    <div id="status"></div>
-    <div id="progressBar"><div></div></div>
-
-    <script src="js/upload.js"></script>
+        <div id="status" class="status"></div>
+        <div id="progressContainer" class="progress-container">
+            <div id="progressBar" class="progress-bar"></div>
+            <div id="progressText" class="upload-info"></div>
+        </div>
+    </div>
 </body>
 </html>
