@@ -12,6 +12,14 @@
             font-size: 18px;
             margin-bottom: 20px;
         }
+        #search-button {
+            padding: 10px 15px;
+            font-size: 18px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
         #search-results li {
             list-style-type: none;
             margin-bottom: 10px;
@@ -27,6 +35,7 @@
 <section>
     <h1>Tìm kiếm</h1>
     <input type="text" id="search-box" placeholder="Nhập từ khóa tìm kiếm..." />
+    <button id="search-button">Tìm kiếm</button>
     <div>
         <h2>Kết quả tìm kiếm</h2>
         <ul id="search-results"></ul>
@@ -66,9 +75,21 @@
             });
         });
 
-    // Khi người dùng nhập vào ô tìm kiếm
-    document.getElementById('search-box').addEventListener('input', function () {
-        const query = this.value;
+    // Khi người dùng nhấn nút "Tìm kiếm"
+    document.getElementById('search-button').addEventListener('click', function () {
+        performSearch();
+    });
+
+    // Hoặc khi người dùng nhập từ khóa và nhấn Enter
+    document.getElementById('search-box').addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') {
+            performSearch();
+        }
+    });
+
+    // Hàm thực hiện tìm kiếm
+    function performSearch() {
+        const query = document.getElementById('search-box').value;
         const results = idx.search(query);
 
         // Hiển thị kết quả tìm kiếm
@@ -80,7 +101,7 @@
 
         // Lưu lịch sử tìm kiếm
         saveSearchHistory(query);
-    });
+    }
 
     // Lưu lịch sử tìm kiếm vào LocalStorage
     function saveSearchHistory(query) {
