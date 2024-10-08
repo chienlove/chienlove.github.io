@@ -5,20 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tìm kiếm</title>
     <style>
-        /* Một số CSS cơ bản để trang tìm kiếm đẹp hơn */
         #search-box {
             width: 100%;
             padding: 10px;
             font-size: 18px;
             margin-bottom: 20px;
         }
-        #search-button {
-            padding: 10px 15px;
-            font-size: 18px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
+        #autocomplete-results {
+            border: 1px solid #ddd;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        #autocomplete-results li {
+            list-style-type: none;
+            padding: 8px;
             cursor: pointer;
+        }
+        #autocomplete-results li:hover {
+            background-color: #f0f0f0;
         }
         #search-results li {
             list-style-type: none;
@@ -34,22 +38,12 @@
 
 <section>
     <h1>Tìm kiếm</h1>
-    <input type="text" id="search-box" placeholder="Nhập từ khóa tìm kiếm..." />
-    <button id="search-button">Tìm kiếm</button>
+    <input type="text" id="search-box" placeholder="Nhập từ khóa tìm kiếm..." autocomplete="off" />
+    <ul id="autocomplete-results"></ul>
     <div>
         <h2>Kết quả tìm kiếm</h2>
         <ul id="search-results"></ul>
     </div>
-</section>
-
-<section>
-    <h2>Lịch sử tìm kiếm</h2>
-    <ul id="search-history"></ul>
-</section>
-
-<section>
-    <h2>Xu hướng tìm kiếm</h2>
-    <ul id="search-trends"></ul>
 </section>
 
 <script src="https://unpkg.com/lunr/lunr.js"></script>
@@ -75,76 +69,63 @@
             });
         });
 
-    // Khi người dùng nhấn nút "Tìm kiếm"
-    document.getElementById('search-button').addEventListener('click', function () {
-        performSearch();
+    const searchBox = document.getElementById('search-box');
+    const autocompleteResults = document.getElementById('autocomplete-results');
+
+    // Khi người dùng nhập vào ô tìm kiếm
+    searchBox.addEventListener('input', function () {
+        const query = searchBox.value.trim();
+        if (query.length < 2) {
+            autocompleteResults.innerHTML = '';  // Không gợi ý nếu từ khóa quá ngắn
+            return;
+        }
+
+        const results = idx.search(query);
+
+        // Hiển thị gợi ý tự hoàn thành (autocomplete)
+        autocompleteResults.innerHTML = results.map(result => {
+            const ref = result.ref;
+            const item = data.find(d => d.url === ref);
+            return `<li data-url="${item.url}">${item.title}</li>`;
+        }).join('');
+
+        // Gắn sự kiện khi người dùng chọn một gợi ý
+        document.querySelectorAll('#autocomplete-results li').forEach(item => {
+            item.addEventListener('click', function () {
+                searchBox.value = this.textContent;
+                performSearch();
+                autocompleteResults.innerHTML = '';  // Ẩn danh sách gợi ý sau khi chọn
+            });
+        });
     });
 
-    // Hoặc khi người dùng nhập từ khóa và nhấn Enter
-    document.getElementById('search-box').addEventListener('keypress', function (e) {
+    // Khi người dùng nhấn Enter, thực hiện tìm kiếm
+    searchBox.addEventListener('keypress', function (e) {
         if (e.key === 'Enter') {
             performSearch();
         }
     });
 
-    // Hàm thực hiện tìm kiếm
+    // Hàm thực hiện tìm kiếm và hiển thị kết quả
     function performSearch() {
-        const query = document.getElementById('search-box').value;
+        const query = searchBox.value.trim();
+        if (!query) {
+            document.getElementById('search-results').innerHTML = "<li>Vui lòng nhập từ khóa để tìm kiếm</li>";
+            return;
+        }
         const results = idx.search(query);
 
-        // Hiển thị kết quả tìm kiếm
-        document.getElementById('search-results').innerHTML = results.map(result => {
-            const ref = result.ref;
-            const item = data.find(d => d.url === ref);
-            return `<li><a href="${item.url}">${item.title}</a></li>`;
-        }).join('');
-
-        // Lưu lịch sử tìm kiếm
-        saveSearchHistory(query);
-    }
-
-    // Lưu lịch sử tìm kiếm vào LocalStorage
-    function saveSearchHistory(query) {
-        if (!query) return;
-
-        let history = JSON.parse(localStorage.getItem('searchHistory')) || [];
-        if (!history.includes(query)) {
-            history.push(query);
+        if (results.length > 0) {
+            // Hiển thị kết quả tìm kiếm
+            document.getElementById('search-results').innerHTML = results.map(result => {
+                const ref = result.ref;
+                const item = data.find(d => d.url === ref);
+                return `<li><a href="${item.url}">${item.title}</a></li>`;
+            }).join('');
+        } else {
+            document.getElementById('search-results').innerHTML = "<li>Không tìm thấy kết quả phù hợp</li>";
         }
-
-        // Giới hạn lịch sử tìm kiếm tối đa 10 từ khóa
-        if (history.length > 10) {
-            history.shift();
-        }
-
-        let trends = JSON.parse(localStorage.getItem('searchTrends')) || {};
-        trends[query] = (trends[query] || 0) + 1;
-
-        // Lưu lịch sử và xu hướng
-        localStorage.setItem('searchHistory', JSON.stringify(history));
-        localStorage.setItem('searchTrends', JSON.stringify(trends));
-
-        displaySearchHistory();
-        displaySearchTrends();
     }
-
-    // Hiển thị lịch sử tìm kiếm
-    function displaySearchHistory() {
-        let history = JSON.parse(localStorage.getItem('searchHistory')) || [];
-        document.getElementById('search-history').innerHTML = history.map(query => `<li>${query}</li>`).join('');
-    }
-
-    // Hiển thị xu hướng tìm kiếm (từ khóa được tìm kiếm nhiều nhất)
-    function displaySearchTrends() {
-        let trends = JSON.parse(localStorage.getItem('searchTrends')) || {};
-        let sortedTrends = Object.keys(trends).sort((a, b) => trends[b] - trends[a]);
-
-        document.getElementById('search-trends').innerHTML = sortedTrends.slice(0, 5).map(query => `<li>${query} (${trends[query]})</li>`).join('');
-    }
-
-    // Hiển thị lịch sử và xu hướng khi trang được tải
-    displaySearchHistory();
-    displaySearchTrends();
 </script>
 
 </body>
