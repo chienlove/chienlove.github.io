@@ -133,46 +133,47 @@ class GitHubUploader {
     }
 
     async handleUpload() {
-        if (!this.token) {
-            this.setStatus('Vui lòng đăng nhập trước', 'error');
-            return;
-        }
-
-        const file = this.elements.fileInput.files[0];
-        if (!file) {
-            this.setStatus('Vui lòng chọn tệp', 'error');
-            return;
-        }
-
-        try {
-            this.elements.uploadButton.disabled = true;
-            this.setStatus('Đang tạo release...', 'info');
-            this.updateProgress(0, 'Chuẩn bị tải lên...');
-            
-            const release = await this.createRelease();
-            if (!release) throw new Error('Không thể tạo release');
-
-            const uploadResult = await this.uploadFileToRelease(file, release.upload_url);
-            
-            this.elements.uploadButton.disabled = false;
-            this.elements.fileInput.value = '';
-            this.elements.fileInfo.style.display = 'none';
-            this.updateProgress(100, 'Tải lên hoàn tất');
-            
-            // Thêm link tải xuống
-            if (uploadResult && uploadResult.browser_download_url) {
-                this.setStatus('Tải tệp lên thành công!', 'success');
-                this.elements.status.innerHTML += `<br><a href="${uploadResult.browser_download_url}" class="download-link" target="_blank">Tải xuống tệp</a>`;
-            } else {
-                throw new Error('Tải lên thành công nhưng không có URL tải xuống');
-            }
-        } catch (error) {
-            console.error('Lỗi tải lên:', error);
-            this.setStatus(`Tải lên thất bại: ${error.message}`, 'error');
-            this.elements.uploadButton.disabled = false;
-            this.updateProgress(0, '');
-        }
+    if (!this.token) {
+        this.setStatus('Vui lòng đăng nhập trước', 'error');
+        return;
     }
+
+    const file = this.elements.fileInput.files[0];
+    if (!file) {
+        this.setStatus('Vui lòng chọn tệp', 'error');
+        return;
+    }
+
+    try {
+        this.elements.uploadButton.disabled = true;
+        this.setStatus('Đang tạo release...', 'info');
+        this.updateProgress(0, 'Chuẩn bị tải lên...');
+
+        const release = await this.createRelease();
+        if (!release) throw new Error('Không thể tạo release');
+
+        const uploadResult = await this.uploadFileToRelease(file, release.upload_url);
+        
+        this.elements.uploadButton.disabled = false;
+        this.elements.fileInput.value = '';
+        this.elements.fileInfo.style.display = 'none';
+        this.updateProgress(100, 'Tải lên hoàn tất');
+        
+        // Kiểm tra phản hồi của API
+        if (uploadResult && uploadResult.browser_download_url) {
+            this.setStatus('Tải tệp lên thành công!', 'success');
+            this.elements.status.innerHTML += `<br><a href="${uploadResult.browser_download_url}" class="download-link" target="_blank">Tải xuống tệp</a>`;
+        } else {
+            console.warn('Upload completed, but no browser_download_url found:', uploadResult);
+            throw new Error('Tải lên thành công nhưng không có URL tải xuống');
+        }
+    } catch (error) {
+        console.error('Lỗi tải lên:', error); // Thêm log lỗi chi tiết vào console
+        this.setStatus(`Tải lên thất bại: ${error.message}`, 'error');
+        this.elements.uploadButton.disabled = false;
+        this.updateProgress(0, '');
+    }
+}
 
     async createRelease() {
         try {
