@@ -208,30 +208,30 @@ class GitHubUploader {
     }
 
     async uploadFileToRelease(file, uploadUrl) {
-        const finalUploadUrl = uploadUrl.replace('{?name,label}', `?name=${encodeURIComponent(file.name)}`);
-        
-        this.uploadController = new AbortController();
-        const signal = this.uploadController.signal;
+    // Thay thế template URL với tên file
+    const finalUploadUrl = uploadUrl.replace('{?name,label}', `?name=${encodeURIComponent(file.name)}`);
+    
+    this.uploadController = new AbortController();
+    const signal = this.uploadController.signal;
 
-        try {
-            let result;
-            if (file.size > CONFIG.CHUNK_SIZE) {
-                result = await this.uploadLargeFile(file, finalUploadUrl, signal);
-            } else {
-                result = await this.uploadSmallFile(file, finalUploadUrl, signal);
-            }
-            return result;
-        } catch (error) {
-            if (error.name === 'AbortError') {
-                throw new Error('Tải lên đã bị hủy bởi người dùng');
-            }
-            throw error;
-        } finally {
-            this.uploadController = null;
+    try {
+        let result;
+        if (file.size > CONFIG.CHUNK_SIZE) {
+            result = await this.uploadLargeFile(file, finalUploadUrl, signal);
+        } else {
+            result = await this.uploadSmallFile(file, finalUploadUrl, signal);
         }
+        return result;
+    } catch (error) {
+        console.error('Lỗi trong quá trình tải lên:', error); // Log lỗi chi tiết
+        throw new Error('Upload failed: ' + error.message); // Thêm thông tin lỗi chi tiết
+    } finally {
+        this.uploadController = null;
     }
+}
 
-    async uploadSmallFile(file, uploadUrl, signal) {
+async uploadSmallFile(file, uploadUrl, signal) {
+    try {
         const response = await fetch(uploadUrl, {
             method: 'POST',
             headers: {
@@ -251,7 +251,11 @@ class GitHubUploader {
         
         this.updateProgress(100, 'Tải lên hoàn tất');
         return await response.json();
+    } catch (error) {
+        console.error('Lỗi trong uploadSmallFile:', error); // Log lỗi cụ thể trong uploadSmallFile
+        throw error;
     }
+}
 
     async uploadLargeFile(file, uploadUrl, signal) {
         const totalChunks = Math.ceil(file.size / CONFIG.CHUNK_SIZE);
