@@ -92,10 +92,12 @@ class GitHubUploader {
                     if (this.authWindow) {
                         this.authWindow.close();
                     }
+                } else {
+                    throw new Error('No access token received');
                 }
             } catch (error) {
                 console.error('Token acquisition error:', error);
-                this.setStatus('Failed to get access token', 'error');
+                this.setStatus(`Failed to get access token: ${error.message}`, 'error');
             }
         }
     }
@@ -145,19 +147,30 @@ class GitHubUploader {
         try {
             this.elements.uploadButton.disabled = true;
             this.setStatus('Creating release...', 'info');
+            this.updateProgress(0, 'Preparing upload...');
             
             const release = await this.createRelease();
             if (!release) throw new Error('Failed to create release');
 
-            await this.uploadFileToRelease(file, release.upload_url);
+            const uploadResult = await this.uploadFileToRelease(file, release.upload_url);
             
             this.elements.uploadButton.disabled = false;
             this.elements.fileInput.value = '';
             this.elements.fileInfo.style.display = 'none';
+            this.updateProgress(100, 'Upload completed');
+            
+            // Add download link
+            if (uploadResult && uploadResult.browser_download_url) {
+                this.setStatus('File uploaded successfully!', 'success');
+                this.elements.status.innerHTML += `<br><a href="${uploadResult.browser_download_url}" class="download-link" target="_blank">Download File</a>`;
+            } else {
+                throw new Error('Upload successful but download URL not available');
+            }
         } catch (error) {
             console.error('Upload error:', error);
             this.setStatus(`Upload failed: ${error.message}`, 'error');
             this.elements.uploadButton.disabled = false;
+            this.updateProgress(0, '');
         }
     }
 
@@ -179,7 +192,10 @@ class GitHubUploader {
                 })
             });
 
-            if (!response.ok) throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP ${response.status}: ${errorText}`);
+            }
             return await response.json();
         } catch (error) {
             throw new Error(`Release creation failed: ${error.message}`);
@@ -187,35 +203,19 @@ class GitHubUploader {
     }
 
     async uploadFileToRelease(file, uploadUrl) {
-        // Remove template parameters from upload URL
         const finalUploadUrl = uploadUrl.replace('{?name,label}', `?name=${encodeURIComponent(file.name)}`);
         
         this.uploadController = new AbortController();
         const signal = this.uploadController.signal;
 
         try {
-            const response = await fetch(finalUploadUrl, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `token ${this.token}`,
-                    'Content-Type': file.type || 'application/octet-stream',
-                    'Content-Length': file.size.toString(),
-                    'Accept': 'application/vnd.github.v3+json'
-                },
-                body: file,
-                signal: signal
-            });
-
-            if (!response.ok) throw new Error(`HTTP ${response.status}: ${await response.text()}`);
-            
-            const data = await response.json();
-            this.setStatus('File uploaded successfully!', 'success');
-            
-            // Add download link
-            const downloadUrl = data.browser_download_url;
-            if (downloadUrl) {
-                this.elements.status.innerHTML += `<br><a href="${downloadUrl}" class="download-link" target="_blank">Download File</a>`;
+            let result;
+            if (file.size > CONFIG.CHUNK_SIZE) {
+                result = await this.uploadLargeFile(file, finalUploadUrl, signal);
+            } else {
+                result = await this.uploadSmallFile(file, finalUploadUrl, signal);
             }
+            return result;
         } catch (error) {
             if (error.name === 'AbortError') {
                 throw new Error('Upload cancelled by user');
@@ -224,6 +224,62 @@ class GitHubUploader {
         } finally {
             this.uploadController = null;
         }
+    }
+
+    async uploadSmallFile(file, uploadUrl, signal) {
+        const response = await fetch(uploadUrl, {
+            method: 'POST',
+            headers: {
+                'Authorization': `token ${this.token}`,
+                'Content-Type': file.type || 'application/octet-stream',
+                'Content-Length': file.size.toString(),
+                'Accept': 'application/vnd.github.v3+json'
+            },
+            body: file,
+            signal: signal
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(`HTTP ${response.status}: ${errorText}`);
+        }
+        
+        this.updateProgress(100, 'Upload completed');
+        return await response.json();
+    }
+
+    async uploadLargeFile(file, uploadUrl, signal) {
+        const totalChunks = Math.ceil(file.size / CONFIG.CHUNK_SIZE);
+        let uploadedChunks = 0;
+
+        for (let start = 0; start < file.size; start += CONFIG.CHUNK_SIZE) {
+            const chunk = file.slice(start, start + CONFIG.CHUNK_SIZE);
+            const end = Math.min(start + CONFIG.CHUNK_SIZE - 1, file.size - 1);
+
+            const response = await fetch(uploadUrl, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `token ${this.token}`,
+                    'Content-Type': file.type || 'application/octet-stream',
+                    'Content-Range': `bytes ${start}-${end}/${file.size}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                },
+                body: chunk,
+                signal: signal
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP ${response.status}: ${errorText}`);
+            }
+
+            uploadedChunks++;
+            const progress = Math.round((uploadedChunks / totalChunks) * 100);
+            this.updateProgress(progress, `Uploading... ${progress}%`);
+        }
+
+        this.updateProgress(100, 'Upload completed');
+        return await (await fetch(uploadUrl, { method: 'GET', headers: { 'Authorization': `token ${this.token}` } })).json();
     }
 }
 
