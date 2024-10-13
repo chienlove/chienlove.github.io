@@ -14,15 +14,19 @@
         <script async defer src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797"
                 crossorigin="anonymous"></script>
         <ins class="adsbygoogle"
+             id="ad1"
              style="display:block;width:100%;height:100px"
              data-ad-client="ca-pub-3905625903416797"
              data-ad-slot="5160182988"
-             loading="lazy">
-             <p>Quảng cáo không khả dụng</p>
-        </ins>
+             loading="lazy"></ins>
         <script>
              (adsbygoogle = window.adsbygoogle || []).push({});
         </script>
+        
+        <!-- Fallback message -->
+        <div id="ad1-fallback" style="display:none; text-align:center; margin-top:10px;">
+            Quảng cáo không khả dụng
+        </div>
         
         <!-- Form Tìm kiếm -->
         <form id="searchForm">
@@ -51,15 +55,19 @@
 
         <!-- Google Ads -->
         <ins class="adsbygoogle"
+             id="ad2"
              style="display:block;width:100%;height:250px"
              data-ad-client="ca-pub-3905625903416797"
              data-ad-slot="5160182988"
-             loading="lazy">
-             <p>Quảng cáo không khả dụng</p>
-        </ins>
+             loading="lazy"></ins>
         <script>
              (adsbygoogle = window.adsbygoogle || []).push({});
         </script>
+        
+        <!-- Fallback message -->
+        <div id="ad2-fallback" style="display:none; text-align:center; margin-top:10px;">
+            Quảng cáo không khả dụng
+        </div>
     </main>
 
     <script src="/js/app-version.js"></script>
@@ -69,6 +77,24 @@
         document.getElementById('searchForm').addEventListener('submit', function(e) {
             e.preventDefault();
             // Thêm xử lý tìm kiếm ở đây
+        });
+
+        // Kiểm tra nếu quảng cáo không tải được và hiển thị fallback
+        window.addEventListener('load', function() {
+            setTimeout(function() {
+                const ad1 = document.getElementById('ad1');
+                const ad1Fallback = document.getElementById('ad1-fallback');
+                const ad2 = document.getElementById('ad2');
+                const ad2Fallback = document.getElementById('ad2-fallback');
+                
+                // Nếu thẻ quảng cáo vẫn chưa hiển thị sau 5 giây, hiển thị thông báo dự phòng
+                if (ad1 && ad1.innerHTML.trim() === '') {
+                    ad1Fallback.style.display = 'block';
+                }
+                if (ad2 && ad2.innerHTML.trim() === '') {
+                    ad2Fallback.style.display = 'block';
+                }
+            }, 5000); // Chờ 5 giây trước khi kiểm tra
         });
     </script>
 </body>
