@@ -54,11 +54,11 @@ class GitHubUploader {
         if (!this.token) {
             this.elements.loginSection.style.display = 'block';
             this.elements.uploadSection.style.display = 'none';
-            this.setStatus('Please log in to upload files', 'info');
+            this.setStatus('Vui lòng đăng nhập để tải tệp', 'info');
         } else {
             this.elements.loginSection.style.display = 'none';
             this.elements.uploadSection.style.display = 'block';
-            this.setStatus('Ready to upload', 'info');
+            this.setStatus('Sẵn sàng để tải tệp', 'info');
         }
     }
 
@@ -88,16 +88,16 @@ class GitHubUploader {
                     this.token = data.access_token;
                     localStorage.setItem('github_token', this.token);
                     this.checkAuth();
-                    this.setStatus('Login successful', 'success');
+                    this.setStatus('Đăng nhập thành công', 'success');
                     if (this.authWindow) {
                         this.authWindow.close();
                     }
                 } else {
-                    throw new Error('No access token received');
+                    throw new Error('Không nhận được access token');
                 }
             } catch (error) {
-                console.error('Token acquisition error:', error);
-                this.setStatus(`Failed to get access token: ${error.message}`, 'error');
+                console.error('Lỗi khi lấy token:', error);
+                this.setStatus(`Lấy token thất bại: ${error.message}`, 'error');
             }
         }
     }
@@ -107,7 +107,7 @@ class GitHubUploader {
         if (!file) return;
 
         if (file.size > CONFIG.MAX_FILE_SIZE) {
-            this.setStatus(`File size exceeds the maximum limit of 2GB`, 'error');
+            this.setStatus(`Kích thước tệp vượt quá giới hạn 2GB`, 'error');
             this.elements.fileInput.value = '';
             return;
         }
@@ -115,9 +115,9 @@ class GitHubUploader {
         const fileSize = this.formatFileSize(file.size);
         this.elements.fileInfo.style.display = 'block';
         this.elements.fileInfo.innerHTML = `
-            Selected file: ${file.name}<br>
-            Size: ${fileSize}<br>
-            Type: ${file.type || 'application/octet-stream'}
+            Tệp đã chọn: ${file.name}<br>
+            Kích thước: ${fileSize}<br>
+            Loại: ${file.type || 'application/octet-stream'}
         `;
     }
 
@@ -134,41 +134,41 @@ class GitHubUploader {
 
     async handleUpload() {
         if (!this.token) {
-            this.setStatus('Please log in first', 'error');
+            this.setStatus('Vui lòng đăng nhập trước', 'error');
             return;
         }
 
         const file = this.elements.fileInput.files[0];
         if (!file) {
-            this.setStatus('Please select a file', 'error');
+            this.setStatus('Vui lòng chọn tệp', 'error');
             return;
         }
 
         try {
             this.elements.uploadButton.disabled = true;
-            this.setStatus('Creating release...', 'info');
-            this.updateProgress(0, 'Preparing upload...');
+            this.setStatus('Đang tạo release...', 'info');
+            this.updateProgress(0, 'Chuẩn bị tải lên...');
             
             const release = await this.createRelease();
-            if (!release) throw new Error('Failed to create release');
+            if (!release) throw new Error('Không thể tạo release');
 
             const uploadResult = await this.uploadFileToRelease(file, release.upload_url);
             
             this.elements.uploadButton.disabled = false;
             this.elements.fileInput.value = '';
             this.elements.fileInfo.style.display = 'none';
-            this.updateProgress(100, 'Upload completed');
+            this.updateProgress(100, 'Tải lên hoàn tất');
             
-            // Add download link
+            // Thêm link tải xuống
             if (uploadResult && uploadResult.browser_download_url) {
-                this.setStatus('File uploaded successfully!', 'success');
-                this.elements.status.innerHTML += `<br><a href="${uploadResult.browser_download_url}" class="download-link" target="_blank">Download File</a>`;
+                this.setStatus('Tải tệp lên thành công!', 'success');
+                this.elements.status.innerHTML += `<br><a href="${uploadResult.browser_download_url}" class="download-link" target="_blank">Tải xuống tệp</a>`;
             } else {
-                throw new Error('Upload successful but download URL not available');
+                throw new Error('Tải lên thành công nhưng không có URL tải xuống');
             }
         } catch (error) {
-            console.error('Upload error:', error);
-            this.setStatus(`Upload failed: ${error.message}`, 'error');
+            console.error('Lỗi tải lên:', error);
+            this.setStatus(`Tải lên thất bại: ${error.message}`, 'error');
             this.elements.uploadButton.disabled = false;
             this.updateProgress(0, '');
         }
@@ -186,7 +186,7 @@ class GitHubUploader {
                 body: JSON.stringify({
                     tag_name: `v${Date.now()}`,
                     name: `Release ${new Date().toISOString()}`,
-                    body: 'Uploaded via web interface',
+                    body: 'Tải lên thông qua giao diện web',
                     draft: false,
                     prerelease: false
                 })
@@ -198,7 +198,7 @@ class GitHubUploader {
             }
             return await response.json();
         } catch (error) {
-            throw new Error(`Release creation failed: ${error.message}`);
+            throw new Error(`Tạo release thất bại: ${error.message}`);
         }
     }
 
@@ -218,7 +218,7 @@ class GitHubUploader {
             return result;
         } catch (error) {
             if (error.name === 'AbortError') {
-                throw new Error('Upload cancelled by user');
+                throw new Error('Tải lên đã bị hủy bởi người dùng');
             }
             throw error;
         } finally {
@@ -244,7 +244,7 @@ class GitHubUploader {
             throw new Error(`HTTP ${response.status}: ${errorText}`);
         }
         
-        this.updateProgress(100, 'Upload completed');
+        this.updateProgress(100, 'Tải lên hoàn tất');
         return await response.json();
     }
 
@@ -275,15 +275,15 @@ class GitHubUploader {
 
             uploadedChunks++;
             const progress = Math.round((uploadedChunks / totalChunks) * 100);
-            this.updateProgress(progress, `Uploading... ${progress}%`);
+            this.updateProgress(progress, `Đang tải lên... ${progress}%`);
         }
 
-        this.updateProgress(100, 'Upload completed');
+        this.updateProgress(100, 'Tải lên hoàn tất');
         return await (await fetch(uploadUrl, { method: 'GET', headers: { 'Authorization': `token ${this.token}` } })).json();
     }
 }
 
-// Initialize uploader when DOM is ready
+// Khởi tạo uploader khi DOM đã sẵn sàng
 document.addEventListener('DOMContentLoaded', () => {
     new GitHubUploader();
 });
