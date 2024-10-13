@@ -151,9 +151,13 @@ class GitHubUploader {
 
         const release = await this.createRelease();
         if (!release) throw new Error('Không thể tạo release');
+        
+        console.log('Release created successfully:', release);
 
         const uploadResult = await this.uploadFileToRelease(file, release.upload_url);
         
+        console.log('File uploaded successfully:', uploadResult);
+
         this.elements.uploadButton.disabled = false;
         this.elements.fileInput.value = '';
         this.elements.fileInfo.style.display = 'none';
