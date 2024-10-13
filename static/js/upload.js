@@ -234,7 +234,7 @@ async uploadSmallFile(file, uploadUrl, signal) {
     try {
         // Thay thế {name,label} trong upload URL
         const finalUploadUrl = uploadUrl.replace('{?name,label}', `?name=${encodeURIComponent(file.name)}`);
-        console.log('Final upload URL:', finalUploadUrl); // Log để kiểm tra URL cuối cùng
+        console.log('Final upload URL:', finalUploadUrl); // Log URL để kiểm tra
 
         // Gửi yêu cầu tải tệp lên GitHub
         const response = await fetch(finalUploadUrl, {
@@ -251,16 +251,22 @@ async uploadSmallFile(file, uploadUrl, signal) {
 
         console.log('Response from GitHub API:', response); // Log phản hồi từ API
 
-        // Kiểm tra xem phản hồi có ok không
+        // Kiểm tra xem phản hồi có thành công không
         if (!response.ok) {
             const errorText = await response.text();
             console.error('Error text from GitHub API:', errorText); // Log chi tiết lỗi
             throw new Error(`HTTP ${response.status}: ${errorText}`);
         }
 
-        // Parse phản hồi JSON
-        const jsonResponse = await response.json();
-        console.log('Parsed response JSON:', jsonResponse); // Log phản hồi JSON
+        // Kiểm tra xem phản hồi có phải là JSON không
+        let jsonResponse;
+        try {
+            jsonResponse = await response.json();
+            console.log('Parsed response JSON:', jsonResponse); // Log phản hồi JSON
+        } catch (error) {
+            console.error('Error parsing JSON:', error); // Log lỗi khi phân tích JSON
+            throw new Error('Response is not valid JSON');
+        }
 
         this.updateProgress(100, 'Tải lên hoàn tất');
         return jsonResponse;
