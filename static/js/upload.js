@@ -250,18 +250,19 @@ async uploadSmallFile(file, uploadUrl, signal) {
         });
 
         console.log('Response from GitHub API:', response); // Log phản hồi từ API
+        const responseText = await response.text(); // Đọc toàn bộ phản hồi dưới dạng văn bản
+        console.log('Response Text:', responseText); // Log văn bản của phản hồi
 
         // Kiểm tra xem phản hồi có thành công không
         if (!response.ok) {
-            const errorText = await response.text();
-            console.error('Error text from GitHub API:', errorText); // Log chi tiết lỗi
-            throw new Error(`HTTP ${response.status}: ${errorText}`);
+            console.error('Error text from GitHub API:', responseText); // Log chi tiết lỗi
+            throw new Error(`HTTP ${response.status}: ${responseText}`);
         }
 
-        // Parse phản hồi JSON
+        // Phân tích phản hồi JSON
         let jsonResponse;
         try {
-            jsonResponse = await response.json();
+            jsonResponse = JSON.parse(responseText);
             console.log('Parsed response JSON:', jsonResponse); // Log phản hồi JSON
         } catch (error) {
             console.error('Error parsing JSON:', error); // Log lỗi khi phân tích JSON
