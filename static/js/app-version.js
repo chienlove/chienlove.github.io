@@ -2,13 +2,11 @@ let currentPage = 1;
 const perPage = 50;
 let versions = [];
 
-// Kiểm tra nếu input là App ID (số) hoặc URL App Store
 function isAppId(input) {
-    return /^\d+$/.test(input);  // Kiểm tra nếu input là số (appId)
+    return /^\d+$/.test(input);
 }
 
 function extractAppIdFromUrl(url) {
-    // Kiểm tra nếu input là URL App Store, lấy appId từ URL
     const match = url.match(/id(\d+)/);
     return match ? match[1] : null;
 }
@@ -17,48 +15,42 @@ document.getElementById('searchForm').addEventListener('submit', function(e) {
     e.preventDefault();
     const searchTerm = document.getElementById('searchTerm').value.trim();
 
-    document.getElementById('loading').style.display = 'block';  // Hiển thị thông báo loading
-    document.getElementById('appInfo').innerHTML = '';  // Xóa thông tin cũ
-    document.getElementById('result').innerHTML = '';  // Xóa kết quả cũ
-    document.getElementById('pagination').innerHTML = '';  // Xóa phân trang cũ
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('appInfo').innerHTML = '';
+    document.getElementById('result').innerHTML = '';
+    document.getElementById('pagination').innerHTML = '';
 
     if (isAppId(searchTerm)) {
-        // Nếu người dùng nhập App ID
-        fetchAppInfoFromiTunes(searchTerm);  // Lấy thông tin ứng dụng từ iTunes
-        fetchTimbrdVersion(searchTerm);      // Lấy các phiên bản từ Timbrd
+        fetchAppInfoFromiTunes(searchTerm);
+        fetchTimbrdVersion(searchTerm);
     } else {
         const appIdFromUrl = extractAppIdFromUrl(searchTerm);
         if (appIdFromUrl) {
-            // Nếu người dùng nhập URL App Store, trích xuất appId từ URL
-            fetchAppInfoFromiTunes(appIdFromUrl);  // Lấy thông tin ứng dụng từ iTunes
-            fetchTimbrdVersion(appIdFromUrl);      // Lấy các phiên bản từ Timbrd
+            fetchAppInfoFromiTunes(appIdFromUrl);
+            fetchTimbrdVersion(appIdFromUrl);
         } else {
-            // Nếu người dùng nhập tên ứng dụng, sử dụng iTunes API để tìm appId
             searchApp(searchTerm);
         }
     }
 });
 
-// Hàm tìm thông tin ứng dụng từ iTunes bằng appId
 function fetchAppInfoFromiTunes(appId) {
-    document.getElementById('loading').style.display = 'block';  // Hiển thị thông báo loading
-    document.getElementById('appInfo').innerHTML = '';  // Xóa thông tin cũ
+    console.log(`Fetching iTunes data from URL: https://itunes.apple.com/lookup?id=${appId}`);
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('appInfo').innerHTML = '';
 
-    fetch(`https://itunes.apple.com/lookup?id=${appId}`)
+    fetch(`/api/appInfo?id=${appId}`)
         .then(response => {
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                throw new Error(`Lỗi HTTP! Trạng thái: ${response.status}`);
             }
             return response.json();
         })
         .then(data => {
             if (data.results && data.results.length > 0) {
-                const app = data.results[0];  // Lấy thông tin ứng dụng
+                const app = data.results[0];
+                const fileSizeMB = app.fileSizeBytes ? (app.fileSizeBytes / (1024 * 1024)).toFixed(2) : 'Không có thông tin';
 
-                // Chuyển đổi dung lượng từ bytes sang MB
-                const fileSizeMB = (app.fileSizeBytes / (1024 * 1024)).toFixed(2); 
-
-                // Hiển thị thông tin ứng dụng
                 document.getElementById('appInfo').innerHTML = `
                     <h2>Thông tin Ứng dụng</h2>
                     <p><strong>Tên:</strong> ${app.trackName || 'Không có thông tin'}</p>
@@ -75,20 +67,19 @@ function fetchAppInfoFromiTunes(appId) {
             }
         })
         .catch(error => {
-            console.error('Lỗi khi gọi iTunes API:', error);
-            document.getElementById('appInfo').innerHTML = `<p class="error">Lỗi khi tìm thông tin ứng dụng: ${error.message}</p>`;
+            console.error('Lỗi khi gọi API iTunes:', error);
+            document.getElementById('appInfo').innerHTML = `<p class="error">Lỗi khi lấy thông tin ứng dụng: ${error.message}</p>`;
         })
         .finally(() => {
-            document.getElementById('loading').style.display = 'none';  // Tắt thông báo loading
+            document.getElementById('loading').style.display = 'none';
         });
 }
 
-// Hàm tìm ứng dụng từ iTunes bằng tên ứng dụng
 function searchApp(term) {
     fetch(`https://itunes.apple.com/search?term=${term}&entity=software`)
         .then(response => {
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                throw new Error(`Lỗi HTTP! Trạng thái: ${response.status}`);
             }
             return response.json();
         })
@@ -100,13 +91,13 @@ function searchApp(term) {
             document.getElementById('result').innerHTML = `<p class="error">Lỗi khi tìm kiếm ứng dụng: ${error.message}</p>`;
         })
         .finally(() => {
-            document.getElementById('loading').style.display = 'none';  // Tắt thông báo loading
+            document.getElementById('loading').style.display = 'none';
         });
 }
 
 function displaySearchResults(apps) {
     const resultDiv = document.getElementById('result');
-    resultDiv.innerHTML = ''; // Xóa kết quả cũ
+    resultDiv.innerHTML = '';
 
     if (apps.length > 0) {
         let output = '<table><tr><th>Icon</th><th>Tên ứng dụng</th><th>Tác giả</th></tr>';
@@ -124,9 +115,7 @@ function displaySearchResults(apps) {
     }
 }
 
-// Khi click vào ứng dụng trong danh sách kết quả tìm kiếm
 function getAppVersions(appId, appName, artistName, latestVersion, releaseNotes) {
-    // Hiển thị thông tin cơ bản ngay lập tức
     document.getElementById('appInfo').innerHTML = `
         <h2>Thông tin Ứng dụng</h2>
         <p><strong>Tên:</strong> ${appName}</p>
@@ -135,16 +124,12 @@ function getAppVersions(appId, appName, artistName, latestVersion, releaseNotes)
         <p><strong>Mô tả cập nhật:</strong> ${releaseNotes}</p>
     `;
 
-    // Lấy thông tin chi tiết từ iTunes
     fetchAppInfoFromiTunes(appId);
-    
-    // Gọi API của Timbrd để lấy phiên bản
     fetchTimbrdVersion(appId);
 }
 
-// Gọi API Timbrd với appId để lấy các phiên bản
 function fetchTimbrdVersion(appId) {
-    document.getElementById('loading').style.display = 'block';  // Hiển thị thông báo loading
+    document.getElementById('loading').style.display = 'block';
     fetch(`/api/getAppVersions?id=${appId}`)
         .then(response => {
             if (!response.ok) {
@@ -161,11 +146,11 @@ function fetchTimbrdVersion(appId) {
             }
         })
         .catch(error => {
-            console.error('Lỗi khi gọi Timbrd API:', error);
+            console.error('Lỗi khi gọi API Timbrd:', error);
             document.getElementById('result').innerHTML = `<p class="error">Lỗi khi lấy thông tin phiên bản: ${error.message}</p>`;
         })
         .finally(() => {
-            document.getElementById('loading').style.display = 'none';  // Tắt thông báo loading
+            document.getElementById('loading').style.display = 'none';
         });
 }
 
@@ -176,7 +161,7 @@ function paginateVersions(page) {
     const end = start + perPage;
 
     const resultDiv = document.getElementById('result');
-    resultDiv.innerHTML = '';  // Xóa kết quả trước
+    resultDiv.innerHTML = '';
 
     if (totalVersions > 0) {
         let output = '<table><tr><th>Phiên bản</th><th>ID Phiên bản</th><th>Ngày phát hành</th></tr>';
@@ -190,7 +175,6 @@ function paginateVersions(page) {
         output += '</table>';
         resultDiv.innerHTML = output;
 
-        // Phân trang
         const paginationDiv = document.getElementById('pagination');
         paginationDiv.innerHTML = '';
         const totalPages = Math.ceil(totalVersions / perPage);
@@ -205,5 +189,5 @@ function paginateVersions(page) {
 
 function changePage(page) {
     currentPage = page;
-    paginateVersions(currentPage);  // Gọi lại phân trang với trang mới
+    paginateVersions(currentPage);
 }
