@@ -41,10 +41,18 @@ document.getElementById('searchForm').addEventListener('submit', function(e) {
 
 // Hàm tìm thông tin ứng dụng từ iTunes bằng appId
 function fetchAppInfoFromiTunes(appId) {
+    document.getElementById('loading').style.display = 'block';  // Hiển thị thông báo loading
+    document.getElementById('appInfo').innerHTML = '';  // Xóa thông tin cũ
+
     fetch(`https://itunes.apple.com/lookup?id=${appId}`)
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
-            if (data.results.length > 0) {
+            if (data.results && data.results.length > 0) {
                 const app = data.results[0];  // Lấy thông tin ứng dụng
 
                 // Chuyển đổi dung lượng từ bytes sang MB
@@ -53,23 +61,24 @@ function fetchAppInfoFromiTunes(appId) {
                 // Hiển thị thông tin ứng dụng
                 document.getElementById('appInfo').innerHTML = `
                     <h2>Thông tin Ứng dụng</h2>
-                    <p><strong>Tên:</strong> ${app.trackName}</p>
-                    <p><strong>Tác giả:</strong> ${app.artistName}</p>
-                    <p><strong>Phiên bản mới nhất:</strong> ${app.version}</p>
-                    <p><strong>Mô tả cập nhật:</strong> ${app.releaseNotes}</p>
-                    <p><strong>Ngày phát hành:</strong> ${new Date(app.releaseDate).toLocaleDateString()}</p>
+                    <p><strong>Tên:</strong> ${app.trackName || 'Không có thông tin'}</p>
+                    <p><strong>Tác giả:</strong> ${app.artistName || 'Không có thông tin'}</p>
+                    <p><strong>Phiên bản mới nhất:</strong> ${app.version || 'Không có thông tin'}</p>
+                    <p><strong>Mô tả cập nhật:</strong> ${app.releaseNotes || 'Không có thông tin'}</p>
+                    <p><strong>Ngày phát hành:</strong> ${app.releaseDate ? new Date(app.releaseDate).toLocaleDateString() : 'Không có thông tin'}</p>
                     <p><strong>Dung lượng:</strong> ${fileSizeMB} MB</p>
-                    <p><strong>Bundle ID:</strong> ${app.bundleId}</p>
-                    <p><strong>iOS tối thiểu:</strong> ${app.minimumOsVersion}</p>
+                    <p><strong>Bundle ID:</strong> ${app.bundleId || 'Không có thông tin'}</p>
+                    <p><strong>iOS tối thiểu:</strong> ${app.minimumOsVersion || 'Không có thông tin'}</p>
                 `;
             } else {
-                document.getElementById('appInfo').innerHTML = '<p>Không tìm thấy thông tin ứng dụng.</p>';
+                throw new Error('Không tìm thấy thông tin ứng dụng.');
             }
-            document.getElementById('loading').style.display = 'none';  // Tắt thông báo loading
         })
         .catch(error => {
             console.error('Lỗi khi gọi iTunes API:', error);
-            document.getElementById('appInfo').innerHTML = '<p class="error">Lỗi khi tìm thông tin ứng dụng.</p>';
+            document.getElementById('appInfo').innerHTML = `<p class="error">Lỗi khi tìm thông tin ứng dụng: ${error.message}</p>`;
+        })
+        .finally(() => {
             document.getElementById('loading').style.display = 'none';  // Tắt thông báo loading
         });
 }
@@ -77,14 +86,20 @@ function fetchAppInfoFromiTunes(appId) {
 // Hàm tìm ứng dụng từ iTunes bằng tên ứng dụng
 function searchApp(term) {
     fetch(`https://itunes.apple.com/search?term=${term}&entity=software`)
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
-            document.getElementById('loading').style.display = 'none';  // Tắt thông báo loading
             displaySearchResults(data.results);
         })
         .catch(error => {
             console.error('Lỗi:', error);
             document.getElementById('result').innerHTML = `<p class="error">Lỗi khi tìm kiếm ứng dụng: ${error.message}</p>`;
+        })
+        .finally(() => {
             document.getElementById('loading').style.display = 'none';  // Tắt thông báo loading
         });
 }
@@ -131,7 +146,12 @@ function getAppVersions(appId, appName, artistName, latestVersion, releaseNotes)
 function fetchTimbrdVersion(appId) {
     document.getElementById('loading').style.display = 'block';  // Hiển thị thông báo loading
     fetch(`/api/getAppVersions?id=${appId}`)
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             if (data && data.length > 0) {
                 versions = data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
@@ -139,11 +159,12 @@ function fetchTimbrdVersion(appId) {
             } else {
                 document.getElementById('result').innerHTML = '<p>Không tìm thấy phiên bản nào.</p>';
             }
-            document.getElementById('loading').style.display = 'none';  // Tắt thông báo loading
         })
         .catch(error => {
             console.error('Lỗi khi gọi Timbrd API:', error);
             document.getElementById('result').innerHTML = `<p class="error">Lỗi khi lấy thông tin phiên bản: ${error.message}</p>`;
+        })
+        .finally(() => {
             document.getElementById('loading').style.display = 'none';  // Tắt thông báo loading
         });
 }
@@ -163,7 +184,7 @@ function paginateVersions(page) {
             output += `<tr>
                 <td>${version.bundle_version}</td>
                 <td>${version.external_identifier}</td>
-                <td>${version.created_at}</td>
+                <td>${new Date(version.created_at).toLocaleDateString()}</td>
             </tr>`;
         });
         output += '</table>';
