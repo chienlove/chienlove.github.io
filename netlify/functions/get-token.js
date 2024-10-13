@@ -3,7 +3,7 @@ const axios = require('axios');
 exports.handler = async function(event, context) {
   // CORS headers
   const headers = {
-    'Access-Control-Allow-Origin': 'https://storeios.net',
+    'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Max-Age': '86400',
