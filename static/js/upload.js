@@ -232,7 +232,12 @@ class GitHubUploader {
 
 async uploadSmallFile(file, uploadUrl, signal) {
     try {
-        const response = await fetch(uploadUrl, {
+        // Thay thế {name,label} trong upload URL
+        const finalUploadUrl = uploadUrl.replace('{?name,label}', `?name=${encodeURIComponent(file.name)}`);
+        console.log('Final upload URL:', finalUploadUrl); // Log để kiểm tra URL cuối cùng
+
+        // Gửi yêu cầu tải tệp lên GitHub
+        const response = await fetch(finalUploadUrl, {
             method: 'POST',
             headers: {
                 'Authorization': `token ${this.token}`,
@@ -244,15 +249,23 @@ async uploadSmallFile(file, uploadUrl, signal) {
             signal: signal
         });
 
+        console.log('Response from GitHub API:', response); // Log phản hồi từ API
+
+        // Kiểm tra xem phản hồi có ok không
         if (!response.ok) {
             const errorText = await response.text();
+            console.error('Error text from GitHub API:', errorText); // Log chi tiết lỗi
             throw new Error(`HTTP ${response.status}: ${errorText}`);
         }
-        
+
+        // Parse phản hồi JSON
+        const jsonResponse = await response.json();
+        console.log('Parsed response JSON:', jsonResponse); // Log phản hồi JSON
+
         this.updateProgress(100, 'Tải lên hoàn tất');
-        return await response.json();
+        return jsonResponse;
     } catch (error) {
-        console.error('Lỗi trong uploadSmallFile:', error); // Log lỗi cụ thể trong uploadSmallFile
+        console.error('Lỗi trong uploadSmallFile:', error); // Log chi tiết lỗi
         throw error;
     }
 }
