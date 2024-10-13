@@ -258,7 +258,7 @@ async uploadSmallFile(file, uploadUrl, signal) {
             throw new Error(`HTTP ${response.status}: ${errorText}`);
         }
 
-        // Kiểm tra xem phản hồi có phải là JSON không
+        // Parse phản hồi JSON
         let jsonResponse;
         try {
             jsonResponse = await response.json();
@@ -266,6 +266,12 @@ async uploadSmallFile(file, uploadUrl, signal) {
         } catch (error) {
             console.error('Error parsing JSON:', error); // Log lỗi khi phân tích JSON
             throw new Error('Response is not valid JSON');
+        }
+
+        // Kiểm tra xem jsonResponse có chứa thông tin cần thiết không
+        if (!jsonResponse || !jsonResponse.browser_download_url) {
+            console.warn('Upload successful but no download URL found:', jsonResponse);
+            throw new Error('Upload successful but no download URL found');
         }
 
         this.updateProgress(100, 'Tải lên hoàn tất');
