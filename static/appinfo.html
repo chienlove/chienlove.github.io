@@ -2,30 +2,37 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, initial-scale=1">
     <title>Tìm kiếm thông tin ID phiên bản (Version), bundleID,...của Ứng dụng App Store</title>
     <link rel="stylesheet" href="/css/app-version.css?v=1.5">
 </head>
 <body>
-    <div class="container">
+    <main class="container">
         <h2>Tìm kiếm ID Version, BundleID... của Ứng dụng trên App Store</h2>
         
-        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797"
+        <!-- Google Ads -->
+        <script async defer src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797"
                 crossorigin="anonymous"></script>
         <ins class="adsbygoogle"
              style="display:block;width:100%;height:100px"
              data-ad-client="ca-pub-3905625903416797"
-             data-ad-slot="5160182988"></ins>
+             data-ad-slot="5160182988"
+             loading="lazy">
+             <p>Quảng cáo không khả dụng</p>
+        </ins>
         <script>
              (adsbygoogle = window.adsbygoogle || []).push({});
         </script>
         
+        <!-- Form Tìm kiếm -->
         <form id="searchForm">
             <input type="text" id="searchTerm" placeholder="Nhập App ID, tên ứng dụng hoặc URL App Store">
-            <button type="submit">Tìm kiếm</button>
+            <button type="submit" aria-label="Tìm kiếm ứng dụng">Tìm kiếm</button>
         </form>
-      <div id="loading" style="display: none;">Đang tìm kiếm...</div>
-       <div class="user-guide">
+        <div id="loading" style="display: none;">Đang tìm kiếm...</div>
+
+        <!-- Hướng dẫn sử dụng -->
+        <div class="user-guide">
             <h2>Hướng dẫn sử dụng</h2>
             <ol>
                 <li>Nhập App ID, tên ứng dụng hoặc URL App Store vào ô tìm kiếm.</li>
@@ -35,23 +42,34 @@
                 <li>Để tìm kiếm ứng dụng khác, chỉ cần nhập thông tin mới và tìm kiếm lại.</li>
             </ol>
         </div>
-    </div>
-  
+
+        <!-- Kết quả -->
         <div id="error" class="error" style="display: none;"></div>
         <div id="appInfo" class="app-info"></div>
         <div id="result"></div>
         <div id="pagination" class="pagination"></div>
 
-    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797"
-             crossorigin="anonymous"></script>
-    <ins class="adsbygoogle"
-         style="display:block;width:100%;height:250px"
-         data-ad-client="ca-pub-3905625903416797"
-         data-ad-slot="5160182988"></ins>
-    <script>
-         (adsbygoogle = window.adsbygoogle || []).push({});
-    </script>
+        <!-- Google Ads -->
+        <ins class="adsbygoogle"
+             style="display:block;width:100%;height:250px"
+             data-ad-client="ca-pub-3905625903416797"
+             data-ad-slot="5160182988"
+             loading="lazy">
+             <p>Quảng cáo không khả dụng</p>
+        </ins>
+        <script>
+             (adsbygoogle = window.adsbygoogle || []).push({});
+        </script>
+    </main>
 
     <script src="/js/app-version.js"></script>
+
+    <script>
+        // Ngăn form tải lại trang khi submit
+        document.getElementById('searchForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            // Thêm xử lý tìm kiếm ở đây
+        });
+    </script>
 </body>
 </html>
