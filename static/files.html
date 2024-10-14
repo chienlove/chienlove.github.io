@@ -98,19 +98,21 @@
 <body>
     <div class="container">
         <h1>Upload to GitHub Release</h1>
-        
+
         <div id="loginSection">
             <button id="loginButton">Login with GitHub</button>
         </div>
 
         <div id="uploadSection" style="display: none;">
-            <input type="file" id="fileInput" />
             <div id="fileInfo" class="file-info"></div>
+            <input type="file" id="fileInput">
             <button id="uploadButton">Upload to Release</button>
+            <button id="cancelButton" style="display: none;">Cancel Upload</button>
         </div>
 
         <div id="status" class="status"></div>
-        <div id="progressContainer" class="progress-container">
+
+        <div id="progressContainer" class="progress-container" style="display: none;">
             <div id="progressBar" class="progress-bar"></div>
             <div id="progressText" class="upload-info"></div>
         </div>
