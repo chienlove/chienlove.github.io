@@ -11,7 +11,7 @@ class GitHubUploader {
     constructor() {
         this.token = localStorage.getItem('github_token');
         this.authWindow = null;
-        this.uploadAbortController = null;
+        this.uploadController = null;
         this.initializeElements();
         this.attachEventListeners();
         this.checkAuth();
@@ -24,7 +24,6 @@ class GitHubUploader {
             uploadSection: document.getElementById('uploadSection'),
             fileInput: document.getElementById('fileInput'),
             uploadButton: document.getElementById('uploadButton'),
-            cancelButton: document.getElementById('cancelButton'),
             status: document.getElementById('status'),
             progressContainer: document.getElementById('progressContainer'),
             progressBar: document.getElementById('progressBar'),
@@ -37,8 +36,7 @@ class GitHubUploader {
         this.elements.loginButton.addEventListener('click', () => this.login());
         this.elements.fileInput.addEventListener('change', (e) => this.handleFileSelect(e));
         this.elements.uploadButton.addEventListener('click', () => this.handleUpload());
-        this.elements.cancelButton.addEventListener('click', () => this.cancelUpload());
-        window.addEventListener('message', (event) => this.handleOAuthCallback(event), false);
+        window.addEventListener('message', (event) => this.handleOAuthCallback(event));
     }
 
     setStatus(message, type = 'info') {
