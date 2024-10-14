@@ -18,19 +18,20 @@ class GitHubUploader {
     }
 
     initializeElements() {
-        this.elements = {
-            loginButton: document.getElementById('loginButton'),
-            loginSection: document.getElementById('loginSection'),
-            uploadSection: document.getElementById('uploadSection'),
-            fileInput: document.getElementById('fileInput'),
-            uploadButton: document.getElementById('uploadButton'),
-            status: document.getElementById('status'),
-            progressContainer: document.getElementById('progressContainer'),
-            progressBar: document.getElementById('progressBar'),
-            progressText: document.getElementById('progressText'),
-            fileInfo: document.getElementById('fileInfo')
-        };
-    }
+    this.elements = {
+        loginButton: document.getElementById('loginButton'),
+        loginSection: document.getElementById('loginSection'),
+        uploadSection: document.getElementById('uploadSection'),
+        fileInput: document.getElementById('fileInput'),
+        uploadButton: document.getElementById('uploadButton'),
+        cancelButton: document.getElementById('cancelButton'),
+        status: document.getElementById('status'),
+        progressContainer: document.getElementById('progressContainer'),
+        progressBar: document.getElementById('progressBar'),
+        progressText: document.getElementById('progressText'),
+        fileInfo: document.getElementById('fileInfo')
+    };
+}
 
     attachEventListeners() {
         this.elements.loginButton.addEventListener('click', () => this.login());
