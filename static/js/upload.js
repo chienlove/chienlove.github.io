@@ -38,7 +38,7 @@ class GitHubUploader {
         this.elements.fileInput.addEventListener('change', (e) => this.handleFileSelect(e));
         this.elements.uploadButton.addEventListener('click', () => this.handleUpload());
         this.elements.cancelButton.addEventListener('click', () => this.cancelUpload());
-        window.addEventListener('message', (event) => this.handleOAuthCallback(event));
+        window.addEventListener('message', (event) => this.handleOAuthCallback(event), false);
     }
 
     setStatus(message, type = 'info') {
@@ -77,6 +77,8 @@ class GitHubUploader {
     }
 
     async handleOAuthCallback(event) {
+        if (event.origin !== window.location.origin) return;
+        
         if (event.data.type === 'oauth') {
             try {
                 const response = await fetch('/.netlify/functions/get-token', {
