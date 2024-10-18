@@ -262,17 +262,8 @@ class GitHubUploader {
                 throw new Error(`HTTP ${response.status}: ${errorText}`);
             }
 
-            const responseText = await response.text();
-            console.log('Response Text:', responseText);
-
-            let jsonResponse;
-            try {
-                jsonResponse = JSON.parse(responseText);
-                console.log('Parsed response JSON:', jsonResponse);
-            } catch (error) {
-                console.error('Error parsing JSON:', error);
-                throw new Error('Response is not valid JSON');
-            }
+            const jsonResponse = await response.json();
+            console.log('Upload response:', jsonResponse);
 
             if (!jsonResponse || !jsonResponse.browser_download_url) {
                 throw new Error('Upload successful but no download URL found');
@@ -290,56 +281,82 @@ class GitHubUploader {
         const totalChunks = Math.ceil(file.size / CONFIG.CHUNK_SIZE);
         let uploadedChunks = 0;
 
-        for (let start = 0; start < file.size; start += CONFIG.CHUNK_SIZE) {
-            if (signal.aborted) {
-                throw new Error('Upload cancelled by user');
-            }
-
-            const chunk = file.slice(start, start + CONFIG.CHUNK_SIZE);
-            const end = Math.min(start + CONFIG.CHUNK_SIZE - 1, file.size - 1);
-
-            const response = await fetch(uploadUrl, {
+        try {
+            // Khởi tạo tải lên
+            const initResponse = await fetch(uploadUrl, {
                 method: 'POST',
                 headers: {
                     'Authorization': `token ${this.token}`,
                     'Content-Type': file.type || 'application/octet-stream',
-                    'Content-Range': `bytes ${start}-${end}/${file.size}`,
+                    'Content-Length': '0',
                     'Accept': 'application/vnd.github.v3+json'
                 },
-                body: chunk,
                 signal: signal
             });
 
-            if (!response.ok) {
-                const errorText = await response.text();
-                throw new Error(`HTTP ${response.status}: ${errorText}`);
+            if (!initResponse.ok) {
+                const errorText = await initResponse.text();
+                throw new Error(`HTTP ${initResponse.status}: ${errorText}`);
             }
 
-            uploadedChunks++;
-            const progress = Math.round((uploadedChunks / totalChunks) * 100);
-            this.updateProgress(progress, `Đang tải lên... ${progress}%`);
-        }
+            const initJson = await initResponse.json();
+            const uploadId = initJson.upload_id;
 
-        this.updateProgress(100, 'Tải lên hoàn tất');
-        return await (await fetch(uploadUrl, { method: 'GET', headers: { 'Authorization': `token ${this.token}` } })).json();
-    }
+            // Tải lên từng phần
+            for (let start = 0; start < file.size; start += CONFIG.CHUNK_SIZE) {
+                if (signal.aborted) {
+                    throw new Error('Upload cancelled by user');
+                }
 
-    cancelUpload() {
-        if (this.uploadAbortController) {
-            this.uploadAbortController.abort();
-            this.elements.cancelButton.disabled = true;
+                const chunk = file.slice(start, start + CONFIG.CHUNK_SIZE);
+                const end = Math.min(start + CONFIG.CHUNK_SIZE - 1, file.size - 1);
+
+                const chunkResponse = await fetch(`${uploadUrl}&upload_id=${uploadId}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Authorization': `token ${this.token}`,
+                        'Content-Type': file.type || 'application/octet-stream',
+                        'Content-Range': `bytes ${start}-${end}/${file.size}`,
+                        'Accept': 'application/vnd.github.v3+json'
+                    },
+                    body: chunk,
+                    signal: signal
+                });
+
+                if (!chunkResponse.ok) {
+                    const errorText = await chunkResponse.text();
+                    throw new Error(`HTTP ${chunkResponse.status}: ${errorText}`);
+                }
+
+                uploadedChunks++;
+                const progress = Math.round((uploadedChunks / totalChunks) * 100);
+                this.updateProgress(progress, `Đang tải lên... ${progress}%`);
+            }
+
+            // Hoàn thành tải lên
+            const finalizeResponse = await fetch(`${uploadUrl}&upload_id=${uploadId}`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `token ${this.token}`,
+                    'Content-Length': '0',
+                    'Accept': 'application/vnd.github.v3+json'
+                },
+                signal: signal
+            });
+
+            if (!finalizeResponse.ok) {
+                const errorText = await finalizeResponse.text();
+                throw new Error(`HTTP ${finalizeResponse.status}: ${errorText}`);
+            }
+
+            const finalJson = await finalizeResponse.json();
+            this.updateProgress(100, 'Tải lên hoàn tất');
+            return finalJson;
+        } catch (error) {
+            console.error('Lỗi trong uploadLargeFile:', error);
+            throw error;
         }
     }
-
-    isValidUrl(string) {
-        try {
-            new URL(string);
-            return true;
-        } catch (_) {
-            return false;  
-        }
-    }
-}
 
 // Khởi tạo uploader khi DOM đã sẵn sàng
 document.addEventListener('DOMContentLoaded', () => {
