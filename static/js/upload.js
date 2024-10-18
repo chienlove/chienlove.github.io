@@ -18,25 +18,26 @@ class GitHubUploader {
     }
 
     initializeElements() {
-    this.elements = {
-        loginButton: document.getElementById('loginButton'),
-        loginSection: document.getElementById('loginSection'),
-        uploadSection: document.getElementById('uploadSection'),
-        fileInput: document.getElementById('fileInput'),
-        uploadButton: document.getElementById('uploadButton'),
-        cancelButton: document.getElementById('cancelButton'),
-        status: document.getElementById('status'),
-        progressContainer: document.getElementById('progressContainer'),
-        progressBar: document.getElementById('progressBar'),
-        progressText: document.getElementById('progressText'),
-        fileInfo: document.getElementById('fileInfo')
-    };
-}
+        this.elements = {
+            loginButton: document.getElementById('loginButton'),
+            loginSection: document.getElementById('loginSection'),
+            uploadSection: document.getElementById('uploadSection'),
+            fileInput: document.getElementById('fileInput'),
+            uploadButton: document.getElementById('uploadButton'),
+            cancelButton: document.getElementById('cancelButton'),
+            status: document.getElementById('status'),
+            progressContainer: document.getElementById('progressContainer'),
+            progressBar: document.getElementById('progressBar'),
+            progressText: document.getElementById('progressText'),
+            fileInfo: document.getElementById('fileInfo')
+        };
+    }
 
     attachEventListeners() {
         this.elements.loginButton.addEventListener('click', () => this.login());
         this.elements.fileInput.addEventListener('change', (e) => this.handleFileSelect(e));
         this.elements.uploadButton.addEventListener('click', () => this.handleUpload());
+        this.elements.cancelButton.addEventListener('click', () => this.cancelUpload());
         window.addEventListener('message', (event) => this.handleOAuthCallback(event));
     }
 
@@ -357,6 +358,23 @@ class GitHubUploader {
             throw error;
         }
     }
+
+    cancelUpload() {
+        if (this.uploadAbortController) {
+            this.uploadAbortController.abort();
+            this.elements.cancelButton.disabled = true;
+        }
+    }
+
+    isValidUrl(string) {
+        try {
+            new URL(string);
+            return true;
+        } catch (_) {
+            return false;  
+        }
+    }
+}
 
 // Khởi tạo uploader khi DOM đã sẵn sàng
 document.addEventListener('DOMContentLoaded', () => {
