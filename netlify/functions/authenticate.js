@@ -1,6 +1,7 @@
 // netlify/functions/authenticate.js
 const { execFile } = require('child_process');
 const util = require('util');
+const path = require('path');
 const execFileAsync = util.promisify(execFile);
 
 exports.handler = async function(event, context) {
@@ -11,14 +12,17 @@ exports.handler = async function(event, context) {
   try {
     const { appleId, password } = JSON.parse(event.body);
     
+    // Xác định đường dẫn đến ipatool
+    const ipatoolPath = path.join(__dirname, '../bin/ipatool-2.1.4-linux-amd64');
+    
     // Use ipatool to authenticate
-    const { stdout } = await execFileAsync('ipatool', ['auth', 'login', '--apple-id', appleId, '--password', password]);
+    const { stdout } = await execFileAsync(ipatoolPath, ['auth', 'login', '--apple-id', appleId, '--password', password]);
     
     // Parse the output to get the session information
     const sessionInfo = JSON.parse(stdout);
 
     // Use ipatool to get the list of purchased apps
-    const { stdout: appsOutput } = await execFileAsync('ipatool', ['list', '--purchased']);
+    const { stdout: appsOutput } = await execFileAsync(ipatoolPath, ['list', '--purchased']);
     
     // Parse the output to get the list of apps
     const apps = JSON.parse(appsOutput).map(app => ({

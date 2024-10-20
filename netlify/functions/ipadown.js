@@ -13,8 +13,11 @@ exports.handler = async function(event, context) {
   try {
     const { bundleId, sessionInfo } = JSON.parse(event.body);
     
+    // Cập nhật đường dẫn đến ipatool
+    const ipatoolPath = path.join(__dirname, '../bin/ipatool-2.1.4-linux-amd64'); // Đảm bảo đường dẫn đúng
+
     // Use ipatool to download the IPA
-    const { stdout } = await execFileAsync('ipatool', ['download', '--bundle-identifier', bundleId, '--session-info', JSON.stringify(sessionInfo)]);
+    const { stdout } = await execFileAsync(ipatoolPath, ['download', '--bundle-identifier', bundleId, '--session-info', JSON.stringify(sessionInfo)]);
     
     // Parse the output to get the path of the downloaded IPA
     const downloadPath = JSON.parse(stdout).path;
