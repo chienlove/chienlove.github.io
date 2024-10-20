@@ -70,16 +70,13 @@ jobs:
       - name: Check bundled file
         run: cat ipa-downloader/dist/index.js
       
-      - name: Install Go
-        uses: actions/setup-go@v4
-        with:
-          go-version: '1.17'
-      
-      - name: Install ipatool
-        run: go install github.com/majd/ipatool@v1.1.4
-      
+      - name: Download ipatool binary
+        run: |
+              curl -L https://github.com/majd/ipatool/releases/download/v1.1.4/ipatool-linux-amd64 -o ipatool
+              chmod +x ipatool
+
       - name: Verify ipatool installation
-        run: ipatool --version
+        run: ./ipatool --version
 
       - name: Deploy Worker
         run: |
