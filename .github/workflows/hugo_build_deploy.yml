@@ -76,7 +76,7 @@ jobs:
           go-version: '1.17'
       
       - name: Install ipatool
-        run: go install github.com/majd/ipatool@latest
+        run: go install github.com/majd/ipatool@v1.1.4
       
       - name: Verify ipatool installation
         run: ipatool --version
