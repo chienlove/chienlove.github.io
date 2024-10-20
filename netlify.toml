@@ -7,6 +7,9 @@
   node_bundler = "esbuild"
   external_node_modules = ["@sparticuz/chromium", "puppeteer-core"]
 
+[[plugins]]
+  package = "./netlify/plugins/download-ipatool"
+  
 [build.environment]
   NODE_VERSION = "16"
 
