@@ -43,11 +43,6 @@ class IpaDownloader {
     `;
   }
 
-  attachEventListeners() {
-    const form = document.getElementById('login-form');
-    form.addEventListener('submit', this.handleLogin.bind(this));
-  }
-
   async handleLogin(e) {
     e.preventDefault();
     const button = document.getElementById('login-button');
@@ -66,9 +61,13 @@ class IpaDownloader {
         })
       });
 
-      if (!response.ok) throw new Error('Authentication failed');
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.details || 'Authentication failed');
+      }
 
       const data = await response.json();
+      this.sessionToken = data.sessionToken;
       this.displayApps(data.apps);
     } catch (err) {
       errorDiv.textContent = err.message;
@@ -80,13 +79,22 @@ class IpaDownloader {
   }
 
   async handleDownload(bundleId) {
+    const errorDiv = document.getElementById('error-message');
+    errorDiv.style.display = 'none';
+
     try {
-      const response = await fetch('/.netlify/functions/ipadown', {
+      const response = await fetch('/.netlify/functions/download', {
         method: 'POST',
-        body: JSON.stringify({ bundleId })
+        body: JSON.stringify({ 
+          bundleId,
+          sessionToken: this.sessionToken 
+        })
       });
 
-      if (!response.ok) throw new Error('Download failed');
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.details || 'Download failed');
+      }
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
@@ -97,7 +105,6 @@ class IpaDownloader {
       a.click();
       a.remove();
     } catch (err) {
-      const errorDiv = document.getElementById('error-message');
       errorDiv.textContent = err.message;
       errorDiv.style.display = 'block';
     }
