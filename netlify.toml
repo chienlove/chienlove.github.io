@@ -9,12 +9,11 @@
 
 [build.environment]
   NODE_VERSION = "16"
-  GO_VERSION = "1.16"
 
 [build.lifecycle]
   onBuild = """
-    go install github.com/majd/ipatool@latest
-    mv $GOPATH/bin/ipatool .
+    curl -L https://github.com/majd/ipatool/releases/download/v2.1.1/ipatool-linux-amd64 -o bin/ipatool
+    chmod +x bin/ipatool
   """
 
 [[edge_functions]]
