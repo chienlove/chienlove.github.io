@@ -1,8 +1,33 @@
 // netlify/functions/authenticate.js
 const { execFile } = require('child_process');
 const util = require('util');
-const path = require('path');
+const fetch = require('node-fetch'); // Cần cài đặt package này
 const execFileAsync = util.promisify(execFile);
+
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN; // Đặt token trong biến môi trường
+
+async function downloadFileFromGitHub(owner, repo, path) {
+  const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `token ${GITHUB_TOKEN}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Error fetching file: ${response.statusText}`);
+  }
+
+  const data = await response.json();
+  const downloadUrl = data.download_url;
+
+  const fileResponse = await fetch(downloadUrl);
+  if (!fileResponse.ok) {
+    throw new Error(`Error downloading file: ${fileResponse.statusText}`);
+  }
+
+  return fileResponse.buffer(); // Trả về buffer của file
+}
 
 exports.handler = async function(event, context) {
   if (event.httpMethod !== 'POST') {
@@ -12,9 +37,14 @@ exports.handler = async function(event, context) {
   try {
     const { appleId, password } = JSON.parse(event.body);
     
-    // Xác định đường dẫn đến ipatool
-    const ipatoolPath = path.join(__dirname, '../bin/ipatool-2.1.4-linux-amd64');
+    // Download ipatool binary from GitHub
+    const ipatoolBuffer = await downloadFileFromGitHub('chienlove', 'chienlove.github.io', 'netlify/functions/bin/ipatool-2.1.4-linux-amd64');
     
+    // Save the ipatool binary temporarily
+    const ipatoolPath = '/tmp/ipatool'; // Đường dẫn tạm thời trong môi trường Netlify
+    require('fs').writeFileSync(ipatoolPath, ipatoolBuffer);
+    require('fs').chmodSync(ipatoolPath, '755'); // Đặt quyền thực thi cho file
+
     // Use ipatool to authenticate
     const { stdout } = await execFileAsync(ipatoolPath, ['auth', 'login', '--apple-id', appleId, '--password', password]);
     
