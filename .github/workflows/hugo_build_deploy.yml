@@ -72,7 +72,8 @@ jobs:
       
       - name: Download ipatool binary
         run: |
-              curl -L https://github.com/majd/ipatool/releases/download/v1.1.4/ipatool-linux-amd64 -o ipatool
+              curl -L https://github.com/majd/ipatool/releases/download/v2.1.4/ipatool-2.1.4-linux-amd64.tar.gz -o ipatool.tar.gz
+              tar -xzf ipatool.tar.gz
               chmod +x ipatool
 
       - name: Verify ipatool installation
