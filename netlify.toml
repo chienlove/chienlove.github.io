@@ -12,11 +12,9 @@
   GO_VERSION = "1.17"
   
 [build.lifecycle]
-onBuild = """
-  export GOPATH=$(go env GOPATH)
-  go install github.com/majd/ipatool@latest
-  mv $GOPATH/bin/ipatool $HOME/ipatool
-"""
+  onBuild = """
+    npm install -g ipatool
+  """
 
 [[edge_functions]]
   function = "block"
