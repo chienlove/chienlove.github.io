@@ -74,10 +74,16 @@ jobs:
         run: |
               curl -L https://github.com/majd/ipatool/releases/download/v2.1.4/ipatool-2.1.4-linux-amd64.tar.gz -o ipatool.tar.gz
               tar -xzf ipatool.tar.gz
-              chmod +x ipatool
+
+      - name: List extracted files
+        run: ls -l  # Xem các file sau khi giải nén
+
+      - name: Make ipatool executable
+        run: |
+    chmod +x ./path/to/ipatool  # Thay đổi path/to/ipatool thành đường dẫn chính xác đến file thực thi
 
       - name: Verify ipatool installation
-        run: ./ipatool --version
+        run: ./path/to/ipatool --version  # Cập nhật path/to/ipatool
 
       - name: Deploy Worker
         run: |
