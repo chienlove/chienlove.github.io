@@ -1,4 +1,5 @@
 name: Hugo Build and Deploy
+
 on:
   push:
     branches:
@@ -68,6 +69,18 @@ jobs:
 
       - name: Check bundled file
         run: cat ipa-downloader/dist/index.js
+      
+      - name: Install Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.17'
+      
+      - name: Install ipatool
+        run: go install github.com/majd/ipatool@latest
+      
+      - name: Verify ipatool installation
+        run: ipatool --version
+
       - name: Deploy Worker
         run: |
           cd ipa-downloader
