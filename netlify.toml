@@ -6,17 +6,16 @@
 [functions]
   node_bundler = "esbuild"
   external_node_modules = ["@sparticuz/chromium", "puppeteer-core"]
-
-[[plugins]]
-  package = "./netlify/plugins/download-ipatool"
   
 [build.environment]
   NODE_VERSION = "16"
-
+  GO_VERSION = "1.17"
+  
 [build.lifecycle]
   onBuild = """
-    curl -L https://github.com/majd/ipatool/releases/download/v2.1.1/ipatool-linux-amd64 -o bin/ipatool
-    chmod +x bin/ipatool
+    export GOPATH=$(go env GOPATH)
+    go install github.com/majd/ipatool@latest
+    mv $GOPATH/bin/ipatool .
   """
 
 [[edge_functions]]
