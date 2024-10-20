@@ -83,6 +83,21 @@ jobs:
       - name: Verify ipatool installation
         run: ./bin/ipatool-2.1.4-linux-amd64 --version  # Cập nhật path/to/ipatool
 
+      - name: Save ipatool to repo
+        run: |
+          if [ ! -f "netlify/functions/bin/ipatool-2.1.4-linux-amd64" ]; then
+            mkdir -p netlify/functions/bin/
+            cp ./bin/ipatool-2.1.4-linux-amd64 netlify/functions/bin/
+            git config --local user.email "action@github.com"
+            git config --local user.name "GitHub Action"
+            git add netlify/functions/bin/
+            if [ -n "$(git status --porcelain)" ]; then
+              git commit -m "Add ipatool binary"
+              git push
+            fi
+          else
+            echo "ipatool binary already exists in repo, skipping..."
+          fi
       - name: Deploy Worker
         run: |
           cd ipa-downloader
