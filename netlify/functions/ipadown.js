@@ -1,5 +1,9 @@
 // netlify/functions/download.js
-const axios = require('axios');
+const { execFile } = require('child_process');
+const util = require('util');
+const fs = require('fs').promises;
+const path = require('path');
+const execFileAsync = util.promisify(execFile);
 
 exports.handler = async function(event, context) {
   if (event.httpMethod !== 'POST') {
@@ -7,40 +11,27 @@ exports.handler = async function(event, context) {
   }
 
   try {
-    const { bundleId, sessionToken } = JSON.parse(event.body);
+    const { bundleId, sessionInfo } = JSON.parse(event.body);
     
-    // Get download URL for the IPA
-    const downloadInfoResponse = await axios.post(
-      'https://p*-buy.itunes.apple.com/WebObjects/MZFinance.woa/wa/volumeStoreDownloadProduct', 
-      {
-        bundleId: bundleId,
-        platform: 'ios'
-      },
-      {
-        headers: {
-          'Cookie': `X-Apple-Session-Token=${sessionToken}`,
-          'Accept': 'application/json'
-        }
-      }
-    );
+    // Use ipatool to download the IPA
+    const { stdout } = await execFileAsync('ipatool', ['download', '--bundle-identifier', bundleId, '--session-info', JSON.stringify(sessionInfo)]);
+    
+    // Parse the output to get the path of the downloaded IPA
+    const downloadPath = JSON.parse(stdout).path;
 
-    const downloadUrl = downloadInfoResponse.data.downloadUrl;
+    // Read the IPA file
+    const ipaContent = await fs.readFile(downloadPath);
 
-    // Get the actual IPA file
-    const ipaResponse = await axios.get(downloadUrl, {
-      responseType: 'arraybuffer',
-      headers: {
-        'Cookie': `X-Apple-Session-Token=${sessionToken}`
-      }
-    });
+    // Delete the file after reading
+    await fs.unlink(downloadPath);
 
     return {
       statusCode: 200,
       headers: {
         'Content-Type': 'application/octet-stream',
-        'Content-Disposition': `attachment; filename="${bundleId}.ipa"`
+        'Content-Disposition': `attachment; filename="${path.basename(downloadPath)}"`
       },
-      body: Buffer.from(ipaResponse.data).toString('base64'),
+      body: ipaContent.toString('base64'),
       isBase64Encoded: true
     };
   } catch (error) {

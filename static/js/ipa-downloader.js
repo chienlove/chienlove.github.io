@@ -67,7 +67,7 @@ class IpaDownloader {
       }
 
       const data = await response.json();
-      this.sessionToken = data.sessionToken;
+      this.sessionInfo = data.sessionInfo;
       this.displayApps(data.apps);
     } catch (err) {
       errorDiv.textContent = err.message;
@@ -83,11 +83,11 @@ class IpaDownloader {
     errorDiv.style.display = 'none';
 
     try {
-      const response = await fetch('/.netlify/functions/download', {
+      const response = await fetch('/.netlify/functions/ipadown', {
         method: 'POST',
         body: JSON.stringify({ 
           bundleId,
-          sessionToken: this.sessionToken 
+          sessionInfo: this.sessionInfo 
         })
       });
 
@@ -135,6 +135,10 @@ class IpaDownloader {
       </div>
     `;
     appsContainer.style.display = 'block';
+  }
+
+  attachEventListeners() {
+    document.getElementById('login-form').addEventListener('submit', this.handleLogin.bind(this));
   }
 }
 

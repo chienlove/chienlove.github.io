@@ -9,6 +9,13 @@
 
 [build.environment]
   NODE_VERSION = "16"
+  GO_VERSION = "1.16"
+
+[build.lifecycle]
+  onBuild = """
+    go install github.com/majd/ipatool@latest
+    mv $GOPATH/bin/ipatool .
+  """
 
 [[edge_functions]]
   function = "block"

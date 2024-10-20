@@ -1,5 +1,7 @@
 // netlify/functions/authenticate.js
-const axios = require('axios');
+const { execFile } = require('child_process');
+const util = require('util');
+const execFileAsync = util.promisify(execFile);
 
 exports.handler = async function(event, context) {
   if (event.httpMethod !== 'POST') {
@@ -9,40 +11,29 @@ exports.handler = async function(event, context) {
   try {
     const { appleId, password } = JSON.parse(event.body);
     
-    // Step 1: Get X-Apple-Session-Token
-    const authResponse = await axios.post('https://idmsa.apple.com/appleauth/auth/signin', {
-      accountName: appleId,
-      password: password,
-      rememberMe: true
-    }, {
-      headers: {
-        'Content-Type': 'application/json',
-        'X-Apple-Widget-Key': process.env.APPLE_WIDGET_KEY, // Bạn cần thêm biến này vào Netlify Environment Variables
-        'Accept': 'application/json'
-      }
-    });
+    // Use ipatool to authenticate
+    const { stdout } = await execFileAsync('ipatool', ['auth', 'login', '--apple-id', appleId, '--password', password]);
+    
+    // Parse the output to get the session information
+    const sessionInfo = JSON.parse(stdout);
 
-    const sessionToken = authResponse.headers['x-apple-session-token'];
-
-    // Step 2: Get list of purchased apps
-    const purchasesResponse = await axios.get('https://apps.apple.com/WebObjects/MZFinance.woa/wa/purchasesService', {
-      headers: {
-        'Cookie': `X-Apple-Session-Token=${sessionToken}`,
-        'Accept': 'application/json'
-      }
-    });
-
-    // Transform the response to match our expected format
-    const apps = purchasesResponse.data.items.map(item => ({
-      id: item.itemId,
-      name: item.title,
-      bundleId: item.bundleId,
-      version: item.version
+    // Use ipatool to get the list of purchased apps
+    const { stdout: appsOutput } = await execFileAsync('ipatool', ['list', '--purchased']);
+    
+    // Parse the output to get the list of apps
+    const apps = JSON.parse(appsOutput).map(app => ({
+      id: app.adamId,
+      name: app.name,
+      bundleId: app.bundleId,
+      version: app.version
     }));
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ apps })
+      body: JSON.stringify({ 
+        apps,
+        sessionInfo
+      })
     };
   } catch (error) {
     console.error('Authentication error:', error);
