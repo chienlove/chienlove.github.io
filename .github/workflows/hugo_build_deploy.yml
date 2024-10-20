@@ -80,7 +80,7 @@ jobs:
 
       - name: Make ipatool executable
         run: |
-    chmod +x ./path/to/ipatool  # Thay đổi path/to/ipatool thành đường dẫn chính xác đến file thực thi
+              chmod +x ./path/to/ipatool  # Thay đổi path/to/ipatool thành đường dẫn chính xác đến file thực thi
 
       - name: Verify ipatool installation
         run: ./path/to/ipatool --version  # Cập nhật path/to/ipatool
