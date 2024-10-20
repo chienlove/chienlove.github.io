@@ -13,8 +13,15 @@ exports.handler = async function(event, context) {
   try {
     const { bundleId, sessionInfo } = JSON.parse(event.body);
     
-    // Đường dẫn trực tiếp đến file ipatool
-    const ipatoolPath = path.join(__dirname, 'bin', 'ipatool-2.1.4-linux-amd64');
+    // Cập nhật đường dẫn ipatool
+    const ipatoolPath = path.join('/var/task', 'netlify', 'functions', 'bin', 'ipatool-2.1.4-linux-amd64');
+    console.log('ipatool path:', ipatoolPath); // Để debug đường dẫn
+
+    // Kiểm tra file tồn tại
+    if (!require('fs').existsSync(ipatoolPath)) {
+      console.error('ipatool not found at:', ipatoolPath);
+      throw new Error('ipatool binary not found');
+    }
     
     // Set HOME environment variable to /tmp
     process.env.HOME = '/tmp';
