@@ -1,33 +1,8 @@
 // netlify/functions/authenticate.js
 const { execFile } = require('child_process');
 const util = require('util');
-const fetch = require('node-fetch'); // Cần cài đặt package này
+const path = require('path');
 const execFileAsync = util.promisify(execFile);
-
-const GITHUB_TOKEN = process.env.GITHUB_TOKEN; // Đặt token trong biến môi trường
-
-async function downloadFileFromGitHub(owner, repo, path) {
-  const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
-  const response = await fetch(url, {
-    headers: {
-      Authorization: `token ${GITHUB_TOKEN}`,
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Error fetching file: ${response.statusText}`);
-  }
-
-  const data = await response.json();
-  const downloadUrl = data.download_url;
-
-  const fileResponse = await fetch(downloadUrl);
-  if (!fileResponse.ok) {
-    throw new Error(`Error downloading file: ${fileResponse.statusText}`);
-  }
-
-  return fileResponse.buffer(); // Trả về buffer của file
-}
 
 exports.handler = async function(event, context) {
   if (event.httpMethod !== 'POST') {
@@ -35,40 +10,58 @@ exports.handler = async function(event, context) {
   }
 
   try {
-    const { appleId, password } = JSON.parse(event.body);
+    const { appleId, password, verificationCode } = JSON.parse(event.body);
     
-    // Download ipatool binary from GitHub
-    const ipatoolBuffer = await downloadFileFromGitHub('chienlove', 'chienlove.github.io', 'netlify/functions/bin/ipatool-2.1.4-linux-amd64');
+    // Đường dẫn trực tiếp đến file ipatool
+    const ipatoolPath = path.join(__dirname, 'bin', 'ipatool-2.1.4-linux-amd64');
     
-    // Save the ipatool binary temporarily
-    const ipatoolPath = '/tmp/ipatool'; // Đường dẫn tạm thời trong môi trường Netlify
-    require('fs').writeFileSync(ipatoolPath, ipatoolBuffer);
-    require('fs').chmodSync(ipatoolPath, '755'); // Đặt quyền thực thi cho file
+    // Set HOME environment variable to /tmp
+    process.env.HOME = '/tmp';
 
-    // Use ipatool to authenticate
-    const { stdout } = await execFileAsync(ipatoolPath, ['auth', 'login', '--apple-id', appleId, '--password', password]);
-    
-    // Parse the output to get the session information
-    const sessionInfo = JSON.parse(stdout);
+    // Chuẩn bị command array
+    const command = ['auth', 'login', '--apple-id', appleId, '--password', password];
+    if (verificationCode) {
+      command.push('--verification-code', verificationCode);
+    }
 
-    // Use ipatool to get the list of purchased apps
-    const { stdout: appsOutput } = await execFileAsync(ipatoolPath, ['list', '--purchased']);
-    
-    // Parse the output to get the list of apps
-    const apps = JSON.parse(appsOutput).map(app => ({
-      id: app.adamId,
-      name: app.name,
-      bundleId: app.bundleId,
-      version: app.version
-    }));
+    try {
+      // Use ipatool to authenticate
+      const { stdout } = await execFileAsync(ipatoolPath, command);
+      
+      // Parse the output to get the session information
+      const sessionInfo = JSON.parse(stdout);
 
-    return {
-      statusCode: 200,
-      body: JSON.stringify({ 
-        apps,
-        sessionInfo
-      })
-    };
+      // Use ipatool to get the list of purchased apps
+      const { stdout: appsOutput } = await execFileAsync(ipatoolPath, ['list', '--purchased']);
+      
+      // Parse the output to get the list of apps
+      const apps = JSON.parse(appsOutput).map(app => ({
+        id: app.adamId,
+        name: app.name,
+        bundleId: app.bundleId,
+        version: app.version
+      }));
+
+      return {
+        statusCode: 200,
+        body: JSON.stringify({ 
+          apps,
+          sessionInfo
+        })
+      };
+    } catch (error) {
+      // Check if error message indicates 2FA is required
+      if (error.message.includes('2FA')) {
+        return {
+          statusCode: 401,
+          body: JSON.stringify({
+            error: 'Two-factor authentication required',
+            requires2FA: true
+          })
+        };
+      }
+      throw error;
+    }
   } catch (error) {
     console.error('Authentication error:', error);
     return {

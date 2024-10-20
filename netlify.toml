@@ -9,13 +9,6 @@
   
 [build.environment]
   NODE_VERSION = "16"
-  GO_VERSION = "1.17"
-  
-[build.lifecycle]
-onBuild = """
-  npm install -g ipatool
-  ipatool --version
-"""
 
 [[edge_functions]]
   function = "block"

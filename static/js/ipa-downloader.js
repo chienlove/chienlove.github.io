@@ -31,6 +31,16 @@ class IpaDownloader {
                 class="input-primary" 
                 required
               />
+              <div id="verification-code-container" style="display: none;">
+                <input 
+                  type="text" 
+                  id="verification-code" 
+                  placeholder="2FA Verification Code" 
+                  class="input-primary"
+                  pattern="[0-9]{6}"
+                />
+                <p class="help-text">Please enter the verification code sent to your device</p>
+              </div>
               <button type="submit" class="button-primary" id="login-button">
                 Login
               </button>
@@ -47,6 +57,8 @@ class IpaDownloader {
     e.preventDefault();
     const button = document.getElementById('login-button');
     const errorDiv = document.getElementById('error-message');
+    const verificationCodeContainer = document.getElementById('verification-code-container');
+    const verificationCode = document.getElementById('verification-code').value;
     
     button.disabled = true;
     button.textContent = 'Processing...';
@@ -57,18 +69,32 @@ class IpaDownloader {
         method: 'POST',
         body: JSON.stringify({
           appleId: document.getElementById('apple-id').value,
-          password: document.getElementById('password').value
+          password: document.getElementById('password').value,
+          verificationCode: verificationCode || undefined
         })
       });
 
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.details || 'Authentication failed');
+      const data = await response.json();
+
+      if (response.status === 401 && data.requires2FA) {
+        // Show 2FA input field
+        verificationCodeContainer.style.display = 'block';
+        errorDiv.textContent = 'Please enter the verification code sent to your device';
+        errorDiv.style.display = 'block';
+        button.disabled = false;
+        button.textContent = 'Verify';
+        return;
       }
 
-      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.details || 'Authentication failed');
+      }
+
       this.sessionInfo = data.sessionInfo;
       this.displayApps(data.apps);
+      
+      // Hide verification code container after successful login
+      verificationCodeContainer.style.display = 'none';
     } catch (err) {
       errorDiv.textContent = err.message;
       errorDiv.style.display = 'block';
@@ -83,7 +109,7 @@ class IpaDownloader {
     errorDiv.style.display = 'none';
 
     try {
-      const response = await fetch('/.netlify/functions/ipadown', {
+      const response = await fetch('/.netlify/functions/download', {
         method: 'POST',
         body: JSON.stringify({ 
           bundleId,
