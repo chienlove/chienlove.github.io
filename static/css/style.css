@@ -477,3 +477,112 @@ body {
 .status.error #status-text {
   color: orange; /* Màu của văn bản khi có lỗi */
 }
+/* Styles chung cho tất cả blockquote */
+blockquote {
+  margin: 2rem 0;
+  padding: 1.5rem 2rem 1.5rem 4rem;
+  border-radius: 4px;
+  position: relative;
+  font-size: 1.1em;
+  line-height: 1.6;
+}
+
+/* Kiểu mặc định */
+blockquote {
+  background: #f9f9f9;
+  border-left: 5px solid #4a90e2;
+}
+
+blockquote::before {
+  content: '"';
+  font-size: 4em;
+  position: absolute;
+  left: 20px;
+  top: -10px;
+  color: #4a90e2;
+  opacity: 0.2;
+}
+
+/* Kiểu Info */
+blockquote.info {
+  background: #e3f2fd;
+  border-left: 5px solid #2196f3;
+}
+
+blockquote.info::before {
+  content: 'ℹ';
+  color: #2196f3;
+}
+
+/* Kiểu Warning */
+blockquote.warning {
+  background: #fff3e0;
+  border-left: 5px solid #ff9800;
+}
+
+blockquote.warning::before {
+  content: '⚠';
+  color: #ff9800;
+}
+
+/* Kiểu Success */
+blockquote.success {
+  background: #e8f5e9;
+  border-left: 5px solid #4caf50;
+}
+
+blockquote.success::before {
+  content: '✓';
+  color: #4caf50;
+}
+
+/* Kiểu Error */
+blockquote.error {
+  background: #ffebee;
+  border-left: 5px solid #f44336;
+}
+
+blockquote.error::before {
+  content: '✗';
+  color: #f44336;
+}
+
+/* Kiểu Note */
+blockquote.note {
+  background: #fff8e1;
+  border-left: 5px solid #ffc107;
+}
+
+blockquote.note::before {
+  content: '📝';
+  color: #ffc107;
+}
+
+/* Kiểu Quote người nổi tiếng */
+blockquote.famous-quote {
+  background: #f3e5f5;
+  border-left: 5px solid #9c27b0;
+  font-style: italic;
+}
+
+blockquote.famous-quote::before {
+  content: '"';
+  color: #9c27b0;
+}
+
+/* Author citation */
+blockquote cite {
+  display: block;
+  margin-top: 1rem;
+  font-style: normal;
+  font-weight: 500;
+  font-size: 0.9em;
+  text-align: right;
+}
+
+/* Hiệu ứng hover */
+blockquote:hover {
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  transform: translateY(-2px);
+  transition: all 0.3s ease;
+}
