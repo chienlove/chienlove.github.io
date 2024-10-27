@@ -1,7 +1,5 @@
 ---
 title: "{{ replace .Name "-" " " | title }}"
 date: {{ .Date }}
-draft: true
+slug: "{{ .Name | urlize }}"
 ---
-
-Nội dung bài viết của bạn ở đây.
