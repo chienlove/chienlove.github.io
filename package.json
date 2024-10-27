@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "hugo --gc --minify"
+    "build": "hugo --gc --minify",
+    "fix-slugs": "node js/fix-slugs.js"
   },
   "author": "",
   "license": "ISC",
