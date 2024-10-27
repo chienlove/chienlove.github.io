@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 
+// Hàm xóa dấu
 function removeAccents(str) {
   return str
     .normalize('NFD')
@@ -13,6 +14,7 @@ function removeAccents(str) {
     .replace(/^-|-$/g, '');
 }
 
+// Hàm xử lý file
 function processFiles(dir) {
   const files = fs.readdirSync(dir);
   
@@ -21,7 +23,7 @@ function processFiles(dir) {
     const stat = fs.statSync(filePath);
     
     if (stat.isDirectory()) {
-      processFiles(filePath); // Duyệt tiếp trong thư mục con
+      processFiles(filePath); // Đệ quy vào thư mục con
     } else if (path.extname(file) === '.md') {
       let content = fs.readFileSync(filePath, 'utf8');
       
@@ -31,12 +33,10 @@ function processFiles(dir) {
         const title = titleMatch[1];
         const newSlug = removeAccents(title);
         
-        // Kiểm tra xem đã có slug chưa
+        // Cập nhật slug
         if (content.includes('slug:')) {
-          // Thay thế slug cũ
           content = content.replace(/slug:\s*"[^"]+"/g, `slug: "${newSlug}"`);
         } else {
-          // Thêm slug mới vào sau title
           content = content.replace(
             /title:\s*"[^"]+"\n/,
             `title: "${title}"\nslug: "${newSlug}"\n`
@@ -50,16 +50,6 @@ function processFiles(dir) {
   });
 }
 
-// Thư mục cha chứa các thư mục con với bài viết
-const rootDir = path.join(__dirname, '../content'); // Thay đổi đường dẫn nếu cần
-
-// Duyệt qua tất cả các thư mục con và áp dụng `processFiles` cho mỗi thư mục
-const directories = fs.readdirSync(rootDir).filter(file => {
-  const filePath = path.join(rootDir, file);
-  return fs.statSync(filePath).isDirectory();
-});
-
-directories.forEach(directory => {
-  const dirPath = path.join(rootDir, directory);
-  processFiles(dirPath); // Áp dụng cho từng thư mục con
-});
+// Thư mục chứa bài viết
+const postsDir = path.join(__dirname, '../content/posts'); // Đường dẫn tới thư mục bài viết
+processFiles(postsDir);
