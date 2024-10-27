@@ -21,7 +21,7 @@ function processFiles(dir) {
     const stat = fs.statSync(filePath);
     
     if (stat.isDirectory()) {
-      processFiles(filePath);
+      processFiles(filePath); // Duyệt tiếp trong thư mục con
     } else if (path.extname(file) === '.md') {
       let content = fs.readFileSync(filePath, 'utf8');
       
@@ -50,6 +50,16 @@ function processFiles(dir) {
   });
 }
 
-// Thư mục chứa bài viết
-const postsDir = path.join(__dirname, '../content/posts');
-processFiles(postsDir);
+// Thư mục cha chứa các thư mục con với bài viết
+const rootDir = path.join(__dirname, '../content'); // Thay đổi đường dẫn nếu cần
+
+// Duyệt qua tất cả các thư mục con và áp dụng `processFiles` cho mỗi thư mục
+const directories = fs.readdirSync(rootDir).filter(file => {
+  const filePath = path.join(rootDir, file);
+  return fs.statSync(filePath).isDirectory();
+});
+
+directories.forEach(directory => {
+  const dirPath = path.join(rootDir, directory);
+  processFiles(dirPath); // Áp dụng cho từng thư mục con
+});
