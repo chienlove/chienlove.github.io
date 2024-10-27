@@ -6,8 +6,7 @@
   "scripts": {
     "process-md-files": "node static/js/fix-slugs.js",
     "build": "npm run process-md-files && hugo --gc --minify"
-  }
-},
+  },
   "author": "",
   "license": "ISC",
   "dependencies": {
