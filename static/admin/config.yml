@@ -10,7 +10,7 @@ collections:
     label: "Bài viết"
     folder: "content/posts"
     create: true
-    slug: "{{year}}-{{month}}-{{day}}-{{slug}}"
+    slug: "{{year}}-{{month}}-{{day}}-{{title | urlize}}"
     fields:
       - {label: "Tiêu đề", name: "title", widget: "string"}
       - {label: "Ngày đăng", name: "date", widget: "datetime"}
@@ -25,7 +25,7 @@ collections:
     label: "Ứng dụng"
     folder: "content/apps"
     create: true
-    slug: "{{slug}}"
+    slug: "{{slug}}-{{title | urlize}}"
     fields:
       - {label: "Tên ứng dụng", name: "title", widget: "string", required: true}
       - {label: "Ngày đăng", name: "date", widget: "datetime", required: true}
@@ -46,7 +46,7 @@ collections:
     label: "Tool Jailbreak"
     folder: "content/jailbreak-tools"
     create: true
-    slug: "{{slug}}"
+    slug: "{{slug}}-{{title | urlize}}"
     fields:
       - {label: "Tên Tool", name: "title", widget: "string", required: true}
       - {label: "Ngày đăng", name: "date", widget: "datetime", required: true}
