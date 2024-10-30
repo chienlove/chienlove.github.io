@@ -74,3 +74,34 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 });
+
+    // Tự cập nhật thời gian đang bài
+    const postTimeElements = document.querySelectorAll('.post-time');
+    postTimeElements.forEach(el => {
+        const postTime = new Date(el.getAttribute('data-time'));
+        const now = new Date();
+        const diffMs = now - postTime;
+        const diffMinutes = Math.floor(diffMs / (1000 * 60));
+        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+        const diffDays = Math.floor(diffHours / 24);
+
+        let timeAgoText = '';
+        if (diffMinutes < 1) {
+            timeAgoText = 'Vừa xong';
+        } else if (diffMinutes < 60) {
+            timeAgoText = `${diffMinutes} phút trước`;
+        } else if (diffHours < 24) {
+            timeAgoText = `${diffHours} giờ trước`;
+        } else if (diffDays === 1) {
+            timeAgoText = `Hôm qua ${postTime.getHours()}:${postTime.getMinutes()}`;
+        } else if (diffDays < 7) {
+            timeAgoText = `${diffDays} ngày trước`;
+        } else {
+            const daysOfWeek = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
+            const dayOfWeek = daysOfWeek[postTime.getDay()];
+            timeAgoText = `${dayOfWeek}, ${postTime.getDate()}/${postTime.getMonth() + 1}/${postTime.getFullYear()}`;
+        }
+
+        el.innerText = timeAgoText;
+    });
+});
