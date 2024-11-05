@@ -96,13 +96,18 @@ document.addEventListener('DOMContentLoaded', function () {
         } else if (diffHours < 24) {
             timeAgoText = `${diffHours} giờ trước`;
         } else if (diffDays === 1) {
+            // Nếu là ngày hôm qua
             timeAgoText = `Hôm qua ${postTime.getUTCHours()}:${postTime.getUTCMinutes().toString().padStart(2, '0')}`;
         } else if (diffDays < 7) {
+            // Hiển thị thứ nếu trong vòng 7 ngày
             const daysOfWeek = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
             const dayOfWeek = daysOfWeek[postTime.getUTCDay()];
             timeAgoText = `${dayOfWeek}, ${postTime.getUTCDate()}/${postTime.getUTCMonth() + 1}/${postTime.getUTCFullYear()}`;
         } else {
-            timeAgoText = `${postTime.getUTCDate()}/${postTime.getUTCMonth() + 1}/${postTime.getUTCFullYear()}`;
+            // Hiển thị đầy đủ ngày, tháng, năm nếu hơn 7 ngày
+            const daysOfWeek = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
+            const dayOfWeek = daysOfWeek[postTime.getUTCDay()];
+            timeAgoText = `${dayOfWeek}, ${postTime.getUTCDate()}/${postTime.getUTCMonth() + 1}/${postTime.getUTCFullYear()}`;
         }
 
         el.innerText = timeAgoText;
