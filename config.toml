@@ -2,33 +2,26 @@ baseURL = "https://storeios.net"
 languageCode = "vi-vn"
 title = "storeios"
 
-# Uncomment this line if you have a theme to use
-# theme = "ananke"
-
 [params]
-  # Các tham số tùy chỉnh nếu cần
   disqusShortname = "storeios"
-
-# Bỏ cấu hình menu không cần thiết
 
 [markup.goldmark.renderer]
   unsafe = true
 
-# Thêm cấu hình build nếu cần
 [build]
   publishDir = "public"
   minify = true
   gc = true
 
 [permalinks]
-  posts = "/:slug/"
-  apps = "/:slug/"
-  jailbreak-tools = "/:slug/"
+  posts = "/:year/:month/:day/:slug/"
+  apps = "/apps/:slug/"
+  jailbreak-tools = "/jailbreak/:slug/"
   categories = "/categories/:slug/"
 
 [taxonomies]
-category = "categories"
-tag = "tags"
+  category = "categories"
+  tag = "tags"
 
 [outputs]
   home = ["HTML", "JSON"]
@@ -38,3 +31,14 @@ tag = "tags"
     mediaType = "application/json"
     baseName = "index"
     isPlainText = true
+
+# Thêm phần này để xử lý URL tiếng Việt
+[blackfriday]
+  plainIDAnchors = true
+  hrefTargetBlank = true
+
+[frontmatter]
+  date = ["date", "publishDate", "lastmod"]
+  lastmod = [":git", "lastmod", "date", "publishDate"]
+  publishDate = ["publishDate", "date"]
+  expiryDate = ["expiryDate"]
