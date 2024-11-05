@@ -10,7 +10,8 @@ collections:
     label: "Bài viết"
     folder: "content/posts"
     create: true
-    slug: "{{year}}-{{month}}-{{day}}-{{title | urlize}}"
+    # Cập nhật slug để loại bỏ dấu tiếng Việt
+    slug: "{{year}}-{{month}}-{{day}}-{{title | replaceRE '[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]' 'a' | replaceRE '[èéẹẻẽêềếệểễ]' 'e' | replaceRE '[ìíịỉĩ]' 'i' | replaceRE '[òóọỏõôồốộổỗơờớợởỡ]' 'o' | replaceRE '[ùúụủũưừứựửữ]' 'u' | replaceRE '[ỳýỵỷỹ]' 'y' | replaceRE '[đ]' 'd' | urlize }}"
     fields:
       - {label: "Tiêu đề", name: "title", widget: "string"}
       - {label: "Ngày đăng", name: "date", widget: "datetime"}
