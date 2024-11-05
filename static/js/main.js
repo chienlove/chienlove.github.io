@@ -78,9 +78,12 @@ document.addEventListener('DOMContentLoaded', function () {
     // Tự cập nhật thời gian đăng bài
     const postTimeElements = document.querySelectorAll('.post-time');
     postTimeElements.forEach(el => {
+        // Lấy thời gian từ `data-time` và chuyển đổi sang UTC
         const postTime = new Date(el.getAttribute('data-time'));
-        const now = new Date();
-        const diffMs = now - postTime;
+        const now = new Date(); // Thời gian hiện tại của trình duyệt người dùng
+
+        // Tính toán khoảng thời gian dựa trên UTC
+        const diffMs = now.getTime() - postTime.getTime();
         const diffMinutes = Math.floor(diffMs / (1000 * 60));
         const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
         const diffDays = Math.floor(diffHours / 24);
@@ -93,13 +96,13 @@ document.addEventListener('DOMContentLoaded', function () {
         } else if (diffHours < 24) {
             timeAgoText = `${diffHours} giờ trước`;
         } else if (diffDays === 1) {
-            timeAgoText = `Hôm qua ${postTime.getHours()}:${postTime.getMinutes().toString().padStart(2, '0')}`;
+            timeAgoText = `Hôm qua ${postTime.getUTCHours()}:${postTime.getUTCMinutes().toString().padStart(2, '0')}`;
         } else if (diffDays < 7) {
             const daysOfWeek = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
-            const dayOfWeek = daysOfWeek[postTime.getDay()];
-            timeAgoText = `${dayOfWeek}, ${postTime.getDate()}/${postTime.getMonth() + 1}/${postTime.getFullYear()}`;
+            const dayOfWeek = daysOfWeek[postTime.getUTCDay()];
+            timeAgoText = `${dayOfWeek}, ${postTime.getUTCDate()}/${postTime.getUTCMonth() + 1}/${postTime.getUTCFullYear()}`;
         } else {
-            timeAgoText = `${postTime.getDate()}/${postTime.getMonth() + 1}/${postTime.getFullYear()}`;
+            timeAgoText = `${postTime.getUTCDate()}/${postTime.getUTCMonth() + 1}/${postTime.getUTCFullYear()}`;
         }
 
         el.innerText = timeAgoText;
