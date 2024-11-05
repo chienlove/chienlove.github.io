@@ -4,15 +4,17 @@ document.addEventListener('DOMContentLoaded', function () {
     const mobileNav = document.querySelector('.mobile-nav');
     const sidebarOverlay = document.querySelector('.sidebar-overlay');
 
-    hamburgerMenu.addEventListener('click', function () {
-        mobileNav.classList.toggle('active');
-        sidebarOverlay.classList.toggle('active');
-    });
+    if (hamburgerMenu && mobileNav && sidebarOverlay) {
+        hamburgerMenu.addEventListener('click', function () {
+            mobileNav.classList.toggle('active');
+            sidebarOverlay.classList.toggle('active');
+        });
 
-    sidebarOverlay.addEventListener('click', function () {
-        mobileNav.classList.remove('active');
-        sidebarOverlay.classList.remove('active');
-    });
+        sidebarOverlay.addEventListener('click', function () {
+            mobileNav.classList.remove('active');
+            sidebarOverlay.classList.remove('active');
+        });
+    }
 
     // Blockquote handling
     const processBlockquotes = () => {
@@ -55,7 +57,6 @@ document.addEventListener('DOMContentLoaded', function () {
     processBlockquotes();
 
     // Optional: Xử lý blockquotes khi nội dung được cập nhật động
-    // Nếu bạn có content được load động, bạn có thể gọi processBlockquotes() sau khi load
     const contentObserver = new MutationObserver((mutations) => {
         mutations.forEach((mutation) => {
             if (mutation.type === 'childList' && 
@@ -73,9 +74,8 @@ document.addEventListener('DOMContentLoaded', function () {
             subtree: true
         });
     }
-});
 
-    // Tự cập nhật thời gian đang bài
+    // Tự cập nhật thời gian đăng bài
     const postTimeElements = document.querySelectorAll('.post-time');
     postTimeElements.forEach(el => {
         const postTime = new Date(el.getAttribute('data-time'));
@@ -93,13 +93,13 @@ document.addEventListener('DOMContentLoaded', function () {
         } else if (diffHours < 24) {
             timeAgoText = `${diffHours} giờ trước`;
         } else if (diffDays === 1) {
-            timeAgoText = `Hôm qua ${postTime.getHours()}:${postTime.getMinutes()}`;
+            timeAgoText = `Hôm qua ${postTime.getHours()}:${postTime.getMinutes().toString().padStart(2, '0')}`;
         } else if (diffDays < 7) {
-            timeAgoText = `${diffDays} ngày trước`;
-        } else {
             const daysOfWeek = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'];
             const dayOfWeek = daysOfWeek[postTime.getDay()];
             timeAgoText = `${dayOfWeek}, ${postTime.getDate()}/${postTime.getMonth() + 1}/${postTime.getFullYear()}`;
+        } else {
+            timeAgoText = `${postTime.getDate()}/${postTime.getMonth() + 1}/${postTime.getFullYear()}`;
         }
 
         el.innerText = timeAgoText;
