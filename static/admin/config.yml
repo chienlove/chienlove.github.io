@@ -11,7 +11,7 @@ collections:
     folder: "content/posts"
     create: true
     # Cập nhật slug để loại bỏ dấu tiếng Việt
-    slug: "{{year}}-{{month}}-{{day}}-{{title | regex_replace('[^a-zA-Z0-9-]', '') | lower | kebabcase }}"
+    slug: "{{title | regex_replace '[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđ]' 'a' | regex_replace '[^a-z0-9]' '-' | lower}}"
     fields:
       - {label: "Tiêu đề", name: "title", widget: "string"}
       - {label: "Ngày đăng", name: "date", widget: "datetime"}
