@@ -1,6 +1,6 @@
 const https = require('https');
 
-const URL = 'https://usescarlet.com';
+const URL = 'https://ipa-apps.me';
 
 exports.handler = async function(event, context) {
   return new Promise((resolve, reject) => {
