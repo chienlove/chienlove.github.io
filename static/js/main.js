@@ -1,4 +1,45 @@
 document.addEventListener('DOMContentLoaded', function () {
+    // Tích hợp script kiểm tra trạng thái
+    const statusText = document.getElementById('status-text');
+    const statusIcon = document.getElementById('status-icon');
+
+    async function checkStatus() {
+        try {
+            const response = await fetch('/api/check-status');
+            const data = await response.json();
+
+            switch(data.status) {
+                case 'signed':
+                    statusText.textContent = 'Đã ký';
+                    statusText.classList.add('text-success');
+                    statusText.classList.remove('text-danger');
+                    statusIcon.classList.add('bg-success');
+                    statusIcon.classList.remove('bg-danger');
+                    break;
+                case 'revoked':
+                    statusText.textContent = 'Đã thu hồi';
+                    statusText.classList.add('text-danger');
+                    statusText.classList.remove('text-success');
+                    statusIcon.classList.add('bg-danger');
+                    statusIcon.classList.remove('bg-success');
+                    break;
+                default:
+                    statusText.textContent = 'Không xác định';
+                    statusText.classList.remove('text-success', 'text-danger');
+                    statusIcon.classList.remove('bg-success', 'bg-danger');
+            }
+        } catch (error) {
+            statusText.textContent = 'Lỗi kết nối';
+            console.error('Lỗi kiểm tra trạng thái:', error);
+        }
+    }
+
+    // Kiểm tra ngay lập tức khi trang tải
+    checkStatus();
+
+    // Cập nhật trạng thái mỗi 5 phút
+    setInterval(checkStatus, 5 * 60 * 1000);
+
     // Menu handling
     const hamburgerMenu = document.querySelector('.hamburger-menu');
     const mobileNav = document.querySelector('.mobile-nav');

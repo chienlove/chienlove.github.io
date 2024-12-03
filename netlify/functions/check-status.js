@@ -1,72 +1,98 @@
 const https = require('https');
-const cheerio = require('cheerio');
+const { URL } = require('url');
 
-const URL = 'https://ipa-apps.me';
+// Cấu hình linh hoạt
+const CONFIG = {
+    TARGET_URL: 'https://ipa-apps.me',
+    TIMEOUT: 5000,
+    RETRY_ATTEMPTS: 3
+};
 
-exports.handler = async function(event, context) {
-  return new Promise((resolve, reject) => {
-    const req = https.get(
-      URL,
-      {
-        timeout: 5000,
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-          'Cache-Control': 'no-cache'
+// Hàm gửi request với nhiều lần thử lại
+async function fetchWithRetry(url, options, maxRetries = CONFIG.RETRY_ATTEMPTS) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+            return await new Promise((resolve, reject) => {
+                const req = https.get(url, options, (res) => {
+                    let data = '';
+                    res.on('data', chunk => data += chunk);
+                    res.on('end', () => resolve(data));
+                });
+
+                req.on('error', reject);
+                req.setTimeout(CONFIG.TIMEOUT, () => {
+                    req.destroy();
+                    reject(new Error('Request timeout'));
+                });
+            });
+        } catch (error) {
+            if (attempt === maxRetries) throw error;
+            console.log(`Attempt ${attempt} failed. Retrying...`);
         }
-      },
-      (res) => {
-        let data = '';
+    }
+}
 
-        res.on('data', (chunk) => {
-          data += chunk;
-        });
+// Hàm phân tích trạng thái
+function parseStatus(html) {
+    // Chiến lược phân tích linh hoạt
+    const statusPatterns = [
+        /signed/i,
+        /revoked/i,
+        /available/i,
+        /unavailable/i
+    ];
 
-        res.on('end', () => {
-          console.log('HTML nhận được:', data); // Log dữ liệu thô
+    for (const pattern of statusPatterns) {
+        if (pattern.test(html)) {
+            return pattern.source.replace(/\\/g, '').toLowerCase().replace(/[\^$]/g, '');
+        }
+    }
 
-          try {
-            const $ = cheerio.load(data);
-            const statusElement = $('.status-class'); // Thay đổi class/ID theo đúng trang web
-            const statusText = statusElement.text().toLowerCase();
+    return 'unknown';
+}
 
-            console.log('Trạng thái phân tích:', statusText); // Log trạng thái được phân tích
+exports.handler = async (event) => {
+    try {
+        // Thêm User-Agent và các header bảo mật
+        const options = {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+                'Accept': 'text/html,application/xhtml+xml,application/xml',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Cache-Control': 'no-cache'
+            }
+        };
 
-            const status = statusText.includes('signed') ? 'signed' : 'revoked';
+        // Lấy nội dung trang web
+        const htmlContent = await fetchWithRetry(CONFIG.TARGET_URL, options);
+        
+        // Phân tích trạng thái
+        const status = parseStatus(htmlContent);
 
-            resolve({
-              statusCode: 200,
-              body: JSON.stringify({ status }),
-              headers: { 'Content-Type': 'application/json' }
-            });
-          } catch (error) {
-            console.error('Lỗi phân tích dữ liệu:', error);
+        return {
+            statusCode: 200,
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            },
+            body: JSON.stringify({ 
+                status, 
+                timestamp: new Date().toISOString() 
+            })
+        };
+    } catch (error) {
+        console.error('Lỗi chi tiết:', error);
 
-            resolve({
-              statusCode: 500,
-              body: JSON.stringify({ error: 'Lỗi phân tích dữ liệu', details: error.message }),
-              headers: { 'Content-Type': 'application/json' }
-            });
-          }
-        });
-      }
-    );
-
-    req.on('error', (error) => {
-      console.error('Lỗi:', error);
-      resolve({
-        statusCode: 500,
-        body: JSON.stringify({ error: 'Lỗi khi kết nối đến trang web', details: error.message }),
-        headers: { 'Content-Type': 'application/json' }
-      });
-    });
-
-    req.on('timeout', () => {
-      req.destroy();
-      resolve({
-        statusCode: 504,
-        body: JSON.stringify({ error: 'Timeout khi kết nối đến trang web' }),
-        headers: { 'Content-Type': 'application/json' }
-      });
-    });
-  });
+        return {
+            statusCode: 500,
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            },
+            body: JSON.stringify({ 
+                error: 'Không thể kiểm tra trạng thái',
+                details: error.message 
+            })
+        };
+    }
 };
