@@ -1,24 +1,22 @@
-const chromium = require('@sparticuz/chromium');
-const puppeteer = require('puppeteer-core');
+const https = require('https');
 
 exports.handler = async () => {
     try {
-        const browser = await puppeteer.launch({
-            args: chromium.args,
-            defaultViewport: chromium.defaultViewport,
-            executablePath: await chromium.executablePath(),
-            headless: chromium.headless,
+        const options = {
+            headers: {
+                'User-Agent': 'Mozilla/5.0',
+            },
+        };
+
+        const html = await new Promise((resolve, reject) => {
+            https.get('https://ipa-apps.me', options, (res) => {
+                let data = '';
+                res.on('data', (chunk) => (data += chunk));
+                res.on('end', () => resolve(data));
+            }).on('error', reject);
         });
 
-        const page = await browser.newPage();
-        await page.goto('https://ipa-apps.me', { waitUntil: 'networkidle2' });
-
-        // Tìm kiếm chữ "SIGNED" trong nội dung đã render
-        const htmlContent = await page.content();
-        const isSigned = /SIGNED/i.test(htmlContent);
-
-        // Đóng trình duyệt
-        await browser.close();
+        const isSigned = /SIGNED/i.test(html);
 
         return {
             statusCode: 200,
