@@ -1,14 +1,12 @@
 const https = require('https');
 const { URL } = require('url');
 
-// Cấu hình linh hoạt
 const CONFIG = {
     TARGET_URL: 'https://ipa-apps.me',
     TIMEOUT: 5000,
     RETRY_ATTEMPTS: 3
 };
 
-// Hàm gửi request với nhiều lần thử lại
 async function fetchWithRetry(url, options, maxRetries = CONFIG.RETRY_ATTEMPTS) {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
@@ -32,28 +30,14 @@ async function fetchWithRetry(url, options, maxRetries = CONFIG.RETRY_ATTEMPTS) 
     }
 }
 
-// Hàm phân tích trạng thái
 function parseStatus(html) {
-    // Chiến lược phân tích linh hoạt
-    const statusPatterns = [
-        /signed/i,
-        /revoked/i,
-        /available/i,
-        /unavailable/i
-    ];
-
-    for (const pattern of statusPatterns) {
-        if (pattern.test(html)) {
-            return pattern.source.replace(/\\/g, '').toLowerCase().replace(/[\^$]/g, '');
-        }
-    }
-
-    return 'unknown';
+    // Kiểm tra xem chữ "SIGNED" có xuất hiện không
+    const isSigned = /SIGNED/i.test(html);
+    return isSigned ? "signed" : "revoked";
 }
 
 exports.handler = async (event) => {
     try {
-        // Thêm User-Agent và các header bảo mật
         const options = {
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
@@ -63,10 +47,11 @@ exports.handler = async (event) => {
             }
         };
 
-        // Lấy nội dung trang web
         const htmlContent = await fetchWithRetry(CONFIG.TARGET_URL, options);
-        
-        // Phân tích trạng thái
+
+        // Debug HTML nếu cần
+        console.log("HTML Content:", htmlContent);
+
         const status = parseStatus(htmlContent);
 
         return {
