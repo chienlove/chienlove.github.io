@@ -5,9 +5,12 @@ exports.handler = async () => {
         const options = {
             headers: {
                 'User-Agent': 'Mozilla/5.0',
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache',
             },
         };
 
+        // Fetch nội dung HTML
         const html = await new Promise((resolve, reject) => {
             https.get('https://ipa-apps.me', options, (res) => {
                 let data = '';
@@ -16,7 +19,14 @@ exports.handler = async () => {
             }).on('error', reject);
         });
 
-        const isSigned = /SIGNED/i.test(html);
+        // Loại bỏ bình luận và các thẻ HTML
+        const cleanedHtml = html
+            .replace(/<!--[\s\S]*?-->/g, '') // Loại bỏ bình luận HTML
+            .replace(/<[^>]*>/g, '')        // Loại bỏ thẻ HTML
+            .replace(/[^\w\s]/g, '');       // Loại bỏ biểu tượng và ký tự đặc biệt
+
+        // Kiểm tra từ "signed" không phân biệt hoa/thường
+        const isSigned = /\bsigned\b/i.test(cleanedHtml);
 
         return {
             statusCode: 200,
