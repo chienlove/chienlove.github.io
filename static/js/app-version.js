@@ -7,7 +7,7 @@ function isAppId(input) {
 }
 
 function extractAppIdFromUrl(url) {
-    const match = url.match(/id(\d+)/);
+    const match = url.match(/(?:id|app\/.*?id)(\d+)/i); // Cập nhật regex
     return match ? match[1] : null;
 }
 
@@ -41,6 +41,9 @@ function fetchAppInfoFromiTunes(appId) {
 
     fetch(`/api/appInfo?id=${appId}`)
         .then(response => {
+            if (response.status === 404) {
+                throw new Error('Không tìm thấy ứng dụng');
+            }
             if (!response.ok) {
                 throw new Error(`Lỗi HTTP! Trạng thái: ${response.status}`);
             }
@@ -76,7 +79,8 @@ function fetchAppInfoFromiTunes(appId) {
 }
 
 function searchApp(term) {
-    fetch(`https://itunes.apple.com/search?term=${term}&entity=software`)
+    const encodedTerm = encodeURIComponent(term); // Encode URI
+    fetch(`https://itunes.apple.com/search?term=${encodedTerm}&entity=software`)
         .then(response => {
             if (!response.ok) {
                 throw new Error(`Lỗi HTTP! Trạng thái: ${response.status}`);
@@ -99,12 +103,12 @@ function displaySearchResults(apps) {
     const resultDiv = document.getElementById('result');
     resultDiv.innerHTML = '';
 
-    if (apps.length > 0) {
+    if (apps && apps.length > 0) {
         let output = '<table><tr><th>Icon</th><th>Tên ứng dụng</th><th>Tác giả</th></tr>';
         apps.forEach(app => {
             output += `<tr>
                 <td><img src="${app.artworkUrl60}" alt="${app.trackName} icon"></td>
-                <td><a href="#" onclick="getAppVersions(${app.trackId}, '${app.trackName}', '${app.artistName}', '${app.version}', '${app.releaseNotes}'); return false;">${app.trackName}</a></td>
+                <td><a href="#" onclick="getAppVersions(${app.trackId}, '${app.trackName}', '${app.artistName}', '${app.version || ''}', '${app.releaseNotes || ''}'); return false;">${app.trackName}</a></td>
                 <td>${app.artistName}</td>
             </tr>`;
         });
@@ -118,10 +122,10 @@ function displaySearchResults(apps) {
 function getAppVersions(appId, appName, artistName, latestVersion, releaseNotes) {
     document.getElementById('appInfo').innerHTML = `
         <h2>Thông tin Ứng dụng</h2>
-        <p><strong>Tên:</strong> ${appName}</p>
-        <p><strong>Tác giả:</strong> ${artistName}</p>
-        <p><strong>Phiên bản mới nhất:</strong> ${latestVersion}</p>
-        <p><strong>Mô tả cập nhật:</strong> ${releaseNotes}</p>
+        <p><strong>Tên:</strong> ${appName || 'Không có thông tin'}</p>
+        <p><strong>Tác giả:</strong> ${artistName || 'Không có thông tin'}</p>
+        <p><strong>Phiên bản mới nhất:</strong> ${latestVersion || 'Không có thông tin'}</p>
+        <p><strong>Mô tả cập nhật:</strong> ${releaseNotes || 'Không có thông tin'}</p>
     `;
 
     fetchAppInfoFromiTunes(appId);
@@ -132,13 +136,16 @@ function fetchTimbrdVersion(appId) {
     document.getElementById('loading').style.display = 'block';
     fetch(`/api/getAppVersions?id=${appId}`)
         .then(response => {
+            if (response.status === 404) {
+                throw new Error("Không tìm thấy thông tin phiên bản");
+            }
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                throw new Error(`Lỗi HTTP! Trạng thái: ${response.status}`);
             }
             return response.json();
         })
         .then(data => {
-            if (data && data.length > 0) {
+            if (Array.isArray(data) && data.length > 0) { // Kiểm tra mảng hợp lệ
                 versions = data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
                 paginateVersions(currentPage);
             } else {
@@ -184,6 +191,7 @@ function paginateVersions(page) {
         }
     } else {
         resultDiv.innerHTML = '<p>Không tìm thấy phiên bản nào cho ứng dụng này.</p>';
+        document.getElementById('pagination').innerHTML = ''; // Xóa phân trang
     }
 }
 
