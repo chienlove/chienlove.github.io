@@ -34,9 +34,10 @@ exports.handler = async function(event, context) {
         if (!Array.isArray(parsedData) || parsedData.length === 0) {
             return {
                 statusCode: 404,
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
                     message: "Không tìm thấy thông tin phiên bản",
-                    details: `Ứng dụng với ID '${appId}' không có dữ liệu phiên bản`
+                    details: `Dữ liệu trả về không có cấu trúc mảng hoặc mảng rỗng. Dữ liệu: ${rawData}`
                 })
             };
         }
@@ -54,6 +55,7 @@ exports.handler = async function(event, context) {
 
         return {
             statusCode: error.message.includes('404') ? 404 : 500,
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
                 message: "Lỗi khi xử lý yêu cầu",
                 error: error.message,
