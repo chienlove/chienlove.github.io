@@ -147,33 +147,83 @@ function selectApp(trackId, trackName, artistName, version, releaseNotes) {
     fetchTimbrdVersion(trackId);
 }
 
-function fetchTimbrdVersion(appId) {
+function fetchTimbrdVersion(appId, retryCount = 0) {
+    const MAX_RETRIES = 3;
+    const RETRY_DELAY = 2000; // 2 seconds
     document.getElementById('loading').style.display = 'block';
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    
+    // Hiển thị trạng thái retry nếu có
+    if (retryCount > 0) {
+        document.getElementById('result').innerHTML = `
+            <p>Đang thử lại lần ${retryCount}/${MAX_RETRIES}...</p>
+        `;
+    }
 
-    fetch(`/api/getAppVersions?id=${appId}`, { signal: controller.signal })
-        .then(response => {
-            clearTimeout(timeoutId);
-            if (response.status === 404) throw new Error('Không tìm thấy phiên bản');
-            if (!response.ok) throw new Error(`Lỗi HTTP: ${response.status}`);
-            return response.json();
-        })
-        .then(data => {
-            if (!Array.isArray(data)) throw new Error('Dữ liệu không hợp lệ');
-            versions = data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-            currentPage = 1; // Reset về trang đầu tiên
-            paginateVersions(currentPage);
-        })
-        .catch(error => {
-            console.error('Lỗi Timbrd:', error);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // Tăng timeout lên 15s
+
+    fetch(`/api/getAppVersions?id=${appId}`, { 
+        signal: controller.signal,
+        headers: {
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+        }
+    })
+    .then(async response => {
+        clearTimeout(timeoutId);
+        
+        // Kiểm tra và xử lý response text trước
+        const text = await response.text();
+        
+        // Log để debug
+        console.log(`Response for app ${appId}:`, text);
+        
+        // Kiểm tra response rỗng
+        if (!text || text.trim() === '') {
+            throw new Error('Response rỗng từ server');
+        }
+        
+        // Thử parse JSON
+        try {
+            const data = JSON.parse(text);
+            return data;
+        } catch (e) {
+            console.error('Parse JSON error:', e);
+            throw new Error(`Lỗi parse dữ liệu: ${e.message}`);
+        }
+    })
+    .then(data => {
+        if (!Array.isArray(data)) {
+            throw new Error('Dữ liệu không đúng định dạng mảng');
+        }
+        versions = data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        currentPage = 1;
+        paginateVersions(currentPage);
+    })
+    .catch(error => {
+        console.error(`Lỗi Timbrd (attempt ${retryCount + 1}):`, error);
+        
+        // Kiểm tra nếu còn lượt retry và không phải lỗi 404
+        if (retryCount < MAX_RETRIES && 
+            !error.message.includes('404') && 
+            !error.message.includes('không tồn tại')) {
+            
+            console.log(`Retrying in ${RETRY_DELAY}ms...`);
+            setTimeout(() => {
+                fetchTimbrdVersion(appId, retryCount + 1);
+            }, RETRY_DELAY);
+            
+        } else {
+            // Hiển thị lỗi cuối cùng
             document.getElementById('result').innerHTML = `
-                <p class="error">Lỗi: ${sanitizeHTML(error.message)}</p>
+                <p class="error">
+                    ${retryCount > 0 ? `Đã thử ${retryCount} lần. ` : ''}
+                    Lỗi: ${sanitizeHTML(error.message)}
+                </p>
             `;
-        })
-        .finally(() => {
             document.getElementById('loading').style.display = 'none';
-        });
+        }
+    });
 }
 
 function paginateVersions(page) {
