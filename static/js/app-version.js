@@ -147,82 +147,102 @@ function selectApp(trackId, trackName, artistName, version, releaseNotes) {
     fetchTimbrdVersion(trackId);
 }
 
+// ... các hàm khác giữ nguyên ...
+
 function fetchTimbrdVersion(appId, retryCount = 0) {
     const MAX_RETRIES = 3;
-    const RETRY_DELAY = 2000; // 2 seconds
+    const baseDelay = 2000; // 2 seconds
     document.getElementById('loading').style.display = 'block';
     
-    // Hiển thị trạng thái retry nếu có
     if (retryCount > 0) {
         document.getElementById('result').innerHTML = `
             <p>Đang thử lại lần ${retryCount}/${MAX_RETRIES}...</p>
         `;
     }
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // Tăng timeout lên 15s
-
-    fetch(`/api/getAppVersions?id=${appId}`, { 
-        signal: controller.signal,
+    // Exponential backoff delay
+    const delay = Math.min(baseDelay * Math.pow(2, retryCount), 8000);
+    
+    fetch(`/api/getAppVersions?id=${appId}`, {
         headers: {
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache'
-        }
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache',
+        },
+        // Increase timeout based on retry count
+        timeout: 20000 + (retryCount * 5000)
     })
     .then(async response => {
-        clearTimeout(timeoutId);
-        
-        // Kiểm tra và xử lý response text trước
-        const text = await response.text();
-        
-        // Log để debug
-        console.log(`Response for app ${appId}:`, text);
-        
-        // Kiểm tra response rỗng
-        if (!text || text.trim() === '') {
-            throw new Error('Response rỗng từ server');
+        if (!response.ok) {
+            throw new Error(`HTTP Error: ${response.status}`);
         }
         
-        // Thử parse JSON
+        // Read as blob first to ensure complete data
+        const blob = await response.blob();
+        const text = await blob.text();
+        
+        if (!text || text.trim() === '') {
+            throw new Error('Empty response received');
+        }
+        
         try {
-            const data = JSON.parse(text);
-            return data;
+            return JSON.parse(text);
         } catch (e) {
-            console.error('Parse JSON error:', e);
-            throw new Error(`Lỗi parse dữ liệu: ${e.message}`);
+            console.error('Parse error:', e);
+            console.error('Raw text:', text);
+            throw new Error('Failed to parse response');
         }
     })
     .then(data => {
         if (!Array.isArray(data)) {
-            throw new Error('Dữ liệu không đúng định dạng mảng');
+            throw new Error('Invalid data format received');
         }
+        
+        // Thêm log để debug
+        console.log(`Received ${data.length} versions for app ${appId}`);
+        
         versions = data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
         currentPage = 1;
         paginateVersions(currentPage);
     })
     .catch(error => {
-        console.error(`Lỗi Timbrd (attempt ${retryCount + 1}):`, error);
+        console.error(`Error (attempt ${retryCount + 1}):`, error);
         
-        // Kiểm tra nếu còn lượt retry và không phải lỗi 404
+        // Check if we should retry
         if (retryCount < MAX_RETRIES && 
             !error.message.includes('404') && 
-            !error.message.includes('không tồn tại')) {
+            !error.message.includes('Invalid data format')) {
             
-            console.log(`Retrying in ${RETRY_DELAY}ms...`);
+            console.log(`Retrying in ${delay}ms...`);
             setTimeout(() => {
                 fetchTimbrdVersion(appId, retryCount + 1);
-            }, RETRY_DELAY);
+            }, delay);
             
         } else {
-            // Hiển thị lỗi cuối cùng
+            // Final error display
             document.getElementById('result').innerHTML = `
                 <p class="error">
                     ${retryCount > 0 ? `Đã thử ${retryCount} lần. ` : ''}
                     Lỗi: ${sanitizeHTML(error.message)}
+                    ${error.message.includes('parse') ? '<br>Dữ liệu không hợp lệ từ server.' : ''}
                 </p>
             `;
             document.getElementById('loading').style.display = 'none';
         }
+    });
+}
+
+// Thêm hàm mới để xử lý response size lớn
+function streamResponse(response) {
+    const reader = response.body.getReader();
+    const chunks = [];
+    
+    return reader.read().then(function processChunk({done, value}) {
+        if (done) {
+            const blob = new Blob(chunks);
+            return blob.text();
+        }
+        chunks.push(value);
+        return reader.read().then(processChunk);
     });
 }
 
