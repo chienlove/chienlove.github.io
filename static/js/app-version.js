@@ -151,7 +151,6 @@ function selectApp(trackId, trackName, artistName, version, releaseNotes) {
 
 function fetchTimbrdVersion(appId, retryCount = 0) {
     const MAX_RETRIES = 3;
-    const baseDelay = 2000; // 2 seconds
     document.getElementById('loading').style.display = 'block';
     
     if (retryCount > 0) {
@@ -160,46 +159,37 @@ function fetchTimbrdVersion(appId, retryCount = 0) {
         `;
     }
 
-    // Exponential backoff delay
-    const delay = Math.min(baseDelay * Math.pow(2, retryCount), 8000);
-    
     fetch(`/api/getAppVersions?id=${appId}`, {
         headers: {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            'Pragma': 'no-cache',
-        },
-        // Increase timeout based on retry count
-        timeout: 20000 + (retryCount * 5000)
+            'Cache-Control': 'no-cache',
+            'Pragma': 'no-cache'
+        }
     })
-    .then(async response => {
+    .then(response => {
         if (!response.ok) {
             throw new Error(`HTTP Error: ${response.status}`);
         }
-        
-        // Read as blob first to ensure complete data
-        const blob = await response.blob();
-        const text = await blob.text();
-        
+        return response.text();
+    })
+    .then(text => {
         if (!text || text.trim() === '') {
             throw new Error('Empty response received');
         }
         
         try {
-            return JSON.parse(text);
+            const data = JSON.parse(text);
+            if (!Array.isArray(data)) {
+                throw new Error('Invalid data format received');
+            }
+            return data;
         } catch (e) {
             console.error('Parse error:', e);
-            console.error('Raw text:', text);
+            console.error('Raw response:', text);
             throw new Error('Failed to parse response');
         }
     })
     .then(data => {
-        if (!Array.isArray(data)) {
-            throw new Error('Invalid data format received');
-        }
-        
-        // Thêm log để debug
         console.log(`Received ${data.length} versions for app ${appId}`);
-        
         versions = data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
         currentPage = 1;
         paginateVersions(currentPage);
@@ -207,42 +197,23 @@ function fetchTimbrdVersion(appId, retryCount = 0) {
     .catch(error => {
         console.error(`Error (attempt ${retryCount + 1}):`, error);
         
-        // Check if we should retry
         if (retryCount < MAX_RETRIES && 
             !error.message.includes('404') && 
             !error.message.includes('Invalid data format')) {
             
-            console.log(`Retrying in ${delay}ms...`);
             setTimeout(() => {
                 fetchTimbrdVersion(appId, retryCount + 1);
-            }, delay);
+            }, 2000);
             
         } else {
-            // Final error display
             document.getElementById('result').innerHTML = `
                 <p class="error">
                     ${retryCount > 0 ? `Đã thử ${retryCount} lần. ` : ''}
                     Lỗi: ${sanitizeHTML(error.message)}
-                    ${error.message.includes('parse') ? '<br>Dữ liệu không hợp lệ từ server.' : ''}
                 </p>
             `;
             document.getElementById('loading').style.display = 'none';
         }
-    });
-}
-
-// Thêm hàm mới để xử lý response size lớn
-function streamResponse(response) {
-    const reader = response.body.getReader();
-    const chunks = [];
-    
-    return reader.read().then(function processChunk({done, value}) {
-        if (done) {
-            const blob = new Blob(chunks);
-            return blob.text();
-        }
-        chunks.push(value);
-        return reader.read().then(processChunk);
     });
 }
 
