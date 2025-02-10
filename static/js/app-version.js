@@ -282,3 +282,49 @@ function paginateVersions(page) {
     
     document.getElementById('loading').style.display = 'none';
 }
+// Hàm phân trang (thêm kiểm tra dữ liệu)
+function paginateVersions(page) {
+    currentPage = page;
+    const totalVersions = versions.length;
+    const start = (currentPage - 1) * perPage;
+    const end = start + perPage;
+
+    const resultDiv = document.getElementById('result');
+    resultDiv.innerHTML = '';
+
+    if (totalVersions === 0) {
+        resultDiv.innerHTML = '<p>Không có phiên bản nào.</p>';
+        document.getElementById('pagination').innerHTML = '';
+        return;
+    }
+
+    let output = '<table><tr><th>Phiên bản</th><th>ID</th><th>Ngày phát hành</th></tr>';
+    versions.slice(start, end).forEach(version => {
+        output += `
+            <tr>
+                <td>${sanitizeHTML(version.bundle_version)}</td>
+                <td>${sanitizeHTML(version.external_identifier)}</td>
+                <td>${new Date(version.created_at).toLocaleDateString()}</td>
+            </tr>
+        `;
+    });
+    output += '</table>';
+    resultDiv.innerHTML = output;
+
+    // Hiển thị phân trang
+    const totalPages = Math.ceil(totalVersions / perPage);
+    document.getElementById('pagination').innerHTML = Array.from(
+        { length: totalPages },
+        (_, i) => `<button class="${i + 1 === currentPage ? 'active' : ''}" onclick="changePage(${i + 1})">${i + 1}</button>`
+    ).join('');
+}
+
+// Hàm utility: Xử lý XSS
+function sanitizeHTML(str) {
+    return str.toString()
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
