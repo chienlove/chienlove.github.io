@@ -2,18 +2,15 @@ let currentPage = 1;
 const perPage = 50;
 let versions = [];
 
-// Hàm kiểm tra ID ứng dụng hợp lệ
 function isAppId(input) {
     return /^\d+$/.test(input);
 }
 
-// Hàm trích xuất ID từ URL (đã cải tiến)
 function extractAppIdFromUrl(url) {
-    const match = url.match(/(?:id|app\/.*?\bid)(\d+)/i); // Regex mạnh hơn
+    const match = url.match(/(?:id|app\/.*?\bid)(\d+)/i);
     return match ? match[1] : null;
 }
 
-// Xử lý sự kiện tìm kiếm
 document.getElementById('searchForm').addEventListener('submit', function(e) {
     e.preventDefault();
     const searchTerm = document.getElementById('searchTerm').value.trim();
@@ -23,8 +20,8 @@ document.getElementById('searchForm').addEventListener('submit', function(e) {
     document.getElementById('appInfo').innerHTML = '';
     document.getElementById('result').innerHTML = '';
     document.getElementById('pagination').innerHTML = '';
+    versions = []; // Reset versions array
 
-    // Xử lý logic tìm kiếm
     if (isAppId(searchTerm)) {
         fetchAppInfoFromiTunes(searchTerm);
         fetchTimbrdVersion(searchTerm);
@@ -39,10 +36,9 @@ document.getElementById('searchForm').addEventListener('submit', function(e) {
     }
 });
 
-// Hàm gọi API iTunes (thêm timeout và xử lý lỗi)
 function fetchAppInfoFromiTunes(appId) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // Timeout 10s
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     fetch(`/api/appInfo?id=${appId}`, { signal: controller.signal })
         .then(response => {
@@ -66,13 +62,13 @@ function fetchAppInfoFromiTunes(appId) {
         });
 }
 
-// Hiển thị thông tin ứng dụng (escape HTML)
 function displayAppInfo(app) {
     const sanitize = str => str ? sanitizeHTML(str) : 'Không có thông tin';
     const fileSizeMB = app.fileSizeBytes ? (app.fileSizeBytes / (1024 * 1024)).toFixed(2) : 'N/A';
 
     document.getElementById('appInfo').innerHTML = `
         <h2>Thông tin Ứng dụng</h2>
+        <p><strong>ID:</strong> ${app.trackId}</p>
         <p><strong>Tên:</strong> ${sanitize(app.trackName)}</p>
         <p><strong>Tác giả:</strong> ${sanitize(app.artistName)}</p>
         <p><strong>Phiên bản:</strong> ${sanitize(app.version)}</p>
@@ -82,7 +78,6 @@ function displayAppInfo(app) {
     `;
 }
 
-// Hàm tìm kiếm ứng dụng (thêm xử lý lỗi mạng)
 function searchApp(term) {
     const encodedTerm = encodeURIComponent(term);
     fetch(`https://itunes.apple.com/search?term=${encodedTerm}&entity=software`)
@@ -102,7 +97,6 @@ function searchApp(term) {
         });
 }
 
-// Hiển thị kết quả tìm kiếm (escape HTML)
 function displaySearchResults(apps) {
     const resultDiv = document.getElementById('result');
     resultDiv.innerHTML = '';
@@ -112,21 +106,24 @@ function displaySearchResults(apps) {
         return;
     }
 
-    let output = '<table><tr><th>Icon</th><th>Tên ứng dụng</th><th>Tác giả</th></tr>';
+    let output = '<table><tr><th>Icon</th><th>Tên ứng dụng</th><th>Tác giả</th><th>Action</th></tr>';
     apps.forEach(app => {
         const trackName = sanitizeHTML(app.trackName);
         const artistName = sanitizeHTML(app.artistName);
         output += `
             <tr>
                 <td><img src="${app.artworkUrl60}" alt="${trackName} icon"></td>
-                <td><a href="#" onclick="getAppVersions(
-                    ${app.trackId},
-                    '${trackName.replace(/'/g, "\\'")}',
-                    '${artistName.replace(/'/g, "\\'")}',
-                    '${sanitizeHTML(app.version || '')}',
-                    '${sanitizeHTML(app.releaseNotes || '')}'
-                )">${trackName}</a></td>
+                <td>${trackName}</td>
                 <td>${artistName}</td>
+                <td>
+                    <button onclick="selectApp(
+                        ${app.trackId},
+                        '${trackName.replace(/'/g, "\\'")}',
+                        '${artistName.replace(/'/g, "\\'")}',
+                        '${sanitizeHTML(app.version || '')}',
+                        '${sanitizeHTML(app.releaseNotes || '')}'
+                    )">Xem versions</button>
+                </td>
             </tr>
         `;
     });
@@ -134,10 +131,26 @@ function displaySearchResults(apps) {
     resultDiv.innerHTML = output;
 }
 
-// Hàm gọi phiên bản từ Timbrd (thêm kiểm tra dữ liệu)
+// Thêm hàm mới để xử lý việc chọn ứng dụng
+function selectApp(trackId, trackName, artistName, version, releaseNotes) {
+    // Hiển thị thông tin ứng dụng
+    document.getElementById('appInfo').innerHTML = `
+        <h2>Thông tin Ứng dụng</h2>
+        <p><strong>ID:</strong> ${trackId}</p>
+        <p><strong>Tên:</strong> ${trackName}</p>
+        <p><strong>Tác giả:</strong> ${artistName}</p>
+        <p><strong>Phiên bản hiện tại:</strong> ${version}</p>
+        <p><strong>Cập nhật:</strong> ${releaseNotes}</p>
+    `;
+
+    // Fetch versions cho ứng dụng đã chọn
+    fetchTimbrdVersion(trackId);
+}
+
 function fetchTimbrdVersion(appId) {
+    document.getElementById('loading').style.display = 'block';
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // Timeout 10s
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
 
     fetch(`/api/getAppVersions?id=${appId}`, { signal: controller.signal })
         .then(response => {
@@ -149,6 +162,7 @@ function fetchTimbrdVersion(appId) {
         .then(data => {
             if (!Array.isArray(data)) throw new Error('Dữ liệu không hợp lệ');
             versions = data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            currentPage = 1; // Reset về trang đầu tiên
             paginateVersions(currentPage);
         })
         .catch(error => {
@@ -162,7 +176,6 @@ function fetchTimbrdVersion(appId) {
         });
 }
 
-// Hàm phân trang (thêm kiểm tra dữ liệu)
 function paginateVersions(page) {
     currentPage = page;
     const totalVersions = versions.length;
@@ -191,16 +204,15 @@ function paginateVersions(page) {
     output += '</table>';
     resultDiv.innerHTML = output;
 
-    // Hiển thị phân trang
     const totalPages = Math.ceil(totalVersions / perPage);
     document.getElementById('pagination').innerHTML = Array.from(
         { length: totalPages },
-        (_, i) => `<button class="${i + 1 === currentPage ? 'active' : ''}" onclick="changePage(${i + 1})">${i + 1}</button>`
+        (_, i) => `<button class="${i + 1 === currentPage ? 'active' : ''}" onclick="paginateVersions(${i + 1})">${i + 1}</button>`
     ).join('');
 }
 
-// Hàm utility: Xử lý XSS
 function sanitizeHTML(str) {
+    if (!str) return '';
     return str.toString()
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
