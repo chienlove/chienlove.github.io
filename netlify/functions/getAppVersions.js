@@ -2,63 +2,86 @@ const fetch = require('node-fetch');
 
 exports.handler = async function(event, context) {
     const appId = event.queryStringParameters.id;
-    const apiUrl = `https://api.timbrd.com/apple/app-version/index.php?id=${appId}`;
+    const page = event.queryStringParameters.page || 1;
+    const limit = event.queryStringParameters.limit || 1000; // Giới hạn số lượng mỗi lần
     
-    // Tăng timeout của Lambda
-    context.callbackWaitsForEmptyEventLoop = false;
+    const apiUrl = `https://api.timbrd.com/apple/app-version/index.php?id=${appId}&page=${page}&limit=${limit}`;
     
-    const fetchWithRetry = async (url, maxRetries = 3) => {
-        let lastError;
-        
-        for (let i = 0; i < maxRetries; i++) {
-            try {
-                const response = await fetch(url, {
-                    timeout: 30000, // 30 seconds
-                    headers: {
-                        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_7_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.1.2 Mobile/15E148 Safari/604.1',
-                        'Accept': 'application/json',
-                        'Cache-Control': 'no-cache'
-                    }
-                });
+    // Nếu không có pagination từ API gốc, chúng ta sẽ lấy theo chunks
+    const MAX_CHUNKS = 3; // Số lần gọi tối đa
+    
+    const fetchChunk = async (url, attempt = 1) => {
+        try {
+            const response = await fetch(url, {
+                timeout: 30000,
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_7_1 like Mac OS X) AppleWebKit/605.1.15',
+                    'Accept': 'application/json',
+                    'Cache-Control': 'no-cache'
+                }
+            });
 
-                if (!response.ok) {
-                    throw new Error(`HTTP Error: ${response.status}`);
-                }
-
-                const text = await response.text();
-                
-                if (!text || text.trim() === '') {
-                    throw new Error('Empty response');
-                }
-
-                try {
-                    const data = JSON.parse(text);
-                    if (!Array.isArray(data)) {
-                        throw new Error('Invalid response format');
-                    }
-                    return data;
-                } catch (e) {
-                    console.error('Parse error:', e);
-                    throw new Error('JSON parse failed');
-                }
-                
-            } catch (error) {
-                console.error(`Attempt ${i + 1} failed:`, error);
-                lastError = error;
-                
-                if (i < maxRetries - 1) {
-                    // Simple delay between retries
-                    await new Promise(resolve => setTimeout(resolve, 2000));
-                }
+            if (!response.ok) {
+                throw new Error(`HTTP Error: ${response.status}`);
             }
+
+            const text = await response.text();
+            if (!text || text.trim() === '') {
+                throw new Error('Empty response');
+            }
+
+            return JSON.parse(text);
+        } catch (error) {
+            if (attempt < 3) {
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                return fetchChunk(url, attempt + 1);
+            }
+            throw error;
         }
-        
-        throw lastError;
     };
-    
+
     try {
-        const data = await fetchWithRetry(apiUrl);
-        
+        let allData = [];
+        let hasMore = true;
+        let currentChunk = 1;
+
+        while (hasMore && currentChunk <= MAX_CHUNKS) {
+            const chunkUrl = `${apiUrl}&chunk=${currentChunk}`;
+            const chunkData = await fetchChunk(chunkUrl);
+
+            if (Array.isArray(chunkData) && chunkData.length > 0) {
+                allData = allData.concat(chunkData);
+                
+                // Nếu số lượng ít hơn limit, có thể đã hết data
+                if (chunkData.length < limit) {
+                    hasMore = false;
+                }
+            } else {
+                hasMore = false;
+            }
+
+            currentChunk++;
+        }
+
+        // Sắp xếp và lọc trùng
+        const uniqueData = Array.from(new Map(
+            allData.map(item => [item.external_identifier, item])
+        ).values());
+
+        const sortedData = uniqueData.sort(
+            (a, b) => new Date(b.created_at) - new Date(a.created_at)
+        );
+
+        // Thêm metadata
+        const response = {
+            data: sortedData,
+            metadata: {
+                total: sortedData.length,
+                chunks: currentChunk - 1,
+                hasMore: hasMore
+            }
+        };
+
         return {
             statusCode: 200,
             headers: {
@@ -66,9 +89,9 @@ exports.handler = async function(event, context) {
                 'Cache-Control': 'no-cache',
                 'Access-Control-Allow-Origin': '*'
             },
-            body: JSON.stringify(data)
+            body: JSON.stringify(response)
         };
-        
+
     } catch (error) {
         console.error('Final error:', error);
         

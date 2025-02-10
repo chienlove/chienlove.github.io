@@ -147,11 +147,10 @@ function selectApp(trackId, trackName, artistName, version, releaseNotes) {
     fetchTimbrdVersion(trackId);
 }
 
-// ... các hàm khác giữ nguyên ...
-
 function fetchTimbrdVersion(appId, retryCount = 0) {
     const MAX_RETRIES = 3;
     document.getElementById('loading').style.display = 'block';
+    document.getElementById('result').innerHTML = '<p>Đang tải dữ liệu...</p>';
     
     if (retryCount > 0) {
         document.getElementById('result').innerHTML = `
@@ -159,7 +158,16 @@ function fetchTimbrdVersion(appId, retryCount = 0) {
         `;
     }
 
-    fetch(`/api/getAppVersions?id=${appId}`, {
+    // Reset versions array
+    versions = [];
+
+    fetchVersionsChunk(appId, 1, retryCount);
+}
+
+function fetchVersionsChunk(appId, page, retryCount = 0) {
+    const limit = 1000;
+    
+    fetch(`/api/getAppVersions?id=${appId}&page=${page}&limit=${limit}`, {
         headers: {
             'Cache-Control': 'no-cache',
             'Pragma': 'no-cache'
@@ -177,22 +185,39 @@ function fetchTimbrdVersion(appId, retryCount = 0) {
         }
         
         try {
-            const data = JSON.parse(text);
-            if (!Array.isArray(data)) {
+            const response = JSON.parse(text);
+            if (!response.data || !Array.isArray(response.data)) {
                 throw new Error('Invalid data format received');
             }
-            return data;
+            return response;
         } catch (e) {
             console.error('Parse error:', e);
             console.error('Raw response:', text);
             throw new Error('Failed to parse response');
         }
     })
-    .then(data => {
-        console.log(`Received ${data.length} versions for app ${appId}`);
-        versions = data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-        currentPage = 1;
-        paginateVersions(currentPage);
+    .then(response => {
+        const { data, metadata } = response;
+        console.log(`Received ${data.length} versions for app ${appId} (Chunk ${metadata.chunks})`);
+        
+        // Merge với dữ liệu hiện có
+        versions = versions.concat(data);
+        
+        // Hiển thị trạng thái tải
+        document.getElementById('result').innerHTML = `
+            <p>Đã tải ${versions.length} phiên bản...</p>
+        `;
+
+        // Kiểm tra nếu còn data cần tải
+        if (metadata.hasMore) {
+            // Tải chunk tiếp theo
+            fetchVersionsChunk(appId, page + 1, retryCount);
+        } else {
+            // Đã tải xong, hiển thị kết quả
+            versions.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            currentPage = 1;
+            paginateVersions(currentPage);
+        }
     })
     .catch(error => {
         console.error(`Error (attempt ${retryCount + 1}):`, error);
@@ -202,7 +227,7 @@ function fetchTimbrdVersion(appId, retryCount = 0) {
             !error.message.includes('Invalid data format')) {
             
             setTimeout(() => {
-                fetchTimbrdVersion(appId, retryCount + 1);
+                fetchVersionsChunk(appId, page, retryCount + 1);
             }, 2000);
             
         } else {
@@ -217,6 +242,7 @@ function fetchTimbrdVersion(appId, retryCount = 0) {
     });
 }
 
+// Cập nhật hàm paginateVersions để hiển thị thông tin về tổng số phiên bản
 function paginateVersions(page) {
     currentPage = page;
     const totalVersions = versions.length;
@@ -232,6 +258,9 @@ function paginateVersions(page) {
         return;
     }
 
+    // Thêm thông tin tổng số phiên bản
+    resultDiv.innerHTML = `<p>Tổng số phiên bản: ${totalVersions}</p>`;
+
     let output = '<table><tr><th>Phiên bản</th><th>ID</th><th>Ngày phát hành</th></tr>';
     versions.slice(start, end).forEach(version => {
         output += `
@@ -243,21 +272,13 @@ function paginateVersions(page) {
         `;
     });
     output += '</table>';
-    resultDiv.innerHTML = output;
+    resultDiv.innerHTML += output;
 
     const totalPages = Math.ceil(totalVersions / perPage);
     document.getElementById('pagination').innerHTML = Array.from(
         { length: totalPages },
         (_, i) => `<button class="${i + 1 === currentPage ? 'active' : ''}" onclick="paginateVersions(${i + 1})">${i + 1}</button>`
     ).join('');
-}
-
-function sanitizeHTML(str) {
-    if (!str) return '';
-    return str.toString()
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
+    
+    document.getElementById('loading').style.display = 'none';
 }
