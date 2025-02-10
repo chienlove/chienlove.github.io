@@ -158,13 +158,12 @@ function fetchTimbrdVersion(appId, retryCount = 0) {
         `;
     }
 
-    // Reset versions array
     versions = [];
-
     fetchVersionsChunk(appId, 1, retryCount);
 }
 
 function fetchVersionsChunk(appId, page, retryCount = 0) {
+    const MAX_RETRIES = 3;
     const limit = 1000;
     
     fetch(`/api/getAppVersions?id=${appId}&page=${page}&limit=${limit}`, {
@@ -175,45 +174,44 @@ function fetchVersionsChunk(appId, page, retryCount = 0) {
     })
     .then(response => {
         if (!response.ok) {
+            // Handle specific status codes
+            if (response.status === 403) {
+                throw new Error('Ứng dụng này không hỗ trợ xem version history');
+            }
             throw new Error(`HTTP Error: ${response.status}`);
         }
         return response.text();
     })
     .then(text => {
         if (!text || text.trim() === '') {
-            throw new Error('Empty response received');
+            throw new Error('Không nhận được dữ liệu từ server');
         }
         
         try {
             const response = JSON.parse(text);
             if (!response.data || !Array.isArray(response.data)) {
-                throw new Error('Invalid data format received');
+                throw new Error('Định dạng dữ liệu không hợp lệ');
             }
             return response;
         } catch (e) {
             console.error('Parse error:', e);
             console.error('Raw response:', text);
-            throw new Error('Failed to parse response');
+            throw new Error('Không thể xử lý dữ liệu từ server');
         }
     })
     .then(response => {
         const { data, metadata } = response;
-        console.log(`Received ${data.length} versions for app ${appId} (Chunk ${metadata.chunks})`);
         
         // Merge với dữ liệu hiện có
         versions = versions.concat(data);
         
-        // Hiển thị trạng thái tải
         document.getElementById('result').innerHTML = `
             <p>Đã tải ${versions.length} phiên bản...</p>
         `;
 
-        // Kiểm tra nếu còn data cần tải
         if (metadata.hasMore) {
-            // Tải chunk tiếp theo
             fetchVersionsChunk(appId, page + 1, retryCount);
         } else {
-            // Đã tải xong, hiển thị kết quả
             versions.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
             currentPage = 1;
             paginateVersions(currentPage);
@@ -222,9 +220,15 @@ function fetchVersionsChunk(appId, page, retryCount = 0) {
     .catch(error => {
         console.error(`Error (attempt ${retryCount + 1}):`, error);
         
+        // Don't retry for certain errors
+        const noRetryErrors = [
+            'Ứng dụng này không hỗ trợ xem version history',
+            'Định dạng dữ liệu không hợp lệ'
+        ];
+        
         if (retryCount < MAX_RETRIES && 
             !error.message.includes('404') && 
-            !error.message.includes('Invalid data format')) {
+            !noRetryErrors.some(msg => error.message.includes(msg))) {
             
             setTimeout(() => {
                 fetchVersionsChunk(appId, page, retryCount + 1);
