@@ -21,7 +21,7 @@ exports.handler = async function(event, context) {
     };
   }
   
-  // Thiết lập timeout cho function (giảm xuống để tránh timeout của Netlify)
+  // Thiết lập timeout cho function
   context.callbackWaitsForEmptyEventLoop = false;
   
   // Danh sách các plist cần cập nhật
@@ -80,7 +80,7 @@ exports.handler = async function(event, context) {
     let updatedHashes = { ...currentHashes };
     const updatePromises = [];
 
-    // Xử lý các plist song song thay vì tuần tự
+    // Xử lý các plist tuần tự thay vì song song để tránh xung đột
     for (const [url, targetFilePath] of Object.entries(plistMappings)) {
       updatePromises.push(
         processPlistFile(url, targetFilePath, currentHashes, updatedHashes, githubAxios, externalAxios, owner, repo, branch)
@@ -90,27 +90,28 @@ exports.handler = async function(event, context) {
               updatedHashes[targetFilePath] = updated.hash;
               return { targetFilePath, status: 'updated' };
             }
-            return { targetFilePath, status: 'skipped' };
+            return { targetFilePath, status: 'skipped', reason: updated.reason };
           })
           .catch(error => {
             console.log(`Error processing ${targetFilePath}: ${error.message}`);
             return { targetFilePath, status: 'error', error: error.message };
           })
       );
+      
+      // Thêm độ trễ 500ms giữa các request để tránh xung đột
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
 
-    // Chờ tất cả các xử lý plist hoàn thành (với timeout)
-    const updateResults = await Promise.allSettled(updatePromises);
+    // Chờ tất cả các xử lý plist hoàn thành
+    const updateResults = await Promise.all(updatePromises);
     
     // Cập nhật file hash nếu có thay đổi
     if (JSON.stringify(currentHashes) !== JSON.stringify(updatedHashes)) {
       try {
+        // Đảm bảo lấy phiên bản mới nhất của file hash
         const hashFileResponse = await githubAxios.get(
           `https://api.github.com/repos/${owner}/${repo}/contents/${hashFilePath}`,
-          { 
-            params: { ref: branch },
-            headers: { Accept: 'application/json' }
-          }
+          { params: { ref: branch } }
         ).catch(() => ({ data: null }));
 
         const hashFileSha = hashFileResponse.data ? hashFileResponse.data.sha : null;
@@ -141,7 +142,7 @@ exports.handler = async function(event, context) {
           ? 'Plist files and/or hash file updated successfully' 
           : 'No updates were necessary. All files are up to date.',
         timestamp: new Date().toISOString(),
-        results: updateResults.map(r => r.value || r.reason)
+        results: updateResults
       })
     };
   } catch (error) {
@@ -159,97 +160,143 @@ exports.handler = async function(event, context) {
 };
 
 /**
- * Xử lý một file plist
+ * Xử lý một file plist với xử lý lỗi 409
  */
 async function processPlistFile(url, targetFilePath, currentHashes, updatedHashes, githubAxios, externalAxios, owner, repo, branch) {
   console.log(`Processing ${url} -> ${targetFilePath}`);
   
-  // Fetch và parse external plist
-  const { data: externalPlistContent } = await externalAxios.get(url);
-  const externalPlistData = plist.parse(externalPlistContent);
-  
-  // Tính hash của dữ liệu mới
-  const externalPlistHash = crypto.createHash('sha256')
-    .update(JSON.stringify(externalPlistData))
-    .digest('hex');
-  
-  // Kiểm tra xem có cần cập nhật không
-  if (currentHashes[targetFilePath] === externalPlistHash) {
-    console.log(`No update needed for ${targetFilePath}`);
-    return { success: false };
-  }
-  
-  // Lấy dữ liệu plist và SHA hiện tại (nếu có)
-  let targetPlistData = externalPlistData; // Mặc định sử dụng dữ liệu ngoài
-  let fileSha = null;
-  
   try {
-    // Lấy thông tin file hiện tại
-    const fileResponse = await githubAxios.get(
-      `https://api.github.com/repos/${owner}/${repo}/contents/${targetFilePath}`,
-      { params: { ref: branch }}
-    );
+    // Fetch và parse external plist
+    let externalPlistData;
+    try {
+      const { data: externalPlistContent } = await externalAxios.get(url);
+      externalPlistData = plist.parse(externalPlistContent);
+    } catch (error) {
+      return { 
+        success: false, 
+        reason: `Failed to fetch or parse external plist: ${error.message}` 
+      };
+    }
     
-    if (fileResponse.data) {
-      // Lấy SHA
-      fileSha = fileResponse.data.sha;
+    // Tính hash của dữ liệu mới
+    const externalPlistHash = crypto.createHash('sha256')
+      .update(JSON.stringify(externalPlistData))
+      .digest('hex');
+    
+    // Kiểm tra xem có cần cập nhật không
+    if (currentHashes[targetFilePath] === externalPlistHash) {
+      console.log(`No update needed for ${targetFilePath}`);
+      return { success: false, reason: 'No update needed' };
+    }
+    
+    // Nỗ lực tối đa 3 lần để cập nhật file
+    let attempt = 0;
+    const maxAttempts = 3;
+    
+    while (attempt < maxAttempts) {
+      attempt++;
+      console.log(`Attempt ${attempt} to update ${targetFilePath}`);
       
-      // Lấy và parse nội dung
-      const content = Buffer.from(fileResponse.data.content, 'base64').toString('utf8');
       try {
-        targetPlistData = plist.parse(content);
-        
-        // Cập nhật dữ liệu từ file mới
-        if (targetPlistData.items && targetPlistData.items[0] &&
-            externalPlistData.items && externalPlistData.items[0]) {
-          
-          const targetItem = targetPlistData.items[0];
-          const externalItem = externalPlistData.items[0];
-          
-          // Cập nhật IPA link
-          if (targetItem.assets && externalItem.assets) {
-            const targetIpaAsset = targetItem.assets.find(asset => asset.kind === 'software-package');
-            const externalIpaAsset = externalItem.assets.find(asset => asset.kind === 'software-package');
-            
-            if (targetIpaAsset && externalIpaAsset) {
-              targetIpaAsset.url = externalIpaAsset.url;
-            }
+        // Luôn lấy phiên bản mới nhất của file để đảm bảo SHA chính xác
+        const fileResponse = await githubAxios.get(
+          `https://api.github.com/repos/${owner}/${repo}/contents/${targetFilePath}`,
+          { params: { ref: branch } }
+        ).catch(error => {
+          if (error.response && error.response.status === 404) {
+            return { data: null }; // File không tồn tại
           }
+          throw error; // Lỗi khác, ném ra ngoài
+        });
+        
+        let targetPlistData;
+        let fileSha = null;
+        
+        if (fileResponse.data) {
+          // Lấy SHA hiện tại
+          fileSha = fileResponse.data.sha;
           
-          // Cập nhật metadata
-          if (targetItem.metadata && externalItem.metadata) {
-            targetItem.metadata['bundle-identifier'] = externalItem.metadata['bundle-identifier'];
-            targetItem.metadata['bundle-version'] = externalItem.metadata['bundle-version'];
+          // Parse nội dung hiện tại
+          try {
+            const content = Buffer.from(fileResponse.data.content, 'base64').toString('utf8');
+            targetPlistData = plist.parse(content);
+            
+            // Cập nhật dữ liệu
+            if (targetPlistData.items && targetPlistData.items[0] &&
+                externalPlistData.items && externalPlistData.items[0]) {
+              
+              const targetItem = targetPlistData.items[0];
+              const externalItem = externalPlistData.items[0];
+              
+              // Cập nhật IPA link
+              if (targetItem.assets && externalItem.assets) {
+                const targetIpaAsset = targetItem.assets.find(asset => asset.kind === 'software-package');
+                const externalIpaAsset = externalItem.assets.find(asset => asset.kind === 'software-package');
+                
+                if (targetIpaAsset && externalIpaAsset) {
+                  targetIpaAsset.url = externalIpaAsset.url;
+                }
+              }
+              
+              // Cập nhật metadata
+              if (targetItem.metadata && externalItem.metadata) {
+                targetItem.metadata['bundle-identifier'] = externalItem.metadata['bundle-identifier'];
+                targetItem.metadata['bundle-version'] = externalItem.metadata['bundle-version'];
+              }
+            } else {
+              // Nếu cấu trúc không đúng, sử dụng dữ liệu mới
+              targetPlistData = externalPlistData;
+            }
+          } catch (e) {
+            console.log(`Error parsing current plist: ${e.message}`);
+            targetPlistData = externalPlistData;
           }
         } else {
-          // Nếu cấu trúc không đúng, sử dụng dữ liệu mới
+          // File không tồn tại, sử dụng dữ liệu mới
           targetPlistData = externalPlistData;
         }
-      } catch (e) {
-        // Parse lỗi, sử dụng dữ liệu mới
-        targetPlistData = externalPlistData;
+        
+        // Build plist content
+        const updatedPlistContent = plist.build(targetPlistData);
+        
+        // Gửi cập nhật lên GitHub
+        await githubAxios({
+          method: 'put',
+          url: `https://api.github.com/repos/${owner}/${repo}/contents/${targetFilePath}`,
+          data: {
+            message: `Update ${targetFilePath} via Netlify Function [${new Date().toISOString()}]`,
+            content: Buffer.from(updatedPlistContent).toString('base64'),
+            sha: fileSha,
+            branch: branch
+          }
+        });
+        
+        console.log(`Successfully updated ${targetFilePath}`);
+        return { success: true, hash: externalPlistHash };
+        
+      } catch (error) {
+        if (error.response && error.response.status === 409) {
+          console.log(`Conflict (409) updating ${targetFilePath}, attempt ${attempt}`);
+          
+          if (attempt < maxAttempts) {
+            // Thêm độ trễ ngẫu nhiên trước khi thử lại
+            const delay = 1000 + Math.floor(Math.random() * 1000);
+            await new Promise(resolve => setTimeout(resolve, delay));
+            continue; // Thử lại
+          }
+        }
+        
+        throw error; // Ném lỗi ra ngoài nếu không phải 409 hoặc đã hết số lần thử
       }
     }
+    
+    return { 
+      success: false, 
+      reason: `Failed after ${maxAttempts} attempts due to conflicts` 
+    };
+    
   } catch (error) {
-    console.log(`File ${targetFilePath} not found or error: ${error.message}`);
-    // Tiếp tục với dữ liệu mặc định (externalPlistData)
+    console.log(`Error in processPlistFile for ${targetFilePath}: ${error.message}`);
+    throw error;
   }
-  
-  // Build plist content
-  const updatedPlistContent = plist.build(targetPlistData);
-  
-  // Cập nhật file trên GitHub
-  await githubAxios({
-    method: 'put',
-    url: `https://api.github.com/repos/${owner}/${repo}/contents/${targetFilePath}`,
-    data: {
-      message: `Update ${targetFilePath} via Netlify Function`,
-      content: Buffer.from(updatedPlistContent).toString('base64'),
-      sha: fileSha,
-      branch: branch
-    }
-  });
-  
-  console.log(`Successfully updated ${targetFilePath}`);
-  return { success: true, hash: externalPlistHash };
 }
