@@ -2,99 +2,173 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, initial-scale=1">
-    <title>Tìm kiếm thông tin ID phiên bản (Version), bundleID,...của Ứng dụng App Store</title>
-    <link rel="stylesheet" href="/css/app-version.css?v=1.5">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tìm kiếm thông tin ứng dụng App Store - Version, BundleID</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap">
+    <link rel="stylesheet" href="/css/app-version.css?v=2.0">
+    <style>
+        /* Loading spinner */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+            display: none;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body>
-    <main class="container">
-        <h2>Tìm kiếm ID Version, BundleID... của Ứng dụng trên App Store</h2>
-        
-        <!-- Google Ads -->
-        <script async defer src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797"
-                crossorigin="anonymous"></script>
-        <ins class="adsbygoogle"
-             id="ad1"
-             style="display:block;width:100%;height:100px"
-             data-ad-client="ca-pub-3905625903416797"
-             data-ad-slot="5160182988"
-             loading="lazy"></ins>
-        <script>
-             (adsbygoogle = window.adsbygoogle || []).push({});
-        </script>
-        
-        <!-- Fallback message -->
-        <div id="ad1-fallback" style="display:none; text-align:center; margin-top:10px;">
-            Quảng cáo không khả dụng
-        </div>
-        
-        <!-- Form Tìm kiếm -->
-        <form id="searchForm">
-            <input type="text" id="searchTerm" placeholder="Nhập App ID, tên ứng dụng hoặc URL App Store">
-            <button type="submit" aria-label="Tìm kiếm ứng dụng">Tìm kiếm</button>
-        </form>
-        <div id="loading" style="display: none;">Đang tìm kiếm...</div>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <h1>Tìm kiếm thông tin ứng dụng App Store</h1>
+                <p class="subtitle">Tra cứu Version History, Bundle ID và thông tin chi tiết</p>
+            </div>
+        </header>
 
-        <!-- Hướng dẫn sử dụng -->
-        <div class="user-guide">
-            <h2>Hướng dẫn sử dụng</h2>
-            <ol>
-                <li>Nhập App ID, tên ứng dụng hoặc URL App Store vào ô tìm kiếm.</li>
-                <li>Nhấn nút "Tìm kiếm" hoặc nhấn Enter.</li>
-                <li>Đợi kết quả hiển thị. Thông tin ứng dụng sẽ xuất hiện nếu tìm thấy.</li>
-                <li>Nếu có nhiều kết quả, sử dụng phần phân trang để xem thêm.</li>
-                <li>Để tìm kiếm ứng dụng khác, chỉ cần nhập thông tin mới và tìm kiếm lại.</li>
-            </ol>
-        </div>
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Ad Banner Top -->
+            <div class="ad-container">
+                <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797"
+                        crossorigin="anonymous"></script>
+                <ins class="adsbygoogle"
+                     style="display:block; width:100%; height:90px"
+                     data-ad-client="ca-pub-3905625903416797"
+                     data-ad-slot="5160182988"
+                     data-ad-format="auto"
+                     data-full-width-responsive="true"></ins>
+                <script>
+                     (adsbygoogle = window.adsbygoogle || []).push({});
+                </script>
+                <div class="ad-fallback">Quảng cáo</div>
+            </div>
 
-        <!-- Kết quả -->
-        <div id="error" class="error" style="display: none;"></div>
-        <div id="appInfo" class="app-info"></div>
-        <div id="result"></div>
-        <div id="pagination" class="pagination"></div>
+            <!-- Search Section -->
+            <section class="search-section">
+                <form id="searchForm" class="search-form">
+                    <div class="search-input-group">
+                        <input type="text" id="searchTerm" 
+                               placeholder="Nhập App ID (ví dụ: 284882215), tên ứng dụng hoặc URL App Store" 
+                               aria-label="Tìm kiếm ứng dụng">
+                        <button type="submit" class="search-button">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/>
+                            </svg>
+                            Tìm kiếm
+                        </button>
+                    </div>
+                </form>
+                
+                <div id="loading" class="loading-container">
+                    <div class="loader"></div>
+                    <p class="loading-text">Đang tìm kiếm...</p>
+                </div>
+            </section>
 
-        <!-- Google Ads -->
-        <ins class="adsbygoogle"
-             id="ad2"
-             style="display:block;width:100%;height:250px"
-             data-ad-client="ca-pub-3905625903416797"
-             data-ad-slot="5160182988"
-             loading="lazy"></ins>
-        <script>
-             (adsbygoogle = window.adsbygoogle || []).push({});
-        </script>
-        
-        <!-- Fallback message -->
-        <div id="ad2-fallback" style="display:none; text-align:center; margin-top:10px;">
-            Quảng cáo không khả dụng
-        </div>
-    </main>
+            <!-- Quick Guide -->
+            <section class="guide-section">
+                <details class="guide-accordion">
+                    <summary class="guide-summary">
+                        <span>Hướng dẫn sử dụng nhanh</span>
+                        <svg class="chevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
+                        </svg>
+                    </summary>
+                    <div class="guide-content">
+                        <ol class="guide-steps">
+                            <li>Nhập <strong>App ID</strong> (ví dụ: 284882215), <strong>tên ứng dụng</strong> (ví dụ: Facebook) hoặc <strong>URL App Store</strong></li>
+                            <li>Nhấn nút "Tìm kiếm" hoặc phím Enter</li>
+                            <li>Xem thông tin ứng dụng và lịch sử phiên bản</li>
+                            <li>Click vào tên ứng dụng trong danh sách để xem chi tiết</li>
+                            <li>Sử dụng phân trang để xem thêm phiên bản nếu có</li>
+                        </ol>
+                        <div class="example-apps">
+                            <p><strong>Ví dụ ứng dụng phổ biến:</strong></p>
+                            <div class="app-badges">
+                                <span class="app-badge" data-appid="284882215">Facebook</span>
+                                <span class="app-badge" data-appid="310633997">WhatsApp</span>
+                                <span class="app-badge" data-appid="389801252">Instagram</span>
+                                <span class="app-badge" data-appid="333903271">Zalo</span>
+                            </div>
+                        </div>
+                    </div>
+                </details>
+            </section>
 
-    <script src="/js/app-version.js"></script>
+            <!-- Results Section -->
+            <section class="results-section">
+                <div id="error" class="error-message" style="display: none;"></div>
+                
+                <div class="results-grid">
+                    <!-- App Info Column -->
+                    <div class="app-info-column">
+                        <div id="appInfo" class="app-info-container"></div>
+                    </div>
+                    
+                    <!-- Results Column -->
+                    <div class="results-column">
+                        <div id="result" class="results-container"></div>
+                        <div id="pagination" class="pagination-container"></div>
+                    </div>
+                </div>
+            </section>
 
+            <!-- Ad Banner Bottom -->
+            <div class="ad-container">
+                <ins class="adsbygoogle"
+                     style="display:block; width:100%; height:250px"
+                     data-ad-client="ca-pub-3905625903416797"
+                     data-ad-slot="5160182988"
+                     data-ad-format="auto"
+                     data-full-width-responsive="true"></ins>
+                <script>
+                     (adsbygoogle = window.adsbygoogle || []).push({});
+                </script>
+                <div class="ad-fallback">Quảng cáo</div>
+            </div>
+        </main>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <p>© 2023 Công cụ tra cứu thông tin ứng dụng App Store</p>
+            <p class="footer-links">
+                <a href="/privacy" target="_blank">Chính sách bảo mật</a>
+                <span>|</span>
+                <a href="/terms" target="_blank">Điều khoản sử dụng</a>
+            </p>
+        </footer>
+    </div>
+
+    <script src="/js/app-version.js?v=2.0"></script>
     <script>
-        // Ngăn form tải lại trang khi submit
-        document.getElementById('searchForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            // Thêm xử lý tìm kiếm ở đây
+        // Xử lý click trên các app badge ví dụ
+        document.querySelectorAll('.app-badge').forEach(badge => {
+            badge.addEventListener('click', function() {
+                const appId = this.getAttribute('data-appid');
+                document.getElementById('searchTerm').value = appId;
+                document.getElementById('searchForm').dispatchEvent(new Event('submit'));
+            });
         });
 
-        // Kiểm tra nếu quảng cáo không tải được và hiển thị fallback
+        // Kiểm tra quảng cáo
         window.addEventListener('load', function() {
-            setTimeout(function() {
-                const ad1 = document.getElementById('ad1');
-                const ad1Fallback = document.getElementById('ad1-fallback');
-                const ad2 = document.getElementById('ad2');
-                const ad2Fallback = document.getElementById('ad2-fallback');
-                
-                // Nếu thẻ quảng cáo vẫn chưa hiển thị sau 5 giây, hiển thị thông báo dự phòng
-                if (ad1 && ad1.innerHTML.trim() === '') {
-                    ad1Fallback.style.display = 'block';
-                }
-                if (ad2 && ad2.innerHTML.trim() === '') {
-                    ad2Fallback.style.display = 'block';
-                }
-            }, 5000); // Chờ 5 giây trước khi kiểm tra
+            setTimeout(() => {
+                document.querySelectorAll('.adsbygoogle').forEach(ad => {
+                    if (ad.clientHeight === 0) {
+                        ad.nextElementSibling.style.display = 'block';
+                    }
+                });
+            }, 3000);
         });
     </script>
 </body>
