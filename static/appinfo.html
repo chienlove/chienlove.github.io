@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tra cứu thông tin ứng dụng App Store</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap">
-    <link rel="stylesheet" href="/css/app-version.css?v=6.4">
+    <link rel="stylesheet" href="/css/app-version.css?v=6.5">
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797" crossorigin="anonymous"></script>
 </head>
 <body>
     <div class="page-wrapper">
@@ -22,13 +23,11 @@
                 <div class="ad-section">
                     <span class="ad-label">QUẢNG CÁO</span>
                     <div class="ad-container" id="adTop">
-                        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797"
-                                crossorigin="anonymous"></script>
                         <!-- AdTop -->
                         <ins class="adsbygoogle"
                              style="display:block"
                              data-ad-client="ca-pub-3905625903416797"
-                             data-ad-slot="5160182988"
+                             data-ad-slot="1234567890"
                              data-ad-format="auto"
                              data-full-width-responsive="true"></ins>
                         <script>
@@ -99,13 +98,11 @@
                 <div class="ad-section">
                     <span class="ad-label">QUẢNG CÁO</span>
                     <div class="ad-container" id="adBottom">
-                        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797"
-                                crossorigin="anonymous"></script>
                         <!-- AdBottom -->
                         <ins class="adsbygoogle"
                              style="display:block"
                              data-ad-client="ca-pub-3905625903416797"
-                             data-ad-slot="5160182988"
+                             data-ad-slot="0987654321"
                              data-ad-format="auto"
                              data-full-width-responsive="true"></ins>
                         <script>
@@ -147,6 +144,12 @@
         // Khởi tạo khi DOM ready
         document.addEventListener('DOMContentLoaded', function() {
             setupAppBadges();
+            
+            // Khởi tạo lại quảng cáo nếu cần
+            if (typeof adsbygoogle !== 'undefined') {
+                adsbygoogle = window.adsbygoogle || [];
+                adsbygoogle.push({});
+            }
         });
     })();
     //]]>

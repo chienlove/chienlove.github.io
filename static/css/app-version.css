@@ -20,6 +20,7 @@
     margin: 0 auto;
     width: 100%;
     padding: 0 20px;
+    box-sizing: border-box;
 }
 
 /* ===== LAYOUT & TYPOGRAPHY ===== */
@@ -43,6 +44,7 @@ body {
     width: 100%;
     margin: 0 auto;
     padding: 20px 0;
+    box-sizing: border-box;
 }
 
 /* ===== HEADER ===== */
@@ -52,12 +54,14 @@ body {
     padding: 20px 0;
     text-align: center;
     box-shadow: var(--shadow-md);
+    width: 100%;
 }
 
 .header-content {
     max-width: 1200px;
     margin: 0 auto;
     padding: 0 20px;
+    box-sizing: border-box;
 }
 
 .app-header h1 {
@@ -81,6 +85,7 @@ body {
     border-radius: var(--radius-lg);
     padding: 20px;
     box-shadow: var(--shadow-sm);
+    box-sizing: border-box;
 }
 
 .search-input-group {
@@ -94,6 +99,7 @@ body {
     border: 1px solid var(--border-color);
     border-radius: var(--radius-md);
     font-size: 16px;
+    box-sizing: border-box;
 }
 
 #searchTerm:focus {
@@ -114,6 +120,7 @@ body {
     font-size: 16px;
     cursor: pointer;
     transition: background 0.2s;
+    box-sizing: border-box;
 }
 
 .search-button:hover {
@@ -245,6 +252,7 @@ body {
     box-shadow: var(--shadow-sm);
     margin-bottom: 20px;
     display: none;
+    box-sizing: border-box;
 }
 
 .app-info-header {
@@ -342,6 +350,7 @@ body {
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-sm);
     overflow: hidden;
+    box-sizing: border-box;
 }
 
 .search-results {
@@ -521,6 +530,8 @@ body {
 /* ===== ADS ===== */
 .ad-section {
     margin: 30px 0;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .ad-label {
@@ -543,6 +554,12 @@ body {
     min-height: 90px;
     width: 100%;
     overflow: hidden;
+    box-sizing: border-box;
+}
+
+.ad-container ins {
+    width: 100%;
+    height: 100%;
 }
 
 .ad-fallback {
@@ -557,6 +574,7 @@ body {
     padding: 20px 0;
     text-align: center;
     margin-top: 40px;
+    width: 100%;
 }
 
 .app-footer p {
