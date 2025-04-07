@@ -30,11 +30,17 @@ function showError(message) {
 function extractAppIdFromUrl(url) {
     if (!url) return null;
     
+    // Kiểm tra xem có phải là số (App ID)
+    if (/^\d+$/.test(url)) {
+        return url;
+    }
+    
     // Kiểm tra các định dạng URL App Store
     const patterns = [
         /\/id(\d+)/i,
         /\/app\/[^\/]+\/id(\d+)/i,
-        /[?&]id=(\d+)/i
+        /[?&]id=(\d+)/i,
+        /apps\.apple\.com\/[a-z]{2}\/app\/[^\/]+\/(\d+)/i
     ];
     
     for (const pattern of patterns) {
@@ -129,8 +135,8 @@ async function searchApp(term) {
         // Kiểm tra xem có phải là URL App Store không
         const appIdFromUrl = extractAppIdFromUrl(term);
         if (appIdFromUrl) {
-            fetchAppInfo(appIdFromUrl);
-            fetchVersions(appIdFromUrl);
+            await fetchAppInfo(appIdFromUrl);
+            await fetchVersions(appIdFromUrl);
             return;
         }
         
