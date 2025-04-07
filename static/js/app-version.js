@@ -36,30 +36,31 @@ document.getElementById('searchForm').addEventListener('submit', function(e) {
     }
 });
 
-function fetchAppInfoFromiTunes(appId) {
+async function fetchAppInfoFromiTunes(appId) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000);
 
-    fetch(`/api/appInfo?id=${appId}`, { signal: controller.signal })
-        .then(response => {
-            clearTimeout(timeoutId);
-            if (response.status === 404) throw new Error('Ứng dụng không tồn tại');
-            if (!response.ok) throw new Error(`Lỗi HTTP: ${response.status}`);
-            return response.json();
-        })
-        .then(data => {
-            if (!data?.results?.length) throw new Error('Không có dữ liệu');
-            displayAppInfo(data.results[0]);
-        })
-        .catch(error => {
-            console.error('Lỗi iTunes:', error);
-            document.getElementById('appInfo').innerHTML = `
-                <p class="error">Lỗi: ${sanitizeHTML(error.message)}</p>
-            `;
-        })
-        .finally(() => {
-            document.getElementById('loading').style.display = 'none';
+    try {
+        const response = await fetch(`/api/appInfo?id=${appId}`, { 
+            signal: controller.signal 
         });
+        clearTimeout(timeoutId);
+
+        if (response.status === 404) throw new Error('Ứng dụng không tồn tại');
+        if (!response.ok) throw new Error(`Lỗi HTTP: ${response.status}`);
+
+        const data = await response.json();
+        if (!data?.results?.length) throw new Error('Không có dữ liệu');
+        
+        displayAppInfo(data.results[0]);
+    } catch (error) {
+        console.error('Lỗi iTunes:', error);
+        document.getElementById('appInfo').innerHTML = `
+            <p class="error">Lỗi: ${sanitizeHTML(error.message)}</p>
+        `;
+    } finally {
+        document.getElementById('loading').style.display = 'none';
+    }
 }
 
 function displayAppInfo(app) {
@@ -67,49 +68,48 @@ function displayAppInfo(app) {
     const fileSizeMB = app.fileSizeBytes ? (app.fileSizeBytes / (1024 * 1024)).toFixed(2) : 'N/A';
 
     document.getElementById('appInfo').innerHTML = `
-        <h2>Thông tin Ứng dụng</h2>
-        <p><strong>ID:</strong> ${app.trackId}</p>
-        <p><strong>Tên:</strong> ${sanitize(app.trackName)}</p>
-        <p><strong>Tác giả:</strong> ${sanitize(app.artistName)}</p>
-        <p><strong>Phiên bản:</strong> ${sanitize(app.version)}</p>
-        <p><strong>Cập nhật:</strong> ${sanitize(app.releaseNotes)}</p>
-        <p><strong>Ngày phát hành:</strong> ${app.releaseDate ? new Date(app.releaseDate).toLocaleDateString() : 'N/A'}</p>
-        <p><strong>Dung lượng:</strong> ${fileSizeMB} MB</p>
+        <div class="app-info">
+            <h2>Thông tin Ứng dụng</h2>
+            <p><strong>ID:</strong> ${app.trackId}</p>
+            <p><strong>Tên:</strong> ${sanitize(app.trackName)}</p>
+            <p><strong>Tác giả:</strong> ${sanitize(app.artistName)}</p>
+            <p><strong>Phiên bản:</strong> ${sanitize(app.version)}</p>
+            <p><strong>Cập nhật:</strong> ${sanitize(app.releaseNotes || 'Không có thông tin')}</p>
+            <p><strong>Ngày phát hành:</strong> ${app.releaseDate ? new Date(app.releaseDate).toLocaleDateString() : 'N/A'}</p>
+            <p><strong>Dung lượng:</strong> ${fileSizeMB} MB</p>
+        </div>
     `;
 }
 
-function searchApp(term) {
+async function searchApp(term) {
     const encodedTerm = encodeURIComponent(term);
     document.getElementById('loading').style.display = 'block';
     document.getElementById('result').innerHTML = '<p>Đang tìm kiếm ứng dụng...</p>';
 
-    fetch(`https://itunes.apple.com/search?term=${encodedTerm}&entity=software`)
-        .then(response => {
-            if (!response.ok) throw new Error(`Lỗi HTTP: ${response.status}`);
-            return response.json();
-        })
-        .then(data => {
-            if (!data.results || data.results.length === 0) {
-                throw new Error('Không tìm thấy ứng dụng nào phù hợp');
-            }
-            displaySearchResults(data.results);
-        })
-        .catch(error => {
-            console.error('Lỗi tìm kiếm:', error);
-            document.getElementById('result').innerHTML = `
-                <p class="error">Lỗi: ${sanitizeHTML(error.message)}</p>
-            `;
-        })
-        .finally(() => {
-            document.getElementById('loading').style.display = 'none';
-        });
+    try {
+        const response = await fetch(`https://itunes.apple.com/search?term=${encodedTerm}&entity=software`);
+        if (!response.ok) throw new Error(`Lỗi HTTP: ${response.status}`);
+
+        const data = await response.json();
+        if (!data.results || data.results.length === 0) {
+            throw new Error('Không tìm thấy ứng dụng nào phù hợp');
+        }
+        displaySearchResults(data.results);
+    } catch (error) {
+        console.error('Lỗi tìm kiếm:', error);
+        document.getElementById('result').innerHTML = `
+            <p class="error">Lỗi: ${sanitizeHTML(error.message)}</p>
+        `;
+    } finally {
+        document.getElementById('loading').style.display = 'none';
+    }
 }
 
 function displaySearchResults(apps) {
     const resultDiv = document.getElementById('result');
     resultDiv.innerHTML = '';
 
-    if (!apps || !Array.isArray(apps) {
+    if (!apps || !Array.isArray(apps)) {
         resultDiv.innerHTML = '<p class="error">Dữ liệu ứng dụng không hợp lệ</p>';
         return;
     }
@@ -119,35 +119,50 @@ function displaySearchResults(apps) {
         return;
     }
 
-    let output = '<table><tr><th>Icon</th><th>Tên ứng dụng</th><th>Tác giả</th><th>Action</th></tr>';
+    let output = `
+        <table class="search-results">
+            <thead>
+                <tr>
+                    <th>Icon</th>
+                    <th>Tên ứng dụng</th>
+                    <th>Tác giả</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
     apps.forEach(app => {
         const trackName = sanitizeHTML(app.trackName || '');
         const artistName = sanitizeHTML(app.artistName || '');
         output += `
             <tr>
-                <td><img src="${app.artworkUrl60 || ''}" alt="${trackName} icon" width="60"></td>
+                <td><img src="${app.artworkUrl60 || ''}" alt="${trackName}" width="60"></td>
                 <td>${trackName}</td>
                 <td>${artistName}</td>
                 <td>
-                    <button onclick="selectApp(${app.trackId}, '${trackName.replace(/'/g, "\\'")}', '${artistName.replace(/'/g, "\\'")}')">Xem versions</button>
+                    <button class="btn-view" onclick="selectApp(${app.trackId}, '${escapeSingleQuote(trackName)}', '${escapeSingleQuote(artistName)}')">
+                        Xem versions
+                    </button>
                 </td>
             </tr>
         `;
     });
-    output += '</table>';
+
+    output += `</tbody></table>`;
     resultDiv.innerHTML = output;
 }
 
 function selectApp(trackId, trackName, artistName) {
-    // Hiển thị thông tin cơ bản
     document.getElementById('appInfo').innerHTML = `
-        <h2>Thông tin Ứng dụng</h2>
-        <p><strong>ID:</strong> ${trackId}</p>
-        <p><strong>Tên:</strong> ${trackName}</p>
-        <p><strong>Tác giả:</strong> ${artistName}</p>
+        <div class="app-info">
+            <h2>Thông tin Ứng dụng</h2>
+            <p><strong>ID:</strong> ${trackId}</p>
+            <p><strong>Tên:</strong> ${trackName}</p>
+            <p><strong>Tác giả:</strong> ${artistName}</p>
+        </div>
     `;
 
-    // Reset và tải versions mới
     document.getElementById('result').innerHTML = '<p>Đang tải danh sách phiên bản...</p>';
     document.getElementById('pagination').innerHTML = '';
     versions = [];
@@ -155,7 +170,7 @@ function selectApp(trackId, trackName, artistName) {
     fetchTimbrdVersion(trackId);
 }
 
-function fetchTimbrdVersion(appId, retryCount = 0) {
+async function fetchTimbrdVersion(appId, retryCount = 0) {
     const MAX_RETRIES = 3;
     document.getElementById('loading').style.display = 'block';
     
@@ -165,57 +180,57 @@ function fetchTimbrdVersion(appId, retryCount = 0) {
         `;
     }
 
-    fetchVersionsChunk(appId, 1, retryCount);
+    try {
+        await fetchVersionsChunk(appId, 1, retryCount);
+    } catch (error) {
+        console.error('Lỗi fetchTimbrdVersion:', error);
+        document.getElementById('result').innerHTML = `
+            <p class="error">Lỗi khi tải phiên bản: ${sanitizeHTML(error.message)}</p>
+        `;
+        document.getElementById('loading').style.display = 'none';
+    }
 }
 
-function fetchVersionsChunk(appId, page, retryCount = 0) {
+async function fetchVersionsChunk(appId, page, retryCount = 0) {
     const MAX_RETRIES = 3;
     const limit = 1000;
     
-    fetch(`/api/getAppVersions?id=${appId}&page=${page}&limit=${limit}`, {
-        headers: {
-            'Cache-Control': 'no-cache',
-            'Pragma': 'no-cache'
-        }
-    })
-    .then(response => {
+    try {
+        const response = await fetch(`/api/getAppVersions?id=${appId}&page=${page}&limit=${limit}`, {
+            headers: {
+                'Cache-Control': 'no-cache',
+                'Pragma': 'no-cache'
+            }
+        });
+
         if (!response.ok) {
             if (response.status === 403) {
                 throw new Error('Ứng dụng này không hỗ trợ xem version history');
             }
             throw new Error(`HTTP Error: ${response.status}`);
         }
-        return response.text();
-    })
-    .then(text => {
+
+        const text = await response.text();
         if (!text || text.trim() === '') {
             throw new Error('Không nhận được dữ liệu từ server');
         }
-        
-        try {
-            return JSON.parse(text);
-        } catch (e) {
-            console.error('Parse error:', e);
-            throw new Error('Không thể xử lý dữ liệu từ server');
-        }
-    })
-    .then(response => {
-        if (!response.data || !Array.isArray(response.data)) {
+
+        const data = JSON.parse(text);
+        if (!data.data || !Array.isArray(data.data)) {
             throw new Error('Định dạng dữ liệu không hợp lệ');
         }
 
-        versions = versions.concat(response.data);
+        versions = versions.concat(data.data);
         
-        if (response.metadata?.hasMore) {
-            fetchVersionsChunk(appId, page + 1, retryCount);
+        if (data.metadata?.hasMore) {
+            await fetchVersionsChunk(appId, page + 1, retryCount);
         } else {
             versions.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
             currentPage = 1;
             renderVersions();
         }
-    })
-    .catch(error => {
-        console.error(`Error (attempt ${retryCount + 1}):`, error);
+    } catch (error) {
+        console.error(`Lỗi fetchVersionsChunk (attempt ${retryCount + 1}):`, error);
         
         const noRetryErrors = [
             'Ứng dụng này không hỗ trợ xem version history',
@@ -226,19 +241,12 @@ function fetchVersionsChunk(appId, page, retryCount = 0) {
             !error.message.includes('404') && 
             !noRetryErrors.some(msg => error.message.includes(msg))) {
             
-            setTimeout(() => {
-                fetchVersionsChunk(appId, page, retryCount + 1);
-            }, 2000);
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            return fetchVersionsChunk(appId, page, retryCount + 1);
         } else {
-            document.getElementById('result').innerHTML = `
-                <p class="error">
-                    ${retryCount > 0 ? `Đã thử ${retryCount} lần. ` : ''}
-                    Lỗi: ${sanitizeHTML(error.message)}
-                </p>
-            `;
-            document.getElementById('loading').style.display = 'none';
+            throw error;
         }
-    });
+    }
 }
 
 function renderVersions() {
@@ -257,8 +265,18 @@ function renderVersions() {
         return;
     }
 
-    let output = `<p>Tổng số phiên bản: ${totalVersions}</p>`;
-    output += '<table><tr><th>Phiên bản</th><th>ID</th><th>Ngày phát hành</th></tr>';
+    let output = `<p class="total-versions">Tổng số phiên bản: ${totalVersions}</p>`;
+    output += `
+        <table class="versions-table">
+            <thead>
+                <tr>
+                    <th>Phiên bản</th>
+                    <th>ID</th>
+                    <th>Ngày phát hành</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
     
     paginatedVersions.forEach(version => {
         output += `
@@ -269,7 +287,7 @@ function renderVersions() {
             </tr>
         `;
     });
-    output += '</table>';
+    output += `</tbody></table>`;
     resultDiv.innerHTML = output;
 
     renderPagination(totalVersions);
@@ -283,22 +301,54 @@ function renderPagination(totalItems) {
 
     if (totalPages <= 1) return;
 
+    const paginationContainer = document.createElement('div');
+    paginationContainer.className = 'pagination';
+
+    // Previous button
+    if (currentPage > 1) {
+        const prevButton = document.createElement('button');
+        prevButton.innerHTML = '&laquo;';
+        prevButton.addEventListener('click', () => {
+            currentPage--;
+            renderVersions();
+        });
+        paginationContainer.appendChild(prevButton);
+    }
+
+    // Page buttons
     for (let i = 1; i <= totalPages; i++) {
         const button = document.createElement('button');
         button.textContent = i;
         if (i === currentPage) {
-            button.classList.add('active');
+            button.className = 'active';
         }
         button.addEventListener('click', () => {
             currentPage = i;
             renderVersions();
         });
-        paginationDiv.appendChild(button);
+        paginationContainer.appendChild(button);
     }
+
+    // Next button
+    if (currentPage < totalPages) {
+        const nextButton = document.createElement('button');
+        nextButton.innerHTML = '&raquo;';
+        nextButton.addEventListener('click', () => {
+            currentPage++;
+            renderVersions();
+        });
+        paginationContainer.appendChild(nextButton);
+    }
+
+    paginationDiv.appendChild(paginationContainer);
+}
+
+function escapeSingleQuote(str) {
+    return str.replace(/'/g, "\\'");
 }
 
 function sanitizeHTML(str) {
-    if (!str) return '';
+    if (str == null) return '';
     return str.toString()
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
@@ -307,5 +357,9 @@ function sanitizeHTML(str) {
         .replace(/'/g, '&#039;');
 }
 
-// Thêm vào global scope để có thể gọi từ HTML
+// Make functions available globally
 window.selectApp = selectApp;
+window.paginateVersions = function(page) {
+    currentPage = page;
+    renderVersions();
+};
