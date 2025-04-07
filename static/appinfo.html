@@ -5,22 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tra cứu thông tin ứng dụng App Store</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap">
-    <link rel="stylesheet" href="/css/app-version.css?v=4.0">
-    <style>
-        .loader {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #2563eb;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-    </style>
+    <link rel="stylesheet" href="/css/app-version.css?v=6.0">
 </head>
 <body>
     <div class="app-container">
@@ -35,20 +20,7 @@
             <!-- Quảng cáo đầu trang -->
             <div class="ad-section">
                 <span class="ad-label">QUẢNG CÁO</span>
-                <div class="ad-container">
-                    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797"
-                            crossorigin="anonymous"></script>
-                    <ins class="adsbygoogle"
-                         style="display:block"
-                         data-ad-client="ca-pub-3905625903416797"
-                         data-ad-slot="5160182988"
-                         data-ad-format="auto"
-                         data-full-width-responsive="true"></ins>
-                    <script>
-                         (adsbygoogle = window.adsbygoogle || []).push({});
-                    </script>
-                    <div class="ad-fallback">Nội dung quảng cáo</div>
-                </div>
+                <div class="ad-container" id="adTop"></div>
             </div>
 
             <!-- Form tìm kiếm -->
@@ -56,7 +28,7 @@
                 <form id="searchForm" class="search-form">
                     <div class="search-input-group">
                         <input type="text" id="searchTerm" 
-                               placeholder="Nhập App ID (ví dụ: 284882215), tên ứng dụng hoặc URL App Store" 
+                               placeholder="Nhập App ID, tên ứng dụng hoặc URL App Store" 
                                aria-label="Tìm kiếm ứng dụng">
                         <button type="submit" class="search-button">
                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
@@ -73,25 +45,32 @@
                 </div>
             </section>
 
-            <!-- Hướng dẫn sử dụng -->
+            <!-- Hướng dẫn sử dụng có thể thu gọn -->
             <section class="user-guide">
-                <h2>Hướng dẫn sử dụng</h2>
-                <ol>
-                    <li>Nhập <strong>App ID</strong>, <strong>tên ứng dụng</strong> hoặc <strong>URL App Store</strong> vào ô tìm kiếm</li>
-                    <li>Nhấn nút "Tìm kiếm" hoặc phím Enter</li>
-                    <li>Xem thông tin ứng dụng và lịch sử phiên bản</li>
-                    <li>Click vào tên ứng dụng trong danh sách để xem chi tiết</li>
-                    <li>Sử dụng phân trang để xem thêm phiên bản nếu có</li>
-                </ol>
-                <div class="example-apps">
-                    <p><strong>Ví dụ ứng dụng phổ biến:</strong></p>
-                    <div class="app-badges">
-                        <span class="app-badge" data-appid="284882215">Facebook</span>
-                        <span class="app-badge" data-appid="310633997">WhatsApp</span>
-                        <span class="app-badge" data-appid="389801252">Instagram</span>
-                        <span class="app-badge" data-appid="333903271">Zalo</span>
+                <details class="guide-accordion" open>
+                    <summary class="guide-summary">
+                        <h2>Hướng dẫn sử dụng</h2>
+                        <svg class="chevron" viewBox="0 0 24 24">
+                            <path d="M7.41 8.59L12 13.17l4.59-4.58L18 10l-6 6-6-6 1.41-1.41z"/>
+                        </svg>
+                    </summary>
+                    <div class="guide-content">
+                        <ol>
+                            <li>Nhập <strong>App ID</strong> (ví dụ: 284882215), <strong>tên ứng dụng</strong> hoặc <strong>URL App Store</strong></li>
+                            <li>Nhấn nút "Tìm kiếm" hoặc phím Enter</li>
+                            <li>Xem thông tin ứng dụng và lịch sử phiên bản</li>
+                            <li>Click vào icon ứng dụng để mở App Store</li>
+                        </ol>
+                        <div class="example-apps">
+                            <p><strong>Ví dụ ứng dụng phổ biến:</strong></p>
+                            <div class="app-badges">
+                                <span class="app-badge" data-appid="284882215">Facebook</span>
+                                <span class="app-badge" data-appid="310633997">WhatsApp</span>
+                                <span class="app-badge" data-appid="389801252">Instagram</span>
+                            </div>
+                        </div>
                     </div>
-                </div>
+                </details>
             </section>
 
             <!-- Kết quả tra cứu -->
@@ -105,18 +84,7 @@
             <!-- Quảng cáo cuối trang -->
             <div class="ad-section">
                 <span class="ad-label">QUẢNG CÁO</span>
-                <div class="ad-container">
-                    <ins class="adsbygoogle"
-                         style="display:block"
-                         data-ad-client="ca-pub-3905625903416797"
-                         data-ad-slot="5160182988"
-                         data-ad-format="auto"
-                         data-full-width-responsive="true"></ins>
-                    <script>
-                         (adsbygoogle = window.adsbygoogle || []).push({});
-                    </script>
-                    <div class="ad-fallback">Nội dung quảng cáo</div>
-                </div>
+                <div class="ad-container" id="adBottom"></div>
             </div>
         </main>
 
@@ -130,26 +98,40 @@
         </footer>
     </div>
 
-    <script src="/js/app-version.js?v=4.0"></script>
+    <script src="/js/app-version.js?v=6.0"></script>
     <script>
-        // Xử lý click trên các app badge ví dụ
-        document.querySelectorAll('.app-badge').forEach(badge => {
-            badge.addEventListener('click', function() {
-                const appId = this.getAttribute('data-appid');
-                document.getElementById('searchTerm').value = appId;
-                document.getElementById('searchForm').dispatchEvent(new Event('submit'));
-            });
-        });
-
-        // Kiểm tra quảng cáo không tải
-        window.addEventListener('load', function() {
-            setTimeout(() => {
-                document.querySelectorAll('.adsbygoogle').forEach(ad => {
-                    if (ad.clientHeight === 0) {
-                        ad.nextElementSibling.style.display = 'block';
-                    }
+        // Khởi tạo quảng cáo
+        function initAds() {
+            const adTop = document.createElement('script');
+            adTop.innerHTML = `
+                (adsbygoogle = window.adsbygoogle || []).push({
+                    google_ad_client: "ca-pub-3905625903416797",
+                    enable_page_level_ads: true,
+                    overlays: {bottom: true}
                 });
+            `;
+            document.head.appendChild(adTop);
+            
+            // Fallback nếu quảng cáo không tải
+            setTimeout(() => {
+                if (!document.querySelector('.adsbygoogle iframe')) {
+                    document.getElementById('adTop').innerHTML = '<div class="ad-fallback">Quảng cáo</div>';
+                    document.getElementById('adBottom').innerHTML = '<div class="ad-fallback">Quảng cáo</div>';
+                }
             }, 3000);
+        }
+        
+        // Thêm sự kiện click cho các app badge ví dụ
+        document.addEventListener('DOMContentLoaded', function() {
+            initAds();
+            
+            document.querySelectorAll('.app-badge').forEach(badge => {
+                badge.addEventListener('click', function() {
+                    const appId = this.getAttribute('data-appid');
+                    document.getElementById('searchTerm').value = appId;
+                    document.getElementById('searchForm').dispatchEvent(new Event('submit'));
+                });
+            });
         });
     </script>
 </body>

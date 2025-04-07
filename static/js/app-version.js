@@ -1,6 +1,7 @@
 let currentPage = 1;
 const perPage = 15;
 let versions = [];
+let currentAppId = null;
 
 // Utility functions
 function sanitizeHTML(str) {
@@ -26,9 +27,30 @@ function showError(message) {
     document.getElementById('loading').style.display = 'none';
 }
 
+function extractAppIdFromUrl(url) {
+    if (!url) return null;
+    
+    // Kiểm tra các định dạng URL App Store
+    const patterns = [
+        /\/id(\d+)/i,
+        /\/app\/[^\/]+\/id(\d+)/i,
+        /[?&]id=(\d+)/i
+    ];
+    
+    for (const pattern of patterns) {
+        const match = url.match(pattern);
+        if (match && match[1]) {
+            return match[1];
+        }
+    }
+    
+    return null;
+}
+
 // Fetch App Info
 async function fetchAppInfo(appId) {
     try {
+        document.getElementById('loading').style.display = 'flex';
         const response = await fetch(`/api/appInfo?id=${appId}`);
         if (!response.ok) throw new Error(`Lỗi HTTP: ${response.status}`);
         
@@ -38,8 +60,11 @@ async function fetchAppInfo(appId) {
         }
         
         displayAppInfo(data.results[0]);
+        currentAppId = appId;
     } catch (error) {
         showError(error.message);
+    } finally {
+        document.getElementById('loading').style.display = 'none';
     }
 }
 
@@ -48,10 +73,13 @@ function displayAppInfo(app) {
     const iconUrl = app.artworkUrl512 || app.artworkUrl100 || app.artworkUrl60;
     const fileSizeMB = app.fileSizeBytes ? (app.fileSizeBytes / (1024 * 1024)).toFixed(1) + ' MB' : 'Không rõ';
     const rating = app.averageUserRating ? app.averageUserRating.toFixed(1) + '★' : 'Chưa có';
+    const appStoreUrl = `https://apps.apple.com/app/id${app.trackId}`;
     
     appInfo.innerHTML = `
         <div class="app-info-header">
-            <img src="${iconUrl}" alt="${sanitizeHTML(app.trackName)}" class="app-icon-large">
+            <a href="${appStoreUrl}" target="_blank" class="app-icon-link">
+                <img src="${iconUrl}" alt="${sanitizeHTML(app.trackName)}" class="app-icon-large">
+            </a>
             <div>
                 <h2 class="app-title">${sanitizeHTML(app.trackName)}</h2>
                 <p class="app-developer">${sanitizeHTML(app.artistName)}</p>
@@ -93,10 +121,20 @@ function displayAppInfo(app) {
     appInfo.style.display = 'block';
 }
 
-// Search App by Name
+// Search App
 async function searchApp(term) {
     try {
         document.getElementById('loading').style.display = 'flex';
+        
+        // Kiểm tra xem có phải là URL App Store không
+        const appIdFromUrl = extractAppIdFromUrl(term);
+        if (appIdFromUrl) {
+            fetchAppInfo(appIdFromUrl);
+            fetchVersions(appIdFromUrl);
+            return;
+        }
+        
+        // Nếu không phải URL thì tìm kiếm bằng tên
         const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(term)}&entity=software&limit=10`);
         if (!response.ok) throw new Error(`Lỗi HTTP: ${response.status}`);
         
@@ -135,7 +173,7 @@ function displaySearchResults(apps) {
         </div>
     `;
     
-    // Add click event to each app item
+    // Thêm sự kiện click cho mỗi ứng dụng
     document.querySelectorAll('.app-item').forEach(item => {
         item.addEventListener('click', function() {
             const appId = this.getAttribute('data-appid');
@@ -270,15 +308,9 @@ document.getElementById('searchForm').addEventListener('submit', function(e) {
     document.getElementById('pagination').innerHTML = '';
     versions = [];
     currentPage = 1;
+    currentAppId = null;
     
     if (term) {
-        if (/^\d+$/.test(term)) {
-            // Search by App ID
-            fetchAppInfo(term);
-            fetchVersions(term);
-        } else {
-            // Search by name
-            searchApp(term);
-        }
+        searchApp(term);
     }
 });
