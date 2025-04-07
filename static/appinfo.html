@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tra cứu thông tin ứng dụng App Store</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap">
-    <link rel="stylesheet" href="/css/app-version.css?v=6.0">
+    <link rel="stylesheet" href="/css/app-version.css?v=6.2">
 </head>
 <body>
-    <div class="container">
+    <div class="page-wrapper">
         <div class="app-container">
             <header class="app-header">
                 <div class="header-content">
@@ -100,54 +100,55 @@
         </div>
     </div>
 
-    <script src="/js/app-version.js?v=6.0"></script>
+    <script src="/js/app-version.js?v=6.2"></script>
     <script>
+    //<![CDATA[
+    (function() {
         // Khởi tạo quảng cáo
         function initAds() {
-            const adTop = document.getElementById('adTop');
-            const adBottom = document.getElementById('adBottom');
-            
-            adTop.innerHTML = `
-                <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797" crossorigin="anonymous"></script>
-                <!-- Top Ad -->
-                <ins class="adsbygoogle"
-                     style="display:block"
-                     data-ad-client="ca-pub-3905625903416797"
-                     data-ad-slot="1234567890"
-                     data-ad-format="auto"
-                     data-full-width-responsive="true"></ins>
-                <script>
-                     (adsbygoogle = window.adsbygoogle || []).push({});
-                </script>
-            `;
-            
-            adBottom.innerHTML = `
-                <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797" crossorigin="anonymous"></script>
-                <!-- Bottom Ad -->
-                <ins class="adsbygoogle"
-                     style="display:block"
-                     data-ad-client="ca-pub-3905625903416797"
-                     data-ad-slot="0987654321"
-                     data-ad-format="auto"
-                     data-full-width-responsive="true"></ins>
-                <script>
-                     (adsbygoogle = window.adsbygoogle || []).push({});
-                </script>
-            `;
+            try {
+                var adTop = document.getElementById('adTop');
+                var adBottom = document.getElementById('adBottom');
+                
+                // Tạo script quảng cáo
+                var adScript = document.createElement('script');
+                adScript.async = true;
+                adScript.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797';
+                adScript.crossOrigin = 'anonymous';
+                document.head.appendChild(adScript);
+                
+                // Thêm quảng cáo top
+                adTop.innerHTML = '<ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3905625903416797" data-ad-slot="1234567890" data-ad-format="auto" data-full-width-responsive="true"></ins>';
+                
+                // Thêm quảng cáo bottom
+                adBottom.innerHTML = '<ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3905625903416797" data-ad-slot="0987654321" data-ad-format="auto" data-full-width-responsive="true"></ins>';
+                
+                // Khởi chạy quảng cáo
+                (adsbygoogle = window.adsbygoogle || []).push({});
+            } catch (e) {
+                console.error('Lỗi khi tải quảng cáo:', e);
+            }
         }
         
         // Thêm sự kiện click cho các app badge ví dụ
-        document.addEventListener('DOMContentLoaded', function() {
-            initAds();
-            
-            document.querySelectorAll('.app-badge').forEach(badge => {
+        function setupAppBadges() {
+            var badges = document.querySelectorAll('.app-badge');
+            badges.forEach(function(badge) {
                 badge.addEventListener('click', function() {
-                    const appId = this.getAttribute('data-appid');
+                    var appId = this.getAttribute('data-appid');
                     document.getElementById('searchTerm').value = appId;
                     document.getElementById('searchForm').dispatchEvent(new Event('submit'));
                 });
             });
+        }
+        
+        // Khởi tạo khi DOM ready
+        document.addEventListener('DOMContentLoaded', function() {
+            initAds();
+            setupAppBadges();
         });
+    })();
+    //]]>
     </script>
 </body>
 </html>
