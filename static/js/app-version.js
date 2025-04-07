@@ -1,23 +1,10 @@
 let currentPage = 1;
-const perPage = 50;
+const perPage = 20;
 let versions = [];
 
 // Utility functions
-function isAppId(input) {
-    return /^\d+$/.test(input);
-}
-
-function extractAppIdFromUrl(url) {
-    const match = url.match(/(?:id|app\/.*?\bid)(\d+)/i);
-    return match ? match[1] : null;
-}
-
-function escapeSingleQuote(str) {
-    return str.replace(/'/g, "\\'");
-}
-
 function sanitizeHTML(str) {
-    if (str == null) return '';
+    if (!str) return '';
     return str.toString()
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
@@ -26,337 +13,271 @@ function sanitizeHTML(str) {
         .replace(/'/g, '&#039;');
 }
 
-// Main search function
-document.getElementById('searchForm').addEventListener('submit', function(e) {
+function formatDate(dateString) {
+    if (!dateString) return 'Không rõ';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('vi-VN');
+}
+
+// DOM Elements
+const searchForm = document.getElementById('searchForm');
+const searchTerm = document.getElementById('searchTerm');
+const loading = document.getElementById('loading');
+const appInfo = document.getElementById('appInfo');
+const result = document.getElementById('result');
+const pagination = document.getElementById('pagination');
+const errorElement = document.getElementById('error');
+
+// Event Listeners
+searchForm.addEventListener('submit', function(e) {
     e.preventDefault();
-    const searchTerm = document.getElementById('searchTerm').value.trim();
-    resetSearchUI();
+    const term = searchTerm.value.trim();
     
-    if (isAppId(searchTerm)) {
-        fetchFullAppInfo(searchTerm);
-    } else {
-        const appIdFromUrl = extractAppIdFromUrl(searchTerm);
-        if (appIdFromUrl) {
-            fetchFullAppInfo(appIdFromUrl);
+    // Reset UI
+    loading.style.display = 'flex';
+    appInfo.innerHTML = '';
+    result.innerHTML = '';
+    pagination.innerHTML = '';
+    errorElement.style.display = 'none';
+    versions = [];
+    currentPage = 1;
+    
+    if (term) {
+        if (/^\d+$/.test(term)) {
+            // Search by App ID
+            fetchAppInfo(term);
+            fetchVersions(term);
         } else {
-            searchApp(searchTerm);
+            // Search by name
+            searchApp(term);
         }
     }
 });
 
-function resetSearchUI() {
-    document.getElementById('loading').style.display = 'block';
-    document.getElementById('appInfo').innerHTML = '';
-    document.getElementById('result').innerHTML = '';
-    document.getElementById('pagination').innerHTML = '';
-    versions = [];
-}
-
-// Click on app name to show versions
-function handleAppClick(appId, appName, artistName, version, releaseNotes, bundleId) {
-    displayFullAppInfo({
-        trackId: appId,
-        trackName: appName,
-        artistName: artistName,
-        version: version,
-        releaseNotes: releaseNotes,
-        bundleId: bundleId
-    });
-    fetchTimbrdVersion(appId);
-}
-
-async function fetchFullAppInfo(appId) {
+// Fetch App Info
+async function fetchAppInfo(appId) {
     try {
         const response = await fetch(`/api/appInfo?id=${appId}`);
-        if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
         
         const data = await response.json();
-        if (!data?.results?.length) throw new Error('Không có dữ liệu');
+        if (!data.results || data.results.length === 0) {
+            throw new Error('Không tìm thấy ứng dụng');
+        }
         
-        displayFullAppInfo(data.results[0]);
-        fetchTimbrdVersion(appId);
+        displayAppInfo(data.results[0]);
     } catch (error) {
-        console.error('Lỗi:', error);
-        document.getElementById('appInfo').innerHTML = `
-            <p class="error">Lỗi: ${sanitizeHTML(error.message)}</p>
-        `;
-        document.getElementById('loading').style.display = 'none';
+        showError(error.message);
     }
 }
 
-function displayFullAppInfo(app) {
-    const sanitize = str => str ? sanitizeHTML(str) : 'Không có thông tin';
-    const fileSizeMB = app.fileSizeBytes ? (app.fileSizeBytes / (1024 * 1024)).toFixed(2) : 'N/A';
-    const releaseDate = app.releaseDate ? new Date(app.releaseDate).toLocaleDateString() : 'N/A';
+function displayAppInfo(app) {
     const iconUrl = app.artworkUrl512 || app.artworkUrl100 || app.artworkUrl60;
-
-    document.getElementById('appInfo').innerHTML = `
-        <div class="app-info-container">
-            <div class="app-icon">
-                <img src="${iconUrl}" alt="${sanitize(app.trackName)}">
-            </div>
-            <div class="app-details">
-                <h2>${sanitize(app.trackName)}</h2>
-                <p class="developer">${sanitize(app.artistName)}</p>
-                <div class="app-meta">
-                    <span class="version">Version: ${sanitize(app.version)}</span>
-                    <span class="size">${fileSizeMB} MB</span>
-                    <span class="release-date">${releaseDate}</span>
-                </div>
-                <p class="bundle-id"><strong>Bundle ID:</strong> ${sanitize(app.bundleId || 'N/A')}</p>
-                <div class="release-notes">
-                    <h3>Release Notes:</h3>
-                    <div class="notes-content">${sanitize(app.releaseNotes || 'Không có thông tin cập nhật')}</div>
-                </div>
+    const fileSizeMB = app.fileSizeBytes ? (app.fileSizeBytes / (1024 * 1024)).toFixed(1) + ' MB' : 'Không rõ';
+    
+    appInfo.innerHTML = `
+        <div class="app-info-header">
+            <img src="${iconUrl}" alt="${sanitizeHTML(app.trackName)}" class="app-icon-large">
+            <div>
+                <h2 class="app-title">${sanitizeHTML(app.trackName)}</h2>
+                <p class="app-developer">${sanitizeHTML(app.artistName)}</p>
             </div>
         </div>
+        
+        <div class="app-meta-grid">
+            <div class="app-meta-item">
+                <div class="app-meta-label">Phiên bản hiện tại</div>
+                <div class="app-meta-value">${sanitizeHTML(app.version || 'Không rõ')}</div>
+            </div>
+            <div class="app-meta-item">
+                <div class="app-meta-label">Kích thước</div>
+                <div class="app-meta-value">${fileSizeMB}</div>
+            </div>
+            <div class="app-meta-item">
+                <div class="app-meta-label">Ngày phát hành</div>
+                <div class="app-meta-value">${formatDate(app.releaseDate)}</div>
+            </div>
+            <div class="app-meta-item">
+                <div class="app-meta-label">Đánh giá</div>
+                <div class="app-meta-value">${app.averageUserRating ? app.averageUserRating.toFixed(1) + '★' : 'Chưa có'}</div>
+            </div>
+        </div>
+        
+        <div class="bundle-id-container">
+            <div class="app-meta-label">Bundle ID</div>
+            <div class="app-meta-value">${sanitizeHTML(app.bundleId || 'Không rõ')}</div>
+        </div>
+        
+        ${app.releaseNotes ? `
+        <div class="release-notes-container">
+            <h3 class="release-notes-title">Ghi chú phát hành</h3>
+            <div class="release-notes-content">${sanitizeHTML(app.releaseNotes)}</div>
+        </div>
+        ` : ''}
     `;
 }
 
+// Search App by Name
 async function searchApp(term) {
-    const encodedTerm = encodeURIComponent(term);
-    document.getElementById('result').innerHTML = '<p class="loading-text">Đang tìm kiếm ứng dụng...</p>';
-
     try {
-        const response = await fetch(`https://itunes.apple.com/search?term=${encodedTerm}&entity=software`);
-        if (!response.ok) throw new Error(`Lỗi HTTP: ${response.status}`);
-
+        const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(term)}&entity=software&limit=10`);
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        
         const data = await response.json();
         if (!data.results || data.results.length === 0) {
             throw new Error('Không tìm thấy ứng dụng nào phù hợp');
         }
+        
         displaySearchResults(data.results);
     } catch (error) {
-        document.getElementById('result').innerHTML = `
-            <p class="error">Lỗi: ${sanitizeHTML(error.message)}</p>
-        `;
+        showError(error.message);
     } finally {
-        document.getElementById('loading').style.display = 'none';
+        loading.style.display = 'none';
     }
 }
 
 function displaySearchResults(apps) {
-    const resultDiv = document.getElementById('result');
-    resultDiv.innerHTML = '';
-
-    if (!apps || !Array.isArray(apps) || apps.length === 0) {
-        resultDiv.innerHTML = '<p class="no-results">Không tìm thấy ứng dụng nào.</p>';
-        return;
-    }
-
-    let output = `
-        <div class="search-results-container">
-            <div class="results-header">
-                <span class="result-count">${apps.length} kết quả</span>
+    result.innerHTML = `
+        <div class="search-results">
+            <h3>Kết quả tìm kiếm (${apps.length})</h3>
+            <div class="apps-list">
+                ${apps.map(app => `
+                    <div class="app-item" data-appid="${app.trackId}">
+                        <img src="${app.artworkUrl60}" alt="${sanitizeHTML(app.trackName)}" class="app-icon">
+                        <div class="app-details">
+                            <h4>${sanitizeHTML(app.trackName)}</h4>
+                            <p>${sanitizeHTML(app.artistName)}</p>
+                            <div class="app-meta">
+                                <span>${sanitizeHTML(app.version || 'N/A')}</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
             </div>
-            <div class="results-list">
+        </div>
     `;
-
-    apps.forEach(app => {
-        const trackName = sanitizeHTML(app.trackName || '');
-        const artistName = sanitizeHTML(app.artistName || '');
-        const version = sanitizeHTML(app.version || '');
-        const bundleId = sanitizeHTML(app.bundleId || '');
-
-        output += `
-            <div class="app-result" onclick="handleAppClick(
-                ${app.trackId}, 
-                '${escapeSingleQuote(trackName)}', 
-                '${escapeSingleQuote(artistName)}',
-                '${escapeSingleQuote(version)}',
-                '${escapeSingleQuote(app.releaseNotes || '')}',
-                '${escapeSingleQuote(bundleId)}'
-            )">
-                <img src="${app.artworkUrl60}" alt="${trackName}" class="app-icon">
-                <div class="app-info">
-                    <h3 class="app-name">${trackName}</h3>
-                    <p class="app-developer">${artistName}</p>
-                    <p class="app-meta">
-                        <span class="app-version">${version}</span>
-                        <span class="app-bundle">${bundleId || 'N/A'}</span>
-                    </p>
-                </div>
-            </div>
-        `;
+    
+    // Add click event to each app item
+    document.querySelectorAll('.app-item').forEach(item => {
+        item.addEventListener('click', function() {
+            const appId = this.getAttribute('data-appid');
+            fetchAppInfo(appId);
+            fetchVersions(appId);
+        });
     });
-
-    output += `</div></div>`;
-    resultDiv.innerHTML = output;
 }
 
-// Version history functions
-async function fetchTimbrdVersion(appId, retryCount = 0) {
-    const MAX_RETRIES = 3;
-    document.getElementById('loading').style.display = 'block';
-    document.getElementById('result').innerHTML = '<p class="loading-text">Đang tải danh sách phiên bản...</p>';
-
+// Fetch Versions
+async function fetchVersions(appId) {
+    loading.style.display = 'flex';
+    result.innerHTML = '<p>Đang tải lịch sử phiên bản...</p>';
+    
     try {
         const response = await fetch(`/api/getAppVersions?id=${appId}`);
-        if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
-
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        
         const data = await response.json();
         if (!data.data || !Array.isArray(data.data)) {
-            throw new Error('Định dạng dữ liệu không hợp lệ');
+            throw new Error('Dữ liệu phiên bản không hợp lệ');
         }
-
-        versions = data.data.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        
+        versions = data.data;
         renderVersions();
     } catch (error) {
-        console.error(`Lỗi (attempt ${retryCount + 1}):`, error);
-        
-        if (retryCount < MAX_RETRIES) {
-            document.getElementById('result').innerHTML = `
-                <p class="loading-text">Đang thử lại lần ${retryCount + 1}/${MAX_RETRIES}...</p>
-            `;
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            return fetchTimbrdVersion(appId, retryCount + 1);
-        } else {
-            document.getElementById('result').innerHTML = `
-                <p class="error">Lỗi: ${sanitizeHTML(error.message)}</p>
-            `;
-        }
+        showError(error.message);
+        result.innerHTML = '<p>Không thể tải lịch sử phiên bản</p>';
     } finally {
-        document.getElementById('loading').style.display = 'none';
+        loading.style.display = 'none';
     }
 }
 
 function renderVersions() {
-    const totalVersions = versions.length;
+    if (versions.length === 0) {
+        result.innerHTML = '<p>Không có dữ liệu phiên bản</p>';
+        pagination.innerHTML = '';
+        return;
+    }
+    
     const start = (currentPage - 1) * perPage;
     const end = start + perPage;
     const paginatedVersions = versions.slice(start, end);
-
-    const resultDiv = document.getElementById('result');
-    resultDiv.innerHTML = '';
-
-    if (totalVersions === 0) {
-        resultDiv.innerHTML = '<p class="no-results">Không có phiên bản nào.</p>';
-        document.getElementById('pagination').innerHTML = '';
-        return;
-    }
-
-    let output = `
+    
+    result.innerHTML = `
         <div class="versions-container">
             <div class="versions-header">
                 <h3>Lịch sử Phiên bản</h3>
-                <span class="total-versions">${totalVersions} phiên bản</span>
+                <span class="total-versions">${versions.length} phiên bản</span>
             </div>
-            <div class="versions-list">
-                <table>
+            <div class="versions-scroll-container">
+                <table class="versions-table">
                     <thead>
                         <tr>
-                            <th class="version">Phiên bản</th>
-                            <th class="id">ID</th>
-                            <th class="date">Ngày phát hành</th>
-                            <th class="bundle">Bundle ID</th>
+                            <th class="version-col">Phiên bản</th>
+                            <th class="id-col">ID</th>
+                            <th class="date-col">Ngày phát hành</th>
                         </tr>
                     </thead>
                     <tbody>
+                        ${paginatedVersions.map(version => `
+                            <tr>
+                                <td class="version-col">${sanitizeHTML(version.bundle_version || 'N/A')}</td>
+                                <td class="id-col">${sanitizeHTML(version.external_identifier || 'N/A')}</td>
+                                <td class="date-col">${formatDate(version.created_at)}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
     `;
-
-    paginatedVersions.forEach(version => {
-        output += `
-            <tr>
-                <td class="version">${sanitizeHTML(version.bundle_version || 'N/A')}</td>
-                <td class="id">${sanitizeHTML(version.external_identifier || 'N/A')}</td>
-                <td class="date">${version.created_at ? new Date(version.created_at).toLocaleDateString() : 'N/A'}</td>
-                <td class="bundle">${sanitizeHTML(version.bundle_id || 'N/A')}</td>
-            </tr>
-        `;
-    });
-
-    output += `</tbody></table></div></div>`;
-    resultDiv.innerHTML = output;
-
-    renderPagination(totalVersions);
+    
+    renderPagination();
 }
 
-function renderPagination(totalItems) {
-    const totalPages = Math.ceil(totalItems / perPage);
-    const paginationDiv = document.getElementById('pagination');
-    paginationDiv.innerHTML = '';
-
-    if (totalPages <= 1) return;
-
-    const pagination = document.createElement('div');
-    pagination.className = 'pagination-container';
-
+function renderPagination() {
+    const totalPages = Math.ceil(versions.length / perPage);
+    
+    if (totalPages <= 1) {
+        pagination.innerHTML = '';
+        return;
+    }
+    
+    let paginationHTML = '<div class="pagination">';
+    
     // Previous button
     if (currentPage > 1) {
-        const prevBtn = document.createElement('button');
-        prevBtn.className = 'pagination-btn prev';
-        prevBtn.innerHTML = '&larr; Trước';
-        prevBtn.addEventListener('click', () => {
-            currentPage--;
-            renderVersions();
-        });
-        pagination.appendChild(prevBtn);
+        paginationHTML += `<button class="pagination-button" data-page="${currentPage - 1}">←</button>`;
     }
-
+    
     // Page numbers
-    const pageNumbers = document.createElement('div');
-    pageNumbers.className = 'page-numbers';
-
-    // First page
-    if (currentPage > 3) {
-        const firstPage = createPageBtn(1);
-        pageNumbers.appendChild(firstPage);
-        if (currentPage > 4) {
-            pageNumbers.appendChild(createEllipsis());
-        }
-    }
-
-    // Middle pages
     const startPage = Math.max(1, currentPage - 2);
     const endPage = Math.min(totalPages, currentPage + 2);
-
+    
     for (let i = startPage; i <= endPage; i++) {
-        pageNumbers.appendChild(createPageBtn(i));
+        paginationHTML += `<button class="pagination-button ${i === currentPage ? 'active' : ''}" data-page="${i}">${i}</button>`;
     }
-
-    // Last page
-    if (currentPage < totalPages - 2) {
-        if (currentPage < totalPages - 3) {
-            pageNumbers.appendChild(createEllipsis());
-        }
-        const lastPage = createPageBtn(totalPages);
-        pageNumbers.appendChild(lastPage);
-    }
-
-    pagination.appendChild(pageNumbers);
-
+    
     // Next button
     if (currentPage < totalPages) {
-        const nextBtn = document.createElement('button');
-        nextBtn.className = 'pagination-btn next';
-        nextBtn.innerHTML = 'Sau &rarr;';
-        nextBtn.addEventListener('click', () => {
-            currentPage++;
-            renderVersions();
-        });
-        pagination.appendChild(nextBtn);
+        paginationHTML += `<button class="pagination-button" data-page="${currentPage + 1}">→</button>`;
     }
-
-    paginationDiv.appendChild(pagination);
-}
-
-function createPageBtn(page) {
-    const btn = document.createElement('button');
-    btn.textContent = page;
-    btn.className = page === currentPage ? 'active' : '';
-    btn.addEventListener('click', () => {
-        currentPage = page;
-        renderVersions();
+    
+    paginationHTML += '</div>';
+    pagination.innerHTML = paginationHTML;
+    
+    // Add event listeners
+    document.querySelectorAll('.pagination-button').forEach(button => {
+        button.addEventListener('click', function() {
+            currentPage = parseInt(this.getAttribute('data-page'));
+            renderVersions();
+            window.scrollTo({ top: result.offsetTop, behavior: 'smooth' });
+        });
     });
-    return btn;
 }
 
-function createEllipsis() {
-    const span = document.createElement('span');
-    span.className = 'ellipsis';
-    span.textContent = '...';
-    return span;
+// Error Handling
+function showError(message) {
+    errorElement.textContent = message;
+    errorElement.style.display = 'block';
+    loading.style.display = 'none';
 }
-
-// Global functions
-window.handleAppClick = handleAppClick;
