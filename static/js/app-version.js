@@ -2,6 +2,7 @@ let currentPage = 1;
 const perPage = 50;
 let versions = [];
 
+// Hàm utility
 function isAppId(input) {
     return /^\d+$/.test(input);
 }
@@ -11,17 +12,28 @@ function extractAppIdFromUrl(url) {
     return match ? match[1] : null;
 }
 
+function escapeSingleQuote(str) {
+    return str.replace(/'/g, "\\'");
+}
+
+function sanitizeHTML(str) {
+    if (str == null) return '';
+    return str.toString()
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+// Event listeners
 document.getElementById('searchForm').addEventListener('submit', function(e) {
     e.preventDefault();
     const searchTerm = document.getElementById('searchTerm').value.trim();
 
     // Reset UI
-    document.getElementById('loading').style.display = 'block';
-    document.getElementById('appInfo').innerHTML = '';
-    document.getElementById('result').innerHTML = '';
-    document.getElementById('pagination').innerHTML = '';
-    versions = [];
-
+    resetSearchUI();
+    
     if (isAppId(searchTerm)) {
         fetchAppInfoFromiTunes(searchTerm);
         fetchTimbrdVersion(searchTerm);
@@ -36,18 +48,24 @@ document.getElementById('searchForm').addEventListener('submit', function(e) {
     }
 });
 
+function resetSearchUI() {
+    document.getElementById('loading').style.display = 'block';
+    document.getElementById('appInfo').innerHTML = '';
+    document.getElementById('result').innerHTML = '';
+    document.getElementById('pagination').innerHTML = '';
+    versions = [];
+}
+
+// API functions
 async function fetchAppInfoFromiTunes(appId) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
-
     try {
-        const response = await fetch(`/api/appInfo?id=${appId}`, { 
-            signal: controller.signal 
-        });
-        clearTimeout(timeoutId);
-
-        if (response.status === 404) throw new Error('Ứng dụng không tồn tại');
-        if (!response.ok) throw new Error(`Lỗi HTTP: ${response.status}`);
+        const response = await fetch(`/api/appInfo?id=${appId}`);
+        
+        if (!response.ok) {
+            throw new Error(response.status === 404 
+                ? 'Ứng dụng không tồn tại' 
+                : `Lỗi HTTP: ${response.status}`);
+        }
 
         const data = await response.json();
         if (!data?.results?.length) throw new Error('Không có dữ liệu');
@@ -73,8 +91,7 @@ function displayAppInfo(app) {
             <p><strong>ID:</strong> ${app.trackId}</p>
             <p><strong>Tên:</strong> ${sanitize(app.trackName)}</p>
             <p><strong>Tác giả:</strong> ${sanitize(app.artistName)}</p>
-            <p><strong>Phiên bản:</strong> ${sanitize(app.version)}</p>
-            <p><strong>Cập nhật:</strong> ${sanitize(app.releaseNotes || 'Không có thông tin')}</p>
+            <p><strong>Phiên bản hiện tại:</strong> ${sanitize(app.version)}</p>
             <p><strong>Ngày phát hành:</strong> ${app.releaseDate ? new Date(app.releaseDate).toLocaleDateString() : 'N/A'}</p>
             <p><strong>Dung lượng:</strong> ${fileSizeMB} MB</p>
         </div>
@@ -83,7 +100,6 @@ function displayAppInfo(app) {
 
 async function searchApp(term) {
     const encodedTerm = encodeURIComponent(term);
-    document.getElementById('loading').style.display = 'block';
     document.getElementById('result').innerHTML = '<p>Đang tìm kiếm ứng dụng...</p>';
 
     try {
@@ -100,8 +116,6 @@ async function searchApp(term) {
         document.getElementById('result').innerHTML = `
             <p class="error">Lỗi: ${sanitizeHTML(error.message)}</p>
         `;
-    } finally {
-        document.getElementById('loading').style.display = 'none';
     }
 }
 
@@ -109,12 +123,7 @@ function displaySearchResults(apps) {
     const resultDiv = document.getElementById('result');
     resultDiv.innerHTML = '';
 
-    if (!apps || !Array.isArray(apps)) {
-        resultDiv.innerHTML = '<p class="error">Dữ liệu ứng dụng không hợp lệ</p>';
-        return;
-    }
-
-    if (apps.length === 0) {
+    if (!apps || !Array.isArray(apps) || apps.length === 0) {
         resultDiv.innerHTML = '<p>Không tìm thấy ứng dụng nào.</p>';
         return;
     }
@@ -137,11 +146,12 @@ function displaySearchResults(apps) {
         const artistName = sanitizeHTML(app.artistName || '');
         output += `
             <tr>
-                <td><img src="${app.artworkUrl60 || ''}" alt="${trackName}" width="60"></td>
+                <td><img src="${app.artworkUrl60}" alt="${trackName}" width="60"></td>
                 <td>${trackName}</td>
                 <td>${artistName}</td>
                 <td>
-                    <button class="btn-view" onclick="selectApp(${app.trackId}, '${escapeSingleQuote(trackName)}', '${escapeSingleQuote(artistName)}')">
+                    <button class="btn-view" 
+                        onclick="selectApp(${app.trackId}, '${escapeSingleQuote(trackName)}', '${escapeSingleQuote(artistName)}')">
                         Xem versions
                     </button>
                 </td>
@@ -149,10 +159,11 @@ function displaySearchResults(apps) {
         `;
     });
 
-    output += `</tbody></table>`;
+    output += '</tbody></table>';
     resultDiv.innerHTML = output;
 }
 
+// Version history functions
 function selectApp(trackId, trackName, artistName) {
     document.getElementById('appInfo').innerHTML = `
         <div class="app-info">
@@ -174,35 +185,9 @@ async function fetchTimbrdVersion(appId, retryCount = 0) {
     const MAX_RETRIES = 3;
     document.getElementById('loading').style.display = 'block';
     
-    if (retryCount > 0) {
-        document.getElementById('result').innerHTML = `
-            <p>Đang thử lại lần ${retryCount}/${MAX_RETRIES}...</p>
-        `;
-    }
-
     try {
-        await fetchVersionsChunk(appId, 1, retryCount);
-    } catch (error) {
-        console.error('Lỗi fetchTimbrdVersion:', error);
-        document.getElementById('result').innerHTML = `
-            <p class="error">Lỗi khi tải phiên bản: ${sanitizeHTML(error.message)}</p>
-        `;
-        document.getElementById('loading').style.display = 'none';
-    }
-}
-
-async function fetchVersionsChunk(appId, page, retryCount = 0) {
-    const MAX_RETRIES = 3;
-    const limit = 1000;
-    
-    try {
-        const response = await fetch(`/api/getAppVersions?id=${appId}&page=${page}&limit=${limit}`, {
-            headers: {
-                'Cache-Control': 'no-cache',
-                'Pragma': 'no-cache'
-            }
-        });
-
+        const response = await fetch(`/api/getAppVersions?id=${appId}`);
+        
         if (!response.ok) {
             if (response.status === 403) {
                 throw new Error('Ứng dụng này không hỗ trợ xem version history');
@@ -210,42 +195,31 @@ async function fetchVersionsChunk(appId, page, retryCount = 0) {
             throw new Error(`HTTP Error: ${response.status}`);
         }
 
-        const text = await response.text();
-        if (!text || text.trim() === '') {
-            throw new Error('Không nhận được dữ liệu từ server');
-        }
-
-        const data = JSON.parse(text);
+        const data = await response.json();
         if (!data.data || !Array.isArray(data.data)) {
             throw new Error('Định dạng dữ liệu không hợp lệ');
         }
 
-        versions = versions.concat(data.data);
+        versions = data.data;
+        versions.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
         
-        if (data.metadata?.hasMore) {
-            await fetchVersionsChunk(appId, page + 1, retryCount);
-        } else {
-            versions.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-            currentPage = 1;
-            renderVersions();
-        }
+        renderVersions();
     } catch (error) {
-        console.error(`Lỗi fetchVersionsChunk (attempt ${retryCount + 1}):`, error);
+        console.error(`Lỗi khi tải phiên bản (attempt ${retryCount + 1}):`, error);
         
-        const noRetryErrors = [
-            'Ứng dụng này không hỗ trợ xem version history',
-            'Định dạng dữ liệu không hợp lệ'
-        ];
-        
-        if (retryCount < MAX_RETRIES && 
-            !error.message.includes('404') && 
-            !noRetryErrors.some(msg => error.message.includes(msg))) {
-            
+        if (retryCount < MAX_RETRIES && !error.message.includes('403')) {
+            document.getElementById('result').innerHTML = `
+                <p>Đang thử lại lần ${retryCount + 1}/${MAX_RETRIES}...</p>
+            `;
             await new Promise(resolve => setTimeout(resolve, 2000));
-            return fetchVersionsChunk(appId, page, retryCount + 1);
+            return fetchTimbrdVersion(appId, retryCount + 1);
         } else {
-            throw error;
+            document.getElementById('result').innerHTML = `
+                <p class="error">Lỗi: ${sanitizeHTML(error.message)}</p>
+            `;
         }
+    } finally {
+        document.getElementById('loading').style.display = 'none';
     }
 }
 
@@ -261,7 +235,6 @@ function renderVersions() {
     if (totalVersions === 0) {
         resultDiv.innerHTML = '<p>Không có phiên bản nào.</p>';
         document.getElementById('pagination').innerHTML = '';
-        document.getElementById('loading').style.display = 'none';
         return;
     }
 
@@ -287,11 +260,11 @@ function renderVersions() {
             </tr>
         `;
     });
-    output += `</tbody></table>`;
+    
+    output += '</tbody></table>';
     resultDiv.innerHTML = output;
 
     renderPagination(totalVersions);
-    document.getElementById('loading').style.display = 'none';
 }
 
 function renderPagination(totalItems) {
@@ -341,20 +314,6 @@ function renderPagination(totalItems) {
     }
 
     paginationDiv.appendChild(paginationContainer);
-}
-
-function escapeSingleQuote(str) {
-    return str.replace(/'/g, "\\'");
-}
-
-function sanitizeHTML(str) {
-    if (str == null) return '';
-    return str.toString()
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
 }
 
 // Make functions available globally
