@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tra cứu thông tin ứng dụng App Store</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap">
-    <link rel="stylesheet" href="/css/app-version.css?v=6.2">
+    <link rel="stylesheet" href="/css/app-version.css?v=6.4">
 </head>
 <body>
     <div class="page-wrapper">
@@ -100,31 +100,52 @@
         </div>
     </div>
 
-    <script src="/js/app-version.js?v=6.2"></script>
+    <script src="/js/app-version.js?v=6.4"></script>
     <script>
     //<![CDATA[
     (function() {
         // Khởi tạo quảng cáo
         function initAds() {
             try {
-                var adTop = document.getElementById('adTop');
-                var adBottom = document.getElementById('adBottom');
-                
-                // Tạo script quảng cáo
+                // Tạo thẻ script quảng cáo
                 var adScript = document.createElement('script');
-                adScript.async = true;
                 adScript.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797';
+                adScript.async = true;
                 adScript.crossOrigin = 'anonymous';
                 document.head.appendChild(adScript);
                 
-                // Thêm quảng cáo top
-                adTop.innerHTML = '<ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3905625903416797" data-ad-slot="1234567890" data-ad-format="auto" data-full-width-responsive="true"></ins>';
+                // Tạo quảng cáo top
+                var adTop = document.getElementById('adTop');
+                var topAd = document.createElement('ins');
+                topAd.className = 'adsbygoogle';
+                topAd.style.display = 'block';
+                topAd.dataset.adClient = 'ca-pub-3905625903416797';
+                topAd.dataset.adSlot = '1234567890';
+                topAd.dataset.adFormat = 'auto';
+                topAd.dataset.fullWidthResponsive = 'true';
+                adTop.appendChild(topAd);
                 
-                // Thêm quảng cáo bottom
-                adBottom.innerHTML = '<ins class="adsbygoogle" style="display:block" data-ad-client="ca-pub-3905625903416797" data-ad-slot="0987654321" data-ad-format="auto" data-full-width-responsive="true"></ins>';
+                // Tạo quảng cáo bottom
+                var adBottom = document.getElementById('adBottom');
+                var bottomAd = document.createElement('ins');
+                bottomAd.className = 'adsbygoogle';
+                bottomAd.style.display = 'block';
+                bottomAd.dataset.adClient = 'ca-pub-3905625903416797';
+                bottomAd.dataset.adSlot = '0987654321';
+                bottomAd.dataset.adFormat = 'auto';
+                bottomAd.dataset.fullWidthResponsive = 'true';
+                adBottom.appendChild(bottomAd);
                 
                 // Khởi chạy quảng cáo
                 (adsbygoogle = window.adsbygoogle || []).push({});
+                
+                // Fallback nếu quảng cáo không tải
+                setTimeout(function() {
+                    if (!document.querySelector('.adsbygoogle iframe')) {
+                        adTop.innerHTML = '<div class="ad-fallback">Quảng cáo</div>';
+                        adBottom.innerHTML = '<div class="ad-fallback">Quảng cáo</div>';
+                    }
+                }, 3000);
             } catch (e) {
                 console.error('Lỗi khi tải quảng cáo:', e);
             }
