@@ -1,5 +1,5 @@
 let currentPage = 1;
-const perPage = 20;
+const perPage = 15;
 let versions = [];
 
 // Utility functions
@@ -19,46 +19,18 @@ function formatDate(dateString) {
     return date.toLocaleDateString('vi-VN');
 }
 
-// DOM Elements
-const searchForm = document.getElementById('searchForm');
-const searchTerm = document.getElementById('searchTerm');
-const loading = document.getElementById('loading');
-const appInfo = document.getElementById('appInfo');
-const result = document.getElementById('result');
-const pagination = document.getElementById('pagination');
-const errorElement = document.getElementById('error');
-
-// Event Listeners
-searchForm.addEventListener('submit', function(e) {
-    e.preventDefault();
-    const term = searchTerm.value.trim();
-    
-    // Reset UI
-    loading.style.display = 'flex';
-    appInfo.innerHTML = '';
-    result.innerHTML = '';
-    pagination.innerHTML = '';
-    errorElement.style.display = 'none';
-    versions = [];
-    currentPage = 1;
-    
-    if (term) {
-        if (/^\d+$/.test(term)) {
-            // Search by App ID
-            fetchAppInfo(term);
-            fetchVersions(term);
-        } else {
-            // Search by name
-            searchApp(term);
-        }
-    }
-});
+function showError(message) {
+    const errorElement = document.getElementById('error');
+    errorElement.textContent = message;
+    errorElement.style.display = 'block';
+    document.getElementById('loading').style.display = 'none';
+}
 
 // Fetch App Info
 async function fetchAppInfo(appId) {
     try {
         const response = await fetch(`/api/appInfo?id=${appId}`);
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        if (!response.ok) throw new Error(`Lỗi HTTP: ${response.status}`);
         
         const data = await response.json();
         if (!data.results || data.results.length === 0) {
@@ -72,8 +44,10 @@ async function fetchAppInfo(appId) {
 }
 
 function displayAppInfo(app) {
+    const appInfo = document.getElementById('appInfo');
     const iconUrl = app.artworkUrl512 || app.artworkUrl100 || app.artworkUrl60;
     const fileSizeMB = app.fileSizeBytes ? (app.fileSizeBytes / (1024 * 1024)).toFixed(1) + ' MB' : 'Không rõ';
+    const rating = app.averageUserRating ? app.averageUserRating.toFixed(1) + '★' : 'Chưa có';
     
     appInfo.innerHTML = `
         <div class="app-info-header">
@@ -99,7 +73,7 @@ function displayAppInfo(app) {
             </div>
             <div class="app-meta-item">
                 <div class="app-meta-label">Đánh giá</div>
-                <div class="app-meta-value">${app.averageUserRating ? app.averageUserRating.toFixed(1) + '★' : 'Chưa có'}</div>
+                <div class="app-meta-value">${rating}</div>
             </div>
         </div>
         
@@ -115,13 +89,16 @@ function displayAppInfo(app) {
         </div>
         ` : ''}
     `;
+    
+    appInfo.style.display = 'block';
 }
 
 // Search App by Name
 async function searchApp(term) {
     try {
+        document.getElementById('loading').style.display = 'flex';
         const response = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(term)}&entity=software&limit=10`);
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        if (!response.ok) throw new Error(`Lỗi HTTP: ${response.status}`);
         
         const data = await response.json();
         if (!data.results || data.results.length === 0) {
@@ -132,11 +109,12 @@ async function searchApp(term) {
     } catch (error) {
         showError(error.message);
     } finally {
-        loading.style.display = 'none';
+        document.getElementById('loading').style.display = 'none';
     }
 }
 
 function displaySearchResults(apps) {
+    const result = document.getElementById('result');
     result.innerHTML = `
         <div class="search-results">
             <h3>Kết quả tìm kiếm (${apps.length})</h3>
@@ -148,7 +126,7 @@ function displaySearchResults(apps) {
                             <h4>${sanitizeHTML(app.trackName)}</h4>
                             <p>${sanitizeHTML(app.artistName)}</p>
                             <div class="app-meta">
-                                <span>${sanitizeHTML(app.version || 'N/A')}</span>
+                                <span>${sanitizeHTML(app.version || 'Phiên bản không rõ')}</span>
                             </div>
                         </div>
                     </div>
@@ -161,6 +139,8 @@ function displaySearchResults(apps) {
     document.querySelectorAll('.app-item').forEach(item => {
         item.addEventListener('click', function() {
             const appId = this.getAttribute('data-appid');
+            document.getElementById('appInfo').style.display = 'none';
+            document.getElementById('result').innerHTML = '<p>Đang tải thông tin...</p>';
             fetchAppInfo(appId);
             fetchVersions(appId);
         });
@@ -169,12 +149,10 @@ function displaySearchResults(apps) {
 
 // Fetch Versions
 async function fetchVersions(appId) {
-    loading.style.display = 'flex';
-    result.innerHTML = '<p>Đang tải lịch sử phiên bản...</p>';
-    
     try {
+        document.getElementById('loading').style.display = 'flex';
         const response = await fetch(`/api/getAppVersions?id=${appId}`);
-        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+        if (!response.ok) throw new Error(`Lỗi HTTP: ${response.status}`);
         
         const data = await response.json();
         if (!data.data || !Array.isArray(data.data)) {
@@ -185,13 +163,16 @@ async function fetchVersions(appId) {
         renderVersions();
     } catch (error) {
         showError(error.message);
-        result.innerHTML = '<p>Không thể tải lịch sử phiên bản</p>';
+        document.getElementById('result').innerHTML = '<p>Không thể tải lịch sử phiên bản</p>';
     } finally {
-        loading.style.display = 'none';
+        document.getElementById('loading').style.display = 'none';
     }
 }
 
 function renderVersions() {
+    const result = document.getElementById('result');
+    const pagination = document.getElementById('pagination');
+    
     if (versions.length === 0) {
         result.innerHTML = '<p>Không có dữ liệu phiên bản</p>';
         pagination.innerHTML = '';
@@ -236,6 +217,7 @@ function renderVersions() {
 
 function renderPagination() {
     const totalPages = Math.ceil(versions.length / perPage);
+    const pagination = document.getElementById('pagination');
     
     if (totalPages <= 1) {
         pagination.innerHTML = '';
@@ -270,14 +252,33 @@ function renderPagination() {
         button.addEventListener('click', function() {
             currentPage = parseInt(this.getAttribute('data-page'));
             renderVersions();
-            window.scrollTo({ top: result.offsetTop, behavior: 'smooth' });
+            window.scrollTo({ top: document.getElementById('result').offsetTop, behavior: 'smooth' });
         });
     });
 }
 
-// Error Handling
-function showError(message) {
-    errorElement.textContent = message;
-    errorElement.style.display = 'block';
-    loading.style.display = 'none';
-}
+// Initialize
+document.getElementById('searchForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const term = document.getElementById('searchTerm').value.trim();
+    
+    // Reset UI
+    document.getElementById('loading').style.display = 'flex';
+    document.getElementById('error').style.display = 'none';
+    document.getElementById('appInfo').style.display = 'none';
+    document.getElementById('result').innerHTML = '';
+    document.getElementById('pagination').innerHTML = '';
+    versions = [];
+    currentPage = 1;
+    
+    if (term) {
+        if (/^\d+$/.test(term)) {
+            // Search by App ID
+            fetchAppInfo(term);
+            fetchVersions(term);
+        } else {
+            // Search by name
+            searchApp(term);
+        }
+    }
+});

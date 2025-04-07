@@ -5,7 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tra cứu thông tin ứng dụng App Store</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap">
-    <link rel="stylesheet" href="/css/app-version.css?v=3.0">
+    <link rel="stylesheet" href="/css/app-version.css?v=4.0">
+    <style>
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #2563eb;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
 </head>
 <body>
     <div class="app-container">
@@ -17,9 +32,9 @@
         </header>
 
         <main class="main-content">
-            <!-- Ad Section Top -->
+            <!-- Quảng cáo đầu trang -->
             <div class="ad-section">
-                <span class="ad-label">Quảng cáo</span>
+                <span class="ad-label">QUẢNG CÁO</span>
                 <div class="ad-container">
                     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797"
                             crossorigin="anonymous"></script>
@@ -32,10 +47,11 @@
                     <script>
                          (adsbygoogle = window.adsbygoogle || []).push({});
                     </script>
+                    <div class="ad-fallback">Nội dung quảng cáo</div>
                 </div>
             </div>
 
-            <!-- Search Section -->
+            <!-- Form tìm kiếm -->
             <section class="search-section">
                 <form id="searchForm" class="search-form">
                     <div class="search-input-group">
@@ -57,21 +73,38 @@
                 </div>
             </section>
 
-            <!-- App Info Section -->
-            <section class="app-info-section">
-                <div id="error" class="error-message"></div>
-                <div id="appInfo" class="app-info-container"></div>
+            <!-- Hướng dẫn sử dụng -->
+            <section class="user-guide">
+                <h2>Hướng dẫn sử dụng</h2>
+                <ol>
+                    <li>Nhập <strong>App ID</strong>, <strong>tên ứng dụng</strong> hoặc <strong>URL App Store</strong> vào ô tìm kiếm</li>
+                    <li>Nhấn nút "Tìm kiếm" hoặc phím Enter</li>
+                    <li>Xem thông tin ứng dụng và lịch sử phiên bản</li>
+                    <li>Click vào tên ứng dụng trong danh sách để xem chi tiết</li>
+                    <li>Sử dụng phân trang để xem thêm phiên bản nếu có</li>
+                </ol>
+                <div class="example-apps">
+                    <p><strong>Ví dụ ứng dụng phổ biến:</strong></p>
+                    <div class="app-badges">
+                        <span class="app-badge" data-appid="284882215">Facebook</span>
+                        <span class="app-badge" data-appid="310633997">WhatsApp</span>
+                        <span class="app-badge" data-appid="389801252">Instagram</span>
+                        <span class="app-badge" data-appid="333903271">Zalo</span>
+                    </div>
+                </div>
             </section>
 
-            <!-- Results Section -->
+            <!-- Kết quả tra cứu -->
             <section class="results-section">
+                <div id="error" class="error-message"></div>
+                <div id="appInfo" class="app-info-container"></div>
                 <div id="result" class="results-container"></div>
                 <div id="pagination" class="pagination-container"></div>
             </section>
 
-            <!-- Ad Section Bottom -->
+            <!-- Quảng cáo cuối trang -->
             <div class="ad-section">
-                <span class="ad-label">Quảng cáo</span>
+                <span class="ad-label">QUẢNG CÁO</span>
                 <div class="ad-container">
                     <ins class="adsbygoogle"
                          style="display:block"
@@ -82,6 +115,7 @@
                     <script>
                          (adsbygoogle = window.adsbygoogle || []).push({});
                     </script>
+                    <div class="ad-fallback">Nội dung quảng cáo</div>
                 </div>
             </div>
         </main>
@@ -96,18 +130,23 @@
         </footer>
     </div>
 
-    <script src="/js/app-version.js?v=3.0"></script>
+    <script src="/js/app-version.js?v=4.0"></script>
     <script>
-        // Check if ads failed to load
+        // Xử lý click trên các app badge ví dụ
+        document.querySelectorAll('.app-badge').forEach(badge => {
+            badge.addEventListener('click', function() {
+                const appId = this.getAttribute('data-appid');
+                document.getElementById('searchTerm').value = appId;
+                document.getElementById('searchForm').dispatchEvent(new Event('submit'));
+            });
+        });
+
+        // Kiểm tra quảng cáo không tải
         window.addEventListener('load', function() {
             setTimeout(() => {
                 document.querySelectorAll('.adsbygoogle').forEach(ad => {
                     if (ad.clientHeight === 0) {
-                        const fallback = document.createElement('div');
-                        fallback.className = 'ad-fallback';
-                        fallback.textContent = 'Quảng cáo';
-                        ad.parentNode.insertBefore(fallback, ad.nextSibling);
-                        fallback.style.display = 'block';
+                        ad.nextElementSibling.style.display = 'block';
                     }
                 });
             }, 3000);
