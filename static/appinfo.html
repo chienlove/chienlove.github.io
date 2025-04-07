@@ -11,17 +11,30 @@
     <div class="page-wrapper">
         <div class="app-container">
             <header class="app-header">
-                <div class="header-content">
+                <div class="header-content container">
                     <h1>Tra cứu thông tin ứng dụng App Store</h1>
                     <p class="subtitle">Version History, Bundle ID và thông tin chi tiết</p>
                 </div>
             </header>
 
-            <main class="main-content">
+            <main class="main-content container">
                 <!-- Quảng cáo đầu trang -->
                 <div class="ad-section">
                     <span class="ad-label">QUẢNG CÁO</span>
-                    <div class="ad-container" id="adTop"></div>
+                    <div class="ad-container" id="adTop">
+                        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797"
+                                crossorigin="anonymous"></script>
+                        <!-- AdTop -->
+                        <ins class="adsbygoogle"
+                             style="display:block"
+                             data-ad-client="ca-pub-3905625903416797"
+                             data-ad-slot="5160182988"
+                             data-ad-format="auto"
+                             data-full-width-responsive="true"></ins>
+                        <script>
+                             (adsbygoogle = window.adsbygoogle || []).push({});
+                        </script>
+                    </div>
                 </div>
 
                 <!-- Form tìm kiếm -->
@@ -85,17 +98,32 @@
                 <!-- Quảng cáo cuối trang -->
                 <div class="ad-section">
                     <span class="ad-label">QUẢNG CÁO</span>
-                    <div class="ad-container" id="adBottom"></div>
+                    <div class="ad-container" id="adBottom">
+                        <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797"
+                                crossorigin="anonymous"></script>
+                        <!-- AdBottom -->
+                        <ins class="adsbygoogle"
+                             style="display:block"
+                             data-ad-client="ca-pub-3905625903416797"
+                             data-ad-slot="5160182988"
+                             data-ad-format="auto"
+                             data-full-width-responsive="true"></ins>
+                        <script>
+                             (adsbygoogle = window.adsbygoogle || []).push({});
+                        </script>
+                    </div>
                 </div>
             </main>
 
             <footer class="app-footer">
-                <p>© 2023 Công cụ tra cứu thông tin ứng dụng App Store</p>
-                <p class="footer-links">
-                    <a href="/privacy" target="_blank">Chính sách bảo mật</a>
-                    <span>|</span>
-                    <a href="/terms" target="_blank">Điều khoản sử dụng</a>
-                </p>
+                <div class="container">
+                    <p>© 2023 Công cụ tra cứu thông tin ứng dụng App Store</p>
+                    <p class="footer-links">
+                        <a href="/privacy" target="_blank">Chính sách bảo mật</a>
+                        <span>|</span>
+                        <a href="/terms" target="_blank">Điều khoản sử dụng</a>
+                    </p>
+                </div>
             </footer>
         </div>
     </div>
@@ -104,53 +132,6 @@
     <script>
     //<![CDATA[
     (function() {
-        // Khởi tạo quảng cáo
-        function initAds() {
-            try {
-                // Tạo thẻ script quảng cáo
-                var adScript = document.createElement('script');
-                adScript.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797';
-                adScript.async = true;
-                adScript.crossOrigin = 'anonymous';
-                document.head.appendChild(adScript);
-                
-                // Tạo quảng cáo top
-                var adTop = document.getElementById('adTop');
-                var topAd = document.createElement('ins');
-                topAd.className = 'adsbygoogle';
-                topAd.style.display = 'block';
-                topAd.dataset.adClient = 'ca-pub-3905625903416797';
-                topAd.dataset.adSlot = '1234567890';
-                topAd.dataset.adFormat = 'auto';
-                topAd.dataset.fullWidthResponsive = 'true';
-                adTop.appendChild(topAd);
-                
-                // Tạo quảng cáo bottom
-                var adBottom = document.getElementById('adBottom');
-                var bottomAd = document.createElement('ins');
-                bottomAd.className = 'adsbygoogle';
-                bottomAd.style.display = 'block';
-                bottomAd.dataset.adClient = 'ca-pub-3905625903416797';
-                bottomAd.dataset.adSlot = '0987654321';
-                bottomAd.dataset.adFormat = 'auto';
-                bottomAd.dataset.fullWidthResponsive = 'true';
-                adBottom.appendChild(bottomAd);
-                
-                // Khởi chạy quảng cáo
-                (adsbygoogle = window.adsbygoogle || []).push({});
-                
-                // Fallback nếu quảng cáo không tải
-                setTimeout(function() {
-                    if (!document.querySelector('.adsbygoogle iframe')) {
-                        adTop.innerHTML = '<div class="ad-fallback">Quảng cáo</div>';
-                        adBottom.innerHTML = '<div class="ad-fallback">Quảng cáo</div>';
-                    }
-                }, 3000);
-            } catch (e) {
-                console.error('Lỗi khi tải quảng cáo:', e);
-            }
-        }
-        
         // Thêm sự kiện click cho các app badge ví dụ
         function setupAppBadges() {
             var badges = document.querySelectorAll('.app-badge');
@@ -165,7 +146,6 @@
         
         // Khởi tạo khi DOM ready
         document.addEventListener('DOMContentLoaded', function() {
-            initAds();
             setupAppBadges();
         });
     })();

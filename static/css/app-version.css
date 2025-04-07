@@ -19,6 +19,7 @@
     max-width: 1200px;
     margin: 0 auto;
     width: 100%;
+    padding: 0 20px;
 }
 
 /* ===== LAYOUT & TYPOGRAPHY ===== */
@@ -41,7 +42,7 @@ body {
     flex: 1;
     width: 100%;
     margin: 0 auto;
-    padding: 20px;
+    padding: 20px 0;
 }
 
 /* ===== HEADER ===== */
@@ -266,6 +267,8 @@ body {
     object-fit: contain;
     cursor: pointer;
     transition: transform 0.2s;
+    margin: 0 auto;
+    display: block;
 }
 
 .app-icon-large:hover {
@@ -538,6 +541,8 @@ body {
     justify-content: center;
     align-items: center;
     min-height: 90px;
+    width: 100%;
+    overflow: hidden;
 }
 
 .ad-fallback {
@@ -549,7 +554,7 @@ body {
 .app-footer {
     background: var(--dark-color);
     color: white;
-    padding: 20px;
+    padding: 20px 0;
     text-align: center;
     margin-top: 40px;
 }
@@ -583,12 +588,12 @@ body {
 /* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
     .main-content {
-        padding: 15px;
+        padding: 15px 0;
     }
     
     .app-info-header {
         flex-direction: column;
-        align-items: flex-start;
+        align-items: center;
     }
     
     .app-icon-large {
