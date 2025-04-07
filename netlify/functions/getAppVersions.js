@@ -21,13 +21,11 @@ exports.handler = async function(event, context) {
         };
     }
 
-    // First try the primary API
     try {
         const result = await tryPrimaryApi(appId, page, limit);
         return result;
     } catch (primaryError) {
         console.log('Primary API failed:', primaryError.message);
-        // If primary API fails, try fallback
         try {
             const result = await tryFallbackApi(appId, page, limit);
             return result;
@@ -103,11 +101,9 @@ async function fetchWithRetry(url, attempt = 1) {
             throw new Error('Empty response');
         }
 
-        // Try to parse as JSON
         try {
             return JSON.parse(text);
         } catch (parseError) {
-            // If JSON parsing fails, check if it's the Google sodar URL
             if (text.includes('sodar')) {
                 throw new Error('SODAR_REDIRECT');
             }
@@ -125,7 +121,6 @@ async function fetchWithRetry(url, attempt = 1) {
 }
 
 function createSuccessResponse(data, chunks, hasMore) {
-    // Remove duplicates and sort
     const uniqueData = Array.from(new Map(
         data.map(item => [item.external_identifier, item])
     ).values());
