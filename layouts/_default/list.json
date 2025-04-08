@@ -5,9 +5,10 @@
         "title": {{ .Title | jsonify }},
         "url": {{ .Permalink | jsonify }},
         "content": {{ .Plain | jsonify }},
-        "description": {{ .Description | default .Summary | jsonify }},
-        "tags": {{ .Params.tags | default (slice) | jsonify }},
-        "icon": {{ .Params.icon | default "/images/default-icon.png" | absURL | jsonify }},
+        "description": {{ .Params.short_description | default .Description | jsonify }},
+        "icon": {{ .Params.icon | default "/images/default-icon.png" | jsonify }},
+        "screenshots": {{ .Params.screenshots | default (slice) | jsonify }},
+        "category": {{ .Params.category | jsonify }},
         "date": {{ .Date.Format "2006-01-02" | jsonify }}
     }{{ if ne (add $index 1) (len $pages) }},{{ end }}
 {{- end -}}

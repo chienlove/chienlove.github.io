@@ -1,56 +1,50 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Tìm kiếm</title>
+    <title>Tìm kiếm ứng dụng</title>
     <style>
         body {
             font-family: 'Arial', sans-serif;
-            background-color: #f9f9f9;
+            background-color: #f5f5f5;
             color: #333;
             padding: 0;
             margin: 0;
         }
 
-        h1 {
-            text-align: center;
-            margin-top: 50px;
-            font-size: 36px;
-            color: #333;
+        #search-section {
+            max-width: 800px;
+            margin: 30px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
 
-        #search-section {
-            max-width: 600px;
-            margin: 0 auto;
-            padding: 20px;
+        h1 {
             text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
         }
 
         #search-box {
             width: 100%;
-            padding: 15px;
-            font-size: 18px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
+            padding: 12px 20px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 25px;
             outline: none;
-            transition: all 0.2s ease-in-out;
+            transition: all 0.3s;
         }
 
         #search-box:focus {
             border-color: #3498db;
-            box-shadow: 0 2px 8px rgba(52, 152, 219, 0.2);
+            box-shadow: 0 0 8px rgba(52, 152, 219, 0.3);
         }
 
         #results-container {
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            background-color: #fff;
-            max-height: 400px;
-            overflow-y: auto;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-top: 20px;
             display: none;
         }
 
@@ -58,127 +52,172 @@
             display: flex;
             align-items: center;
             padding: 15px;
-            border-bottom: 1px solid #f0f0f0;
+            margin-bottom: 10px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            transition: transform 0.2s;
             cursor: pointer;
-            transition: background-color 0.2s ease;
         }
 
         .result-item:hover {
-            background-color: #f9f9f9;
+            transform: translateY(-3px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
 
-        .result-item img {
-            width: 40px;
-            height: 40px;
-            margin-right: 15px;
+        .app-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 15px;
             object-fit: cover;
-            border-radius: 50%;
-            background-color: #e0e0e0;
+            margin-right: 15px;
+            border: 1px solid #eee;
         }
 
-        .result-item-content {
+        .app-info {
             flex: 1;
-            overflow: hidden;
         }
 
-        .result-item-title {
+        .app-title {
             font-size: 18px;
-            color: #333;
-            margin-bottom: 4px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #2c3e50;
         }
 
-        .result-item-meta {
+        .app-description {
             font-size: 14px;
-            color: #777;
+            color: #7f8c8d;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .app-meta {
             display: flex;
-            justify-content: space-between;
+            margin-top: 8px;
+            font-size: 12px;
+            color: #95a5a6;
+        }
+
+        .app-category {
+            margin-right: 15px;
         }
 
         .no-results {
-            padding: 20px;
             text-align: center;
-            color: #999;
+            padding: 30px;
+            color: #95a5a6;
             font-size: 16px;
+        }
+
+        @media (max-width: 600px) {
+            .result-item {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .app-icon {
+                margin-right: 0;
+                margin-bottom: 10px;
+            }
         }
     </style>
 </head>
 <body>
+    <section id="search-section">
+        <h1>Tìm kiếm ứng dụng</h1>
+        <input type="text" id="search-box" placeholder="Nhập tên ứng dụng..." autocomplete="off">
+        <div id="results-container"></div>
+    </section>
 
-<section id="search-section">
-    <h1>Tìm kiếm</h1>
-    <input type="text" id="search-box" placeholder="Nhập từ khóa để tìm kiếm..." autocomplete="off" />
-    <div id="results-container"></div>
-</section>
-
-<script src="https://unpkg.com/lunr/lunr.js"></script>
-<script>
-    let idx;
-    let searchData = {};
-
-    // Fetch dữ liệu JSON
-    fetch('/index.json')
-        .then(response => {
-            if (!response.ok) throw new Error('Network response was not ok');
-            return response.json();
-        })
-        .then(jsonData => {
-            // Chuẩn bị dữ liệu
-            searchData = jsonData.reduce((acc, item) => {
-                acc[item.url] = item;
-                return acc;
-            }, {});
-
-            // Tạo chỉ mục tìm kiếm
-            idx = lunr(function() {
-                this.ref('url');
-                this.field('title', { boost: 10 });
-                this.field('content');
-                this.field('description', { boost: 5 });
-                this.field('tags', { boost: 3 });
-
-                jsonData.forEach(doc => {
-                    this.add(doc);
+    <script src="https://unpkg.com/lunr/lunr.js"></script>
+    <script>
+        let searchIndex;
+        let appData = {};
+        
+        // Tải dữ liệu ứng dụng
+        fetch('/index.json')
+            .then(response => response.json())
+            .then(data => {
+                // Lưu dữ liệu ứng dụng
+                data.forEach(app => {
+                    appData[app.url] = app;
                 });
+                
+                // Tạo search index
+                searchIndex = lunr(function() {
+                    this.ref('url');
+                    this.field('title', { boost: 10 });
+                    this.field('description', { boost: 5 });
+                    this.field('content');
+                    this.field('category');
+                    
+                    data.forEach(app => {
+                        this.add(app);
+                    });
+                });
+                
+                console.log('Đã tải xong dữ liệu tìm kiếm');
+            })
+            .catch(error => {
+                console.error('Lỗi khi tải dữ liệu:', error);
             });
+
+        const searchBox = document.getElementById('search-box');
+        const resultsContainer = document.getElementById('results-container');
+
+        // Xử lý tìm kiếm
+        searchBox.addEventListener('input', function() {
+            const query = this.value.trim();
             
-            console.log('Search index ready');
-        })
-        .catch(error => {
-            console.error('Error loading search index:', error);
-            document.getElementById('results-container').innerHTML = `
-                <div class="no-results">Lỗi tải dữ liệu tìm kiếm. Vui lòng thử lại sau.</div>
-            `;
+            if (query.length < 2) {
+                resultsContainer.style.display = 'none';
+                return;
+            }
+            
+            try {
+                const results = searchIndex.search(query);
+                showResults(results);
+            } catch (error) {
+                console.error('Lỗi tìm kiếm:', error);
+                resultsContainer.innerHTML = '<div class="no-results">Lỗi tìm kiếm. Vui lòng thử lại.</div>';
+                resultsContainer.style.display = 'block';
+            }
         });
 
-    const searchBox = document.getElementById('search-box');
-    const resultsContainer = document.getElementById('results-container');
-
-    // Xử lý tìm kiếm
-    searchBox.addEventListener('input', function() {
-        const query = this.value.trim();
-        if (query.length < 2) {
-            resultsContainer.style.display = 'none';
-            return;
-        }
-
-        try {
-            const results = idx.search(query);
-            displayResults(results);
-        } catch (error) {
-            console.error('Search error:', error);
-            resultsContainer.innerHTML = `
-                <div class="no-results">Lỗi tìm kiếm. Vui lòng thử lại.</div>
-            `;
+        // Hiển thị kết quả
+        function showResults(results) {
+            if (!results || results.length === 0) {
+                resultsContainer.innerHTML = '<div class="no-results">Không tìm thấy ứng dụng phù hợp</div>';
+                resultsContainer.style.display = 'block';
+                return;
+            }
+            
+            let html = '';
+            results.slice(0, 10).forEach(result => {
+                const app = appData[result.ref];
+                if (!app) return;
+                
+                html += `
+                    <div class="result-item" onclick="window.location='${app.url}'">
+                        <img class="app-icon" src="${app.icon}" alt="${app.title}" onerror="this.src='/images/default-icon.png'">
+                        <div class="app-info">
+                            <div class="app-title">${app.title}</div>
+                            <div class="app-description">${app.description || ''}</div>
+                            <div class="app-meta">
+                                <span class="app-category">${app.category || 'Game'}</span>
+                                <span class="app-date">${app.date || ''}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            resultsContainer.innerHTML = html;
             resultsContainer.style.display = 'block';
         }
-    });
-
-    // Hiển thị kết quả
-    function displayResults(results) {
-        if (!results || results.length === 0) {
-            resultsContainer.innerHTML = `
-                <div class="no-results">Không tìm thấy kết quả phù hợp</div>
-            `
+    </script>
+</body>
+</html>
