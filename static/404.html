@@ -75,40 +75,49 @@
             line-height: 1.6;
         }
 
-        /* KHUNG TÌM KIẾM */
+        /* KHUNG TÌM KIẾM - ĐÃ SỬA */
         .search-box {
             display: flex;
             width: 100%;
             margin: 2rem 0;
+            box-sizing: border-box;
         }
 
         #search-input {
             flex: 1;
-            padding: 1rem 1.5rem;
+            padding: 0.75rem 1.5rem;
             font-size: 1rem;
             border: 2px solid #E5E7EB;
+            border-right: none;
             border-radius: 50px 0 0 50px;
             outline: none;
             transition: all 0.3s ease;
             box-sizing: border-box;
+            height: 48px;
         }
 
         #search-input:focus {
             border-color: var(--primary);
+            border-right: none;
         }
 
         #search-button {
             padding: 0 1.5rem;
             background: var(--primary);
             color: white;
-            border: none;
+            border: 2px solid var(--primary);
             border-radius: 0 50px 50px 0;
             cursor: pointer;
             transition: all 0.3s;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         #search-button:hover {
             background: #4338CA;
+            border-color: #4338CA;
         }
 
         /* KẾT QUẢ TÌM KIẾM */
@@ -122,12 +131,16 @@
             margin-top: 0.5rem;
             display: none;
             text-align: left;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            z-index: 10;
+            position: relative;
         }
 
         .search-result {
             padding: 1rem;
             border-bottom: 1px solid #F3F4F6;
             cursor: pointer;
+            transition: background-color 0.2s;
         }
 
         .search-result:hover {
@@ -137,17 +150,19 @@
         .search-result-title {
             font-weight: 600;
             color: var(--text);
+            margin-bottom: 0.25rem;
         }
 
         .search-result-url {
             font-size: 0.8rem;
             color: var(--text-light);
-            margin-top: 0.25rem;
+            word-break: break-all;
         }
 
         .no-results {
             padding: 1rem;
             color: var(--text-light);
+            text-align: center;
         }
 
         /* NÚT BẤM */
@@ -246,33 +261,62 @@
     <script>
         // 1. TẢI DỮ LIỆU TÌM KIẾM
         let searchIndex;
-        let searchData = [];
+        let searchData = {};
         
-        fetch('/list.json')
-            .then(response => response.json())
-            .then(data => {
-                searchData = data;
-                
-                // Tạo search index
-                searchIndex = lunr(function() {
-                    this.ref('url');
-                    this.field('title', { boost: 10 });
-                    this.field('content');
-                    this.field('tags', { boost: 5 });
-                    
-                    data.forEach(doc => {
-                        this.add(doc);
+        // Thử cả 2 đường dẫn phổ biến cho file index
+        const possibleIndexPaths = ['/index.json', '/list.json', '/search/index.json', '/search/list.json'];
+        
+        function loadSearchData() {
+            let loaded = false;
+            
+            for (const path of possibleIndexPaths) {
+                fetch(path)
+                    .then(response => {
+                        if (response.ok) return response.json();
+                        throw new Error('Not found');
+                    })
+                    .then(data => {
+                        if (loaded) return;
+                        loaded = true;
+                        
+                        // Chuẩn bị dữ liệu
+                        searchData = Array.isArray(data) ? 
+                            data.reduce((acc, item) => ({...acc, [item.url]: item}), {}) : 
+                            data;
+                        
+                        // Tạo search index
+                        searchIndex = lunr(function() {
+                            this.ref('url');
+                            this.field('title', { boost: 10 });
+                            this.field('content');
+                            this.field('tags', { boost: 5 });
+                            
+                            Object.values(searchData).forEach(doc => {
+                                this.add(doc);
+                            });
+                        });
+                        
+                        console.log('Search index loaded successfully from', path);
+                    })
+                    .catch(error => {
+                        console.log(`Failed to load search index from ${path}:`, error);
                     });
-                });
-            })
-            .catch(error => {
-                console.error("Error loading search data:", error);
-            });
+            }
+        }
+
+        // Gọi hàm load dữ liệu khi trang tải
+        document.addEventListener('DOMContentLoaded', loadSearchData);
 
         // 2. XỬ LÝ TÌM KIẾM
         function performSearch() {
             const query = document.getElementById('search-input').value.trim();
             const resultsContainer = document.getElementById('search-results');
+            
+            if (!searchIndex) {
+                resultsContainer.innerHTML = '<div class="no-results">Search index is not ready yet</div>';
+                resultsContainer.style.display = 'block';
+                return;
+            }
             
             if (query.length < 2) {
                 resultsContainer.style.display = 'none';
@@ -294,23 +338,30 @@
             const resultsContainer = document.getElementById('search-results');
             
             if (!results || results.length === 0) {
-                resultsContainer.innerHTML = '<div class="no-results">No results found</div>';
+                resultsContainer.innerHTML = '<div class="no-results">No results found. Try different keywords.</div>';
                 resultsContainer.style.display = 'block';
                 return;
             }
             
             let html = '';
-            results.slice(0, 5).forEach(result => {
-                const item = searchData.find(doc => doc.url === result.ref);
+            const maxResults = 5;
+            const displayedResults = results.slice(0, maxResults);
+            
+            displayedResults.forEach(result => {
+                const item = searchData[result.ref];
                 if (item) {
                     html += `
-                        <div class="search-result" onclick="window.location='${item.url}'">
-                            <div class="search-result-title">${item.title}</div>
-                            <div class="search-result-url">${item.url.replace(/^https?:\/\/[^\/]+/, '')}</div>
+                        <div class="search-result" onclick="window.location.href='${item.url}'">
+                            <div class="search-result-title">${item.title || 'Untitled'}</div>
+                            <div class="search-result-url">${new URL(item.url, window.location.origin).pathname}</div>
                         </div>
                     `;
                 }
             });
+            
+            if (results.length > maxResults) {
+                html += `<div class="no-results">Showing ${maxResults} of ${results.length} results</div>`;
+            }
             
             resultsContainer.innerHTML = html;
             resultsContainer.style.display = 'block';
@@ -318,6 +369,12 @@
 
         // 4. GẮN SỰ KIỆN
         document.getElementById('search-button').addEventListener('click', performSearch);
+        
+        document.getElementById('search-input').addEventListener('input', function(e) {
+            // Tìm kiếm khi nhập (có thể gây nhiều request)
+            performSearch();
+        });
+        
         document.getElementById('search-input').addEventListener('keyup', function(e) {
             if (e.key === 'Enter') {
                 performSearch();
@@ -326,9 +383,15 @@
 
         // Đóng kết quả khi click ra ngoài
         document.addEventListener('click', function(e) {
+            const searchResults = document.getElementById('search-results');
             if (!e.target.closest('.search-box') && !e.target.closest('#search-results')) {
-                document.getElementById('search-results').style.display = 'none';
+                searchResults.style.display = 'none';
             }
+        });
+        
+        // Giữ kết quả hiển thị khi hover vào
+        document.getElementById('search-results').addEventListener('mouseenter', function() {
+            this.style.display = 'block';
         });
     </script>
 </body>
