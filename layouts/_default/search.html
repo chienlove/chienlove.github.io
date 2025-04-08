@@ -5,189 +5,195 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tìm kiếm ứng dụng</title>
     <style>
-        /* Reset và font chữ */
+        /* Reset CSS */
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
+            font-family: 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
         }
         
+        /* Layout chính */
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f8f9fa;
+            background-color: #f5f7fa;
             color: #333;
             line-height: 1.6;
+            padding: 20px;
         }
         
-        /* Container chính */
-        .search-container {
-            max-width: 800px;
-            margin: 30px auto;
-            padding: 0 20px;
+        .search-app {
+            max-width: 1000px;
+            margin: 0 auto;
         }
         
-        /* Tiêu đề */
+        /* Header tìm kiếm */
         .search-header {
             text-align: center;
             margin-bottom: 30px;
         }
         
-        .search-header h1 {
-            color: #2c3e50;
-            font-size: 2.2rem;
+        .search-title {
+            color: #2d3748;
+            font-size: 2.5rem;
             margin-bottom: 10px;
         }
         
         /* Ô tìm kiếm */
-        .search-box-container {
+        .search-box-wrapper {
             width: 100%;
-            margin: 0 auto 30px;
+            max-width: 600px;
+            margin: 0 auto 40px;
             position: relative;
         }
         
-        #search-box {
+        #search-input {
             width: 100%;
-            padding: 15px 25px;
-            font-size: 1rem;
-            border: 2px solid #e0e0e0;
+            padding: 16px 25px;
+            font-size: 1.1rem;
+            border: none;
             border-radius: 30px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             outline: none;
             transition: all 0.3s ease;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
         }
         
-        #search-box:focus {
-            border-color: #3498db;
-            box-shadow: 0 2px 15px rgba(52, 152, 219, 0.2);
+        #search-input:focus {
+            box-shadow: 0 4px 16px rgba(66, 153, 225, 0.3);
         }
         
         /* Kết quả tìm kiếm */
-        #results-container {
-            display: none;
-            background: white;
-            border-radius: 12px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-            overflow: hidden;
+        .app-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 25px;
+            margin-top: 20px;
         }
         
-        /* Item ứng dụng */
-        .app-item {
-            display: flex;
-            align-items: center;
-            padding: 20px;
-            border-bottom: 1px solid #f0f0f0;
-            transition: background-color 0.2s;
+        .app-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
             cursor: pointer;
         }
         
-        .app-item:hover {
-            background-color: #f8f9fa;
+        .app-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
+        }
+        
+        .app-image {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .app-content {
+            padding: 20px;
+        }
+        
+        .app-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
         }
         
         .app-icon {
-            width: 70px;
-            height: 70px;
-            border-radius: 18px;
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
             object-fit: cover;
-            margin-right: 20px;
-            border: 1px solid #eee;
-            flex-shrink: 0;
-        }
-        
-        .app-info {
-            flex: 1;
-            min-width: 0;
+            margin-right: 15px;
+            border: 1px solid #f0f0f0;
         }
         
         .app-title {
             font-size: 1.2rem;
             font-weight: 600;
-            color: #2c3e50;
-            margin-bottom: 5px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            color: #2d3748;
         }
         
         .app-description {
+            color: #4a5568;
             font-size: 0.95rem;
-            color: #7f8c8d;
-            margin-bottom: 8px;
+            margin-bottom: 15px;
             display: -webkit-box;
-            -webkit-line-clamp: 2;
+            -webkit-line-clamp: 3;
             -webkit-box-orient: vertical;
             overflow: hidden;
         }
         
         .app-meta {
             display: flex;
+            justify-content: space-between;
             align-items: center;
-            font-size: 0.85rem;
-            color: #95a5a6;
         }
         
         .app-category {
-            background-color: #e3f2fd;
-            color: #1976d2;
-            padding: 3px 10px;
-            border-radius: 12px;
-            font-size: 0.75rem;
-            margin-right: 10px;
+            background: #ebf8ff;
+            color: #3182ce;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 500;
         }
         
-        /* Không có kết quả */
+        .app-rating {
+            color: #ecc94b;
+            font-weight: bold;
+        }
+        
+        /* Trạng thái không có kết quả */
         .no-results {
-            padding: 40px 20px;
             text-align: center;
-            color: #95a5a6;
+            padding: 50px 20px;
+            color: #718096;
             font-size: 1.1rem;
+            grid-column: 1 / -1;
         }
         
         /* Responsive */
         @media (max-width: 768px) {
-            .search-container {
-                padding: 0 15px;
+            .app-list {
+                grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+                gap: 20px;
             }
             
-            .app-item {
-                padding: 15px;
-            }
-            
-            .app-icon {
-                width: 60px;
-                height: 60px;
-                margin-right: 15px;
+            .app-image {
+                height: 150px;
             }
         }
         
         @media (max-width: 480px) {
-            .app-item {
-                flex-direction: column;
-                text-align: center;
+            .search-title {
+                font-size: 2rem;
             }
             
-            .app-icon {
-                margin-right: 0;
-                margin-bottom: 15px;
+            #search-input {
+                padding: 14px 20px;
             }
             
-            .app-meta {
-                justify-content: center;
+            .app-list {
+                grid-template-columns: 1fr;
             }
         }
     </style>
 </head>
 <body>
-    <div class="search-container">
+    <div class="search-app">
         <div class="search-header">
-            <h1>Tìm kiếm ứng dụng</h1>
+            <h1 class="search-title">Tìm kiếm ứng dụng</h1>
         </div>
         
-        <div class="search-box-container">
-            <input type="text" id="search-box" placeholder="Nhập tên ứng dụng, thể loại..." autocomplete="off">
+        <div class="search-box-wrapper">
+            <input type="text" id="search-input" placeholder="Tìm kiếm ứng dụng, game..." autocomplete="off">
         </div>
         
-        <div id="results-container"></div>
+        <div class="app-list" id="results-container">
+            <!-- Kết quả sẽ hiển thị ở đây -->
+        </div>
     </div>
 
     <script src="https://unpkg.com/lunr/lunr.js"></script>
@@ -235,12 +241,11 @@
         function showError(message) {
             const resultsContainer = document.getElementById('results-container');
             resultsContainer.innerHTML = `<div class="no-results">${message}</div>`;
-            resultsContainer.style.display = 'block';
         }
         
         // Xử lý tìm kiếm
         function handleSearch() {
-            const query = document.getElementById('search-box').value.trim();
+            const query = document.getElementById('search-input').value.trim();
             const resultsContainer = document.getElementById('results-container');
             
             if (!searchIndex) {
@@ -249,7 +254,7 @@
             }
             
             if (query.length < 2) {
-                resultsContainer.style.display = 'none';
+                resultsContainer.innerHTML = '';
                 return;
             }
             
@@ -262,7 +267,7 @@
             }
         }
         
-        // Hiển thị kết quả
+        // Hiển thị kết quả dạng danh sách ứng dụng
         function displayResults(results) {
             const resultsContainer = document.getElementById('results-container');
             
@@ -272,27 +277,31 @@
                         Không tìm thấy ứng dụng phù hợp. Hãy thử từ khóa khác.
                     </div>
                 `;
-                resultsContainer.style.display = 'block';
                 return;
             }
             
             let html = '';
-            results.slice(0, 15).forEach(result => {
+            results.slice(0, 12).forEach(result => {
                 const app = appData[result.ref];
                 if (!app) return;
                 
-                // Xử lý icon
-                const iconUrl = app.icon || '/images/default-icon.png';
+                // Lấy ảnh đầu tiên từ screenshots hoặc dùng icon
+                const imageUrl = app.screenshots && app.screenshots.length > 0 
+                    ? app.screenshots[0] 
+                    : app.icon || '/images/default-app.png';
                 
-                // Xử lý category
+                // Lấy category hoặc mặc định
                 const category = app.category || 'Game';
                 
                 html += `
-                    <div class="app-item" onclick="window.location.href='${app.url}'">
-                        <img class="app-icon" src="${iconUrl}" alt="${app.title}" onerror="this.src='/images/default-icon.png'">
-                        <div class="app-info">
-                            <div class="app-title">${app.title}</div>
-                            <div class="app-description">${app.description || ''}</div>
+                    <div class="app-card" onclick="window.location.href='${app.url}'">
+                        <img class="app-image" src="${imageUrl}" alt="${app.title}" onerror="this.src='/images/default-app.png'">
+                        <div class="app-content">
+                            <div class="app-header">
+                                <img class="app-icon" src="${app.icon || '/images/default-icon.png'}" alt="Icon" onerror="this.src='/images/default-icon.png'">
+                                <h3 class="app-title">${app.title}</h3>
+                            </div>
+                            <p class="app-description">${app.description || 'Không có mô tả'}</p>
                             <div class="app-meta">
                                 <span class="app-category">${category}</span>
                             </div>
@@ -302,25 +311,7 @@
             });
             
             resultsContainer.innerHTML = html;
-            resultsContainer.style.display = 'block';
         }
-        
-        // Khởi tạo
-        document.addEventListener('DOMContentLoaded', function() {
-            // Tải dữ liệu
-            loadAppData();
-            
-            // Gắn sự kiện tìm kiếm
-            const searchBox = document.getElementById('search-box');
-            searchBox.addEventListener('input', debounce(handleSearch, 300));
-            
-            // Enter để tìm kiếm
-            searchBox.addEventListener('keyup', function(e) {
-                if (e.key === 'Enter') {
-                    handleSearch();
-                }
-            });
-        });
         
         // Debounce để giảm số lần gọi hàm
         function debounce(func, wait) {
@@ -333,6 +324,23 @@
                 }, wait);
             };
         }
+        
+        // Khởi tạo
+        document.addEventListener('DOMContentLoaded', function() {
+            // Tải dữ liệu
+            loadAppData();
+            
+            // Gắn sự kiện tìm kiếm
+            const searchBox = document.getElementById('search-input');
+            searchBox.addEventListener('input', debounce(handleSearch, 300));
+            
+            // Enter để tìm kiếm
+            searchBox.addEventListener('keyup', function(e) {
+                if (e.key === 'Enter') {
+                    handleSearch();
+                }
+            });
+        });
     </script>
 </body>
 </html>
