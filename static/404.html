@@ -75,12 +75,20 @@
             line-height: 1.6;
         }
 
-        /* KHUNG TÌM KIẾM - ĐÃ SỬA */
+        /* KHUNG TÌM KIẾM ĐÃ SỬA - FIX LỖI LỆCH */
+        .search-container {
+            width: 100%;
+            margin: 2rem auto;
+            position: relative;
+            padding: 0 10px;
+            box-sizing: border-box;
+        }
+
         .search-box {
             display: flex;
             width: 100%;
-            margin: 2rem 0;
-            box-sizing: border-box;
+            max-width: 100%;
+            margin: 0 auto;
         }
 
         #search-input {
@@ -94,6 +102,7 @@
             transition: all 0.3s ease;
             box-sizing: border-box;
             height: 48px;
+            min-width: 0;
         }
 
         #search-input:focus {
@@ -113,6 +122,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            flex-shrink: 0;
         }
 
         #search-button:hover {
@@ -122,45 +132,79 @@
 
         /* KẾT QUẢ TÌM KIẾM */
         #search-results {
-            width: 100%;
-            max-height: 300px;
+            width: calc(100% - 20px);
+            max-height: 400px;
             overflow-y: auto;
             background: white;
             border-radius: 8px;
             border: 1px solid #E5E7EB;
-            margin-top: 0.5rem;
+            margin: 0.5rem 10px 0;
             display: none;
             text-align: left;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
             z-index: 10;
-            position: relative;
+            position: absolute;
+            left: 0;
         }
 
         .search-result {
-            padding: 1rem;
+            padding: 12px 16px;
             border-bottom: 1px solid #F3F4F6;
             cursor: pointer;
             transition: background-color 0.2s;
+            display: flex;
+            align-items: flex-start;
         }
 
         .search-result:hover {
             background: #F9FAFB;
         }
 
+        .search-result-icon {
+            width: 36px;
+            height: 36px;
+            margin-right: 12px;
+            background-color: #E5E7EB;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--primary);
+            flex-shrink: 0;
+        }
+
+        .search-result-content {
+            flex: 1;
+            min-width: 0;
+        }
+
         .search-result-title {
             font-weight: 600;
             color: var(--text);
-            margin-bottom: 0.25rem;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .search-result-subtitle {
+            font-size: 0.85rem;
+            color: var(--text-light);
+            margin-bottom: 4px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
         }
 
         .search-result-url {
-            font-size: 0.8rem;
-            color: var(--text-light);
+            font-size: 0.75rem;
+            color: var(--primary);
             word-break: break-all;
         }
 
         .no-results {
-            padding: 1rem;
+            padding: 16px;
             color: var(--text-light);
             text-align: center;
         }
@@ -232,14 +276,16 @@
             <div class="error-code">Error 404</div>
             <p>The page you're looking for doesn't exist or has been moved. Try searching or return to the homepage.</p>
             
-            <!-- KHUNG TÌM KIẾM -->
-            <div class="search-box">
-                <input type="text" id="search-input" placeholder="Search our website..." autocomplete="off">
-                <button id="search-button" type="button">
-                    <i class="fas fa-search"></i>
-                </button>
+            <!-- KHUNG TÌM KIẾM ĐÃ SỬA -->
+            <div class="search-container">
+                <div class="search-box">
+                    <input type="text" id="search-input" placeholder="Search our website..." autocomplete="off">
+                    <button id="search-button" type="button">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </div>
+                <div id="search-results"></div>
             </div>
-            <div id="search-results"></div>
             
             <!-- NÚT BẤM -->
             <div class="btn-container">
@@ -263,7 +309,7 @@
         let searchIndex;
         let searchData = {};
         
-        // Thử cả 2 đường dẫn phổ biến cho file index
+        // Thử các đường dẫn phổ biến cho file index
         const possibleIndexPaths = ['/index.json', '/list.json', '/search/index.json', '/search/list.json'];
         
         function loadSearchData() {
@@ -289,7 +335,8 @@
                             this.ref('url');
                             this.field('title', { boost: 10 });
                             this.field('content');
-                            this.field('tags', { boost: 5 });
+                            this.field('description', { boost: 5 });
+                            this.field('tags', { boost: 3 });
                             
                             Object.values(searchData).forEach(doc => {
                                 this.add(doc);
@@ -313,7 +360,7 @@
             const resultsContainer = document.getElementById('search-results');
             
             if (!searchIndex) {
-                resultsContainer.innerHTML = '<div class="no-results">Search index is not ready yet</div>';
+                resultsContainer.innerHTML = '<div class="no-results">Search index is loading...</div>';
                 resultsContainer.style.display = 'block';
                 return;
             }
@@ -333,7 +380,7 @@
             }
         }
 
-        // 3. HIỂN THỊ KẾT QUẢ
+        // 3. HIỂN THỊ KẾT QUẢ MỚI VỚI ICON VÀ SUBTITLE
         function displayResults(results) {
             const resultsContainer = document.getElementById('search-results');
             
@@ -350,10 +397,22 @@
             displayedResults.forEach(result => {
                 const item = searchData[result.ref];
                 if (item) {
+                    // Lấy icon mặc định hoặc từ dữ liệu
+                    const iconClass = item.icon || 'fa-file-alt';
+                    // Lấy subtitle từ description hoặc content rút gọn
+                    const subtitle = item.description || 
+                                   (item.content ? item.content.substring(0, 100) + '...' : '');
+                    
                     html += `
                         <div class="search-result" onclick="window.location.href='${item.url}'">
-                            <div class="search-result-title">${item.title || 'Untitled'}</div>
-                            <div class="search-result-url">${new URL(item.url, window.location.origin).pathname}</div>
+                            <div class="search-result-icon">
+                                <i class="fas ${iconClass}"></i>
+                            </div>
+                            <div class="search-result-content">
+                                <div class="search-result-title">${item.title || 'Untitled'}</div>
+                                ${subtitle ? `<div class="search-result-subtitle">${subtitle}</div>` : ''}
+                                <div class="search-result-url">${new URL(item.url, window.location.origin).pathname}</div>
+                            </div>
                         </div>
                     `;
                 }
@@ -370,9 +429,11 @@
         // 4. GẮN SỰ KIỆN
         document.getElementById('search-button').addEventListener('click', performSearch);
         
+        // Tìm kiếm khi nhập với debounce để tránh quá nhiều request
+        let searchTimeout;
         document.getElementById('search-input').addEventListener('input', function(e) {
-            // Tìm kiếm khi nhập (có thể gây nhiều request)
-            performSearch();
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(performSearch, 300);
         });
         
         document.getElementById('search-input').addEventListener('keyup', function(e) {
@@ -384,7 +445,7 @@
         // Đóng kết quả khi click ra ngoài
         document.addEventListener('click', function(e) {
             const searchResults = document.getElementById('search-results');
-            if (!e.target.closest('.search-box') && !e.target.closest('#search-results')) {
+            if (!e.target.closest('.search-container')) {
                 searchResults.style.display = 'none';
             }
         });
