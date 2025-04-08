@@ -76,41 +76,78 @@
         }
 
         /* KHUNG TÌM KIẾM */
-        .search-container {
+        .search-box {
+            display: flex;
             width: 100%;
             margin: 2rem 0;
-            position: relative;
-            box-sizing: border-box;
         }
 
         #search-input {
-            width: 100%;
+            flex: 1;
             padding: 1rem 1.5rem;
             font-size: 1rem;
             border: 2px solid #E5E7EB;
-            border-radius: 50px;
+            border-radius: 50px 0 0 50px;
             outline: none;
             transition: all 0.3s ease;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
             box-sizing: border-box;
         }
 
         #search-input:focus {
             border-color: var(--primary);
-            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
         }
 
+        #search-button {
+            padding: 0 1.5rem;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 0 50px 50px 0;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        #search-button:hover {
+            background: #4338CA;
+        }
+
+        /* KẾT QUẢ TÌM KIẾM */
         #search-results {
-            position: absolute;
             width: 100%;
             max-height: 300px;
             overflow-y: auto;
             background: white;
             border-radius: 8px;
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            border: 1px solid #E5E7EB;
             margin-top: 0.5rem;
-            z-index: 10;
             display: none;
+            text-align: left;
+        }
+
+        .search-result {
+            padding: 1rem;
+            border-bottom: 1px solid #F3F4F6;
+            cursor: pointer;
+        }
+
+        .search-result:hover {
+            background: #F9FAFB;
+        }
+
+        .search-result-title {
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .search-result-url {
+            font-size: 0.8rem;
+            color: var(--text-light);
+            margin-top: 0.25rem;
+        }
+
+        .no-results {
+            padding: 1rem;
+            color: var(--text-light);
         }
 
         /* NÚT BẤM */
@@ -150,7 +187,6 @@
         .btn-primary:hover {
             background: #4338CA;
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
         }
 
         .btn-outline {
@@ -161,7 +197,6 @@
 
         .btn-outline:hover {
             background: #F9FAFB;
-            border-color: #D1D5DB;
         }
 
         .footer {
@@ -183,10 +218,13 @@
             <p>The page you're looking for doesn't exist or has been moved. Try searching or return to the homepage.</p>
             
             <!-- KHUNG TÌM KIẾM -->
-            <div class="search-container">
+            <div class="search-box">
                 <input type="text" id="search-input" placeholder="Search our website..." autocomplete="off">
-                <div id="search-results"></div>
+                <button id="search-button" type="button">
+                    <i class="fas fa-search"></i>
+                </button>
             </div>
+            <div id="search-results"></div>
             
             <!-- NÚT BẤM -->
             <div class="btn-container">
@@ -201,51 +239,95 @@
     </div>
 
     <div class="footer">
-        &copy; 2025 Your Brand. All rights reserved.
+        &copy; 2023 Your Brand. All rights reserved.
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/lunr@2.3.9/lunr.min.js"></script>
     <script>
-        // Khởi tạo tìm kiếm
+        // 1. TẢI DỮ LIỆU TÌM KIẾM
         let searchIndex;
-        let searchData;
-
+        let searchData = [];
+        
         fetch('/list.json')
             .then(response => response.json())
             .then(data => {
                 searchData = data;
+                
+                // Tạo search index
                 searchIndex = lunr(function() {
                     this.ref('url');
                     this.field('title', { boost: 10 });
                     this.field('content');
                     this.field('tags', { boost: 5 });
-                    data.forEach(doc => this.add(doc));
+                    
+                    data.forEach(doc => {
+                        this.add(doc);
+                    });
                 });
+            })
+            .catch(error => {
+                console.error("Error loading search data:", error);
             });
 
-        // Xử lý tìm kiếm
-        document.getElementById('search-input').addEventListener('input', function(e) {
-            const query = e.target.value.trim();
+        // 2. XỬ LÝ TÌM KIẾM
+        function performSearch() {
+            const query = document.getElementById('search-input').value.trim();
             const resultsContainer = document.getElementById('search-results');
             
             if (query.length < 2) {
                 resultsContainer.style.display = 'none';
                 return;
             }
-
-            const results = searchIndex.search(query);
-            if (results.length > 0) {
-                resultsContainer.innerHTML = results.slice(0, 5).map(result => {
-                    const item = searchData.find(doc => doc.url === result.ref);
-                    return `<div class="search-result" onclick="window.location='${item.url}'">
-                                <div class="search-result-title">${item.title}</div>
-                                <div class="search-result-url">${new URL(item.url).pathname}</div>
-                            </div>`;
-                }).join('');
+            
+            try {
+                const results = searchIndex.search(query);
+                displayResults(results);
+            } catch (error) {
+                console.error("Search error:", error);
+                resultsContainer.innerHTML = '<div class="no-results">Search temporarily unavailable</div>';
                 resultsContainer.style.display = 'block';
-            } else {
+            }
+        }
+
+        // 3. HIỂN THỊ KẾT QUẢ
+        function displayResults(results) {
+            const resultsContainer = document.getElementById('search-results');
+            
+            if (!results || results.length === 0) {
                 resultsContainer.innerHTML = '<div class="no-results">No results found</div>';
                 resultsContainer.style.display = 'block';
+                return;
+            }
+            
+            let html = '';
+            results.slice(0, 5).forEach(result => {
+                const item = searchData.find(doc => doc.url === result.ref);
+                if (item) {
+                    html += `
+                        <div class="search-result" onclick="window.location='${item.url}'">
+                            <div class="search-result-title">${item.title}</div>
+                            <div class="search-result-url">${item.url.replace(/^https?:\/\/[^\/]+/, '')}</div>
+                        </div>
+                    `;
+                }
+            });
+            
+            resultsContainer.innerHTML = html;
+            resultsContainer.style.display = 'block';
+        }
+
+        // 4. GẮN SỰ KIỆN
+        document.getElementById('search-button').addEventListener('click', performSearch);
+        document.getElementById('search-input').addEventListener('keyup', function(e) {
+            if (e.key === 'Enter') {
+                performSearch();
+            }
+        });
+
+        // Đóng kết quả khi click ra ngoài
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.search-box') && !e.target.closest('#search-results')) {
+                document.getElementById('search-results').style.display = 'none';
             }
         });
     </script>
