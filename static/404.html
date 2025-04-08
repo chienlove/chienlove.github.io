@@ -3,139 +3,251 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>404 - Page Not Found</title>
+    <title>Page Not Found | Your Brand</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --primary: #4F46E5;
+            --error: #EF4444;
+            --text: #1F2937;
+            --text-light: #6B7280;
+            --bg: #F9FAFB;
+        }
+
         body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
             margin: 0;
             padding: 0;
-            font-family: 'Arial', sans-serif;
+            min-height: 100vh;
             display: flex;
-            justify-content: center;
+            flex-direction: column;
+        }
+
+        .main-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
             align-items: center;
-            height: 100vh;
-            background: #f2f2f2;
-            color: #333;
-        }
-
-        .container {
-            text-align: center;
-            padding: 20px;
-            background: #fff;
-            border-radius: 8px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .container h1 {
-            font-size: 72px;
-            margin: 0;
-            color: #ff6b6b;
-        }
-
-        .container p {
-            font-size: 18px;
-            margin: 20px 0;
-            color: #666;
-        }
-
-        .container a.button {
-            display: inline-block;
-            margin: 15px 0;
-            padding: 12px 30px;
-            color: #fff;
-            background: #ff6b6b;
-            text-decoration: none;
-            border-radius: 50px;
-            font-size: 16px;
-            transition: background 0.3s;
-        }
-
-        .container a.button:hover {
-            background: #e55b5b;
-        }
-
-        .container .search-box {
-            margin: 20px 0;
-            display: flex;
             justify-content: center;
+            padding: 1rem;
+            text-align: center;
         }
 
-        .container .search-box input[type="text"] {
-            padding: 10px;
-            font-size: 16px;
-            border: 2px solid #ddd;
-            border-radius: 4px;
-            width: 300px;
-            max-width: 100%;
+        .error-card {
+            max-width: 600px;
+            width: 100%;
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            border-top: 6px solid var(--error);
+            position: relative;
+            overflow: hidden;
+            margin: 0 auto;
+            box-sizing: border-box;
         }
 
-        .container .search-box input[type="submit"] {
-            padding: 10px 20px;
-            margin-left: 10px;
-            background: #ff6b6b;
-            color: #fff;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background 0.3s;
+        .error-icon {
+            font-size: 4rem;
+            color: var(--error);
+            margin-bottom: 1.5rem;
         }
 
-        .container .search-box input[type="submit"]:hover {
-            background: #e55b5b;
+        h1 {
+            font-size: 2rem;
+            color: var(--text);
+            margin-bottom: 1rem;
+            font-weight: 700;
         }
 
-        .container nav {
-            margin-top: 20px;
+        .error-code {
+            font-size: 1rem;
+            color: var(--text-light);
+            margin-bottom: 1.5rem;
         }
 
-        .container nav a {
-            margin: 0 15px;
+        p {
+            color: var(--text-light);
+            margin-bottom: 2rem;
+            line-height: 1.6;
+        }
+
+        /* KHUNG TÌM KIẾM */
+        .search-container {
+            width: 100%;
+            margin: 2rem 0;
+            position: relative;
+            box-sizing: border-box;
+        }
+
+        #search-input {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            font-size: 1rem;
+            border: 2px solid #E5E7EB;
+            border-radius: 50px;
+            outline: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            box-sizing: border-box;
+        }
+
+        #search-input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.15);
+        }
+
+        #search-results {
+            position: absolute;
+            width: 100%;
+            max-height: 300px;
+            overflow-y: auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+            margin-top: 0.5rem;
+            z-index: 10;
+            display: none;
+        }
+
+        /* NÚT BẤM */
+        .btn-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        @media (min-width: 480px) {
+            .btn-container {
+                flex-direction: row;
+                justify-content: center;
+            }
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.875rem 1.75rem;
+            border-radius: 8px;
             text-decoration: none;
-            color: #ff6b6b;
-            font-weight: bold;
-            transition: color 0.3s;
+            font-weight: 600;
+            transition: all 0.2s;
+            width: 100%;
+            box-sizing: border-box;
         }
 
-        .container nav a:hover {
-            color: #e55b5b;
+        .btn-primary {
+            background: var(--primary);
+            color: white;
         }
 
-        @media (max-width: 600px) {
-            .container h1 {
-                font-size: 48px;
-            }
+        .btn-primary:hover {
+            background: #4338CA;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(79, 70, 229, 0.25);
+        }
 
-            .container p {
-                font-size: 16px;
-            }
+        .btn-outline {
+            background: transparent;
+            border: 2px solid #E5E7EB;
+            color: var(--text);
+        }
 
-            .container .search-box {
-                flex-direction: column;
-            }
+        .btn-outline:hover {
+            background: #F9FAFB;
+            border-color: #D1D5DB;
+        }
 
-            .container .search-box input[type="submit"] {
-                margin: 10px 0 0 0;
-                width: 100%;
-            }
+        .footer {
+            text-align: center;
+            padding: 1.5rem;
+            color: var(--text-light);
+            font-size: 0.875rem;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>404</h1>
-        <p>Oops! The page you are looking for doesn't exist.</p>
-        <a href="/" class="button">Go Back Home</a>
-        <div class="search-box">
-            <form action="/search" method="get">
-                <input type="text" name="q" placeholder="Search our site...">
-                <input type="submit" value="Search">
-            </form>
+    <div class="main-container">
+        <div class="error-card">
+            <div class="error-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <h1>Page Not Found</h1>
+            <div class="error-code">Error 404</div>
+            <p>The page you're looking for doesn't exist or has been moved. Try searching or return to the homepage.</p>
+            
+            <!-- KHUNG TÌM KIẾM -->
+            <div class="search-container">
+                <input type="text" id="search-input" placeholder="Search our website..." autocomplete="off">
+                <div id="search-results"></div>
+            </div>
+            
+            <!-- NÚT BẤM -->
+            <div class="btn-container">
+                <a href="/" class="btn btn-primary">
+                    <i class="fas fa-home"></i> Go Home
+                </a>
+                <a href="/contact" class="btn btn-outline">
+                    <i class="fas fa-envelope"></i> Contact Support
+                </a>
+            </div>
         </div>
-        <nav>
-            <a href="/">Home</a>
-            <a href="/about">About Us</a>
-            <a href="/contact">Contact</a>
-            <a href="/blog">Blog</a>
-        </nav>
     </div>
+
+    <div class="footer">
+        &copy; 2025 Your Brand. All rights reserved.
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/lunr@2.3.9/lunr.min.js"></script>
+    <script>
+        // Khởi tạo tìm kiếm
+        let searchIndex;
+        let searchData;
+
+        fetch('/list.json')
+            .then(response => response.json())
+            .then(data => {
+                searchData = data;
+                searchIndex = lunr(function() {
+                    this.ref('url');
+                    this.field('title', { boost: 10 });
+                    this.field('content');
+                    this.field('tags', { boost: 5 });
+                    data.forEach(doc => this.add(doc));
+                });
+            });
+
+        // Xử lý tìm kiếm
+        document.getElementById('search-input').addEventListener('input', function(e) {
+            const query = e.target.value.trim();
+            const resultsContainer = document.getElementById('search-results');
+            
+            if (query.length < 2) {
+                resultsContainer.style.display = 'none';
+                return;
+            }
+
+            const results = searchIndex.search(query);
+            if (results.length > 0) {
+                resultsContainer.innerHTML = results.slice(0, 5).map(result => {
+                    const item = searchData.find(doc => doc.url === result.ref);
+                    return `<div class="search-result" onclick="window.location='${item.url}'">
+                                <div class="search-result-title">${item.title}</div>
+                                <div class="search-result-url">${new URL(item.url).pathname}</div>
+                            </div>`;
+                }).join('');
+                resultsContainer.style.display = 'block';
+            } else {
+                resultsContainer.innerHTML = '<div class="no-results">No results found</div>';
+                resultsContainer.style.display = 'block';
+            }
+        });
+    </script>
 </body>
 </html>
