@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tìm kiếm</title>
     <style>
-        /* Định dạng cho toàn bộ trang */
         body {
             font-family: 'Arial', sans-serif;
             background-color: #f9f9f9;
@@ -52,7 +51,7 @@
             max-height: 400px;
             overflow-y: auto;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            display: none; /* Chỉ hiện khi có kết quả */
+            display: none;
         }
 
         .result-item {
@@ -77,9 +76,25 @@
             background-color: #e0e0e0;
         }
 
+        .result-item-content {
+            flex: 1;
+            overflow: hidden;
+        }
+
         .result-item-title {
             font-size: 18px;
             color: #333;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .result-item-meta {
+            font-size: 14px;
+            color: #777;
+            display: flex;
+            justify-content: space-between;
         }
 
         .no-results {
@@ -101,65 +116,69 @@
 <script src="https://unpkg.com/lunr/lunr.js"></script>
 <script>
     let idx;
-    let data;
+    let searchData = {};
 
-    // Fetch dữ liệu JSON từ file index.json
+    // Fetch dữ liệu JSON
     fetch('/index.json')
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) throw new Error('Network response was not ok');
+            return response.json();
+        })
         .then(jsonData => {
-            data = jsonData;
-            // Tạo chỉ mục tìm kiếm với Lunr.js
-            idx = lunr(function () {
-                this.ref('url');
-                this.field('title');
-                this.field('content');
-                this.field('tags');
+            // Chuẩn bị dữ liệu
+            searchData = jsonData.reduce((acc, item) => {
+                acc[item.url] = item;
+                return acc;
+            }, {});
 
-                jsonData.forEach(function (doc) {
+            // Tạo chỉ mục tìm kiếm
+            idx = lunr(function() {
+                this.ref('url');
+                this.field('title', { boost: 10 });
+                this.field('content');
+                this.field('description', { boost: 5 });
+                this.field('tags', { boost: 3 });
+
+                jsonData.forEach(doc => {
                     this.add(doc);
-                }, this);
+                });
             });
+            
+            console.log('Search index ready');
+        })
+        .catch(error => {
+            console.error('Error loading search index:', error);
+            document.getElementById('results-container').innerHTML = `
+                <div class="no-results">Lỗi tải dữ liệu tìm kiếm. Vui lòng thử lại sau.</div>
+            `;
         });
 
     const searchBox = document.getElementById('search-box');
     const resultsContainer = document.getElementById('results-container');
 
-    // Khi người dùng nhập vào ô tìm kiếm
-    searchBox.addEventListener('input', function () {
-        const query = searchBox.value.trim();
+    // Xử lý tìm kiếm
+    searchBox.addEventListener('input', function() {
+        const query = this.value.trim();
         if (query.length < 2) {
-            resultsContainer.style.display = 'none';  // Ẩn gợi ý nếu từ khóa quá ngắn
-            resultsContainer.innerHTML = '';
+            resultsContainer.style.display = 'none';
             return;
         }
 
-        const results = idx.search(query);
-
-        if (results.length > 0) {
-            // Hiển thị kết quả tìm kiếm
-            resultsContainer.innerHTML = results.map(result => {
-                const ref = result.ref;
-                const item = data.find(d => d.url === ref);
-                return `<div class="result-item" data-url="${item.url}">
-                            <img src="https://via.placeholder.com/40" alt="icon">
-                            <div class="result-item-title">${item.title}</div>
-                        </div>`;
-            }).join('');
-            resultsContainer.style.display = 'block';  // Hiển thị khung kết quả
-
-            // Gắn sự kiện khi người dùng chọn một gợi ý
-            document.querySelectorAll('.result-item').forEach(item => {
-                item.addEventListener('click', function () {
-                    window.location.href = this.getAttribute('data-url');
-                });
-            });
-        } else {
-            // Hiển thị thông báo không có kết quả
-            resultsContainer.innerHTML = `<div class="no-results">Không tìm thấy kết quả phù hợp</div>`;
-            resultsContainer.style.display = 'block';  // Hiển thị khung kết quả
+        try {
+            const results = idx.search(query);
+            displayResults(results);
+        } catch (error) {
+            console.error('Search error:', error);
+            resultsContainer.innerHTML = `
+                <div class="no-results">Lỗi tìm kiếm. Vui lòng thử lại.</div>
+            `;
+            resultsContainer.style.display = 'block';
         }
     });
-</script>
 
-</body>
-</html>
+    // Hiển thị kết quả
+    function displayResults(results) {
+        if (!results || results.length === 0) {
+            resultsContainer.innerHTML = `
+                <div class="no-results">Không tìm thấy kết quả phù hợp</div>
+            `
