@@ -2,13 +2,28 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Content Manager</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>StoreiOS CMS</title>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <link rel="stylesheet" href="/css/admin.css">
 </head>
 <body>
-  <!-- Include the script that builds the page and powers Netlify CMS -->
   <script src="https://unpkg.com/netlify-cms@^2.0.0/dist/netlify-cms.js"></script>
-  <!-- Tích hợp trực tiếp script cho widget tùy chỉnh updateSize -->
   <script src="/admin/widgets/updateSize.js"></script>
+  <script src="/admin/widgets/customCard.js"></script>
+  
+  <script>
+    // Thêm class mobile khi kích thước màn hình nhỏ
+    function checkMobile() {
+      if (window.innerWidth < 768) {
+        document.body.classList.add('mobile-view');
+      } else {
+        document.body.classList.remove('mobile-view');
+      }
+    }
+    
+    window.addEventListener('resize', checkMobile);
+    document.addEventListener('DOMContentLoaded', checkMobile);
+  </script>
 </body>
 </html>
