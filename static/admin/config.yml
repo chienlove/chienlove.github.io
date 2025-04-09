@@ -80,3 +80,5 @@ custom_css: /css/admin.css
 custom_widgets:
   - name: update-size
     file: "/admin/widgets/updateSize.js"
+  - name: customCard
+"/admin/widgets/customCard.js"

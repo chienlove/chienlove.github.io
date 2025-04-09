@@ -1,0 +1,42 @@
+/* ---------- Global Styles ---------- */
+.nc-root {
+  --primary: #2c3e50; /* Màu chính giống cPanel */
+  --sidebar-width: 220px;
+}
+
+/* ---------- Sidebar ---------- */
+.nc-sidebar {
+  background: var(--primary) !important;
+  width: var(--sidebar-width) !important;
+  padding-top: 20px !important;
+}
+
+.nc-sidebarHeader {
+  border-bottom: 1px solid rgba(255,255,255,0.1) !important;
+  padding-bottom: 15px !important;
+}
+
+.nc-sidebarCounter {
+  background: #3498db !important;
+}
+
+/* ---------- Collection List ---------- */
+.nc-collectionPage-list {
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)) !important;
+}
+
+.nc-collectionCard {
+  border-radius: 8px !important;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1) !important;
+  transition: transform 0.2s;
+}
+
+.nc-collectionCard:hover {
+  transform: translateY(-5px);
+}
+
+/* ---------- Header ---------- */
+.nc-appHeader {
+  background: white !important;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1) !important;
+}
