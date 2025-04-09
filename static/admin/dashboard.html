@@ -5,34 +5,56 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>StoreiOS CMS</title>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-  <link rel="stylesheet" href="/css/admin.css?ver=1.0">
+  
+  <!-- LOAD CSS THEO THỨ TỰ QUAN TRỌNG -->
+  <link rel="stylesheet" href="/css/admin.css">
+  <link rel="stylesheet" href="/css/mobile-fixes.css" id="mobile-css">
+  
   <script>
-    document.addEventListener('DOMContentLoaded', function() {
-      // Force mobile class immediately
-      if (window.innerWidth < 768) {
-        document.body.classList.add('mobile-view');
-        console.log('Mobile view activated');
-      }
+    // KIỂM TRA MẠNH MẼ HƠN
+    function forceMobileView() {
+      const isMobile = window.innerWidth < 768;
+      document.documentElement.classList.toggle('cms-mobile', isMobile);
+      document.body.classList.toggle('mobile-view', isMobile);
       
-      // Listen for CMS init event
-      document.addEventListener('netlify-cms-loaded', function() {
-        console.log('CMS fully loaded');
-        // Re-check mobile state after CMS init
-        if (window.innerWidth < 768) {
-          document.documentElement.classList.add('cms-mobile');
-          document.body.classList.add('mobile-view');
-        }
-      });
-    });
+      // KIỂM TRA CSS ĐÃ LOAD
+      const mobileCss = document.getElementById('mobile-css');
+      if (!mobileCss.sheet || mobileCss.sheet.cssRules.length === 0) {
+        console.error('MOBILE CSS CHƯA LOAD!');
+        // THỬ CÁCH KHÁC NẾU CSS KHÔNG LOAD
+        const style = document.createElement('style');
+        style.textContent = `
+          body.mobile-view::after {
+            content: "MOBILE MODE ACTIVATED (FALLBACK)";
+            display: block;
+            padding: 20px;
+            background: red;
+            color: white;
+            font-weight: bold;
+            position: fixed;
+            top: 0;
+            z-index: 9999;
+          }
+        `;
+        document.head.appendChild(style);
+      }
+    }
     
-    // Continuous resize checking
-    window.addEventListener('resize', function() {
-      if (window.innerWidth < 768) {
-        document.body.classList.add('mobile-view');
-        document.documentElement.classList.add('cms-mobile');
-      } else {
-        document.body.classList.remove('mobile-view');
-        document.documentElement.classList.remove('cms-mobile');
+    // KÍCH HOẠT NGAY KHI TẢI
+    forceMobileView();
+    
+    // THEO DÕI THAY ĐỔI KÍCH THƯỚC
+    window.addEventListener('resize', forceMobileView);
+    
+    // THEO DÕI CMS LOAD
+    document.addEventListener('netlify-cms-loaded', function() {
+      console.log('NETLIFY CMS FULLY LOADED');
+      forceMobileView();
+      
+      // THÊM CLASS TRỰC TIẾP VÀO ROOT ELEMENT
+      const cmsRoot = document.getElementById('nc-root');
+      if (cmsRoot) {
+        cmsRoot.classList.toggle('cms-mobile', window.innerWidth < 768);
       }
     });
   </script>

@@ -1,0 +1,75 @@
+/* THÊM CÁC QUY TẮC GHI ĐÈ MẠNH MẼ */
+html.cms-mobile,
+body.mobile-view {
+  --mobile-touch-target: 44px;
+}
+
+/* GHI ĐÈ HOÀN TOÀN CẤU TRÚC LAYOUT */
+html.cms-mobile .nc-root,
+body.mobile-view .nc-root {
+  display: flex !important;
+  flex-direction: column-reverse !important;
+  padding-bottom: 60px !important;
+}
+
+/* SIDEBAR THÀNH MENU DƯỚI ĐÁY */
+html.cms-mobile .nc-sidebar,
+body.mobile-view .nc-sidebar {
+  position: fixed !important;
+  bottom: 0 !important;
+  top: auto !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  height: 60px !important;
+  flex-direction: row !important;
+  overflow-x: auto !important;
+  z-index: 1000 !important;
+  background: #fff !important;
+  box-shadow: 0 -2px 10px rgba(0,0,0,0.1) !important;
+  transform: none !important;
+}
+
+/* MENU ITEMS */
+html.cms-mobile .nc-collectionLink,
+body.mobile-view .nc-collectionLink {
+  min-width: 120px !important;
+  height: 100% !important;
+  padding: 0 15px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-right: 1px solid #eee !important;
+}
+
+/* MAIN CONTENT */
+html.cms-mobile .nc-main,
+body.mobile-view .nc-main {
+  margin: 0 !important;
+  padding: 15px !important;
+  width: 100% !important;
+  margin-bottom: 60px !important;
+}
+
+/* EDITOR LAYOUT */
+html.cms-mobile .nc-editorLayout,
+body.mobile-view .nc-editorLayout {
+  flex-direction: column !important;
+}
+
+/* FORM ELEMENTS */
+html.cms-mobile input,
+html.cms-mobile textarea,
+html.cms-mobile select,
+body.mobile-view input,
+body.mobile-view textarea,
+body.mobile-view select {
+  font-size: 16px !important;
+  min-height: var(--mobile-touch-target) !important;
+}
+
+/* ẨN CÁC PHẦN KHÔNG CẦN THIẾT */
+html.cms-mobile .nc-sidebarHeader,
+body.mobile-view .nc-sidebarHeader {
+  display: none !important;
+}
