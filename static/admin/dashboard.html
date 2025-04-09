@@ -1,4 +1,4 @@
-<!doctype html>
+<!doctype html><!doctype html>
 <html>
 <head>
   <meta charset="utf-8">
@@ -6,8 +6,8 @@
   <title>StoreiOS CMS</title>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   
-  <!-- Load mobile fix FIRST -->
-  <script src="/admin/cms-mobile-fix.js"></script>
+  <!-- Load proxy injector FIRST -->
+  <script src="/admin/cms-proxy-injector.js"></script>
 </head>
 <body>
   <!-- Load CMS -->
@@ -17,30 +17,33 @@
   <script src="/admin/widgets/updateSize.js"></script>
   <script src="/admin/widgets/customCard.js"></script>
   
-  <!-- Debug Script -->
+  <!-- Ultimate Test Script -->
   <script>
     setTimeout(() => {
-      console.log('Final Debug Check:');
+      console.log('ULTIMATE TEST:');
       
-      // 1. Kiểm tra style đã được chèn
-      const style = document.getElementById('cms-mobile-definitive-fix');
-      console.log('Mobile style exists:', !!style);
-      
-      // 2. Kiểm tra sidebar
-      const sidebar = document.querySelector('.nc-sidebar');
-      if (sidebar) {
-        console.log('Sidebar found!');
-        console.log('Computed styles:', {
-          position: window.getComputedStyle(sidebar).position,
-          bottom: window.getComputedStyle(sidebar).bottom,
-          border: window.getComputedStyle(sidebar).borderTop
-        });
-        
-        // Thêm test visual
-        sidebar.style.boxShadow = '0 0 0 3px red';
+      // 1. Kiểm tra shadow DOM
+      const cmsRoot = document.querySelector('.nc-root, #nc-root');
+      if (cmsRoot && cmsRoot.shadowRoot) {
+        console.log('Shadow DOM found! Styles:', 
+          cmsRoot.shadowRoot.innerHTML);
       } else {
-        console.error('Sidebar not found!');
+        console.error('No shadow DOM detected');
       }
+      
+      // 2. Thêm visual test cuối cùng
+      const testDiv = document.createElement('div');
+      testDiv.style.position = 'fixed';
+      testDiv.style.bottom = '70px';
+      testDiv.style.left = '0';
+      testDiv.style.right = '0';
+      testDiv.style.background = 'yellow';
+      testDiv.style.color = 'black';
+      testDiv.style.padding = '10px';
+      testDiv.style.zIndex = '99999';
+      testDiv.style.textAlign = 'center';
+      testDiv.textContent = 'CMS MOBILE TEST ACTIVE';
+      document.body.appendChild(testDiv);
     }, 5000);
   </script>
 </body>
