@@ -1,5 +1,3 @@
-# static/admin/config.yml
-
 backend:
   name: git-gateway
   branch: master
@@ -94,7 +92,7 @@ collections:
           - {name: "plistUrl", label: "Plist URL", widget: "string"}
 
 # Cấu hình giao diện
-cms_manual_init: true
+cms_manual_init: false
 custom_css: ["/css/admin.css"]
 custom_widgets:
   - name: "update-size"
