@@ -6,34 +6,40 @@
   <title>StoreiOS CMS</title>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   
-  <!-- Load injector TRƯỚC CMS -->
-  <script src="/admin/widgets/cms-frame-injector.js"></script>
+  <!-- Load injector CUỐI CÙNG này trước CMS -->
+  <script src="/admin/widgets/cms-final-injector.js"></script>
 </head>
 <body>
-  <!-- Load CMS SAU -->
+  <!-- Load CMS sau -->
   <script src="https://unpkg.com/netlify-cms@^2.0.0/dist/netlify-cms.js"></script>
   <script src="/admin/widgets/updateSize.js"></script>
   <script src="/admin/widgets/customCard.js"></script>
   
-  <!-- Debug helper -->
+  <!-- Debug script -->
   <script>
     setTimeout(() => {
-      console.log('Running frame check...');
-      const frame = document.querySelector('#nc-root iframe, .nc-root iframe');
+      const frame = document.getElementById('preview-pane');
       if (frame) {
-        console.log('Frame found:', frame);
         try {
           const doc = frame.contentDocument;
-          console.log('Frame document:', doc);
+          console.log('Frame document found:', doc);
           if (doc) {
-            const style = doc.querySelector('style#cms-mobile-forced');
+            const style = doc.getElementById('cms-mobile-final-fix');
             console.log('Injected style exists:', !!style);
+            
+            // Kiểm tra sidebar
+            const sidebar = doc.querySelector('.nc-sidebar');
+            if (sidebar) {
+              console.log('Sidebar found:', sidebar);
+              console.log('Computed styles:', {
+                position: window.getComputedStyle(sidebar).position,
+                bottom: window.getComputedStyle(sidebar).bottom
+              });
+            }
           }
         } catch (e) {
-          console.error('Cannot access frame:', e);
+          console.error('Frame access error:', e);
         }
-      } else {
-        console.error('No CMS frame found');
       }
     }, 5000);
   </script>
