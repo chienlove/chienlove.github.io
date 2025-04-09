@@ -99,14 +99,3 @@ custom_css: ["/css/admin.css"]
 custom_widgets:
   - name: "update-size"
     file: "/admin/widgets/updateSize.js"
-  - name: "custom-card"
-    file: "/admin/widgets/customCard.js"
-
-# Cấu hình i18n (tiếng Việt)
-i18n:
-  structure: "multiple_folders"
-  locales: ["vi", "en"]
-  default_locale: "vi"
-# Cấu hình plugin
-plugins:
-  - /admin/cms.js
