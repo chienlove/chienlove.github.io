@@ -6,60 +6,11 @@
   <title>StoreiOS CMS</title>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   
-  <!-- LOAD CSS THEO THỨ TỰ QUAN TRỌNG -->
-  <link rel="stylesheet" href="/css/admin.css">
-  <link rel="stylesheet" href="/css/mobile-fixes.css" id="mobile-css">
-  
-  <script>
-    // KIỂM TRA MẠNH MẼ HƠN
-    function forceMobileView() {
-      const isMobile = window.innerWidth < 768;
-      document.documentElement.classList.toggle('cms-mobile', isMobile);
-      document.body.classList.toggle('mobile-view', isMobile);
-      
-      // KIỂM TRA CSS ĐÃ LOAD
-      const mobileCss = document.getElementById('mobile-css');
-      if (!mobileCss.sheet || mobileCss.sheet.cssRules.length === 0) {
-        console.error('MOBILE CSS CHƯA LOAD!');
-        // THỬ CÁCH KHÁC NẾU CSS KHÔNG LOAD
-        const style = document.createElement('style');
-        style.textContent = `
-          body.mobile-view::after {
-            content: "MOBILE MODE ACTIVATED (FALLBACK)";
-            display: block;
-            padding: 20px;
-            background: red;
-            color: white;
-            font-weight: bold;
-            position: fixed;
-            top: 0;
-            z-index: 9999;
-          }
-        `;
-        document.head.appendChild(style);
-      }
-    }
-    
-    // KÍCH HOẠT NGAY KHI TẢI
-    forceMobileView();
-    
-    // THEO DÕI THAY ĐỔI KÍCH THƯỚC
-    window.addEventListener('resize', forceMobileView);
-    
-    // THEO DÕI CMS LOAD
-    document.addEventListener('netlify-cms-loaded', function() {
-      console.log('NETLIFY CMS FULLY LOADED');
-      forceMobileView();
-      
-      // THÊM CLASS TRỰC TIẾP VÀO ROOT ELEMENT
-      const cmsRoot = document.getElementById('nc-root');
-      if (cmsRoot) {
-        cmsRoot.classList.toggle('cms-mobile', window.innerWidth < 768);
-      }
-    });
-  </script>
+  <!-- Load script override trước CMS -->
+  <script src="/admin/widgets/mobile-override.js"></script>
 </head>
 <body>
+  <!-- Load CMS sau -->
   <script src="https://unpkg.com/netlify-cms@^2.0.0/dist/netlify-cms.js"></script>
   <script src="/admin/widgets/updateSize.js"></script>
   <script src="/admin/widgets/customCard.js"></script>
