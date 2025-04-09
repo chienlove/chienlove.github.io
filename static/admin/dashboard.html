@@ -1,21 +1,21 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Netlify CMS Dashboard</title>
-  <!-- Load Netlify CMS -->
+  <meta charset="utf-8">
+  <title>CMS Dashboard</title>
+  <!-- CHỈ load Netlify CMS, KHÔNG dùng Identity Widget ở đây -->
   <script src="https://unpkg.com/netlify-cms@^3.0.0/dist/netlify-cms.js"></script>
-  <!-- Khởi tạo CMS sau khi load -->
   <script>
+    // Khởi tạo thủ công theo config.yml
     document.addEventListener('DOMContentLoaded', function() {
       if (window.CMS) {
-        CMS.init();
-      } else {
-        console.error("Netlify CMS script không tải được!");
+        CMS.init({ config: window.CMS_CONFIG });
       }
     });
   </script>
 </head>
-<body></body>
+<body>
+  <!-- Thêm div root cho CMS -->
+  <div id="nc-root"></div>
+</body>
 </html>
