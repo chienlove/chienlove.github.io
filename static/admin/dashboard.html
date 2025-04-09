@@ -1,4 +1,4 @@
-<!doctype html><!doctype html>
+<!doctype html>
 <html>
 <head>
   <meta charset="utf-8">
@@ -6,8 +6,8 @@
   <title>StoreiOS CMS</title>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   
-  <!-- Load proxy injector FIRST -->
-  <script src="/admin/cms-proxy-injector.js"></script>
+  <!-- Load ultimate fix FIRST -->
+  <script src="/admin/cms-ultimate-fix.js"></script>
 </head>
 <body>
   <!-- Load CMS -->
@@ -17,33 +17,26 @@
   <script src="/admin/widgets/updateSize.js"></script>
   <script src="/admin/widgets/customCard.js"></script>
   
-  <!-- Ultimate Test Script -->
+  <!-- Final Verification Script -->
   <script>
     setTimeout(() => {
-      console.log('ULTIMATE TEST:');
+      console.log('FINAL VERIFICATION:');
       
-      // 1. Kiểm tra shadow DOM
-      const cmsRoot = document.querySelector('.nc-root, #nc-root');
-      if (cmsRoot && cmsRoot.shadowRoot) {
-        console.log('Shadow DOM found! Styles:', 
-          cmsRoot.shadowRoot.innerHTML);
+      // 1. Kiểm tra sidebar
+      const sidebar = document.querySelector('.nc-sidebar');
+      if (sidebar) {
+        console.log('Sidebar found! Computed styles:', {
+          position: window.getComputedStyle(sidebar).position,
+          bottom: window.getComputedStyle(sidebar).bottom,
+          height: window.getComputedStyle(sidebar).height
+        });
       } else {
-        console.error('No shadow DOM detected');
+        console.error('Sidebar still not found!');
       }
       
-      // 2. Thêm visual test cuối cùng
-      const testDiv = document.createElement('div');
-      testDiv.style.position = 'fixed';
-      testDiv.style.bottom = '70px';
-      testDiv.style.left = '0';
-      testDiv.style.right = '0';
-      testDiv.style.background = 'yellow';
-      testDiv.style.color = 'black';
-      testDiv.style.padding = '10px';
-      testDiv.style.zIndex = '99999';
-      testDiv.style.textAlign = 'center';
-      testDiv.textContent = 'CMS MOBILE TEST ACTIVE';
-      document.body.appendChild(testDiv);
+      // 2. Kiểm tra visual confirm
+      const confirmDiv = document.querySelector('.cms-mobile-confirm');
+      console.log('Visual confirmation exists:', !!confirmDiv);
     }, 5000);
   </script>
 </body>
