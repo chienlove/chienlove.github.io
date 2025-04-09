@@ -6,13 +6,26 @@
   <title>StoreiOS CMS</title>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   
-  <!-- Load script override trước CMS -->
-  <script src="/admin/widgets/mobile-override.js"></script>
+  <!-- Load injector TRƯỚC CMS -->
+  <script src="/admin/widgets/cms-mobile-injector.js"></script>
 </head>
 <body>
-  <!-- Load CMS sau -->
+  <!-- Load CMS SAU -->
   <script src="https://unpkg.com/netlify-cms@^2.0.0/dist/netlify-cms.js"></script>
   <script src="/admin/widgets/updateSize.js"></script>
   <script src="/admin/widgets/customCard.js"></script>
+  
+  <!-- Fallback check -->
+  <script>
+    setTimeout(() => {
+      const sidebar = document.querySelector('.nc-sidebar');
+      if (sidebar) {
+        console.log('SIDEBAR FOUND:', sidebar);
+        console.log('COMPUTED STYLE:', window.getComputedStyle(sidebar).border);
+      } else {
+        console.error('SIDEBAR NOT FOUND');
+      }
+    }, 3000);
+  </script>
 </body>
 </html>
