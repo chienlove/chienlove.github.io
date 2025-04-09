@@ -1,116 +1,42 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <title>Đăng nhập Admin</title>
-    <script type="text/javascript" src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #f0f0f0;
-        }
-        .container {
-            background-color: white;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            max-width: 400px;
-            width: 100%;
-        }
-        h2 {
-            color: #333;
-            margin-bottom: 20px;
-        }
-        input {
-            display: block;
-            margin: 10px 0;
-            padding: 10px;
-            width: 100%;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-        button {
-            background-color: #007bff;
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            width: 100%;
-            font-size: 16px;
-            transition: background-color 0.3s;
-        }
-        button:hover {
-            background-color: #0056b3;
-        }
-        #message {
-            margin-top: 10px;
-            color: red;
-            text-align: center;
-        }
-      input:focus, textarea:focus {
-  outline: none; 
-}
-      input, textarea {
-  font-size: 16px;
-}
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Netlify CMS | cPanel Style</title>
+  <!-- Load Netlify CMS -->
+  <script src="https://unpkg.com/netlify-cms@^2.0.0/dist/netlify-cms.js"></script>
+  <!-- Load CSS tùy chỉnh -->
+  <link rel="stylesheet" href="/admin/cms.css" />
+  <!-- Favicon cPanel -->
+  <link rel="icon" href="/admin/cpanel-favicon.ico" />
 </head>
 <body>
-    <div class="container">
-        <div id="loginForm">
-            <h2>Đăng nhập</h2>
-            <input type="email" id="email" placeholder="Email" required>
-            <input type="password" id="password" placeholder="Mật khẩu" required>
-            <button onclick="login()">Đăng nhập</button>
-            <p id="message"></p>
-        </div>
-    </div>
-    <script>
-        const netlifyIdentity = window.netlifyIdentity;
-        netlifyIdentity.init();
-        function updateUI() {
-            const user = netlifyIdentity.currentUser();
-            if (user) {
-                // Redirect to the Netlify CMS dashboard after login
-                window.location.href = '/admin/dashboard';
-            } else {
-                document.getElementById('loginForm').style.display = 'block';
-            }
+  <script>
+    // Tạo dashboard tùy chỉnh
+    CMS.registerEventListener({
+      name: "preview",
+      handler: () => {
+        const dashboard = `
+          <div class="cpanel-dashboard">
+            <h1>Chào mừng đến với CMS</h1>
+            <div class="cpanel-cards">
+              <div class="cpanel-card">
+                <h3>Bài viết</h3>
+                <p>10</p>
+              </div>
+              <div class="cpanel-card">
+                <h3>Người dùng</h3>
+                <p>3</p>
+              </div>
+            </div>
+          </div>
+        `;
+        if (document.querySelector(".nc-root")) {
+          document.querySelector(".nc-root").innerHTML = dashboard;
         }
-        function login() {
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
-    const messageElement = document.getElementById('message');
-
-    netlifyIdentity.gotrue.login(email, password, true)
-        .then((response) => {
-            messageElement.style.color = 'green';
-            messageElement.textContent = 'Đăng nhập thành công!';
-            
-            // Lưu token xác thực vào localStorage
-            localStorage.setItem('netlifySiteURL', 'https://storeios.net');
-            localStorage.setItem('netlifyAppID', '8100e8e1-3511-4426-bd2e-5d28aa7428de');
-            localStorage.setItem('nf_jwt', response.token.access_token);
-            
-            // Chuyển hướng đến trang dashboard
-            window.location.href = '/admin/dashboard';
-        })
-        .catch((error) => {
-            messageElement.style.color = 'red';
-            messageElement.textContent = 'Đăng nhập thất bại: ' + error.message;
-        });
-}
-        document.addEventListener('DOMContentLoaded', updateUI);
-        netlifyIdentity.on('login', updateUI);
-        netlifyIdentity.on('logout', updateUI);
-    </script>
+      },
+    });
+  </script>
 </body>
 </html>
