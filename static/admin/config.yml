@@ -107,3 +107,6 @@ i18n:
   structure: "multiple_folders"
   locales: ["vi", "en"]
   default_locale: "vi"
+# Cấu hình plugin
+plugins:
+  - /admin/cms.js

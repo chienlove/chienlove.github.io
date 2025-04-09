@@ -5,34 +5,41 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>StoreiOS CMS</title>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-  
-  <!-- Load nuclear fix TRƯỚC CMS -->
-  <script src="/admin/widgets/cms-nuclear-fix.js"></script>
 </head>
 <body>
-  <!-- Load CMS sau -->
+  <!-- Load CMS -->
   <script src="https://unpkg.com/netlify-cms@^2.0.0/dist/netlify-cms.js"></script>
+  
+  <!-- Load widgets -->
   <script src="/admin/widgets/updateSize.js"></script>
   <script src="/admin/widgets/customCard.js"></script>
   
-  <!-- Nuclear test -->
+  <!-- Load plugin -->
+  <script src="/admin/cms.js"></script>
+  
+  <!-- Debug Script -->
   <script>
     setTimeout(() => {
-      console.log('Nuclear test running...');
-      const frames = document.querySelectorAll('iframe');
-      console.log(`Found ${frames.length} iframes`);
+      console.log('Debugging CMS...');
       
-      frames.forEach((frame, i) => {
-        try {
-          console.log(`Frame ${i}:`, frame);
-          console.log('Frame src:', frame.src);
-          console.log('Frame id:', frame.id);
-          console.log('Frame class:', frame.className);
-        } catch (e) {
-          console.error(`Cannot access frame ${i}:`, e);
-        }
-      });
-    }, 8000);
+      // Kiểm tra plugin đã load
+      console.log('CMS plugins:', window.CMS?.getRegisteredPlugins());
+      
+      // Kiểm tra style override
+      const style = document.getElementById('cms-mobile-override');
+      console.log('Override style exists:', !!style);
+      
+      // Kiểm tra sidebar
+      const sidebar = document.querySelector('.nc-sidebar');
+      if (sidebar) {
+        console.log('Sidebar found:', sidebar);
+        console.log('Computed styles:', {
+          position: window.getComputedStyle(sidebar).position,
+          bottom: window.getComputedStyle(sidebar).bottom,
+          border: window.getComputedStyle(sidebar).border
+        });
+      }
+    }, 5000);
   </script>
 </body>
 </html>
