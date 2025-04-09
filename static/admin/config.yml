@@ -105,5 +105,5 @@ custom_widgets:
 # Cấu hình i18n (tiếng Việt)
 i18n:
   structure: "multiple_folders"
-  locales: ["vi"]
+  locales: ["vi", "en"]
   default_locale: "vi"
