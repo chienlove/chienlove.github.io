@@ -2,42 +2,18 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>StoreiOS CMS</title>
-  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-  
-  <!-- Load ultimate fix FIRST -->
-  <script src="/admin/cms-ultimate-fix.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CMS Tùy chỉnh</title>
+  <!-- Sử dụng phiên bản chính xác -->
+  <script src="https://unpkg.com/netlify-cms@^3.0.0/dist/netlify-cms.js"></script>
+  <!-- Thêm CSP meta nếu cần -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https:; script-src 'self' https://unpkg.com 'unsafe-inline';">
 </head>
 <body>
-  <!-- Load CMS -->
-  <script src="https://unpkg.com/netlify-cms@^2.0.0/dist/netlify-cms.js"></script>
-  
-  <!-- Load widgets -->
-  <script src="/admin/widgets/updateSize.js"></script>
-  <script src="/admin/widgets/customCard.js"></script>
-  
-  <!-- Final Verification Script -->
+  <!-- Script CMS phải được load trước các tùy chỉnh -->
   <script>
-    setTimeout(() => {
-      console.log('FINAL VERIFICATION:');
-      
-      // 1. Kiểm tra sidebar
-      const sidebar = document.querySelector('.nc-sidebar');
-      if (sidebar) {
-        console.log('Sidebar found! Computed styles:', {
-          position: window.getComputedStyle(sidebar).position,
-          bottom: window.getComputedStyle(sidebar).bottom,
-          height: window.getComputedStyle(sidebar).height
-        });
-      } else {
-        console.error('Sidebar still not found!');
-      }
-      
-      // 2. Kiểm tra visual confirm
-      const confirmDiv = document.querySelector('.cms-mobile-confirm');
-      console.log('Visual confirmation exists:', !!confirmDiv);
-    }, 5000);
+    CMS.init();
+    console.log('CMS initialized'); // Kiểm tra trong console
   </script>
 </body>
 </html>
