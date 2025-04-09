@@ -1,42 +1,18 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Netlify CMS | cPanel Style</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel</title>
   <!-- Load Netlify CMS -->
-  <script src="https://unpkg.com/netlify-cms@^2.0.0/dist/netlify-cms.js"></script>
-  <!-- Load CSS tùy chỉnh -->
-  <link rel="stylesheet" href="/admin/cms.css" />
-  <!-- Favicon cPanel -->
-  <link rel="icon" href="/admin/cpanel-favicon.ico" />
+  <script src="https://unpkg.com/netlify-cms@^2.10.0/dist/netlify-cms.js"></script>
+  <!-- Load CSS tùy chỉnh (đảm bảo đường dẫn đúng) -->
+  <link rel="stylesheet" href="/admin/cms.css">
 </head>
 <body>
+  <!-- Script tùy chỉnh (nếu có) -->
   <script>
-    // Tạo dashboard tùy chỉnh
-    CMS.registerEventListener({
-      name: "preview",
-      handler: () => {
-        const dashboard = `
-          <div class="cpanel-dashboard">
-            <h1>Chào mừng đến với CMS</h1>
-            <div class="cpanel-cards">
-              <div class="cpanel-card">
-                <h3>Bài viết</h3>
-                <p>10</p>
-              </div>
-              <div class="cpanel-card">
-                <h3>Người dùng</h3>
-                <p>3</p>
-              </div>
-            </div>
-          </div>
-        `;
-        if (document.querySelector(".nc-root")) {
-          document.querySelector(".nc-root").innerHTML = dashboard;
-        }
-      },
-    });
+    console.log("Netlify CMS đã load!");
   </script>
 </body>
 </html>
