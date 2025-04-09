@@ -7,7 +7,7 @@
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   
   <!-- Load injector TRƯỚC CMS -->
-  <script src="/admin/widgets/cms-mobile-injector.js"></script>
+  <script src="/admin/widgets/cms-frame-injector.js"></script>
 </head>
 <body>
   <!-- Load CMS SAU -->
@@ -15,17 +15,27 @@
   <script src="/admin/widgets/updateSize.js"></script>
   <script src="/admin/widgets/customCard.js"></script>
   
-  <!-- Fallback check -->
+  <!-- Debug helper -->
   <script>
     setTimeout(() => {
-      const sidebar = document.querySelector('.nc-sidebar');
-      if (sidebar) {
-        console.log('SIDEBAR FOUND:', sidebar);
-        console.log('COMPUTED STYLE:', window.getComputedStyle(sidebar).border);
+      console.log('Running frame check...');
+      const frame = document.querySelector('#nc-root iframe, .nc-root iframe');
+      if (frame) {
+        console.log('Frame found:', frame);
+        try {
+          const doc = frame.contentDocument;
+          console.log('Frame document:', doc);
+          if (doc) {
+            const style = doc.querySelector('style#cms-mobile-forced');
+            console.log('Injected style exists:', !!style);
+          }
+        } catch (e) {
+          console.error('Cannot access frame:', e);
+        }
       } else {
-        console.error('SIDEBAR NOT FOUND');
+        console.error('No CMS frame found');
       }
-    }, 3000);
+    }, 5000);
   </script>
 </body>
 </html>
