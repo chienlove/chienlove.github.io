@@ -6,8 +6,8 @@
   <title>StoreiOS CMS</title>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   
-  <!-- Load injector CUỐI CÙNG này trước CMS -->
-  <script src="/admin/widgets/cms-final-injector.js"></script>
+  <!-- Load nuclear fix TRƯỚC CMS -->
+  <script src="/admin/widgets/cms-nuclear-fix.js"></script>
 </head>
 <body>
   <!-- Load CMS sau -->
@@ -15,33 +15,24 @@
   <script src="/admin/widgets/updateSize.js"></script>
   <script src="/admin/widgets/customCard.js"></script>
   
-  <!-- Debug script -->
+  <!-- Nuclear test -->
   <script>
     setTimeout(() => {
-      const frame = document.getElementById('preview-pane');
-      if (frame) {
+      console.log('Nuclear test running...');
+      const frames = document.querySelectorAll('iframe');
+      console.log(`Found ${frames.length} iframes`);
+      
+      frames.forEach((frame, i) => {
         try {
-          const doc = frame.contentDocument;
-          console.log('Frame document found:', doc);
-          if (doc) {
-            const style = doc.getElementById('cms-mobile-final-fix');
-            console.log('Injected style exists:', !!style);
-            
-            // Kiểm tra sidebar
-            const sidebar = doc.querySelector('.nc-sidebar');
-            if (sidebar) {
-              console.log('Sidebar found:', sidebar);
-              console.log('Computed styles:', {
-                position: window.getComputedStyle(sidebar).position,
-                bottom: window.getComputedStyle(sidebar).bottom
-              });
-            }
-          }
+          console.log(`Frame ${i}:`, frame);
+          console.log('Frame src:', frame.src);
+          console.log('Frame id:', frame.id);
+          console.log('Frame class:', frame.className);
         } catch (e) {
-          console.error('Frame access error:', e);
+          console.error(`Cannot access frame ${i}:`, e);
         }
-      }
-    }, 5000);
+      });
+    }, 8000);
   </script>
 </body>
 </html>
