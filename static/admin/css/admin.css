@@ -1,31 +1,37 @@
 /* Mobile Styles */
-@media (max-width: 768px) {
+@media (max-width: 768px), .mobile-view {
   /* Layout */
   .nc-root {
-    flex-direction: column-reverse;
+    flex-direction: column-reverse !important;
   }
   
   .nc-sidebar {
-    position: fixed;
-    bottom: 0;
+    position: fixed !important;
+    bottom: 0 !important;
     top: auto !important;
     width: 100% !important;
-    height: 60px;
-    overflow-x: auto;
-    white-space: nowrap;
-    display: flex;
-    z-index: 1000;
+    height: 60px !important;
+    overflow-x: auto !important;
+    white-space: nowrap !important;
+    display: flex !important;
+    z-index: 1000 !important;
+    background: #fff !important;
+    box-shadow: 0 -2px 5px rgba(0,0,0,0.1) !important;
   }
   
   .nc-sidebar-scroll {
     display: flex !important;
     flex-direction: row !important;
+    padding: 0 10px !important;
   }
   
   .nc-collectionLink {
     padding: 10px 15px !important;
-    min-width: 100px;
-    text-align: center;
+    min-width: 100px !important;
+    text-align: center !important;
+    display: inline-block !important;
+    border-bottom: none !important;
+    border-right: 1px solid #eee !important;
   }
   
   /* Main content */
@@ -43,7 +49,7 @@
   
   /* Editor */
   .nc-editorLayout {
-    flex-direction: column;
+    flex-direction: column !important;
   }
   
   .nc-markdownEditor, 
@@ -66,7 +72,7 @@
   /* Custom widgets */
   .custom-card, .size-calculator {
     width: 100% !important;
-    box-sizing: border-box;
+    box-sizing: border-box !important;
   }
 }
 
@@ -84,5 +90,10 @@
   
   input, textarea, select {
     font-size: 16px !important; /* Ngăn chặn zoom trên iOS */
+  }
+  
+  /* Thêm style cho menu mobile */
+  .nc-sidebarHeader {
+    display: none !important;
   }
 }

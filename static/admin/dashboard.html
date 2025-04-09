@@ -6,6 +6,12 @@
   <title>StoreiOS CMS</title>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <link rel="stylesheet" href="/css/admin.css">
+  <style>
+    /* Thêm style tạm thời để kiểm tra */
+    body.mobile-view {
+      background-color: #f0f0f0;
+    }
+  </style>
 </head>
 <body>
   <script src="https://unpkg.com/netlify-cms@^2.0.0/dist/netlify-cms.js"></script>
@@ -13,17 +19,36 @@
   <script src="/admin/widgets/customCard.js"></script>
   
   <script>
-    // Thêm class mobile khi kích thước màn hình nhỏ
+    // Kiểm tra và thêm class mobile ngay khi load
     function checkMobile() {
       if (window.innerWidth < 768) {
         document.body.classList.add('mobile-view');
+        console.log('Mobile mode activated');
       } else {
         document.body.classList.remove('mobile-view');
       }
     }
     
+    // Kích hoạt ngay khi load
+    checkMobile();
+    
+    // Theo dõi thay đổi kích thước
     window.addEventListener('resize', checkMobile);
-    document.addEventListener('DOMContentLoaded', checkMobile);
+    
+    // Đảm bảo CMS đã load xong
+    document.addEventListener('DOMContentLoaded', function() {
+      checkMobile();
+      
+      // Kiểm tra xem CSS đã được áp dụng chưa
+      setTimeout(function() {
+        var testElement = document.createElement('div');
+        testElement.className = 'nc-sidebar';
+        document.body.appendChild(testElement);
+        var computedStyle = window.getComputedStyle(testElement);
+        console.log('Sidebar position:', computedStyle.position);
+        testElement.remove();
+      }, 1000);
+    });
   </script>
 </body>
 </html>
