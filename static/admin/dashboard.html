@@ -1,18 +1,14 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
 <head>
-  <meta charset="utf-8">
-  <title>CMS</title>
-  <script src="https://unpkg.com/netlify-cms@2.10.192/dist/netlify-cms.js"></script>
+  <meta charset="utf-8" />
+  <title>Content Manager</title>
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 </head>
 <body>
-  <div id="nc-root"></div>
-  <script>
-    console.log("CMS object exists:", !!window.CMS);
-    if (window.CMS) {
-      CMS.init();
-      CMS.registerPreviewStyle("/admin/css/custom.css"); // Nếu có
-    }
-  </script>
+  <!-- Include the script that builds the page and powers Netlify CMS -->
+  <script src="https://unpkg.com/netlify-cms@^2.0.0/dist/netlify-cms.js"></script>
+  <!-- Tích hợp trực tiếp script cho widget tùy chỉnh updateSize -->
+  <script src="/admin/widgets/updateSize.js"></script>
 </body>
 </html>
