@@ -1,21 +1,58 @@
-// Hàm xử lý khi submit form search
+// Biến toàn cục
+let searchIndex;
+let appData = {};
+
+// Hàm tải dữ liệu ứng dụng
+async function loadAppData() {
+    try {
+        const response = await fetch('/list.json');
+        if (!response.ok) throw new Error('Network response was not ok');
+        
+        const data = await response.json();
+        appData = data.reduce((acc, app) => {
+            acc[app.url] = app;
+            return acc;
+        }, {});
+        
+        // Khởi tạo Lunr search index
+        searchIndex = lunr(function() {
+            this.ref('url');
+            this.field('title', { boost: 10 });
+            this.field('description', { boost: 5 });
+            this.field('content', { boost: 3 });
+            this.field('category', { boost: 2 });
+            
+            data.forEach(app => {
+                this.add(app);
+            });
+        });
+        
+        console.log('Search index ready');
+    } catch (error) {
+        console.error('Error loading search data:', error);
+    }
+}
+
+// Hàm xử lý submit form
 function handleSearchSubmit(event) {
-    event.preventDefault(); // Ngăn chặn form submit mặc định
+    event.preventDefault();
     const query = document.getElementById('search-input').value.trim();
     
     if (query.length > 0) {
         // Hiển thị kết quả ngay lập tức
         performSearch(query);
         
-        // Nếu muốn chuyển đến trang search khi nhấn Enter (tùy chọn)
-        // window.location.href = `/search?q=${encodeURIComponent(query)}`;
+        // Đồng thời chuyển đến trang search.html với query
+        window.location.href = `/search?q=${encodeURIComponent(query)}`;
     }
 }
 
-// Hàm thực hiện tìm kiếm và hiển thị kết quả
+// Hàm thực hiện tìm kiếm
 function performSearch(query) {
+    const searchResults = document.getElementById('header-search-results');
+    
     if (!searchIndex || query.length < 2) {
-        document.getElementById('header-search-results').style.display = 'none';
+        searchResults.style.display = 'none';
         return;
     }
     
@@ -24,11 +61,11 @@ function performSearch(query) {
         displaySearchResults(results);
     } catch (error) {
         console.error('Search error:', error);
-        document.getElementById('header-search-results').style.display = 'none';
+        searchResults.style.display = 'none';
     }
 }
 
-// Hàm hiển thị kết quả trong dropdown
+// Hàm hiển thị kết quả
 function displaySearchResults(results) {
     const searchResults = document.getElementById('header-search-results');
     
@@ -58,15 +95,37 @@ function displaySearchResults(results) {
     searchResults.style.display = 'block';
 }
 
-// Thêm sự kiện click ra ngoài để đóng dropdown
-document.addEventListener('click', function(e) {
-    const searchBar = document.querySelector('.search-bar');
-    if (!searchBar.contains(e.target)) {
-        document.getElementById('header-search-results').style.display = 'none';
+// Hàm debounce
+function debounce(func, delay) {
+    let timeoutId;
+    return function(...args) {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => func.apply(this, args), delay);
+    };
+}
+
+// Khởi tạo khi DOM ready
+document.addEventListener('DOMContentLoaded', function() {
+    // Tải dữ liệu
+    loadAppData();
+    
+    // Gắn sự kiện input với debounce
+    document.getElementById('search-input').addEventListener('input', debounce(function() {
+        performSearch(this.value.trim());
+    }, 300));
+    
+    // Đóng dropdown khi click ra ngoài
+    document.addEventListener('click', function(e) {
+        const searchBar = document.querySelector('.search-bar');
+        if (!searchBar.contains(e.target)) {
+            document.getElementById('header-search-results').style.display = 'none';
+        }
+    });
+    
+    // Giữ lại query khi trang reload
+    const urlParams = new URLSearchParams(window.location.search);
+    const searchQuery = urlParams.get('q');
+    if (searchQuery) {
+        document.getElementById('search-input').value = searchQuery;
     }
 });
-
-// Thêm sự kiện input với debounce
-document.getElementById('search-input').addEventListener('input', debounce(function() {
-    performSearch(this.value.trim());
-}, 300));
