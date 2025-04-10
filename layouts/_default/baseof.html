@@ -21,12 +21,13 @@
                 <a href="/"><img src="/images/logo.png" alt="{{ .Site.Title }}" loading="lazy"></a>
             </div>
             <div class="search-bar">
-                <form id="search-form" action="/search" method="GET">
-                    <input type="text" id="search-input" name="q" placeholder="Tìm kiếm apps & games" autocomplete="off">
-                    <button type="submit" class="search-button"><i class="fas fa-search"></i></button>
-                </form>
-                <div class="search-results" id="header-search-results"></div>
-            </div>
+    <form id="search-form" onsubmit="handleSearchSubmit(event)">
+        <input type="text" id="search-input" placeholder="Tìm kiếm apps & games" autocomplete="off">
+        <button type="submit" class="search-button"><i class="fas fa-search"></i></button>
+    </form>
+    <div class="search-results" id="header-search-results">
+    </div>
+</div>
             <div class="sidebar-overlay"></div>
             <nav class="main-nav">
                 <ul>
