@@ -156,67 +156,123 @@
         </div>
         
         <div id="search-results">
-            {{ if .Query }}
-                <div class="search-results-count">Tìm thấy {{ .ResultsCount }} kết quả cho "{{ .Query }}"</div>
-                
-                {{ if .Results }}
-                    <div class="app-grid">
-                        {{ range .Results }}
-                            <div class="app-card" onclick="window.location.href='{{ .url }}'">
-                                <img class="app-image" src="{{ .screenshots | first | default .icon | default "/images/default-app.png" }}" 
-                                     alt="{{ .title }}" loading="lazy">
-                                <div class="app-content">
-                                    <div class="app-header">
-                                        <img class="app-icon" src="{{ .icon | default "/images/default-icon.png" }}" 
-                                             alt="Icon" loading="lazy">
-                                        <h3 class="app-title">{{ .title }}</h3>
-                                    </div>
-                                    <p class="app-description">{{ .description | default "Không có mô tả" }}</p>
-                                    <div class="app-meta">
-                                        <span class="app-category">{{ .category | default "Ứng dụng" }}</span>
-                                        <span class="app-date">{{ .date | dateFormat "02/01/2006" }}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        {{ end }}
-                    </div>
-                {{ else }}
-                    <div class="no-results">
-                        <div class="no-results-icon">
-                            <i class="far fa-frown"></i>
-                        </div>
-                        <h3 class="no-results-title">Không tìm thấy kết quả</h3>
-                        <p>Không có ứng dụng nào phù hợp với từ khóa "{{ .Query }}"</p>
-                    </div>
-                {{ end }}
-            {{ else }}
-                <div class="no-results">
-                    <div class="no-results-icon">
-                        <i class="fas fa-search"></i>
-                    </div>
-                    <h3 class="no-results-title">Nhập từ khóa để tìm kiếm</h3>
-                    <p>Tìm kiếm ứng dụng, trò chơi hoặc nội dung bạn quan tâm</p>
+            <!-- Kết quả sẽ được hiển thị bằng JavaScript -->
+            <div class="no-results">
+                <div class="no-results-icon">
+                    <i class="fas fa-search"></i>
                 </div>
-            {{ end }}
+                <h3 class="no-results-title">Đang tải kết quả...</h3>
+            </div>
         </div>
     </div>
 
+    <script src="https://unpkg.com/lunr/lunr.js"></script>
     <script src="/js/search.js"></script>
     <script>
-        // Đồng bộ với header search
-        document.addEventListener('DOMContentLoaded', function() {
-            const searchInput = document.getElementById('search-input');
+        // Hiển thị kết quả tìm kiếm khi dữ liệu đã sẵn sàng
+        function displayFullPageResults(query) {
+            const resultsContainer = document.getElementById('search-results');
             
-            // Gắn sự kiện input với debounce
-            searchInput.addEventListener('input', debounce(function() {
-                const query = this.value.trim();
-                if (query.length > 1) {
-                    performSearch(query);
+            if (!searchIndex || !query || query.length < 2) {
+                resultsContainer.innerHTML = `
+                    <div class="no-results">
+                        <div class="no-results-icon">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <h3 class="no-results-title">Nhập từ khóa để tìm kiếm</h3>
+                        <p>Tìm kiếm ứng dụng, trò chơi hoặc nội dung bạn quan tâm</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            try {
+                const results = searchIndex.search(query);
+                
+                if (!results || results.length === 0) {
+                    resultsContainer.innerHTML = `
+                        <div class="no-results">
+                            <div class="no-results-icon">
+                                <i class="far fa-frown"></i>
+                            </div>
+                            <h3 class="no-results-title">Không tìm thấy kết quả</h3>
+                            <p>Không có ứng dụng nào phù hợp với từ khóa "${query}"</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                let html = `
+                    <div class="search-results-count">Tìm thấy ${results.length} kết quả cho "${query}"</div>
+                    <div class="app-grid">
+                `;
+                
+                results.forEach(result => {
+                    const app = appData[result.ref];
+                    if (!app) return;
+                    
+                    html += `
+                        <div class="app-card" onclick="window.location.href='${app.url}'">
+                            <img class="app-image" src="${app.screenshots && app.screenshots.length > 0 ? app.screenshots[0] : app.icon || '/images/default-app.png'}" 
+                                 alt="${app.title}" loading="lazy">
+                            <div class="app-content">
+                                <div class="app-header">
+                                    <img class="app-icon" src="${app.icon || '/images/default-icon.png'}" 
+                                         alt="Icon" loading="lazy">
+                                    <h3 class="app-title">${app.title}</h3>
+                                </div>
+                                <p class="app-description">${app.description || 'Không có mô tả'}</p>
+                                <div class="app-meta">
+                                    <span class="app-category">${app.category || 'Ứng dụng'}</span>
+                                    <span class="app-date">${new Date(app.date).toLocaleDateString('vi-VN')}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += `</div>`;
+                resultsContainer.innerHTML = html;
+            } catch (error) {
+                console.error('Search error:', error);
+                resultsContainer.innerHTML = `
+                    <div class="no-results">
+                        <div class="no-results-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <h3 class="no-results-title">Lỗi khi tìm kiếm</h3>
+                        <p>Đã xảy ra lỗi khi tìm kiếm. Vui lòng thử lại.</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Khi DOM đã sẵn sàng
+        document.addEventListener('DOMContentLoaded', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const query = urlParams.get('q');
+            
+            // Nếu có query, thực hiện tìm kiếm
+            if (query) {
+                document.getElementById('search-input').value = query;
+                // Chờ dữ liệu tải xong rồi hiển thị kết quả
+                const checkDataLoaded = setInterval(() => {
+                    if (searchIndex) {
+                        clearInterval(checkDataLoaded);
+                        displayFullPageResults(query);
+                    }
+                }, 100);
+            }
+            
+            // Gắn sự kiện cho ô tìm kiếm
+            document.getElementById('search-input').addEventListener('input', debounce(function() {
+                const newQuery = this.value.trim();
+                if (newQuery.length > 1) {
+                    // Cập nhật URL nhưng không reload trang
+                    window.history.pushState({}, '', `/search?q=${encodeURIComponent(newQuery)}`);
+                    displayFullPageResults(newQuery);
                 }
             }, 300));
-            
-            // Focus vào ô tìm kiếm khi trang load
-            searchInput.focus();
         });
     </script>
 </body>

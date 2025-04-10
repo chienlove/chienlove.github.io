@@ -28,6 +28,14 @@ async function loadAppData() {
         });
         
         console.log('Search index ready');
+        
+        // Tự động tìm kiếm nếu có query trong URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const searchQuery = urlParams.get('q');
+        if (searchQuery && document.getElementById('search-input')) {
+            document.getElementById('search-input').value = searchQuery;
+            performSearch(searchQuery);
+        }
     } catch (error) {
         console.error('Error loading search data:', error);
     }
@@ -39,10 +47,10 @@ function handleSearchSubmit(event) {
     const query = document.getElementById('search-input').value.trim();
     
     if (query.length > 0) {
-        // Hiển thị kết quả ngay lập tức
-        performSearch(query);
+        // Lưu query vào localStorage để đồng bộ giữa các trang
+        localStorage.setItem('searchQuery', query);
         
-        // Đồng thời chuyển đến trang search.html với query
+        // Chuyển đến trang search.html với query
         window.location.href = `/search?q=${encodeURIComponent(query)}`;
     }
 }
@@ -50,9 +58,10 @@ function handleSearchSubmit(event) {
 // Hàm thực hiện tìm kiếm
 function performSearch(query) {
     const searchResults = document.getElementById('header-search-results');
+    if (!searchResults) return;
     
     if (!searchIndex || query.length < 2) {
-        searchResults.style.display = 'none';
+        if (searchResults) searchResults.style.display = 'none';
         return;
     }
     
@@ -61,13 +70,14 @@ function performSearch(query) {
         displaySearchResults(results);
     } catch (error) {
         console.error('Search error:', error);
-        searchResults.style.display = 'none';
+        if (searchResults) searchResults.style.display = 'none';
     }
 }
 
 // Hàm hiển thị kết quả
 function displaySearchResults(results) {
     const searchResults = document.getElementById('header-search-results');
+    if (!searchResults) return;
     
     if (!results || results.length === 0) {
         searchResults.innerHTML = '<div class="search-result-item">Không tìm thấy kết quả</div>';
@@ -109,23 +119,27 @@ document.addEventListener('DOMContentLoaded', function() {
     // Tải dữ liệu
     loadAppData();
     
-    // Gắn sự kiện input với debounce
-    document.getElementById('search-input').addEventListener('input', debounce(function() {
-        performSearch(this.value.trim());
-    }, 300));
+    // Gắn sự kiện input với debounce (nếu có ô tìm kiếm trên trang)
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+        searchInput.addEventListener('input', debounce(function() {
+            performSearch(this.value.trim());
+        }, 300));
+        
+        // Khôi phục query từ localStorage (nếu có)
+        const savedQuery = localStorage.getItem('searchQuery');
+        if (savedQuery) {
+            searchInput.value = savedQuery;
+            performSearch(savedQuery);
+        }
+    }
     
-    // Đóng dropdown khi click ra ngoài
+    // Đóng dropdown khi click ra ngoài (nếu có dropdown)
     document.addEventListener('click', function(e) {
         const searchBar = document.querySelector('.search-bar');
-        if (!searchBar.contains(e.target)) {
-            document.getElementById('header-search-results').style.display = 'none';
+        const searchResults = document.getElementById('header-search-results');
+        if (searchBar && searchResults && !searchBar.contains(e.target)) {
+            searchResults.style.display = 'none';
         }
     });
-    
-    // Giữ lại query khi trang reload
-    const urlParams = new URLSearchParams(window.location.search);
-    const searchQuery = urlParams.get('q');
-    if (searchQuery) {
-        document.getElementById('search-input').value = searchQuery;
-    }
 });
