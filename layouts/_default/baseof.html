@@ -4,11 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
     <title>
-       {{ if or (in .Params.categories "Jailbreak") }}
-    Download {{ .Title }} Tool Jailbreak For iOS | {{ .Site.Title }}
-  {{ else }}
+        {{ if or (in .Params.categories "Jailbreak") }}
+            Download {{ .Title }} Tool Jailbreak For iOS | {{ .Site.Title }}
+        {{ else }}
             {{ .Title }} | {{ .Site.Title }}
-{{ end }}
+        {{ end }}
     </title>
     <link rel="stylesheet" href="/css/style.css?v={{ now.Unix }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -18,13 +18,14 @@
     <header class="site-header">
         <div class="header-container">
             <div class="logo">
-                <a href="/"><img src="/images/logo.png" alt="{{ .Site.Title }}"></a>
+                <a href="/"><img src="/images/logo.png" alt="{{ .Site.Title }}" loading="lazy"></a>
             </div>
             <div class="search-bar">
-                <form id="search-form" action="javascript:void(0);" onsubmit="performSearch()">
-                    <input type="text" id="search-input" placeholder="Tìm kiếm apps & games">
+                <form id="search-form" action="/search" method="GET">
+                    <input type="text" id="search-input" name="q" placeholder="Tìm kiếm apps & games" autocomplete="off">
                     <button type="submit" class="search-button"><i class="fas fa-search"></i></button>
                 </form>
+                <div class="search-results" id="header-search-results"></div>
             </div>
             <div class="sidebar-overlay"></div>
             <nav class="main-nav">
@@ -47,7 +48,7 @@
     </header>
 
     <nav class="mobile-nav">
-      <button class="close-menu">&times;</button>
+        <button class="close-menu">&times;</button>
         <ul>
             <li><a href="/">Trang chủ</a></li>
             <li><a href="/games">Games</a></li>
@@ -70,16 +71,18 @@
 
     <footer class="site-footer">
         <div class="footer-content">
-            <p>&copy; 2024 {{ .Site.Title }}. Tất cả quyền được bảo lưu.</p>
+            <p>&copy; {{ now.Format "2006" }} {{ .Site.Title }}. Tất cả quyền được bảo lưu.</p>
             <nav class="footer-nav">
                 <a href="/about">Về chúng tôi</a>
                 <a href="/contact">Liên hệ</a>
                 <a href="/privacy">Chính sách bảo mật</a>
+                <a href="/terms">Điều khoản sử dụng</a>
             </nav>
         </div>
     </footer>
     <script src="/js/firebase-config.js"></script>
     <script src="/js/search.js"></script>
     <script src="/js/main.js"></script>
+    {{ block "scripts" . }}{{ end }}
 </body>
 </html>
