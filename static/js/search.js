@@ -5,7 +5,7 @@ let appData = {};
 // Hàm tải dữ liệu JSON
 async function loadAppData() {
     try {
-        const response = await fetch('/list.json');
+        const response = await fetch('/index.json');
         if (!response.ok) throw new Error('Failed to load data');
         const data = await response.json();
         
