@@ -1,168 +1,221 @@
-/* General container styles */
-.tool-container {
-    margin-top: 20px;
-    background-color: #f9f9f9;
-    padding: 15px;
-    border-radius: 5px;
+/* Container Styles */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
 }
 
-/* Tool header styles */
+/* Card Styles */
+.card {
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    border: 1px solid #e2e8f0;
+    margin-bottom: 24px;
+    overflow: hidden;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.card-header {
+    padding: 20px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.card-body {
+    padding: 20px;
+}
+
+.card-title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.section-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0 0 16px 0;
+    color: #333;
+}
+
+/* Tool Header */
 .tool-header {
     display: flex;
-    align-items: flex-start; /* Align items at the top */
-    justify-content: space-between;
-    padding: 15px 0;
-    border-bottom: 1px solid #ddd;
+    align-items: center;
+    gap: 16px;
 }
 
 .tool-icon {
     width: 80px;
     height: 80px;
-    border-radius: 10px;
-    margin-right: 15px;
+    border-radius: 16px;
+    object-fit: contain;
+    border: 1px solid #e2e8f0;
 }
 
-.tool-name-and-details {
-    flex-grow: 1;
+.tool-meta {
+    flex: 1;
 }
 
 .tool-title {
-    margin: 0;
-    font-size: 24px;
+    margin: 0 0 4px 0;
+    font-size: 1.5rem;
+    font-weight: 600;
 }
 
 .tool-version-dev {
-    margin-top: 10px; /* Increased space between details and GET button */
-    font-size: 14px;
+    font-size: 0.875rem;
     color: #666;
 }
 
 .tool-version-label {
-    font-weight: bold;
-    display: block;
-}
-
-.tool-developer-label {
-    display: block;
+    display: inline-block;
+    margin-right: 12px;
 }
 
 .get-button {
-    background-color: #0070c9;
+    background-color: #2563eb;
     color: white;
-    padding: 8px 12px; /* Adjusted padding */
-    border-radius: 5px;
+    padding: 8px 16px;
+    border-radius: 8px;
     text-decoration: none;
-    font-weight: bold;
-    font-size: 14px; /* Adjusted font size */
-    display: inline-block;
-    transition: background-color 0.3s;
-    margin-left: 15px;
-    align-self: flex-end; /* Align the button to the bottom right */
+    font-weight: 500;
+    font-size: 0.875rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background-color 0.2s ease;
+    white-space: nowrap;
 }
 
 .get-button:hover {
-    background-color: #005cbf;
+    background-color: #1d4ed8;
 }
 
-/* Description styles */
-#description-container {
-    margin-top: 20px;
-    padding: 10px;
+.get-button::before {
+    content: "↓";
 }
 
-.read-more-button {
-    background-color: transparent;
+/* Description Section */
+.description-container {
+    margin: 16px 0;
+}
+
+.description-toggle {
+    background: none;
     border: none;
-    color: #e53e3e;
+    color: #2563eb;
     cursor: pointer;
+    font-weight: 500;
     padding: 0;
-    font-size: 14px;
-    margin-top: 10px;
+    margin-top: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
 }
 
-/* Tool details styles */
-.tool-info-container {
-    margin-bottom: 20px;
+.description-toggle::after {
+    content: "→";
+    display: inline-block;
+    transition: transform 0.2s ease;
 }
 
-.tool-details-container {
-    padding: 15px;
-    background-color: #ffffff;
-    border-radius: 5px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    border: 1px solid #ddd;
+.description-toggle.expanded::after {
+    transform: rotate(90deg);
 }
 
-.tool-details-title {
-    margin: 0;
-    font-size: 18px;
-    font-weight: bold;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #ddd;
-}
-
-.tool-details {
-    margin-bottom: 10px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #ddd;
-}
-
-.tool-details:last-child {
-    border-bottom: none;
-}
-
-/* Screenshots styles */
+/* Screenshots */
 .screenshots {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 15px;
-    margin-top: 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+    margin-top: 16px;
 }
 
-.screenshots img {
-    max-width: calc(33.333% - 10px);
+.screenshot {
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #e2e8f0;
+    transition: transform 0.2s ease;
+}
+
+.screenshot:hover {
+    transform: scale(1.02);
+}
+
+.screenshot img {
+    width: 100%;
     height: auto;
-    border-radius: 10px;
+    display: block;
 }
 
-/* Download links styles */
-.download-links {
-    margin-top: 20px;
-    padding: 15px;
-    background-color: #ffffff;
-    border-radius: 5px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    border: 1px solid #ddd;
+/* Tool Details */
+.tool-details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+}
+
+.tool-detail {
+    display: flex;
+    flex-direction: column;
+}
+
+.tool-detail-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: #666;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.tool-detail-value {
+    font-weight: 500;
+}
+
+/* Download Links */
+.download-links-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 12px;
 }
 
 .download-link {
-    display: inline-block;
-    padding: 10px 15px;
-    background-color: #f3f4f6;
-    margin-right: 10px;
-    margin-bottom: 10px;
-    border-radius: 5px;
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    background-color: #f8fafc;
+    border-radius: 8px;
     text-decoration: none;
     color: #333;
+    transition: background-color 0.2s ease;
 }
 
 .download-link:hover {
     background-color: #e2e8f0;
 }
 
-/* Utility classes */
+.download-link::before {
+    content: "↓";
+    margin-right: 8px;
+    color: #2563eb;
+    font-weight: bold;
+}
+
+/* Utility Classes */
+.mb-4 {
+    margin-bottom: 16px;
+}
+
+.mt-4 {
+    margin-top: 16px;
+}
+
 .hidden {
     display: none;
-}
-
-/* Ensure tool-info and download-links sections are equal in width */
-.tool-container {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-}
-
-.tool-info-container, .download-links {
-    width: 100%;
-    box-sizing: border-box;
 }
