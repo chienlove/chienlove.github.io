@@ -150,18 +150,18 @@
             <form id="search-form" onsubmit="handleSearchSubmit(event)">
                 <input type="text" name="q" id="search-input" 
                        placeholder="Nhập từ khóa tìm kiếm..." 
-                       value="{{ .Query }}" autocomplete="off" autofocus>
+                       value="" autocomplete="off" autofocus>
                 <button type="submit" class="search-button"><i class="fas fa-search"></i></button>
             </form>
         </div>
         
         <div id="search-results">
-            <!-- Kết quả sẽ được hiển thị bằng JavaScript -->
             <div class="no-results">
                 <div class="no-results-icon">
                     <i class="fas fa-search"></i>
                 </div>
-                <h3 class="no-results-title">Đang tải kết quả...</h3>
+                <h3 class="no-results-title">Nhập từ khóa để tìm kiếm</h3>
+                <p>Tìm kiếm ứng dụng, trò chơi hoặc nội dung bạn quan tâm</p>
             </div>
         </div>
     </div>
@@ -169,108 +169,87 @@
     <script src="https://unpkg.com/lunr/lunr.js"></script>
     <script src="/js/search.js"></script>
     <script>
-        // Hiển thị kết quả tìm kiếm khi dữ liệu đã sẵn sàng
-        function displayFullPageResults(query) {
+        // Lấy query từ URL
+        function getQueryParam() {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('q') || '';
+        }
+
+        // Hiển thị kết quả tìm kiếm
+        function displaySearchResults(results, query) {
             const resultsContainer = document.getElementById('search-results');
             
-            if (!searchIndex || !query || query.length < 2) {
+            if (!results || results.length === 0) {
                 resultsContainer.innerHTML = `
                     <div class="no-results">
                         <div class="no-results-icon">
-                            <i class="fas fa-search"></i>
+                            <i class="far fa-frown"></i>
                         </div>
-                        <h3 class="no-results-title">Nhập từ khóa để tìm kiếm</h3>
-                        <p>Tìm kiếm ứng dụng, trò chơi hoặc nội dung bạn quan tâm</p>
+                        <h3 class="no-results-title">Không tìm thấy kết quả</h3>
+                        <p>Không có ứng dụng nào phù hợp với từ khóa "${query}"</p>
                     </div>
                 `;
                 return;
             }
             
-            try {
-                const results = searchIndex.search(query);
+            let html = `
+                <div class="search-results-count">Tìm thấy ${results.length} kết quả cho "${query}"</div>
+                <div class="app-grid">
+            `;
+            
+            results.forEach(result => {
+                const app = appData[result.ref];
+                if (!app) return;
                 
-                if (!results || results.length === 0) {
-                    resultsContainer.innerHTML = `
-                        <div class="no-results">
-                            <div class="no-results-icon">
-                                <i class="far fa-frown"></i>
+                html += `
+                    <div class="app-card" onclick="window.location.href='${app.url}'">
+                        <img class="app-image" src="${app.screenshots && app.screenshots.length > 0 ? app.screenshots[0] : app.icon || '/images/default-app.png'}" 
+                             alt="${app.title}" loading="lazy">
+                        <div class="app-content">
+                            <div class="app-header">
+                                <img class="app-icon" src="${app.icon || '/images/default-icon.png'}" 
+                                     alt="Icon" loading="lazy">
+                                <h3 class="app-title">${app.title}</h3>
                             </div>
-                            <h3 class="no-results-title">Không tìm thấy kết quả</h3>
-                            <p>Không có ứng dụng nào phù hợp với từ khóa "${query}"</p>
-                        </div>
-                    `;
-                    return;
-                }
-                
-                let html = `
-                    <div class="search-results-count">Tìm thấy ${results.length} kết quả cho "${query}"</div>
-                    <div class="app-grid">
-                `;
-                
-                results.forEach(result => {
-                    const app = appData[result.ref];
-                    if (!app) return;
-                    
-                    html += `
-                        <div class="app-card" onclick="window.location.href='${app.url}'">
-                            <img class="app-image" src="${app.screenshots && app.screenshots.length > 0 ? app.screenshots[0] : app.icon || '/images/default-app.png'}" 
-                                 alt="${app.title}" loading="lazy">
-                            <div class="app-content">
-                                <div class="app-header">
-                                    <img class="app-icon" src="${app.icon || '/images/default-icon.png'}" 
-                                         alt="Icon" loading="lazy">
-                                    <h3 class="app-title">${app.title}</h3>
-                                </div>
-                                <p class="app-description">${app.description || 'Không có mô tả'}</p>
-                                <div class="app-meta">
-                                    <span class="app-category">${app.category || 'Ứng dụng'}</span>
-                                    <span class="app-date">${new Date(app.date).toLocaleDateString('vi-VN')}</span>
-                                </div>
+                            <p class="app-description">${app.description || 'Không có mô tả'}</p>
+                            <div class="app-meta">
+                                <span class="app-category">${app.category || 'Ứng dụng'}</span>
+                                <span class="app-date">${app.date ? new Date(app.date).toLocaleDateString('vi-VN') : ''}</span>
                             </div>
                         </div>
-                    `;
-                });
-                
-                html += `</div>`;
-                resultsContainer.innerHTML = html;
-            } catch (error) {
-                console.error('Search error:', error);
-                resultsContainer.innerHTML = `
-                    <div class="no-results">
-                        <div class="no-results-icon">
-                            <i class="fas fa-exclamation-triangle"></i>
-                        </div>
-                        <h3 class="no-results-title">Lỗi khi tìm kiếm</h3>
-                        <p>Đã xảy ra lỗi khi tìm kiếm. Vui lòng thử lại.</p>
                     </div>
                 `;
-            }
+            });
+            
+            html += `</div>`;
+            resultsContainer.innerHTML = html;
         }
 
-        // Khi DOM đã sẵn sàng
+        // Khi trang đã tải xong
         document.addEventListener('DOMContentLoaded', function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const query = urlParams.get('q');
+            const query = getQueryParam();
+            const searchInput = document.getElementById('search-input');
             
-            // Nếu có query, thực hiện tìm kiếm
             if (query) {
-                document.getElementById('search-input').value = query;
-                // Chờ dữ liệu tải xong rồi hiển thị kết quả
+                searchInput.value = query;
+                
+                // Chờ dữ liệu tải xong
                 const checkDataLoaded = setInterval(() => {
                     if (searchIndex) {
                         clearInterval(checkDataLoaded);
-                        displayFullPageResults(query);
+                        const results = searchIndex.search(query);
+                        displaySearchResults(results, query);
                     }
                 }, 100);
             }
             
-            // Gắn sự kiện cho ô tìm kiếm
-            document.getElementById('search-input').addEventListener('input', debounce(function() {
+            // Xử lý sự kiện tìm kiếm
+            searchInput.addEventListener('input', debounce(function() {
                 const newQuery = this.value.trim();
                 if (newQuery.length > 1) {
-                    // Cập nhật URL nhưng không reload trang
                     window.history.pushState({}, '', `/search?q=${encodeURIComponent(newQuery)}`);
-                    displayFullPageResults(newQuery);
+                    const results = searchIndex.search(newQuery);
+                    displaySearchResults(results, newQuery);
                 }
             }, 300));
         });
