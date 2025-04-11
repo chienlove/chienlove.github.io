@@ -5,8 +5,8 @@
 
 {{ define "main" }}
 <div class="app-detail-container">
-    <!-- App Header -->
-    <div class="app-header">
+    <!-- Header Card -->
+    <div class="app-card app-header-card">
         <img src="{{ .Params.icon }}" alt="{{ .Title }} Icon" class="app-icon">
         <div style="flex: 1;">
             <h1 class="app-title">{{ .Title }}</h1>
@@ -22,83 +22,89 @@
         </div>
     </div>
 
-    <!-- Description Section -->
-    <div class="section">
-        <h2 class="section-title">Description</h2>
-        <div class="app-description">
+    <!-- Description Card -->
+    <div class="app-card">
+        <h2>Description</h2>
+        <div class="description-content">
             {{ $description := .Params.description | markdownify }}
             {{ $words := split $description " " }}
             {{ if gt (len $words) 30 }}
                 <div id="short-description">
                     {{ delimit (first 30 $words) " " | safeHTML }}
-                    <button class="toggle-description" onclick="toggleDescription()">
-                        Read more <i class="fas fa-chevron-right"></i>
-                    </button>
                 </div>
                 <div id="full-description" class="hidden">
                     {{ $description | safeHTML }}
-                    <button class="toggle-description" onclick="toggleDescription()">
-                        Show less <i class="fas fa-chevron-up"></i>
-                    </button>
                 </div>
+                <button class="toggle-description" onclick="toggleDescription()">
+                    <span id="toggle-text">Read more</span> <i class="fas fa-chevron-right"></i>
+                </button>
             {{ else }}
                 <div>{{ $description | safeHTML }}</div>
             {{ end }}
         </div>
     </div>
 
-    <!-- Details Section -->
-    <div class="section">
-        <h2 class="section-title">Details</h2>
-        <div class="details-grid">
+    <!-- Details Card -->
+    <div class="app-card">
+        <h2>Details</h2>
+        <div class="details-list">
             <div class="detail-item">
-                <div class="detail-label">Developer:</div>
-                <div class="detail-value">{{ with .Params.developer }}{{ . }}{{ else }}Unknown{{ end }}</div>
+                <span class="detail-label">Developer:</span>
+                <span class="detail-value">{{ with .Params.developer }}{{ . }}{{ else }}Unknown{{ end }}</span>
             </div>
             <div class="detail-item">
-                <div class="detail-label">Category:</div>
-                <div class="detail-value">{{ with .Params.categories }}{{ . }}{{ else }}Unknown{{ end }}</div>
+                <span class="detail-label">Category:</span>
+                <span class="detail-value">{{ with .Params.categories }}{{ . }}{{ else }}Unknown{{ end }}</span>
             </div>
             <div class="detail-item">
-                <div class="detail-label">Size:</div>
-                <div class="detail-value">{{ with .Params.size }}{{ . }}{{ else }}Unknown{{ end }}</div>
+                <span class="detail-label">Size:</span>
+                <span class="detail-value">{{ with .Params.size }}{{ . }}{{ else }}Unknown{{ end }}</span>
             </div>
             <div class="detail-item">
-                <div class="detail-label">iOS Version:</div>
-                <div class="detail-value">{{ with .Params.ios_compatible }}{{ . }}{{ else }}Unknown{{ end }}</div>
+                <span class="detail-label">iOS Version:</span>
+                <span class="detail-value">{{ with .Params.ios_compatible }}{{ . }}{{ else }}Unknown{{ end }}</span>
             </div>
             <div class="detail-item">
-                <div class="detail-label">Keywords:</div>
-                <div class="detail-value">{{ if .Params.keywords }}{{ delimit .Params.keywords ", " }}{{ else }}None{{ end }}</div>
+                <span class="detail-label">Keywords:</span>
+                <span class="detail-value">{{ if .Params.keywords }}{{ delimit .Params.keywords ", " }}{{ else }}None{{ end }}</span>
             </div>
         </div>
     </div>
 
-    <!-- Other Versions Section -->
+    <!-- Other Versions Card -->
     {{ if .Params.other_versions }}
-    <div class="section">
-        <h2 class="section-title">Other Versions</h2>
-        <div class="versions-list">
+    <div class="app-card">
+        <h2>Other Versions</h2>
+        <div class="versions-horizontal">
             {{ range .Params.other_versions }}
-                <a href="/download?appId={{ .appId }}" class="version-btn">
-                    <i class="fas fa-download"></i> {{ printf "%s %s" $.Title .version }}
-                </a>
+                <div class="version-item">
+                    <span class="version-text">{{ .version }}</span>
+                    <a href="/download?appId={{ .appId }}" class="download-icon">
+                        <i class="fas fa-download"></i>
+                    </a>
+                </div>
             {{ end }}
         </div>
     </div>
     {{ end }}
-  
+
 <script>
     function toggleDescription() {
         const shortDesc = document.getElementById('short-description');
         const fullDesc = document.getElementById('full-description');
+        const toggleText = document.getElementById('toggle-text');
+        const toggleIcon = document.querySelector('.toggle-description i');
         
         if (fullDesc.classList.contains('hidden')) {
             shortDesc.style.display = 'none';
             fullDesc.classList.remove('hidden');
+            toggleText.textContent = 'Show less';
+            toggleIcon.classList.replace('fa-chevron-right', 'fa-chevron-up');
         } else {
             shortDesc.style.display = 'block';
             fullDesc.classList.add('hidden');
+            toggleText.textContent = 'Read more';
+            toggleIcon.classList.replace('fa-chevron-up', 'fa-chevron-right');
         }
     }
 </script>

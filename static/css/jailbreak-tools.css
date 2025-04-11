@@ -5,15 +5,19 @@
     font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-/* Header Section */
-.app-header {
-    display: flex;
-    align-items: center;
-    padding: 25px;
+/* Card Styles */
+.app-card {
     background: #ffffff;
     border-radius: 14px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    padding: 25px;
     margin-bottom: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+/* Header Card */
+.app-header-card {
+    display: flex;
+    align-items: center;
 }
 
 .app-icon {
@@ -63,25 +67,8 @@
     font-size: 18px;
 }
 
-/* Description Section */
-.section {
-    background: #ffffff;
-    border-radius: 14px;
-    padding: 25px;
-    margin-bottom: 20px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-}
-
-.section-title {
-    font-size: 20px;
-    font-weight: 600;
-    color: #1a1a1a;
-    margin: 0 0 20px 0;
-    padding-bottom: 12px;
-    border-bottom: 1px solid #f0f0f0;
-}
-
-.app-description {
+/* Description Card */
+.description-content {
     color: #333;
     line-height: 1.7;
     font-size: 15px;
@@ -109,53 +96,51 @@
     transform: translateX(3px);
 }
 
-/* Details Section */
-.details-grid {
+/* Details Card - Modified to keep label and value on same line */
+.details-list {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 15px;
+    gap: 12px;
 }
 
 .detail-item {
     display: flex;
+    align-items: center;
 }
 
 .detail-label {
     font-weight: 600;
     color: #666;
     min-width: 120px;
+    display: inline-block;
 }
 
 .detail-value {
     color: #333;
     flex: 1;
+    display: inline;
 }
 
-/* Versions Section */
-.versions-list {
+/* Versions Card - Modified for horizontal layout */
+.versions-horizontal {
     display: flex;
-    flex-wrap: wrap;
     gap: 10px;
+    flex-wrap: wrap;
 }
 
-.version-btn {
+.version-item {
+    display: flex;
+    align-items: center;
     background: #f5f5f7;
     border-radius: 8px;
-    padding: 10px 15px;
+    padding: 8px 12px;
+}
+
+.version-text {
+    margin-right: 8px;
+}
+
+.download-icon {
     color: #007AFF;
-    text-decoration: none;
-    font-weight: 500;
-    transition: all 0.2s ease;
-    display: inline-flex;
-    align-items: center;
-}
-
-.version-btn:hover {
-    background: #e5e5ea;
-}
-
-.version-btn i {
-    margin-right: 6px;
 }
 
 /* Footer */
@@ -164,13 +149,12 @@
     color: #999;
     font-size: 13px;
     padding: 20px 0;
-    border-top: 1px solid #f0f0f0;
     margin-top: 30px;
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
-    .app-header {
+    .app-header-card {
         flex-direction: column;
         text-align: center;
     }
@@ -180,15 +164,7 @@
         margin-bottom: 20px;
     }
     
-    .details-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .detail-item {
+    .versions-horizontal {
         flex-direction: column;
-    }
-    
-    .detail-label {
-        margin-bottom: 5px;
     }
 }
