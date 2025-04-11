@@ -6,6 +6,37 @@
     <title>Tìm kiếm ứng dụng | {{ .Site.Title }}</title>
     <link rel="stylesheet" href="/css/style.css?v={{ now.Unix }}">
     <style>
+        /* Highlight từ khóa tìm kiếm */
+.highlight {
+    background-color: #fff9c4;
+    font-weight: bold;
+    padding: 0 2px;
+    border-radius: 2px;
+}
+
+/* Hiệu ứng khi nhập liệu */
+#search-input:focus {
+    outline: none;
+    border-color: #4361ee;
+    box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.2);
+}
+
+/* Animation cho kết quả tìm kiếm */
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+#header-search-results,
+#search-results {
+    animation: fadeIn 0.2s ease-out;
+}
+
+/* Tìm kiếm không dấu */
+.search-result-item h4,
+.app-card h4 {
+    position: relative;
+}
         .search-page {
             max-width: 1200px;
             margin: 2rem auto;
