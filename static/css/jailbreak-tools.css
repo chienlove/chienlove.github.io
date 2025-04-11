@@ -1,221 +1,157 @@
 /* Container Styles */
-.container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 20px;
-}
-
-/* Card Styles */
-.card {
-    background-color: #ffffff;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    border: 1px solid #e2e8f0;
-    margin-bottom: 24px;
+.tool-container {
+    max-width: 800px;
+    margin: 20px auto;
+    background: #ffffff;
+    border-radius: 14px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
     overflow: hidden;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-
-.card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-}
-
-.card-header {
-    padding: 20px;
-    border-bottom: 1px solid #e2e8f0;
-}
-
-.card-body {
-    padding: 20px;
-}
-
-.card-title {
-    margin: 0;
-    font-size: 1.5rem;
-    font-weight: 600;
-}
-
-.section-title {
-    font-size: 1.25rem;
-    font-weight: 600;
-    margin: 0 0 16px 0;
-    color: #333;
 }
 
 /* Tool Header */
 .tool-header {
     display: flex;
     align-items: center;
-    gap: 16px;
+    padding: 25px;
+    background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);
+    border-bottom: 1px solid #e0e3e7;
 }
 
 .tool-icon {
-    width: 80px;
-    height: 80px;
+    width: 70px;
+    height: 70px;
     border-radius: 16px;
-    object-fit: contain;
-    border: 1px solid #e2e8f0;
+    margin-right: 20px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
-.tool-meta {
+.tool-name-and-details {
     flex: 1;
 }
 
 .tool-title {
-    margin: 0 0 4px 0;
-    font-size: 1.5rem;
-    font-weight: 600;
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+    color: #2d3748;
 }
 
 .tool-version-dev {
-    font-size: 0.875rem;
-    color: #666;
+    margin-top: 8px;
+    font-size: 15px;
+    color: #4a5568;
 }
 
-.tool-version-label {
-    display: inline-block;
-    margin-right: 12px;
+.tool-version-label, .tool-developer-label {
+    display: block;
+    line-height: 1.5;
 }
 
 .get-button {
-    background-color: #2563eb;
+    background: #3182ce;
     color: white;
-    padding: 8px 16px;
+    padding: 10px 20px;
     border-radius: 8px;
     text-decoration: none;
-    font-weight: 500;
-    font-size: 0.875rem;
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    transition: background-color 0.2s ease;
-    white-space: nowrap;
+    font-weight: 600;
+    font-size: 15px;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 .get-button:hover {
-    background-color: #1d4ed8;
+    background: #2c5282;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
 }
 
-.get-button::before {
-    content: "↓";
+/* Content Sections */
+#description-container, .tool-details-container {
+    padding: 25px;
 }
 
-/* Description Section */
-.description-container {
-    margin: 16px 0;
+h3 {
+    font-size: 20px;
+    margin: 0 0 15px 0;
+    color: #2d3748;
+    font-weight: 600;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #edf2f7;
 }
 
-.description-toggle {
+/* Description Text */
+#description-container p {
+    margin: 0 0 15px 0;
+    line-height: 1.6;
+    color: #4a5568;
+}
+
+.read-more-button {
     background: none;
     border: none;
-    color: #2563eb;
+    color: #3182ce;
+    font-weight: 600;
     cursor: pointer;
-    font-weight: 500;
     padding: 0;
-    margin-top: 8px;
+    font-size: 14px;
     display: inline-flex;
     align-items: center;
-    gap: 4px;
 }
 
-.description-toggle::after {
+.read-more-button::after {
     content: "→";
+    margin-left: 5px;
+    transition: transform 0.2s ease;
+}
+
+.read-more-button:hover::after {
+    transform: translateX(3px);
+}
+
+/* Details Section */
+.tool-details {
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #edf2f7;
+    display: flex;
+}
+
+.tool-details:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.tool-details strong {
+    min-width: 120px;
     display: inline-block;
-    transition: transform 0.2s ease;
+    color: #4a5568;
 }
 
-.description-toggle.expanded::after {
-    transform: rotate(90deg);
-}
-
-/* Screenshots */
-.screenshots {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 16px;
-    margin-top: 16px;
-}
-
-.screenshot {
-    border-radius: 8px;
-    overflow: hidden;
-    border: 1px solid #e2e8f0;
-    transition: transform 0.2s ease;
-}
-
-.screenshot:hover {
-    transform: scale(1.02);
-}
-
-.screenshot img {
-    width: 100%;
-    height: auto;
-    display: block;
-}
-
-/* Tool Details */
-.tool-details-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 12px;
-}
-
-.tool-detail {
-    display: flex;
-    flex-direction: column;
-}
-
-.tool-detail-label {
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    color: #666;
-    letter-spacing: 0.5px;
-    margin-bottom: 4px;
-}
-
-.tool-detail-value {
-    font-weight: 500;
-}
-
-/* Download Links */
-.download-links-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-    gap: 12px;
-}
-
-.download-link {
-    display: flex;
-    align-items: center;
-    padding: 12px 16px;
-    background-color: #f8fafc;
-    border-radius: 8px;
-    text-decoration: none;
-    color: #333;
-    transition: background-color 0.2s ease;
-}
-
-.download-link:hover {
-    background-color: #e2e8f0;
-}
-
-.download-link::before {
-    content: "↓";
-    margin-right: 8px;
-    color: #2563eb;
-    font-weight: bold;
-}
-
-/* Utility Classes */
-.mb-4 {
-    margin-bottom: 16px;
-}
-
-.mt-4 {
-    margin-top: 16px;
-}
-
-.hidden {
-    display: none;
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .tool-header {
+        flex-direction: column;
+        text-align: center;
+        padding: 20px;
+    }
+    
+    .tool-icon {
+        margin-right: 0;
+        margin-bottom: 15px;
+    }
+    
+    .get-button {
+        margin-top: 15px;
+        width: 100%;
+        text-align: center;
+    }
+    
+    .tool-details {
+        flex-direction: column;
+    }
+    
+    .tool-details strong {
+        margin-bottom: 5px;
+    }
 }
