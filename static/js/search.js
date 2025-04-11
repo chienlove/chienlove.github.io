@@ -1,47 +1,35 @@
-// search.js - Complete Search Functionality
+// search.js - Complete Site Search
 document.addEventListener('DOMContentLoaded', function() {
     // Global variables
     let searchIndex;
-    let appData = {};
+    let pageData = {};
     const MIN_QUERY_LENGTH = 2;
-    const MAX_RESULTS = 10;
     const isSearchPage = window.location.pathname.includes('/search');
 
     // Initialize search
     async function initSearch() {
         try {
-            // Load and process data
+            // Load all site data
             const response = await fetch('/index.json');
             if (!response.ok) throw new Error('Failed to load search data');
             
-            const rawData = await response.json();
+            const allPages = await response.json();
             
-            // Filter and prepare data
-            appData = {};
-            const searchableItems = rawData.filter(item => 
-                item.type === 'app' || item.type === 'game'
-            );
-            
-            searchableItems.forEach(item => {
-                appData[item.url] = {
-                    ...item,
-                    normalizedTitle: normalizeText(item.title),
-                    normalizedDesc: normalizeText(item.description || '')
-                };
+            // Store all pages data
+            pageData = {};
+            allPages.forEach(page => {
+                pageData[page.url] = page;
             });
 
-            // Build search index
+            // Build search index for all content
             searchIndex = lunr(function() {
                 this.ref('url');
-                this.field('title', { 
-                    boost: 15,
-                    extractor: doc => `${doc.title} ${doc.normalizedTitle}`
-                });
-                this.field('description', { boost: 5 });
-                this.field('category', { boost: 3 });
+                this.field('title', { boost: 10 });
+                this.field('content', { boost: 5 });
+                this.field('description', { boost: 3 });
                 this.field('tags', { boost: 2 });
                 
-                searchableItems.forEach(item => this.add(item));
+                allPages.forEach(page => this.add(page));
             });
 
             setupSearchUI();
@@ -51,14 +39,6 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Search init error:', error);
             showError('Khởi tạo tìm kiếm thất bại');
         }
-    }
-
-    // Text normalization
-    function normalizeText(text) {
-        return text.toLowerCase()
-            .normalize("NFD")
-            .replace(/[\u0300-\u036f]/g, "")
-            .replace(/[^a-z0-9 ]/g, ' ');
     }
 
     // Setup search UI events
@@ -95,38 +75,17 @@ document.addEventListener('DOMContentLoaded', function() {
         if (isSearchPage) searchInput.focus();
     }
 
-    // Perform search
+    // Perform search across all content
     function performSearch(query) {
         if (!searchIndex) return;
 
         try {
-            const normalizedQuery = normalizeText(query);
-            const results = searchIndex.query(q => {
-                // Exact match boost
-                q.term(normalizedQuery, { 
-                    boost: 100,
-                    wildcard: lunr.Query.wildcard.TRAILING
-                });
-                
-                // Fuzzy match
-                if (normalizedQuery.length > 3) {
-                    q.term(normalizedQuery, { 
-                        boost: 50,
-                        editDistance: 1
-                    });
-                }
-                
-                // Individual terms
-                normalizedQuery.split(' ').forEach(term => {
-                    if (term.length >= 2) q.term(term, { boost: 20 });
-                });
-            })
-            .map(result => ({
-                ...result,
-                item: appData[result.ref]
-            }))
-            .sort((a, b) => b.score - a.score)
-            .slice(0, MAX_RESULTS);
+            const results = searchIndex.search(query)
+                .map(result => ({
+                    ...result,
+                    page: pageData[result.ref]
+                }))
+                .sort((a, b) => b.score - a.score);
 
             displayResults(results, query);
         } catch (error) {
@@ -150,21 +109,18 @@ document.addEventListener('DOMContentLoaded', function() {
 
         container.innerHTML = isSearchPage 
             ? createFullPageResultsHTML(results, query)
-            : createDropdownResultsHTML(results);
+            : createDropdownResultsHTML(results, query);
         
         container.style.display = 'block';
     }
 
     // HTML templates
-    function createDropdownResultsHTML(results) {
-        return results.map(result => `
-            <a href="${result.item.url}" class="search-result-item">
-                <img src="${result.item.icon || '/images/default-icon.png'}" 
-                     alt="${result.item.title}"
-                     onerror="this.src='/images/default-icon.png'">
+    function createDropdownResultsHTML(results, query) {
+        return results.slice(0, 5).map(result => `
+            <a href="${result.page.url}" class="search-result-item">
                 <div class="info">
-                    <h4>${highlightMatches(result.item.title, query)}</h4>
-                    <p>${highlightMatches(result.item.description || '', query)}</p>
+                    <h4>${highlightMatches(result.page.title || result.page.url, query)}</h4>
+                    <p>${highlightMatches(result.page.description || '', query)}</p>
                 </div>
             </a>
         `).join('');
@@ -175,20 +131,13 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="results-header">
                 <h2>Tìm thấy ${results.length} kết quả cho "${query}"</h2>
             </div>
-            <div class="app-grid">
+            <div class="results-list">
                 ${results.map(result => `
-                    <div class="app-card" onclick="window.location.href='${result.item.url}'">
-                        <img src="${result.item.icon || '/images/default-icon.png'}"
-                             alt="${result.item.title}"
-                             onerror="this.src='/images/default-icon.png'">
-                        <div class="app-info">
-                            <h3>${highlightMatches(result.item.title, query)}</h3>
-                            <p>${highlightMatches(result.item.description || '', query)}</p>
-                            <div class="app-meta">
-                                <span class="category">${result.item.category || 'App'}</span>
-                                ${result.item.version ? `<span class="version">${result.item.version}</span>` : ''}
-                            </div>
-                        </div>
+                    <div class="result-item">
+                        <h3><a href="${result.page.url}">${highlightMatches(result.page.title || result.page.url, query)}</a></h3>
+                        <div class="result-url">${result.page.url}</div>
+                        ${result.page.description ? `<p>${highlightMatches(result.page.description, query)}</p>` : ''}
+                        <div class="snippet">${getContentSnippet(result.page.content, query)}</div>
                     </div>
                 `).join('')}
             </div>
@@ -198,11 +147,25 @@ document.addEventListener('DOMContentLoaded', function() {
     // Helper functions
     function highlightMatches(text, query) {
         if (!text || !query) return text || '';
-        const normalizedText = text.toLowerCase();
-        const normalizedQuery = query.toLowerCase();
-        
-        return text.replace(new RegExp(`(${normalizedQuery.split(' ').filter(t => t.length >= 2).join('|')})`, 'gi'), 
+        return text.replace(new RegExp(`(${escapeRegExp(query)})`, 'gi'), 
             '<span class="highlight">$1</span>');
+    }
+
+    function getContentSnippet(content, query) {
+        if (!content) return '';
+        const text = content.replace(/<[^>]*>/g, ' '); // Remove HTML tags
+        const index = text.toLowerCase().indexOf(query.toLowerCase());
+        
+        if (index >= 0) {
+            const start = Math.max(0, index - 50);
+            const end = Math.min(text.length, index + query.length + 100);
+            return '...' + text.substring(start, end) + '...';
+        }
+        return text.substring(0, 150) + '...';
+    }
+
+    function escapeRegExp(string) {
+        return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     }
 
     function showNoResults(container, query) {
