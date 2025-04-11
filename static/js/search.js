@@ -1,153 +1,198 @@
-// Biến toàn cục
-let searchIndex;
+// Global variables
+let searchIndex = null;
 let appData = {};
+let isSearchPage = window.location.pathname.includes('/search');
 
-// Hàm tải dữ liệu ứng dụng
-async function loadAppData() {
+// Load app data and initialize search
+async function initSearch() {
     try {
+        // Load data from index.json
         const response = await fetch('/index.json');
-        if (!response.ok) throw new Error('Không thể tải dữ liệu');
+        if (!response.ok) throw new Error('Failed to load search data');
         
         const data = await response.json();
+        
+        // Store app data
         appData = data.reduce((acc, app) => {
             acc[app.url] = app;
             return acc;
         }, {});
         
-        // Khởi tạo Lunr search index với cấu hình tìm kiếm mờ
+        // Initialize Lunr search index with better configuration
         searchIndex = lunr(function() {
             this.ref('url');
             this.field('title', { 
-                boost: 10,
+                boost: 15,
                 extractor: (doc) => {
-                    // Thêm cả title không dấu để tìm kiếm tốt hơn
-                    return doc.title + ' ' + removeAccents(doc.title);
+                    // Search with both original and normalized text
+                    return `${doc.title} ${doc.title.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")}`;
                 }
             });
             this.field('description', { boost: 5 });
             this.field('content', { boost: 3 });
             this.field('category', { boost: 2 });
             
+            // Add documents to index
             data.forEach(app => {
                 this.add(app);
             });
         });
+
+        console.log('Search initialized successfully');
         
-        console.log('Search index ready');
-        initSearch();
+        // Initialize search functionality
+        setupSearch();
+        
+        // If on search page with query, perform search immediately
+        if (isSearchPage) {
+            const query = new URLSearchParams(window.location.search).get('q');
+            if (query && query.length > 0) {
+                document.getElementById('search-input').value = query;
+                performSearch(query, true);
+            }
+        }
     } catch (error) {
-        console.error('Lỗi khi tải dữ liệu:', error);
-        showError('Không thể tải dữ liệu tìm kiếm');
+        console.error('Search initialization failed:', error);
+        showError('Không thể khởi tạo tìm kiếm');
     }
 }
 
-// Hàm bỏ dấu tiếng Việt
-function removeAccents(str) {
-    return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-}
-
-// Hàm khởi tạo tìm kiếm
-function initSearch() {
+// Setup search event listeners
+function setupSearch() {
     const searchInput = document.getElementById('search-input');
-    if (!searchInput) return;
+    const searchForm = document.getElementById('search-form');
     
-    // Tự động focus vào ô tìm kiếm trên trang search
-    if (window.location.pathname === '/search') {
+    if (!searchInput || !searchForm) return;
+    
+    // Input event with debounce
+    searchInput.addEventListener('input', debounce((e) => {
+        const query = e.target.value.trim();
+        if (query.length > 0) {
+            performSearch(query, false);
+        } else {
+            clearResults();
+        }
+    }, 250));
+    
+    // Form submission
+    searchForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const query = searchInput.value.trim();
+        if (query.length > 0) {
+            if (!isSearchPage) {
+                window.location.href = `/search?q=${encodeURIComponent(query)}`;
+            } else {
+                performSearch(query, true);
+                window.history.pushState({}, '', `/search?q=${encodeURIComponent(query)}`);
+            }
+        }
+    });
+    
+    // Focus search input on search page
+    if (isSearchPage) {
         searchInput.focus();
     }
-    
-    // Khôi phục query từ URL nếu có
-    const urlParams = new URLSearchParams(window.location.search);
-    const query = urlParams.get('q');
-    if (query) {
-        searchInput.value = query;
-        performSearch(query);
-    }
 }
 
-// Hàm thực hiện tìm kiếm
-function performSearch(query) {
-    const searchResults = document.getElementById('header-search-results') || 
-                         document.getElementById('search-results');
-    if (!searchResults) return;
-    
-    query = query.trim().toLowerCase();
-    
-    // Chỉ tìm kiếm khi có ít nhất 2 ký tự
-    if (!searchIndex || query.length < 2) {
-        searchResults.style.display = 'none';
+// Perform search
+function performSearch(query, isFullPageSearch = false) {
+    if (!searchIndex || query.length < 1) {
+        if (isFullPageSearch) {
+            showNoResults(query);
+        } else {
+            clearResults();
+        }
         return;
     }
     
     try {
-        // Tìm kiếm với Lunr
-        let results = searchIndex.search(query);
+        // First try: Exact match with wildcard
+        let results = searchIndex.query(q => {
+            q.term(query, { 
+                boost: 100,
+                wildcard: lunr.Query.wildcard.TRAILING
+            });
+            
+            // Second try: Fuzzy match
+            q.term(query, { 
+                boost: 10,
+                editDistance: 1
+            });
+            
+            // Third try: Individual terms
+            query.split(' ').forEach(term => {
+                if (term.length > 1) {
+                    q.term(term, { boost: 5 });
+                }
+            });
+        });
         
-        // Nếu không có kết quả, thử tìm kiếm không dấu
-        if (results.length === 0) {
-            const queryWithoutAccents = removeAccents(query);
-            if (queryWithoutAccents !== query) {
-                results = searchIndex.search(queryWithoutAccents);
-            }
+        // Filter and sort results
+        results = results
+            .filter(result => result.score > 0.1)
+            .sort((a, b) => b.score - a.score)
+            .map(result => {
+                return {
+                    ...result,
+                    item: appData[result.ref]
+                };
+            });
+        
+        if (results.length > 0) {
+            displayResults(results, query, isFullPageSearch);
+        } else {
+            showNoResults(query);
         }
-        
-        displaySearchResults(results, query);
     } catch (error) {
-        console.error('Lỗi tìm kiếm:', error);
-        searchResults.style.display = 'none';
+        console.error('Search failed:', error);
+        showError('Lỗi tìm kiếm');
     }
 }
 
-// Hàm hiển thị kết quả
-function displaySearchResults(results, query) {
-    const container = document.getElementById('header-search-results') || 
-                     document.getElementById('search-results');
+// Display search results
+function displayResults(results, query, isFullPage = false) {
+    const container = isFullPage 
+        ? document.getElementById('search-results')
+        : document.getElementById('header-search-results');
+    
     if (!container) return;
     
-    if (!results || results.length === 0) {
-        container.innerHTML = `
-            <div class="no-results">
-                <i class="far fa-frown"></i>
-                <p>Không tìm thấy kết quả cho "${query}"</p>
-            </div>
-        `;
-        container.style.display = 'block';
-        return;
-    }
+    // Highlight matches in text
+    const highlight = (text) => {
+        if (!text || !query) return text || '';
+        const regex = new RegExp(`(${query.split(' ').filter(t => t.length > 1).join('|')})`, 'gi');
+        return text.replace(regex, '<span class="highlight">$1</span>');
+    };
     
+    // Generate results HTML
     let html = '';
-    const maxResults = container.id === 'header-search-results' ? 5 : 20;
+    const displayResults = isFullPage ? results : results.slice(0, 5);
     
-    results.slice(0, maxResults).forEach(result => {
-        const app = appData[result.ref];
-        if (!app) return;
-        
-        // Highlight từ khóa tìm kiếm trong kết quả
-        const highlightedTitle = highlightMatches(app.title, query);
-        const highlightedDesc = highlightMatches(app.description || '', query);
-        
-        const isHeaderResults = container.id === 'header-search-results';
-        const itemClass = isHeaderResults ? 'search-result-item' : 'app-card';
-        
+    displayResults.forEach(result => {
+        const app = result.item;
         html += `
-            <div class="${itemClass}" onclick="window.location.href='${app.url}'">
+            <div class="${isFullPage ? 'app-card' : 'search-result-item'}" 
+                 onclick="window.location.href='${app.url}'">
                 <img src="${app.icon || '/images/default-icon.png'}" 
                      alt="${app.title}" 
                      loading="lazy"
                      onerror="this.src='/images/default-icon.png'">
                 <div class="info">
-                    <h4>${highlightedTitle}</h4>
-                    <p>${highlightedDesc}</p>
-                    ${!isHeaderResults ? `<span class="category">${app.category || 'Ứng dụng'}</span>` : ''}
+                    <h4>${highlight(app.title)}</h4>
+                    <p>${highlight(app.description || '')}</p>
+                    ${isFullPage ? `<span class="category">${app.category || 'App'}</span>` : ''}
                 </div>
             </div>
         `;
     });
     
-    if (!isHeaderResults) {
+    // Add header for full page results
+    if (isFullPage) {
         html = `
-            <div class="results-count">Tìm thấy ${results.length} kết quả cho "${query}"</div>
-            <div class="app-grid">${html}</div>
+            <div class="results-header">
+                <h3>Tìm thấy ${results.length} kết quả cho "${query}"</h3>
+            </div>
+            <div class="results-grid">${html}</div>
         `;
     }
     
@@ -155,58 +200,59 @@ function displaySearchResults(results, query) {
     container.style.display = 'block';
 }
 
-// Hàm highlight từ khóa tìm kiếm
-function highlightMatches(text, query) {
-    if (!text || !query) return text || '';
+// Show no results message
+function showNoResults(query) {
+    const container = isSearchPage 
+        ? document.getElementById('search-results')
+        : document.getElementById('header-search-results');
     
-    const regex = new RegExp(`(${escapeRegExp(query)})`, 'gi');
-    return text.replace(regex, '<span class="highlight">$1</span>');
+    if (!container) return;
+    
+    container.innerHTML = `
+        <div class="no-results">
+            <i class="far fa-frown"></i>
+            <p>Không tìm thấy kết quả cho "${query}"</p>
+        </div>
+    `;
+    container.style.display = 'block';
 }
 
-// Hàm escape ký tự đặc biệt cho regex
-function escapeRegExp(string) {
-    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+// Show error message
+function showError(message) {
+    const container = isSearchPage 
+        ? document.getElementById('search-results')
+        : document.getElementById('header-search-results');
+    
+    if (!container) return;
+    
+    container.innerHTML = `
+        <div class="error-message">
+            <i class="fas fa-exclamation-triangle"></i>
+            <p>${message}</p>
+        </div>
+    `;
+    container.style.display = 'block';
 }
 
-// Hàm debounce
-const debounce = (func, delay) => {
-    let timeoutId;
-    return (...args) => {
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => func.apply(this, args), delay);
+// Clear results
+function clearResults() {
+    const container = isSearchPage 
+        ? document.getElementById('search-results')
+        : document.getElementById('header-search-results');
+    
+    if (container) {
+        container.style.display = 'none';
+    }
+}
+
+// Debounce function
+function debounce(func, wait) {
+    let timeout;
+    return function(...args) {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => func.apply(this, args), wait);
     };
-};
+}
 
-// Khởi tạo khi DOM ready
-document.addEventListener('DOMContentLoaded', () => {
-    loadAppData();
-    
-    // Gắn sự kiện input với debounce 300ms
-    const searchInput = document.getElementById('search-input');
-    if (searchInput) {
-        searchInput.addEventListener('input', debounce((e) => {
-            performSearch(e.target.value);
-        }, 300));
-    }
-    
-    // Đóng dropdown khi click ra ngoài
-    document.addEventListener('click', (e) => {
-        const searchBar = document.querySelector('.search-bar');
-        const results = document.getElementById('header-search-results');
-        if (searchBar && results && !searchBar.contains(e.target)) {
-            results.style.display = 'none';
-        }
-    });
-    
-    // Xử lý submit form
-    const searchForm = document.getElementById('search-form');
-    if (searchForm) {
-        searchForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const query = searchInput?.value.trim();
-            if (query) {
-                window.location.href = `/search?q=${encodeURIComponent(query)}`;
-            }
-        });
-    }
-});
+// Initialize when DOM is ready
+document.addEventListener('DOMContentLoaded', initSearch);
