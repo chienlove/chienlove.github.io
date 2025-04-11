@@ -48,25 +48,35 @@
     <div class="app-card">
         <h2>Details</h2>
         <div class="details-list">
-            <div class="detail-item">
-                <span class="detail-label">Developer:</span>
-                <span class="detail-value">{{ with .Params.developer }}{{ . }}{{ else }}Unknown{{ end }}</span>
+            <div class="detail-row">
+                <div class="detail-label-value">
+                    <span class="detail-label">Developer:</span>
+                    <span class="detail-value">{{ with .Params.developer }}{{ . }}{{ else }}Unknown{{ end }}</span>
+                </div>
             </div>
-            <div class="detail-item">
-                <span class="detail-label">Category:</span>
-                <span class="detail-value">{{ with .Params.categories }}{{ . }}{{ else }}Unknown{{ end }}</span>
+            <div class="detail-row">
+                <div class="detail-label-value">
+                    <span class="detail-label">Category:</span>
+                    <span class="detail-value">{{ with .Params.categories }}{{ . }}{{ else }}Unknown{{ end }}</span>
+                </div>
             </div>
-            <div class="detail-item">
-                <span class="detail-label">Size:</span>
-                <span class="detail-value">{{ with .Params.size }}{{ . }}{{ else }}Unknown{{ end }}</span>
+            <div class="detail-row">
+                <div class="detail-label-value">
+                    <span class="detail-label">Size:</span>
+                    <span class="detail-value">{{ with .Params.size }}{{ . }}{{ else }}Unknown{{ end }}</span>
+                </div>
             </div>
-            <div class="detail-item">
-                <span class="detail-label">iOS Version:</span>
-                <span class="detail-value">{{ with .Params.ios_compatible }}{{ . }}{{ else }}Unknown{{ end }}</span>
+            <div class="detail-row">
+                <div class="detail-label-value">
+                    <span class="detail-label">iOS Version:</span>
+                    <span class="detail-value">{{ with .Params.ios_compatible }}{{ . }}{{ else }}Unknown{{ end }}</span>
+                </div>
             </div>
-            <div class="detail-item">
-                <span class="detail-label">Keywords:</span>
-                <span class="detail-value">{{ if .Params.keywords }}{{ delimit .Params.keywords ", " }}{{ else }}None{{ end }}</span>
+            <div class="detail-row">
+                <div class="detail-label-value">
+                    <span class="detail-label">Keywords:</span>
+                    <span class="detail-value">{{ if .Params.keywords }}{{ delimit .Params.keywords ", " }}{{ else }}None{{ end }}</span>
+                </div>
             </div>
         </div>
     </div>
@@ -75,14 +85,14 @@
     {{ if .Params.other_versions }}
     <div class="app-card">
         <h2>Other Versions</h2>
-        <div class="versions-horizontal">
+        <div class="details-list">
             {{ range .Params.other_versions }}
-                <div class="version-item">
-                    <span class="version-text">{{ .version }}</span>
-                    <a href="/download?appId={{ .appId }}" class="download-icon">
-                        <i class="fas fa-download"></i>
-                    </a>
-                </div>
+            <div class="version-row">
+                <span class="version-text">{{ .version }}</span>
+                <a href="/download?appId={{ .appId }}" class="download-icon">
+                    <i class="fas fa-download"></i>
+                </a>
+            </div>
             {{ end }}
         </div>
     </div>
