@@ -1,157 +1,194 @@
-/* Container Styles */
-.tool-container {
+/* Main Container */
+.app-detail-container {
     max-width: 800px;
     margin: 20px auto;
-    background: #ffffff;
-    border-radius: 14px;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
-    overflow: hidden;
+    font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-/* Tool Header */
-.tool-header {
+/* Header Section */
+.app-header {
     display: flex;
     align-items: center;
     padding: 25px;
-    background: linear-gradient(135deg, #f5f7fa 0%, #e4e8eb 100%);
-    border-bottom: 1px solid #e0e3e7;
+    background: #ffffff;
+    border-radius: 14px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    margin-bottom: 20px;
 }
 
-.tool-icon {
-    width: 70px;
-    height: 70px;
-    border-radius: 16px;
-    margin-right: 20px;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+.app-icon {
+    width: 90px;
+    height: 90px;
+    border-radius: 18px;
+    margin-right: 25px;
+    border: 1px solid #f0f0f0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.tool-name-and-details {
-    flex: 1;
-}
-
-.tool-title {
-    margin: 0;
-    font-size: 24px;
+.app-title {
+    font-size: 28px;
     font-weight: 700;
-    color: #2d3748;
+    color: #1a1a1a;
+    margin: 0 0 5px 0;
 }
 
-.tool-version-dev {
-    margin-top: 8px;
+.app-meta {
+    color: #666;
     font-size: 15px;
-    color: #4a5568;
-}
-
-.tool-version-label, .tool-developer-label {
-    display: block;
+    margin-bottom: 15px;
     line-height: 1.5;
 }
 
-.get-button {
-    background: #3182ce;
+.download-btn {
+    background: linear-gradient(135deg, #007AFF 0%, #0062CC 100%);
     color: white;
-    padding: 10px 20px;
-    border-radius: 8px;
+    padding: 12px 25px;
+    border-radius: 10px;
     text-decoration: none;
     font-weight: 600;
-    font-size: 15px;
-    transition: all 0.2s ease;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    font-size: 16px;
+    display: inline-flex;
+    align-items: center;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(0, 122, 255, 0.2);
 }
 
-.get-button:hover {
-    background: #2c5282;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+.download-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(0, 122, 255, 0.3);
 }
 
-/* Content Sections */
-#description-container, .tool-details-container {
+.download-btn i {
+    margin-right: 8px;
+    font-size: 18px;
+}
+
+/* Description Section */
+.section {
+    background: #ffffff;
+    border-radius: 14px;
     padding: 25px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
-h3 {
+.section-title {
     font-size: 20px;
-    margin: 0 0 15px 0;
-    color: #2d3748;
     font-weight: 600;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #edf2f7;
+    color: #1a1a1a;
+    margin: 0 0 20px 0;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f0f0f0;
 }
 
-/* Description Text */
-#description-container p {
-    margin: 0 0 15px 0;
-    line-height: 1.6;
-    color: #4a5568;
+.app-description {
+    color: #333;
+    line-height: 1.7;
+    font-size: 15px;
 }
 
-.read-more-button {
+.toggle-description {
     background: none;
     border: none;
-    color: #3182ce;
+    color: #007AFF;
     font-weight: 600;
     cursor: pointer;
     padding: 0;
-    font-size: 14px;
+    margin-top: 10px;
     display: inline-flex;
     align-items: center;
+    font-size: 15px;
 }
 
-.read-more-button::after {
-    content: "→";
+.toggle-description i {
     margin-left: 5px;
     transition: transform 0.2s ease;
 }
 
-.read-more-button:hover::after {
+.toggle-description:hover i {
     transform: translateX(3px);
 }
 
 /* Details Section */
-.tool-details {
-    margin-bottom: 12px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid #edf2f7;
+.details-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+}
+
+.detail-item {
     display: flex;
 }
 
-.tool-details:last-child {
-    border-bottom: none;
-    margin-bottom: 0;
-    padding-bottom: 0;
-}
-
-.tool-details strong {
+.detail-label {
+    font-weight: 600;
+    color: #666;
     min-width: 120px;
-    display: inline-block;
-    color: #4a5568;
 }
 
-/* Responsive Adjustments */
+.detail-value {
+    color: #333;
+    flex: 1;
+}
+
+/* Versions Section */
+.versions-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.version-btn {
+    background: #f5f5f7;
+    border-radius: 8px;
+    padding: 10px 15px;
+    color: #007AFF;
+    text-decoration: none;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+}
+
+.version-btn:hover {
+    background: #e5e5ea;
+}
+
+.version-btn i {
+    margin-right: 6px;
+}
+
+/* Footer */
+.app-footer {
+    text-align: center;
+    color: #999;
+    font-size: 13px;
+    padding: 20px 0;
+    border-top: 1px solid #f0f0f0;
+    margin-top: 30px;
+}
+
+/* Responsive Design */
 @media (max-width: 768px) {
-    .tool-header {
+    .app-header {
         flex-direction: column;
         text-align: center;
-        padding: 20px;
     }
     
-    .tool-icon {
+    .app-icon {
         margin-right: 0;
-        margin-bottom: 15px;
+        margin-bottom: 20px;
     }
     
-    .get-button {
-        margin-top: 15px;
-        width: 100%;
-        text-align: center;
+    .details-grid {
+        grid-template-columns: 1fr;
     }
     
-    .tool-details {
+    .detail-item {
         flex-direction: column;
     }
     
-    .tool-details strong {
+    .detail-label {
         margin-bottom: 5px;
     }
 }

@@ -1,107 +1,105 @@
 {{ define "head" }}
     <link rel="stylesheet" href="/css/jailbreak-tools.css?v={{ now.Unix }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 {{ end }}
 
 {{ define "main" }}
-<div class="tool-container">
-    <!-- Tool Header Section -->
-    <div class="tool-header">
-        <img src="{{ .Params.icon }}" alt="{{ .Title }} Icon" class="tool-icon">
-        <div class="tool-name-and-details">
-            <h1 class="tool-title">{{ .Title }}</h1>
-            <div class="tool-version-dev">
-                <span class="tool-version-label">Version: {{ .Params.main_download.version }}</span>
-                <span class="tool-developer-label">Developer: {{ with .Params.developer }}{{ . }}{{ else }}Unknown{{ end }}</span>
+<div class="app-detail-container">
+    <!-- App Header -->
+    <div class="app-header">
+        <img src="{{ .Params.icon }}" alt="{{ .Title }} Icon" class="app-icon">
+        <div style="flex: 1;">
+            <h1 class="app-title">{{ .Title }}</h1>
+            <div class="app-meta">
+                <div>Version: {{ .Params.main_download.version }}</div>
+                <div>Developer: {{ with .Params.developer }}{{ . }}{{ else }}Unknown{{ end }}</div>
             </div>
+            {{ if .Params.main_download }}
+            <a href="/download?appId={{ .Params.main_download.appId }}" class="download-btn">
+                <i class="fas fa-download"></i> Download
+            </a>
+            {{ end }}
         </div>
-        {{ if .Params.main_download }}
-        <a href="/download?appId={{ .Params.main_download.appId }}" class="get-button">GET</a>
-        {{ end }}
     </div>
 
     <!-- Description Section -->
-    <div id="description-container">
-        <h3>Description</h3>
-        {{ $description := .Params.description | markdownify }}
-        {{ $words := split $description " " }}
-        {{ if gt (len $words) 30 }}
-            <p>
-                {{ delimit (first 30 $words) " " | safeHTML }}
-                <button id="toggle-description" class="read-more-button">Read more</button>
-            </p>
-            <div id="full-description" class="hidden">
-                {{ $description | safeHTML }}
-                <button id="toggle-description" class="read-more-button">Show less</button>
-            </div>
-        {{ else }}
-            <p>{{ $description | safeHTML }}</p>
-        {{ end }}
+    <div class="section">
+        <h2 class="section-title">Description</h2>
+        <div class="app-description">
+            {{ $description := .Params.description | markdownify }}
+            {{ $words := split $description " " }}
+            {{ if gt (len $words) 30 }}
+                <div id="short-description">
+                    {{ delimit (first 30 $words) " " | safeHTML }}
+                    <button class="toggle-description" onclick="toggleDescription()">
+                        Read more <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+                <div id="full-description" class="hidden">
+                    {{ $description | safeHTML }}
+                    <button class="toggle-description" onclick="toggleDescription()">
+                        Show less <i class="fas fa-chevron-up"></i>
+                    </button>
+                </div>
+            {{ else }}
+                <div>{{ $description | safeHTML }}</div>
+            {{ end }}
+        </div>
     </div>
 
     <!-- Details Section -->
-    <div class="tool-details-container">
-        <h3>Details</h3>
-        <div class="tool-details">
-            <strong>Developer:</strong>
-            <span>{{ with .Params.developer }}{{ . }}{{ else }}Unknown{{ end }}</span>
-        </div>
-        <div class="tool-details">
-            <strong>Category:</strong>
-            <span>{{ with .Params.categories }}{{ . }}{{ else }}Unknown{{ end }}</span>
-        </div>
-        <div class="tool-details">
-            <strong>Size:</strong>
-            <span>{{ with .Params.size }}{{ . }}{{ else }}Unknown{{ end }}</span>
-        </div>
-        <div class="tool-details">
-            <strong>Compatible iOS:</strong>
-            <span>{{ with .Params.ios_compatible }}{{ . }}{{ else }}Unknown{{ end }}</span>
-        </div>
-        <div class="tool-details">
-            <strong>Keywords:</strong>
-            <span>{{ if .Params.keywords }}{{ delimit .Params.keywords ", " }}{{ else }}None{{ end }}</span>
+    <div class="section">
+        <h2 class="section-title">Details</h2>
+        <div class="details-grid">
+            <div class="detail-item">
+                <div class="detail-label">Developer:</div>
+                <div class="detail-value">{{ with .Params.developer }}{{ . }}{{ else }}Unknown{{ end }}</div>
+            </div>
+            <div class="detail-item">
+                <div class="detail-label">Category:</div>
+                <div class="detail-value">{{ with .Params.categories }}{{ . }}{{ else }}Unknown{{ end }}</div>
+            </div>
+            <div class="detail-item">
+                <div class="detail-label">Size:</div>
+                <div class="detail-value">{{ with .Params.size }}{{ . }}{{ else }}Unknown{{ end }}</div>
+            </div>
+            <div class="detail-item">
+                <div class="detail-label">iOS Version:</div>
+                <div class="detail-value">{{ with .Params.ios_compatible }}{{ . }}{{ else }}Unknown{{ end }}</div>
+            </div>
+            <div class="detail-item">
+                <div class="detail-label">Keywords:</div>
+                <div class="detail-value">{{ if .Params.keywords }}{{ delimit .Params.keywords ", " }}{{ else }}None{{ end }}</div>
+            </div>
         </div>
     </div>
 
     <!-- Other Versions Section -->
     {{ if .Params.other_versions }}
-    <div class="tool-details-container">
-        <h3>Other Versions</h3>
-        {{ $versions := .Params.other_versions }}
-        {{ if gt (len $versions) 0 }}
-            {{ range $versions }}
-                <div class="tool-details">
-                    <strong>{{ .version }}:</strong>
-                    <span><a href="/download?appId={{ .appId }}" class="get-button small">Download</a></span>
-                </div>
+    <div class="section">
+        <h2 class="section-title">Other Versions</h2>
+        <div class="versions-list">
+            {{ range .Params.other_versions }}
+                <a href="/download?appId={{ .appId }}" class="version-btn">
+                    <i class="fas fa-download"></i> {{ printf "%s %s" $.Title .version }}
+                </a>
             {{ end }}
-        {{ else }}
-            <p>No other versions available.</p>
-        {{ end }}
+        </div>
     </div>
     {{ end }}
-</div>
-
+  
 <script>
     function toggleDescription() {
-        const shortDesc = document.querySelector('#description-container p');
+        const shortDesc = document.getElementById('short-description');
         const fullDesc = document.getElementById('full-description');
-        const toggleButtons = document.querySelectorAll('#toggle-description');
         
         if (fullDesc.classList.contains('hidden')) {
             shortDesc.style.display = 'none';
             fullDesc.classList.remove('hidden');
-            toggleButtons.forEach(btn => btn.textContent = 'Show less');
         } else {
             shortDesc.style.display = 'block';
             fullDesc.classList.add('hidden');
-            toggleButtons.forEach(btn => btn.textContent = 'Read more');
         }
     }
-    
-    // Initialize toggle buttons
-    document.querySelectorAll('#toggle-description').forEach(btn => {
-        btn.addEventListener('click', toggleDescription);
-    });
 </script>
 {{ end }}
