@@ -118,7 +118,7 @@
           </div>
         </div>
       </a>
-      <a href="/download?appId={{ .Params.main_download.appId }}" class="related-download-icon">
+      <a href="{{ .Permalink }}" class="related-download-icon">
         <i class="fas fa-download"></i>
       </a>
     </div>
@@ -126,13 +126,6 @@
   </div>
 </div>
 {{ end }}
-
-  <!-- Footer -->
-  <div class="app-footer">
-    <div>© {{ now.Format "2006" }} storeios. All rights reserved.</div>
-    <div><a href="/about" class="footer-link">About Us</a></div>
-  </div>
-</div>
 
 <script>
   // Toggle description function
