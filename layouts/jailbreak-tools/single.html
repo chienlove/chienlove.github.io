@@ -29,7 +29,7 @@
       {{ $description := .Params.description | markdownify | plainify }}
       {{ $words := split $description " " }}
       
-      {{ if gt (len $words) 100 }}
+      {{ if gt (len $words) 60 }}
         <div id="short-description">
           {{ range first 100 $words }}{{ . }} {{ end }}...
         </div>
@@ -108,8 +108,8 @@
           </a>
           <div class="related-app-meta">
             <span class="related-app-version">{{ .Params.main_download.version }}</span>
-            <a href="/download?appId={{ .Params.main_download.appId }}" class="related-app-download">
-              <i class="fas fa-download"></i>
+            <a href="{{ .Permalink }}" class="related-app-download">
+              <i class="fas fa-external-link-alt"></i>
             </a>
           </div>
         </div>
