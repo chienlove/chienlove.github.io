@@ -22,7 +22,7 @@
     </div>
   </div>
 
-  <!-- Description Card - Fixed 100 word limit -->
+  <!-- Description Card -->
   <div class="app-card">
     <h2 class="card-title">Description</h2>
     <div class="description-content">
@@ -33,7 +33,7 @@
         <div id="short-description">
           {{ range first 100 $words }}{{ . }} {{ end }}...
         </div>
-        <div id="full-description">
+        <div id="full-description" class="hidden">
           {{ $description }}
         </div>
         <button class="toggle-description" onclick="toggleDescription()">
@@ -93,34 +93,49 @@
   {{ $currentPage := . }}
   {{ $related := where (where .Site.RegularPages "Type" "jailbreak-tools") "File.Path" "!=" $currentPage.File.Path }}
   {{ if $related }}
-  <div class="app-card">
-    <h2 class="card-title">More Jailbreak Tools</h2>
-    <div class="related-apps-container">
-      {{ range $related }}
-      <div class="app-item">
-        <a href="{{ .Permalink }}" class="app-link">
-          <img src="{{ .Params.icon | default "/images/default-icon.png" }}" alt="{{ .Title }}" class="app-icon">
-          <div class="app-item-content">
-            <h3 class="app-title">{{ .Title }}</h3>
-            <p class="app-developer">{{ .Params.developer | default "Unknown developer" }}</p>
+    {{ $paginator := .Paginate $related 6 }}
+    <div class="app-card">
+      <h2 class="card-title">More Jailbreak Tools</h2>
+      <div class="related-apps-container">
+        {{ range $paginator.Pages }}
+        <div class="related-app-item">
+          <a href="{{ .Permalink }}" class="related-app-link">
+            <img src="{{ .Params.icon | default "/images/default-icon.png" }}" alt="{{ .Title }}" class="related-app-icon">
+            <div class="related-app-content">
+              <h3 class="related-app-title">{{ .Title }}</h3>
+              <p class="related-app-developer">{{ .Params.developer | default "Unknown developer" }}</p>
+            </div>
+          </a>
+          <div class="related-app-meta">
+            <span class="related-app-version">{{ .Params.main_download.version }}</span>
+            <a href="/download?appId={{ .Params.main_download.appId }}" class="related-app-download">
+              <i class="fas fa-download"></i>
+            </a>
           </div>
-        </a>
-        <div class="app-meta">
-          <a href="/download?appId={{ .Params.main_download.appId }}" class="download-btn">Tải</a>
-          <span class="app-version"><i class="fas fa-arrow-up"></i> {{ .Params.main_download.version }}</span>
         </div>
+        {{ end }}
       </div>
+
+      <!-- Pagination -->
+      {{ if gt $paginator.TotalPages 1 }}
+      <nav class="pagination">
+        {{ if $paginator.HasPrev }}
+          <a href="{{ $paginator.Prev.URL }}" class="page-link">&laquo; Prev</a>
+        {{ end }}
+        
+        {{ range $paginator.Pagers }}
+          <a href="{{ .URL }}" class="page-link{{ if eq . $paginator }} active{{ end }}">
+            {{ .PageNumber }}
+          </a>
+        {{ end }}
+
+        {{ if $paginator.HasNext }}
+          <a href="{{ $paginator.Next.URL }}" class="page-link">Next &raquo;</a>
+        {{ end }}
+      </nav>
       {{ end }}
     </div>
-  </div>
   {{ end }}
-
-  <!-- Footer -->
-  <div class="app-footer">
-    <div>© {{ now.Format "2006" }} storeios. All rights reserved.</div>
-    <div><a href="/about" style="color: #999; text-decoration: none;">About Us</a></div>
-  </div>
-</div>
 
 <script>
   // Toggle description function
@@ -130,14 +145,14 @@
     const toggleBtn = document.querySelector('.toggle-description');
     const toggleIcon = document.querySelector('.toggle-description i');
     
-    if (fullDesc.style.display === 'none' || !fullDesc.style.display) {
+    if (fullDesc.classList.contains('hidden')) {
       shortDesc.style.display = 'none';
-      fullDesc.style.display = 'block';
+      fullDesc.classList.remove('hidden');
       toggleBtn.innerHTML = '<span id="toggle-text">Show less</span> <i class="fas fa-chevron-up"></i>';
       toggleBtn.classList.add('expanded');
     } else {
       shortDesc.style.display = 'block';
-      fullDesc.style.display = 'none';
+      fullDesc.classList.add('hidden');
       toggleBtn.innerHTML = '<span id="toggle-text">Read more</span> <i class="fas fa-chevron-down"></i>';
       toggleBtn.classList.remove('expanded');
     }
