@@ -26,23 +26,23 @@
   <div class="app-card">
     <h2 class="card-title">Description</h2>
     <div class="description-content">
-  {{ $plainText := .Params.description | markdownify | plainify }}
-  {{ $words := split $plainText " " }}
-  
-  {{ if gt (len $words) 100 }}
-    <div id="short-description">
-      {{ range first 100 $words }}{{ . }} {{ end }}...
+      {{ $description := .Params.description | markdownify | plainify }}
+      {{ $words := split $description " " }}
+      
+      {{ if gt (len $words) 100 }}
+        <div id="short-description">
+          {{ range first 100 $words }}{{ . }} {{ end }}...
+        </div>
+        <div id="full-description">
+          {{ $description }}
+        </div>
+        <button class="toggle-description" onclick="toggleDescription()">
+          <span id="toggle-text">Read more</span> <i class="fas fa-chevron-down"></i>
+        </button>
+      {{ else }}
+        <div>{{ $description }}</div>
+      {{ end }}
     </div>
-    <div id="full-description" class="hidden">
-      {{ $plainText }}
-    </div>
-    <button class="toggle-description" onclick="toggleDescription()">
-      <span id="toggle-text">Read more</span> <i class="fas fa-chevron-right"></i>
-    </button>
-  {{ else }}
-    <div>{{ $plainText }}</div>
-  {{ end }}
-</div>
   </div>
 
   <!-- Details Card -->
@@ -89,18 +89,27 @@
   </div>
   {{ end }}
 
-  <!-- Related Jailbreak Tools - Chính xác theo collection -->
+  <!-- Related Apps Section -->
   {{ $currentPage := . }}
-{{ $related := where (where .Site.RegularPages "Type" "jailbreak-tools") "File.Path" "!=" $currentPage.File.Path }}
-{{ if $related }}
+  {{ $related := where (where .Site.RegularPages "Type" "jailbreak-tools") "File.Path" "!=" $currentPage.File.Path }}
+  {{ if $related }}
   <div class="app-card">
     <h2 class="card-title">More Jailbreak Tools</h2>
-    <div class="related-posts-grid">
-      {{ range first 6 $related }}
-      <a href="{{ .RelPermalink }}" class="related-post">
-        <img src="{{ .Params.icon | default "/images/default-icon.png" }}" alt="{{ .Title }}" class="related-post-icon">
-        <h3 class="related-post-title">{{ .Title }}</h3>
-      </a>
+    <div class="related-apps-container">
+      {{ range $related }}
+      <div class="app-item">
+        <a href="{{ .Permalink }}" class="app-link">
+          <img src="{{ .Params.icon | default "/images/default-icon.png" }}" alt="{{ .Title }}" class="app-icon">
+          <div class="app-item-content">
+            <h3 class="app-title">{{ .Title }}</h3>
+            <p class="app-developer">{{ .Params.developer | default "Unknown developer" }}</p>
+          </div>
+        </a>
+        <div class="app-meta">
+          <a href="/download?appId={{ .Params.main_download.appId }}" class="download-btn">Tải</a>
+          <span class="app-version"><i class="fas fa-arrow-up"></i> {{ .Params.main_download.version }}</span>
+        </div>
+      </div>
       {{ end }}
     </div>
   </div>
@@ -114,22 +123,23 @@
 </div>
 
 <script>
+  // Toggle description function
   function toggleDescription() {
     const shortDesc = document.getElementById('short-description');
     const fullDesc = document.getElementById('full-description');
-    const toggleText = document.getElementById('toggle-text');
+    const toggleBtn = document.querySelector('.toggle-description');
     const toggleIcon = document.querySelector('.toggle-description i');
     
-    if (fullDesc.classList.contains('hidden')) {
+    if (fullDesc.style.display === 'none' || !fullDesc.style.display) {
       shortDesc.style.display = 'none';
-      fullDesc.classList.remove('hidden');
-      toggleText.textContent = 'Show less';
-      toggleIcon.classList.replace('fa-chevron-right', 'fa-chevron-up');
+      fullDesc.style.display = 'block';
+      toggleBtn.innerHTML = '<span id="toggle-text">Show less</span> <i class="fas fa-chevron-up"></i>';
+      toggleBtn.classList.add('expanded');
     } else {
       shortDesc.style.display = 'block';
-      fullDesc.classList.add('hidden');
-      toggleText.textContent = 'Read more';
-      toggleIcon.classList.replace('fa-chevron-up', 'fa-chevron-right');
+      fullDesc.style.display = 'none';
+      toggleBtn.innerHTML = '<span id="toggle-text">Read more</span> <i class="fas fa-chevron-down"></i>';
+      toggleBtn.classList.remove('expanded');
     }
   }
 </script>
