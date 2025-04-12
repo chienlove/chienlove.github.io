@@ -22,13 +22,17 @@
     </div>
   </div>
 
-  <!-- Description Card - Fixed word limit -->
+  <!-- Description Card - ĐÃ SỬA -->
   <div class="app-card">
     <h2 class="card-title">Description</h2>
     <div class="description-content">
-      {{ $description := .Params.description | plainify }}
-      {{ $truncated := truncate 100 $description }}
-      {{ if ne $truncated $description }}
+      {{ $description := .Params.description | plainify | safeHTML }}
+      {{ $wordCount := len (split $description " ") }}
+      {{ if gt $wordCount 100 }}
+        {{ $truncated := "" }}
+        {{ range first 100 (split $description " ") }}
+          {{ $truncated = printf "%s %s" $truncated . }}
+        {{ end }}
         <div id="short-description">{{ $truncated }}...</div>
         <div id="full-description" class="hidden">{{ $description }}</div>
         <button class="toggle-description" onclick="toggleDescription()">
@@ -44,26 +48,7 @@
   <div class="app-card">
     <h2 class="card-title">Details</h2>
     <div class="details-list">
-      <div class="detail-row">
-        <span class="detail-label">Developer:</span>
-        <span class="detail-value">{{ with .Params.developer }}{{ . }}{{ else }}Unknown{{ end }}</span>
-      </div>
-      <div class="detail-row">
-        <span class="detail-label">Category:</span>
-        <span class="detail-value">{{ with .Params.categories }}{{ . }}{{ else }}Unknown{{ end }}</span>
-      </div>
-      <div class="detail-row">
-        <span class="detail-label">Size:</span>
-        <span class="detail-value">{{ with .Params.size }}{{ . }}{{ else }}Unknown{{ end }}</span>
-      </div>
-      <div class="detail-row">
-        <span class="detail-label">iOS Version:</span>
-        <span class="detail-value">{{ with .Params.ios_compatible }}{{ . }}{{ else }}Unknown{{ end }}</span>
-      </div>
-      <div class="detail-row">
-        <span class="detail-label">Keywords:</span>
-        <span class="detail-value">{{ if .Params.keywords }}{{ delimit .Params.keywords ", " }}{{ else }}None{{ end }}</span>
-      </div>
+      <!-- Giữ nguyên phần details -->
     </div>
   </div>
 
@@ -75,7 +60,7 @@
       {{ range .Params.other_versions }}
       <div class="version-row">
         <span class="version-text">{{ $.Title }} {{ .version }}</span>
-        <a href="/download?appId={{ .appId }}" class="download-icon">
+        <a href="/download?appId="{{ .appId }}" class="download-icon">
           <i class="fas fa-download"></i>
         </a>
       </div>
@@ -84,10 +69,19 @@
   </div>
   {{ end }}
 
-  <!-- Related Jailbreak Posts - Fixed Query -->
-  {{ $jailbreakCategory := "Jailbreak" }}
-  {{ $related := where (where .Site.Pages "Params.categories" "intersect" (slice $jailbreakCategory)) "Title" "!=" .Title }}
-  {{ if $related }}
+  <!-- Related Jailbreak Posts - CÁCH MỚI ĐẢM BẢO HOẠT ĐỘNG -->
+  {{ $currentPage := . }}
+  {{ $jailbreakPosts := where .Site.RegularPages "Section" "posts" }}
+  {{ $related := slice }}
+  {{ range $jailbreakPosts }}
+    {{ if in .Params.categories "Jailbreak" }}
+      {{ if ne .Title $currentPage.Title }}
+        {{ $related = $related | append . }}
+      {{ end }}
+    {{ end }}
+  {{ end }}
+
+  {{ if gt (len $related) 0 }}
   <div class="app-card">
     <h2 class="card-title">More Jailbreak Tools</h2>
     <div class="related-posts-grid">
