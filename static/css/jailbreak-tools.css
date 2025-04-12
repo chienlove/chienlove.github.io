@@ -1,6 +1,6 @@
 /* Main Container */
 .app-detail-container {
-  max-width: 800px;
+  max-width: 1200px;
   margin: 20px auto;
   font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif;
 }
@@ -8,7 +8,7 @@
 /* Card Styles */
 .app-card {
   background: #ffffff;
-  border-radius: 14px;
+  border-radius: 16px;
   padding: 25px;
   margin-bottom: 20px;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
@@ -19,7 +19,7 @@
 .card-title {
   font-size: 20px;
   font-weight: 600;
-  color: #47b8e0;
+  color: #007AFF;
   margin: 0 0 20px 0;
   padding-bottom: 12px;
   border-bottom: 1px solid #f0f0f0;
@@ -29,37 +29,58 @@
 .app-header-card {
   display: flex;
   align-items: center;
+  padding: 30px;
 }
 
-.app-icon {
-  width: 90px;
-  height: 90px;
-  border-radius: 18px;
-  margin-right: 25px;
-  border: 1px solid #f0f0f0;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+.app-icon-wrapper {
+  position: relative;
+  margin-right: 30px;
+}
+
+.app-icon-large {
+  width: 120px;
+  height: 120px;
+  border-radius: 24px;
   object-fit: contain;
+  border: 1px solid #f0f0f0;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  padding: 12px;
+  background: white;
+}
+
+.app-header-content {
+  flex: 1;
 }
 
 .app-title {
-  font-size: 28px;
+  font-size: 32px;
   font-weight: 700;
   color: #1a1a1a;
-  margin: 0 0 5px 0;
+  margin: 0 0 10px 0;
 }
 
 .app-meta {
   color: #666;
-  font-size: 15px;
-  margin-bottom: 15px;
+  font-size: 16px;
+  margin-bottom: 20px;
   line-height: 1.5;
+}
+
+.app-version-badge {
+  display: inline-block;
+  background: #007AFF;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 14px;
+  margin-right: 10px;
 }
 
 .download-btn {
   background: linear-gradient(135deg, #007AFF 0%, #0062CC 100%);
   color: white;
-  padding: 10px 20px;
-  border-radius: 10px;
+  padding: 12px 24px;
+  border-radius: 12px;
   text-decoration: none;
   font-weight: 600;
   font-size: 16px;
@@ -79,7 +100,21 @@
   font-size: 18px;
 }
 
-/* Description Content - Fixed word limit */
+/* Content Layout */
+.app-content-layout {
+  display: flex;
+  gap: 20px;
+}
+
+.app-left-column {
+  flex: 2;
+}
+
+.app-right-column {
+  flex: 1;
+}
+
+/* Description Content */
 .description-content {
   color: #333;
   line-height: 1.7;
@@ -93,10 +128,6 @@
 
 #full-description {
   display: none;
-}
-
-#full-description.expanded {
-  display: block;
 }
 
 .toggle-description {
@@ -120,7 +151,12 @@
   transform: rotate(180deg);
 }
 
-/* Details Section */
+/* Details Card */
+.details-card {
+  position: sticky;
+  top: 20px;
+}
+
 .details-list {
   display: grid;
   gap: 12px;
@@ -129,7 +165,7 @@
 .detail-row {
   display: flex;
   align-items: center;
-  padding: 8px 0;
+  padding: 10px 0;
   border-bottom: 1px solid #f0f0f0;
 }
 
@@ -147,11 +183,15 @@
   color: #333;
 }
 
-/* Other Versions List */
+/* Other Versions Card */
+.versions-card {
+  background-color: #f8faff;
+}
+
 .versions-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .version-row {
@@ -159,22 +199,38 @@
   justify-content: space-between;
   align-items: center;
   padding: 12px 0;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid #e0e8f5;
 }
 
 .version-row:last-child {
   border-bottom: none;
 }
 
+.version-link {
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: #333;
+  flex-grow: 1;
+}
+
 .version-text {
   font-size: 15px;
-  color: #333;
+  font-weight: 500;
+  color: #2d3748;
+}
+
+.version-date {
+  font-size: 13px;
+  color: #666;
+  margin-top: 4px;
 }
 
 .version-download-icon {
   color: #007AFF;
   font-size: 18px;
   padding: 8px;
+  margin-left: 15px;
   transition: transform 0.2s ease;
 }
 
@@ -208,13 +264,13 @@
   flex-grow: 1;
   text-decoration: none;
   color: #333;
+  gap: 15px;
 }
 
-.app-icon {
+.app-icon-small {
   width: 50px;
   height: 50px;
   border-radius: 12px;
-  margin-right: 15px;
   object-fit: contain;
   border: 1px solid #f0f0f0;
 }
@@ -230,10 +286,23 @@
   color: #2d3748;
 }
 
+.app-meta-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .app-developer {
   font-size: 13px;
   color: #666;
-  margin: 0;
+}
+
+.app-version {
+  font-size: 12px;
+  color: #007AFF;
+  background: #e6f0ff;
+  padding: 2px 8px;
+  border-radius: 8px;
 }
 
 .related-download-icon {
@@ -255,18 +324,40 @@
   padding: 20px 0;
   color: #999;
   font-size: 14px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.footer-link {
+  color: #999;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.footer-link:hover {
+  color: #007AFF;
 }
 
 /* Responsive */
 @media (max-width: 768px) {
+  .app-content-layout {
+    flex-direction: column;
+  }
+  
   .app-header-card {
     flex-direction: column;
     text-align: center;
+    padding: 25px;
   }
   
-  .app-icon {
+  .app-icon-wrapper {
     margin-right: 0;
     margin-bottom: 20px;
+  }
+  
+  .app-icon-large {
+    width: 100px;
+    height: 100px;
   }
   
   .related-app-item {
