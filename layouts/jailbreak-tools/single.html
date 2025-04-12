@@ -13,12 +13,14 @@
     <div class="app-header-content">
       <h1 class="app-title">{{ .Title }}</h1>
       <div class="app-meta">
-        <div class="app-version-badge">v{{ .Params.main_download.version }}</div>
-        <div>Developer: {{ with .Params.developer }}{{ . }}{{ else }}Unknown{{ end }}</div>
+        <span class="app-version-text">Version: {{ .Params.main_download.version }}</span>
+        <span>Developer: {{ with .Params.developer }}{{ . }}{{ else }}Unknown{{ end }}</span>
       </div>
+      {{ if .Params.main_download }}
       <a href="/download?appId={{ .Params.main_download.appId }}" class="download-btn">
         <i class="fas fa-download"></i> Download
       </a>
+      {{ end }}
     </div>
   </div>
 
@@ -50,15 +52,12 @@
 
       <!-- Other Versions Card -->
       {{ if .Params.other_versions }}
-      <div class="app-card versions-card">
+      <div class="app-card">
         <h2 class="card-title">Other Versions</h2>
         <div class="versions-list">
           {{ range .Params.other_versions }}
           <div class="version-row">
-            <a href="{{ $.Permalink }}?version={{ .version }}" class="version-link">
-              <span class="version-text">{{ $.Title }} {{ .version }}</span>
-              <span class="version-date">{{ .release_date }}</span>
-            </a>
+            <span class="version-text">{{ $.Title }} {{ .version }}</span>
             <a href="/download?appId={{ .appId }}" class="version-download-icon">
               <i class="fas fa-download"></i>
             </a>
@@ -113,14 +112,11 @@
           <img src="{{ .Params.icon | default "/images/default-icon.png" }}" alt="{{ .Title }}" class="app-icon-small">
           <div class="app-item-content">
             <h3 class="app-title">{{ .Title }}</h3>
-            <div class="app-meta-info">
-              <span class="app-developer">{{ .Params.developer | default "Unknown developer" }}</span>
-              <span class="app-version">v{{ .Params.main_download.version }}</span>
-            </div>
+            <span class="app-developer">{{ .Params.developer | default "Unknown developer" }}</span>
           </div>
         </a>
-        <a href="{{ .Permalink }}" class="related-download-icon">
-          <i class="fas fa-external-link-alt"></i>
+        <a href="/download?appId={{ .Params.main_download.appId }}" class="related-download-icon">
+          <i class="fas fa-download"></i>
         </a>
       </div>
       {{ end }}
