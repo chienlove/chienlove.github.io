@@ -90,8 +90,9 @@
   {{ end }}
 
   <!-- Related Jailbreak Tools - Chính xác theo collection -->
-  {{ $related := where (where (where .Site.Pages "Type" "jailbreak-tools") "Params.categories" "intersect" (slice "Jailbreak")) "Title" "!=" .Title }}
-  {{ if $related }}
+  {{ $currentPage := . }}
+{{ $related := where (where .Site.RegularPages "Type" "jailbreak-tools") "File.Path" "!=" $currentPage.File.Path }}
+{{ if $related }}
   <div class="app-card">
     <h2 class="card-title">More Jailbreak Tools</h2>
     <div class="related-posts-grid">
