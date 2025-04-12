@@ -11,7 +11,7 @@
   border-radius: 16px;
   padding: 25px;
   margin-bottom: 20px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
   border: 1px solid #e2e8f0;
 }
 
@@ -43,8 +43,8 @@
   border-radius: 24px;
   object-fit: contain;
   border: 1px solid #f0f0f0;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
-  padding: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  padding: 6px;
   background: white;
 }
 
