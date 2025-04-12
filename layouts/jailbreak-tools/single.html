@@ -26,23 +26,23 @@
   <div class="app-card">
     <h2 class="card-title">Description</h2>
     <div class="description-content">
-      {{ $plainText := .Params.description | markdownify | plainify }}
-      {{ $words := split $plainText " " }}
-      
-      {{ if gt (len $words) 100 }}
-        <div id="short-description">
-          {{ delimit (first 100 $words) " " }}...
-        </div>
-        <div id="full-description" class="hidden">
-          {{ $plainText }}
-        </div>
-        <button class="toggle-description" onclick="toggleDescription()">
-          <span id="toggle-text">Read more</span> <i class="fas fa-chevron-right"></i>
-        </button>
-      {{ else }}
-        <div>{{ $plainText }}</div>
-      {{ end }}
+  {{ $plainText := .Params.description | markdownify | plainify }}
+  {{ $words := split $plainText " " }}
+  
+  {{ if gt (len $words) 100 }}
+    <div id="short-description">
+      {{ range first 100 $words }}{{ . }} {{ end }}...
     </div>
+    <div id="full-description" class="hidden">
+      {{ $plainText }}
+    </div>
+    <button class="toggle-description" onclick="toggleDescription()">
+      <span id="toggle-text">Read more</span> <i class="fas fa-chevron-right"></i>
+    </button>
+  {{ else }}
+    <div>{{ $plainText }}</div>
+  {{ end }}
+</div>
   </div>
 
   <!-- Details Card -->
