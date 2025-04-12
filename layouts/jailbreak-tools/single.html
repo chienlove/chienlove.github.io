@@ -1,141 +1,131 @@
 {{ define "head" }}
-    <link rel="stylesheet" href="/css/jailbreak-tools.css?v={{ now.Unix }}">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+<link rel="stylesheet" href="/css/jailbreak-tools.css?v={{ now.Unix }}">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 {{ end }}
 
 {{ define "main" }}
 <div class="app-detail-container">
-    <!-- Header Card -->
-    <div class="app-card app-header-card">
-        <img src="{{ .Params.icon }}" alt="{{ .Title }} Icon" class="app-icon">
-        <div style="flex: 1;">
-            <h1 class="app-title">{{ .Title }}</h1>
-            <div class="app-meta">
-                <div>Version: {{ .Params.main_download.version }}</div>
-                <div>Developer: {{ with .Params.developer }}{{ . }}{{ else }}Unknown{{ end }}</div>
-            </div>
-            {{ if .Params.main_download }}
-            <a href="/download?appId={{ .Params.main_download.appId }}" class="download-btn">
-                <i class="fas fa-download"></i> Download
-            </a>
-            {{ end }}
-        </div>
+  <!-- Header Card -->
+  <div class="app-card app-header-card">
+    <img src="{{ .Params.icon }}" alt="{{ .Title }} Icon" class="app-icon">
+    <div style="flex: 1;">
+      <h1 class="app-title">{{ .Title }}</h1>
+      <div class="app-meta">
+        <div>Version: {{ .Params.main_download.version }}</div>
+        <div>Developer: {{ with .Params.developer }}{{ . }}{{ else }}Unknown{{ end }}</div>
+      </div>
+      {{ if .Params.main_download }}
+      <a href="/download?appId={{ .Params.main_download.appId }}" class="download-btn">
+        <i class="fas fa-download"></i> Download
+      </a>
+      {{ end }}
     </div>
+  </div>
 
-    <!-- Description Card -->
-    <div class="app-card">
-        <h2 class="card-title">Description</h2>
-        <div class="description-content">
-            {{ $description := .Params.description | markdownify }}
-            {{ $words := split $description " " }}
-            {{ if gt (len $words) 100 }}
-                <div id="short-description">
-                    {{ delimit (first 100 $words) " " | safeHTML }}...
-                </div>
-                <div id="full-description" class="hidden">
-                    {{ $description | safeHTML }}
-                </div>
-                <button class="toggle-description" onclick="toggleDescription()">
-                    <span id="toggle-text">Read more</span> <i class="fas fa-chevron-right"></i>
-                </button>
-            {{ else }}
-                <div>{{ $description | safeHTML }}</div>
-            {{ end }}
-        </div>
+  <!-- Description Card - Fixed word limit -->
+  <div class="app-card">
+    <h2 class="card-title">Description</h2>
+    <div class="description-content">
+      {{ $description := .Params.description | plainify }}
+      {{ $truncated := truncate 100 $description }}
+      {{ if ne $truncated $description }}
+        <div id="short-description">{{ $truncated }}...</div>
+        <div id="full-description" class="hidden">{{ $description }}</div>
+        <button class="toggle-description" onclick="toggleDescription()">
+          <span id="toggle-text">Read more</span> <i class="fas fa-chevron-right"></i>
+        </button>
+      {{ else }}
+        <div>{{ $description }}</div>
+      {{ end }}
     </div>
+  </div>
 
-    <!-- Details Card -->
-    <div class="app-card">
-        <h2 class="card-title">Details</h2>
-        <div class="details-list">
-            <div class="detail-row">
-                <div class="detail-label-value">
-                    <span class="detail-label">Developer:</span>
-                    <span class="detail-value">{{ with .Params.developer }}{{ . }}{{ else }}Unknown{{ end }}</span>
-                </div>
-            </div>
-            <div class="detail-row">
-                <div class="detail-label-value">
-                    <span class="detail-label">Category:</span>
-                    <span class="detail-value">{{ with .Params.categories }}{{ . }}{{ else }}Unknown{{ end }}</span>
-                </div>
-            </div>
-            <div class="detail-row">
-                <div class="detail-label-value">
-                    <span class="detail-label">Size:</span>
-                    <span class="detail-value">{{ with .Params.size }}{{ . }}{{ else }}Unknown{{ end }}</span>
-                </div>
-            </div>
-            <div class="detail-row">
-                <div class="detail-label-value">
-                    <span class="detail-label">iOS Version:</span>
-                    <span class="detail-value">{{ with .Params.ios_compatible }}{{ . }}{{ else }}Unknown{{ end }}</span>
-                </div>
-            </div>
-            <div class="detail-row">
-                <div class="detail-label-value">
-                    <span class="detail-label">Keywords:</span>
-                    <span class="detail-value">{{ if .Params.keywords }}{{ delimit .Params.keywords ", " }}{{ else }}None{{ end }}</span>
-                </div>
-            </div>
-        </div>
+  <!-- Details Card -->
+  <div class="app-card">
+    <h2 class="card-title">Details</h2>
+    <div class="details-list">
+      <div class="detail-row">
+        <span class="detail-label">Developer:</span>
+        <span class="detail-value">{{ with .Params.developer }}{{ . }}{{ else }}Unknown{{ end }}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Category:</span>
+        <span class="detail-value">{{ with .Params.categories }}{{ . }}{{ else }}Unknown{{ end }}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Size:</span>
+        <span class="detail-value">{{ with .Params.size }}{{ . }}{{ else }}Unknown{{ end }}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">iOS Version:</span>
+        <span class="detail-value">{{ with .Params.ios_compatible }}{{ . }}{{ else }}Unknown{{ end }}</span>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Keywords:</span>
+        <span class="detail-value">{{ if .Params.keywords }}{{ delimit .Params.keywords ", " }}{{ else }}None{{ end }}</span>
+      </div>
     </div>
+  </div>
 
-    <!-- Other Versions Card -->
-    {{ if .Params.other_versions }}
-    <div class="app-card">
-        <h2 class="card-title">Other Versions</h2>
-        <div>
-            {{ range .Params.other_versions }}
-            <div class="version-row">
-                <div class="version-info">
-                    <span class="version-name">{{ $.Title }}</span>
-                    <span class="version-number">{{ .version }}</span>
-                </div>
-                <a href="/download?appId={{ .appId }}" class="download-icon">
-                    <i class="fas fa-download"></i>
-                </a>
-            </div>
-            {{ end }}
-        </div>
+  <!-- Other Versions Card -->
+  {{ if .Params.other_versions }}
+  <div class="app-card">
+    <h2 class="card-title">Other Versions</h2>
+    <div>
+      {{ range .Params.other_versions }}
+      <div class="version-row">
+        <span class="version-text">{{ $.Title }} {{ .version }}</span>
+        <a href="/download?appId={{ .appId }}" class="download-icon">
+          <i class="fas fa-download"></i>
+        </a>
+      </div>
+      {{ end }}
     </div>
-    {{ end }}
+  </div>
+  {{ end }}
 
-    <!-- Related Posts in Jailbreak Category -->
-    {{ $currentCategory := "Jailbreak" }}
-    {{ $related := where (where .Site.RegularPages "Params.categories" "intersect" (slice $currentCategory)) "Permalink" "!=" .Permalink }}
-    {{ if $related }}
-    <div class="app-card">
-        <h2 class="card-title">More in {{ $currentCategory }}</h2>
-        <div class="related-posts-grid">
-            {{ range first 6 $related }}
-            <a href="{{ .RelPermalink }}" class="related-post">
-                <img src="{{ .Params.icon | default "/images/default-icon.png" }}" alt="{{ .Title }}" class="related-post-icon">
-                <h3 class="related-post-title">{{ .Title }}</h3>
-            </a>
-            {{ end }}
-        </div>
+  <!-- Related Jailbreak Posts - Fixed Query -->
+  {{ $jailbreakCategory := "Jailbreak" }}
+  {{ $related := where (where .Site.Pages "Params.categories" "intersect" (slice $jailbreakCategory)) "Title" "!=" .Title }}
+  {{ if $related }}
+  <div class="app-card">
+    <h2 class="card-title">More Jailbreak Tools</h2>
+    <div class="related-posts-grid">
+      {{ range first 6 $related }}
+      <a href="{{ .RelPermalink }}" class="related-post">
+        <img src="{{ .Params.icon | default "/images/default-icon.png" }}" alt="{{ .Title }}" class="related-post-icon">
+        <h3 class="related-post-title">{{ .Title }}</h3>
+      </a>
+      {{ end }}
     </div>
-    {{ end }}
+  </div>
+  {{ end }}
+
+  <!-- Footer -->
+  <div class="app-footer">
+    <div>© {{ now.Format "2006" }} storeios. All rights reserved.</div>
+    <div><a href="/about" style="color: #999; text-decoration: none;">About Us</a></div>
+  </div>
+</div>
 
 <script>
-    function toggleDescription() {
-        const shortDesc = document.getElementById('short-description');
-        const fullDesc = document.getElementById('full-description');
-        const toggleText = document.getElementById('toggle-text');
-        const toggleIcon = document.querySelector('.toggle-description i');
-        
-        if (fullDesc.classList.contains('hidden')) {
-            shortDesc.style.display = 'none';
-            fullDesc.classList.remove('hidden');
-            toggleText.textContent = 'Show less';
-            toggleIcon.classList.replace('fa-chevron-right', 'fa-chevron-up');
-        } else {
-            shortDesc.style.display = 'block';
-            fullDesc.classList.add('hidden');
-            toggleText.textContent = 'Read more';
-            toggleIcon.classList.replace('fa-chevron-up', 'fa-chevron-right');
-        }
+  function toggleDescription() {
+    const shortDesc = document.getElementById('short-description');
+    const fullDesc = document.getElementById('full-description');
+    const toggleText = document.getElementById('toggle-text');
+    const toggleIcon = document.querySelector('.toggle-description i');
+    
+    if (fullDesc.classList.contains('hidden')) {
+      shortDesc.style.display = 'none';
+      fullDesc.classList.remove('hidden');
+      toggleText.textContent = 'Show less';
+      toggleIcon.classList.replace('fa-chevron-right', 'fa-chevron-up');
+    } else {
+      shortDesc.style.display = 'block';
+      fullDesc.classList.add('hidden');
+      toggleText.textContent = 'Read more';
+      toggleIcon.classList.replace('fa-chevron-up', 'fa-chevron-right');
     }
+  }
 </script>
 {{ end }}
