@@ -27,10 +27,11 @@
         <h2 class="card-title">Description</h2>
         <div class="description-content">
             {{ $description := .Params.description | markdownify }}
-            {{ $words := split $description " " }}
-            {{ if gt (len $words) 150 }}
+            {{ $wordCount := len (split $description " ") }}
+            {{ if gt $wordCount 100 }}
                 <div id="short-description">
-                    {{ delimit (first 150 $words) " " | safeHTML }}
+                    {{ $truncated := delimit (first 100 (split $description " ")) " " }}
+                    {{ $truncated | safeHTML }}...
                 </div>
                 <div id="full-description" class="hidden">
                     {{ $description | safeHTML }}
@@ -101,27 +102,21 @@
     </div>
     {{ end }}
 
-    <!-- Related Apps Card -->
-    {{ if .Params.related_apps }}
+    <!-- Related Posts in Jailbreak Category -->
+    {{ $jailbreakPosts := where (where .Site.Pages "Params.categories" "intersect" (slice "Jailbreak")) "Permalink" "!=" .Permalink }}
+    {{ if $jailbreakPosts }}
     <div class="app-card">
-        <h2 class="card-title">Related Apps</h2>
-        <div class="related-apps">
-            {{ range .Params.related_apps }}
-            <a href="{{ .url }}" class="related-app">
-                <img src="{{ .icon }}" alt="{{ .name }}" class="related-app-icon">
-                <span class="related-app-name">{{ .name }}</span>
+        <h2 class="card-title">More Jailbreak Tools</h2>
+        <div class="related-posts-grid">
+            {{ range first 6 $jailbreakPosts }}
+            <a href="{{ .RelPermalink }}" class="related-post">
+                <img src="{{ .Params.icon }}" alt="{{ .Title }}" class="related-post-icon">
+                <h3 class="related-post-title">{{ .Title }}</h3>
             </a>
             {{ end }}
         </div>
     </div>
     {{ end }}
-
-    <!-- Footer -->
-    <div class="app-footer">
-        <div>© {{ now.Format "2006" }} storeios. All rights reserved.</div>
-        <div><a href="/about" style="color: #999; text-decoration: none;">About Us</a></div>
-    </div>
-</div>
 
 <script>
     function toggleDescription() {

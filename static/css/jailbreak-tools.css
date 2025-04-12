@@ -244,3 +244,51 @@
         grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     }
 }
+/* Thêm phần này vào cuối file CSS */
+/* Related Posts Section */
+.related-posts {
+    margin-top: 30px;
+}
+
+.related-posts-title {
+    font-size: 22px;
+    font-weight: 600;
+    color: #007AFF; /* Màu xanh giống tiêu đề card */
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.related-posts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.related-post {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transition: transform 0.2s ease;
+}
+
+.related-post:hover {
+    transform: translateY(-5px);
+}
+
+.related-post-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    margin-bottom: 10px;
+    border: 1px solid #f0f0f0;
+}
+
+.related-post-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #333;
+    margin: 0;
+    line-height: 1.4;
+}
