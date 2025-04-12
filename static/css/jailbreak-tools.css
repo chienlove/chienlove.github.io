@@ -14,6 +14,16 @@
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
 }
 
+/* Card Title */
+.card-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: #007AFF; /* Màu xanh cho tiêu đề */
+    margin: 0 0 20px 0;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
 /* Header Card */
 .app-header-card {
     display: flex;
@@ -96,7 +106,7 @@
     transform: translateX(3px);
 }
 
-/* Details Card - Fixed version */
+/* Details Card */
 .details-list {
     display: grid;
     gap: 12px;
@@ -130,31 +140,78 @@
     color: #333;
 }
 
-/* Versions Card - Fixed version */
+/* Versions Card - Updated style */
 .version-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 8px 0;
-    border-bottom: 1px solid #f0f0f0;
+    padding: 10px 15px;
+    margin-bottom: 8px;
+    background-color: #f5f5f7; /* Màu nền nhạt */
+    border-radius: 8px;
+    transition: all 0.2s ease;
 }
 
-.version-row:last-child {
-    border-bottom: none;
+.version-row:hover {
+    background-color: #e5e5ea;
 }
 
-.version-text {
-    flex: 1;
+.version-info {
+    display: flex;
+    align-items: center;
+}
+
+.version-name {
+    font-weight: 600;
+    margin-right: 8px;
+}
+
+.version-number {
+    color: #666;
 }
 
 .download-icon {
     color: #007AFF;
-    margin-left: 15px;
     font-size: 18px;
 }
 
 .download-icon:hover {
     color: #005bb5;
+}
+
+/* Related Apps Card */
+.related-apps {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.related-app {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-decoration: none;
+    color: #333;
+    transition: transform 0.2s ease;
+}
+
+.related-app:hover {
+    transform: translateY(-3px);
+}
+
+.related-app-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 12px;
+    margin-bottom: 8px;
+    border: 1px solid #f0f0f0;
+}
+
+.related-app-name {
+    font-size: 13px;
+    text-align: center;
+    font-weight: 500;
 }
 
 /* Footer */
@@ -183,7 +240,7 @@
         justify-content: center;
     }
     
-    .detail-label-value {
-        flex-wrap: wrap;
+    .related-apps {
+        grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     }
 }

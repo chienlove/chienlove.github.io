@@ -24,13 +24,13 @@
 
     <!-- Description Card -->
     <div class="app-card">
-        <h2>Description</h2>
+        <h2 class="card-title">Description</h2>
         <div class="description-content">
             {{ $description := .Params.description | markdownify }}
             {{ $words := split $description " " }}
-            {{ if gt (len $words) 30 }}
+            {{ if gt (len $words) 150 }}
                 <div id="short-description">
-                    {{ delimit (first 30 $words) " " | safeHTML }}
+                    {{ delimit (first 150 $words) " " | safeHTML }}
                 </div>
                 <div id="full-description" class="hidden">
                     {{ $description | safeHTML }}
@@ -46,7 +46,7 @@
 
     <!-- Details Card -->
     <div class="app-card">
-        <h2>Details</h2>
+        <h2 class="card-title">Details</h2>
         <div class="details-list">
             <div class="detail-row">
                 <div class="detail-label-value">
@@ -84,11 +84,14 @@
     <!-- Other Versions Card -->
     {{ if .Params.other_versions }}
     <div class="app-card">
-        <h2>Other Versions</h2>
-        <div class="details-list">
+        <h2 class="card-title">Other Versions</h2>
+        <div>
             {{ range .Params.other_versions }}
             <div class="version-row">
-                <span class="version-text">{{ .version }}</span>
+                <div class="version-info">
+                    <span class="version-name">{{ $.Title }}</span>
+                    <span class="version-number">{{ .version }}</span>
+                </div>
                 <a href="/download?appId={{ .appId }}" class="download-icon">
                     <i class="fas fa-download"></i>
                 </a>
@@ -97,6 +100,28 @@
         </div>
     </div>
     {{ end }}
+
+    <!-- Related Apps Card -->
+    {{ if .Params.related_apps }}
+    <div class="app-card">
+        <h2 class="card-title">Related Apps</h2>
+        <div class="related-apps">
+            {{ range .Params.related_apps }}
+            <a href="{{ .url }}" class="related-app">
+                <img src="{{ .icon }}" alt="{{ .name }}" class="related-app-icon">
+                <span class="related-app-name">{{ .name }}</span>
+            </a>
+            {{ end }}
+        </div>
+    </div>
+    {{ end }}
+
+    <!-- Footer -->
+    <div class="app-footer">
+        <div>© {{ now.Format "2006" }} storeios. All rights reserved.</div>
+        <div><a href="/about" style="color: #999; text-decoration: none;">About Us</a></div>
+    </div>
+</div>
 
 <script>
     function toggleDescription() {
