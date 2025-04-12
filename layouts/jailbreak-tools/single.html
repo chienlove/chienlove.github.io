@@ -27,11 +27,10 @@
         <h2 class="card-title">Description</h2>
         <div class="description-content">
             {{ $description := .Params.description | markdownify }}
-            {{ $wordCount := len (split $description " ") }}
-            {{ if gt $wordCount 100 }}
+            {{ $words := split $description " " }}
+            {{ if gt (len $words) 100 }}
                 <div id="short-description">
-                    {{ $truncated := delimit (first 100 (split $description " ")) " " }}
-                    {{ $truncated | safeHTML }}...
+                    {{ delimit (first 100 $words) " " | safeHTML }}...
                 </div>
                 <div id="full-description" class="hidden">
                     {{ $description | safeHTML }}
@@ -103,14 +102,15 @@
     {{ end }}
 
     <!-- Related Posts in Jailbreak Category -->
-    {{ $jailbreakPosts := where (where .Site.Pages "Params.categories" "intersect" (slice "Jailbreak")) "Permalink" "!=" .Permalink }}
-    {{ if $jailbreakPosts }}
+    {{ $currentCategory := "Jailbreak" }}
+    {{ $related := where (where .Site.RegularPages "Params.categories" "intersect" (slice $currentCategory)) "Permalink" "!=" .Permalink }}
+    {{ if $related }}
     <div class="app-card">
-        <h2 class="card-title">More Jailbreak Tools</h2>
+        <h2 class="card-title">More in {{ $currentCategory }}</h2>
         <div class="related-posts-grid">
-            {{ range first 6 $jailbreakPosts }}
+            {{ range first 6 $related }}
             <a href="{{ .RelPermalink }}" class="related-post">
-                <img src="{{ .Params.icon }}" alt="{{ .Title }}" class="related-post-icon">
+                <img src="{{ .Params.icon | default "/images/default-icon.png" }}" alt="{{ .Title }}" class="related-post-icon">
                 <h3 class="related-post-title">{{ .Title }}</h3>
             </a>
             {{ end }}

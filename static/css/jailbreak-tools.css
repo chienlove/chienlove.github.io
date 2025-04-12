@@ -18,7 +18,7 @@
 .card-title {
     font-size: 20px;
     font-weight: 600;
-    color: #007AFF; /* Màu xanh cho tiêu đề */
+    color: #007AFF;
     margin: 0 0 20px 0;
     padding-bottom: 12px;
     border-bottom: 1px solid #f0f0f0;
@@ -77,7 +77,7 @@
     font-size: 18px;
 }
 
-/* Description Card */
+/* Description Content */
 .description-content {
     color: #333;
     line-height: 1.7;
@@ -106,7 +106,7 @@
     transform: translateX(3px);
 }
 
-/* Details Card */
+/* Details Section */
 .details-list {
     display: grid;
     gap: 12px;
@@ -140,14 +140,14 @@
     color: #333;
 }
 
-/* Versions Card - Updated style */
+/* Other Versions */
 .version-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 10px 15px;
     margin-bottom: 8px;
-    background-color: #f5f5f7; /* Màu nền nhạt */
+    background-color: #f5f5f7;
     border-radius: 8px;
     transition: all 0.2s ease;
 }
@@ -179,15 +179,19 @@
     color: #005bb5;
 }
 
-/* Related Apps Card */
-.related-apps {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 15px;
-    margin-top: 15px;
+/* Related Posts Section */
+.related-posts-title {
+    font-size: 20px;
+    margin-bottom: 15px;
 }
 
-.related-app {
+.related-posts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 20px;
+}
+
+.related-post {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -196,22 +200,25 @@
     transition: transform 0.2s ease;
 }
 
-.related-app:hover {
+.related-post:hover {
     transform: translateY(-3px);
 }
 
-.related-app-icon {
+.related-post-icon {
     width: 60px;
     height: 60px;
     border-radius: 12px;
-    margin-bottom: 8px;
+    margin-bottom: 10px;
     border: 1px solid #f0f0f0;
+    object-fit: contain;
 }
 
-.related-app-name {
-    font-size: 13px;
+.related-post-title {
+    font-size: 14px;
     text-align: center;
-    font-weight: 500;
+    font-weight: 600;
+    margin: 0;
+    line-height: 1.4;
 }
 
 /* Footer */
@@ -223,7 +230,7 @@
     margin-top: 30px;
 }
 
-/* Responsive Design */
+/* Responsive */
 @media (max-width: 768px) {
     .app-header-card {
         flex-direction: column;
@@ -240,55 +247,7 @@
         justify-content: center;
     }
     
-    .related-apps {
+    .related-posts-grid {
         grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
     }
-}
-/* Thêm phần này vào cuối file CSS */
-/* Related Posts Section */
-.related-posts {
-    margin-top: 30px;
-}
-
-.related-posts-title {
-    font-size: 22px;
-    font-weight: 600;
-    color: #007AFF; /* Màu xanh giống tiêu đề card */
-    margin-bottom: 20px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #f0f0f0;
-}
-
-.related-posts-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 20px;
-}
-
-.related-post {
-    background: #ffffff;
-    border-radius: 12px;
-    padding: 15px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-    transition: transform 0.2s ease;
-}
-
-.related-post:hover {
-    transform: translateY(-5px);
-}
-
-.related-post-icon {
-    width: 60px;
-    height: 60px;
-    border-radius: 12px;
-    margin-bottom: 10px;
-    border: 1px solid #f0f0f0;
-}
-
-.related-post-title {
-    font-size: 15px;
-    font-weight: 600;
-    color: #333;
-    margin: 0;
-    line-height: 1.4;
 }
