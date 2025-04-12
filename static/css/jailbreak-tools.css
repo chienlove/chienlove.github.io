@@ -19,7 +19,7 @@
 .card-title {
   font-size: 20px;
   font-weight: 600;
-  color: #007AFF;
+  color: #47b8e0;
   margin: 0 0 20px 0;
   padding-bottom: 12px;
   border-bottom: 1px solid #f0f0f0;
@@ -147,27 +147,59 @@
   color: #333;
 }
 
-/* Related Apps Section */
-.related-apps-container {
-  margin-top: 25px;
+/* Other Versions List */
+.versions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.app-item {
+.version-row {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  padding: 15px;
-  margin-bottom: 15px;
-  background: #ffffff;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  border: 1px solid #eaeaea;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.version-row:last-child {
+  border-bottom: none;
+}
+
+.version-text {
+  font-size: 15px;
+  color: #333;
+}
+
+.version-download-icon {
+  color: #007AFF;
+  font-size: 18px;
+  padding: 8px;
   transition: transform 0.2s ease;
 }
 
-.app-item:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+.version-download-icon:hover {
+  transform: translateY(-2px);
+  color: #0062CC;
+}
+
+/* Related Apps List */
+.related-apps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.related-app-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.related-app-item:last-child {
+  border-bottom: none;
 }
 
 .app-link {
@@ -204,37 +236,25 @@
   margin: 0;
 }
 
-.app-meta {
-  display: flex;
-  align-items: center;
-  gap: 15px;
-}
-
-.download-btn {
-  background: #007AFF;
-  color: white;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-size: 13px;
-  text-decoration: none;
-  transition: all 0.2s ease;
-}
-
-.download-btn:hover {
-  background: #0062CC;
-}
-
-.app-version {
-  font-size: 13px;
-  color: #666;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.app-version i {
+.related-download-icon {
   color: #007AFF;
-  font-size: 12px;
+  font-size: 18px;
+  padding: 8px;
+  margin-left: 15px;
+  transition: transform 0.2s ease;
+}
+
+.related-download-icon:hover {
+  transform: translateY(-2px);
+  color: #0062CC;
+}
+
+/* Footer */
+.app-footer {
+  text-align: center;
+  padding: 20px 0;
+  color: #999;
+  font-size: 14px;
 }
 
 /* Responsive */
@@ -249,14 +269,13 @@
     margin-bottom: 20px;
   }
   
-  .app-item {
+  .related-app-item {
     flex-direction: column;
     align-items: flex-start;
   }
   
-  .app-meta {
-    width: 100%;
-    justify-content: flex-end;
+  .related-download-icon {
+    align-self: flex-end;
     margin-top: 10px;
   }
 }

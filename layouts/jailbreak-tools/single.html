@@ -76,11 +76,11 @@
   {{ if .Params.other_versions }}
   <div class="app-card">
     <h2 class="card-title">Other Versions</h2>
-    <div>
+    <div class="versions-list">
       {{ range .Params.other_versions }}
       <div class="version-row">
         <span class="version-text">{{ $.Title }} {{ .version }}</span>
-        <a href="/download?appId={{ .appId }}" class="download-icon">
+        <a href="/download?appId={{ .appId }}" class="version-download-icon">
           <i class="fas fa-download"></i>
         </a>
       </div>
@@ -95,9 +95,9 @@
   {{ if $related }}
   <div class="app-card">
     <h2 class="card-title">More Jailbreak Tools</h2>
-    <div class="related-apps-container">
+    <div class="related-apps-list">
       {{ range $related }}
-      <div class="app-item">
+      <div class="related-app-item">
         <a href="{{ .Permalink }}" class="app-link">
           <img src="{{ .Params.icon | default "/images/default-icon.png" }}" alt="{{ .Title }}" class="app-icon">
           <div class="app-item-content">
@@ -105,10 +105,9 @@
             <p class="app-developer">{{ .Params.developer | default "Unknown developer" }}</p>
           </div>
         </a>
-        <div class="app-meta">
-          <a href="/download?appId={{ .Params.main_download.appId }}" class="download-btn">Tải</a>
-          <span class="app-version"><i class="fas fa-arrow-up"></i> {{ .Params.main_download.version }}</span>
-        </div>
+        <a href="/download?appId={{ .Params.main_download.appId }}" class="related-download-icon">
+          <i class="fas fa-download"></i>
+        </a>
       </div>
       {{ end }}
     </div>
