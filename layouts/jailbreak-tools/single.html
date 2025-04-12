@@ -29,7 +29,7 @@
       {{ $description := .Params.description | markdownify | plainify }}
       {{ $words := split $description " " }}
       
-      {{ if gt (len $words) 60 }}
+      {{ if gt (len $words) 100 }}
         <div id="short-description">
           {{ range first 100 $words }}{{ . }} {{ end }}...
         </div>
@@ -94,47 +94,49 @@
   {{ $related := where (where .Site.RegularPages "Type" "jailbreak-tools") "File.Path" "!=" $currentPage.File.Path }}
   {{ if $related }}
     {{ $paginator := .Paginate $related 6 }}
-    <div class="app-card">
-      <h2 class="card-title">More Jailbreak Tools</h2>
-      <div class="related-apps-container">
-        {{ range $paginator.Pages }}
-        <div class="related-app-item">
-          <a href="{{ .Permalink }}" class="related-app-link">
-            <img src="{{ .Params.icon | default "/images/default-icon.png" }}" alt="{{ .Title }}" class="related-app-icon">
-            <div class="related-app-content">
-              <h3 class="related-app-title">{{ .Title }}</h3>
-              <p class="related-app-developer">{{ .Params.developer | default "Unknown developer" }}</p>
-            </div>
-          </a>
-          <div class="related-app-meta">
-            <span class="related-app-version">{{ .Params.main_download.version }}</span>
-            <a href="{{ .Permalink }}" class="related-app-download">
-              <i class="fas fa-external-link-alt"></i>
+    {{ if $paginator }}
+      <div class="app-card">
+        <h2 class="card-title">More Jailbreak Tools</h2>
+        <div class="related-apps-container">
+          {{ range $paginator.Pages }}
+          <div class="related-app-item">
+            <a href="{{ .Permalink }}" class="related-app-link">
+              <img src="{{ .Params.icon | default "/images/default-icon.png" }}" alt="{{ .Title }}" class="related-app-icon">
+              <div class="related-app-content">
+                <h3 class="related-app-title">{{ .Title }}</h3>
+                <p class="related-app-developer">{{ .Params.developer | default "Unknown developer" }}</p>
+              </div>
             </a>
+            <div class="related-app-meta">
+              <span class="related-app-version">{{ with .Params.main_download }}{{ .version }}{{ else }}N/A{{ end }}</span>
+              <a href="{{ .Permalink }}" class="related-app-download">
+                <i class="fas fa-external-link-alt"></i>
+              </a>
+            </div>
           </div>
+          {{ end }}
         </div>
+
+        <!-- Pagination -->
+        {{ if gt $paginator.TotalPages 1 }}
+        <nav class="pagination">
+          {{ if $paginator.HasPrev }}
+            <a href="{{ $paginator.Prev.URL }}" class="page-link">&laquo; Prev</a>
+          {{ end }}
+          
+          {{ range $paginator.Pagers }}
+            <a href="{{ .URL }}" class="page-link{{ if eq . $paginator }} active{{ end }}">
+              {{ .PageNumber }}
+            </a>
+          {{ end }}
+
+          {{ if $paginator.HasNext }}
+            <a href="{{ $paginator.Next.URL }}" class="page-link">Next &raquo;</a>
+          {{ end }}
+        </nav>
         {{ end }}
       </div>
-
-      <!-- Pagination -->
-      {{ if gt $paginator.TotalPages 1 }}
-      <nav class="pagination">
-        {{ if $paginator.HasPrev }}
-          <a href="{{ $paginator.Prev.URL }}" class="page-link">&laquo; Prev</a>
-        {{ end }}
-        
-        {{ range $paginator.Pagers }}
-          <a href="{{ .URL }}" class="page-link{{ if eq . $paginator }} active{{ end }}">
-            {{ .PageNumber }}
-          </a>
-        {{ end }}
-
-        {{ if $paginator.HasNext }}
-          <a href="{{ $paginator.Next.URL }}" class="page-link">Next &raquo;</a>
-        {{ end }}
-      </nav>
-      {{ end }}
-    </div>
+    {{ end }}
   {{ end }}
 
 <script>
