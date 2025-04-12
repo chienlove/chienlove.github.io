@@ -19,7 +19,7 @@
 .card-title {
   font-size: 20px;
   font-weight: 600;
-  color: #007AFF;
+  color: #47b8e0;
   margin: 0 0 20px 0;
   padding-bottom: 12px;
   border-bottom: 1px solid #f0f0f0;
@@ -268,12 +268,26 @@
   text-overflow: ellipsis;
 }
 
+.app-meta-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .app-developer {
   font-size: 13px;
   color: #666;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.app-version {
+  font-size: 12px;
+  color: #007AFF;
+  background: #e6f0ff;
+  padding: 2px 8px;
+  border-radius: 8px;
 }
 
 .related-download-icon {
@@ -290,25 +304,6 @@
   color: #0062CC;
 }
 
-/* Footer */
-.app-footer {
-  text-align: center;
-  padding: 20px 0;
-  color: #999;
-  font-size: 14px;
-  display: flex;
-  justify-content: space-between;
-}
-
-.footer-link {
-  color: #999;
-  text-decoration: none;
-  transition: color 0.2s ease;
-}
-
-.footer-link:hover {
-  color: #007AFF;
-}
 
 /* Responsive */
 @media (max-width: 768px) {

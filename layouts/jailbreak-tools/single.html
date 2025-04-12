@@ -100,29 +100,32 @@
   </div>
 
   <!-- Related Apps Section -->
-  {{ $currentPage := . }}
-  {{ $related := where (where .Site.RegularPages "Type" "jailbreak-tools") "File.Path" "!=" $currentPage.File.Path }}
-  {{ if $related }}
-  <div class="app-card">
-    <h2 class="card-title">More Jailbreak Tools</h2>
-    <div class="related-apps-list">
-      {{ range $related }}
-      <div class="related-app-item">
-        <a href="{{ .Permalink }}" class="app-link">
-          <img src="{{ .Params.icon | default "/images/default-icon.png" }}" alt="{{ .Title }}" class="app-icon-small">
-          <div class="app-item-content">
-            <h3 class="app-title">{{ .Title }}</h3>
+{{ $currentPage := . }}
+{{ $related := where (where .Site.RegularPages "Type" "jailbreak-tools") "File.Path" "!=" $currentPage.File.Path }}
+{{ if $related }}
+<div class="app-card">
+  <h2 class="card-title">More Jailbreak Tools</h2>
+  <div class="related-apps-list">
+    {{ range $related }}
+    <div class="related-app-item">
+      <a href="{{ .Permalink }}" class="app-link">
+        <img src="{{ .Params.icon | default "/images/default-icon.png" }}" alt="{{ .Title }}" class="app-icon-small">
+        <div class="app-item-content">
+          <h3 class="app-title">{{ .Title }}</h3>
+          <div class="app-meta-info">
             <span class="app-developer">{{ .Params.developer | default "Unknown developer" }}</span>
+            <span class="app-version">v{{ .Params.main_download.version }}</span>
           </div>
-        </a>
-        <a href="/download?appId={{ .Params.main_download.appId }}" class="related-download-icon">
-          <i class="fas fa-download"></i>
-        </a>
-      </div>
-      {{ end }}
+        </div>
+      </a>
+      <a href="/download?appId={{ .Params.main_download.appId }}" class="related-download-icon">
+        <i class="fas fa-download"></i>
+      </a>
     </div>
+    {{ end }}
   </div>
-  {{ end }}
+</div>
+{{ end }}
 
   <!-- Footer -->
   <div class="app-footer">
