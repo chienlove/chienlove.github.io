@@ -20,7 +20,7 @@ jobs:
   plist-updater:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-
+    
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -28,31 +28,29 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Cache Node modules
-        uses: actions/cache@v3
-        id: cache
-        with:
-          path: |
-            ~/.npm
-            node_modules
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '18'
           cache: 'npm'
+
+      - name: Auto-generate package-lock.json (if missing)
+        run: |
+          if [ ! -f package-lock.json ]; then
+            echo "Generating package-lock.json..."
+            npm init -y --scope=temp-pkg 2>/dev/null || true
+            npm install axios@1.6.7 plist@3.1.0 crypto-js@4.1.1 dotenv@16.3.1 --no-audit --no-fund --package-lock-only
+            mv package-lock.json ../
+            cd ..
+            rm -rf temp-pkg/
+          else
+            echo "package-lock.json already exists"
+          fi
 
       - name: Install dependencies
         run: |
           sudo chown -R $USER:$USER ~/.npm
-          if [ -f package-lock.json ]; then
-            npm ci --no-audit
-          else
-            npm install
-          fi
+          npm ci --no-audit --no-fund || npm install --no-audit --no-fund
 
       - name: Run Plist Updater
         id: update
@@ -77,11 +75,9 @@ jobs:
         uses: nwtgck/actions-netlify@v1.2
         with:
           publish-dir: './'
-          production-branch: 'main'
+          production-branch: 'master'
           github-token: ${{ secrets.GITHUB_TOKEN }}
           netlify-auth-token: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          enable-commit-comment: false
-          enable-pull-request-comment: false
 
       - name: Send Telegram notification
         if: always()
@@ -91,17 +87,19 @@ jobs:
           token: ${{ secrets.TELEGRAM_TOKEN }}
           message: |
             *Plist Update Report*
-            Status: ${{ job.status }}
-            Changes: ${{ steps.update.outputs.changed }} files
-            Errors: ${{ steps.update.outputs.errors }}
-            Summary: ${{ steps.update.outputs.summary }}
+            ▫️ *Status*: ${{ job.status }}
+            ▫️ *Changes*: ${{ steps.update.outputs.changed }} files
+            ▫️ *Errors*: ${{ steps.update.outputs.errors }}
+            ▫️ *Summary*: ${{ steps.update.outputs.summary }}
             
-            [View Job](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            📊 [View Job](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
           parse_mode: markdown
 
-      - name: Upload log artifact
+      - name: Upload logs if failed
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: plist-updater-logs
-          path: output.log
+          path: |
+            output.log
+            npm-debug.log
