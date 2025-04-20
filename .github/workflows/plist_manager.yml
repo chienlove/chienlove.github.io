@@ -1,8 +1,8 @@
-name: Advanced Plist Manager
+name: Ultimate Plist Updater
 
 on:
   schedule:
-    - cron: '*/30 * * * *' # Chạy mỗi 30 phút
+    - cron: '*/30 * * * *'
   workflow_dispatch:
     inputs:
       force:
@@ -19,14 +19,13 @@ env:
 jobs:
   plist-updater:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          persist-credentials: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -34,23 +33,42 @@ jobs:
           node-version: '18'
           cache: 'npm'
 
-      - name: Auto-generate package-lock.json (if missing)
+      - name: Create package.json if missing
         run: |
-          if [ ! -f package-lock.json ]; then
-            echo "Generating package-lock.json..."
-            npm init -y --scope=temp-pkg 2>/dev/null || true
-            npm install axios@1.6.7 plist@3.1.0 crypto-js@4.1.1 dotenv@16.3.1 --no-audit --no-fund --package-lock-only
-            mv package-lock.json ../
-            cd ..
-            rm -rf temp-pkg/
-          else
-            echo "package-lock.json already exists"
+          if [ ! -f package.json ]; then
+            echo "{
+              \"name\": \"plist-updater\",
+              \"version\": \"1.0.0\",
+              \"dependencies\": {
+                \"axios\": \"^1.6.7\",
+                \"plist\": \"^3.1.0\",
+                \"crypto-js\": \"^4.1.1\",
+                \"dotenv\": \"^16.3.1\"
+              }
+            }" > package.json
           fi
 
-      - name: Install dependencies
+      - name: Generate reliable package-lock.json
         run: |
+          # Đảm bảo quyền truy cập
           sudo chown -R $USER:$USER ~/.npm
-          npm ci --no-audit --no-fund || npm install --no-audit --no-fund
+          sudo chown -R $USER:$USER .
+          
+          # Tạo lock file cứng
+          npm install --package-lock-only --no-audit --no-fund --loglevel=error
+          npm ci --no-audit --no-fund || {
+            echo "Fallback to manual install..."
+            rm -rf node_modules/
+            npm install --no-audit --no-fund
+          }
+
+      - name: Verify dependencies
+        run: |
+          ls -la
+          echo "===== package-lock.json content ====="
+          head -n 20 package-lock.json || echo "No package-lock.json found"
+          echo "===== node_modules ====="
+          ls node_modules/ || echo "No node_modules"
 
       - name: Run Plist Updater
         id: update
@@ -64,20 +82,16 @@ jobs:
       - name: Commit changes
         if: steps.update.outputs.changed != '0'
         run: |
-          git config --global user.name "GitHub Plist Bot"
-          git config --global user.email "github-actions@users.noreply.github.com"
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
           git add .
-          git diff --cached --quiet || git commit -m "🔄 Auto-update plist files [skip ci]"
+          git diff --cached --quiet || git commit -m "🔁 Auto-update plist files [skip ci]"
           git push
 
       - name: Trigger Netlify Build
         if: steps.update.outputs.changed != '0'
-        uses: nwtgck/actions-netlify@v1.2
-        with:
-          publish-dir: './'
-          production-branch: 'master'
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          netlify-auth-token: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        run: |
+          curl -X POST -d {} $NETLIFY_BUILD_HOOK
 
       - name: Send Telegram notification
         if: always()
@@ -86,20 +100,25 @@ jobs:
           to: ${{ secrets.TELEGRAM_CHAT_ID }}
           token: ${{ secrets.TELEGRAM_TOKEN }}
           message: |
-            *Plist Update Report*
+            *🛠️ Plist Update Report*
             ▫️ *Status*: ${{ job.status }}
             ▫️ *Changes*: ${{ steps.update.outputs.changed }} files
             ▫️ *Errors*: ${{ steps.update.outputs.errors }}
-            ▫️ *Summary*: ${{ steps.update.outputs.summary }}
             
-            📊 [View Job](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            📦 *Deps Status*:
+            - package-lock.json: $(if [ -f package-lock.json ]; then echo "✅ Present"; else echo "❌ Missing"; fi)
+            - node_modules: $(if [ -d node_modules ]; then echo "✅ Installed"; else echo "❌ Missing"; fi)
+            
+            🔍 [View Job](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
           parse_mode: markdown
 
-      - name: Upload logs if failed
-        if: failure()
+      - name: Upload debug info
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: plist-updater-logs
+          name: debug-info
           path: |
             output.log
+            package.json
+            package-lock.json
             npm-debug.log
