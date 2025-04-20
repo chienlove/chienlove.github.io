@@ -7,9 +7,6 @@
   directory = "netlify/functions"
   included_files = ["netlify/functions/bin/**"]
   external_node_modules = ["@sparticuz/chromium", "puppeteer-core"]
-  
-[functions.update-plists]
-  schedule = "@daily"  # Chạy một lần mỗi ngày
 
 [build.environment]
   NODE_VERSION = "16"
