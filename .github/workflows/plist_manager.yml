@@ -2,7 +2,7 @@ name: Ultimate Plist Updater
 
 on:
   schedule:
-    - cron: '0 */6 * * *' # Chạy mỗi 6 giờ
+    - cron: '0 */6 * * *'
   workflow_dispatch:
     inputs:
       force:
@@ -21,41 +21,23 @@ jobs:
     timeout-minutes: 25
 
     steps:
-      # Bước 1: Checkout với đầy đủ history và quyền ghi
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      # Bước 2: Thiết lập Node.js và cache
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'npm'
+          # Bỏ dòng `cache: 'npm'` để tránh lỗi khi không có lock file
 
-      # Bước 3: Cài dependencies mà không cần package-lock.json
       - name: Install Dependencies Without Lockfile
         run: |
-          # Tạo package.json đơn giản nếu chưa có
-          if [ ! -f package.json ]; then
-            echo '{
-              "name": "plist-updater",
-              "version": "1.0.0",
-              "dependencies": {
-                "axios": "1.6.7",
-                "plist": "3.1.0",
-                "crypto-js": "4.1.1"
-              }
-            }' > package.json
-          fi
-
-          # Cài đặt mà không tạo file lock
           npm install --no-package-lock --no-audit --no-fund
-          npm list --depth=0
+          npm list --depth=0 || true
 
-      # Bước 4: Chạy script plist updater
       - name: Run Plist Updater
         id: updater
         run: |
@@ -66,7 +48,6 @@ jobs:
           echo "failed=$(grep -c '❌ Lỗi' output.log)" >> $GITHUB_OUTPUT
           echo "summary=$(grep '✨\|🔄' output.log | tail -n 1)" >> $GITHUB_OUTPUT
 
-      # Bước 5: Commit & Push nếu có thay đổi
       - name: Commit Changes
         if: steps.updater.outputs.changed != '0'
         run: |
@@ -76,9 +57,7 @@ jobs:
           git diff --cached --quiet || git commit -m "🔄 Auto-update plist files [skip ci]"
           git pull --rebase
           git push
-          echo "::notice:: Đã push ${{ steps.updater.outputs.changed }} thay đổi"
 
-      # Bước 6: Gửi thông báo Telegram
       - name: Send Telegram Notification
         if: always()
         uses: appleboy/telegram-action@master
@@ -93,14 +72,9 @@ jobs:
             ▫️ *Lỗi*: ${{ steps.updater.outputs.failed || 0 }} file
             ▫️ *Tổng kết*: ${{ steps.updater.outputs.summary || 'Không có thay đổi' }}
             
-            📝 *Chi tiết*:
-            - Link IPA: ✅ Đã cập nhật
-            - Bundle ID: ✅ Đã cập nhật
-            
             🔗 [Xem job](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
           parse_mode: markdown
 
-      # Bước 7: Upload log khi có lỗi
       - name: Upload Logs
         if: failure()
         uses: actions/upload-artifact@v4
