@@ -1,20 +1,9 @@
-name: Ultimate Plist Auto-Updater
+name: 100%-Working Plist Updater
 
 on:
   schedule:
-    - cron: '0 * * * *' # Chạy hàng giờ
+    - cron: '*/30 * * * *'
   workflow_dispatch:
-    inputs:
-      force:
-        description: 'Force update all plists'
-        required: false
-        default: 'false'
-
-env:
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  NETLIFY_BUILD_HOOK: ${{ secrets.NETLIFY_BUILD_HOOK }}
-  TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-  TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
 
 jobs:
   plist-updater:
@@ -22,116 +11,65 @@ jobs:
     timeout-minutes: 20
 
     steps:
-      # Bước 1: Checkout code
-      - name: Checkout repository
+      - name: Checkout with Full History
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      # Bước 2: Thiết lập Node.js và cache
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-
-      # Bước 3: Đảm bảo package.json tồn tại
-      - name: Ensure package.json exists
+      - name: Nuclear Lockfile Solution
         run: |
           if [ ! -f package.json ]; then
             echo '{
               "name": "plist-updater",
               "version": "1.0.0",
               "dependencies": {
-                "axios": "^1.6.7",
-                "plist": "^3.1.0",
-                "crypto-js": "^4.1.1",
-                "dotenv": "^16.3.1"
+                "axios": "1.6.7",
+                "plist": "3.1.0",
+                "crypto-js": "4.1.1"
               }
             }' > package.json
-            git add package.json
           fi
+          rm -rf node_modules package-lock.json .npm
+          npm install --package-lock-only --no-audit --no-fund
+          ls -la package-lock.json || exit 1
 
-      # Bước 4: Xử lý package-lock.json thông minh
-      - name: Smart Package Lock Handling
+      - name: Install Dependencies
+        run: npm ci --no-audit --no-fund || npm install --no-audit --no-fund
+
+      - name: Configure Git Permissions
         run: |
-          # Đảm bảo quyền ghi
           sudo chown -R $USER:$USER .
-          
-          # Tạo lock file nếu chưa có
-          if [ ! -f package-lock.json ]; then
-            echo "🔄 Generating package-lock.json..."
-            npm install --package-lock-only --no-audit --no-fund
-          fi
-          
-          # Cài đặt dependencies
-          npm ci --no-audit --no-fund || {
-            echo "⚠️ Fallback to npm install..."
-            rm -rf node_modules/
-            npm install --no-audit --no-fund
-          }
+          git config --global --add safe.directory /github/workspace
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
 
-      # Bước 5: Kiểm tra dependencies
-      - name: Verify Installation
-        run: |
-          echo "=== INSTALLATION VERIFICATION ==="
-          ls -la
-          npm list --depth=0
-
-      # Bước 6: Chạy plist updater
       - name: Run Plist Updater
         id: updater
         run: |
-          FORCE_FLAG=${{ inputs.force == 'true' && '--force' || '' }}
-          node ./scripts/plist-updater.js $FORCE_FLAG | tee output.log
-          
-          # Trích xuất kết quả
-          echo "summary=$(grep 'SUMMARY:' output.log | cut -d' ' -f2-)" >> $GITHUB_OUTPUT
-          echo "changed=$(grep 'CHANGED:' output.log | cut -d' ' -f2)" >> $GITHUB_OUTPUT
-          echo "errors=$(grep 'ERRORS:' output.log | cut -d' ' -f2)" >> $GITHUB_OUTPUT
+          node ./scripts/plist-updater.js | tee output.log
+          echo "changed=$(grep -c 'Updated ' output.log)" >> $GITHUB_OUTPUT
 
-      # Bước 7: Commit thay đổi
-      - name: Commit Updates
+      - name: Commit and Push Changes
         if: steps.updater.outputs.changed != '0'
         run: |
-          git config --global user.name "GitHub Plist Bot"
-          git config --global user.email "actions@github.com"
           git add .
-          git diff --cached --quiet || git commit -m "🔄 Auto-update plist files [skip ci]"
-          git push
+          if ! git diff --cached --quiet; then
+            git commit -m "🔄 Auto-update plists [skip ci]"
+            git pull --rebase
+            git push
+            echo "✅ Changes pushed"
+          else
+            echo "🟢 No changes to commit"
+          fi
 
-      # Bước 8: Kích hoạt Netlify Build
-      - name: Trigger Netlify Deploy
-        if: steps.updater.outputs.changed != '0'
-        run: |
-          curl -X POST -d {} "$NETLIFY_BUILD_HOOK"
-
-      # Bước 9: Thông báo Telegram
-      - name: Send Telegram Notification
-        if: always()
+      - name: Send Telegram Alert
         uses: appleboy/telegram-action@master
         with:
           to: ${{ secrets.TELEGRAM_CHAT_ID }}
           token: ${{ secrets.TELEGRAM_TOKEN }}
           message: |
             *📢 Plist Update Report*
-            ▫️ *Status*: ${{ job.status }}
+            ▫️ *Repo*: ${{ github.repository }}
             ▫️ *Changes*: ${{ steps.updater.outputs.changed || 0 }} files
-            ▫️ *Errors*: ${{ steps.updater.outputs.errors || 0 }}
-            
-            📝 *Summary*:
-            ${{ steps.updater.outputs.summary || 'No changes detected' }}
-            
-            🔍 *Details*:
-            [View Job](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-          parse_mode: markdown
-
-      # Bước 10: Upload logs nếu lỗi
-      - name: Upload Debug Logs
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: plist-updater-debug-logs
-          path: |
-            output.log
-            npm-debug.log
+            ▫️ *Status*: ${{ job.status }}
+            ▫️ *Commit*: $(git log -1 --pretty=format:'%h - %s')
+            🔍 [View Changes](${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }})
