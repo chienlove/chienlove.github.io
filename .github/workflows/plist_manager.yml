@@ -2,13 +2,8 @@ name: Ultimate Plist Updater
 
 on:
   schedule:
-    - cron: '0 */6 * * *'
+    - cron: '0 */6 * * *' # Chạy mỗi 15 phút
   workflow_dispatch:
-    inputs:
-      force:
-        description: 'Force update all plists'
-        required: false
-        default: 'false'
 
 env:
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -18,25 +13,22 @@ env:
 jobs:
   update-plists:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 20
 
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          # Bỏ dòng `cache: 'npm'` để tránh lỗi khi không có lock file
 
       - name: Install Dependencies Without Lockfile
         run: |
           npm install --no-package-lock --no-audit --no-fund
-          npm list --depth=0 || true
 
       - name: Run Plist Updater
         id: updater
@@ -58,24 +50,23 @@ jobs:
           git pull --rebase
           git push
 
-      - name: Send Telegram Notification
-        if: always()
+      - name: Send Telegram Notification (only if updated)
+        if: steps.updater.outputs.changed != '0'
         uses: appleboy/telegram-action@master
         with:
           to: ${{ secrets.TELEGRAM_CHAT_ID }}
           token: ${{ secrets.TELEGRAM_TOKEN }}
           message: |
-            *📢 Báo cáo cập nhật Plist*
+            *📢 Đã cập nhật Plist*
             ▫️ *Repo*: ${{ github.repository }}
-            ▫️ *Trạng thái*: ${{ job.status }}
-            ▫️ *Đã cập nhật*: ${{ steps.updater.outputs.changed || 0 }} file
+            ▫️ *Cập nhật thành công*: ${{ steps.updater.outputs.changed || 0 }} file
             ▫️ *Lỗi*: ${{ steps.updater.outputs.failed || 0 }} file
-            ▫️ *Tổng kết*: ${{ steps.updater.outputs.summary || 'Không có thay đổi' }}
+            ▫️ *Tổng kết*: ${{ steps.updater.outputs.summary || 'Không rõ' }}
             
-            🔗 [Xem job](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            🔗 [Xem chi tiết](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
           parse_mode: markdown
 
-      - name: Upload Logs
+      - name: Upload Logs (chỉ khi lỗi)
         if: failure()
         uses: actions/upload-artifact@v4
         with:
