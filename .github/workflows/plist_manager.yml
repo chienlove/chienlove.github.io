@@ -35,10 +35,10 @@ jobs:
           node-version: '18'
           cache: 'npm'
 
-      # Bước 3: Xử lý dependencies không cần package-lock
-      - name: Smart Dependency Installation
+      # Bước 3: Cài dependencies mà không cần package-lock.json
+      - name: Install Dependencies Without Lockfile
         run: |
-          # Tạo package.json tối giản nếu thiếu
+          # Tạo package.json đơn giản nếu chưa có
           if [ ! -f package.json ]; then
             echo '{
               "name": "plist-updater",
@@ -50,24 +50,23 @@ jobs:
               }
             }' > package.json
           fi
-          
-          # Clean install không cần lockfile
+
+          # Cài đặt mà không tạo file lock
           npm install --no-package-lock --no-audit --no-fund
           npm list --depth=0
 
-      # Bước 4: Chạy plist updater
+      # Bước 4: Chạy script plist updater
       - name: Run Plist Updater
         id: updater
         run: |
-          set -e # Dừng ngay nếu có lỗi
+          set -e
           node ./scripts/plist-updater.js | tee output.log
-          
-          # Trích xuất kết quả
+
           echo "changed=$(grep -c '✅ Đã cập nhật' output.log)" >> $GITHUB_OUTPUT
           echo "failed=$(grep -c '❌ Lỗi' output.log)" >> $GITHUB_OUTPUT
           echo "summary=$(grep '✨\|🔄' output.log | tail -n 1)" >> $GITHUB_OUTPUT
 
-      # Bước 5: Commit và push thay đổi
+      # Bước 5: Commit & Push nếu có thay đổi
       - name: Commit Changes
         if: steps.updater.outputs.changed != '0'
         run: |
@@ -79,7 +78,7 @@ jobs:
           git push
           echo "::notice:: Đã push ${{ steps.updater.outputs.changed }} thay đổi"
 
-      # Bước 6: Thông báo Telegram chi tiết
+      # Bước 6: Gửi thông báo Telegram
       - name: Send Telegram Notification
         if: always()
         uses: appleboy/telegram-action@master
@@ -101,7 +100,7 @@ jobs:
             🔗 [Xem job](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
           parse_mode: markdown
 
-      # Bước 7: Upload log khi lỗi
+      # Bước 7: Upload log khi có lỗi
       - name: Upload Logs
         if: failure()
         uses: actions/upload-artifact@v4
