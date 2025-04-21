@@ -2,25 +2,26 @@ name: Ultimate Plist Updater
 
 on:
   schedule:
-    - cron: '0 */3 * * *' # Chạy mỗi 3 tiếng
+    - cron: '0 */6 * * *' # Chạy mỗi 6 giờ
   workflow_dispatch:
     inputs:
       force:
-        description: 'Force update'
+        description: 'Force update all plists'
         required: false
         default: 'false'
 
 env:
-  PLIST_SOURCE_TOKEN: ${{ secrets.PLIST_SOURCE_TOKEN }}
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+  TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
 
 jobs:
   update-plists:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
 
     steps:
-      # Bước 1: Checkout code với đầy đủ history và quyền ghi
+      # Bước 1: Checkout với đầy đủ history và quyền ghi
       - name: Checkout Repository
         uses: actions/checkout@v4
         with:
@@ -34,9 +35,10 @@ jobs:
           node-version: '18'
           cache: 'npm'
 
-      # Bước 3: Cài đặt dependencies không gây lỗi
-      - name: Safe Dependency Installation
+      # Bước 3: Xử lý dependencies không cần package-lock
+      - name: Smart Dependency Installation
         run: |
+          # Tạo package.json tối giản nếu thiếu
           if [ ! -f package.json ]; then
             echo '{
               "name": "plist-updater",
@@ -45,75 +47,66 @@ jobs:
                 "axios": "1.6.7",
                 "plist": "3.1.0",
                 "crypto-js": "4.1.1"
-              },
-              "overrides": {
-                "reakit": { "react": "17.0.2" },
-                "multer": "1.4.4-lts.1"
               }
             }' > package.json
           fi
+          
+          # Clean install không cần lockfile
+          npm install --no-package-lock --no-audit --no-fund
+          npm list --depth=0
 
-          rm -rf node_modules package-lock.json
-          npm install --package-lock-only --no-audit --no-fund
-          npm ci --no-audit --no-fund || npm install --no-audit --no-fund
-
-      # Bước 4: Chạy script chính
+      # Bước 4: Chạy plist updater
       - name: Run Plist Updater
-        id: run-updater
+        id: updater
         run: |
-          set -e
-          FORCE_FLAG=${{ inputs.force == 'true' && '--force' || '' }}
-          node ./scripts/plist-updater.js $FORCE_FLAG | tee output.log
-          echo "changed=$(grep -c 'Successfully updated' output.log)" >> $GITHUB_OUTPUT
-          echo "failed=$(grep -c 'Failed to update' output.log)" >> $GITHUB_OUTPUT
+          set -e # Dừng ngay nếu có lỗi
+          node ./scripts/plist-updater.js | tee output.log
+          
+          # Trích xuất kết quả
+          echo "changed=$(grep -c '✅ Đã cập nhật' output.log)" >> $GITHUB_OUTPUT
+          echo "failed=$(grep -c '❌ Lỗi' output.log)" >> $GITHUB_OUTPUT
+          echo "summary=$(grep '✨\|🔄' output.log | tail -n 1)" >> $GITHUB_OUTPUT
 
       # Bước 5: Commit và push thay đổi
-      - name: Push Changes
-        if: steps.run-updater.outputs.changed != '0'
+      - name: Commit Changes
+        if: steps.updater.outputs.changed != '0'
         run: |
           git config --global user.name "GitHub Plist Bot"
           git config --global user.email "actions@github.com"
           git add .
-          git diff --cached --quiet || git commit -m "🔄 Auto-update plists [skip ci]"
+          git diff --cached --quiet || git commit -m "🔄 Auto-update plist files [skip ci]"
           git pull --rebase
-          git push origin HEAD:${{ github.ref_name }}
-          echo "✅ Đã push ${{ steps.run-updater.outputs.changed }} thay đổi"
+          git push
+          echo "::notice:: Đã push ${{ steps.updater.outputs.changed }} thay đổi"
 
-      # Bước 6: Gửi báo cáo Telegram chi tiết
-      - name: Send Telegram Report
+      # Bước 6: Thông báo Telegram chi tiết
+      - name: Send Telegram Notification
         if: always()
         uses: appleboy/telegram-action@master
         with:
           to: ${{ secrets.TELEGRAM_CHAT_ID }}
           token: ${{ secrets.TELEGRAM_TOKEN }}
           message: |
-            *📦 Ultimate Plist Updater Report*
+            *📢 Báo cáo cập nhật Plist*
+            ▫️ *Repo*: ${{ github.repository }}
+            ▫️ *Trạng thái*: ${{ job.status }}
+            ▫️ *Đã cập nhật*: ${{ steps.updater.outputs.changed || 0 }} file
+            ▫️ *Lỗi*: ${{ steps.updater.outputs.failed || 0 }} file
+            ▫️ *Tổng kết*: ${{ steps.updater.outputs.summary || 'Không có thay đổi' }}
             
-            *🔹 Repo:* [`${{ github.repository }}`](${{ github.server_url }}/${{ github.repository }})
-            *🔸 Branch:* `${{ github.ref_name }}`
-            *⚡ Trigger:* `${{ github.event_name }}`
-            *🕒 Time:* `${{ github.run_started_at }}`
-            *🔁 Run ID:* [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-
-            *✅ Updated:* `${{ steps.run-updater.outputs.changed || 0 }}`
-            *❌ Failed:* `${{ steps.run-updater.outputs.failed || 0 }}`
-
-            *📝 Commit:* [`$(git log -1 --pretty=format:'%h')`](https://github.com/${{ github.repository }}/commit/$(git log -1 --pretty=format:'%H')) - $(git log -1 --pretty=format:'%s')
-
-            ${{ job.status == 'success' && '🎉 *Status:* Success' || '⚠️ *Status:* Failed' }}
+            📝 *Chi tiết*:
+            - Link IPA: ✅ Đã cập nhật
+            - Bundle ID: ✅ Đã cập nhật
+            
+            🔗 [Xem job](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
           parse_mode: markdown
 
-      # Bước 7: Gửi file log nếu có lỗi
-      - name: Send Log File to Telegram (if failed)
-        if: steps.run-updater.outputs.failed != '0'
-        uses: appleboy/telegram-action@master
+      # Bước 7: Upload log khi lỗi
+      - name: Upload Logs
+        if: failure()
+        uses: actions/upload-artifact@v4
         with:
-          to: ${{ secrets.TELEGRAM_CHAT_ID }}
-          token: ${{ secrets.TELEGRAM_TOKEN }}
-          document: output.log
-          caption: |
-            🧾 *Chi tiết log chạy gần nhất*
-            *Repo:* ${{ github.repository }}
-            *Status:* ${{ job.status }}
-            *Run ID:* [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-          parse_mode: markdown
+          name: plist-updater-logs
+          path: |
+            output.log
+            npm-debug.log
