@@ -1,11 +1,16 @@
 #!/usr/bin/env node
 const fs = require('fs');
-const path = require('path');
-const { processAllPlists } = require('./plist-utils');
-const { updateHashFile, getCurrentHashes } = require('./github-api');
+const axios = require('axios');
+const plist = require('plist');
+const crypto = require('crypto');
 
-// Cấu hình
+// Config - Giữ nguyên như file gốc
 const CONFIG = {
+  GITHUB_TOKEN: process.env.GITHUB_TOKEN,
+  REPO_OWNER: 'chienlove',
+  REPO_NAME: 'chienlove.github.io',
+  BRANCH: 'master',
+  HASH_FILE: 'static/plist_hashes.json',
   PLIST_MAPPINGS: {
     'https://file.jb-apps.me/plist/Unc0ver.plist': 'static/plist/unc0ver.plist',
     'https://file.jb-apps.me/plist/DopamineJB.plist': 'static/plist/dopamine.plist',
@@ -18,41 +23,153 @@ const CONFIG = {
     'https://file.jb-apps.me/plist/ChimeraJB.plist': 'static/plist/chimera.plist',
     'https://file.jb-apps.me/plist/OdysseyJB.plist': 'static/plist/odyssey.plist',
     'https://file.jb-apps.me/plist/Freya.plist': 'static/plist/freya.plist'
-  },
-  HASH_FILE: 'static/plist_hashes.json',
-  GITHUB_REPO: 'chienlove/chienlove.github.io',
-  GITHUB_BRANCH: 'main'
+  }
 };
 
+// Khởi tạo Axios
+const githubApi = axios.create({
+  baseURL: 'https://api.github.com',
+  timeout: 5000,
+  headers: {
+    'Authorization': `Bearer ${CONFIG.GITHUB_TOKEN}`,
+    'Accept': 'application/vnd.github.v3+json'
+  }
+});
+
+const externalApi = axios.create({ timeout: 5000 });
+
+// Hàm chính
 async function main() {
-  const forceUpdate = process.argv.includes('--force');
-  const startTime = new Date();
-  
   try {
+    console.log('🚀 Bắt đầu cập nhật plist...');
     const currentHashes = await getCurrentHashes();
-    const { results, updatedHashes } = await processAllPlists(CONFIG.PLIST_MAPPINGS, currentHashes, forceUpdate);
-    
-    if (Object.keys(updatedHashes).length > 0) {
-      await updateHashFile(updatedHashes);
+    let updatedHashes = { ...currentHashes };
+    let updatesPerformed = false;
+
+    // Xử lý tuần tự từng plist
+    for (const [sourceUrl, targetPath] of Object.entries(CONFIG.PLIST_MAPPINGS)) {
+      const result = await processPlist(sourceUrl, targetPath, currentHashes);
+      if (result.updated) {
+        updatedHashes[targetPath] = result.hash;
+        updatesPerformed = true;
+      }
+      await delay(500); // Đợi giữa các request
     }
 
-    printSummary(results, startTime);
+    // Cập nhật file hash nếu có thay đổi
+    if (updatesPerformed) {
+      await updateHashFile(updatedHashes);
+      console.log('✅ Đã cập nhật file hash');
+    }
+
+    console.log(updatesPerformed ? '✨ Hoàn thành!' : '🔄 Không có thay đổi');
     process.exit(0);
+
   } catch (error) {
-    console.error('❌ Critical error:', error.message);
+    console.error('💥 Lỗi:', error.message);
     process.exit(1);
   }
 }
 
-function printSummary(results, startTime) {
-  const changed = results.filter(r => r.updated).length;
-  const errors = results.filter(r => r.error).length;
-  const duration = ((new Date() - startTime) / 1000).toFixed(2);
+// Chỉ cập nhật link IPA và bundle-identifier (giống yêu cầu)
+async function processPlist(sourceUrl, targetPath, currentHashes) {
+  console.log(`\n🔍 Đang xử lý: ${targetPath}`);
   
-  console.log('SUMMARY:', `Checked ${results.length} plists in ${duration}s. ` +
-    `Updated: ${changed}, Errors: ${errors}`);
-  console.log('CHANGED:', changed);
-  console.log('ERRORS:', errors);
+  try {
+    // 1. Lấy plist nguồn
+    const { data } = await externalApi.get(sourceUrl);
+    const sourcePlist = plist.parse(data);
+    
+    // 2. Tính hash
+    const newHash = crypto.createHash('sha256')
+      .update(JSON.stringify(sourcePlist))
+      .digest('hex');
+
+    // 3. Kiểm tra cần cập nhật không
+    if (currentHashes[targetPath] === newHash) {
+      console.log('⏩ Bỏ qua (không thay đổi)');
+      return { updated: false, hash: newHash };
+    }
+
+    // 4. Lấy plist đích hiện tại
+    let targetPlist, fileSha;
+    try {
+      const fileRes = await githubApi.get(
+        `/repos/${CONFIG.REPO_OWNER}/${CONFIG.REPO_NAME}/contents/${targetPath}`,
+        { params: { ref: CONFIG.BRANCH } }
+      );
+      fileSha = fileRes.data.sha;
+      targetPlist = plist.parse(Buffer.from(fileRes.data.content, 'base64').toString('utf8'));
+    } catch (error) {
+      if (error.response?.status !== 404) throw error;
+      targetPlist = { items: [{}] }; // Tạo mới nếu file không tồn tại
+    }
+
+    // 5. Chỉ cập nhật 2 trường theo yêu cầu
+    if (sourcePlist.items?.[0]?.assets && targetPlist.items?.[0]?.assets) {
+      const sourceIpa = sourcePlist.items[0].assets.find(a => a.kind === 'software-package');
+      const targetIpa = targetPlist.items[0].assets.find(a => a.kind === 'software-package');
+      if (sourceIpa && targetIpa) targetIpa.url = sourceIpa.url;
+    }
+
+    if (sourcePlist.items?.[0]?.metadata && targetPlist.items?.[0]?.metadata) {
+      targetPlist.items[0].metadata['bundle-identifier'] = 
+        sourcePlist.items[0].metadata['bundle-identifier'];
+    }
+
+    // 6. Gửi cập nhật lên GitHub
+    await githubApi.put(
+      `/repos/${CONFIG.REPO_OWNER}/${CONFIG.REPO_NAME}/contents/${targetPath}`,
+      {
+        message: `Update ${targetPath.split('/').pop()}`,
+        content: Buffer.from(plist.build(targetPlist)).toString('base64'),
+        sha: fileSha,
+        branch: CONFIG.BRANCH
+      }
+    );
+
+    console.log('✅ Đã cập nhật link IPA và bundle-identifier');
+    return { updated: true, hash: newHash };
+
+  } catch (error) {
+    console.error(`❌ Lỗi khi xử lý ${targetPath}:`, error.message);
+    throw error;
+  }
 }
 
+// Các hàm phụ trợ
+async function getCurrentHashes() {
+  try {
+    const { data } = await githubApi.get(
+      `/repos/${CONFIG.REPO_OWNER}/${CONFIG.REPO_NAME}/contents/${CONFIG.HASH_FILE}`,
+      { params: { ref: CONFIG.BRANCH } }
+    );
+    return JSON.parse(Buffer.from(data.content, 'base64').toString('utf8'));
+  } catch (error) {
+    if (error.response?.status === 404) return {};
+    throw error;
+  }
+}
+
+async function updateHashFile(hashes) {
+  const current = await getCurrentHashes();
+  await githubApi.put(
+    `/repos/${CONFIG.REPO_OWNER}/${CONFIG.REPO_NAME}/contents/${CONFIG.HASH_FILE}`,
+    {
+      message: 'Update plist hashes',
+      content: Buffer.from(JSON.stringify(hashes, null, 2)).toString('base64'),
+      sha: Object.keys(current).length > 0 ? (await githubApi.get(
+        `/repos/${CONFIG.REPO_OWNER}/${CONFIG.REPO_NAME}/contents/${CONFIG.HASH_FILE}`,
+        { params: { ref: CONFIG.BRANCH } }
+      )).data.sha : null,
+      branch: CONFIG.BRANCH
+    }
+  );
+}
+
+function delay(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Chạy chương trình
 main();
