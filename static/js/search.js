@@ -15,7 +15,7 @@ async function loadAppData() {
             appData[app.url] = app;
         });
         
-        // Xây dựng search index
+        // Xây dựng search index với cấu hình tối ưu
         searchIndex = lunr(function() {
             this.ref('url');
             this.field('title', { boost: 10 });
@@ -23,6 +23,18 @@ async function loadAppData() {
             this.field('content', { boost: 3 });
             this.field('category', { boost: 2 });
             
+            // Tùy chỉnh pipeline để hỗ trợ tìm kiếm tốt hơn
+            this.pipeline.reset();
+            this.pipeline.add(
+                lunr.trimmer,
+                function(token) {
+                    // Chỉ index các token có từ 3 ký tự trở lên
+                    return token.length >= 3 ? token : null;
+                },
+                lunr.stopWordFilter
+            );
+            
+            // Thêm dữ liệu vào index
             data.forEach(app => {
                 this.add(app);
             });
@@ -68,13 +80,15 @@ function initSearch() {
 
 // Hàm thực hiện tìm kiếm
 function performSearch(query) {
-    if (!searchIndex || query.length < 2) {
+    if (!searchIndex || query.length < 3) {
         hideResults();
         return;
     }
     
     try {
-        const results = searchIndex.search(query);
+        // Sử dụng wildcard search để tìm kiếm phần từ
+        const wildcardQuery = query + '*';
+        const results = searchIndex.search(wildcardQuery);
         displayResults(results, query);
     } catch (error) {
         console.error('Search error:', error);
@@ -106,12 +120,16 @@ function displayResults(results, query) {
         
         const cardClass = container.id === 'header-search-results' ? 'search-result-item' : 'app-card';
         
+        // Highlight từ khóa tìm kiếm trong kết quả
+        const highlightedTitle = highlightText(app.title, query);
+        const highlightedDesc = highlightText(app.description || 'Không có mô tả', query);
+        
         html += `
             <div class="${cardClass}" onclick="window.location.href='${app.url}'">
                 <img src="${app.icon || '/images/default-icon.png'}" alt="${app.title}" loading="lazy">
                 <div class="info">
-                    <h4>${app.title}</h4>
-                    <p>${app.description || 'Không có mô tả'}</p>
+                    <h4>${highlightedTitle}</h4>
+                    <p>${highlightedDesc}</p>
                     ${cardClass === 'app-card' ? `<span class="category">${app.category || 'Ứng dụng'}</span>` : ''}
                 </div>
             </div>
@@ -127,6 +145,19 @@ function displayResults(results, query) {
     
     container.innerHTML = html;
     container.style.display = 'block';
+}
+
+// Hàm highlight từ khóa trong văn bản
+function highlightText(text, query) {
+    if (!text || !query) return text;
+    
+    const regex = new RegExp(`(${escapeRegExp(query)})`, 'gi');
+    return text.replace(regex, '<span class="highlight">$1</span>');
+}
+
+// Hàm escape ký tự đặc biệt cho regex
+function escapeRegExp(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 // Hàm ẩn kết quả
