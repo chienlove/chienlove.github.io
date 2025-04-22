@@ -2,7 +2,7 @@ name: Ultimate Plist Updater
 
 on:
   schedule:
-    - cron: '0 */6 * * *' # Chạy mỗi 15 phút
+    - cron: '0 */3 * * *' # Chạy mỗi 15 phút
   workflow_dispatch:
 
 env:
