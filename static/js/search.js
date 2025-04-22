@@ -13,15 +13,29 @@ async function loadAppData() {
         appData = {};
         data.forEach(app => {
             appData[app.url] = app;
+            
+            // Tạo biến tokenized để hỗ trợ tìm kiếm cho các từ có số hoặc ký tự đặc biệt
+            if (app.title) {
+                app.title_tokens = app.title.toLowerCase().replace(/[0-9]/g, ' $& ');
+            }
         });
         
         // Xây dựng search index
         searchIndex = lunr(function() {
             this.ref('url');
             this.field('title', { boost: 10 });
+            this.field('title_tokens', { boost: 12 }); // Trường đặc biệt cho tokenized title
             this.field('description', { boost: 5 });
             this.field('content', { boost: 3 });
             this.field('category', { boost: 2 });
+            
+            // Thiết lập pipeline cho việc tìm kiếm
+            this.pipeline.remove(lunr.stemmer);
+            this.searchPipeline.remove(lunr.stemmer);
+            
+            // Điều chỉnh để tối ưu hóa cho từ khóa ngắn
+            this.k1(1.2);  // Tham số cho BM25 scoring
+            this.b(0.75);  // Tham số cho document length normalization
             
             data.forEach(app => {
                 this.add(app);
@@ -66,15 +80,33 @@ function initSearch() {
     }
 }
 
-// Hàm thực hiện tìm kiếm
+// Hàm thực hiện tìm kiếm - phiên bản tối ưu
 function performSearch(query) {
-    if (!searchIndex || query.length < 2) {
+    // Thay đổi từ 2 ký tự thành 3 ký tự
+    if (!searchIndex || query.length < 3) {
         hideResults();
         return;
     }
     
     try {
-        const results = searchIndex.search(query);
+        // Tạo các query tối ưu hóa cho từng cách tìm kiếm khác nhau
+        const exactQuery = query;
+        const wildcardQuery = query + '*';
+        const fuzzyQuery = query + '~1';
+        
+        // Thử tìm kiếm chính xác trước
+        let results = searchIndex.search(exactQuery);
+        
+        // Nếu không có kết quả, thử wildcard search
+        if (results.length === 0) {
+            results = searchIndex.search(wildcardQuery);
+        }
+        
+        // Nếu vẫn không có kết quả, thử fuzzy search
+        if (results.length === 0) {
+            results = searchIndex.search(fuzzyQuery);
+        }
+        
         displayResults(results, query);
     } catch (error) {
         console.error('Search error:', error);
@@ -110,8 +142,8 @@ function displayResults(results, query) {
             <div class="${cardClass}" onclick="window.location.href='${app.url}'">
                 <img src="${app.icon || '/images/default-icon.png'}" alt="${app.title}" loading="lazy">
                 <div class="info">
-                    <h4>${app.title}</h4>
-                    <p>${app.description || 'Không có mô tả'}</p>
+                    <h4>${highlightQuery(app.title, query)}</h4>
+                    <p>${highlightQuery(app.description || 'Không có mô tả', query)}</p>
                     ${cardClass === 'app-card' ? `<span class="category">${app.category || 'Ứng dụng'}</span>` : ''}
                 </div>
             </div>
@@ -127,6 +159,20 @@ function displayResults(results, query) {
     
     container.innerHTML = html;
     container.style.display = 'block';
+}
+
+// Hàm highlight query trong kết quả tìm kiếm
+function highlightQuery(text, query) {
+    if (!text || !query || query.length < 3) return text;
+    
+    try {
+        // Escape regex special characters
+        const escapedQuery = query.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+        const regex = new RegExp(`(${escapedQuery})`, 'gi');
+        return text.replace(regex, '<mark>$1</mark>');
+    } catch (e) {
+        return text;
+    }
 }
 
 // Hàm ẩn kết quả
