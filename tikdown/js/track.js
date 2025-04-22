@@ -1,3 +1,0 @@
-function trackEvent(name, data) {
-
- };
