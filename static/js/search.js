@@ -23,15 +23,21 @@ async function loadAppData() {
             this.field('content', { boost: 3 });
             this.field('category', { boost: 2 });
             
-            // Tùy chỉnh pipeline để hỗ trợ tìm kiếm tốt hơn
+            // Tùy chỉnh tokenizer để xử lý tốt các từ có số
+            this.tokenizer = function (str) {
+                return str.split(/[\s\-\.]+/).filter(function (token) {
+                    return token.length > 0;
+                });
+            };
+            
+            // Tùy chỉnh pipeline
             this.pipeline.reset();
             this.pipeline.add(
                 lunr.trimmer,
-                function(token) {
-                    // Chỉ index các token có từ 3 ký tự trở lên
-                    return token.length >= 3 ? token : null;
-                },
-                lunr.stopWordFilter
+                function (token) {
+                    // Giữ lại tất cả token (kể cả các token có số)
+                    return token.toString().toLowerCase();
+                }
             );
             
             // Thêm dữ liệu vào index
@@ -80,15 +86,31 @@ function initSearch() {
 
 // Hàm thực hiện tìm kiếm
 function performSearch(query) {
-    if (!searchIndex || query.length < 3) {
+    if (!searchIndex || query.length < 2) {
         hideResults();
         return;
     }
     
     try {
-        // Sử dụng wildcard search để tìm kiếm phần từ
-        const wildcardQuery = query + '*';
-        const results = searchIndex.search(wildcardQuery);
+        // Thực hiện tìm kiếm với wildcard và không phân biệt hoa thường
+        const results = searchIndex.query(function(q) {
+            // Tìm kiếm chính xác hơn với các từ có số trong title
+            q.term(query.toLowerCase(), { 
+                wildcard: lunr.Query.wildcard.TRAILING,
+                fields: ['title'],
+                boost: 100,
+                usePipeline: false
+            });
+            
+            // Tìm kiếm mở rộng cho các trường khác
+            q.term(query.toLowerCase(), { 
+                wildcard: lunr.Query.wildcard.TRAILING,
+                fields: ['description', 'content', 'category'],
+                boost: 10,
+                usePipeline: false
+            });
+        });
+        
         displayResults(results, query);
     } catch (error) {
         console.error('Search error:', error);
@@ -119,8 +141,6 @@ function displayResults(results, query) {
         if (!app) return;
         
         const cardClass = container.id === 'header-search-results' ? 'search-result-item' : 'app-card';
-        
-        // Highlight từ khóa tìm kiếm trong kết quả
         const highlightedTitle = highlightText(app.title, query);
         const highlightedDesc = highlightText(app.description || 'Không có mô tả', query);
         
@@ -151,8 +171,12 @@ function displayResults(results, query) {
 function highlightText(text, query) {
     if (!text || !query) return text;
     
-    const regex = new RegExp(`(${escapeRegExp(query)})`, 'gi');
-    return text.replace(regex, '<span class="highlight">$1</span>');
+    try {
+        const regex = new RegExp(`(${escapeRegExp(query)})`, 'gi');
+        return text.replace(regex, '<span class="highlight">$1</span>');
+    } catch (e) {
+        return text;
+    }
 }
 
 // Hàm escape ký tự đặc biệt cho regex
