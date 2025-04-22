@@ -15,7 +15,7 @@ async function loadAppData() {
             appData[app.url] = app;
         });
         
-        // Xây dựng search index với cấu hình tối ưu
+        // Xây dựng search index
         searchIndex = lunr(function() {
             this.ref('url');
             this.field('title', { boost: 10 });
@@ -23,24 +23,6 @@ async function loadAppData() {
             this.field('content', { boost: 3 });
             this.field('category', { boost: 2 });
             
-            // Tùy chỉnh tokenizer để xử lý tốt các từ có số
-            this.tokenizer = function (str) {
-                return str.split(/[\s\-\.]+/).filter(function (token) {
-                    return token.length > 0;
-                });
-            };
-            
-            // Tùy chỉnh pipeline
-            this.pipeline.reset();
-            this.pipeline.add(
-                lunr.trimmer,
-                function (token) {
-                    // Giữ lại tất cả token (kể cả các token có số)
-                    return token.toString().toLowerCase();
-                }
-            );
-            
-            // Thêm dữ liệu vào index
             data.forEach(app => {
                 this.add(app);
             });
@@ -92,25 +74,7 @@ function performSearch(query) {
     }
     
     try {
-        // Thực hiện tìm kiếm với wildcard và không phân biệt hoa thường
-        const results = searchIndex.query(function(q) {
-            // Tìm kiếm chính xác hơn với các từ có số trong title
-            q.term(query.toLowerCase(), { 
-                wildcard: lunr.Query.wildcard.TRAILING,
-                fields: ['title'],
-                boost: 100,
-                usePipeline: false
-            });
-            
-            // Tìm kiếm mở rộng cho các trường khác
-            q.term(query.toLowerCase(), { 
-                wildcard: lunr.Query.wildcard.TRAILING,
-                fields: ['description', 'content', 'category'],
-                boost: 10,
-                usePipeline: false
-            });
-        });
-        
+        const results = searchIndex.search(query);
         displayResults(results, query);
     } catch (error) {
         console.error('Search error:', error);
@@ -141,15 +105,13 @@ function displayResults(results, query) {
         if (!app) return;
         
         const cardClass = container.id === 'header-search-results' ? 'search-result-item' : 'app-card';
-        const highlightedTitle = highlightText(app.title, query);
-        const highlightedDesc = highlightText(app.description || 'Không có mô tả', query);
         
         html += `
             <div class="${cardClass}" onclick="window.location.href='${app.url}'">
                 <img src="${app.icon || '/images/default-icon.png'}" alt="${app.title}" loading="lazy">
                 <div class="info">
-                    <h4>${highlightedTitle}</h4>
-                    <p>${highlightedDesc}</p>
+                    <h4>${app.title}</h4>
+                    <p>${app.description || 'Không có mô tả'}</p>
                     ${cardClass === 'app-card' ? `<span class="category">${app.category || 'Ứng dụng'}</span>` : ''}
                 </div>
             </div>
@@ -165,23 +127,6 @@ function displayResults(results, query) {
     
     container.innerHTML = html;
     container.style.display = 'block';
-}
-
-// Hàm highlight từ khóa trong văn bản
-function highlightText(text, query) {
-    if (!text || !query) return text;
-    
-    try {
-        const regex = new RegExp(`(${escapeRegExp(query)})`, 'gi');
-        return text.replace(regex, '<span class="highlight">$1</span>');
-    } catch (e) {
-        return text;
-    }
-}
-
-// Hàm escape ký tự đặc biệt cho regex
-function escapeRegExp(string) {
-    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 // Hàm ẩn kết quả
