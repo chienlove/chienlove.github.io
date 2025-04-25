@@ -1,61 +1,70 @@
-/* Reset toàn bộ layout */
+/* Reset hoàn toàn layout */
 html, body, #root, .CMS_root {
-  width: 100% !important;
-  max-width: 100% !important;
+  width: 100vw !important;
+  max-width: 100vw !important;
   overflow-x: hidden !important;
 }
 
-/* Ẩn hoàn toàn sidebar và pinned collections */
+/* Ẩn HOÀN TOÀN sidebar và collections */
 .CMS_sidebar-wrapper,
 .CMS_sidebar,
 .CMS_sidebar-nav,
 .CMS_pinned-collections,
-[data-testid="collection-pinned"] {
+[data-testid="collection-pinned"],
+[data-testid="sidebar"],
+.cms-sidebar {
   display: none !important;
   width: 0 !important;
+  height: 0 !important;
   padding: 0 !important;
   margin: 0 !important;
+  visibility: hidden !important;
 }
 
 /* Main content chiếm toàn bộ không gian */
 .CMS_main {
+  left: 0 !important;
+  width: 100vw !important;
   margin-left: 0 !important;
-  width: 100% !important;
 }
 
-/* Editor full width với padding hợp lý */
+/* Editor full width triệt để */
 .CMS_editor {
-  width: 100% !important;
+  width: 100vw !important;
   max-width: 100vw !important;
   padding: 15px !important;
-  box-sizing: border-box !important;
   margin: 0 !important;
-}
-
-/* Fix cho tất cả các widget */
-.CMS_widget-control {
-  width: 100% !important;
-  max-width: 100% !important;
-}
-
-/* Đặc biệt xử lý markdown editor */
-.CMS_markdown-editor {
-  width: 100% !important;
-}
-.CMS_markdown-editor textarea {
-  width: 100% !important;
-  max-width: 100% !important;
   box-sizing: border-box !important;
+  position: relative;
+  left: 0;
 }
 
-/* Xử lý các element có thể gây tràn */
-div, section, main, article {
-  max-width: 100% !important;
+/* Xử lý màu nền tiêu đề */
+.CMS_widget-string {
+  background-color: transparent !important;
+}
+.CMS_widget-string input {
+  background-color: #fff !important; /* Màu nền trắng */
+  border: 1px solid #ddd !important;
+}
+
+/* Ngăn chặn mọi khả năng cuộn ngang */
+* {
+  max-width: 100vw !important;
   overflow-x: hidden !important;
 }
 
 /* Ẩn thanh cuộn ngang */
-::-webkit-scrollbar:horizontal {
+::-webkit-scrollbar {
   display: none !important;
-  height: 0 !important;
+}
+
+/* Fix cho markdown editor */
+.CMS_markdown-editor,
+.CMS_markdown-editor textarea,
+.CodeMirror,
+.CodeMirror-scroll {
+  width: 100% !important;
+  max-width: 100% !important;
+  overflow-x: hidden !important;
 }
