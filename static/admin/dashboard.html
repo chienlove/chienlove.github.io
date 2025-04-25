@@ -5,50 +5,62 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Admin Panel</title>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-  <link rel="stylesheet" href="/admin.css?v=3">
+  <link rel="stylesheet" href="/admin.css?v=5">
   <style>
-    /* CSS injection tức thì */
+    /* CSS injection tức thì trước khi CMS load */
     body {
       overflow-x: hidden !important;
       position: relative;
     }
-    .CMS_sidebar-wrapper { 
-      transform: translateX(-100%) !important;
+    .CMS_sidebar-wrapper {
+      display: none !important;
       width: 0 !important;
+    }
+    .CMS_editor {
+      background-color: #f5f5f5 !important;
     }
   </style>
 </head>
 <body>
   <script>
-    // Giải pháp mạnh mẽ để xử lý cả collections và cuộn ngang
+    // Giải pháp NUCLEAR để xử lý collections và editor
     document.addEventListener('DOMContentLoaded', function() {
-      // 1. Tắt hoàn toàn collections sidebar
+      // 1. Tắt mọi collections sidebar ngay lập tức
       localStorage.setItem('cms.collection.pinned', 'false');
-      document.body.classList.add('no-sidebar');
+      document.documentElement.style.setProperty('--sidebar-width', '0px', 'important');
       
-      // 2. MutationObserver để xử lý dynamic elements
-      const observer = new MutationObserver(function() {
-        // Ẩn tất cả collections sidebar
-        const sidebarElements = document.querySelectorAll(
-          '.CMS_sidebar-wrapper, .CMS_sidebar, [data-testid="sidebar"], .cms-sidebar'
-        );
-        sidebarElements.forEach(el => {
-          el.style.display = 'none';
-          el.style.width = '0';
-          el.style.overflow = 'hidden';
+      // 2. Xóa hoàn toàn sidebar từ DOM
+      const nuclearOption = setInterval(() => {
+        const sidebars = document.querySelectorAll('.CMS_sidebar-wrapper, [data-testid="sidebar"]');
+        sidebars.forEach(sidebar => {
+          sidebar.remove();
         });
         
-        // Fix chiều rộng editor
+        // Đảm bảo editor có nền và đúng kích thước
         const editor = document.querySelector('.CMS_editor');
         if (editor) {
+          editor.style.backgroundColor = '#f5f5f5';
+          editor.style.width = '100vw';
+          clearInterval(nuclearOption);
+        }
+      }, 100);
+      
+      // 3. MutationObserver mạnh mẽ
+      const observer = new MutationObserver(function() {
+        // Diệt mọi dấu vết của sidebar
+        document.querySelectorAll('.CMS_sidebar-wrapper, .CMS_sidebar').forEach(el => {
+          el.style.display = 'none';
+          el.style.width = '0';
+          el.style.transform = 'translateX(-100vw)';
+          el.remove();
+        });
+        
+        // Fix editor
+        document.querySelectorAll('.CMS_editor').forEach(editor => {
           editor.style.width = '100vw';
           editor.style.maxWidth = '100vw';
-          editor.style.overflowX = 'hidden';
-        }
-        
-        // Ngăn chặn cuộn ngang toàn trang
-        document.documentElement.style.overflowX = 'hidden';
-        document.body.style.overflowX = 'hidden';
+          editor.style.backgroundColor = '#f5f5f5';
+        });
       });
       
       observer.observe(document.body, {
@@ -56,22 +68,6 @@
         subtree: true,
         attributes: true,
         characterData: true
-      });
-      
-      // 3. Force reset sau khi CMS load hoàn tất
-      window.addEventListener('load', function() {
-        setTimeout(() => {
-          // Ẩn sidebar lần cuối
-          document.querySelectorAll('.CMS_sidebar-wrapper').forEach(el => {
-            el.remove();
-          });
-          
-          // Đảm bảo không cuộn ngang
-          document.querySelectorAll('*').forEach(el => {
-            el.style.maxWidth = '100vw';
-            el.style.overflowX = 'hidden';
-          });
-        }, 1500);
       });
     });
   </script>
