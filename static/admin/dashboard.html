@@ -5,16 +5,38 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Admin Panel</title>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-  <link rel="stylesheet" href="/admin/css/admin.css">
+  <link rel="stylesheet" href="custom.css">
+  <style>
+    /* Thêm style inline để chắc chắn */
+    body { overflow-x: hidden !important; }
+  </style>
 </head>
 <body>
   <script>
-  document.addEventListener('DOMContentLoaded', function() {
-  // Xóa cache pinned
-  localStorage.removeItem('cms.collection.pinned');
-  // Force ẩn bằng CSS inline (phòng trường hợp CSS không load)
-  document.querySelector('[data-testid="collection-pane"]')?.style.setProperty('display', 'none', 'important');
-});
+    // Tắt pinned collections và ngăn chặn hiển thị
+    document.addEventListener('DOMContentLoaded', function() {
+      localStorage.setItem('cms.collection.pinned', 'false');
+      
+      // Thêm observer để theo dõi thay đổi DOM
+      const observer = new MutationObserver(function() {
+        const pinnedCollections = document.querySelector('.CMS_pinned-collections');
+        if (pinnedCollections) {
+          pinnedCollections.style.display = 'none';
+        }
+        
+        // Đảm bảo không có cuộn ngang
+        document.body.style.overflowX = 'hidden';
+        const editor = document.querySelector('.CMS_editor');
+        if (editor) {
+          editor.style.overflowX = 'hidden';
+        }
+      });
+      
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true
+      });
+    });
   </script>
   <script src="https://unpkg.com/netlify-cms@^2.10.192/dist/netlify-cms.js"></script>
 </body>
