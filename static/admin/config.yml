@@ -100,3 +100,9 @@ custom_css: ["/admin/css/admin.css"]
 custom_widgets:
   - name: "update-size"
     file: "/admin/widgets/updateSize.js"
+
+# Thêm vào cuối file
+collections_ui:
+  pinned: false
+sidebar:
+  hidden: true
