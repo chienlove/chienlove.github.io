@@ -1,63 +1,61 @@
-/* Ẩn preview panel */
-.CMS_preview-pane,
-.CMS_preview-button {
-  display: none !important;
-}
-
-/* Ẩn sidebar collections và pinned collections */
-.CMS_sidebar,
-.CMS_sidebar-nav,
-.CMS_pinned-collections {
-  display: none !important;
-}
-
-/* Mở rộng editor chiếm full màn hình và ngăn cuộn ngang */
-.CMS_root {
-  grid-template-columns: 1fr !important;
-  overflow-x: hidden !important;
-}
-
-/* Editor full width và ngăn cuộn ngang */
-.CMS_editor {
-  padding: 12px !important;
+/* Reset toàn bộ layout */
+html, body, #root, .CMS_root {
   width: 100% !important;
   max-width: 100% !important;
   overflow-x: hidden !important;
 }
 
-/* Tiêu đề - input lớn, chống zoom iOS */
-.CMS_widget-string input {
-  font-size: 16px !important;
-  min-height: 44px !important;
+/* Ẩn hoàn toàn sidebar và pinned collections */
+.CMS_sidebar-wrapper,
+.CMS_sidebar,
+.CMS_sidebar-nav,
+.CMS_pinned-collections,
+[data-testid="collection-pinned"] {
+  display: none !important;
+  width: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* Main content chiếm toàn bộ không gian */
+.CMS_main {
+  margin-left: 0 !important;
   width: 100% !important;
-  padding: 12px !important;
+}
+
+/* Editor full width với padding hợp lý */
+.CMS_editor {
+  width: 100% !important;
+  max-width: 100vw !important;
+  padding: 15px !important;
   box-sizing: border-box !important;
+  margin: 0 !important;
 }
 
-/* Nội dung markdown - full màn hình */
-.CMS_widget-markdown {
-  width: 100% !important;
-}
-.CMS_widget-markdown textarea {
-  font-size: 16px !important;
-  min-height: 60vh !important;
-  width: 100% !important;
-  box-sizing: border-box !important;
-}
-
-/* Nút bấm lớn để dễ thao tác */
-.CMS_button {
-  padding: 14px 20px !important;
-  margin: 10px 0 !important;
-}
-
-/* Đảm bảo các widget không gây tràn */
+/* Fix cho tất cả các widget */
 .CMS_widget-control {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* Đặc biệt xử lý markdown editor */
+.CMS_markdown-editor {
+  width: 100% !important;
+}
+.CMS_markdown-editor textarea {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Xử lý các element có thể gây tràn */
+div, section, main, article {
   max-width: 100% !important;
   overflow-x: hidden !important;
 }
 
 /* Ẩn thanh cuộn ngang */
-html, body {
-  overflow-x: hidden !important;
+::-webkit-scrollbar:horizontal {
+  display: none !important;
+  height: 0 !important;
 }
