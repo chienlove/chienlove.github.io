@@ -9,11 +9,14 @@
 </head>
 <body>
   <script>
-    // Tắt pinned collections
-    document.addEventListener('DOMContentLoaded', function() {
-      localStorage.setItem('cms.collection.pinned', 'false');
-    });
-  </script>
+document.addEventListener('DOMContentLoaded', function() {
+  // Force ẩn pinned collections
+  localStorage.setItem('cms.collection.pinned', 'false');
+  
+  // Ẩn preview nếu config.yml không hoạt động
+  document.body.classList.add('cms-no-preview');
+});
+</script>
   <script src="https://unpkg.com/netlify-cms@^2.10.192/dist/netlify-cms.js"></script>
 </body>
 </html>
