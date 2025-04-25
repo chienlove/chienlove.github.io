@@ -1,41 +1,28 @@
 /* Ẩn preview panel */
-.CMS_preview-pane,
-.CMS_preview-button {
+.nc-previewPane-root,
+[data-testid="preview-pane"],
+.css-1f7nhiq-CollectionMain .css-p5sjac-CollectionControlsContainer + div > div:last-child {
   display: none !important;
 }
 
-/* Ẩn sidebar collections */
-.CMS_sidebar,
-.CMS_sidebar-nav {
+/* Ẩn pinned collections sidebar */
+.css-1gj57a0-SidebarContainer,
+[data-testid="collection-pane"] {
   display: none !important;
 }
 
 /* Mở rộng editor chiếm full màn hình */
-.CMS_root {
+.css-v758ki-AppMainContainer {
   grid-template-columns: 1fr !important;
 }
 
-/* Form nhập liệu thân thiện mobile */
-.CMS_editor {
-  padding: 12px !important;
+/* Tối ưu giao diện mobile */
+.CMS_root {
+  font-size: 16px;
 }
-
-/* Tiêu đề - input lớn, chống zoom iOS */
-.CMS_widget-string input {
-  font-size: 16px !important;
-  min-height: 44px !important;
-  width: 100% !important;
-  padding: 12px !important;
-}
-
-/* Nội dung markdown - full màn hình */
+.CMS_widget-string input,
 .CMS_widget-markdown textarea {
-  font-size: 16px !important;
-  min-height: 60vh !important;
-}
-
-/* Nút bấm lớn để dễ thao tác */
-.CMS_button {
-  padding: 14px 20px !important;
-  margin: 10px 0 !important;
+  min-height: 44px !important; /* Đủ lớn để chạm */
+  font-size: 16px !important; /* Chống zoom iOS */
+  width: 100% !important;
 }
