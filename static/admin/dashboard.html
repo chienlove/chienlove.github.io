@@ -5,36 +5,53 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Admin Panel</title>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-  <link rel="stylesheet" href="custom.css">
+  <link rel="stylesheet" href="/admin.css">
   <style>
-    /* Thêm style inline để chắc chắn */
+    /* CSS bổ sung ngay lập tức */
     body { overflow-x: hidden !important; }
+    [data-testid="collection-pinned"] { display: none !important; }
   </style>
 </head>
 <body>
   <script>
-    // Tắt pinned collections và ngăn chặn hiển thị
+    // Xử lý triệt để pinned collections và cuộn ngang
     document.addEventListener('DOMContentLoaded', function() {
+      // 1. Tắt hoàn toàn pinned collections
       localStorage.setItem('cms.collection.pinned', 'false');
+      document.body.classList.add('no-pinned-collections');
       
-      // Thêm observer để theo dõi thay đổi DOM
-      const observer = new MutationObserver(function() {
-        const pinnedCollections = document.querySelector('.CMS_pinned-collections');
-        if (pinnedCollections) {
-          pinnedCollections.style.display = 'none';
-        }
+      // 2. Observer để xử lý dynamic elements
+      const observer = new MutationObserver(function(mutations) {
+        // Xử lý pinned collections
+        document.querySelectorAll('.CMS_pinned-collections, [data-testid="collection-pinned"]').forEach(el => {
+          el.style.display = 'none';
+          el.remove();
+        });
         
-        // Đảm bảo không có cuộn ngang
-        document.body.style.overflowX = 'hidden';
-        const editor = document.querySelector('.CMS_editor');
-        if (editor) {
-          editor.style.overflowX = 'hidden';
-        }
+        // Ngăn chặn cuộn ngang
+        document.querySelectorAll('*').forEach(el => {
+          el.style.overflowX = 'hidden';
+          if (el.scrollWidth > el.clientWidth) {
+            el.style.width = '100%';
+            el.style.overflowX = 'hidden';
+          }
+        });
       });
       
       observer.observe(document.body, {
         childList: true,
-        subtree: true
+        subtree: true,
+        attributes: true
+      });
+      
+      // 3. Force reset layout sau khi CMS load
+      window.addEventListener('load', function() {
+        setTimeout(() => {
+          document.documentElement.style.overflowX = 'hidden';
+          document.body.style.overflowX = 'hidden';
+          const editor = document.querySelector('.CMS_editor');
+          if (editor) editor.style.width = '100vw';
+        }, 1000);
       });
     });
   </script>
