@@ -9,14 +9,13 @@
 </head>
 <body>
   <script>
-document.addEventListener('DOMContentLoaded', function() {
-  // Force ẩn pinned collections
-  localStorage.setItem('cms.collection.pinned', 'false');
-  
-  // Ẩn preview nếu config.yml không hoạt động
-  document.body.classList.add('cms-no-preview');
+  document.addEventListener('DOMContentLoaded', function() {
+  // Xóa cache pinned
+  localStorage.removeItem('cms.collection.pinned');
+  // Force ẩn bằng CSS inline (phòng trường hợp CSS không load)
+  document.querySelector('[data-testid="collection-pane"]')?.style.setProperty('display', 'none', 'important');
 });
-</script>
+  </script>
   <script src="https://unpkg.com/netlify-cms@^2.10.192/dist/netlify-cms.js"></script>
 </body>
 </html>
