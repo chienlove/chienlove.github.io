@@ -1,37 +1,63 @@
-/* Ẩn HOÀN TOÀN sidebar collections (pinned) */
-[data-testid="collection-pane"],
-.css-1gj57a0-SidebarContainer,
-.nc-collectionPane-root {
-  display: none !important;
-  width: 0 !important;
-  opacity: 0 !important;
-}
-
 /* Ẩn preview panel */
-[data-testid="preview-pane"],
-.nc-previewPane-root {
+.CMS_preview-pane,
+.CMS_preview-button {
   display: none !important;
 }
 
-/* Sửa lỗi cuộn ngang và mở rộng editor */
-.CMS_root,
-.css-v758ki-AppMainContainer {
+/* Ẩn sidebar collections và pinned collections */
+.CMS_sidebar,
+.CMS_sidebar-nav,
+.CMS_pinned-collections {
+  display: none !important;
+}
+
+/* Mở rộng editor chiếm full màn hình và ngăn cuộn ngang */
+.CMS_root {
   grid-template-columns: 1fr !important;
   overflow-x: hidden !important;
 }
 
-/* Đảm bảo main content chiếm full width */
-.css-1f7nhiq-CollectionMain,
-.e1yhfkro1 {
+/* Editor full width và ngăn cuộn ngang */
+.CMS_editor {
+  padding: 12px !important;
   width: 100% !important;
-  margin-left: 0 !important;
-  padding: 0 10px !important;
+  max-width: 100% !important;
+  overflow-x: hidden !important;
 }
 
-/* Tối ưu giao diện mobile */
-.CMS_widget-string input,
-.CMS_widget-markdown textarea {
-  min-height: 44px !important;
+/* Tiêu đề - input lớn, chống zoom iOS */
+.CMS_widget-string input {
   font-size: 16px !important;
+  min-height: 44px !important;
   width: 100% !important;
+  padding: 12px !important;
+  box-sizing: border-box !important;
+}
+
+/* Nội dung markdown - full màn hình */
+.CMS_widget-markdown {
+  width: 100% !important;
+}
+.CMS_widget-markdown textarea {
+  font-size: 16px !important;
+  min-height: 60vh !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Nút bấm lớn để dễ thao tác */
+.CMS_button {
+  padding: 14px 20px !important;
+  margin: 10px 0 !important;
+}
+
+/* Đảm bảo các widget không gây tràn */
+.CMS_widget-control {
+  max-width: 100% !important;
+  overflow-x: hidden !important;
+}
+
+/* Ẩn thanh cuộn ngang */
+html, body {
+  overflow-x: hidden !important;
 }
