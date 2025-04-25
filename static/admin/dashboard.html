@@ -1,14 +1,19 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Content Manager</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Admin Panel</title>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <link rel="stylesheet" href="custom.css">
 </head>
 <body>
-  <!-- Include the script that builds the page and powers Netlify CMS -->
+  <script>
+    // Tắt pinned collections
+    document.addEventListener('DOMContentLoaded', function() {
+      localStorage.setItem('cms.collection.pinned', 'false');
+    });
+  </script>
   <script src="https://unpkg.com/netlify-cms@^2.10.192/dist/netlify-cms.js"></script>
-  <!-- Tích hợp trực tiếp script cho widget tùy chỉnh updateSize -->
-  <script src="/admin/widgets/updateSize.js"></script>
 </body>
 </html>

@@ -13,6 +13,9 @@ public_folder: "/images"
 site_url: "https://storeios.net"
 display_url: "https://storeios.net"
 
+editor:
+  preview: false
+
 # Cấu hình mobile
 mobile:
   enabled: true
