@@ -1,28 +1,37 @@
-/* Ẩn preview panel */
-.nc-previewPane-root,
-[data-testid="preview-pane"],
-.css-1f7nhiq-CollectionMain .css-p5sjac-CollectionControlsContainer + div > div:last-child {
-  display: none !important;
-}
-
-/* Ẩn pinned collections sidebar */
+/* Ẩn HOÀN TOÀN sidebar collections (pinned) */
+[data-testid="collection-pane"],
 .css-1gj57a0-SidebarContainer,
-[data-testid="collection-pane"] {
+.nc-collectionPane-root {
+  display: none !important;
+  width: 0 !important;
+  opacity: 0 !important;
+}
+
+/* Ẩn preview panel */
+[data-testid="preview-pane"],
+.nc-previewPane-root {
   display: none !important;
 }
 
-/* Mở rộng editor chiếm full màn hình */
+/* Sửa lỗi cuộn ngang và mở rộng editor */
+.CMS_root,
 .css-v758ki-AppMainContainer {
   grid-template-columns: 1fr !important;
+  overflow-x: hidden !important;
+}
+
+/* Đảm bảo main content chiếm full width */
+.css-1f7nhiq-CollectionMain,
+.e1yhfkro1 {
+  width: 100% !important;
+  margin-left: 0 !important;
+  padding: 0 10px !important;
 }
 
 /* Tối ưu giao diện mobile */
-.CMS_root {
-  font-size: 16px;
-}
 .CMS_widget-string input,
 .CMS_widget-markdown textarea {
-  min-height: 44px !important; /* Đủ lớn để chạm */
-  font-size: 16px !important; /* Chống zoom iOS */
+  min-height: 44px !important;
+  font-size: 16px !important;
   width: 100% !important;
 }
