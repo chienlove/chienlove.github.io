@@ -109,7 +109,7 @@ class IpaDownloader {
     errorDiv.style.display = 'none';
 
     try {
-      const response = await fetch('/.netlify/functions/download', {
+      const response = await fetch('/.netlify/functions/ipadown', {
         method: 'POST',
         body: JSON.stringify({ 
           bundleId,
