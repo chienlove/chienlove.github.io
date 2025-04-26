@@ -1,5 +1,5 @@
-/* RESET HOÀN TOÀN LAYOUT */
-html, body, #root, .CMS_root, .CMS_main {
+/* Reset hoàn toàn layout */
+html, body, #root, .CMS_root {
   width: 100vw !important;
   max-width: 100vw !important;
   overflow-x: hidden !important;
@@ -7,14 +7,15 @@ html, body, #root, .CMS_root, .CMS_main {
   left: 0 !important;
 }
 
-/* GIẾT HOÀN TOÀN SIDEBAR VÀ COLLECTIONS */
+/* Xóa hoàn toàn sidebar và collections */
 .CMS_sidebar-wrapper,
 .CMS_sidebar,
 .CMS_sidebar-nav,
 .CMS_pinned-collections,
 [class*="sidebar"],
 [data-testid*="sidebar"],
-[data-testid*="collection"] {
+[data-testid*="collection"],
+.cms-sidebar {
   display: none !important;
   width: 0 !important;
   height: 0 !important;
@@ -25,7 +26,7 @@ html, body, #root, .CMS_root, .CMS_main {
   left: -9999px !important;
 }
 
-/* EDITOR FULL WIDTH */
+/* Editor full width */
 .CMS_editor {
   width: 100vw !important;
   max-width: 100vw !important;
@@ -36,14 +37,15 @@ html, body, #root, .CMS_root, .CMS_main {
   overflow-x: hidden !important;
 }
 
-/* NGĂN CHẶN MỌI KHẢ NĂNG CUỘN NGANG */
+/* Ngăn mọi khả năng cuộn ngang */
 * {
   max-width: 100vw !important;
   overflow-x: hidden !important;
   box-sizing: border-box !important;
 }
 
-/* ẨN THANH CUỘN NGANG */
+/* Ẩn thanh cuộn ngang */
 ::-webkit-scrollbar {
-  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
