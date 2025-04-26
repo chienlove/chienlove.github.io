@@ -3,7 +3,7 @@
 class IpaDownloader {
   constructor() {
     this.container = document.getElementById('ipa-downloader');
-    this.sessionInfo = null;
+    this.requires2FA = false; // Add a flag to track 2FA state
     this.render();
     this.attachEventListeners();
   }
@@ -19,13 +19,30 @@ class IpaDownloader {
           <div class="card-content">
             <form id="login-form" class="login-form">
               <div class="form-group">
-                <input type="email" id="apple-id" placeholder="Apple ID" class="input-field" required />
+                <input 
+                  type="email" 
+                  id="apple-id" 
+                  placeholder="Apple ID" 
+                  class="input-field" 
+                  required
+                />
               </div>
               <div class="form-group">
-                <input type="password" id="password" placeholder="Password" class="input-field" required />
+                <input 
+                  type="password" 
+                  id="password" 
+                  placeholder="Password" 
+                  class="input-field" 
+                  required
+                />
               </div>
               <div id="verification-code-container" class="form-group" style="display: none;">
-                <input type="text" id="verification-code" placeholder="Verification Code" class="input-field" />
+                <input 
+                  type="text" 
+                  id="verification-code" 
+                  placeholder="Verification Code" 
+                  class="input-field"
+                />
                 <p class="help-text">Enter the verification code sent to your trusted device</p>
               </div>
               <button type="submit" class="button-primary" id="login-button">
@@ -51,33 +68,33 @@ class IpaDownloader {
     const loadingIndicator = document.getElementById('loading-indicator');
     const verificationCodeContainer = document.getElementById('verification-code-container');
     const verificationCode = document.getElementById('verification-code').value;
-
+    
+    // Reset error display
     errorDiv.style.display = 'none';
+    
+    // Show loading indicator
     button.disabled = true;
     loadingIndicator.style.display = 'flex';
     button.textContent = 'Processing...';
 
     try {
-      const bodyData = {
-        appleId: document.getElementById('apple-id').value,
-        password: document.getElementById('password').value,
-      };
-
-      if (verificationCode) {
-        bodyData.verificationCode = verificationCode;
-        bodyData.sessionInfo = this.sessionInfo;
-      }
-
       const response = await fetch('/.netlify/functions/authenticate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(bodyData)
+        headers: {
+          'Content-Type': 'application/json' // Add Content-Type header
+        },
+        body: JSON.stringify({
+          appleId: document.getElementById('apple-id').value,
+          password: document.getElementById('password').value,
+          verificationCode: verificationCode || undefined
+        })
       });
 
       const data = await response.json();
 
+      // Handle 2FA requirement
       if (response.status === 401 && data.requires2FA) {
-        this.sessionInfo = data.sessionInfo;
+        this.requires2FA = true;
         verificationCodeContainer.style.display = 'block';
         errorDiv.textContent = 'Please enter the verification code sent to your device';
         errorDiv.style.display = 'block';
@@ -87,57 +104,78 @@ class IpaDownloader {
         return;
       }
 
+      // Handle other errors
       if (!response.ok) {
-        throw new Error(data.details || 'Authentication failed');
+        throw new Error(data.details || data.error || 'Authentication failed');
       }
 
-      // Thành công
+      // Success - store session and display apps
       this.sessionInfo = data.sessionInfo;
-      await this.fetchApps(); // Gọi lấy app sau login thành công
+      this.displayApps(data.apps);
+      
+      // Hide verification code container after successful login
+      this.requires2FA = false;
+      verificationCodeContainer.style.display = 'none';
     } catch (err) {
       errorDiv.textContent = err.message;
       errorDiv.style.display = 'block';
     } finally {
       button.disabled = false;
       loadingIndicator.style.display = 'none';
-      button.textContent = verificationCodeContainer.style.display === 'block' ? 'Verify' : 'Login';
+      button.textContent = this.requires2FA ? 'Verify' : 'Login';
     }
   }
 
-  async fetchApps() {
-    const appsContainer = document.getElementById('apps-list');
+  async handleDownload(bundleId, appName) {
     const errorDiv = document.getElementById('error-message');
     const loadingIndicator = document.getElementById('loading-indicator');
-
+    
     errorDiv.style.display = 'none';
     loadingIndicator.style.display = 'flex';
-    appsContainer.style.display = 'none';
 
     try {
+      // Update status
+      loadingIndicator.querySelector('p').textContent = `Downloading ${appName}...`;
+      
       const response = await fetch('/.netlify/functions/ipadown', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionInfo: this.sessionInfo })
+        headers: {
+          'Content-Type': 'application/json' // Add Content-Type header
+        },
+        body: JSON.stringify({ 
+          bundleId,
+          sessionInfo: this.sessionInfo 
+        })
       });
 
-      const data = await response.json();
-
       if (!response.ok) {
-        throw new Error(data.details || 'Failed to fetch apps');
+        const errorData = await response.json();
+        throw new Error(errorData.details || errorData.error || 'Download failed');
       }
 
-      this.displayApps(data.apps || []);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${appName}.ipa`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      
+      // Clean up the URL
+      window.URL.revokeObjectURL(url);
     } catch (err) {
       errorDiv.textContent = err.message;
       errorDiv.style.display = 'block';
     } finally {
       loadingIndicator.style.display = 'none';
+      loadingIndicator.querySelector('p').textContent = 'Processing, please wait...';
     }
   }
 
   displayApps(apps) {
     const appsContainer = document.getElementById('apps-list');
-
+    
     if (!apps || apps.length === 0) {
       appsContainer.innerHTML = `
         <div class="card">
@@ -152,7 +190,7 @@ class IpaDownloader {
       appsContainer.style.display = 'block';
       return;
     }
-
+    
     appsContainer.innerHTML = `
       <div class="card">
         <div class="card-header">
@@ -182,53 +220,11 @@ class IpaDownloader {
     appsContainer.style.display = 'block';
   }
 
-  async handleDownload(bundleId, appName) {
-    const errorDiv = document.getElementById('error-message');
-    const loadingIndicator = document.getElementById('loading-indicator');
-
-    errorDiv.style.display = 'none';
-    loadingIndicator.style.display = 'flex';
-
-    try {
-      loadingIndicator.querySelector('p').textContent = `Downloading ${appName}...`;
-
-      const response = await fetch('/.netlify/functions/ipadown', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          bundleId,
-          sessionInfo: this.sessionInfo 
-        })
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.details || 'Download failed');
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${appName}.ipa`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      errorDiv.textContent = err.message;
-      errorDiv.style.display = 'block';
-    } finally {
-      loadingIndicator.style.display = 'none';
-      loadingIndicator.querySelector('p').textContent = 'Processing, please wait...';
-    }
-  }
-
   attachEventListeners() {
     document.getElementById('login-form').addEventListener('submit', this.handleLogin.bind(this));
   }
 }
 
+// Initialize the downloader
 const ipaDownloader = new IpaDownloader();
-window.ipaDownloader = ipaDownloader;
+window.ipaDownloader = ipaDownloader; // Make it globally accessible
