@@ -68,10 +68,8 @@ class IpaDownloader {
     const verificationCodeContainer = document.getElementById('verification-code-container');
     const verificationCode = document.getElementById('verification-code').value;
     
-    // Reset error display
     errorDiv.style.display = 'none';
     
-    // Show loading indicator
     button.disabled = true;
     loadingIndicator.style.display = 'flex';
     button.textContent = 'Processing...';
@@ -79,6 +77,9 @@ class IpaDownloader {
     try {
       const response = await fetch('/.netlify/functions/authenticate', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({
           appleId: document.getElementById('apple-id').value,
           password: document.getElementById('password').value,
@@ -88,7 +89,6 @@ class IpaDownloader {
 
       const data = await response.json();
 
-      // Handle 2FA requirement
       if (response.status === 401 && data.requires2FA) {
         verificationCodeContainer.style.display = 'block';
         errorDiv.textContent = 'Please enter the verification code sent to your device';
@@ -99,16 +99,12 @@ class IpaDownloader {
         return;
       }
 
-      // Handle other errors
       if (!response.ok) {
         throw new Error(data.details || 'Authentication failed');
       }
 
-      // Success - store session and display apps
       this.sessionInfo = data.sessionInfo;
       this.displayApps(data.apps);
-      
-      // Hide verification code container after successful login
       verificationCodeContainer.style.display = 'none';
     } catch (err) {
       errorDiv.textContent = err.message;
@@ -128,11 +124,13 @@ class IpaDownloader {
     loadingIndicator.style.display = 'flex';
 
     try {
-      // Update status
       loadingIndicator.querySelector('p').textContent = `Downloading ${appName}...`;
       
       const response = await fetch('/.netlify/functions/ipadown', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
         body: JSON.stringify({ 
           bundleId,
           sessionInfo: this.sessionInfo 
