@@ -5,70 +5,53 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Admin Panel</title>
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-  <link rel="stylesheet" href="/admin.css?v=5">
+  <link rel="stylesheet" href="/admin.css?v=2">
   <style>
-    /* CSS injection tức thì trước khi CMS load */
+    /* CSS INJECTION TỨC THỜI */
     body {
       overflow-x: hidden !important;
-      position: relative;
     }
-    .CMS_sidebar-wrapper {
+    .CMS_pinned-collections {
       display: none !important;
-      width: 0 !important;
     }
     .CMS_editor {
-      background-color: #f5f5f5 !important;
+      background-color: #ffffff !important;
     }
   </style>
 </head>
 <body>
   <script>
-    // Giải pháp NUCLEAR để xử lý collections và editor
+    // GIẢI PHÁP MẠNH MẼ
     document.addEventListener('DOMContentLoaded', function() {
-      // 1. Tắt mọi collections sidebar ngay lập tức
+      // 1. TẮT PINNED COLLECTIONS TỪ GỐC
       localStorage.setItem('cms.collection.pinned', 'false');
-      document.documentElement.style.setProperty('--sidebar-width', '0px', 'important');
       
-      // 2. Xóa hoàn toàn sidebar từ DOM
-      const nuclearOption = setInterval(() => {
-        const sidebars = document.querySelectorAll('.CMS_sidebar-wrapper, [data-testid="sidebar"]');
-        sidebars.forEach(sidebar => {
-          sidebar.remove();
-        });
-        
-        // Đảm bảo editor có nền và đúng kích thước
-        const editor = document.querySelector('.CMS_editor');
-        if (editor) {
-          editor.style.backgroundColor = '#f5f5f5';
-          editor.style.width = '100vw';
-          clearInterval(nuclearOption);
-        }
-      }, 100);
-      
-      // 3. MutationObserver mạnh mẽ
-      const observer = new MutationObserver(function() {
-        // Diệt mọi dấu vết của sidebar
-        document.querySelectorAll('.CMS_sidebar-wrapper, .CMS_sidebar').forEach(el => {
+      // 2. HÀM XỬ LÝ TRIỆT ĐỂ
+      const nukePinnedCollections = () => {
+        // Xóa bằng mọi cách
+        const pinned = document.querySelectorAll(
+          '.CMS_pinned-collections, [data-testid="collection-pinned"]'
+        );
+        pinned.forEach(el => {
           el.style.display = 'none';
-          el.style.width = '0';
-          el.style.transform = 'translateX(-100vw)';
           el.remove();
         });
         
         // Fix editor
-        document.querySelectorAll('.CMS_editor').forEach(editor => {
+        const editor = document.querySelector('.CMS_editor');
+        if (editor) {
           editor.style.width = '100vw';
-          editor.style.maxWidth = '100vw';
-          editor.style.backgroundColor = '#f5f5f5';
-        });
-      });
+          editor.style.backgroundColor = '#ffffff';
+        }
+      };
       
-      observer.observe(document.body, {
-        childList: true,
-        subtree: true,
-        attributes: true,
-        characterData: true
-      });
+      // 3. CHẠY LIÊN TỤC ĐỂ ĐẢM BẢO
+      const interval = setInterval(nukePinnedCollections, 100);
+      
+      // 4. DỪNG SAU 5 GIÂY
+      setTimeout(() => {
+        clearInterval(interval);
+      }, 5000);
     });
   </script>
   <script src="https://unpkg.com/netlify-cms@^2.10.192/dist/netlify-cms.js"></script>
