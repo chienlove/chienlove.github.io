@@ -7,11 +7,9 @@
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <link rel="stylesheet" href="/admin/css/admin.css?v=nuclear">
   <style>
-    /* CSS INJECTION TỨC THÌ */
-    body {
-      overflow-x: hidden !important;
-    }
-    .CMS_sidebar-wrapper {
+    /* CSS tấn công trước khi load */
+    body { overflow-x: hidden !important; }
+    .CMS_sidebar-wrapper { 
       display: none !important;
       width: 0 !important;
       transform: translateX(-100vw) !important;
@@ -22,15 +20,14 @@
   <script>
     // PHƯƠNG PHÁP HẠT NHÂN
     document.addEventListener('DOMContentLoaded', function() {
-      // 1. TẮT HOÀN TOÀN COLLECTIONS
+      // 1. Tắt hoàn toàn collections
       localStorage.setItem('cms.collection.pinned', 'false');
-      document.documentElement.style.setProperty('--sidebar-width', '0px', 'important');
       
-      // 2. HÀM DIỆT SIDEBAR
-      const nukeSidebar = () => {
-        // Xóa bằng mọi cách
+      // 2. Hàm diệt sidebar
+      const destroySidebar = () => {
+        // Xóa mọi phần tử sidebar
         document.querySelectorAll(
-          '.CMS_sidebar-wrapper, .CMS_sidebar, [class*="sidebar"], [data-testid*="sidebar"]'
+          '.CMS_sidebar-wrapper, .CMS_sidebar, [class*="sidebar"]'
         ).forEach(el => {
           el.style.cssText = `
             display: none !important;
@@ -41,7 +38,7 @@
           el.remove();
         });
         
-        // FIX EDITOR
+        // Fix editor
         const editor = document.querySelector('.CMS_editor');
         if (editor) {
           editor.style.cssText = `
@@ -55,11 +52,11 @@
         }
       };
       
-      // 3. CHẠY LIÊN TỤC 50ms
-      const nuclearStrike = setInterval(nukeSidebar, 50);
+      // 3. Chạy liên tục mỗi 100ms
+      const nukeInterval = setInterval(destroySidebar, 100);
       
-      // 4. DỪNG SAU 5s
-      setTimeout(() => clearInterval(nuclearStrike), 5000);
+      // 4. Dừng sau 5s
+      setTimeout(() => clearInterval(nukeInterval), 5000);
     });
   </script>
   <script src="https://unpkg.com/netlify-cms@^2.10.192/dist/netlify-cms.js"></script>
