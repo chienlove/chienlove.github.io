@@ -101,8 +101,10 @@ custom_widgets:
   - name: "update-size"
     file: "/admin/widgets/updateSize.js"
 
-# Thêm vào cuối file
+# Thêm vào cuối file config.yml
+ui:
+  sidebar: false
+  pinned_collections: false
+
 collections_ui:
-  pinned: false
-sidebar:
-  hidden: true
+  hide_pinned: true
