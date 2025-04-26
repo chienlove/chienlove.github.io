@@ -1,7 +1,8 @@
 [build]
   publish = "public"
-  command = "hugo --gc --minify"
+  command = "bash .netlify/build-config/prebuild.sh && hugo --gc --minify"
   functions = "netlify/functions"
+
 [functions]
   node_bundler = "esbuild"
   directory = "netlify/functions"
@@ -10,48 +11,58 @@
 
 [build.environment]
   NODE_VERSION = "16"
+
 [[edge_functions]]
   function = "block"
   path = "/*"
+
 [[redirects]]
   from = "/api/*"
   to = "/.netlify/functions/:splat"
   status = 200
+
 [[redirects]]
   from = "/shortener/*"
   to = "/.netlify/functions/shorten/"
   status = 200
+
 [[redirects]]
   from = "/download"
   to = "/.netlify/functions/download"
   status = 200
+
 [[redirects]]
   from = "/:shortId"
   to = "/.netlify/functions/redirect/:shortId"
   status = 200
+
 [[headers]]
   for = "/*.plist"
   [headers.values]
     Content-Type = "application/octet-stream"
     Content-Disposition = "attachment"
     X-Content-Type-Options = "nosniff"
+
 [[headers]]
   for = "/plist/*"
   [headers.values]
     X-Content-Type-Options = "nosniff"
     Content-Security-Policy = "default-src 'none'"
+
 [[headers]]
   for = "/*.css"
   [headers.values]
     Cache-Control = "no-store, no-cache, must-revalidate, proxy-revalidate"
     Pragma = "no-cache"
     Expires = "0"
+
 [[headers]]
   for = "/*.js"
   [headers.values]
     Cache-Control = "no-store, no-cache, must-revalidate, proxy-revalidate"
     Pragma = "no-cache"
     Expires = "0"
+
 [dev]
   framework = "hugo"
   targetPort = 1313

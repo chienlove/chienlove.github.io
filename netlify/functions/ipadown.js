@@ -1,4 +1,4 @@
-// netlify/functions/download.js
+// netlify/functions/ipadown.js
 const { execFile } = require('child_process');
 const util = require('util');
 const fs = require('fs').promises;
@@ -13,8 +13,8 @@ exports.handler = async function(event, context) {
   try {
     const { bundleId, sessionInfo } = JSON.parse(event.body);
     
-    // Cập nhật đường dẫn ipatool
-    const ipatoolPath = path.join('/var/task', 'netlify', 'functions', 'bin', 'ipatool-2.1.4-linux-amd64');
+    // Sử dụng cùng đường dẫn ipatool như trong authenticate.js
+    const ipatoolPath = path.join(process.cwd(), 'netlify', 'functions', 'bin', 'ipatool');
     console.log('ipatool path:', ipatoolPath); // Để debug đường dẫn
 
     // Kiểm tra file tồn tại

@@ -23,11 +23,11 @@ exports.handler = async function(event, context) {
     const ipatoolPath = path.join(process.cwd(), 'netlify', 'functions', 'bin', 'ipatool');
     console.log('ipatool path:', ipatoolPath);
 
-    // 4. Kiểm tra file ipatool tồn tại và có quyền thực thi
+    // 4. Kiểm tra file ipatool tồn tại (không set quyền thực thi)
     if (!fs.existsSync(ipatoolPath)) {
       throw new Error('ipatool binary not found at: ' + ipatoolPath);
     }
-    fs.chmodSync(ipatoolPath, 0o755); // Đảm bảo có quyền thực thi
+    // Đã bỏ dòng fs.chmodSync vì không thể thay đổi quyền trong môi trường read-only
 
     // 5. Thiết lập biến môi trường
     process.env.HOME = '/tmp'; // Yêu cầu bởi ipatool
