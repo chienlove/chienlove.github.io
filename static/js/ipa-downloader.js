@@ -3,9 +3,14 @@ class IpaDownloader {
   constructor() {
     this.container = document.getElementById('ipa-downloader');
     this.sessionInfo = null;
-    this.isWaitingFor2FA = false;
+    this.is2FARequired = false;
+    this.initialize();
+  }
+
+  initialize() {
     this.render();
     this.attachEventListeners();
+    console.log('IPA Downloader initialized');
   }
 
   render() {
@@ -14,11 +19,11 @@ class IpaDownloader {
         <div class="card">
           <div class="card-header">
             <h3 class="card-title">Apple ID Login</h3>
-            <p class="card-description">Enter your Apple ID to download IPA files</p>
+            <p class="card-description">Enter your credentials to download IPA files</p>
           </div>
           <div class="card-content">
-            <form id="login-form" class="space-y-4">
-              <div>
+            <form id="login-form">
+              <div class="form-group">
                 <input 
                   type="email" 
                   id="apple-id" 
@@ -28,7 +33,7 @@ class IpaDownloader {
                   autocomplete="username"
                 />
               </div>
-              <div>
+              <div class="form-group">
                 <input 
                   type="password" 
                   id="password" 
@@ -42,8 +47,8 @@ class IpaDownloader {
                 <input 
                   type="text" 
                   id="verification-code" 
-                  placeholder="6-digit code" 
-                  class="input-primary verification-code-input"
+                  placeholder="Enter 6-digit code" 
+                  class="input-primary verification-input"
                   inputmode="numeric"
                   pattern="[0-9]{6}"
                   maxlength="6"
@@ -51,14 +56,14 @@ class IpaDownloader {
                 />
                 <p class="help-text">Check your trusted devices for the verification code</p>
               </div>
-              <button type="submit" class="button-primary w-full" id="login-button">
+              <button type="submit" class="button-primary" id="login-button">
                 Login
               </button>
             </form>
           </div>
         </div>
         <div id="error-message" class="error-message" style="display: none;"></div>
-        <div id="loading-indicator" style="display: none; flex-direction: column; align-items: center; padding: 1rem;">
+        <div id="loading-indicator" style="display: none;">
           <div class="spinner"></div>
           <p>Processing, please wait...</p>
         </div>
@@ -79,20 +84,30 @@ class IpaDownloader {
     errorDiv.style.display = 'none';
     button.disabled = true;
     loadingIndicator.style.display = 'flex';
-    
+    button.textContent = 'Processing...';
+
     try {
+      const appleId = document.getElementById('apple-id').value.trim();
+      const password = document.getElementById('password').value;
+      const verificationCode = verificationCodeInput.value.trim();
+
+      if (!appleId || !password) {
+        throw new Error('Please enter both Apple ID and password');
+      }
+
       const payload = {
-        appleId: document.getElementById('apple-id').value.trim(),
-        password: document.getElementById('password').value
+        appleId,
+        password
       };
 
-      // Only add verification code if we're in 2FA mode and code is provided
-      if (this.isWaitingFor2FA && verificationCodeInput.value) {
-        payload.verificationCode = verificationCodeInput.value.trim();
-        if (!/^\d{6}$/.test(payload.verificationCode)) {
-          throw new Error('Please enter a valid 6-digit code');
+      if (this.is2FARequired) {
+        if (!verificationCode || !/^\d{6}$/.test(verificationCode)) {
+          throw new Error('Please enter a valid 6-digit verification code');
         }
+        payload.verificationCode = verificationCode;
       }
+
+      console.log('Sending payload:', { ...payload, password: '***' }); // Mask password in logs
 
       const response = await fetch('/.netlify/functions/authenticate', {
         method: 'POST',
@@ -103,11 +118,11 @@ class IpaDownloader {
       });
 
       const data = await response.json();
-      console.debug('Auth response:', data);
+      console.log('Server response:', data);
 
       // Handle 2FA requirement
       if (response.status === 401 && data.requires2FA) {
-        this.isWaitingFor2FA = true;
+        this.is2FARequired = true;
         verificationCodeContainer.style.display = 'block';
         verificationCodeInput.focus();
         errorDiv.textContent = data.message || 'Please enter the 6-digit verification code from your trusted device';
@@ -116,13 +131,12 @@ class IpaDownloader {
         return;
       }
 
-      // Handle other errors
       if (!response.ok) {
-        throw new Error(data.message || `Authentication failed (${response.status})`);
+        throw new Error(data.message || `Authentication failed (Status: ${response.status})`);
       }
 
-      // Success case
-      this.isWaitingFor2FA = false;
+      // Login successful
+      this.is2FARequired = false;
       this.sessionInfo = data.sessionInfo;
       this.displayApps(data.apps);
       verificationCodeContainer.style.display = 'none';
@@ -134,7 +148,7 @@ class IpaDownloader {
     } finally {
       button.disabled = false;
       loadingIndicator.style.display = 'none';
-      button.textContent = this.isWaitingFor2FA ? 'Verify Code' : 'Login';
+      button.textContent = this.is2FARequired ? 'Verify Code' : 'Login';
     }
   }
 
@@ -144,7 +158,7 @@ class IpaDownloader {
     
     errorDiv.style.display = 'none';
     loadingIndicator.style.display = 'flex';
-    loadingIndicator.querySelector('p').textContent = `Preparing ${appName}...`;
+    loadingIndicator.querySelector('p').textContent = `Preparing ${appName} for download...`;
 
     try {
       if (!bundleId || !this.sessionInfo) {
@@ -164,10 +178,9 @@ class IpaDownloader {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.message || 'Download failed');
+        throw new Error(error.message || `Download failed (Status: ${response.status})`);
       }
 
-      // Handle the download
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -239,7 +252,7 @@ class IpaDownloader {
     `;
     appsContainer.style.display = 'block';
     
-    // Attach event listeners to all download buttons
+    // Attach event listeners to download buttons
     document.querySelectorAll('.download-button').forEach(button => {
       button.addEventListener('click', () => {
         this.handleDownload(
@@ -251,13 +264,34 @@ class IpaDownloader {
   }
 
   attachEventListeners() {
-    document.getElementById('login-form').addEventListener('submit', (e) => {
-      this.handleLogin(e);
-    });
+    const loginForm = document.getElementById('login-form');
+    if (loginForm) {
+      loginForm.addEventListener('submit', (e) => this.handleLogin(e));
+    }
   }
 }
 
-// Initialize when DOM is fully loaded
+// Initialize with error handling
 document.addEventListener('DOMContentLoaded', () => {
-  window.ipaDownloader = new IpaDownloader();
+  try {
+    if (!document.getElementById('ipa-downloader')) {
+      console.error('Container element not found');
+      return;
+    }
+    
+    window.ipaDownloader = new IpaDownloader();
+    console.log('IPA Downloader initialized successfully');
+  } catch (err) {
+    console.error('Initialization error:', err);
+    const container = document.getElementById('ipa-downloader');
+    if (container) {
+      container.innerHTML = `
+        <div class="error-message">
+          Application initialization failed. Please refresh the page or contact support.
+          <br><br>
+          Error: ${err.message}
+        </div>
+      `;
+    }
+  }
 });
