@@ -16,18 +16,23 @@ exports.handler = async function(event, context) {
 
   try {
     // 2. Parse thông tin từ client
-    const { appleId, password, verificationCode } = JSON.parse(event.body);
+    let { appleId, password, verificationCode } = JSON.parse(event.body);
+
+    // Xử lý verificationCode: nếu không hợp lệ thì bỏ qua
+    if (typeof verificationCode !== 'string' || !verificationCode.trim()) {
+      verificationCode = null;
+    }
+
     console.log('Authentication request for:', appleId);
 
     // 3. Cấu hình đường dẫn ipatool
     const ipatoolPath = path.join(process.cwd(), 'netlify', 'functions', 'bin', 'ipatool');
     console.log('ipatool path:', ipatoolPath);
 
-    // 4. Kiểm tra file ipatool tồn tại (không set quyền thực thi)
+    // 4. Kiểm tra file ipatool tồn tại
     if (!fs.existsSync(ipatoolPath)) {
       throw new Error('ipatool binary not found at: ' + ipatoolPath);
     }
-    // Đã bỏ dòng fs.chmodSync vì không thể thay đổi quyền trong môi trường read-only
 
     // 5. Thiết lập biến môi trường
     process.env.HOME = '/tmp'; // Yêu cầu bởi ipatool
@@ -42,7 +47,7 @@ exports.handler = async function(event, context) {
     ];
 
     if (verificationCode) {
-      command.push('--verification-code', verificationCode);
+      command.push('--verification-code', verificationCode.trim());
     }
 
     console.log('Executing command:', [ipatoolPath, ...command].join(' '));
@@ -97,7 +102,6 @@ exports.handler = async function(event, context) {
   } catch (error) {
     console.error('Authentication error:', error);
     
-    // Phân loại lỗi
     let statusCode = 500;
     let errorMessage = error.message;
 
