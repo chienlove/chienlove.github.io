@@ -6,7 +6,6 @@ const fs = require('fs');
 const execFileAsync = util.promisify(execFile);
 
 exports.handler = async function(event, context) {
-  // 1. Kiểm tra phương thức HTTP
   if (event.httpMethod !== 'POST') {
     return {
       statusCode: 405,
@@ -15,93 +14,80 @@ exports.handler = async function(event, context) {
   }
 
   try {
-    // 2. Parse thông tin từ client
-    let { appleId, password, verificationCode } = JSON.parse(event.body);
+    const { appleId, password, verificationCode, sessionInfo } = JSON.parse(event.body);
 
-    // Xử lý verificationCode: nếu không hợp lệ thì bỏ qua
-    if (typeof verificationCode !== 'string' || !verificationCode.trim()) {
-      verificationCode = null;
-    }
-
-    console.log('Authentication request for:', appleId);
-
-    // 3. Cấu hình đường dẫn ipatool
     const ipatoolPath = path.join(process.cwd(), 'netlify', 'functions', 'bin', 'ipatool');
-    console.log('ipatool path:', ipatoolPath);
 
-    // 4. Kiểm tra file ipatool tồn tại
     if (!fs.existsSync(ipatoolPath)) {
       throw new Error('ipatool binary not found at: ' + ipatoolPath);
     }
 
-    // 5. Thiết lập biến môi trường
-    process.env.HOME = '/tmp'; // Yêu cầu bởi ipatool
+    process.env.HOME = '/tmp';
 
-    // 6. Chuẩn bị lệnh auth login
-    const command = [
-      'auth',
-      'login',
-      '--email', appleId,
-      '--password', password,
-      '--format', 'json'
-    ];
+    let command = [];
+    let result = null;
 
-    if (verificationCode) {
-      command.push('--verification-code', verificationCode.trim());
-    }
+    if (!verificationCode) {
+      // Nếu chưa có mã 2FA => chỉ đăng nhập
+      command = [
+        'auth',
+        'login',
+        '--email', appleId,
+        '--password', password,
+        '--format', 'json'
+      ];
 
-    console.log('Executing command:', [ipatoolPath, ...command].join(' '));
+      console.log('Executing auth login:', [ipatoolPath, ...command].join(' '));
 
-    // 7. Thực thi lệnh
-    const { stdout, stderr } = await execFileAsync(ipatoolPath, command);
-    console.log('stdout:', stdout);
-    console.log('stderr:', stderr);
+      const { stdout } = await execFileAsync(ipatoolPath, command);
+      result = JSON.parse(stdout);
 
-    // 8. Parse kết quả
-    const result = JSON.parse(stdout);
-    
-    if (result.error) {
-      // Xử lý yêu cầu 2FA
-      if (result.error.includes('2FA') || result.error.includes('verification')) {
+      if (result.error && (result.error.includes('2FA') || result.error.includes('verification'))) {
         return {
           statusCode: 401,
           body: JSON.stringify({
             error: 'Two-factor authentication required',
-            requires2FA: true
+            requires2FA: true,
+            sessionInfo: result.sessionInfo || result // trả luôn sessionInfo để xác thực sau
           })
         };
       }
-      throw new Error(result.error);
+    } else {
+      // Nếu có mã 2FA => submit mã
+      if (!sessionInfo) {
+        throw new Error('Missing session info for verification');
+      }
+
+      command = [
+        'auth',
+        'submit-verification-code',
+        '--code', verificationCode,
+        '--session-info', JSON.stringify(sessionInfo),
+        '--format', 'json'
+      ];
+
+      console.log('Executing submit verification:', [ipatoolPath, ...command].join(' '));
+
+      const { stdout } = await execFileAsync(ipatoolPath, command);
+      result = JSON.parse(stdout);
+
+      if (result.error) {
+        throw new Error(result.error);
+      }
     }
 
-    // 9. Lấy danh sách ứng dụng đã mua
-    const appsCommand = [
-      'list',
-      '--purchased',
-      '--format', 'json',
-      '--session-info', stdout
-    ];
-
-    const { stdout: appsStdout } = await execFileAsync(ipatoolPath, appsCommand);
-    const appsData = JSON.parse(appsStdout);
-
-    // 10. Trả về kết quả
+    // Sau khi login hoặc submit 2FA thành công => trả về
     return {
       statusCode: 200,
       body: JSON.stringify({
-        apps: appsData.map(app => ({
-          id: app.adamId,
-          name: app.name,
-          bundleId: app.bundleId,
-          version: app.version
-        })),
-        sessionInfo: result
+        sessionInfo: result,
+        apps: [] // apps sẽ lấy ở bước khác
       })
     };
 
   } catch (error) {
     console.error('Authentication error:', error);
-    
+
     let statusCode = 500;
     let errorMessage = error.message;
 
