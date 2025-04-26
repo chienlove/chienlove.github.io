@@ -17,8 +17,7 @@ exports.handler = async function(event, context) {
   try {
     // 2. Parse thông tin từ client
     const { appleId, password, verificationCode } = JSON.parse(event.body);
-    console.log('Authentication request for:', appleId);
-    console.log('Verification code provided:', verificationCode ? 'Yes' : 'No');
+    console.log('Authentication request for:', appleId, 'with verification code:', verificationCode ? 'YES' : 'NO');
 
     // 3. Cấu hình đường dẫn ipatool
     const ipatoolPath = path.join(process.cwd(), 'netlify', 'functions', 'bin', 'ipatool');
@@ -45,106 +44,177 @@ exports.handler = async function(event, context) {
       command.push('--verification-code', verificationCode);
     }
 
-    console.log('Executing command:', [ipatoolPath, ...command.map(arg => 
-      arg === password ? '********' : arg)].join(' '));
+    console.log('Executing command:', ipatoolPath, command.filter(arg => !arg.includes(password)).join(' '));
 
     // 7. Thực thi lệnh
+    let stdout, stderr;
     try {
-      const { stdout, stderr } = await execFileAsync(ipatoolPath, command);
+      const result = await execFileAsync(ipatoolPath, command);
+      stdout = result.stdout;
+      stderr = result.stderr;
+      console.log('Command executed successfully');
+    } catch (execError) {
+      console.error('Execution error:', execError.message);
+      // Đôi khi lỗi xảy ra nhưng vẫn có output
+      stdout = execError.stdout || '';
+      stderr = execError.stderr || '';
       
-      // Kiểm tra stderr trước để phát hiện thông báo lỗi
-      if (stderr && stderr.length > 0) {
-        console.log('stderr output:', stderr);
-        
-        // Kiểm tra 2FA trong stderr
-        if (stderr.includes('2FA') || 
-            stderr.includes('verification') || 
-            stderr.includes('code') ||
-            stderr.includes('two factor') ||
-            stderr.includes('two-factor')) {
-          return {
-            statusCode: 401,
-            body: JSON.stringify({
-              error: 'Two-factor authentication required',
-              requires2FA: true,
-              message: 'Yêu cầu xác thực hai yếu tố'
-            })
-          };
-        }
+      // Kiểm tra xem có phải là lỗi 2FA không
+      if (stdout.includes('2FA') || 
+          stdout.includes('verification') || 
+          stderr.includes('2FA') || 
+          stderr.includes('verification') ||
+          stderr.includes('factor')) {
+        console.log('Detected 2FA requirement from execution error');
+        return {
+          statusCode: 401,
+          body: JSON.stringify({
+            error: 'Yêu cầu xác thực hai yếu tố',
+            requires2FA: true,
+            rawError: execError.message
+          })
+        };
       }
       
-      console.log('stdout available:', !!stdout);
+      // Rethrow nếu không phải lỗi 2FA
+      if (!stdout && !stderr) {
+        throw execError;
+      }
+    }
+    
+    console.log('Raw stdout:', stdout);
+    console.log('Raw stderr:', stderr);
+    
+    // Kiểm tra lỗi 2FA trong stderr trước
+    if (stderr && (
+        stderr.includes('2FA') || 
+        stderr.includes('verification') || 
+        stderr.includes('factor') ||
+        stderr.includes('code'))) {
+      console.log('Detected 2FA requirement from stderr');
+      return {
+        statusCode: 401,
+        body: JSON.stringify({
+          error: 'Yêu cầu xác thực hai yếu tố',
+          requires2FA: true,
+          debug: { stderr }
+        })
+      };
+    }
+    
+    // Kiểm tra có lỗi 2FA trong stdout không (trước khi parse)
+    if (stdout && (
+        stdout.toLowerCase().includes('2fa') || 
+        stdout.toLowerCase().includes('verification') || 
+        stdout.toLowerCase().includes('factor') ||
+        stdout.toLowerCase().includes('verification code'))) {
+      console.log('Detected 2FA requirement from raw stdout');
+      return {
+        statusCode: 401,
+        body: JSON.stringify({
+          error: 'Yêu cầu xác thực hai yếu tố',
+          requires2FA: true,
+          debug: { stdout: stdout.substring(0, 200) } // Chỉ gửi 200 ký tự đầu để tránh quá lớn
+        })
+      };
+    }
+
+    // Parse kết quả stdout thành JSON nếu có thể
+    let result;
+    try {
+      result = JSON.parse(stdout);
+      console.log('Parsed result:', JSON.stringify(result, null, 2).substring(0, 500));
+    } catch (parseError) {
+      console.error('Error parsing stdout:', parseError);
       
-      // Cố gắng parse JSON từ stdout
-      let result;
-      try {
-        result = JSON.parse(stdout);
-      } catch (parseError) {
-        console.error('Error parsing stdout as JSON:', parseError);
-        console.log('Raw stdout:', stdout);
-        
-        // Kiểm tra 2FA trong stdout raw
-        if (stdout.includes('2FA') || 
-            stdout.includes('verification') || 
-            stdout.includes('code') ||
-            stdout.includes('two factor') ||
-            stdout.includes('two-factor')) {
-          return {
-            statusCode: 401,
-            body: JSON.stringify({
-              error: 'Two-factor authentication required',
-              requires2FA: true,
-              message: 'Yêu cầu xác thực hai yếu tố'
-            })
-          };
-        }
-        
-        throw new Error('Invalid JSON response from authentication tool');
+      // Trường hợp đặc biệt: có thể là yêu cầu 2FA nhưng không trả về JSON
+      if (stdout.includes('2FA') || 
+          stdout.includes('verification') || 
+          stdout.includes('factor') ||
+          stdout.includes('code')) {
+        console.log('Detected possible 2FA requirement after JSON parse error');
+        return {
+          statusCode: 401,
+          body: JSON.stringify({
+            error: 'Yêu cầu xác thực hai yếu tố',
+            requires2FA: true,
+            parseError: parseError.message
+          })
+        };
       }
       
-      // Kiểm tra lỗi trong kết quả JSON
-      if (result.error) {
-        console.log('Error detected in result:', result.error);
-        
-        // Kiểm tra 2FA trong thông báo lỗi
-        if (result.error.includes('2FA') || 
-            result.error.includes('verification') || 
-            result.error.includes('code') ||
-            result.error.includes('two factor') ||
-            result.error.includes('two-factor')) {
-          return {
-            statusCode: 401,
-            body: JSON.stringify({
-              error: 'Two-factor authentication required',
-              requires2FA: true,
-              message: 'Yêu cầu xác thực hai yếu tố'
-            })
-          };
-        }
-        
-        throw new Error(result.error);
+      throw new Error('Không thể xử lý phản hồi từ công cụ xác thực: ' + parseError.message);
+    }
+    
+    // Kiểm tra lỗi trong kết quả JSON đã parse
+    if (result.error) {
+      console.log('Found error in parsed result:', result.error);
+      
+      // Kiểm tra xem có phải lỗi 2FA không
+      if (result.error.toLowerCase().includes('2fa') || 
+          result.error.toLowerCase().includes('verification') || 
+          result.error.toLowerCase().includes('factor') ||
+          result.error.toLowerCase().includes('code')) {
+        console.log('Detected 2FA requirement from parsed error');
+        return {
+          statusCode: 401,
+          body: JSON.stringify({
+            error: result.error,
+            requires2FA: true
+          })
+        };
       }
       
-      // Thành công - lấy danh sách ứng dụng
-      console.log('Authentication successful, fetching apps list');
-      
+      throw new Error(result.error);
+    }
+
+    // THÊM: Kiểm tra xác nhận 2FA TRƯỚC khi lấy danh sách ứng dụng
+    if (result.authType === '2FA' || 
+        (result.sessionData && result.sessionData.authType === '2FA') ||
+        stdout.includes('verification required')) {
+      console.log('Detected 2FA from session info');
+      return {
+        statusCode: 401,
+        body: JSON.stringify({
+          error: 'Yêu cầu xác thực hai yếu tố',
+          requires2FA: true
+        })
+      };
+    }
+
+    console.log('Authentication successful, retrieving app list');
+    
+    try {
+      // 9. Lấy danh sách ứng dụng đã mua
       const appsCommand = [
         'list',
         '--purchased',
-        '--format', 'json',
-        '--session-info', stdout
+        '--format', 'json'
       ];
       
-      const { stdout: appsStdout } = await execFileAsync(ipatoolPath, appsCommand);
-      let appsData;
+      // Thêm thông tin phiên (cách truyền có thể khác nhau tùy vào ipatool)
+      if (typeof result === 'object') {
+        appsCommand.push('--session-info', JSON.stringify(result));
+      } else {
+        appsCommand.push('--session-info', stdout);
+      }
+
+      console.log('Executing apps list command');
+      const { stdout: appsStdout, stderr: appsStderr } = await execFileAsync(ipatoolPath, appsCommand);
+      console.log('Apps stderr:', appsStderr);
       
+      // Validate JSON before parsing
+      let appsData;
       try {
         appsData = JSON.parse(appsStdout);
+        console.log(`Found ${appsData.length} apps`);
       } catch (parseError) {
         console.error('Error parsing apps stdout:', parseError);
-        throw new Error('Invalid response when fetching apps list');
+        console.log('Raw apps stdout:', appsStdout);
+        throw new Error('Phản hồi không hợp lệ khi lấy danh sách ứng dụng');
       }
-      
+
+      // 10. Trả về kết quả
       return {
         statusCode: 200,
         body: JSON.stringify({
@@ -157,66 +227,66 @@ exports.handler = async function(event, context) {
           sessionInfo: result
         })
       };
+    } catch (appsError) {
+      console.error('Error fetching apps:', appsError);
       
-    } catch (execError) {
-      // Xử lý lỗi từ execFile
-      console.error('Execution error:', execError);
-      console.log('Error message:', execError.message);
-      console.log('Error stdout:', execError.stdout);
-      console.log('Error stderr:', execError.stderr);
-      
-      // Kiểm tra 2FA trong stdout và stderr của lỗi
-      const errorOutput = (execError.stdout || '') + (execError.stderr || '');
-      
-      if (errorOutput.includes('2FA') || 
-          errorOutput.includes('verification') || 
-          errorOutput.includes('code') ||
-          errorOutput.includes('two factor') ||
-          errorOutput.includes('two-factor')) {
+      // Kiểm tra xem lỗi có liên quan đến 2FA không
+      if (appsError.message.includes('2FA') || 
+          appsError.message.includes('verification') ||
+          (appsError.stderr && (
+            appsError.stderr.includes('2FA') || 
+            appsError.stderr.includes('verification')))) {
         return {
           statusCode: 401,
           body: JSON.stringify({
-            error: 'Two-factor authentication required',
+            error: 'Yêu cầu xác thực hai yếu tố',
             requires2FA: true,
-            message: 'Yêu cầu xác thực hai yếu tố'
+            source: 'apps_list'
           })
         };
       }
       
-      throw execError;
+      throw new Error('Không thể lấy danh sách ứng dụng: ' + appsError.message);
     }
 
   } catch (error) {
     console.error('Authentication error:', error);
     
-    // FORCE 2FA FOR TESTING - XÓA SAU KHI KIỂM TRA
-    // Dòng dưới đây sẽ luôn yêu cầu 2FA cho mục đích kiểm thử
-    // Hãy xóa sau khi đã xác minh rằng frontend hiển thị đúng trường 2FA
-    return {
-      statusCode: 401,
-      body: JSON.stringify({
-        error: 'Two-factor authentication required',
-        requires2FA: true,
-        message: 'Yêu cầu xác thực hai yếu tố'
-      })
-    };
-    
     // Phân loại lỗi
     let statusCode = 500;
     let errorMessage = error.message;
-    
-    if (error.message.includes('Invalid credentials') || 
-        error.message.includes('unauthorized') || 
-        error.message.includes('password')) {
+    let requires2FA = false;
+
+    // Phát hiện các mẫu 2FA trong lỗi
+    if (error.message.includes('2FA') || 
+        error.message.includes('verification') || 
+        error.message.includes('two factor') || 
+        error.message.includes('two-factor') ||
+        error.message.includes('code') ||
+        error.message.includes('verify')) {
+      statusCode = 401;
+      errorMessage = 'Yêu cầu xác thực hai yếu tố';
+      requires2FA = true;
+    } else if (error.message.includes('Invalid credentials') || 
+               error.message.includes('password') || 
+               error.message.includes('unauthorized')) {
       statusCode = 401;
       errorMessage = 'Apple ID hoặc mật khẩu không hợp lệ';
+    } else if (error.message.includes('pattern')) {
+      statusCode = 400;
+      errorMessage = 'Định dạng đầu vào không hợp lệ. Vui lòng kiểm tra định dạng thông tin xác thực của bạn.';
     }
-    
+
     return {
       statusCode,
       body: JSON.stringify({
-        error: 'Authentication failed',
-        details: errorMessage
+        error: 'Xác thực thất bại',
+        details: errorMessage,
+        requires2FA,
+        errorObj: {
+          message: error.message,
+          stack: error.stack ? error.stack.split('\n').slice(0, 3).join('\n') : null
+        }
       })
     };
   }
