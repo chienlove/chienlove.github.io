@@ -1,8 +1,7 @@
-// static/js/ipa-downloader.js
-
 class IpaDownloader {
   constructor() {
     this.container = document.getElementById('ipa-downloader');
+    this.sessionInfo = null;
     this.render();
     this.attachEventListeners();
   }
@@ -15,32 +14,28 @@ class IpaDownloader {
             <h3 class="card-title">Apple ID Login</h3>
             <p class="card-description">Enter your Apple ID to download IPA files</p>
           </div>
-          <div class="card-content">
-            <form id="login-form" class="login-form">
-              <div class="form-group">
-                <input 
-                  type="email" 
-                  id="apple-id" 
-                  placeholder="Apple ID" 
-                  class="input-field" 
-                  required
-                />
-              </div>
-              <div class="form-group">
-                <input 
-                  type="password" 
-                  id="password" 
-                  placeholder="Password" 
-                  class="input-field" 
-                  required
-                />
-              </div>
-              <div id="verification-code-container" class="form-group" style="display: none;">
+          <div class="card-content space-y-4">
+            <form id="login-form">
+              <input 
+                type="email" 
+                id="apple-id" 
+                placeholder="Apple ID" 
+                class="input-primary" 
+                required
+              />
+              <input 
+                type="password" 
+                id="password" 
+                placeholder="Password" 
+                class="input-primary" 
+                required
+              />
+              <div id="verification-code-container">
                 <input 
                   type="text" 
                   id="verification-code" 
                   placeholder="Verification Code" 
-                  class="input-field"
+                  class="input-primary"
                 />
                 <p class="help-text">Enter the verification code sent to your trusted device</p>
               </div>
@@ -50,12 +45,12 @@ class IpaDownloader {
             </form>
           </div>
         </div>
-        <div id="error-message" class="error-message" style="display: none;"></div>
-        <div id="loading-indicator" class="loading-indicator" style="display: none;">
+        <div id="error-message" class="error-message"></div>
+        <div id="loading-indicator">
           <div class="spinner"></div>
           <p>Processing, please wait...</p>
         </div>
-        <div id="apps-list" class="apps-container" style="display: none;"></div>
+        <div id="apps-list" class="apps-container"></div>
       </div>
     `;
   }
@@ -66,12 +61,9 @@ class IpaDownloader {
     const errorDiv = document.getElementById('error-message');
     const loadingIndicator = document.getElementById('loading-indicator');
     const verificationCodeContainer = document.getElementById('verification-code-container');
-    const verificationCode = document.getElementById('verification-code').value;
     
-    // Reset error display
+    // Reset UI
     errorDiv.style.display = 'none';
-    
-    // Show loading indicator
     button.disabled = true;
     loadingIndicator.style.display = 'flex';
     button.textContent = 'Processing...';
@@ -79,14 +71,18 @@ class IpaDownloader {
     try {
       const response = await fetch('/.netlify/functions/authenticate', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({
           appleId: document.getElementById('apple-id').value,
           password: document.getElementById('password').value,
-          verificationCode: verificationCode || undefined
+          verificationCode: document.getElementById('verification-code').value || undefined
         })
       });
 
       const data = await response.json();
+      console.log('Authentication response:', data);
 
       // Handle 2FA requirement
       if (response.status === 401 && data.requires2FA) {
@@ -99,16 +95,16 @@ class IpaDownloader {
 
       // Handle other errors
       if (!response.ok) {
-        throw new Error(data.details || 'Authentication failed');
+        throw new Error(data.message || 'Authentication failed');
       }
 
-      // Success - store session and display apps
+      // Success case
       this.sessionInfo = data.sessionInfo;
       this.displayApps(data.apps);
-      
-      // Hide verification code container after successful login
       verificationCodeContainer.style.display = 'none';
+
     } catch (err) {
+      console.error('Login error:', err);
       errorDiv.textContent = err.message;
       errorDiv.style.display = 'block';
     } finally {
@@ -124,13 +120,14 @@ class IpaDownloader {
     
     errorDiv.style.display = 'none';
     loadingIndicator.style.display = 'flex';
+    loadingIndicator.querySelector('p').textContent = `Downloading ${appName}...`;
 
     try {
-      // Update status
-      loadingIndicator.querySelector('p').textContent = `Downloading ${appName}...`;
-      
       const response = await fetch('/.netlify/functions/ipadown', {
         method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({ 
           bundleId,
           sessionInfo: this.sessionInfo 
@@ -139,21 +136,23 @@ class IpaDownloader {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.details || 'Download failed');
+        throw new Error(error.message || 'Download failed');
       }
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${appName}.ipa`;
+      a.download = `${appName.replace(/[^a-z0-9]/gi, '_')}.ipa`;
       document.body.appendChild(a);
       a.click();
-      a.remove();
+      window.setTimeout(() => {
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      }, 100);
       
-      // Clean up the URL
-      window.URL.revokeObjectURL(url);
     } catch (err) {
+      console.error('Download error:', err);
       errorDiv.textContent = err.message;
       errorDiv.style.display = 'block';
     } finally {
@@ -194,10 +193,7 @@ class IpaDownloader {
                   <span class="app-name">${app.name}</span>
                   <span class="app-version">Version: ${app.version || 'Unknown'}</span>
                 </div>
-                <button 
-                  class="download-button"
-                  onclick="ipaDownloader.handleDownload('${app.bundleId}', '${app.name.replace(/'/g, "\\'")}')"
-                >
+                <button class="download-button" data-bundle="${app.bundleId}" data-name="${app.name.replace(/"/g, '&quot;')}">
                   Download
                 </button>
               </div>
@@ -207,13 +203,24 @@ class IpaDownloader {
       </div>
     `;
     appsContainer.style.display = 'block';
+    
+    // Attach event listeners to download buttons
+    document.querySelectorAll('.download-button').forEach(button => {
+      button.addEventListener('click', () => {
+        this.handleDownload(
+          button.getAttribute('data-bundle'),
+          button.getAttribute('data-name')
+        );
+      });
+    });
   }
 
   attachEventListeners() {
-    document.getElementById('login-form').addEventListener('submit', this.handleLogin.bind(this));
+    document.getElementById('login-form').addEventListener('submit', (e) => this.handleLogin(e));
   }
 }
 
-// Initialize the downloader
-const ipaDownloader = new IpaDownloader();
-window.ipaDownloader = ipaDownloader; // Make it globally accessible
+// Initialize the downloader when DOM is loaded
+document.addEventListener('DOMContentLoaded', () => {
+  window.ipaDownloader = new IpaDownloader();
+});
