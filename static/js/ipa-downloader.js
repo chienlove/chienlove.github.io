@@ -3,12 +3,9 @@
 class IpaDownloader {
   constructor() {
     this.container = document.getElementById('ipa-downloader');
-    this.requires2FA = false; // Thêm cờ để theo dõi trạng thái 2FA
     this.render();
     this.attachEventListeners();
-    
-    // Debug: Thêm theo dõi khởi tạo
-    console.log('IpaDownloader initialized');
+    this.isWaitingFor2FA = false; // Thêm trạng thái 2FA
   }
 
   render() {
@@ -16,8 +13,8 @@ class IpaDownloader {
       <div class="ipa-downloader-container">
         <div class="card">
           <div class="card-header">
-            <h3 class="card-title">Đăng nhập Apple ID</h3>
-            <p class="card-description">Nhập Apple ID của bạn để tải file IPA</p>
+            <h3 class="card-title">Apple ID Login</h3>
+            <p class="card-description">Enter your Apple ID to download IPA files</p>
           </div>
           <div class="card-content">
             <form id="login-form" class="login-form">
@@ -34,7 +31,7 @@ class IpaDownloader {
                 <input 
                   type="password" 
                   id="password" 
-                  placeholder="Mật khẩu" 
+                  placeholder="Password" 
                   class="input-field" 
                   required
                 />
@@ -43,233 +40,122 @@ class IpaDownloader {
                 <input 
                   type="text" 
                   id="verification-code" 
-                  placeholder="Mã xác thực" 
+                  placeholder="Verification Code" 
                   class="input-field"
+                  required
                 />
-                <p class="help-text">Nhập mã xác thực được gửi đến thiết bị của bạn</p>
+                <p class="help-text">Enter the verification code sent to your trusted device</p>
               </div>
               <button type="submit" class="button-primary" id="login-button">
-                Đăng nhập
+                Login
               </button>
             </form>
-            <!-- Thêm phần tử hiển thị trạng thái -->
-            <div id="status-message" class="status-message" style="display: none;"></div>
           </div>
         </div>
         <div id="error-message" class="error-message" style="display: none;"></div>
         <div id="loading-indicator" class="loading-indicator" style="display: none;">
           <div class="spinner"></div>
-          <p>Đang xử lý, vui lòng đợi...</p>
+          <p>Processing, please wait...</p>
         </div>
         <div id="apps-list" class="apps-container" style="display: none;"></div>
-        
-        <!-- Thêm vùng debug -->
-        <div id="debug-panel" class="debug-panel" style="margin-top: 20px; padding: 10px; border: 1px solid #ccc; display: none;">
-          <h4>Debug Info</h4>
-          <pre id="debug-content" style="white-space: pre-wrap; overflow: auto; max-height: 300px;"></pre>
-        </div>
       </div>
     `;
-    
-    // Debug panel toggle
-    if (window.location.search.includes('debug=true')) {
-      document.getElementById('debug-panel').style.display = 'block';
-    }
-  }
-  
-  // Hàm gỡ lỗi
-  debug(info, data) {
-    const debugPanel = document.getElementById('debug-content');
-    if (debugPanel) {
-      const timestamp = new Date().toLocaleTimeString();
-      let message = `[${timestamp}] ${info}\n`;
-      
-      if (data) {
-        if (typeof data === 'object') {
-          message += JSON.stringify(data, null, 2) + '\n';
-        } else {
-          message += data + '\n';
-        }
-      }
-      
-      debugPanel.textContent += message;
-      debugPanel.scrollTop = debugPanel.scrollHeight;
-    }
-    
-    // Luôn ghi log ra console
-    console.log(info, data);
   }
 
   async handleLogin(e) {
     e.preventDefault();
-    this.debug('Xử lý đăng nhập...');
-    
-    // Lấy tham chiếu đến các phần tử DOM
     const button = document.getElementById('login-button');
     const errorDiv = document.getElementById('error-message');
     const loadingIndicator = document.getElementById('loading-indicator');
     const verificationCodeContainer = document.getElementById('verification-code-container');
-    const verificationCodeField = document.getElementById('verification-code');
-    const statusMessage = document.getElementById('status-message');
+    const verificationCodeInput = document.getElementById('verification-code');
     
-    // Reset hiển thị lỗi
+    // Reset error display
     errorDiv.style.display = 'none';
     
-    // Hiển thị chỉ báo đang tải
+    // Show loading indicator
     button.disabled = true;
     loadingIndicator.style.display = 'flex';
-    button.textContent = 'Đang xử lý...';
+    button.textContent = 'Processing...';
 
     try {
-      // Hiển thị trạng thái
-      statusMessage.textContent = 'Đang xác thực...';
-      statusMessage.style.display = 'block';
-      
       const appleId = document.getElementById('apple-id').value;
       const password = document.getElementById('password').value;
-      const verificationCode = verificationCodeField.value;
-      
-      this.debug('Thông tin đăng nhập:', { 
-        appleId, 
-        hasPassword: !!password, 
-        hasVerificationCode: !!verificationCode,
-        is2FAVisible: verificationCodeContainer.style.display !== 'none'
-      });
+      const verificationCode = verificationCodeInput.value;
 
-      const reqData = {
-        appleId,
-        password,
-        verificationCode: verificationCode || undefined
-      };
-      
-      this.debug('Gửi yêu cầu xác thực...');
-      
+      // Kiểm tra nếu đang chờ 2FA nhưng không nhập code
+      if (this.isWaitingFor2FA && !verificationCode) {
+        throw new Error('Please enter the verification code');
+      }
+
       const response = await fetch('/.netlify/functions/authenticate', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify(reqData)
+        body: JSON.stringify({
+          appleId,
+          password,
+          verificationCode: this.isWaitingFor2FA ? verificationCode : undefined
+        })
       });
 
-      this.debug('Nhận phản hồi', { status: response.status, statusText: response.statusText });
-      
-      // Lấy dữ liệu phản hồi dưới dạng text trước
-      const responseText = await response.text();
-      let data;
-      
-      try {
-        data = JSON.parse(responseText);
-        this.debug('Phân tích phản hồi thành công', data);
-      } catch (jsonError) {
-        this.debug('Lỗi phân tích JSON phản hồi', responseText);
-        throw new Error('Không thể xử lý phản hồi từ máy chủ: ' + jsonError.message);
+      // Kiểm tra content-type trước khi parse JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        throw new Error(`Server error: ${text}`);
       }
 
-      // QUAN TRỌNG: Xử lý yêu cầu 2FA - Kiểm tra nhiều trường
-      const is2FARequired = 
-        (response.status === 401 && data.requires2FA) || 
-        (data.error && data.error.toLowerCase().includes('hai yếu tố')) ||
-        (data.error && data.error.toLowerCase().includes('2fa')) ||
-        (data.details && data.details.toLowerCase().includes('hai yếu tố')) ||
-        (data.details && data.details.toLowerCase().includes('2fa'));
-      
-      if (is2FARequired) {
-        this.debug('*** ĐÃ PHÁT HIỆN YÊU CẦU XÁC THỰC 2FA ***');
-        this.requires2FA = true;
-        
-        // Hiển thị container mã xác thực
+      const data = await response.json();
+
+      // Handle 2FA requirement
+      if (response.status === 401 && data.requires2FA) {
+        this.isWaitingFor2FA = true;
         verificationCodeContainer.style.display = 'block';
-        
-        // Kiểm tra xem container đã hiển thị chưa
-        setTimeout(() => {
-          if (verificationCodeContainer.offsetParent === null) {
-            this.debug('CẢNH BÁO: Container 2FA vẫn bị ẩn sau khi thiết lập style!');
-            // Thử một cách khác
-            verificationCodeContainer.setAttribute('style', 'display: block !important');
-            
-            // Kiểm tra lần nữa
-            setTimeout(() => {
-              if (verificationCodeContainer.offsetParent === null) {
-                this.debug('LỖI: Không thể hiển thị container 2FA sau nhiều lần thử!');
-              } else {
-                this.debug('Container 2FA hiển thị thành công sau lần thử thứ 2');
-              }
-            }, 100);
-          } else {
-            this.debug('Container 2FA hiển thị thành công');
-          }
-        }, 100);
-        
-        // Hiển thị thông báo lỗi
-        errorDiv.textContent = 'Vui lòng nhập mã xác thực được gửi đến thiết bị của bạn';
-        errorDiv.style.display = 'block';
-        
-        // Cập nhật trạng thái
-        statusMessage.textContent = 'Cần mã xác thực 2FA';
-        button.textContent = 'Xác thực';
-        
-        // Reset trạng thái loading
-        button.disabled = false;
-        loadingIndicator.style.display = 'none';
-        
-        // Focus vào trường mã xác thực
-        setTimeout(() => {
-          try {
-            verificationCodeField.focus();
-            this.debug('Đã focus vào trường mã xác thực');
-          } catch (focusError) {
-            this.debug('Không thể focus vào trường mã xác thực', focusError);
-          }
-        }, 200);
-        
+        verificationCodeInput.focus();
+        button.textContent = 'Verify';
         return;
       }
 
-      // Xử lý các lỗi khác
+      // Handle other errors
       if (!response.ok) {
-        this.debug('Lỗi phản hồi không phải 2FA', data);
-        throw new Error(data.details || data.error || 'Xác thực thất bại');
+        throw new Error(data.details || data.error || 'Authentication failed');
       }
 
-      // Thành công - lưu phiên và hiển thị ứng dụng
-      this.debug('Xác thực thành công, hiển thị danh sách ứng dụng');
+      // Success - store session and display apps
+      this.isWaitingFor2FA = false;
       this.sessionInfo = data.sessionInfo;
       this.displayApps(data.apps);
-      statusMessage.textContent = 'Đăng nhập thành công';
       
-      // Ẩn container mã xác thực sau khi đăng nhập thành công
-      this.requires2FA = false;
+      // Hide verification code container after successful login
       verificationCodeContainer.style.display = 'none';
     } catch (err) {
-      this.debug('Lỗi xử lý', err);
+      console.error('Login error:', err);
       errorDiv.textContent = err.message;
       errorDiv.style.display = 'block';
-      statusMessage.textContent = 'Xác thực thất bại';
     } finally {
       button.disabled = false;
       loadingIndicator.style.display = 'none';
-      button.textContent = this.requires2FA ? 'Xác thực' : 'Đăng nhập';
+      button.textContent = this.isWaitingFor2FA ? 'Verify' : 'Login';
     }
   }
 
   async handleDownload(bundleId, appName) {
-    this.debug(`Bắt đầu tải xuống ứng dụng: ${appName}`);
-    
     const errorDiv = document.getElementById('error-message');
     const loadingIndicator = document.getElementById('loading-indicator');
-    const statusMessage = document.getElementById('status-message');
     
     errorDiv.style.display = 'none';
     loadingIndicator.style.display = 'flex';
-    statusMessage.textContent = `Đang tải ${appName}...`;
-    statusMessage.style.display = 'block';
 
     try {
+      // Update status
+      loadingIndicator.querySelector('p').textContent = `Downloading ${appName}...`;
+      
       const response = await fetch('/.netlify/functions/ipadown', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({ 
           bundleId,
@@ -277,24 +163,15 @@ class IpaDownloader {
         })
       });
 
-      this.debug('Phản hồi tải xuống', { status: response.status });
-
-      if (!response.ok) {
-        const responseText = await response.text();
-        let errorData;
-        
-        try {
-          errorData = JSON.parse(responseText);
-          this.debug('Lỗi tải xuống được phân tích', errorData);
-        } catch (jsonError) {
-          this.debug('Không thể phân tích lỗi tải xuống', responseText);
-          throw new Error('Lỗi tải xuống: ' + responseText);
-        }
-        
-        throw new Error(errorData.details || errorData.error || 'Tải xuống thất bại');
+      // Kiểm tra content-type
+      const contentType = response.headers.get('content-type');
+      if (contentType && contentType.includes('application/json')) {
+        const error = await response.json();
+        throw new Error(error.details || 'Download failed');
+      } else if (!response.ok) {
+        throw new Error(await response.text());
       }
 
-      this.debug('Tải xuống thành công, xử lý blob');
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -304,34 +181,29 @@ class IpaDownloader {
       a.click();
       a.remove();
       
-      statusMessage.textContent = `Đã tải xuống ${appName} thành công`;
-      this.debug('Tải xuống hoàn tất');
-      
-      // Dọn dẹp URL
+      // Clean up the URL
       window.URL.revokeObjectURL(url);
     } catch (err) {
-      this.debug('Lỗi tải xuống', err);
+      console.error('Download error:', err);
       errorDiv.textContent = err.message;
       errorDiv.style.display = 'block';
-      statusMessage.textContent = 'Tải xuống thất bại';
     } finally {
       loadingIndicator.style.display = 'none';
-      loadingIndicator.querySelector('p').textContent = 'Đang xử lý, vui lòng đợi...';
+      loadingIndicator.querySelector('p').textContent = 'Processing, please wait...';
     }
   }
 
   displayApps(apps) {
-    this.debug('Hiển thị danh sách ứng dụng', { count: apps ? apps.length : 0 });
     const appsContainer = document.getElementById('apps-list');
     
     if (!apps || apps.length === 0) {
       appsContainer.innerHTML = `
         <div class="card">
           <div class="card-header">
-            <h3 class="card-title">Không tìm thấy ứng dụng</h3>
+            <h3 class="card-title">No Apps Found</h3>
           </div>
           <div class="card-content">
-            <p>Không tìm thấy ứng dụng nào cho Apple ID này.</p>
+            <p>No apps were found for this Apple ID.</p>
           </div>
         </div>
       `;
@@ -342,8 +214,8 @@ class IpaDownloader {
     appsContainer.innerHTML = `
       <div class="card">
         <div class="card-header">
-          <h3 class="card-title">Ứng dụng của bạn</h3>
-          <p class="card-description">Chọn ứng dụng để tải xuống</p>
+          <h3 class="card-title">Your Apps</h3>
+          <p class="card-description">Select an app to download</p>
         </div>
         <div class="card-content">
           <div class="apps-list">
@@ -351,13 +223,13 @@ class IpaDownloader {
               <div class="app-item">
                 <div class="app-info">
                   <span class="app-name">${app.name}</span>
-                  <span class="app-version">Phiên bản: ${app.version || 'Không xác định'}</span>
+                  <span class="app-version">Version: ${app.version || 'Unknown'}</span>
                 </div>
                 <button 
                   class="download-button"
                   onclick="ipaDownloader.handleDownload('${app.bundleId}', '${app.name.replace(/'/g, "\\'")}')"
                 >
-                  Tải xuống
+                  Download
                 </button>
               </div>
             `).join('')}
@@ -366,18 +238,13 @@ class IpaDownloader {
       </div>
     `;
     appsContainer.style.display = 'block';
-    this.debug('Đã hiển thị danh sách ứng dụng thành công');
   }
 
   attachEventListeners() {
-    const form = document.getElementById('login-form');
-    form.addEventListener('submit', this.handleLogin.bind(this));
-    this.debug('Đã gắn trình xử lý sự kiện đăng nhập');
+    document.getElementById('login-form').addEventListener('submit', (e) => this.handleLogin(e));
   }
 }
 
-// Khởi tạo downloader với debug mode
-console.log('Starting IpaDownloader initialization...');
+// Initialize the downloader
 const ipaDownloader = new IpaDownloader();
-window.ipaDownloader = ipaDownloader; // Làm cho nó có thể truy cập toàn cục
-console.log('IpaDownloader initialized and attached to window');
+window.ipaDownloader = ipaDownloader; // Make it globally accessible
