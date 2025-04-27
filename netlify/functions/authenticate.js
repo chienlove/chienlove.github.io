@@ -1,4 +1,3 @@
-// netlify/functions/authenticate.js
 const { execFile } = require('child_process');
 const util = require('util');
 const path = require('path');
@@ -6,36 +5,22 @@ const fs = require('fs');
 const execFileAsync = util.promisify(execFile);
 
 exports.handler = async function(event, context) {
-  // 1. Kiểm tra phương thức HTTP
   if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      body: JSON.stringify({ error: 'Method Not Allowed' })
-    };
+    return { statusCode: 405, body: JSON.stringify({ error: 'Method Not Allowed' }) };
   }
 
   try {
-    // 2. Parse thông tin từ client
     const { appleId, password, verificationCode } = JSON.parse(event.body);
-    console.log('Authentication request for:', appleId);
-
-    // 3. Cấu hình đường dẫn ipatool
     const ipatoolPath = path.join(process.cwd(), 'netlify', 'functions', 'bin', 'ipatool');
-    console.log('ipatool path:', ipatoolPath);
 
-    // 4. Kiểm tra file ipatool tồn tại
+    // Verify ipatool exists
     if (!fs.existsSync(ipatoolPath)) {
-      throw new Error('ipatool binary not found at: ' + ipatoolPath);
+      throw new Error('ipatool binary not found');
     }
 
-    // 5. Thiết lập biến môi trường
-    process.env.HOME = '/tmp'; // Yêu cầu bởi ipatool
-    console.log('Environment:', {
-      HOME: process.env.HOME,
-      PATH: process.env.PATH
-    });
+    process.env.HOME = '/tmp';
 
-    // 6. Chuẩn bị lệnh auth login
+    // Build command
     const command = [
       'auth',
       'login',
@@ -48,74 +33,48 @@ exports.handler = async function(event, context) {
       command.push('--verification-code', verificationCode);
     }
 
-    console.log('Executing command:', [ipatoolPath, ...command].join(' '));
+    // Execute with timeout
+    const { stdout, stderr } = await execFileAsync(ipatoolPath, command, {
+      timeout: 25000,
+      maxBuffer: 1024 * 1024 * 5
+    });
 
-    // 7. Thực thi lệnh với timeout
-    const { stdout, stderr } = await execFileAsync(ipatoolPath, command, { timeout: 30000 });
-    console.log('Command output:', { stdout, stderr });
+    // Parse response
+    const result = JSON.parse(stdout);
 
-    // 8. Parse kết quả
-    let result;
-    try {
-      result = JSON.parse(stdout);
-    } catch (parseError) {
-      console.error('Failed to parse stdout:', stdout);
-      throw new Error('Invalid response from authentication service');
-    }
-    
+    // Handle 2FA
     if (result.error) {
-      // Xử lý yêu cầu 2FA
-      const lowerError = result.error.toLowerCase();
-      if (lowerError.includes('2fa') || lowerError.includes('verification') || lowerError.includes('code')) {
+      const twoFactorTerms = ['verification', 'two-factor', '2fa', 'code'];
+      const requires2FA = twoFactorTerms.some(term => 
+        result.error.toLowerCase().includes(term)
+      );
+
+      if (requires2FA) {
         return {
-          statusCode: 401,
+          statusCode: 200,
           body: JSON.stringify({
-            error: 'Two-factor authentication required',
-            requires2FA: true,
-            message: result.error
+            status: '2fa_required',
+            message: result.error,
+            requires2FA: true
           })
         };
       }
-      
-      // Xử lý thông báo lỗi không đúng credentials
-      if (lowerError.includes('invalid') || lowerError.includes('incorrect')) {
-        return {
-          statusCode: 401,
-          body: JSON.stringify({
-            error: 'Invalid Apple ID or password',
-            details: result.error,
-            requires2FA: false
-          })
-        };
-      }
-      
+
       throw new Error(result.error);
     }
 
-    // 9. Lấy danh sách ứng dụng đã mua
-    const appsCommand = [
+    // Get apps list
+    const { stdout: appsStdout } = await execFileAsync(ipatoolPath, [
       'list',
       '--purchased',
       '--format', 'json',
       '--session-info', JSON.stringify(result)
-    ];
+    ], { timeout: 25000 });
 
-    console.log('Executing apps command:', [ipatoolPath, ...appsCommand].join(' '));
-    const { stdout: appsStdout } = await execFileAsync(ipatoolPath, appsCommand, { timeout: 30000 });
-    
-    let appsData;
-    try {
-      appsData = JSON.parse(appsStdout);
-    } catch (parseError) {
-      console.error('Failed to parse apps stdout:', appsStdout);
-      throw new Error('Invalid response when fetching apps list');
-    }
-
-    // 10. Trả về kết quả
     return {
       statusCode: 200,
       body: JSON.stringify({
-        apps: appsData.map(app => ({
+        apps: JSON.parse(appsStdout).map(app => ({
           id: app.adamId,
           name: app.name,
           bundleId: app.bundleId,
@@ -126,25 +85,18 @@ exports.handler = async function(event, context) {
     };
 
   } catch (error) {
-    console.error('Authentication error:', error);
-    
-    // Phân loại lỗi
-    let statusCode = 500;
-    let errorMessage = error.message;
-
-    if (error.message.toLowerCase().includes('invalid credentials') || 
-        error.message.toLowerCase().includes('invalid apple id')) {
-      statusCode = 401;
-      errorMessage = 'Invalid Apple ID or password';
-    } else if (error.message.toLowerCase().includes('timeout')) {
-      errorMessage = 'Request timed out. Please try again.';
-    }
+    console.error('Full error:', {
+      message: error.message,
+      stack: error.stack,
+      stderr: error.stderr?.toString(),
+      stdout: error.stdout?.toString()
+    });
 
     return {
-      statusCode,
+      statusCode: error.code === 'ETIMEDOUT' ? 504 : 401,
       body: JSON.stringify({
         error: 'Authentication failed',
-        details: errorMessage,
+        details: error.message,
         requires2FA: false
       })
     };
