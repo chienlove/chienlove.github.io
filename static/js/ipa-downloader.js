@@ -1,20 +1,9 @@
 // static/js/ipa-downloader.js
+
 class IpaDownloader {
   constructor() {
-    try {
-      this.container = document.getElementById('ipa-downloader');
-      if (!this.container) throw new Error('Container element not found');
-      
-      this.sessionInfo = null;
-      this.isWaitingFor2FA = false;
-      this.initialize();
-    } catch (error) {
-      console.error('Initialization error:', error);
-      this.showFatalError('Failed to initialize application. Please refresh the page.');
-    }
-  }
-
-  initialize() {
+    this.container = document.getElementById('ipa-downloader');
+    this.requires2FA = false; // Add a flag to track 2FA state
     this.render();
     this.attachEventListeners();
   }
@@ -36,7 +25,6 @@ class IpaDownloader {
                   placeholder="Apple ID" 
                   class="input-field" 
                   required
-                  autocomplete="username"
                 />
               </div>
               <div class="form-group">
@@ -46,7 +34,6 @@ class IpaDownloader {
                   placeholder="Password" 
                   class="input-field" 
                   required
-                  autocomplete="current-password"
                 />
               </div>
               <div id="verification-code-container" class="form-group" style="display: none;">
@@ -55,13 +42,8 @@ class IpaDownloader {
                   id="verification-code" 
                   placeholder="Verification Code" 
                   class="input-field"
-                  required
-                  autocomplete="one-time-code"
-                  inputmode="numeric"
-                  pattern="[0-9]*"
-                  maxlength="6"
                 />
-                <p class="help-text">Enter the 6-digit verification code sent to your trusted device</p>
+                <p class="help-text">Enter the verification code sent to your trusted device</p>
               </div>
               <button type="submit" class="button-primary" id="login-button">
                 Login
@@ -69,272 +51,180 @@ class IpaDownloader {
             </form>
           </div>
         </div>
-        <div id="status-message" class="status-message" style="display: none;"></div>
         <div id="error-message" class="error-message" style="display: none;"></div>
         <div id="loading-indicator" class="loading-indicator" style="display: none;">
           <div class="spinner"></div>
-          <p class="loading-text">Processing, please wait...</p>
+          <p>Processing, please wait...</p>
         </div>
         <div id="apps-list" class="apps-container" style="display: none;"></div>
       </div>
     `;
   }
 
-  showFatalError(message) {
-    const errorDiv = document.createElement('div');
-    errorDiv.className = 'fatal-error';
-    errorDiv.style.color = 'red';
-    errorDiv.style.padding = '20px';
-    errorDiv.style.margin = '10px';
-    errorDiv.style.border = '1px solid red';
-    errorDiv.style.borderRadius = '4px';
-    errorDiv.textContent = message;
-    document.body.prepend(errorDiv);
-  }
-
-  getElement(id) {
-    const element = document.getElementById(id);
-    if (!element) throw new Error(`Element #${id} not found`);
-    return element;
-  }
-
-  showMessage(type, message, persistent = false) {
-    try {
-      const element = this.getElement(`${type}-message`);
-      element.textContent = message;
-      element.style.display = 'block';
-      
-      if (!persistent) {
-        setTimeout(() => {
-          element.style.display = 'none';
-        }, 5000);
-      }
-    } catch (error) {
-      console.error(`Could not show ${type} message:`, error);
-    }
-  }
-
   async handleLogin(e) {
     e.preventDefault();
+    const button = document.getElementById('login-button');
+    const errorDiv = document.getElementById('error-message');
+    const loadingIndicator = document.getElementById('loading-indicator');
+    const verificationCodeContainer = document.getElementById('verification-code-container');
+    const verificationCode = document.getElementById('verification-code').value;
     
+    // Reset error display
+    errorDiv.style.display = 'none';
+    
+    // Show loading indicator
+    button.disabled = true;
+    loadingIndicator.style.display = 'flex';
+    button.textContent = 'Processing...';
+
     try {
-      const button = this.getElement('login-button');
-      const loadingIndicator = this.getElement('loading-indicator');
-      const loadingText = loadingIndicator.querySelector('.loading-text');
-      const verificationCodeContainer = this.getElement('verification-code-container');
-
-      // Reset UI
-      this.showMessage('error', '', true);
-      button.disabled = true;
-      loadingIndicator.style.display = 'flex';
-      loadingText.textContent = 'Authenticating...';
-      button.textContent = 'Processing...';
-
-      const appleId = this.getElement('apple-id').value.trim();
-      const password = this.getElement('password').value.trim();
-      const verificationCode = this.isWaitingFor2FA ? this.getElement('verification-code').value.trim() : null;
-
-      // Validate inputs
-      if (!appleId || !password) {
-        throw new Error('Please enter both Apple ID and password');
-      }
-
-      if (this.isWaitingFor2FA && !verificationCode) {
-        throw new Error('Please enter the 6-digit verification code');
-      }
-
-      // Make API request
       const response = await fetch('/.netlify/functions/authenticate', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json' // Add Content-Type header
         },
         body: JSON.stringify({
-          appleId,
-          password,
-          verificationCode: this.isWaitingFor2FA ? verificationCode : undefined
+          appleId: document.getElementById('apple-id').value,
+          password: document.getElementById('password').value,
+          verificationCode: verificationCode || undefined
         })
       });
 
-      // Check for network errors
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        
-        // Handle 2FA case
-        if (response.status === 401 && errorData.requires2FA) {
-          this.isWaitingFor2FA = true;
-          verificationCodeContainer.style.display = 'block';
-          this.getElement('verification-code').focus();
-          this.showMessage('status', 'Verification code has been sent to your trusted device');
-          button.textContent = 'Verify';
-          return;
-        }
-        
-        throw new Error(errorData.details || errorData.error || 'Authentication failed');
-      }
-
-      // Success case
       const data = await response.json();
-      this.isWaitingFor2FA = false;
-      this.sessionInfo = data.sessionInfo;
-      this.showMessage('status', 'Login successful! Loading your apps...');
-      this.displayApps(data.apps);
-      verificationCodeContainer.style.display = 'none';
 
-    } catch (error) {
-      console.error('Login error:', error);
-      this.showMessage('error', error.message, true);
-    } finally {
-      try {
-        const button = this.getElement('login-button');
+      // Handle 2FA requirement
+      if (response.status === 401 && data.requires2FA) {
+        this.requires2FA = true;
+        verificationCodeContainer.style.display = 'block';
+        errorDiv.textContent = 'Please enter the verification code sent to your device';
+        errorDiv.style.display = 'block';
+        button.textContent = 'Verify';
         button.disabled = false;
-        button.textContent = this.isWaitingFor2FA ? 'Verify' : 'Login';
-        
-        this.getElement('loading-indicator').style.display = 'none';
-        this.getElement('loading-indicator').querySelector('.loading-text').textContent = 'Processing, please wait...';
-      } catch (cleanupError) {
-        console.error('Cleanup error:', cleanupError);
+        loadingIndicator.style.display = 'none';
+        return;
       }
+
+      // Handle other errors
+      if (!response.ok) {
+        throw new Error(data.details || data.error || 'Authentication failed');
+      }
+
+      // Success - store session and display apps
+      this.sessionInfo = data.sessionInfo;
+      this.displayApps(data.apps);
+      
+      // Hide verification code container after successful login
+      this.requires2FA = false;
+      verificationCodeContainer.style.display = 'none';
+    } catch (err) {
+      errorDiv.textContent = err.message;
+      errorDiv.style.display = 'block';
+    } finally {
+      button.disabled = false;
+      loadingIndicator.style.display = 'none';
+      button.textContent = this.requires2FA ? 'Verify' : 'Login';
     }
   }
 
   async handleDownload(bundleId, appName) {
-    try {
-      const loadingIndicator = this.getElement('loading-indicator');
-      const loadingText = loadingIndicator.querySelector('.loading-text');
-      
-      // Reset UI
-      this.showMessage('error', '', true);
-      loadingIndicator.style.display = 'flex';
-      loadingText.textContent = `Preparing ${appName} for download...`;
+    const errorDiv = document.getElementById('error-message');
+    const loadingIndicator = document.getElementById('loading-indicator');
+    
+    errorDiv.style.display = 'none';
+    loadingIndicator.style.display = 'flex';
 
+    try {
+      // Update status
+      loadingIndicator.querySelector('p').textContent = `Downloading ${appName}...`;
+      
       const response = await fetch('/.netlify/functions/ipadown', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          'Content-Type': 'application/json' // Add Content-Type header
         },
-        body: JSON.stringify({
+        body: JSON.stringify({ 
           bundleId,
-          sessionInfo: this.sessionInfo
+          sessionInfo: this.sessionInfo 
         })
       });
 
       if (!response.ok) {
-        const error = await response.json().catch(() => ({}));
-        throw new Error(error.details || error.error || 'Download failed');
+        const errorData = await response.json();
+        throw new Error(errorData.details || errorData.error || 'Download failed');
       }
 
-      // Create download
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${appName.replace(/[^a-z0-9]/gi, '_')}.ipa`;
+      a.download = `${appName}.ipa`;
       document.body.appendChild(a);
       a.click();
+      a.remove();
       
-      // Cleanup
-      setTimeout(() => {
-        document.body.removeChild(a);
-        window.URL.revokeObjectURL(url);
-      }, 100);
-
-      this.showMessage('status', `${appName} downloaded successfully!`);
-
-    } catch (error) {
-      console.error('Download error:', error);
-      this.showMessage('error', `Failed to download: ${error.message}`, true);
+      // Clean up the URL
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      errorDiv.textContent = err.message;
+      errorDiv.style.display = 'block';
     } finally {
-      this.getElement('loading-indicator').style.display = 'none';
+      loadingIndicator.style.display = 'none';
+      loadingIndicator.querySelector('p').textContent = 'Processing, please wait...';
     }
   }
 
   displayApps(apps) {
-    try {
-      const appsContainer = this.getElement('apps-list');
-      
-      if (!apps || apps.length === 0) {
-        appsContainer.innerHTML = `
-          <div class="card">
-            <div class="card-header">
-              <h3 class="card-title">No Apps Found</h3>
-            </div>
-            <div class="card-content">
-              <p>No purchased apps found for this Apple ID.</p>
-            </div>
-          </div>
-        `;
-        appsContainer.style.display = 'block';
-        return;
-      }
-      
+    const appsContainer = document.getElementById('apps-list');
+    
+    if (!apps || apps.length === 0) {
       appsContainer.innerHTML = `
         <div class="card">
           <div class="card-header">
-            <h3 class="card-title">Your Apps (${apps.length})</h3>
-            <p class="card-description">Select an app to download</p>
+            <h3 class="card-title">No Apps Found</h3>
           </div>
           <div class="card-content">
-            <div class="apps-list">
-              ${apps.map(app => `
-                <div class="app-item">
-                  <div class="app-info">
-                    <span class="app-name">${app.name}</span>
-                    <span class="app-version">Version: ${app.version || 'N/A'}</span>
-                  </div>
-                  <button 
-                    class="download-button"
-                    data-bundle="${app.bundleId}"
-                    data-appname="${app.name.replace(/"/g, '&quot;')}"
-                  >
-                    Download
-                  </button>
-                </div>
-              `).join('')}
-            </div>
+            <p>No apps were found for this Apple ID.</p>
           </div>
         </div>
       `;
-      
-      // Add event listeners
-      appsContainer.querySelectorAll('.download-button').forEach(button => {
-        button.addEventListener('click', () => {
-          this.handleDownload(
-            button.getAttribute('data-bundle'),
-            button.getAttribute('data-appname')
-          );
-        });
-      });
-      
       appsContainer.style.display = 'block';
-
-    } catch (error) {
-      console.error('Display apps error:', error);
-      this.showMessage('error', 'Failed to load apps list', true);
+      return;
     }
+    
+    appsContainer.innerHTML = `
+      <div class="card">
+        <div class="card-header">
+          <h3 class="card-title">Your Apps</h3>
+          <p class="card-description">Select an app to download</p>
+        </div>
+        <div class="card-content">
+          <div class="apps-list">
+            ${apps.map(app => `
+              <div class="app-item">
+                <div class="app-info">
+                  <span class="app-name">${app.name}</span>
+                  <span class="app-version">Version: ${app.version || 'Unknown'}</span>
+                </div>
+                <button 
+                  class="download-button"
+                  onclick="ipaDownloader.handleDownload('${app.bundleId}', '${app.name.replace(/'/g, "\\'")}')"
+                >
+                  Download
+                </button>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    `;
+    appsContainer.style.display = 'block';
   }
 
   attachEventListeners() {
-    try {
-      this.getElement('login-form').addEventListener('submit', (e) => this.handleLogin(e));
-    } catch (error) {
-      console.error('Event listener error:', error);
-    }
+    document.getElementById('login-form').addEventListener('submit', this.handleLogin.bind(this));
   }
 }
 
-// Initialize when DOM is fully loaded
-document.addEventListener('DOMContentLoaded', () => {
-  try {
-    if (!window.ipaDownloader) {
-      window.ipaDownloader = new IpaDownloader();
-      console.log('IPADownloader initialized successfully');
-    }
-  } catch (error) {
-    console.error('Failed to initialize:', error);
-    const errorDiv = document.createElement('div');
-    errorDiv.className = 'fatal-error';
-    errorDiv.textContent = 'Application failed to initialize. Please refresh the page.';
-    document.body.prepend(errorDiv);
-  }
-});
+// Initialize the downloader
+const ipaDownloader = new IpaDownloader();
+window.ipaDownloader = ipaDownloader; // Make it globally accessible
