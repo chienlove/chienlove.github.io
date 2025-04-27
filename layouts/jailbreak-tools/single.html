@@ -103,36 +103,27 @@
   {{ $currentPage := . }}
   {{ $related := where (where .Site.RegularPages "Type" "jailbreak-tools") "File.Path" "!=" $currentPage.File.Path }}
   {{ if $related }}
-  <div class="app-card">
+  <div class="app-card" id="related-apps-section">
     <h2 class="card-title">More Jailbreak Tools</h2>
     
-    <!-- Pagination Variables -->
-    {{ $paginate := 6 }}
-    {{ $relatedCount := len $related }}
-    {{ $pagesCount := div (add $relatedCount (sub $paginate 1)) $paginate }}
-    
-    <!-- Get Page Parameter or Default to 1 -->
-    {{ $currentPageNum := 1 }}
-    {{ with $.Scratch.Get "page" }}
-      {{ $currentPageNum = . }}
-    {{ else }}
-      {{ with $.URL | relURL | strings.TrimPrefix "/" | strings.Split "?page=" }}
-        {{ if ge (len .) 2 }}
-          {{ $pageParam := index . 1 | int }}
-          {{ if gt $pageParam 0 }}
-            {{ $currentPageNum = $pageParam }}
-          {{ end }}
-        {{ end }}
+    <!-- Store all related apps in data attributes for JavaScript access -->
+    <div id="related-apps-data" 
+         data-apps-count="{{ len $related }}" 
+         style="display: none;">
+      {{ range $index, $app := $related }}
+        <div data-app-index="{{ $index }}"
+             data-app-permalink="{{ .Permalink }}"
+             data-app-title="{{ .Title }}"
+             data-app-icon="{{ .Params.icon | default "/images/default-icon.png" }}"
+             data-app-developer="{{ .Params.developer | default "Unknown developer" }}"
+             data-app-version="{{ .Params.main_download.version }}">
+        </div>
       {{ end }}
-    {{ end }}
+    </div>
     
-    <!-- Calculate Start and End Indexes -->
-    {{ $start := mul (sub $currentPageNum 1) $paginate }}
-    {{ $end := min (add $start $paginate) $relatedCount }}
-    
-    <!-- Display Current Page of Items -->
-    <div class="related-apps-list">
-      {{ range (first (sub $end $start) (after $start $related)) }}
+    <!-- The container where paginated apps will be shown -->
+    <div class="related-apps-list" id="related-apps-container">
+      {{ range first 6 $related }}
       <div class="related-app-item">
         <a href="{{ .Permalink }}" class="app-link">
           <img src="{{ .Params.icon | default "/images/default-icon.png" }}" alt="{{ .Title }}" class="app-icon-small">
@@ -152,42 +143,23 @@
     </div>
     
     <!-- Pagination Controls -->
-    {{ if gt $pagesCount 1 }}
-    <div class="pagination">
-      <!-- Previous Button -->
-      {{ if gt $currentPageNum 1 }}
-        {{ $prevPageNum := sub $currentPageNum 1 }}
-        <a href="?page={{ $prevPageNum }}" class="page-link prev-page">
-          <i class="fas fa-chevron-left"></i> Previous
-        </a>
-      {{ else }}
-        <span class="page-link prev-page disabled">
-          <i class="fas fa-chevron-left"></i> Previous
-        </span>
-      {{ end }}
+    {{ $totalPages := div (add (len $related) 5) 6 }}
+    {{ if gt $totalPages 1 }}
+    <div class="pagination" id="pagination-controls">
+      <span class="page-link prev-page disabled" id="prev-page">
+        <i class="fas fa-chevron-left"></i> Previous
+      </span>
       
-      <!-- Page Numbers -->
-      <div class="page-numbers">
-        {{ range $i := seq 1 $pagesCount }}
-          {{ if eq $i $currentPageNum }}
-          <span class="page-number current">{{ $i }}</span>
-          {{ else }}
-          <a href="?page={{ $i }}" class="page-number">{{ $i }}</a>
-          {{ end }}
+      <div class="page-numbers" id="page-numbers">
+        <span class="page-number current">1</span>
+        {{ range $i := seq 2 $totalPages }}
+          <a href="javascript:void(0)" class="page-number" onclick="changePage({{ $i }})">{{ $i }}</a>
         {{ end }}
       </div>
       
-      <!-- Next Button -->
-      {{ if lt $currentPageNum $pagesCount }}
-        {{ $nextPageNum := add $currentPageNum 1 }}
-        <a href="?page={{ $nextPageNum }}" class="page-link next-page">
-          Next <i class="fas fa-chevron-right"></i>
-        </a>
-      {{ else }}
-        <span class="page-link next-page disabled">
-          Next <i class="fas fa-chevron-right"></i>
-        </span>
-      {{ end }}
+      <a href="javascript:void(0)" class="page-link next-page" id="next-page" onclick="changePage(2)">
+        Next <i class="fas fa-chevron-right"></i>
+      </a>
     </div>
     {{ end }}
   </div>
@@ -212,6 +184,116 @@
       toggleBtn.classList.remove('expanded');
     }
   }
+  
+  // Pagination variables
+  let currentPage = 1;
+  const itemsPerPage = 6;
+  
+  // Function to load apps for a specific page
+  function changePage(pageNum) {
+    // Get total number of apps
+    const relatedAppsData = document.getElementById('related-apps-data');
+    const totalApps = parseInt(relatedAppsData.getAttribute('data-apps-count'));
+    const totalPages = Math.ceil(totalApps / itemsPerPage);
+    
+    // Validate page number
+    if (pageNum < 1 || pageNum > totalPages || pageNum === currentPage) {
+      return;
+    }
+    
+    // Update current page
+    currentPage = pageNum;
+    
+    // Calculate start and end indexes
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = Math.min(startIndex + itemsPerPage, totalApps);
+    
+    // Get apps for current page
+    const container = document.getElementById('related-apps-container');
+    container.innerHTML = '';
+    
+    // Add apps for current page
+    for (let i = startIndex; i < endIndex; i++) {
+      const appData = relatedAppsData.querySelector(`[data-app-index="${i}"]`);
+      const appPermalink = appData.getAttribute('data-app-permalink');
+      const appTitle = appData.getAttribute('data-app-title');
+      const appIcon = appData.getAttribute('data-app-icon');
+      const appDeveloper = appData.getAttribute('data-app-developer');
+      const appVersion = appData.getAttribute('data-app-version');
+      
+      const appElement = document.createElement('div');
+      appElement.className = 'related-app-item';
+      appElement.innerHTML = `
+        <a href="${appPermalink}" class="app-link">
+          <img src="${appIcon}" alt="${appTitle}" class="app-icon-small">
+          <div class="app-item-content">
+            <h3 class="app-title">${appTitle}</h3>
+            <div class="app-meta-info">
+              <span class="app-developer">${appDeveloper}</span>
+              <span class="app-version">v${appVersion}</span>
+            </div>
+          </div>
+        </a>
+        <a href="${appPermalink}" class="related-download-icon">
+          <i class="fas fa-download"></i>
+        </a>
+      `;
+      
+      container.appendChild(appElement);
+    }
+    
+    // Update pagination controls
+    updatePaginationControls(totalPages);
+    
+    // Scroll to the related apps section
+    document.getElementById('related-apps-section').scrollIntoView({
+      behavior: 'smooth',
+      block: 'start'
+    });
+  }
+  
+  // Function to update pagination controls
+  function updatePaginationControls(totalPages) {
+    // Update page numbers
+    const pageNumbers = document.getElementById('page-numbers');
+    pageNumbers.innerHTML = '';
+    
+    // Add page numbers with appropriate classes
+    for (let i = 1; i <= totalPages; i++) {
+      const pageLink = document.createElement(i === currentPage ? 'span' : 'a');
+      pageLink.className = `page-number${i === currentPage ? ' current' : ''}`;
+      pageLink.textContent = i;
+      
+      if (i !== currentPage) {
+        pageLink.href = 'javascript:void(0)';
+        pageLink.onclick = function() { changePage(i); };
+      }
+      
+      pageNumbers.appendChild(pageLink);
+    }
+    
+    // Update previous button
+    const prevButton = document.getElementById('prev-page');
+    if (currentPage === 1) {
+      prevButton.className = 'page-link prev-page disabled';
+      prevButton.onclick = null;
+    } else {
+      prevButton.className = 'page-link prev-page';
+      prevButton.href = 'javascript:void(0)';
+      prevButton.onclick = function() { changePage(currentPage - 1); };
+    }
+    
+    // Update next button
+    const nextButton = document.getElementById('next-page');
+    if (currentPage === totalPages) {
+      nextButton.className = 'page-link next-page disabled';
+      nextButton.onclick = null;
+    } else {
+      nextButton.className = 'page-link next-page';
+      nextButton.href = 'javascript:void(0)';
+      nextButton.onclick = function() { changePage(currentPage + 1); };
+    }
+  }
 </script>
 
 <style>
@@ -233,6 +315,7 @@
     color: #007bff;
     text-decoration: none;
     transition: all 0.2s;
+    cursor: pointer;
   }
   
   .page-link:hover {
@@ -257,6 +340,7 @@
     background: #f8f9fa;
     color: #495057;
     text-decoration: none;
+    cursor: pointer;
   }
   
   .page-number:hover {
@@ -266,6 +350,7 @@
   .page-number.current {
     background: #007bff;
     color: white;
+    cursor: default;
   }
 </style>
 {{ end }}
