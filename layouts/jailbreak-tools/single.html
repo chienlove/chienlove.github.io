@@ -100,32 +100,98 @@
   </div>
 
   <!-- Related Apps Section -->
-{{ $currentPage := . }}
-{{ $related := where (where .Site.RegularPages "Type" "jailbreak-tools") "File.Path" "!=" $currentPage.File.Path }}
-{{ if $related }}
-<div class="app-card">
-  <h2 class="card-title">More Jailbreak Tools</h2>
-  <div class="related-apps-list">
-    {{ range $related }}
-    <div class="related-app-item">
-      <a href="{{ .Permalink }}" class="app-link">
-        <img src="{{ .Params.icon | default "/images/default-icon.png" }}" alt="{{ .Title }}" class="app-icon-small">
-        <div class="app-item-content">
-          <h3 class="app-title">{{ .Title }}</h3>
-          <div class="app-meta-info">
-            <span class="app-developer">{{ .Params.developer | default "Unknown developer" }}</span>
-            <span class="app-version">v{{ .Params.main_download.version }}</span>
+  {{ $currentPage := . }}
+  {{ $related := where (where .Site.RegularPages "Type" "jailbreak-tools") "File.Path" "!=" $currentPage.File.Path }}
+  {{ if $related }}
+  <div class="app-card">
+    <h2 class="card-title">More Jailbreak Tools</h2>
+    
+    <!-- Pagination Variables -->
+    {{ $paginate := 6 }}
+    {{ $relatedCount := len $related }}
+    {{ $pagesCount := div (add $relatedCount (sub $paginate 1)) $paginate }}
+    
+    <!-- Get Page Parameter or Default to 1 -->
+    {{ $currentPageNum := 1 }}
+    {{ with $.Scratch.Get "page" }}
+      {{ $currentPageNum = . }}
+    {{ else }}
+      {{ with $.URL | relURL | strings.TrimPrefix "/" | strings.Split "?page=" }}
+        {{ if ge (len .) 2 }}
+          {{ $pageParam := index . 1 | int }}
+          {{ if gt $pageParam 0 }}
+            {{ $currentPageNum = $pageParam }}
+          {{ end }}
+        {{ end }}
+      {{ end }}
+    {{ end }}
+    
+    <!-- Calculate Start and End Indexes -->
+    {{ $start := mul (sub $currentPageNum 1) $paginate }}
+    {{ $end := min (add $start $paginate) $relatedCount }}
+    
+    <!-- Display Current Page of Items -->
+    <div class="related-apps-list">
+      {{ range (first (sub $end $start) (after $start $related)) }}
+      <div class="related-app-item">
+        <a href="{{ .Permalink }}" class="app-link">
+          <img src="{{ .Params.icon | default "/images/default-icon.png" }}" alt="{{ .Title }}" class="app-icon-small">
+          <div class="app-item-content">
+            <h3 class="app-title">{{ .Title }}</h3>
+            <div class="app-meta-info">
+              <span class="app-developer">{{ .Params.developer | default "Unknown developer" }}</span>
+              <span class="app-version">v{{ .Params.main_download.version }}</span>
+            </div>
           </div>
-        </div>
-      </a>
-      <a href="{{ .Permalink }}" class="related-download-icon">
-        <i class="fas fa-download"></i>
-      </a>
+        </a>
+        <a href="{{ .Permalink }}" class="related-download-icon">
+          <i class="fas fa-download"></i>
+        </a>
+      </div>
+      {{ end }}
+    </div>
+    
+    <!-- Pagination Controls -->
+    {{ if gt $pagesCount 1 }}
+    <div class="pagination">
+      <!-- Previous Button -->
+      {{ if gt $currentPageNum 1 }}
+        {{ $prevPageNum := sub $currentPageNum 1 }}
+        <a href="?page={{ $prevPageNum }}" class="page-link prev-page">
+          <i class="fas fa-chevron-left"></i> Previous
+        </a>
+      {{ else }}
+        <span class="page-link prev-page disabled">
+          <i class="fas fa-chevron-left"></i> Previous
+        </span>
+      {{ end }}
+      
+      <!-- Page Numbers -->
+      <div class="page-numbers">
+        {{ range $i := seq 1 $pagesCount }}
+          {{ if eq $i $currentPageNum }}
+          <span class="page-number current">{{ $i }}</span>
+          {{ else }}
+          <a href="?page={{ $i }}" class="page-number">{{ $i }}</a>
+          {{ end }}
+        {{ end }}
+      </div>
+      
+      <!-- Next Button -->
+      {{ if lt $currentPageNum $pagesCount }}
+        {{ $nextPageNum := add $currentPageNum 1 }}
+        <a href="?page={{ $nextPageNum }}" class="page-link next-page">
+          Next <i class="fas fa-chevron-right"></i>
+        </a>
+      {{ else }}
+        <span class="page-link next-page disabled">
+          Next <i class="fas fa-chevron-right"></i>
+        </span>
+      {{ end }}
     </div>
     {{ end }}
   </div>
-</div>
-{{ end }}
+  {{ end }}
 
 <script>
   // Toggle description function
@@ -147,4 +213,59 @@
     }
   }
 </script>
+
+<style>
+  /* Pagination Styles */
+  .pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-top: 20px;
+    gap: 10px;
+  }
+  
+  .page-link {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 12px;
+    background: #f8f9fa;
+    border-radius: 4px;
+    color: #007bff;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+  
+  .page-link:hover {
+    background: #e9ecef;
+  }
+  
+  .page-link.disabled {
+    color: #adb5bd;
+    pointer-events: none;
+    cursor: default;
+  }
+  
+  .page-numbers {
+    display: flex;
+    gap: 5px;
+  }
+  
+  .page-number {
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 4px;
+    background: #f8f9fa;
+    color: #495057;
+    text-decoration: none;
+  }
+  
+  .page-number:hover {
+    background: #e9ecef;
+  }
+  
+  .page-number.current {
+    background: #007bff;
+    color: white;
+  }
+</style>
 {{ end }}
