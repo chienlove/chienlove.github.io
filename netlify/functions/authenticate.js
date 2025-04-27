@@ -1,3 +1,4 @@
+// netlify/functions/authenticate.js
 const { execFile } = require('child_process');
 const util = require('util');
 const path = require('path');
@@ -5,103 +6,114 @@ const fs = require('fs');
 const execFileAsync = util.promisify(execFile);
 
 exports.handler = async function(event, context) {
+  // 1. Kiểm tra phương thức HTTP
   if (event.httpMethod !== 'POST') {
     return {
       statusCode: 405,
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ error: 'Method Not Allowed' })
     };
   }
 
   try {
-    const { appleId, password, verificationCode, sessionInfo } = JSON.parse(event.body);
+    // 2. Parse thông tin từ client
+    const { appleId, password, verificationCode } = JSON.parse(event.body);
+    console.log('Authentication request for:', appleId);
 
-    console.log('Received from client:', {
-      appleId,
-      password: password ? '***hidden***' : undefined,
-      verificationCode,
-      sessionInfo
-    });
-
+    // 3. Cấu hình đường dẫn ipatool
     const ipatoolPath = path.join(process.cwd(), 'netlify', 'functions', 'bin', 'ipatool');
+    console.log('ipatool path:', ipatoolPath);
 
+    // 4. Kiểm tra file ipatool tồn tại
     if (!fs.existsSync(ipatoolPath)) {
       throw new Error('ipatool binary not found at: ' + ipatoolPath);
     }
 
+    // 5. Thiết lập biến môi trường
     process.env.HOME = '/tmp';
 
-    let result = null;
-    let command = [];
+    // 6. Chuẩn bị lệnh auth login
+    const command = [
+      'auth',
+      'login',
+      '--email', appleId,
+      '--password', password,
+      '--format', 'json'
+    ];
 
-    if (!verificationCode) {
-      // Lần đầu login
-      command = [
-        'auth',
-        'login',
-        '--email', appleId,
-        '--password', password,
-        '--format', 'json'
-      ];
+    if (verificationCode) {
+      command.push('--verification-code', verificationCode);
+    }
 
-      console.log('Executing login command:', command.join(' '));
+    console.log('Executing command:', [ipatoolPath, ...command].join(' '));
 
-      const { stdout } = await execFileAsync(ipatoolPath, command);
-      console.log('ipatool login output:', stdout);
-      result = JSON.parse(stdout);
+    // 7. Thực thi lệnh
+    const { stdout, stderr } = await execFileAsync(ipatoolPath, command);
+    console.log('stdout:', stdout);
+    console.log('stderr:', stderr);
 
-      if (result.error && (result.error.includes('2FA') || result.error.includes('verification'))) {
-        console.log('2FA required, sending sessionInfo back to client');
+    // 8. Parse kết quả
+    const result = JSON.parse(stdout);
+    
+    if (result.error) {
+      // Xử lý yêu cầu 2FA
+      if (result.error.includes('2FA') || result.error.includes('verification')) {
         return {
           statusCode: 401,
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             error: 'Two-factor authentication required',
-            requires2FA: true,
-            sessionInfo: result.sessionInfo || result
+            requires2FA: true
           })
         };
       }
-    } else {
-      // Submit mã xác thực
-      if (!sessionInfo) {
-        throw new Error('Missing session info for verification');
-      }
-
-      console.log('Executing submit-verification-code command');
-      
-      command = [
-        'auth',
-        'submit-verification-code',
-        '--code', verificationCode,
-        '--session-info', JSON.stringify(sessionInfo),
-        '--format', 'json'
-      ];
-
-      const { stdout } = await execFileAsync(ipatoolPath, command);
-      console.log('ipatool submit-verification-code output:', stdout);
-      result = JSON.parse(stdout);
-
-      if (result.error) {
-        throw new Error(result.error);
-      }
+      throw new Error(result.error);
     }
 
-    console.log('Authentication success, sending back sessionInfo');
+    // 9. Lấy danh sách ứng dụng đã mua
+    const appsCommand = [
+      'list',
+      '--purchased',
+      '--format', 'json',
+      '--session-info', stdout
+    ];
+
+    const { stdout: appsStdout } = await execFileAsync(ipatoolPath, appsCommand);
+    const appsData = JSON.parse(appsStdout);
+
+    // 10. Trả về kết quả
     return {
       statusCode: 200,
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        sessionInfo: result,
-        apps: []
+        apps: appsData.map(app => ({
+          id: app.adamId,
+          name: app.name,
+          bundleId: app.bundleId,
+          version: app.version
+        })),
+        sessionInfo: result
       })
     };
 
   } catch (error) {
     console.error('Authentication error:', error);
+    
+    // Phân loại lỗi
+    let statusCode = 500;
+    let errorMessage = error.message;
+
+    if (error.message.includes('Invalid credentials')) {
+      statusCode = 401;
+      errorMessage = 'Invalid Apple ID or password';
+    }
 
     return {
-      statusCode: 500,
+      statusCode,
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         error: 'Authentication failed',
-        details: error.message
+        details: errorMessage
       })
     };
   }
