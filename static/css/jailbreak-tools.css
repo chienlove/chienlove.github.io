@@ -393,20 +393,15 @@
   }
   /* AdSense Styling */
 .ad-container {
-  margin: 20px 0;
-  padding: 10px;
+  margin: 25px 0;
+  padding: 15px;
   background-color: #f8f9fa;
   border-radius: 8px;
   text-align: center;
   position: relative;
   overflow: hidden;
-  clear: both;
-}
-
-.ad-container-horizontal {
-  width: 100%;
-  max-width: 100%;
-  margin: 20px 0;
+  border: 1px solid #e9ecef;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
 .ad-label {
@@ -414,29 +409,58 @@
   top: 0;
   left: 0;
   background-color: rgba(0, 0, 0, 0.05);
-  color: #606770;
+  color: #6c757d;
   font-size: 10px;
-  padding: 2px 5px;
+  padding: 3px 8px;
   border-radius: 0 0 4px 0;
   text-transform: uppercase;
-  z-index: 1;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  letter-spacing: 0.5px;
 }
 
-/* Mobile responsiveness for ads */
+/* === AD TYPES === */
+/* Horizontal Banner (728x90) */
+.ad-banner-horizontal {
+  min-height: 90px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Rectangle Ad (300x250) */
+.ad-rectangle {
+  width: 300px;
+  min-height: 250px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* === MOBILE RESPONSIVE === */
 @media (max-width: 768px) {
+  /* Convert horizontal banner to rectangle on mobile */
+  .ad-banner-horizontal {
+    padding: 15px 10px;
+  }
+  
+  .ad-banner-horizontal ins.adsbygoogle {
+    width: 300px !important;
+    height: 250px !important;
+  }
+  
   .ad-container {
     margin: 15px 0;
   }
-  
-  .ad-container ins.adsbygoogle {
-    width: 100% !important;
-    height: auto !important;
-  }
 }
 
-/* Make sure ads don't break layout on small screens */
 @media (max-width: 480px) {
-  .ad-container-horizontal {
-    padding: 10px 0;
+  .ad-rectangle {
+    width: 100%;
+    max-width: 300px;
+  }
+  
+  .ad-rectangle ins.adsbygoogle {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 250px;
   }
 }
