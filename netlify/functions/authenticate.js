@@ -1,4 +1,3 @@
-// netlify/functions/authenticate.js
 const { execFile } = require('child_process');
 const util = require('util');
 const path = require('path');
@@ -15,7 +14,6 @@ exports.handler = async function(event, context) {
 
   try {
     const { appleId, password, verificationCode, sessionInfo } = JSON.parse(event.body);
-
     const ipatoolPath = path.join(process.cwd(), 'netlify', 'functions', 'bin', 'ipatool');
 
     if (!fs.existsSync(ipatoolPath)) {
@@ -24,11 +22,11 @@ exports.handler = async function(event, context) {
 
     process.env.HOME = '/tmp';
 
-    let command = [];
     let result = null;
+    let command = [];
 
     if (!verificationCode) {
-      // Nếu chưa có mã 2FA => chỉ đăng nhập
+      // Lần đầu login
       command = [
         'auth',
         'login',
@@ -36,8 +34,6 @@ exports.handler = async function(event, context) {
         '--password', password,
         '--format', 'json'
       ];
-
-      console.log('Executing auth login:', [ipatoolPath, ...command].join(' '));
 
       const { stdout } = await execFileAsync(ipatoolPath, command);
       result = JSON.parse(stdout);
@@ -48,12 +44,12 @@ exports.handler = async function(event, context) {
           body: JSON.stringify({
             error: 'Two-factor authentication required',
             requires2FA: true,
-            sessionInfo: result.sessionInfo || result // trả luôn sessionInfo để xác thực sau
+            sessionInfo: result.sessionInfo || result
           })
         };
       }
     } else {
-      // Nếu có mã 2FA => submit mã
+      // Submit mã xác thực
       if (!sessionInfo) {
         throw new Error('Missing session info for verification');
       }
@@ -66,8 +62,6 @@ exports.handler = async function(event, context) {
         '--format', 'json'
       ];
 
-      console.log('Executing submit verification:', [ipatoolPath, ...command].join(' '));
-
       const { stdout } = await execFileAsync(ipatoolPath, command);
       result = JSON.parse(stdout);
 
@@ -76,31 +70,22 @@ exports.handler = async function(event, context) {
       }
     }
 
-    // Sau khi login hoặc submit 2FA thành công => trả về
     return {
       statusCode: 200,
       body: JSON.stringify({
         sessionInfo: result,
-        apps: [] // apps sẽ lấy ở bước khác
+        apps: []
       })
     };
 
   } catch (error) {
     console.error('Authentication error:', error);
 
-    let statusCode = 500;
-    let errorMessage = error.message;
-
-    if (error.message.includes('Invalid credentials')) {
-      statusCode = 401;
-      errorMessage = 'Invalid Apple ID or password';
-    }
-
     return {
-      statusCode,
+      statusCode: 500,
       body: JSON.stringify({
         error: 'Authentication failed',
-        details: errorMessage
+        details: error.message
       })
     };
   }
