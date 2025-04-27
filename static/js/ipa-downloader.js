@@ -8,54 +8,29 @@ class IpaDownloader {
 
   render() {
     this.container.innerHTML = `
-      <div class="ipa-downloader-container">
-        <div class="login-box">
+      <div class="ipa-container">
+        <div class="login-section">
           <h2>Apple ID Login</h2>
           <form id="login-form">
-            <div class="input-group">
-              <label for="apple-id">Apple ID</label>
-              <input 
-                type="email" 
-                id="apple-id" 
-                required
-                placeholder="your@appleid.com"
-              >
+            <div class="form-group">
+              <input type="email" id="apple-id" placeholder="Apple ID" required>
             </div>
-            
-            <div class="input-group">
-              <label for="password">Password</label>
-              <input 
-                type="password" 
-                id="password" 
-                required
-                placeholder="Your password"
-              >
+            <div class="form-group">
+              <input type="password" id="password" placeholder="Password" required>
             </div>
-            
-            <div id="2fa-container" class="input-group" style="display:none">
-              <label for="verification-code">Verification Code</label>
-              <input 
-                type="text" 
-                id="verification-code"
-                placeholder="6-digit code"
-              >
-              <small>Check your trusted devices</small>
+            <div id="2fa-group" class="form-group" style="display:none">
+              <input type="text" id="verification-code" placeholder="Verification Code">
+              <small class="help-text">Check your trusted devices</small>
             </div>
-            
             <button type="submit" id="login-btn">Login</button>
           </form>
-          
-          <div id="error-box" class="error-box" style="display:none"></div>
+          <div id="error-message" class="error-message"></div>
           <div id="loading" class="loading" style="display:none">
             <div class="spinner"></div>
             <span>Processing...</span>
           </div>
         </div>
-        
-        <div id="apps-section" style="display:none">
-          <h3>Your Apps</h3>
-          <div id="apps-list"></div>
-        </div>
+        <div id="apps-section" style="display:none"></div>
       </div>
     `;
   }
@@ -63,24 +38,23 @@ class IpaDownloader {
   attachEventListeners() {
     const form = document.getElementById('login-form');
     form.addEventListener('submit', async (e) => {
-      e.preventDefault(); // Quan trọng: ngăn reload trang
+      e.preventDefault();
       
       const btn = document.getElementById('login-btn');
-      const errorBox = document.getElementById('error-box');
-      const loading = document.getElementById('loading');
-      const twoFaContainer = document.getElementById('2fa-container');
+      const errorEl = document.getElementById('error-message');
+      const loadingEl = document.getElementById('loading');
+      const twoFaGroup = document.getElementById('2fa-group');
       
       // Reset UI
-      errorBox.style.display = 'none';
+      errorEl.textContent = '';
+      errorEl.style.display = 'none';
       btn.disabled = true;
-      loading.style.display = 'flex';
+      loadingEl.style.display = 'flex';
       
       try {
         const response = await fetch('/.netlify/functions/authenticate', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             appleId: document.getElementById('apple-id').value.trim(),
             password: document.getElementById('password').value,
@@ -92,11 +66,11 @@ class IpaDownloader {
         
         // Xử lý 2FA
         if (data.status === '2fa_required' || data.requires2FA) {
-          twoFaContainer.style.display = 'block';
-          errorBox.textContent = data.message || 'Please enter the verification code';
-          errorBox.style.display = 'block';
+          twoFaGroup.style.display = 'block';
+          errorEl.textContent = data.message || 'Verification required';
+          errorEl.style.display = 'block';
           btn.textContent = 'Verify';
-          document.getElementById('verification-code')?.focus();
+          document.getElementById('verification-code').focus();
           return;
         }
         
@@ -107,48 +81,45 @@ class IpaDownloader {
         
         // Thành công
         this.sessionInfo = data.sessionInfo;
-        this.displayApps(data.apps);
-        twoFaContainer.style.display = 'none';
+        this.displayApps(data.apps || []);
         
       } catch (err) {
-        errorBox.textContent = err.message;
-        errorBox.style.display = 'block';
+        errorEl.textContent = err.message;
+        errorEl.style.display = 'block';
         console.error('Login error:', err);
       } finally {
         btn.disabled = false;
-        loading.style.display = 'none';
-        btn.textContent = twoFaContainer.style.display === 'block' ? 'Verify' : 'Login';
+        loadingEl.style.display = 'none';
       }
     });
   }
 
   displayApps(apps) {
     const container = document.getElementById('apps-section');
-    const list = document.getElementById('apps-list');
-    
-    if (!apps || apps.length === 0) {
-      list.innerHTML = '<p>No apps found</p>';
-      container.style.display = 'block';
-      return;
-    }
-    
-    list.innerHTML = apps.map(app => `
-      <div class="app-item">
-        <div class="app-info">
-          <h4>${this.escapeHtml(app.name)}</h4>
-          <p>Version: ${this.escapeHtml(app.version || 'N/A')}</p>
-        </div>
-        <button 
-          class="download-btn" 
-          data-bundle="${this.escapeAttr(app.bundleId)}"
-          data-name="${this.escapeAttr(app.name)}"
-        >
-          Download
-        </button>
+    container.innerHTML = apps.length > 0 ? `
+      <h3>Your Apps</h3>
+      <div class="apps-list">
+        ${apps.map(app => `
+          <div class="app-item">
+            <div class="app-info">
+              <h4>${app.name}</h4>
+              <p>Version: ${app.version || 'N/A'}</p>
+            </div>
+            <button 
+              class="download-btn" 
+              data-bundle="${app.bundleId}"
+              data-name="${app.name}"
+            >
+              Download
+            </button>
+          </div>
+        `).join('')}
       </div>
-    `).join('');
+    ` : '<p>No apps found</p>';
     
-    // Thêm event listener cho các nút download
+    container.style.display = 'block';
+    
+    // Thêm event listeners cho các nút download
     document.querySelectorAll('.download-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         this.handleDownload(
@@ -157,24 +128,20 @@ class IpaDownloader {
         );
       });
     });
-    
-    container.style.display = 'block';
   }
 
   async handleDownload(bundleId, appName) {
     const loading = document.getElementById('loading');
-    const errorBox = document.getElementById('error-box');
+    const errorEl = document.getElementById('error-message');
     
-    errorBox.style.display = 'none';
+    errorEl.style.display = 'none';
     loading.style.display = 'flex';
     loading.querySelector('span').textContent = `Downloading ${appName}...`;
     
     try {
       const response = await fetch('/.netlify/functions/ipadown', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           bundleId,
           sessionInfo: this.sessionInfo
@@ -191,33 +158,19 @@ class IpaDownloader {
       const a = document.createElement('a');
       a.href = url;
       a.download = `${appName.replace(/[^\w]/g, '_')}.ipa`;
-      document.body.appendChild(a);
       a.click();
-      setTimeout(() => {
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }, 100);
+      setTimeout(() => URL.revokeObjectURL(url), 100);
       
     } catch (err) {
-      errorBox.textContent = err.message;
-      errorBox.style.display = 'block';
+      errorEl.textContent = err.message;
+      errorEl.style.display = 'block';
     } finally {
       loading.style.display = 'none';
     }
-  }
-
-  escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
-
-  escapeAttr(text) {
-    return this.escapeHtml(text).replace(/"/g, '&quot;');
   }
 }
 
 // Khởi tạo
 document.addEventListener('DOMContentLoaded', () => {
-  window.ipaDownloader = new IpaDownloader();
+  window.downloader = new IpaDownloader();
 });
