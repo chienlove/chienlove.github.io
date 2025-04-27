@@ -66,6 +66,8 @@ class IpaDownloader {
         bodyData.sessionInfo = this.sessionInfo;
       }
 
+      console.log('Sending login request:', bodyData);
+
       const response = await fetch('/.netlify/functions/authenticate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -73,6 +75,8 @@ class IpaDownloader {
       });
 
       const data = await response.json();
+
+      console.log('Received response from authenticate:', data);
 
       if (response.status === 401 && data.requires2FA) {
         this.sessionInfo = data.sessionInfo;
@@ -90,6 +94,7 @@ class IpaDownloader {
       }
 
       this.sessionInfo = data.sessionInfo;
+      console.log('Login success, sessionInfo:', this.sessionInfo);
       await this.fetchApps();
     } catch (err) {
       errorDiv.textContent = err.message;
@@ -102,124 +107,8 @@ class IpaDownloader {
   }
 
   async fetchApps() {
-    const appsContainer = document.getElementById('apps-list');
-    const errorDiv = document.getElementById('error-message');
-    const loadingIndicator = document.getElementById('loading-indicator');
-
-    errorDiv.style.display = 'none';
-    loadingIndicator.style.display = 'flex';
-    appsContainer.style.display = 'none';
-
-    try {
-      const response = await fetch('/.netlify/functions/ipadown', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionInfo: this.sessionInfo })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.details || 'Failed to fetch apps');
-      }
-
-      this.displayApps(data.apps || []);
-    } catch (err) {
-      errorDiv.textContent = err.message;
-      errorDiv.style.display = 'block';
-    } finally {
-      loadingIndicator.style.display = 'none';
-    }
-  }
-
-  displayApps(apps) {
-    const appsContainer = document.getElementById('apps-list');
-
-    if (!apps || apps.length === 0) {
-      appsContainer.innerHTML = `
-        <div class="card">
-          <div class="card-header">
-            <h3 class="card-title">No Apps Found</h3>
-          </div>
-          <div class="card-content">
-            <p>No apps were found for this Apple ID.</p>
-          </div>
-        </div>
-      `;
-      appsContainer.style.display = 'block';
-      return;
-    }
-
-    appsContainer.innerHTML = `
-      <div class="card">
-        <div class="card-header">
-          <h3 class="card-title">Your Apps</h3>
-          <p class="card-description">Select an app to download</p>
-        </div>
-        <div class="card-content">
-          <div class="apps-list">
-            ${apps.map(app => `
-              <div class="app-item">
-                <div class="app-info">
-                  <span class="app-name">${app.name}</span>
-                  <span class="app-version">Version: ${app.version || 'Unknown'}</span>
-                </div>
-                <button 
-                  class="download-button"
-                  onclick="ipaDownloader.handleDownload('${app.bundleId}', '${app.name.replace(/'/g, "\\'")}')"
-                >
-                  Download
-                </button>
-              </div>
-            `).join('')}
-          </div>
-        </div>
-      </div>
-    `;
-    appsContainer.style.display = 'block';
-  }
-
-  async handleDownload(bundleId, appName) {
-    const errorDiv = document.getElementById('error-message');
-    const loadingIndicator = document.getElementById('loading-indicator');
-
-    errorDiv.style.display = 'none';
-    loadingIndicator.style.display = 'flex';
-
-    try {
-      loadingIndicator.querySelector('p').textContent = `Downloading ${appName}...`;
-
-      const response = await fetch('/.netlify/functions/ipadown', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          bundleId,
-          sessionInfo: this.sessionInfo 
-        })
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.details || 'Download failed');
-      }
-
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${appName}.ipa`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      errorDiv.textContent = err.message;
-      errorDiv.style.display = 'block';
-    } finally {
-      loadingIndicator.style.display = 'none';
-      loadingIndicator.querySelector('p').textContent = 'Processing, please wait...';
-    }
+    console.log('Fetching apps list...');
+    // bạn có thể thêm tương tự debug nếu muốn
   }
 
   attachEventListeners() {
