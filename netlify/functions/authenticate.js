@@ -14,6 +14,14 @@ exports.handler = async function(event, context) {
 
   try {
     const { appleId, password, verificationCode, sessionInfo } = JSON.parse(event.body);
+
+    console.log('Received from client:', {
+      appleId,
+      password: password ? '***hidden***' : undefined,
+      verificationCode,
+      sessionInfo
+    });
+
     const ipatoolPath = path.join(process.cwd(), 'netlify', 'functions', 'bin', 'ipatool');
 
     if (!fs.existsSync(ipatoolPath)) {
@@ -35,10 +43,14 @@ exports.handler = async function(event, context) {
         '--format', 'json'
       ];
 
+      console.log('Executing login command:', command.join(' '));
+
       const { stdout } = await execFileAsync(ipatoolPath, command);
+      console.log('ipatool login output:', stdout);
       result = JSON.parse(stdout);
 
       if (result.error && (result.error.includes('2FA') || result.error.includes('verification'))) {
+        console.log('2FA required, sending sessionInfo back to client');
         return {
           statusCode: 401,
           body: JSON.stringify({
@@ -54,6 +66,8 @@ exports.handler = async function(event, context) {
         throw new Error('Missing session info for verification');
       }
 
+      console.log('Executing submit-verification-code command');
+      
       command = [
         'auth',
         'submit-verification-code',
@@ -63,6 +77,7 @@ exports.handler = async function(event, context) {
       ];
 
       const { stdout } = await execFileAsync(ipatoolPath, command);
+      console.log('ipatool submit-verification-code output:', stdout);
       result = JSON.parse(stdout);
 
       if (result.error) {
@@ -70,6 +85,7 @@ exports.handler = async function(event, context) {
       }
     }
 
+    console.log('Authentication success, sending back sessionInfo');
     return {
       statusCode: 200,
       body: JSON.stringify({
