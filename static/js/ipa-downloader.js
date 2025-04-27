@@ -1,5 +1,3 @@
-// static/js/ipa-downloader.js
-
 class IpaDownloader {
   constructor() {
     this.container = document.getElementById('ipa-downloader');
