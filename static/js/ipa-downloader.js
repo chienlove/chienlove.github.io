@@ -10,7 +10,7 @@ class IpaDownloader {
       this.initialize();
     } catch (error) {
       console.error('Initialization error:', error);
-      this.showFatalError('Failed to initialize application');
+      this.showFatalError('Failed to initialize application. Please refresh the page.');
     }
   }
 
@@ -85,8 +85,9 @@ class IpaDownloader {
     errorDiv.className = 'fatal-error';
     errorDiv.style.color = 'red';
     errorDiv.style.padding = '20px';
-    errorDiv.style.border = '1px solid red';
     errorDiv.style.margin = '10px';
+    errorDiv.style.border = '1px solid red';
+    errorDiv.style.borderRadius = '4px';
     errorDiv.textContent = message;
     document.body.prepend(errorDiv);
   }
@@ -119,7 +120,7 @@ class IpaDownloader {
     try {
       const button = this.getElement('login-button');
       const loadingIndicator = this.getElement('loading-indicator');
-      const loadingText = this.getElement('loading-indicator').querySelector('.loading-text');
+      const loadingText = loadingIndicator.querySelector('.loading-text');
       const verificationCodeContainer = this.getElement('verification-code-container');
 
       // Reset UI
@@ -155,9 +156,11 @@ class IpaDownloader {
         })
       });
 
-      // Handle response
+      // Check for network errors
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        
+        // Handle 2FA case
         if (response.status === 401 && errorData.requires2FA) {
           this.isWaitingFor2FA = true;
           verificationCodeContainer.style.display = 'block';
@@ -166,6 +169,7 @@ class IpaDownloader {
           button.textContent = 'Verify';
           return;
         }
+        
         throw new Error(errorData.details || errorData.error || 'Authentication failed');
       }
 
@@ -197,7 +201,7 @@ class IpaDownloader {
   async handleDownload(bundleId, appName) {
     try {
       const loadingIndicator = this.getElement('loading-indicator');
-      const loadingText = this.getElement('loading-indicator').querySelector('.loading-text');
+      const loadingText = loadingIndicator.querySelector('.loading-text');
       
       // Reset UI
       this.showMessage('error', '', true);
@@ -220,20 +224,12 @@ class IpaDownloader {
         throw new Error(error.details || error.error || 'Download failed');
       }
 
-      // Extract filename from headers or generate one
-      const contentDisposition = response.headers.get('content-disposition');
-      let filename = `${appName.replace(/[^a-z0-9]/gi, '_')}.ipa`;
-      if (contentDisposition) {
-        const match = contentDisposition.match(/filename="?(.+?)"?$/);
-        if (match) filename = match[1];
-      }
-
       // Create download
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = filename;
+      a.download = `${appName.replace(/[^a-z0-9]/gi, '_')}.ipa`;
       document.body.appendChild(a);
       a.click();
       
@@ -283,13 +279,13 @@ class IpaDownloader {
               ${apps.map(app => `
                 <div class="app-item">
                   <div class="app-info">
-                    <span class="app-name">${this.escapeHtml(app.name)}</span>
-                    <span class="app-version">Version: ${this.escapeHtml(app.version || 'N/A')}</span>
+                    <span class="app-name">${app.name}</span>
+                    <span class="app-version">Version: ${app.version || 'N/A'}</span>
                   </div>
                   <button 
                     class="download-button"
-                    data-bundle="${this.escapeHtml(app.bundleId)}"
-                    data-appname="${this.escapeHtml(app.name)}"
+                    data-bundle="${app.bundleId}"
+                    data-appname="${app.name.replace(/"/g, '&quot;')}"
                   >
                     Download
                   </button>
@@ -318,16 +314,6 @@ class IpaDownloader {
     }
   }
 
-  escapeHtml(unsafe) {
-    if (!unsafe) return '';
-    return unsafe.toString()
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
-  }
-
   attachEventListeners() {
     try {
       this.getElement('login-form').addEventListener('submit', (e) => this.handleLogin(e));
@@ -342,6 +328,7 @@ document.addEventListener('DOMContentLoaded', () => {
   try {
     if (!window.ipaDownloader) {
       window.ipaDownloader = new IpaDownloader();
+      console.log('IPADownloader initialized successfully');
     }
   } catch (error) {
     console.error('Failed to initialize:', error);
