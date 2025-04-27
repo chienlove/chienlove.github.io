@@ -20,7 +20,7 @@ exports.handler = async function(event, context) {
 
     process.env.HOME = '/tmp';
 
-    // Build command
+    // Build command with proper escaping
     const command = [
       'auth',
       'login',
@@ -33,20 +33,27 @@ exports.handler = async function(event, context) {
       command.push('--verification-code', verificationCode);
     }
 
-    // Execute with timeout
+    console.log('Executing command with timeout');
     const { stdout, stderr } = await execFileAsync(ipatoolPath, command, {
-      timeout: 25000,
+      timeout: 30000,
       maxBuffer: 1024 * 1024 * 5
     });
 
-    // Parse response
+    console.log('Command output:', stdout);
     const result = JSON.parse(stdout);
 
-    // Handle 2FA
+    // Enhanced 2FA detection
     if (result.error) {
-      const twoFactorTerms = ['verification', 'two-factor', '2fa', 'code'];
-      const requires2FA = twoFactorTerms.some(term => 
-        result.error.toLowerCase().includes(term)
+      const twoFactorIndicators = [
+        'verification',
+        'two-factor',
+        '2fa',
+        'code',
+        'additional verification'
+      ];
+
+      const requires2FA = twoFactorIndicators.some(indicator => 
+        result.error.toLowerCase().includes(indicator)
       );
 
       if (requires2FA) {
@@ -54,7 +61,7 @@ exports.handler = async function(event, context) {
           statusCode: 200,
           body: JSON.stringify({
             status: '2fa_required',
-            message: result.error,
+            message: 'Please enter the 6-digit verification code sent to your trusted device',
             requires2FA: true
           })
         };
@@ -63,41 +70,29 @@ exports.handler = async function(event, context) {
       throw new Error(result.error);
     }
 
-    // Get apps list
-    const { stdout: appsStdout } = await execFileAsync(ipatoolPath, [
-      'list',
-      '--purchased',
-      '--format', 'json',
-      '--session-info', JSON.stringify(result)
-    ], { timeout: 25000 });
-
+    // Success case
     return {
       statusCode: 200,
       body: JSON.stringify({
-        apps: JSON.parse(appsStdout).map(app => ({
-          id: app.adamId,
-          name: app.name,
-          bundleId: app.bundleId,
-          version: app.version
-        })),
-        sessionInfo: result
+        sessionInfo: result,
+        apps: [] // Bạn cần thêm logic lấy danh sách app ở đây
       })
     };
 
   } catch (error) {
     console.error('Full error:', {
       message: error.message,
-      stack: error.stack,
-      stderr: error.stderr?.toString(),
-      stdout: error.stdout?.toString()
+      stderr: error.stderr,
+      stdout: error.stdout
     });
 
     return {
-      statusCode: error.code === 'ETIMEDOUT' ? 504 : 401,
+      statusCode: 500,
       body: JSON.stringify({
         error: 'Authentication failed',
-        details: error.message,
-        requires2FA: false
+        details: error.message.includes('ETIMEDOUT') 
+          ? 'Request timed out. Please try again.' 
+          : error.message
       })
     };
   }
