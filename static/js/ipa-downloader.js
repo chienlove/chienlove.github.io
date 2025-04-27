@@ -3,7 +3,7 @@
 class IpaDownloader {
   constructor() {
     this.container = document.getElementById('ipa-downloader');
-    this.requires2FA = false; // Add a flag to track 2FA state
+    this.sessionInfo = null;
     this.render();
     this.attachEventListeners();
   }
@@ -25,6 +25,7 @@ class IpaDownloader {
                   placeholder="Apple ID" 
                   class="input-field" 
                   required
+                  autocomplete="username"
                 />
               </div>
               <div class="form-group">
@@ -34,6 +35,7 @@ class IpaDownloader {
                   placeholder="Password" 
                   class="input-field" 
                   required
+                  autocomplete="current-password"
                 />
               </div>
               <div id="verification-code-container" class="form-group" style="display: none;">
@@ -42,8 +44,9 @@ class IpaDownloader {
                   id="verification-code" 
                   placeholder="Verification Code" 
                   class="input-field"
+                  autocomplete="one-time-code"
                 />
-                <p class="help-text">Enter the verification code sent to your trusted device</p>
+                <p class="help-text">Enter the 6-digit verification code sent to your trusted device</p>
               </div>
               <button type="submit" class="button-primary" id="login-button">
                 Login
@@ -67,7 +70,8 @@ class IpaDownloader {
     const errorDiv = document.getElementById('error-message');
     const loadingIndicator = document.getElementById('loading-indicator');
     const verificationCodeContainer = document.getElementById('verification-code-container');
-    const verificationCode = document.getElementById('verification-code').value;
+    const verificationCodeInput = document.getElementById('verification-code');
+    const verificationCode = verificationCodeInput ? verificationCodeInput.value : '';
     
     // Reset error display
     errorDiv.style.display = 'none';
@@ -78,29 +82,38 @@ class IpaDownloader {
     button.textContent = 'Processing...';
 
     try {
+      const appleId = document.getElementById('apple-id').value.trim();
+      const password = document.getElementById('password').value;
+
+      if (!appleId || !password) {
+        throw new Error('Apple ID and password are required');
+      }
+
       const response = await fetch('/.netlify/functions/authenticate', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json' // Add Content-Type header
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          appleId: document.getElementById('apple-id').value,
-          password: document.getElementById('password').value,
+          appleId,
+          password,
           verificationCode: verificationCode || undefined
         })
       });
 
       const data = await response.json();
 
-      // Handle 2FA requirement
-      if (response.status === 401 && data.requires2FA) {
-        this.requires2FA = true;
+      // Kiểm tra requires2FA bất kể status code nào
+      if (data.requires2FA) {
         verificationCodeContainer.style.display = 'block';
-        errorDiv.textContent = 'Please enter the verification code sent to your device';
+        errorDiv.textContent = data.message || 'Please enter the 6-digit verification code sent to your trusted device';
         errorDiv.style.display = 'block';
         button.textContent = 'Verify';
-        button.disabled = false;
-        loadingIndicator.style.display = 'none';
+        
+        // Focus vào trường nhập mã xác thực
+        if (verificationCodeInput) {
+          verificationCodeInput.focus();
+        }
         return;
       }
 
@@ -114,15 +127,38 @@ class IpaDownloader {
       this.displayApps(data.apps);
       
       // Hide verification code container after successful login
-      this.requires2FA = false;
       verificationCodeContainer.style.display = 'none';
+      
+      // Reset verification code input
+      if (verificationCodeInput) {
+        verificationCodeInput.value = '';
+      }
     } catch (err) {
+      console.error('Login error:', err);
       errorDiv.textContent = err.message;
       errorDiv.style.display = 'block';
+      
+      // Hiển thị trường 2FA nếu có thông báo liên quan
+      if (err.message.toLowerCase().includes('2fa') || 
+          err.message.toLowerCase().includes('verification') ||
+          err.message.toLowerCase().includes('code')) {
+        verificationCodeContainer.style.display = 'block';
+        button.textContent = 'Verify';
+        
+        // Focus vào trường nhập mã xác thực
+        if (verificationCodeInput) {
+          verificationCodeInput.focus();
+        }
+      }
     } finally {
       button.disabled = false;
       loadingIndicator.style.display = 'none';
-      button.textContent = this.requires2FA ? 'Verify' : 'Login';
+      
+      if (document.getElementById('verification-code-container').style.display === 'block') {
+        button.textContent = 'Verify';
+      } else {
+        button.textContent = 'Login';
+      }
     }
   }
 
@@ -140,7 +176,7 @@ class IpaDownloader {
       const response = await fetch('/.netlify/functions/ipadown', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json' // Add Content-Type header
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify({ 
           bundleId,
@@ -149,22 +185,25 @@ class IpaDownloader {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.details || errorData.error || 'Download failed');
+        const error = await response.json();
+        throw new Error(error.details || error.error || 'Download failed');
       }
 
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${appName}.ipa`;
+      a.download = `${appName.replace(/[^a-z0-9]/gi, '_')}.ipa`;
       document.body.appendChild(a);
       a.click();
-      a.remove();
       
-      // Clean up the URL
-      window.URL.revokeObjectURL(url);
+      // Clean up
+      setTimeout(() => {
+        document.body.removeChild(a);
+        window.URL.revokeObjectURL(url);
+      }, 100);
     } catch (err) {
+      console.error('Download error:', err);
       errorDiv.textContent = err.message;
       errorDiv.style.display = 'block';
     } finally {
@@ -202,12 +241,13 @@ class IpaDownloader {
             ${apps.map(app => `
               <div class="app-item">
                 <div class="app-info">
-                  <span class="app-name">${app.name}</span>
-                  <span class="app-version">Version: ${app.version || 'Unknown'}</span>
+                  <span class="app-name">${this.escapeHtml(app.name)}</span>
+                  <span class="app-version">Version: ${this.escapeHtml(app.version || 'Unknown')}</span>
                 </div>
                 <button 
                   class="download-button"
-                  onclick="ipaDownloader.handleDownload('${app.bundleId}', '${app.name.replace(/'/g, "\\'")}')"
+                  data-bundle-id="${this.escapeAttr(app.bundleId)}"
+                  data-app-name="${this.escapeAttr(app.name)}"
                 >
                   Download
                 </button>
@@ -218,13 +258,41 @@ class IpaDownloader {
       </div>
     `;
     appsContainer.style.display = 'block';
+    
+    // Thêm event listener cho các nút download
+    document.querySelectorAll('.download-button').forEach(button => {
+      button.addEventListener('click', (e) => {
+        const bundleId = e.currentTarget.getAttribute('data-bundle-id');
+        const appName = e.currentTarget.getAttribute('data-app-name');
+        this.handleDownload(bundleId, appName);
+      });
+    });
+  }
+
+  // Helper function to escape HTML
+  escapeHtml(unsafe) {
+    if (!unsafe) return '';
+    return unsafe.toString()
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  // Helper function to escape HTML attributes
+  escapeAttr(unsafe) {
+    if (!unsafe) return '';
+    return this.escapeHtml(unsafe).replace(/\//g, "&#x2F;");
   }
 
   attachEventListeners() {
-    document.getElementById('login-form').addEventListener('submit', this.handleLogin.bind(this));
+    document.getElementById('login-form').addEventListener('submit', (e) => this.handleLogin(e));
   }
 }
 
 // Initialize the downloader
-const ipaDownloader = new IpaDownloader();
-window.ipaDownloader = ipaDownloader; // Make it globally accessible
+document.addEventListener('DOMContentLoaded', () => {
+  const ipaDownloader = new IpaDownloader();
+  window.ipaDownloader = ipaDownloader; // Make it globally accessible
+});
