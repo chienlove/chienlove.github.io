@@ -116,11 +116,15 @@
     {{ with $.Scratch.Get "page" }}
       {{ $currentPageNum = . }}
     {{ else }}
-      {{ with $.URL | relURL | strings.TrimPrefix "/" | strings.Split "?page=" }}
-        {{ if ge (len .) 2 }}
-          {{ $pageParam := index . 1 | int }}
-          {{ if gt $pageParam 0 }}
-            {{ $currentPageNum = $pageParam }}
+      {{ if isset $.Params "page" }}
+        {{ $currentPageNum = $.Params.page }}
+      {{ else }}
+        {{ with $.URL | relURL | strings.TrimPrefix "/" | strings.Split "?page=" }}
+          {{ if ge (len .) 2 }}
+            {{ $pageParam := index . 1 | int }}
+            {{ if gt $pageParam 0 }}
+              {{ $currentPageNum = $pageParam }}
+            {{ end }}
           {{ end }}
         {{ end }}
       {{ end }}
@@ -128,7 +132,10 @@
     
     <!-- Calculate Start and End Indexes -->
     {{ $start := mul (sub $currentPageNum 1) $paginate }}
-    {{ $end := min (add $start $paginate) $relatedCount }}
+    {{ $end := add $start $paginate }}
+    {{ if gt $end $relatedCount }}
+      {{ $end = $relatedCount }}
+    {{ end }}
     
     <!-- Display Current Page of Items -->
     <div class="related-apps-list">
