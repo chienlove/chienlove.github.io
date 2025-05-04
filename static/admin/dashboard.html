@@ -1,64 +1,47 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Admin Panel</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Custom Admin Panel</title>
+  <link rel="stylesheet" href="/admin/css/admin.css">
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-  <link rel="stylesheet" href="/admin/css/admin.css?v=nuclear">
-  <style>
-    /* CSS tấn công trước khi load */
-    body { overflow-x: hidden !important; }
-    .CMS_sidebar-wrapper { 
-      display: none !important;
-      width: 0 !important;
-      transform: translateX(-100vw) !important;
-    }
-  </style>
 </head>
 <body>
-  <script>
-    // PHƯƠNG PHÁP HẠT NHÂN
-    document.addEventListener('DOMContentLoaded', function() {
-      // 1. Tắt hoàn toàn collections
-      localStorage.setItem('cms.collection.pinned', 'false');
-      
-      // 2. Hàm diệt sidebar
-      const destroySidebar = () => {
-        // Xóa mọi phần tử sidebar
-        document.querySelectorAll(
-          '.CMS_sidebar-wrapper, .CMS_sidebar, [class*="sidebar"]'
-        ).forEach(el => {
-          el.style.cssText = `
-            display: none !important;
-            width: 0 !important;
-            height: 0 !important;
-            transform: translateX(-100vw) !important;
-          `;
-          el.remove();
-        });
-        
-        // Fix editor
-        const editor = document.querySelector('.CMS_editor');
-        if (editor) {
-          editor.style.cssText = `
-            width: 100vw !important;
-            max-width: 100vw !important;
-            padding: 20px !important;
-            margin-left: 0 !important;
-            background-color: #fff !important;
-            overflow-x: hidden !important;
-          `;
-        }
-      };
-      
-      // 3. Chạy liên tục mỗi 100ms
-      const nukeInterval = setInterval(destroySidebar, 100);
-      
-      // 4. Dừng sau 5s
-      setTimeout(() => clearInterval(nukeInterval), 5000);
-    });
-  </script>
-  <script src="https://unpkg.com/netlify-cms@^2.10.192/dist/netlify-cms.js"></script>
+  <div class="admin-container">
+    <!-- Header -->
+    <header>
+      <h1>My Custom Admin</h1>
+      <button id="login-btn">Login</button>
+    </header>
+
+    <!-- Dashboard -->
+    <div class="dashboard" id="dashboard" style="display: none;">
+      <div class="sidebar">
+        <ul>
+          <li><a href="#" data-section="posts">Posts</a></li>
+          <li><a href="#" data-section="settings">Settings</a></li>
+        </ul>
+      </div>
+
+      <div class="content">
+        <!-- Posts Management -->
+        <div id="posts-section">
+          <h2>Manage Posts</h2>
+          <button id="create-post">New Post</button>
+          <div id="posts-list"></div>
+        </div>
+
+        <!-- Settings Management -->
+        <div id="settings-section" style="display: none;">
+          <h2>Site Settings</h2>
+          <textarea id="settings-editor" rows="10"></textarea>
+          <button id="save-settings">Save</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/admin/scripts.js"></script>
 </body>
 </html>
