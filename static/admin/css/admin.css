@@ -1,5 +1,8 @@
-/* Reset CSS */
-* { margin: 0; padding: 0; box-sizing: border-box; }
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
 
 body {
   font-family: Arial, sans-serif;
@@ -56,13 +59,37 @@ header {
   padding: 2rem;
 }
 
-#posts-list {
-  margin-top: 1rem;
-  border: 1px solid #ddd;
+#post-form {
+  margin: 1rem 0;
   padding: 1rem;
+  background: #f9f9f9;
+  border: 1px solid #ddd;
 }
 
-#settings-editor {
+#post-form select,
+#post-form input,
+#post-form textarea {
   width: 100%;
+  margin-bottom: 0.5rem;
+  padding: 0.5rem;
+}
+
+#post-form textarea {
+  min-height: 200px;
+}
+
+#posts-list {
   margin-top: 1rem;
+}
+
+.post-item {
+  padding: 0.5rem;
+  border-bottom: 1px solid #eee;
+  display: flex;
+  align-items: center;
+}
+
+.post-item button {
+  margin-left: auto;
+  padding: 0.25rem 0.5rem;
 }
