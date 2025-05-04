@@ -9,39 +9,40 @@
 </head>
 <body>
   <div class="admin-container">
-    <!-- Header -->
     <header>
       <h1>My Custom Admin</h1>
       <button id="login-btn">Login</button>
     </header>
 
-    <!-- Dashboard -->
     <div class="dashboard" id="dashboard" style="display: none;">
       <div class="sidebar">
         <ul>
           <li><a href="#" data-section="posts">Posts</a></li>
-          <li><a href="#" data-section="settings">Settings</a></li>
         </ul>
       </div>
 
       <div class="content">
-        <!-- Posts Management -->
         <div id="posts-section">
           <h2>Manage Posts</h2>
           <button id="create-post">New Post</button>
-          <div id="posts-list"></div>
-        </div>
+          
+          <div id="post-form" style="display: none;">
+            <select id="post-category">
+              <option value="posts">Posts</option>
+              <option value="jailbreak-tools">Jailbreak Tools</option>
+              <option value="apps">Apps</option>
+            </select>
+            <input type="text" id="post-title" placeholder="Post title">
+            <textarea id="post-content" rows="10"></textarea>
+            <button id="submit-post">Save</button>
+          </div>
 
-        <!-- Settings Management -->
-        <div id="settings-section" style="display: none;">
-          <h2>Site Settings</h2>
-          <textarea id="settings-editor" rows="10"></textarea>
-          <button id="save-settings">Save</button>
+          <div id="posts-list"></div>
         </div>
       </div>
     </div>
   </div>
 
-  <script src="/admin/script.js"></script>
+  <script src="/script.js"></script>
 </body>
 </html>
