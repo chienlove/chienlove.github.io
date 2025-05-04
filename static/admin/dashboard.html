@@ -3,44 +3,80 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin Panel</title>
+  <title>CMS Admin - Quản trị nội dung</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="/admin/css/admin.css">
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 </head>
 <body>
   <div class="admin-container">
-    <header>
-      <h1>Quản trị nội dung</h1>
-      <button id="login-btn">Đăng nhập</button>
+    <!-- Header -->
+    <header class="admin-header">
+      <div class="header-left">
+        <i class="fas fa-cog"></i>
+        <h1>CMS Content Manager</h1>
+      </div>
+      <button id="login-btn" class="btn-login">
+        <i class="fas fa-sign-in-alt"></i>
+        <span>Đăng nhập</span>
+      </button>
     </header>
 
-    <div class="dashboard" id="dashboard" style="display:none">
-      <div class="sidebar">
-        <ul>
-          <li><a href="#" data-section="posts">Bài viết</a></li>
-        </ul>
-      </div>
+    <!-- Main Content -->
+    <div class="admin-main">
+      <!-- Sidebar (Ẩn khi chưa đăng nhập) -->
+      <aside class="admin-sidebar" id="sidebar">
+        <nav>
+          <ul class="sidebar-menu">
+            <li class="menu-item active">
+              <a href="#">
+                <i class="fas fa-file-alt"></i>
+                <span>Bài viết</span>
+              </a>
+            </li>
+            <li class="menu-item">
+              <a href="#">
+                <i class="fas fa-folder"></i>
+                <span>Thư mục</span>
+              </a>
+            </li>
+            <li class="menu-item">
+              <a href="#">
+                <i class="fas fa-cog"></i>
+                <span>Cài đặt</span>
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </aside>
 
-      <div class="content">
-        <div id="posts-section">
-          <h2>Quản lý bài viết</h2>
-          <button id="create-post">+ Bài mới</button>
-          
-          <div id="post-form" style="display:none">
-            <select id="post-category">
-              <option value="posts">Tin tức</option>
-              <option value="jailbreak-tools">Jailbreak</option>
-              <option value="apps">Ứng dụng</option>
-            </select>
-            <input type="text" id="post-title" placeholder="Tiêu đề">
-            <textarea id="post-content" rows="10"></textarea>
-            <button id="submit-post">Lưu bài</button>
-          </div>
-
-          <div id="posts-list"></div>
+      <!-- Content Area -->
+      <main class="admin-content" id="dashboard">
+        <div class="content-header">
+          <h2><i class="fas fa-file-alt"></i> Quản lý bài viết</h2>
+          <button id="create-post" class="btn-primary">
+            <i class="fas fa-plus"></i> Tạo bài mới
+          </button>
         </div>
-      </div>
+
+        <!-- Breadcrumb -->
+        <div class="breadcrumb" id="breadcrumb"></div>
+
+        <!-- Posts List -->
+        <div class="content-body">
+          <div id="posts-list" class="posts-grid">
+            <!-- Nội dung sẽ được tải động bằng JS -->
+            <div class="loading-state">
+              <i class="fas fa-spinner fa-spin"></i>
+              <p>Vui lòng đăng nhập để xem nội dung</p>
+            </div>
+          </div>
+        </div>
+      </main>
     </div>
+
+    <!-- Modal Container (Dùng chung cho các popup) -->
+    <div id="modal-container"></div>
   </div>
 
   <script src="/admin/script.js"></script>
