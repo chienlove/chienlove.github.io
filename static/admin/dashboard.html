@@ -1,40 +1,40 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="vi">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Custom Admin Panel</title>
+  <title>Admin Panel</title>
   <link rel="stylesheet" href="/admin/css/admin.css">
   <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 </head>
 <body>
   <div class="admin-container">
     <header>
-      <h1>My Custom Admin</h1>
-      <button id="login-btn">Login</button>
+      <h1>Quản trị nội dung</h1>
+      <button id="login-btn">Đăng nhập</button>
     </header>
 
-    <div class="dashboard" id="dashboard" style="display: none;">
+    <div class="dashboard" id="dashboard" style="display:none">
       <div class="sidebar">
         <ul>
-          <li><a href="#" data-section="posts">Posts</a></li>
+          <li><a href="#" data-section="posts">Bài viết</a></li>
         </ul>
       </div>
 
       <div class="content">
         <div id="posts-section">
-          <h2>Manage Posts</h2>
-          <button id="create-post">New Post</button>
+          <h2>Quản lý bài viết</h2>
+          <button id="create-post">+ Bài mới</button>
           
-          <div id="post-form" style="display: none;">
+          <div id="post-form" style="display:none">
             <select id="post-category">
-              <option value="posts">Posts</option>
-              <option value="jailbreak-tools">Jailbreak Tools</option>
-              <option value="apps">Apps</option>
+              <option value="posts">Tin tức</option>
+              <option value="jailbreak-tools">Jailbreak</option>
+              <option value="apps">Ứng dụng</option>
             </select>
-            <input type="text" id="post-title" placeholder="Post title">
+            <input type="text" id="post-title" placeholder="Tiêu đề">
             <textarea id="post-content" rows="10"></textarea>
-            <button id="submit-post">Save</button>
+            <button id="submit-post">Lưu bài</button>
           </div>
 
           <div id="posts-list"></div>
