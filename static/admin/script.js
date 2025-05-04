@@ -30,9 +30,26 @@ document.addEventListener('DOMContentLoaded', () => {
       netlifyIdentity.close();
     });
     netlifyIdentity.on('logout', () => handleAuthChange(null));
+    
+    // Thêm xử lý khi đóng modal đăng nhập
+    netlifyIdentity.on('close', () => {
+      // Kiểm tra nếu user vẫn null sau khi đóng modal
+      if (!netlifyIdentity.currentUser()) {
+        handleAuthChange(null);
+      }
+    });
 
     // 3. KIỂM TRA TRẠNG THÁI BAN ĐẦU
     handleAuthChange(netlifyIdentity.currentUser());
+    
+    // Thêm sự kiện click cho nút đăng nhập
+    document.getElementById('login-btn').addEventListener('click', () => {
+      if (netlifyIdentity.currentUser()) {
+        netlifyIdentity.logout();
+      } else {
+        netlifyIdentity.open('login');
+      }
+    });
   }
 
   // 4. TẢI BÀI VIẾT (ĐÃ BỔ SUNG XỬ LÝ LỖI)
@@ -45,9 +62,11 @@ document.addEventListener('DOMContentLoaded', () => {
       const user = netlifyIdentity.currentUser();
       if (!user) throw new Error('Bạn chưa đăng nhập');
 
-      // Kiểm tra token
-      if (!user.token) {
-        await new Promise(resolve => netlifyIdentity.on('login', resolve));
+      // Kiểm tra token cải tiến
+      if (!user.token || !user.token.access_token) {
+        console.log('Token không hợp lệ, yêu cầu đăng nhập lại');
+        netlifyIdentity.logout();
+        throw new Error('Phiên làm việc hết hạn, vui lòng đăng nhập lại');
       }
 
       // Gọi API với token
@@ -75,7 +94,7 @@ document.addEventListener('DOMContentLoaded', () => {
       postsList.innerHTML = `
         <div class="error">
           ❌ Lỗi: ${error.message || 'Không thể tải dữ liệu'}
-          ${error.message.includes('401') ? 
+          ${error.message && error.message.includes('401') ? 
             '<p>Vui lòng đăng nhập lại</p>' : 
             '<button onclick="location.reload()">Thử lại</button>'}
         </div>
@@ -86,14 +105,20 @@ document.addEventListener('DOMContentLoaded', () => {
   // 5. CÁC HÀM PHỤ TRỢ
   function renderPosts(posts) {
     const postsList = document.getElementById('posts-list');
-    postsList.innerHTML = posts.length > 0 ? 
-      posts.map(post => `
-        <div class="post-item">
-          <span class="post-title">${post.name.replace('.md', '')}</span>
-          <button onclick="editPost('${post.path}')">Sửa</button>
+    
+    if (!posts || posts.length === 0) {
+      postsList.innerHTML = '<div class="empty">Không có bài viết nào</div>';
+      return;
+    }
+    
+    postsList.innerHTML = posts.map(post => `
+      <div class="post-item">
+        <span class="post-title">${post.name.replace('.md', '')}</span>
+        <div class="post-actions">
+          <button onclick="editPost('${post.path}', '${post.sha}')">Sửa</button>
         </div>
-      `).join('') : 
-      '<div class="empty">Không có bài viết nào</div>';
+      </div>
+    `).join('');
   }
 
   // 6. XỬ LÝ NÚT NEW POST
@@ -107,7 +132,40 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Hàm toàn cục
-function editPost(path) {
-  console.log('Bắt đầu sửa:', path);
-  alert(`Chức năng sửa bài đang được phát triển\nPath: ${path}`);
+function editPost(path, sha) {
+  console.log('Bắt đầu sửa:', path, 'SHA:', sha);
+  
+  // Kiểm tra đăng nhập trước khi cho phép sửa
+  if (!window.netlifyIdentity.currentUser()) {
+    alert('Vui lòng đăng nhập để sửa bài viết');
+    return;
+  }
+  
+  // Lưu thông tin bài viết vào localStorage để sử dụng trong form sửa
+  localStorage.setItem('editing_post', JSON.stringify({path, sha}));
+  
+  // Hiển thị form (giả sử bạn có form sửa bài)
+  document.getElementById('post-form').style.display = 'block';
+  
+  // Tải nội dung bài viết (triển khai sau)
+  loadPostContent(path);
+}
+
+// Hàm phụ trợ để tải nội dung bài viết khi sửa
+async function loadPostContent(path) {
+  try {
+    const user = window.netlifyIdentity.currentUser();
+    if (!user || !user.token || !user.token.access_token) {
+      throw new Error('Bạn cần đăng nhập lại');
+    }
+    
+    // Tạm thời hiển thị thông báo
+    alert(`Đang tải nội dung bài viết: ${path}`);
+    
+    // Phần code tải nội dung sẽ được triển khai sau
+    // ...
+  } catch (error) {
+    console.error('Lỗi khi tải nội dung bài viết:', error);
+    alert(`Lỗi: ${error.message || 'Không thể tải nội dung bài viết'}`);
+  }
 }
