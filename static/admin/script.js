@@ -1,36 +1,44 @@
-// Khởi tạo Netlify Identity
 document.addEventListener('DOMContentLoaded', () => {
+  // Khởi tạo Netlify Identity
   netlifyIdentity.init();
 
   const loginBtn = document.getElementById('login-btn');
   const dashboard = document.getElementById('dashboard');
 
-  // Xử lý đăng nhập
-  loginBtn.addEventListener('click', () => {
-    netlifyIdentity.open();
-  });
-
-  // Kiểm tra trạng thái đăng nhập
-  netlifyIdentity.on('init', (user) => {
+  // Hàm cập nhật giao diện dựa trên trạng thái đăng nhập
+  function updateUI(user) {
     if (user) {
       loginBtn.textContent = 'Logout';
       dashboard.style.display = 'flex';
-      loadPosts();
+      loadPosts(); // Tải dữ liệu khi đăng nhập
     } else {
       loginBtn.textContent = 'Login';
       dashboard.style.display = 'none';
     }
+  }
+
+  // Kiểm tra ngay khi tải trang
+  updateUI(netlifyIdentity.currentUser());
+
+  // Xử lý sự kiện đăng nhập/thoát
+  netlifyIdentity.on('login', (user) => {
+    updateUI(user);
   });
 
-  // Xử lý logout
+  netlifyIdentity.on('logout', () => {
+    updateUI(null);
+  });
+
+  // Xử lý nút Login/Logout
   loginBtn.addEventListener('click', () => {
     if (netlifyIdentity.currentUser()) {
       netlifyIdentity.logout();
-      window.location.reload();
+    } else {
+      netlifyIdentity.open();
     }
   });
 
-  // Load dữ liệu từ Git Gateway
+  // Load dữ liệu từ Git Gateway (ví dụ: bài viết)
   async function loadPosts() {
     try {
       const response = await fetch('/.netlify/git/github/contents/content/posts', {
@@ -43,7 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Hiển thị danh sách bài viết
+  // Hiển thị danh sách bài viết (tùy chỉnh theo nhu cầu)
   function renderPosts(posts) {
     const postsList = document.getElementById('posts-list');
     postsList.innerHTML = posts.map(post => `
@@ -54,11 +62,11 @@ document.addEventListener('DOMContentLoaded', () => {
     `).join('');
   }
 
-  // Chuyển đổi giữa các section
+  // Chuyển đổi giữa các section (posts/settings)
   document.querySelectorAll('.sidebar a').forEach(link => {
     link.addEventListener('click', (e) => {
       e.preventDefault();
-      document.querySelectorAll('#posts-section, #settings-section').forEach(section => {
+      document.querySelectorAll('.content > div').forEach(section => {
         section.style.display = 'none';
       });
       document.getElementById(`${e.target.dataset.section}-section`).style.display = 'block';
@@ -66,7 +74,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-// Hàm chỉnh sửa bài viết (cần triển khai thêm)
+// Hàm chỉnh sửa bài viết (ví dụ)
 window.editPost = (path) => {
   alert(`Edit post: ${path}`);
 };
