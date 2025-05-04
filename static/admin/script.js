@@ -1,133 +1,130 @@
-// ========================
-// CẤU HÌNH BAN ĐẦU
-// ========================
 document.addEventListener('DOMContentLoaded', () => {
   // Khởi tạo Netlify Identity
   if (window.netlifyIdentity) {
-    netlifyIdentity.init();
-    console.log("[System] Netlify Identity initialized");
+    netlifyIdentity.init({
+      container: '#login-btn'
+    });
 
-    // Xử lý sự kiện đăng nhập
-    netlifyIdentity.on('init', (user) => {
+    // Xử lý sự kiện
+    netlifyIdentity.on('init', user => {
+      console.log('Init:', user);
       updateUI(user);
     });
 
-    netlifyIdentity.on('login', (user) => {
-      console.log("[Auth] User logged in:", user.email);
+    netlifyIdentity.on('login', user => {
+      console.log('Login:', user.email);
       updateUI(user);
       netlifyIdentity.close();
     });
 
     netlifyIdentity.on('logout', () => {
-      console.log("[Auth] User logged out");
+      console.log('Logged out');
       updateUI(null);
     });
+
+    // Kiểm tra trạng thái ban đầu
+    updateUI(netlifyIdentity.currentUser());
   }
 
-  // ========================
-  // XỬ LÝ GIAO DIỆN
-  // ========================
+  // Cập nhật giao diện
   function updateUI(user) {
     const loginBtn = document.getElementById('login-btn');
     const dashboard = document.getElementById('dashboard');
 
     if (user) {
-      loginBtn.textContent = `Logout (${user.email})`;
+      loginBtn.textContent = `Đăng xuất (${user.email})`;
+      loginBtn.style.backgroundColor = '#f44336';
       dashboard.style.display = 'flex';
-      loadPosts(); // Tải bài viết khi đăng nhập
+      loadPosts();
     } else {
-      loginBtn.textContent = 'Login';
+      loginBtn.textContent = 'Đăng nhập';
+      loginBtn.style.backgroundColor = '#4CAF50';
       dashboard.style.display = 'none';
     }
   }
 
-  // Nút Login/Logout
-  document.getElementById('login-btn').addEventListener('click', () => {
-    if (netlifyIdentity.currentUser()) {
-      netlifyIdentity.logout();
-    } else {
-      netlifyIdentity.open();
-    }
-  });
-
-  // ========================
-  // QUẢN LÝ BÀI VIẾT
-  // ========================
+  // Tải bài viết
   async function loadPosts() {
-    console.log("[Posts] Loading posts...");
     const postsList = document.getElementById('posts-list');
-    postsList.innerHTML = '<div class="loading">Loading posts...</div>';
+    postsList.innerHTML = '<div class="loading">Đang tải bài viết...</div>';
 
     try {
-      // Lấy danh sách thư mục trong /content
-      const categoriesRes = await fetch('/.netlify/git/github/contents/content', {
-        credentials: 'include', // QUAN TRỌNG: Gửi cookie chứa token
+      if (!netlifyIdentity.currentUser()) {
+        throw new Error('Vui lòng đăng nhập');
+      }
+
+      const response = await fetch('/.netlify/git/github/contents/content', {
+        credentials: 'include',
         headers: { 'Accept': 'application/vnd.github.v3+json' }
       });
 
-      if (!categoriesRes.ok) throw new Error(await categoriesRes.text());
-      
-      const categories = await categoriesRes.json();
-      console.log("[Posts] Found categories:", categories.map(c => c.name));
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.message || 'Lỗi tải dữ liệu');
+      }
 
-      // Lấy bài viết từ tất cả thư mục con
-      let allPosts = [];
-      for (const category of categories) {
-        if (category.type === 'dir') {
-          const postsRes = await fetch(`/.netlify/git/github/contents/content/${category.name}`, {
+      const data = await response.json();
+      const posts = [];
+
+      // Lấy bài viết từ các thư mục con
+      for (const item of data) {
+        if (item.type === 'dir') {
+          const res = await fetch(`/.netlify/git/github/contents/content/${item.name}`, {
             credentials: 'include',
             headers: { 'Accept': 'application/vnd.github.v3+json' }
           });
           
-          if (!postsRes.ok) continue; // Bỏ qua nếu thư mục lỗi
-          
-          const posts = await postsRes.json();
-          allPosts = allPosts.concat(
-            posts.filter(p => p.type === 'file').map(post => ({
-              name: post.name,
-              path: post.path,
-              category: category.name
-            }))
-          );
+          if (res.ok) {
+            const files = await res.json();
+            files.forEach(file => {
+              if (file.type === 'file' && file.name.endsWith('.md')) {
+                posts.push({
+                  name: file.name.replace('.md', ''),
+                  path: file.path,
+                  category: item.name
+                });
+              }
+            });
+          }
         }
       }
 
-      renderPosts(allPosts);
+      renderPosts(posts);
     } catch (error) {
-      console.error("[Posts] Load error:", error);
+      console.error('Lỗi:', error);
       postsList.innerHTML = `
         <div class="error">
-          Failed to load posts. <br>
-          <strong>Error:</strong> ${error.message}<br>
-          <button onclick="location.reload()">Retry</button>
+          ${error.message}<br>
+          <button onclick="location.reload()">Thử lại</button>
         </div>
       `;
     }
   }
 
+  // Hiển thị bài viết
   function renderPosts(posts) {
-    console.log("[Posts] Rendering", posts.length, "posts");
     const postsList = document.getElementById('posts-list');
     
     if (posts.length === 0) {
-      postsList.innerHTML = '<div class="empty">No posts found in /content/</div>';
+      postsList.innerHTML = '<div class="empty">Không có bài viết nào</div>';
       return;
     }
 
     postsList.innerHTML = posts.map(post => `
       <div class="post-item">
-        <span class="post-category">${post.category}/</span>
-        <span class="post-title">${post.name.replace('.md', '')}</span>
-        <button onclick="editPost('${post.path}')">Edit</button>
+        <span class="post-category">${post.category}</span>
+        <span class="post-title">${post.name}</span>
+        <button onclick="editPost('${post.path}')">Sửa</button>
       </div>
     `).join('');
   }
 
-  // ========================
-  // THÊM BÀI VIẾT MỚI
-  // ========================
+  // Thêm bài mới
   document.getElementById('create-post').addEventListener('click', () => {
-    console.log("[Editor] Opening new post form");
+    if (!netlifyIdentity.currentUser()) {
+      alert('Vui lòng đăng nhập');
+      return;
+    }
     document.getElementById('post-form').style.display = 'block';
   });
 
@@ -137,11 +134,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const content = document.getElementById('post-content').value.trim();
 
     if (!title || !content) {
-      alert("Please fill both title and content!");
+      alert('Vui lòng nhập đủ thông tin');
       return;
     }
-
-    console.log("[Editor] Creating post:", { category, title });
 
     try {
       const response = await fetch(`/.netlify/git/github/contents/content/${category}/${title}.md`, {
@@ -149,27 +144,27 @@ document.addEventListener('DOMContentLoaded', () => {
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: `Add new post: ${title}`,
+          message: `Thêm bài viết mới: ${title}`,
           content: btoa(unescape(encodeURIComponent(content)))
         })
       });
 
       if (!response.ok) throw new Error(await response.text());
 
-      alert("Post created successfully!");
+      alert('Đã thêm bài viết thành công!');
       document.getElementById('post-form').style.display = 'none';
-      loadPosts(); // Refresh danh sách
+      document.getElementById('post-title').value = '';
+      document.getElementById('post-content').value = '';
+      loadPosts();
     } catch (error) {
-      console.error("[Editor] Create error:", error);
-      alert(`Error: ${error.message || 'Failed to create post'}`);
+      console.error('Lỗi:', error);
+      alert(`Lỗi: ${error.message || 'Không thể thêm bài viết'}`);
     }
   });
 });
 
-// ========================
-// HÀM TOÀN CỤC
-// ========================
+// Hàm sửa bài viết
 function editPost(path) {
-  console.log("[Editor] Editing post:", path);
-  alert(`Edit post: ${path}\n\nFeature coming soon!`);
+  console.log('Sửa bài:', path);
+  alert(`Chức năng sửa bài "${path}" đang được phát triển`);
 }
