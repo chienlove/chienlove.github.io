@@ -1,116 +1,84 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <title>Đăng nhập Admin</title>
-    <script type="text/javascript" src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-            background-color: #f0f0f0;
-        }
-        .container {
-            background-color: white;
-            padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            max-width: 400px;
-            width: 100%;
-        }
-        h2 {
-            color: #333;
-            margin-bottom: 20px;
-        }
-        input {
-            display: block;
-            margin: 10px 0;
-            padding: 10px;
-            width: 100%;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
-        button {
-            background-color: #007bff;
-            color: white;
-            border: none;
-            padding: 12px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            width: 100%;
-            font-size: 16px;
-            transition: background-color 0.3s;
-        }
-        button:hover {
-            background-color: #0056b3;
-        }
-        #message {
-            margin-top: 10px;
-            color: red;
-            text-align: center;
-        }
-      input:focus, textarea:focus {
-  outline: none; 
-}
-      input, textarea {
-  font-size: 16px;
-}
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CMS Admin - Quản trị nội dung</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/admin/css/admin.css">
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 </head>
 <body>
-    <div class="container">
-        <div id="loginForm">
-            <h2>Đăng nhập</h2>
-            <input type="email" id="email" placeholder="Email" required>
-            <input type="password" id="password" placeholder="Mật khẩu" required>
-            <button onclick="login()">Đăng nhập</button>
-            <p id="message"></p>
-        </div>
-    </div>
-    <script>
-        const netlifyIdentity = window.netlifyIdentity;
-        netlifyIdentity.init();
-        function updateUI() {
-            const user = netlifyIdentity.currentUser();
-            if (user) {
-                // Redirect to the Netlify CMS dashboard after login
-                window.location.href = '/admin/dashboard';
-            } else {
-                document.getElementById('loginForm').style.display = 'block';
-            }
-        }
-        function login() {
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
-    const messageElement = document.getElementById('message');
+  <div class="admin-container">
+    <!-- Header -->
+    <header class="admin-header">
+      <div class="header-left">
+        <i class="fas fa-cog"></i>
+        <h1>CMS Content Manager</h1>
+      </div>
+      <button id="login-btn" class="btn-login">
+        <i class="fas fa-sign-in-alt"></i>
+        <span>Đăng nhập</span>
+      </button>
+    </header>
 
-    netlifyIdentity.gotrue.login(email, password, true)
-        .then((response) => {
-            messageElement.style.color = 'green';
-            messageElement.textContent = 'Đăng nhập thành công!';
-            
-            // Lưu token xác thực vào localStorage
-            localStorage.setItem('netlifySiteURL', 'https://storeios.net');
-            localStorage.setItem('netlifyAppID', '8100e8e1-3511-4426-bd2e-5d28aa7428de');
-            localStorage.setItem('nf_jwt', response.token.access_token);
-            
-            // Chuyển hướng đến trang dashboard
-            window.location.href = '/admin/dashboard';
-        })
-        .catch((error) => {
-            messageElement.style.color = 'red';
-            messageElement.textContent = 'Đăng nhập thất bại: ' + error.message;
-        });
-}
-        document.addEventListener('DOMContentLoaded', updateUI);
-        netlifyIdentity.on('login', updateUI);
-        netlifyIdentity.on('logout', updateUI);
-    </script>
+    <!-- Main Content -->
+    <div class="admin-main">
+      <!-- Sidebar (Ẩn khi chưa đăng nhập) -->
+      <aside class="admin-sidebar" id="sidebar">
+        <nav>
+          <ul class="sidebar-menu">
+            <li class="menu-item active">
+              <a href="#">
+                <i class="fas fa-file-alt"></i>
+                <span>Bài viết</span>
+              </a>
+            </li>
+            <li class="menu-item">
+              <a href="#">
+                <i class="fas fa-folder"></i>
+                <span>Thư mục</span>
+              </a>
+            </li>
+            <li class="menu-item">
+              <a href="#">
+                <i class="fas fa-cog"></i>
+                <span>Cài đặt</span>
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </aside>
+
+      <!-- Content Area -->
+      <main class="admin-content" id="dashboard">
+        <div class="content-header">
+          <h2><i class="fas fa-file-alt"></i> Quản lý bài viết</h2>
+          <button id="create-post" class="btn-primary">
+            <i class="fas fa-plus"></i> Tạo bài mới
+          </button>
+        </div>
+
+        <!-- Breadcrumb -->
+        <div class="breadcrumb" id="breadcrumb"></div>
+
+        <!-- Posts List -->
+        <div class="content-body">
+          <div id="posts-list" class="posts-grid">
+            <!-- Nội dung sẽ được tải động bằng JS -->
+            <div class="loading-state">
+              <i class="fas fa-spinner fa-spin"></i>
+              <p>Vui lòng đăng nhập để xem nội dung</p>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- Modal Container (Dùng chung cho các popup) -->
+    <div id="modal-container"></div>
+  </div>
+
+  <script src="/admin/script.js"></script>
 </body>
 </html>
