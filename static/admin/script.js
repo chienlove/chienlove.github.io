@@ -5,6 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let currentFolder = 'content';
   let isProcessing = false;
   let configFields = null;
+  const BASE_URL = window.location.origin; // Lấy base URL từ trang hiện tại
 
   // 1. KHỞI TẠO NETLIFY IDENTITY
   if (window.netlifyIdentity) {
@@ -68,6 +69,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 4. HÀM GỌI API AN TOÀN
   async function callGitHubAPI(url, method = 'GET', body = null) {
+    checkInternetConnection();
+    
     const user = netlifyIdentity.currentUser();
     if (!user?.token?.access_token) {
       throw new Error('Bạn chưa đăng nhập');
@@ -92,14 +95,30 @@ document.addEventListener('DOMContentLoaded', () => {
       config.body = JSON.stringify(body);
     }
 
-    const response = await fetch(url, config);
-    
-    if (!response.ok) {
-      const error = await response.json().catch(() => null);
-      throw new Error(error?.message || `Lỗi HTTP ${response.status}`);
-    }
+    try {
+      const response = await fetch(url, config);
+      
+      if (!response.ok) {
+        const error = await response.json().catch(() => null);
+        const errorMessage = error?.message || `Lỗi HTTP ${response.status}`;
+        
+        if (response.status === 401) {
+          netlifyIdentity.logout();
+          throw new Error('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
+        } else if (response.status === 404) {
+          throw new Error('Tài nguyên không tồn tại hoặc đã bị xóa.');
+        } else if (response.status === 409) {
+          throw new Error('Xung đột dữ liệu. Có thể SHA không còn hợp lệ.');
+        }
+        
+        throw new Error(errorMessage);
+      }
 
-    return response.json();
+      return response.json();
+    } catch (error) {
+      console.error('Lỗi khi gọi API:', error);
+      throw error;
+    }
   }
 
   // 5. TẢI CONFIG.YML
@@ -116,20 +135,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function parseYamlConfig(yamlContent) {
     try {
-      // Cải tiến phân tích YAML
       const collectionsMatch = yamlContent.match(/collections:\s*([\s\S]*?)(?=\n\S|$)/);
       if (!collectionsMatch) return null;
       
       const collections = collectionsMatch[1];
       const fields = {};
       
-      // Tìm các trường được định nghĩa
-      // Tìm khối fields
       const fieldsBlockMatch = collections.match(/fields:\s*\n([\s\S]*?)(?=\n[^\s]|$)/);
       if (!fieldsBlockMatch) return null;
       
       const fieldsBlock = fieldsBlockMatch[1];
-      // Tìm các field riêng lẻ
       const fieldEntries = fieldsBlock.match(/\s*-\s*name:.*?(?=\s*-\s*name:|$)/gs);
       
       if (fieldEntries) {
@@ -146,13 +161,10 @@ document.addEventListener('DOMContentLoaded', () => {
               type: widgetMatch ? widgetMatch[1] : 'string',
               default: defaultMatch ? defaultMatch[2] : ''
             };
-            
-            console.log(`Đã phân tích trường: ${fieldName}`);
           }
         });
       }
       
-      console.log('Kết quả phân tích fields:', fields);
       return Object.keys(fields).length > 0 ? fields : null;
     } catch (error) {
       console.error('Lỗi phân tích config.yml:', error);
@@ -173,14 +185,11 @@ document.addEventListener('DOMContentLoaded', () => {
     updateBreadcrumb(path);
 
     try {
-      // Kiểm tra path hợp lệ
       if (!isValidPath(path)) {
         throw new Error('Đường dẫn không hợp lệ');
       }
 
       const data = await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(path)}`);
-      console.log('Dữ liệu nhận được:', data);
-
       allPosts = Array.isArray(data) ? data : [data];
       renderFolderContents(allPosts, path);
 
@@ -286,13 +295,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 10. THÊM BÀI VIẾT MỚI
   async function addNewPost(folderPath) {
-    // Đảm bảo đã có configFields
     if (!configFields) {
       configFields = await loadConfig();
     }
     
     if (!configFields) {
-      console.error("Không thể tải cấu hình form");
       alert("Không thể tạo bài viết mới vì lỗi tải cấu hình");
       return;
     }
@@ -305,9 +312,6 @@ document.addEventListener('DOMContentLoaded', () => {
       document.body.appendChild(modal);
     }
     
-    console.log("Config fields trước khi tạo form:", configFields);
-    
-    // Tạo các trường từ config
     const fieldsHtml = configFields ? 
       Object.entries(configFields).map(([name, field]) => `
         <div class="form-group">
@@ -379,6 +383,15 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/-+/g, '-');
   }
 
+  function formatFileName(title) {
+    return title.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/đ/g, 'd')
+      .replace(/\s+/g, '-')
+      .replace(/[^a-z0-9-]/g, '')
+      .replace(/-+/g, '-');
+  }
+
   function getFieldInputHtml(name, type, value = '') {
     switch(type) {
       case 'text':
@@ -403,21 +416,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const frontmatter = {};
     let body = content;
     
-    // Kiểm tra có front matter không
     if (content.startsWith('---')) {
       const endFrontmatter = content.indexOf('---', 3);
       if (endFrontmatter > 0) {
         const frontmatterText = content.substring(3, endFrontmatter).trim();
         body = content.substring(endFrontmatter + 3).trim();
         
-        // Phân tích đơn giản front matter
         frontmatterText.split('\n').forEach(line => {
           const match = line.match(/^([^:]+):\s*(.*)$/);
           if (match) {
             const key = match[1].trim();
             let value = match[2].trim();
             
-            // Xử lý giá trị được trích dẫn
             if ((value.startsWith('"') && value.endsWith('"')) || 
                 (value.startsWith("'") && value.endsWith("'"))) {
               value = value.substring(1, value.length - 1);
@@ -562,6 +572,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  function checkInternetConnection() {
+    if (!navigator.onLine) {
+      throw new Error('Không có kết nối Internet. Vui lòng kiểm tra lại kết nối.');
+    }
+  }
+
   // Đăng ký hàm toàn cục
   window.loadFolderContents = loadFolderContents;
   window.editPost = editPost;
@@ -570,14 +586,24 @@ document.addEventListener('DOMContentLoaded', () => {
   window.createNewPost = createNewPost;
   window.addNewPost = addNewPost;
   window.addNewFolder = addNewFolder;
-  window.loadConfig = loadConfig; // Export thêm hàm này để sử dụng ở toàn cục
-  window.savePost = savePost; // Export hàm savePost
+  window.loadConfig = loadConfig;
+  window.savePost = savePost;
 });
 
-// 12. CHỨC NĂNG XEM BÀI VIẾT
+// 12. CHỨC NĂNG XEM BÀI VIẾT (ĐÃ TỐI ƯU CHO STOREIOS.NET)
 function viewPost(path) {
-  const slug = path.replace('content/', '').replace(/\.md$/i, '');
+  // Xử lý đặc biệt cho storeios.net
+  let slug = path.replace('content/', '').replace(/\.md$/i, '');
+  
+  // Xử lý README.md trong thư mục con
+  const parts = slug.split('/');
+  if (parts.length > 1 && parts[parts.length-1].toLowerCase() === 'readme') {
+    slug = parts.slice(0, -1).join('/');
+  }
+  
+  // Tạo URL hoàn chỉnh
   const postUrl = `${window.location.origin}/${slug}`;
+  console.log('Opening post URL:', postUrl);
   window.open(postUrl, '_blank');
 }
 
@@ -586,26 +612,38 @@ async function editPost(path, sha) {
   try {
     console.log("Bắt đầu sửa bài viết:", path);
     
+    // Hiển thị loading
+    const postsList = document.getElementById('posts-list');
+    const originalContent = postsList.innerHTML;
+    postsList.innerHTML = '<div class="loading">Đang tải bài viết...</div>';
+    
     // Đảm bảo configFields đã được tải
     if (!window.configFields) {
       window.configFields = await window.loadConfig();
-      console.log("Đã tải lại config fields:", window.configFields);
+      if (!window.configFields) {
+        throw new Error('Không thể tải cấu hình bài viết');
+      }
     }
     
     const fileData = await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(path)}`);
     const content = atob(fileData.content);
-    console.log("Đã tải nội dung bài viết:", content.substring(0, 100) + "...");
     
     showEditModal(path, content, sha);
+    
+    // Khôi phục nội dung nếu có lỗi
+    postsList.innerHTML = originalContent;
   } catch (error) {
     console.error('Lỗi khi tải nội dung bài viết:', error);
     alert(`Lỗi: ${error.message || 'Không thể tải nội dung bài viết'}`);
+    
+    if (error.message.includes('401') || error.message.includes('Operator')) {
+      netlifyIdentity.logout();
+    }
   }
 }
 
 // 14. HIỂN THỊ MODAL CHỈNH SỬA
 async function showEditModal(path, content, sha) {
-  // Đảm bảo configFields đã được tải
   let configFields = window.configFields;
   if (!configFields) {
     configFields = await window.loadConfig();
@@ -615,15 +653,11 @@ async function showEditModal(path, content, sha) {
   const filename = path.split('/').pop();
   const { frontmatter, body } = parseFrontmatter(content);
   
-  console.log("Frontmatter đã parse:", frontmatter);
-  console.log("Body đã parse:", body.substring(0, 100) + "...");
-  
   const modal = document.getElementById('edit-modal') || document.createElement('div');
   modal.id = 'edit-modal';
   modal.className = 'modal';
   document.body.appendChild(modal);
   
-  // Tạo các trường từ config với giá trị hiện tại
   const fieldsHtml = configFields ? 
     Object.entries(configFields).map(([name, field]) => `
       <div class="form-group">
@@ -658,7 +692,6 @@ async function showEditModal(path, content, sha) {
   
   modal.style.display = 'block';
   
-  // Thêm sự kiện click vào nút lưu
   document.getElementById('save-post-btn').addEventListener('click', () => {
     window.savePost(path, sha);
   });
@@ -667,8 +700,6 @@ async function showEditModal(path, content, sha) {
 // 15. LƯU BÀI VIẾT
 async function savePost(path, sha) {
   try {
-    console.log("Bắt đầu lưu bài viết:", path);
-    
     const titleInput = document.getElementById('edit-title');
     const contentTextarea = document.getElementById('edit-content');
     
@@ -696,8 +727,6 @@ async function savePost(path, sha) {
         }
       }
     }
-    
-    console.log("Frontmatter sẽ lưu:", frontmatter);
     
     // Tạo nội dung với front matter
     let content = '';
@@ -729,6 +758,7 @@ async function savePost(path, sha) {
     alert(`Lỗi: ${error.message || 'Không thể lưu bài viết'}`);
   }
 }
+
 // 16. TẠO BÀI VIẾT MỚI
 async function createNewPost(folderPath) {
   try {
@@ -818,17 +848,7 @@ async function deleteItem(path, sha, isFolder) {
   }
 }
 
-// Hàm hỗ trợ bổ sung
-function formatFileName(title) {
-  return title.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/đ/g, 'd')
-    .replace(/\s+/g, '-')
-    .replace(/[^a-z0-9-]/g, '')
-    .replace(/-+/g, '-');
-}
-
-// 18. Gọi API GitHub an toàn (bổ sung thêm xử lý lỗi)
+// Hàm gọi API (được sử dụng bởi các hàm toàn cục)
 async function callGitHubAPI(url, method = 'GET', body = null) {
   const user = netlifyIdentity.currentUser();
   if (!user?.token?.access_token) {
@@ -854,71 +874,23 @@ async function callGitHubAPI(url, method = 'GET', body = null) {
     config.body = JSON.stringify(body);
   }
 
-  try {
-    const response = await fetch(url, config);
-    
-    if (!response.ok) {
-      const error = await response.json().catch(() => null);
-      const errorMessage = error?.message || `Lỗi HTTP ${response.status}`;
-      
-      // Xử lý một số lỗi cụ thể
-      if (response.status === 401) {
-        throw new Error('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
-      } else if (response.status === 404) {
-        throw new Error('Tài nguyên không tồn tại hoặc đã bị xóa.');
-      } else if (response.status === 409) {
-        throw new Error('Xung đột dữ liệu. Có thể SHA không còn hợp lệ.');
-      }
-      
-      throw new Error(errorMessage);
-    }
-
-    return response.json();
-  } catch (error) {
-    console.error('Lỗi khi gọi API:', error);
-    throw error;
-  }
-}
-
-// 19. Thêm kiểm tra kết nối Internet trước khi gọi API
-function checkInternetConnection() {
-  if (!navigator.onLine) {
-    throw new Error('Không có kết nối Internet. Vui lòng kiểm tra lại kết nối.');
-  }
-}
-
-// 20. Cập nhật hàm loadFolderContents để kiểm tra kết nối
-async function loadFolderContents(path) {
-  if (isProcessing) return;
-  isProcessing = true;
+  const response = await fetch(url, config);
   
-  try {
-    checkInternetConnection();
-    // ... phần còn lại của hàm như trước ...
-  } catch (error) {
-    // ... xử lý lỗi ...
-  } finally {
-    isProcessing = false;
+  if (!response.ok) {
+    const error = await response.json().catch(() => null);
+    throw new Error(error?.message || `Lỗi HTTP ${response.status}`);
   }
+
+  return response.json();
 }
 
-// 21. Thêm hàm xử lý sự kiện offline/online
-window.addEventListener('online', () => {
-  console.log('Đã kết nối Internet');
-  // Tự động tải lại nội dung nếu đang ở trang quản trị
-  if (document.getElementById('dashboard')?.style.display === 'flex') {
-    window.loadFolderContents(window.currentFolder);
-  }
-});
-
-window.addEventListener('offline', () => {
-  console.log('Mất kết nối Internet');
-  const postsList = document.getElementById('posts-list');
-  if (postsList) {
-    postsList.innerHTML = `
-      <div class="error">
-        ❌ Mất kết nối Internet. Vui lòng kiểm tra lại kết nối.
-      </div>
-    `;
-  }
-});
+// Hàm escape HTML (được sử dụng bởi các hàm toàn cục)
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.toString()
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
