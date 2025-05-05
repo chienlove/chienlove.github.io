@@ -23,10 +23,12 @@ document.addEventListener('DOMContentLoaded', () => {
         loginBtn.textContent = `Đăng xuất (${user.email})`;
         loginBtn.style.backgroundColor = '#f44336';
         dashboard.style.display = 'flex';
-        loadFolderContents(currentFolder);
-        // Tải config khi đăng nhập
+        // Tải config ngay sau khi đăng nhập
         loadConfig().then(fields => {
           configFields = fields;
+          console.log('Đã tải config fields:', configFields);
+          // Sau khi đã có config, mới tải nội dung thư mục
+          loadFolderContents(currentFolder);
         });
       } else {
         console.log('Chưa đăng nhập');
@@ -114,7 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function parseYamlConfig(yamlContent) {
     try {
-      // Phân tích đơn giản - có thể sử dụng thư viện chuyên dụng nếu cần
+      // Cải tiến phân tích YAML
       const collectionsMatch = yamlContent.match(/collections:\s*([\s\S]*?)(?=\n\S|$)/);
       if (!collectionsMatch) return null;
       
@@ -122,28 +124,35 @@ document.addEventListener('DOMContentLoaded', () => {
       const fields = {};
       
       // Tìm các trường được định nghĩa
-      const fieldMatches = collections.matchAll(/fields:\s*\n([\s\S]*?)(?=\n\s*\S|$)/g);
-      for (const match of fieldMatches) {
-        const fieldBlock = match[1];
-        const fieldLines = fieldBlock.split('\n').filter(line => line.trim());
-        
-        for (const line of fieldLines) {
-          const fieldMatch = line.match(/-\s*name:\s*['"](.*?)['"]/);
-          if (fieldMatch) {
-            const fieldName = fieldMatch[1];
-            const labelMatch = line.match(/label:\s*['"](.*?)['"]/) || [null, fieldName];
-            const typeMatch = line.match(/widget:\s*['"](.*?)['"]/) || [null, 'string'];
-            const defaultMatch = line.match(/default:\s*(.*)/);
+      // Tìm khối fields
+      const fieldsBlockMatch = collections.match(/fields:\s*\n([\s\S]*?)(?=\n[^\s]|$)/);
+      if (!fieldsBlockMatch) return null;
+      
+      const fieldsBlock = fieldsBlockMatch[1];
+      // Tìm các field riêng lẻ
+      const fieldEntries = fieldsBlock.match(/\s*-\s*name:.*?(?=\s*-\s*name:|$)/gs);
+      
+      if (fieldEntries) {
+        fieldEntries.forEach(entry => {
+          const nameMatch = entry.match(/name:\s*['"](.*?)['"]/);
+          if (nameMatch) {
+            const fieldName = nameMatch[1];
+            const labelMatch = entry.match(/label:\s*['"](.*?)['"]/);
+            const widgetMatch = entry.match(/widget:\s*['"](.*?)['"]/);
+            const defaultMatch = entry.match(/default:\s*(['"]?(.*?)['"]?)\s*(?:\n|$)/);
             
             fields[fieldName] = {
-              label: labelMatch[1],
-              type: typeMatch[1],
-              default: defaultMatch ? defaultMatch[1].trim().replace(/['"]/g, '') : null
+              label: labelMatch ? labelMatch[1] : fieldName,
+              type: widgetMatch ? widgetMatch[1] : 'string',
+              default: defaultMatch ? defaultMatch[2] : ''
             };
+            
+            console.log(`Đã phân tích trường: ${fieldName}`);
           }
-        }
+        });
       }
       
+      console.log('Kết quả phân tích fields:', fields);
       return Object.keys(fields).length > 0 ? fields : null;
     } catch (error) {
       console.error('Lỗi phân tích config.yml:', error);
@@ -277,8 +286,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 10. THÊM BÀI VIẾT MỚI
   async function addNewPost(folderPath) {
+    // Đảm bảo đã có configFields
     if (!configFields) {
       configFields = await loadConfig();
+    }
+    
+    if (!configFields) {
+      console.error("Không thể tải cấu hình form");
+      alert("Không thể tạo bài viết mới vì lỗi tải cấu hình");
+      return;
     }
     
     let modal = document.getElementById('create-modal');
@@ -289,12 +305,14 @@ document.addEventListener('DOMContentLoaded', () => {
       document.body.appendChild(modal);
     }
     
+    console.log("Config fields trước khi tạo form:", configFields);
+    
     // Tạo các trường từ config
     const fieldsHtml = configFields ? 
       Object.entries(configFields).map(([name, field]) => `
         <div class="form-group">
-          <label for="field-${escapeHtml(name)}">${escapeHtml(field.label)}:</label>
-          ${getFieldInputHtml(name, field.type, field.default)}
+          <label for="field-${escapeHtml(name)}">${escapeHtml(field.label || name)}:</label>
+          ${getFieldInputHtml(name, field.type, field.default || '')}
         </div>
       `).join('') : '';
     
@@ -552,6 +570,8 @@ document.addEventListener('DOMContentLoaded', () => {
   window.createNewPost = createNewPost;
   window.addNewPost = addNewPost;
   window.addNewFolder = addNewFolder;
+  window.loadConfig = loadConfig; // Export thêm hàm này để sử dụng ở toàn cục
+  window.savePost = savePost; // Export hàm savePost
 });
 
 // 12. CHỨC NĂNG XEM BÀI VIẾT
@@ -564,8 +584,18 @@ function viewPost(path) {
 // 13. CHỨC NĂNG SỬA BÀI VIẾT
 async function editPost(path, sha) {
   try {
+    console.log("Bắt đầu sửa bài viết:", path);
+    
+    // Đảm bảo configFields đã được tải
+    if (!window.configFields) {
+      window.configFields = await window.loadConfig();
+      console.log("Đã tải lại config fields:", window.configFields);
+    }
+    
     const fileData = await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(path)}`);
     const content = atob(fileData.content);
+    console.log("Đã tải nội dung bài viết:", content.substring(0, 100) + "...");
+    
     showEditModal(path, content, sha);
   } catch (error) {
     console.error('Lỗi khi tải nội dung bài viết:', error);
@@ -575,9 +605,18 @@ async function editPost(path, sha) {
 
 // 14. HIỂN THỊ MODAL CHỈNH SỬA
 async function showEditModal(path, content, sha) {
-  const configFields = await loadConfig();
+  // Đảm bảo configFields đã được tải
+  let configFields = window.configFields;
+  if (!configFields) {
+    configFields = await window.loadConfig();
+    window.configFields = configFields;
+  }
+  
   const filename = path.split('/').pop();
   const { frontmatter, body } = parseFrontmatter(content);
+  
+  console.log("Frontmatter đã parse:", frontmatter);
+  console.log("Body đã parse:", body.substring(0, 100) + "...");
   
   const modal = document.getElementById('edit-modal') || document.createElement('div');
   modal.id = 'edit-modal';
@@ -588,8 +627,8 @@ async function showEditModal(path, content, sha) {
   const fieldsHtml = configFields ? 
     Object.entries(configFields).map(([name, field]) => `
       <div class="form-group">
-        <label for="field-${escapeHtml(name)}">${escapeHtml(field.label)}:</label>
-        ${getFieldInputHtml(name, field.type, frontmatter[name])}
+        <label for="field-${escapeHtml(name)}">${escapeHtml(field.label || name)}:</label>
+        ${getFieldInputHtml(name, field.type, frontmatter[name] || field.default || '')}
       </div>
     `).join('') : '';
   
@@ -611,18 +650,25 @@ async function showEditModal(path, content, sha) {
         </div>
       </div>
       <div class="modal-footer">
-        <button onclick="window.savePost('${escapeHtml(path)}', '${escapeHtml(sha)}')">Lưu</button>
+        <button id="save-post-btn">Lưu</button>
         <button onclick="document.getElementById('edit-modal').style.display='none'">Hủy</button>
       </div>
     </div>
   `;
   
   modal.style.display = 'block';
+  
+  // Thêm sự kiện click vào nút lưu
+  document.getElementById('save-post-btn').addEventListener('click', () => {
+    window.savePost(path, sha);
+  });
 }
 
 // 15. LƯU BÀI VIẾT
 async function savePost(path, sha) {
   try {
+    console.log("Bắt đầu lưu bài viết:", path);
+    
     const titleInput = document.getElementById('edit-title');
     const contentTextarea = document.getElementById('edit-content');
     
@@ -639,7 +685,7 @@ async function savePost(path, sha) {
     }
     
     // Lấy giá trị từ các trường config
-    const configFields = await loadConfig();
+    const configFields = window.configFields;
     const frontmatter = {};
     
     if (configFields) {
@@ -650,6 +696,8 @@ async function savePost(path, sha) {
         }
       }
     }
+    
+    console.log("Frontmatter sẽ lưu:", frontmatter);
     
     // Tạo nội dung với front matter
     let content = '';
@@ -680,218 +728,4 @@ async function savePost(path, sha) {
     console.error('Lỗi khi lưu bài viết:', error);
     alert(`Lỗi: ${error.message || 'Không thể lưu bài viết'}`);
   }
-}
-
-// 16. XÓA BÀI VIẾT HOẶC THƯ MỤC
-async function deleteItem(path, sha, isFolder) {
-  const itemType = isFolder ? 'thư mục' : 'bài viết';
-  if (!confirm(`Bạn có chắc chắn muốn xóa ${itemType} này không?`)) return;
-  
-  try {
-    if (isFolder) {
-      await deleteFolderRecursive(path);
-    } else {
-      const deleteData = {
-        message: `Xóa ${itemType}: ${path}`,
-        sha: sha,
-        branch: 'main'
-      };
-      
-      await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(path)}`, 'DELETE', deleteData);
-    }
-    
-    alert(`Xóa ${itemType} thành công!`);
-    const parentFolder = path.split('/').slice(0, -1).join('/');
-    window.loadFolderContents(parentFolder || 'content');
-    
-  } catch (error) {
-    console.error(`Lỗi khi xóa ${itemType}:`, error);
-    alert(`Lỗi: ${error.message || `Không thể xóa ${itemType}`}`);
-  }
-}
-
-// 17. XÓA THƯ MỤC ĐỆ QUY
-async function deleteFolderRecursive(folderPath) {
-  const items = await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(folderPath)}`);
-  
-  for (const item of items) {
-    if (item.type === 'dir') {
-      await deleteFolderRecursive(item.path);
-    } else {
-      const deleteData = {
-        message: `Xóa file: ${item.path}`,
-        sha: item.sha,
-        branch: 'main'
-      };
-      
-      await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(item.path)}`, 'DELETE', deleteData);
-    }
-  }
-}
-
-// 18. TẠO BÀI VIẾT MỚI
-async function createNewPost(path, defaultContent = null) {
-  try {
-    let title, content;
-    
-    if (defaultContent === null) {
-      const titleInput = document.getElementById('new-title');
-      const contentTextarea = document.getElementById('new-content');
-      
-      if (!titleInput || !contentTextarea) {
-        throw new Error('Không tìm thấy form tạo bài viết');
-      }
-      
-      title = titleInput.value.trim();
-      let bodyContent = contentTextarea.value;
-      
-      if (!title) {
-        alert('Vui lòng nhập tiêu đề bài viết');
-        return;
-      }
-      
-      // Lấy giá trị từ các trường config
-      const configFields = await loadConfig();
-      const frontmatter = {};
-      
-      if (configFields) {
-        for (const [name] of Object.entries(configFields)) {
-          const input = document.getElementById(`field-${name}`);
-          if (input) {
-            frontmatter[name] = input.type === 'checkbox' ? input.checked : input.value;
-          }
-        }
-      }
-      
-      // Tạo nội dung với front matter
-      content = '';
-      if (Object.keys(frontmatter).length > 0) {
-        content += '---\n';
-        for (const [key, value] of Object.entries(frontmatter)) {
-          content += `${key}: ${typeof value === 'string' ? `"${value}"` : value}\n`;
-        }
-        content += '---\n\n';
-      }
-      content += bodyContent;
-      
-      const filename = formatFolderName(title) + '.md';
-      path = `${path}/${filename}`;
-    } else {
-      title = path.split('/').slice(-2, -1)[0];
-      content = defaultContent;
-    }
-    
-    const createData = {
-      message: `Tạo nội dung mới: ${title}`,
-      content: btoa(unescape(encodeURIComponent(content))),
-      branch: 'main'
-    };
-    
-    await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(path)}`, 'PUT', createData);
-    
-    const createModal = document.getElementById('create-modal');
-    if (createModal) {
-      createModal.style.display = 'none';
-    }
-    
-    const parentFolder = path.split('/').slice(0, -1).join('/');
-    if (defaultContent === null) {
-      alert('Tạo bài viết thành công!');
-    }
-    window.loadFolderContents(parentFolder || 'content');
-    
-  } catch (error) {
-    console.error('Lỗi khi tạo nội dung mới:', error);
-    alert(`Lỗi: ${error.message || 'Không thể tạo nội dung mới'}`);
-  }
-}
-
-// Hàm hỗ trợ toàn cục
-function escapeHtml(str) {
-  if (!str) return '';
-  return str.toString()
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-function formatFolderName(name) {
-  return name.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/đ/g, 'd')
-    .replace(/\s+/g, '-')
-    .replace(/[^a-z0-9-]/g, '')
-    .replace(/-+/g, '-');
-}
-
-// Hàm gọi API toàn cục
-async function callGitHubAPI(url, method = 'GET', body = null) {
-  const user = window.netlifyIdentity?.currentUser();
-  if (!user?.token?.access_token) {
-    throw new Error('Bạn chưa đăng nhập');
-  }
-
-  const headers = {
-    'Authorization': `Bearer ${user.token.access_token}`,
-    'Accept': 'application/vnd.github.v3+json',
-    'Content-Type': 'application/json',
-    'X-Operator': 'netlify',
-    'X-Operator-Id': user.id,
-    'X-Netlify-User': user.id
-  };
-
-  const config = {
-    method: method,
-    headers: headers,
-    credentials: 'include'
-  };
-
-  if (body) {
-    config.body = JSON.stringify(body);
-  }
-
-  const response = await fetch(url, config);
-  
-  if (!response.ok) {
-    const error = await response.json().catch(() => null);
-    throw new Error(error?.message || `Lỗi HTTP ${response.status}`);
-  }
-
-  return response.json();
-}
-
-// Hàm phân tích front matter toàn cục
-function parseFrontmatter(content) {
-  const frontmatter = {};
-  let body = content;
-  
-  // Kiểm tra có front matter không
-  if (content.startsWith('---')) {
-    const endFrontmatter = content.indexOf('---', 3);
-    if (endFrontmatter > 0) {
-      const frontmatterText = content.substring(3, endFrontmatter).trim();
-      body = content.substring(endFrontmatter + 3).trim();
-      
-      // Phân tích đơn giản front matter
-      frontmatterText.split('\n').forEach(line => {
-        const match = line.match(/^([^:]+):\s*(.*)$/);
-        if (match) {
-          const key = match[1].trim();
-          let value = match[2].trim();
-          
-          // Xử lý giá trị được trích dẫn
-          if ((value.startsWith('"') && value.endsWith('"')) || 
-              (value.startsWith("'") && value.endsWith("'"))) {
-            value = value.substring(1, value.length - 1);
-          }
-          
-          frontmatter[key] = value;
-        }
-      });
-    }
-  }
-  
-  return { frontmatter, body };
 }
