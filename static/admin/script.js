@@ -1,34 +1,92 @@
-// cms-admin.js
+// script.js hoàn thiện
 document.addEventListener('DOMContentLoaded', () => {
-  // Biến toàn cục
-  let allPosts = [];
-  let currentFolder = 'content';
-  let isProcessing = false;
+  // Khởi tạo CMS_CONFIG từ config.yml
+  window.CMS_CONFIG = {
+    collections: [
+      {
+        name: "posts",
+        label: "Bài viết",
+        fields: [
+          {label: "Tiêu đề", name: "title", widget: "string", required: true},
+          {label: "Ngày đăng", name: "date", widget: "datetime", format: "YYYY-MM-DD", date_format: "DD/MM/YYYY", time_format: false},
+          {label: "Tác giả", name: "author", widget: "string", default: "Admin"},
+          {label: "Hình ảnh đại diện", name: "thumbnail", widget: "image", required: false},
+          {label: "Mô tả ngắn", name: "description", widget: "text", required: false},
+          {label: "Nội dung", name: "body", widget: "markdown"},
+          {label: "Thẻ", name: "tags", widget: "list", required: false},
+          {label: "Chuyên mục", name: "categories", widget: "list", required: false}
+        ]
+      },
+      {
+        name: "app",
+        label: "Ứng dụng",
+        fields: [
+          {label: "Tên ứng dụng", name: "title", widget: "string", required: true},
+          {label: "Ngày đăng", name: "date", widget: "datetime", required: true},
+          {label: "Ảnh icon", name: "icon", widget: "image", required: true},
+          {label: "Ảnh screenshot", name: "screenshots", widget: "list", field: {label: "Ảnh", name: "image", widget: "image"}, required: false},
+          {label: "Mô tả ngắn", name: "short_description", widget: "text", required: false},
+          {label: "Mô tả chi tiết", name: "description", widget: "markdown", required: true},
+          {label: "Nhà phát triển", name: "developer", widget: "string", required: true},
+          {label: "Thể loại", name: "category", widget: "select", options: ["Ứng dụng", "Games", "Tool jailbreak", "Thủ thuật", "File ipa", "Khác"], required: true},
+          {label: "Phiên bản", name: "version", widget: "string", required: true},
+          {label: "Kích thước", name: "size", widget: "string", required: true},
+          {label: "iOS tương thích", name: "requirements", widget: "string", required: true},
+          {label: "Ngôn ngữ hỗ trợ", name: "languages", widget: "list", required: true},
+          {label: "Liên kết tải App Store", name: "app_store_link", widget: "string", required: true},
+          {label: "Từ khóa", name: "tags", widget: "list", required: false}
+        ]
+      },
+      {
+        name: "jailbreak-tools",
+        label: "Tool Jailbreak",
+        fields: [
+          {label: "Tên Tool", name: "title", widget: "string", required: true},
+          {label: "Ngày đăng", name: "date", widget: "datetime", required: true},
+          {label: "Icon", name: "icon", widget: "image", required: true},
+          {label: "Ảnh màn hình", name: "screenshots", widget: "list", field: {label: "Ảnh", name: "image", widget: "image"}, required: false},
+          {label: "Mô tả ngắn", name: "short_description", widget: "text", required: false},
+          {label: "Mô tả chi tiết", name: "description", widget: "markdown", required: true},
+          {label: "Nhà phát triển", name: "developer", widget: "string", required: true},
+          {label: "Thể loại", name: "categories", widget: "string", required: true},
+          {label: "Kích thước", name: "size", widget: "update-size", required: false},
+          {label: "iOS tương thích", name: "ios_compatible", widget: "string", required: true},
+          {label: "Từ khóa", name: "keywords", widget: "list", required: false},
+          {name: "main_download", label: "Liên kết tải xuống chính", widget: "object", fields: [
+            {name: "version", label: "Phiên bản", widget: "string"},
+            {name: "appId", label: "App ID", widget: "string"},
+            {name: "plistUrl", label: "Plist URL", widget: "string"}
+          ]},
+          {name: "other_versions", label: "Các phiên bản khác", widget: "list", fields: [
+            {name: "version", label: "Phiên bản", widget: "string"},
+            {name: "appId", label: "App ID", widget: "string"},
+            {name: "plistUrl", label: "Plist URL", widget: "string"}
+          ]}
+        ]
+      }
+    ]
+  };
 
-  // 1. KHỞI TẠO NETLIFY IDENTITY
+  // Khởi tạo Netlify Identity
   if (window.netlifyIdentity) {
     netlifyIdentity.init({
       APIUrl: 'https://storeios.net/.netlify/identity',
       enableOperator: true
     });
 
-    // 2. XỬ LÝ SỰ KIỆN ĐĂNG NHẬP
     const handleAuthChange = (user) => {
       const loginBtn = document.getElementById('login-btn');
       const dashboard = document.getElementById('dashboard');
       
       if (user) {
-        console.log('Đã đăng nhập:', user.email);
-        loginBtn.textContent = `Đăng xuất (${user.email})`;
+        loginBtn.innerHTML = `<i class="fas fa-sign-out-alt"></i> Đăng xuất (${user.email})`;
         loginBtn.style.backgroundColor = '#f44336';
         dashboard.style.display = 'flex';
-        loadFolderContents(currentFolder);
+        loadFolderContents('content');
       } else {
-        console.log('Chưa đăng nhập');
-        loginBtn.textContent = 'Đăng nhập';
+        loginBtn.innerHTML = '<i class="fas fa-sign-in-alt"></i> Đăng nhập';
         loginBtn.style.backgroundColor = '#4CAF50';
         dashboard.style.display = 'none';
-        allPosts = [];
       }
     };
 
@@ -39,16 +97,6 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     netlifyIdentity.on('logout', () => handleAuthChange(null));
     
-    netlifyIdentity.on('close', () => {
-      if (!netlifyIdentity.currentUser()) {
-        handleAuthChange(null);
-      }
-    });
-
-    // 3. KIỂM TRA TRẠNG THÁI BAN ĐẦU
-    handleAuthChange(netlifyIdentity.currentUser());
-    
-    // Thêm sự kiện click cho nút đăng nhập
     document.getElementById('login-btn').addEventListener('click', () => {
       if (netlifyIdentity.currentUser()) {
         netlifyIdentity.logout();
@@ -58,358 +106,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 4. HÀM GỌI API AN TOÀN
-  async function callGitHubAPI(url, method = 'GET', body = null) {
-    const user = netlifyIdentity.currentUser();
-    if (!user?.token?.access_token) {
-      throw new Error('Bạn chưa đăng nhập');
-    }
+  // Thêm sự kiện cho nút tạo bài mới
+  document.getElementById('create-post').addEventListener('click', () => {
+    addNewPost(currentFolder);
+  });
 
-    const headers = {
-      'Authorization': `Bearer ${user.token.access_token}`,
-      'Accept': 'application/vnd.github.v3+json',
-      'Content-Type': 'application/json',
-      'X-Operator': 'netlify',
-      'X-Operator-Id': user.id,
-      'X-Netlify-User': user.id
-    };
-
-    const config = {
-      method: method,
-      headers: headers,
-      credentials: 'include'
-    };
-
-    if (body) {
-      config.body = JSON.stringify(body);
-    }
-
-    const response = await fetch(url, config);
-    
-    if (!response.ok) {
-      const error = await response.json().catch(() => null);
-      throw new Error(error?.message || `Lỗi HTTP ${response.status}`);
-    }
-
-    return response.json();
-  }
-
-  // 5. TẢI NỘI DUNG THƯ MỤC
-  async function loadFolderContents(path) {
-    if (isProcessing) return;
-    isProcessing = true;
-    
-    currentFolder = path || 'content';
-    const postsList = document.getElementById('posts-list');
-    const breadcrumb = document.getElementById('breadcrumb') || createBreadcrumb();
-    
-    postsList.innerHTML = '<div class="loading">Đang tải dữ liệu...</div>';
-    updateBreadcrumb(path);
-
-    try {
-      // Kiểm tra path hợp lệ
-      if (!isValidPath(path)) {
-        throw new Error('Đường dẫn không hợp lệ');
-      }
-
-      const data = await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(path)}`);
-      console.log('Dữ liệu nhận được:', data);
-
-      allPosts = Array.isArray(data) ? data : [data];
-      renderFolderContents(allPosts, path);
-
-    } catch (error) {
-      console.error('Lỗi tải dữ liệu:', error);
-      postsList.innerHTML = `
-        <div class="error">
-          ❌ Lỗi: ${escapeHtml(error.message || 'Không thể tải dữ liệu')}
-          ${error.message && error.message.includes('401') ? 
-            '<p>Vui lòng đăng nhập lại</p>' : 
-            `<button onclick="window.loadFolderContents('${escapeHtml(path)}')">Thử lại</button>`}
-        </div>
-      `;
-      
-      if (error.message.includes('Operator') || error.message.includes('401')) {
-        netlifyIdentity.logout();
-      }
-    } finally {
-      isProcessing = false;
-    }
-  }
-
-  // 6. TẠO BREADCRUMB
-  function createBreadcrumb() {
-    const dashboard = document.getElementById('dashboard');
-    const breadcrumb = document.createElement('div');
-    breadcrumb.id = 'breadcrumb';
-    breadcrumb.className = 'breadcrumb';
-    dashboard.insertBefore(breadcrumb, dashboard.firstChild);
-    return breadcrumb;
-  }
-
-  // 7. CẬP NHẬT BREADCRUMB
-  function updateBreadcrumb(path) {
-    const breadcrumb = document.getElementById('breadcrumb');
-    const parts = path.split('/');
-    
-    let breadcrumbHTML = `<span class="crumb" onclick="window.loadFolderContents('content')">Home</span>`;
-    let currentPath = 'content';
-    
-    for (let i = 1; i < parts.length; i++) {
-      currentPath += '/' + parts[i];
-      breadcrumbHTML += ` > <span class="crumb" onclick="window.loadFolderContents('${escapeHtml(currentPath)}')">${escapeHtml(parts[i])}</span>`;
-    }
-    
-    breadcrumb.innerHTML = breadcrumbHTML;
-  }
-
-  // 8. HIỂN THỊ NỘI DUNG THƯ MỤC
-  function renderFolderContents(items, currentPath) {
-    const postsList = document.getElementById('posts-list');
-    
-    if (!items || items.length === 0) {
-      postsList.innerHTML = '<div class="empty">Không có nội dung</div>';
-      return;
-    }
-    
-    const sortedItems = [...items].sort((a, b) => {
-      if (a.type === b.type) return a.name.localeCompare(b.name);
-      return a.type === 'dir' ? -1 : 1;
-    });
-    
-    postsList.innerHTML = `
-      <div class="folder-header">
-        <div class="folder-path">${escapeHtml(currentPath)}</div>
-        <button id="add-post-btn" class="action-btn">Thêm bài viết</button>
-        <button id="add-folder-btn" class="action-btn">Thêm thư mục</button>
-      </div>
-      <div class="content-list">
-        ${sortedItems.map(item => {
-          if (item.type === 'dir') {
-            return `
-              <div class="folder-item">
-                <div class="folder-name" onclick="window.loadFolderContents('${escapeHtml(item.path)}')">
-                  📁 ${escapeHtml(item.name)}
-                </div>
-                <div class="folder-actions">
-                  <button onclick="window.deleteItem('${escapeHtml(item.path)}', '${escapeHtml(item.sha)}', true)">Xóa</button>
-                </div>
-              </div>
-            `;
-          } else {
-            if (!item.name.toLowerCase().endsWith('.md')) return '';
-            
-            return `
-              <div class="post-item">
-                <span class="post-title">${escapeHtml(item.name.replace(/\.md$/i, ''))}</span>
-                <div class="post-actions">
-                  <button onclick="window.editPost('${escapeHtml(item.path)}', '${escapeHtml(item.sha)}')">Sửa</button>
-                  <button onclick="window.deleteItem('${escapeHtml(item.path)}', '${escapeHtml(item.sha)}', false)">Xóa</button>
-                  <button onclick="window.viewPost('${escapeHtml(item.path)}')">Xem</button>
-                </div>
-              </div>
-            `;
-          }
-        }).join('')}
-      </div>
-    `;
-    
-    document.getElementById('add-post-btn').addEventListener('click', () => addNewPost(currentPath));
-    document.getElementById('add-folder-btn').addEventListener('click', () => addNewFolder(currentPath));
-  }
-
-  // 9. THÊM BÀI VIẾT MỚI
-  function addNewPost(folderPath) {
-    let modal = document.getElementById('create-modal');
-    if (!modal) {
-      modal = document.createElement('div');
-      modal.id = 'create-modal';
-      modal.className = 'modal';
-      document.body.appendChild(modal);
-    }
-    
-    modal.innerHTML = `
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2>Tạo bài viết mới</h2>
-          <span class="close-btn" onclick="document.getElementById('create-modal').style.display='none'">&times;</span>
-        </div>
-        <div class="modal-body">
-          <div class="form-group">
-            <label for="new-title">Tiêu đề:</label>
-            <input type="text" id="new-title" placeholder="Nhập tiêu đề bài viết" />
-          </div>
-          <div class="form-group">
-            <label for="new-content">Nội dung:</label>
-            <textarea id="new-content" rows="20" placeholder="Nội dung bài viết (Markdown)"></textarea>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button onclick="window.createNewPost('${escapeHtml(folderPath)}')">Tạo</button>
-          <button onclick="document.getElementById('create-modal').style.display='none'">Hủy</button>
-        </div>
-      </div>
-    `;
-    
-    modal.style.display = 'block';
-    addModalStyles();
-  }
-
-  // 10. THÊM THƯ MỤC MỚI
-  function addNewFolder(parentPath) {
-    const folderName = prompt('Nhập tên thư mục mới:');
-    if (!folderName || !folderName.trim()) return;
-    
-    const formattedName = formatFolderName(folderName.trim());
-    const path = `${parentPath}/${formattedName}/README.md`;
-    
-    createNewPost(path, `# ${folderName}\n\nThư mục này chứa nội dung về ${folderName}.`);
-  }
-
-  // Hàm hỗ trợ
-  function isValidPath(path) {
-    return path && !path.includes('../') && !path.startsWith('/') && !path.includes('//');
-  }
-
-  function escapeHtml(str) {
-    if (!str) return '';
-    return str.toString()
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#039;");
-  }
-
-  function formatFolderName(name) {
-    return name.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase()
-      .replace(/đ/g, 'd')
-      .replace(/\s+/g, '-')
-      .replace(/[^a-z0-9-]/g, '')
-      .replace(/-+/g, '-');
-  }
-
-  function addModalStyles() {
-    if (!document.getElementById('modal-styles')) {
-      const styles = document.createElement('style');
-      styles.id = 'modal-styles';
-      styles.textContent = `
-        .modal {
-          display: none;
-          position: fixed;
-          z-index: 1000;
-          left: 0;
-          top: 0;
-          width: 100%;
-          height: 100%;
-          background-color: rgba(0,0,0,0.5);
-        }
-        .modal-content {
-          background-color: #fff;
-          margin: 5% auto;
-          padding: 20px;
-          width: 80%;
-          max-width: 900px;
-          border-radius: 5px;
-          box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        }
-        .modal-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          border-bottom: 1px solid #ddd;
-          padding-bottom: 10px;
-          margin-bottom: 20px;
-        }
-        .close-btn {
-          font-size: 24px;
-          cursor: pointer;
-        }
-        .form-group {
-          margin-bottom: 15px;
-        }
-        .form-group label {
-          display: block;
-          margin-bottom: 5px;
-          font-weight: bold;
-        }
-        .form-group input, .form-group textarea {
-          width: 100%;
-          padding: 8px;
-          border: 1px solid #ddd;
-          border-radius: 4px;
-        }
-        .modal-footer {
-          text-align: right;
-          border-top: 1px solid #ddd;
-          padding-top: 15px;
-          margin-top: 20px;
-        }
-        .modal-footer button {
-          padding: 8px 16px;
-          margin-left: 10px;
-          cursor: pointer;
-        }
-        .breadcrumb {
-          padding: 10px 0;
-          margin-bottom: 20px;
-        }
-        .crumb {
-          cursor: pointer;
-          color: #0066cc;
-        }
-        .crumb:hover {
-          text-decoration: underline;
-        }
-        .folder-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 10px;
-          background-color: #f5f5f5;
-          border-radius: 4px;
-          margin-bottom: 15px;
-        }
-        .folder-path {
-          font-weight: bold;
-        }
-        .action-btn {
-          padding: 5px 10px;
-          margin-left: 10px;
-          cursor: pointer;
-        }
-        .folder-item, .post-item {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 10px;
-          border-bottom: 1px solid #eee;
-        }
-        .folder-name, .post-title {
-          cursor: pointer;
-          font-weight: bold;
-          color: #333;
-        }
-        .folder-name:hover {
-          color: #0066cc;
-        }
-        .post-actions button, .folder-actions button {
-          margin-left: 5px;
-          padding: 3px 8px;
-        }
-        .loading, .empty, .error {
-          padding: 20px;
-          text-align: center;
-          font-size: 18px;
-        }
-        .error {
-          color: #d32f2f;
-        }
-      `;
-      document.head.appendChild(styles);
-    }
-  }
+  // Biến toàn cục
+  let currentFolder = 'content';
+  let isProcessing = false;
 
   // Đăng ký hàm toàn cục
   window.loadFolderContents = loadFolderContents;
@@ -419,36 +123,133 @@ document.addEventListener('DOMContentLoaded', () => {
   window.createNewPost = createNewPost;
   window.addNewPost = addNewPost;
   window.addNewFolder = addNewFolder;
+  window.savePost = savePost;
 });
 
-// 11. CHỨC NĂNG XEM BÀI VIẾT
-function viewPost(path) {
-  const slug = path.replace('content/', '').replace(/\.md$/i, '');
-  const postUrl = `${window.location.origin}/${slug}`;
-  window.open(postUrl, '_blank');
+// ========== CÁC HÀM CHÍNH ==========
+
+// 1. Hàm tải nội dung thư mục
+async function loadFolderContents(path) {
+  if (isProcessing) return;
+  isProcessing = true;
+  
+  currentFolder = path || 'content';
+  const postsList = document.getElementById('posts-list');
+  const breadcrumb = document.getElementById('breadcrumb') || createBreadcrumb();
+  
+  postsList.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Đang tải dữ liệu...</div>';
+  updateBreadcrumb(path);
+
+  try {
+    const user = window.netlifyIdentity?.currentUser();
+    if (!user?.token?.access_token) throw new Error('Bạn chưa đăng nhập');
+
+    const response = await fetch(`/.netlify/git/github/contents/${encodeURIComponent(path)}`, {
+      headers: {
+        'Authorization': `Bearer ${user.token.access_token}`,
+        'Accept': 'application/vnd.github.v3+json'
+      }
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || `Lỗi HTTP ${response.status}`);
+    }
+
+    const data = await response.json();
+    renderFolderContents(Array.isArray(data) ? data : [data], path);
+
+  } catch (error) {
+    console.error('Lỗi tải dữ liệu:', error);
+    postsList.innerHTML = `
+      <div class="error">
+        <i class="fas fa-exclamation-triangle"></i> Lỗi: ${escapeHtml(error.message || 'Không thể tải dữ liệu')}
+        <button onclick="window.loadFolderContents('${escapeHtml(path)}')">Thử lại</button>
+      </div>
+    `;
+  } finally {
+    isProcessing = false;
+  }
 }
 
-// 12. CHỨC NĂNG SỬA BÀI VIẾT
+// 2. Hàm hiển thị form thêm bài mới
+function addNewPost(folderPath) {
+  const collectionName = determineCollectionFromPath(folderPath);
+  const fields = getCollectionFields(collectionName);
+
+  const modal = document.getElementById('create-modal') || document.createElement('div');
+  modal.id = 'create-modal';
+  modal.className = 'modal';
+  document.body.appendChild(modal);
+
+  const fieldsHTML = fields.map(field => renderFieldInput(field, 'create')).join('');
+
+  modal.innerHTML = `
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Tạo bài viết mới</h2>
+        <span class="close-btn" onclick="document.getElementById('create-modal').style.display='none'">&times;</span>
+      </div>
+      <div class="modal-body">
+        ${fieldsHTML}
+      </div>
+      <div class="modal-footer">
+        <button class="btn-primary" onclick="window.createNewPost('${escapeHtml(folderPath)}', '${collectionName}')">
+          <i class="fas fa-save"></i> Lưu
+        </button>
+        <button class="btn-cancel" onclick="document.getElementById('create-modal').style.display='none'">
+          <i class="fas fa-times"></i> Hủy
+        </button>
+      </div>
+    </div>
+  `;
+
+  // Thêm sự kiện cho các field đặc biệt
+  initSpecialFields(modal, fields);
+
+  modal.style.display = 'block';
+}
+
+// 3. Hàm hiển thị form chỉnh sửa
 async function editPost(path, sha) {
   try {
-    const fileData = await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(path)}`);
+    const user = window.netlifyIdentity?.currentUser();
+    if (!user?.token?.access_token) throw new Error('Bạn chưa đăng nhập');
+
+    const response = await fetch(`/.netlify/git/github/contents/${encodeURIComponent(path)}`, {
+      headers: {
+        'Authorization': `Bearer ${user.token.access_token}`,
+        'Accept': 'application/vnd.github.v3+json'
+      }
+    });
+
+    if (!response.ok) throw new Error(`Lỗi HTTP ${response.status}`);
+
+    const fileData = await response.json();
     const content = atob(fileData.content);
-    showEditModal(path, content, sha);
+    const frontmatter = parseFrontmatter(content);
+    const collectionName = determineCollectionFromPath(path);
+    
+    showEditModal(path, content, sha, collectionName, frontmatter);
+
   } catch (error) {
     console.error('Lỗi khi tải nội dung bài viết:', error);
     alert(`Lỗi: ${error.message || 'Không thể tải nội dung bài viết'}`);
   }
 }
 
-// 13. HIỂN THỊ MODAL CHỈNH SỬA
-function showEditModal(path, content, sha) {
+function showEditModal(path, content, sha, collectionName, frontmatter) {
+  const fields = getCollectionFields(collectionName);
   const modal = document.getElementById('edit-modal') || document.createElement('div');
   modal.id = 'edit-modal';
   modal.className = 'modal';
   document.body.appendChild(modal);
-  
-  const filename = path.split('/').pop();
-  
+
+  const fieldsHTML = fields.map(field => {
+    const value = frontmatter[field.name] || '';
+    return renderFieldInput(field, 'edit', value);
+  }).join('');
+
   modal.innerHTML = `
     <div class="modal-content">
       <div class="modal-header">
@@ -456,164 +257,480 @@ function showEditModal(path, content, sha) {
         <span class="close-btn" onclick="document.getElementById('edit-modal').style.display='none'">&times;</span>
       </div>
       <div class="modal-body">
-        <div class="form-group">
-          <label for="edit-title">Tiêu đề:</label>
-          <input type="text" id="edit-title" value="${escapeHtml(filename.replace(/\.md$/i, ''))}" />
-        </div>
-        <div class="form-group">
-          <label for="edit-content">Nội dung:</label>
-          <textarea id="edit-content" rows="20">${escapeHtml(content)}</textarea>
-        </div>
+        ${fieldsHTML}
       </div>
       <div class="modal-footer">
-        <button onclick="window.savePost('${escapeHtml(path)}', '${escapeHtml(sha)}')">Lưu</button>
-        <button onclick="document.getElementById('edit-modal').style.display='none'">Hủy</button>
+        <button class="btn-primary" onclick="window.savePost('${escapeHtml(path)}', '${escapeHtml(sha)}', '${collectionName}')">
+          <i class="fas fa-save"></i> Lưu
+        </button>
+        <button class="btn-cancel" onclick="document.getElementById('edit-modal').style.display='none'">
+          <i class="fas fa-times"></i> Hủy
+        </button>
       </div>
     </div>
   `;
-  
+
+  // Thêm sự kiện cho các field đặc biệt
+  initSpecialFields(modal, fields);
+
+  // Điền nội dung markdown
+  const markdownContent = content.replace(/^---[\s\S]*?---/, '').trim();
+  const bodyField = modal.querySelector('#edit-field-body');
+  if (bodyField) bodyField.value = markdownContent;
+
   modal.style.display = 'block';
 }
 
-// 14. LƯU BÀI VIẾT
-async function savePost(path, sha) {
+// 4. Hàm tạo bài viết mới
+async function createNewPost(folderPath, collectionName) {
   try {
-    const titleInput = document.getElementById('edit-title');
-    const contentTextarea = document.getElementById('edit-content');
+    const fields = getCollectionFields(collectionName);
+    const postData = {};
     
-    if (!titleInput || !contentTextarea) {
-      throw new Error('Không tìm thấy form chỉnh sửa');
+    // Lấy giá trị từ form
+    fields.forEach(field => {
+      const element = document.querySelector(`#create-modal #field-${field.name}`);
+      if (element) {
+        postData[field.name] = getFieldValue(field, element);
+      }
+    });
+
+    // Kiểm tra các field bắt buộc
+    const missingFields = fields
+      .filter(f => f.required && (!postData[f.name] || (Array.isArray(postData[f.name]) && postData[f.name].length === 0)))
+      .map(f => f.label);
+      
+    if (missingFields.length > 0) {
+      throw new Error(`Vui lòng điền các trường bắt buộc: ${missingFields.join(', ')}`);
     }
-    
-    const title = titleInput.value.trim();
-    const content = contentTextarea.value;
-    
-    if (!title) {
-      alert('Vui lòng nhập tiêu đề bài viết');
-      return;
+
+    // Tạo frontmatter
+    let frontmatter = '---\n';
+    for (const [key, value] of Object.entries(postData)) {
+      if (key === 'body') continue;
+      
+      if (Array.isArray(value)) {
+        frontmatter += `${key}:\n${value.map(item => `  - ${item}`).join('\n')}\n`;
+      } else if (typeof value === 'object' && value !== null) {
+        frontmatter += `${key}:\n`;
+        for (const [subKey, subValue] of Object.entries(value)) {
+          frontmatter += `  ${subKey}: ${subValue}\n`;
+        }
+      } else {
+        frontmatter += `${key}: ${value}\n`;
+      }
     }
+    frontmatter += '---\n\n';
+
+    // Thêm nội dung markdown
+    const bodyContent = postData.body || '';
+    const fullContent = frontmatter + bodyContent;
+
+    // Tạo filename
+    const filename = formatSlug(postData.title || 'bai-viet-moi') + '.md';
+    const fullPath = `${folderPath}/${filename}`;
+
+    // Gửi request tạo bài viết
+    const user = window.netlifyIdentity?.currentUser();
+    if (!user?.token?.access_token) throw new Error('Bạn chưa đăng nhập');
+
+    const response = await fetch(`/.netlify/git/github/contents/${encodeURIComponent(fullPath)}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${user.token.access_token}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/vnd.github.v3+json'
+      },
+      body: JSON.stringify({
+        message: `Tạo bài viết mới: ${postData.title || 'Không có tiêu đề'}`,
+        content: btoa(unescape(encodeURIComponent(fullContent))),
+        branch: 'main'
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || `Lỗi HTTP ${response.status}`);
+    }
+
+    // Đóng modal và làm mới danh sách
+    document.getElementById('create-modal').style.display = 'none';
+    alert('Tạo bài viết thành công!');
+    loadFolderContents(folderPath);
+
+  } catch (error) {
+    console.error('Lỗi khi tạo bài viết:', error);
+    alert(`Lỗi: ${error.message || 'Không thể tạo bài viết'}`);
+  }
+}
+
+// 5. Hàm lưu bài viết sau khi chỉnh sửa
+async function savePost(path, sha, collectionName) {
+  try {
+    const fields = getCollectionFields(collectionName);
+    const postData = {};
     
-    const updateData = {
-      message: `Cập nhật bài viết: ${title}`,
-      content: btoa(unescape(encodeURIComponent(content))),
-      sha: sha,
-      branch: 'main'
-    };
-    
-    await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(path)}`, 'PUT', updateData);
-    
+    // Lấy giá trị từ form
+    fields.forEach(field => {
+      const element = document.querySelector(`#edit-modal #field-${field.name}`);
+      if (element) {
+        postData[field.name] = getFieldValue(field, element);
+      }
+    });
+
+    // Kiểm tra các field bắt buộc
+    const missingFields = fields
+      .filter(f => f.required && (!postData[f.name] || (Array.isArray(postData[f.name]) && postData[f.name].length === 0))
+      .map(f => f.label);
+      
+    if (missingFields.length > 0) {
+      throw new Error(`Vui lòng điền các trường bắt buộc: ${missingFields.join(', ')}`);
+    }
+
+    // Tạo frontmatter
+    let frontmatter = '---\n';
+    for (const [key, value] of Object.entries(postData)) {
+      if (key === 'body') continue;
+      
+      if (Array.isArray(value)) {
+        frontmatter += `${key}:\n${value.map(item => `  - ${item}`).join('\n')}\n`;
+      } else if (typeof value === 'object' && value !== null) {
+        frontmatter += `${key}:\n`;
+        for (const [subKey, subValue] of Object.entries(value)) {
+          frontmatter += `  ${subKey}: ${subValue}\n`;
+        }
+      } else {
+        frontmatter += `${key}: ${value}\n`;
+      }
+    }
+    frontmatter += '---\n\n';
+
+    // Thêm nội dung markdown
+    const bodyContent = postData.body || '';
+    const fullContent = frontmatter + bodyContent;
+
+    // Gửi request cập nhật
+    const user = window.netlifyIdentity?.currentUser();
+    if (!user?.token?.access_token) throw new Error('Bạn chưa đăng nhập');
+
+    const response = await fetch(`/.netlify/git/github/contents/${encodeURIComponent(path)}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${user.token.access_token}`,
+        'Content-Type': 'application/json',
+        'Accept': 'application/vnd.github.v3+json'
+      },
+      body: JSON.stringify({
+        message: `Cập nhật bài viết: ${postData.title || path}`,
+        content: btoa(unescape(encodeURIComponent(fullContent))),
+        sha: sha,
+        branch: 'main'
+      })
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.message || `Lỗi HTTP ${response.status}`);
+    }
+
+    // Đóng modal và làm mới danh sách
     document.getElementById('edit-modal').style.display = 'none';
     alert('Cập nhật bài viết thành công!');
-    const folderPath = path.substring(0, path.lastIndexOf('/'));
-    window.loadFolderContents(folderPath);
-    
+    const folderPath = path.split('/').slice(0, -1).join('/');
+    loadFolderContents(folderPath);
+
   } catch (error) {
     console.error('Lỗi khi lưu bài viết:', error);
     alert(`Lỗi: ${error.message || 'Không thể lưu bài viết'}`);
   }
 }
 
-// 15. XÓA BÀI VIẾT HOẶC THƯ MỤC
-async function deleteItem(path, sha, isFolder) {
-  const itemType = isFolder ? 'thư mục' : 'bài viết';
-  if (!confirm(`Bạn có chắc chắn muốn xóa ${itemType} này không?`)) return;
+// ========== CÁC HÀM HỖ TRỢ ==========
+
+// 1. Hàm render field input
+function renderFieldInput(field, mode = 'create', defaultValue = '') {
+  const id = `${mode}-field-${field.name}`;
+  let inputHTML = '';
+  const requiredAttr = field.required ? 'required' : '';
+  const value = defaultValue || field.default || '';
+
+  switch (field.widget) {
+    case 'string':
+      inputHTML = `
+        <div class="form-group">
+          <label for="${id}">${field.label}:</label>
+          <input type="text" id="${id}" ${requiredAttr} 
+                 placeholder="${field.label}" value="${escapeHtml(value)}" />
+        </div>
+      `;
+      break;
+      
+    case 'text':
+      inputHTML = `
+        <div class="form-group">
+          <label for="${id}">${field.label}:</label>
+          <textarea id="${id}" ${requiredAttr} 
+                    rows="4" placeholder="${field.label}">${escapeHtml(value)}</textarea>
+        </div>
+      `;
+      break;
+      
+    case 'markdown':
+      inputHTML = `
+        <div class="form-group">
+          <label for="${id}">${field.label}:</label>
+          <textarea id="${id}" ${requiredAttr} 
+                    rows="10" class="markdown-editor">${escapeHtml(value)}</textarea>
+        </div>
+      `;
+      break;
+      
+    case 'image':
+      inputHTML = `
+        <div class="form-group">
+          <label for="${id}">${field.label}:</label>
+          <input type="file" id="${id}" ${requiredAttr} 
+                 accept="image/*" class="image-upload" />
+          ${value ? `<img src="${value}" class="image-preview" id="preview-${id}" />` : 
+           `<div class="image-preview" id="preview-${id}"></div>`}
+        </div>
+      `;
+      break;
+      
+    case 'datetime':
+      const dateValue = value ? new Date(value).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16);
+      inputHTML = `
+        <div class="form-group">
+          <label for="${id}">${field.label}:</label>
+          <input type="datetime-local" id="${id}" ${requiredAttr} 
+                 value="${dateValue}" />
+        </div>
+      `;
+      break;
+      
+    case 'select':
+      const options = field.options.map(opt => 
+        `<option value="${opt}" ${value === opt ? 'selected' : ''}>${opt}</option>`
+      ).join('');
+      inputHTML = `
+        <div class="form-group">
+          <label for="${id}">${field.label}:</label>
+          <select id="${id}" ${requiredAttr}>
+            ${options}
+          </select>
+        </div>
+      `;
+      break;
+      
+    case 'list':
+      const items = Array.isArray(value) ? value : (value ? [value] : ['']);
+      inputHTML = `
+        <div class="form-group">
+          <label for="${id}">${field.label}:</label>
+          <div class="list-container" id="container-${id}">
+            ${items.map((item, index) => `
+              <div class="list-item">
+                <input type="text" class="list-input" value="${escapeHtml(item)}" 
+                       placeholder="${field.label} ${index + 1}" />
+                <button type="button" class="btn-remove-item" ${items.length <= 1 ? 'disabled' : ''}>
+                  <i class="fas fa-minus"></i>
+                </button>
+                <button type="button" class="btn-add-item">
+                  <i class="fas fa-plus"></i>
+                </button>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+      break;
+      
+    case 'object':
+      const objValue = typeof value === 'object' ? value : {};
+      inputHTML = `
+        <div class="form-group">
+          <label>${field.label}:</label>
+          <div class="object-container">
+            ${field.fields.map(subField => {
+              const subId = `${id}-${subField.name}`;
+              return `
+                <div class="sub-field">
+                  <label for="${subId}">${subField.label}:</label>
+                  <input type="text" id="${subId}" value="${escapeHtml(objValue[subField.name] || '')}" 
+                         placeholder="${subField.label}" />
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+      break;
+      
+    default:
+      inputHTML = `
+        <div class="form-group">
+          <label for="${id}">${field.label}:</label>
+          <input type="text" id="${id}" ${requiredAttr} 
+                 placeholder="${field.label}" value="${escapeHtml(value)}" />
+        </div>
+      `;
+  }
   
-  try {
-    if (isFolder) {
-      await deleteFolderRecursive(path);
-    } else {
-      const deleteData = {
-        message: `Xóa ${itemType}: ${path}`,
-        sha: sha,
-        branch: 'main'
-      };
+  return inputHTML;
+}
+
+// 2. Hàm lấy giá trị từ field
+function getFieldValue(field, element) {
+  switch (field.widget) {
+    case 'list':
+      const inputs = element.querySelectorAll('.list-input');
+      return Array.from(inputs).map(input => input.value.trim()).filter(Boolean);
       
-      await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(path)}`, 'DELETE', deleteData);
-    }
-    
-    alert(`Xóa ${itemType} thành công!`);
-    const parentFolder = path.split('/').slice(0, -1).join('/');
-    window.loadFolderContents(parentFolder || 'content');
-    
-  } catch (error) {
-    console.error(`Lỗi khi xóa ${itemType}:`, error);
-    alert(`Lỗi: ${error.message || `Không thể xóa ${itemType}`}`);
+    case 'object':
+      const obj = {};
+      field.fields.forEach(subField => {
+        const subElement = element.querySelector(`#${element.id}-${subField.name}`);
+        if (subElement) obj[subField.name] = subElement.value.trim();
+      });
+      return obj;
+      
+    case 'datetime':
+      return new Date(element.value).toISOString();
+      
+    case 'image':
+      // Xử lý upload ảnh (cần triển khai riêng)
+      return element.dataset.url || '';
+      
+    default:
+      return element.value.trim();
   }
 }
 
-// 16. XÓA THƯ MỤC ĐỆ QUY
-async function deleteFolderRecursive(folderPath) {
-  const items = await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(folderPath)}`);
+// 3. Hàm khởi tạo các field đặc biệt
+function initSpecialFields(modal, fields) {
+  fields.forEach(field => {
+    const id = `${modal.id.includes('create') ? 'create' : 'edit'}-field-${field.name}`;
+    const element = modal.querySelector(`#${id}`);
+    
+    if (!element) return;
+    
+    // Xử lý list field
+    if (field.widget === 'list') {
+      const container = modal.querySelector(`#container-${id}`);
+      
+      container.addEventListener('click', (e) => {
+        if (e.target.classList.contains('btn-add-item')) {
+          const newItem = document.createElement('div');
+          newItem.className = 'list-item';
+          newItem.innerHTML = `
+            <input type="text" class="list-input" placeholder="${field.label}" />
+            <button type="button" class="btn-remove-item">
+              <i class="fas fa-minus"></i>
+            </button>
+            <button type="button" class="btn-add-item">
+              <i class="fas fa-plus"></i>
+            </button>
+          `;
+          container.appendChild(newItem);
+          
+          // Disable nút xóa nếu chỉ còn 1 item
+          if (container.querySelectorAll('.list-item').length === 1) {
+            container.querySelector('.btn-remove-item').disabled = true;
+          } else {
+            container.querySelectorAll('.btn-remove-item').forEach(btn => btn.disabled = false);
+          }
+        }
+        
+        if (e.target.classList.contains('btn-remove-item')) {
+          if (container.querySelectorAll('.list-item').length > 1) {
+            e.target.closest('.list-item').remove();
+          }
+          
+          // Disable nút xóa nếu chỉ còn 1 item
+          if (container.querySelectorAll('.list-item').length === 1) {
+            container.querySelector('.btn-remove-item').disabled = true;
+          }
+        }
+      });
+    }
+    
+    // Xử lý image field
+    if (field.widget === 'image') {
+      const preview = modal.querySelector(`#preview-${id}`);
+      
+      element.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            preview.innerHTML = `<img src="${event.target.result}" class="image-preview" />`;
+            element.dataset.url = event.target.result; // Lưu tạm URL
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+    }
+  });
+}
+
+// 4. Hàm parse frontmatter
+function parseFrontmatter(content) {
+  const result = {};
+  const frontmatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+  if (!frontmatterMatch) return result;
   
-  for (const item of items) {
-    if (item.type === 'dir') {
-      await deleteFolderRecursive(item.path);
-    } else {
-      const deleteData = {
-        message: `Xóa file: ${item.path}`,
-        sha: item.sha,
-        branch: 'main'
-      };
+  const frontmatter = frontmatterMatch[1];
+  const lines = frontmatter.split('\n');
+  
+  let currentKey = '';
+  let currentObj = null;
+  
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    
+    // Xử lý object
+    if (line.startsWith('  ')) {
+      if (!currentKey || !currentObj) continue;
       
-      await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(item.path)}`, 'DELETE', deleteData);
+      const match = line.match(/^\s+([^:]+):\s*(.*)/);
+      if (match) {
+        currentObj[match[1].trim()] = match[2].trim();
+      }
+      continue;
+    }
+    
+    // Xử lý mảng
+    if (line.startsWith('- ')) {
+      if (!currentKey) continue;
+      
+      if (!Array.isArray(result[currentKey])) {
+        result[currentKey] = [];
+      }
+      result[currentKey].push(line.replace(/^\s*-\s*/, '').trim());
+      continue;
+    }
+    
+    // Xử lý key-value thông thường
+    const match = line.match(/^([^:]+):\s*(.*)/);
+    if (match) {
+      currentKey = match[1].trim();
+      const value = match[2].trim();
+      
+      // Kiểm tra nếu là object
+      if (value === '' && lines.find(l => l.startsWith(`  `))) {
+        result[currentKey] = {};
+        currentObj = result[currentKey];
+      } else {
+        result[currentKey] = value;
+        currentObj = null;
+      }
     }
   }
+  
+  return result;
 }
 
-// 17. TẠO BÀI VIẾT MỚI
-async function createNewPost(path, defaultContent = null) {
-  try {
-    let title, content;
-    
-    if (defaultContent === null) {
-      const titleInput = document.getElementById('new-title');
-      const contentTextarea = document.getElementById('new-content');
-      
-      if (!titleInput || !contentTextarea) {
-        throw new Error('Không tìm thấy form tạo bài viết');
-      }
-      
-      title = titleInput.value.trim();
-      content = contentTextarea.value;
-      
-      if (!title) {
-        alert('Vui lòng nhập tiêu đề bài viết');
-        return;
-      }
-      
-      const filename = formatFolderName(title) + '.md';
-      path = `${path}/${filename}`;
-    } else {
-      title = path.split('/').slice(-2, -1)[0];
-      content = defaultContent;
-    }
-    
-    const createData = {
-      message: `Tạo nội dung mới: ${title}`,
-      content: btoa(unescape(encodeURIComponent(content))),
-      branch: 'main'
-    };
-    
-    await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(path)}`, 'PUT', createData);
-    
-    const createModal = document.getElementById('create-modal');
-    if (createModal) {
-      createModal.style.display = 'none';
-    }
-    
-    const parentFolder = path.split('/').slice(0, -1).join('/');
-    if (defaultContent === null) {
-      alert('Tạo bài viết thành công!');
-    }
-    window.loadFolderContents(parentFolder || 'content');
-    
-  } catch (error) {
-    console.error('Lỗi khi tạo nội dung mới:', error);
-    alert(`Lỗi: ${error.message || 'Không thể tạo nội dung mới'}`);
-  }
-}
-
-// Hàm hỗ trợ toàn cục
+// 5. Các hàm helper khác
 function escapeHtml(str) {
   if (!str) return '';
   return str.toString()
@@ -624,8 +741,8 @@ function escapeHtml(str) {
     .replace(/'/g, "&#039;");
 }
 
-function formatFolderName(name) {
-  return name.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+function formatSlug(str) {
+  return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .replace(/đ/g, 'd')
     .replace(/\s+/g, '-')
@@ -633,38 +750,210 @@ function formatFolderName(name) {
     .replace(/-+/g, '-');
 }
 
-// Hàm gọi API toàn cục
-async function callGitHubAPI(url, method = 'GET', body = null) {
-  const user = window.netlifyIdentity?.currentUser();
-  if (!user?.token?.access_token) {
-    throw new Error('Bạn chưa đăng nhập');
-  }
+function determineCollectionFromPath(path) {
+  if (path.includes('posts')) return 'posts';
+  if (path.includes('apps') || path.includes('content/apps')) return 'app';
+  if (path.includes('jailbreak-tools')) return 'jailbreak-tools';
+  return 'posts';
+}
 
-  const headers = {
-    'Authorization': `Bearer ${user.token.access_token}`,
-    'Accept': 'application/vnd.github.v3+json',
-    'Content-Type': 'application/json',
-    'X-Operator': 'netlify',
-    'X-Operator-Id': user.id,
-    'X-Netlify-User': user.id
-  };
+function getCollectionFields(collectionName) {
+  const collection = window.CMS_CONFIG?.collections?.find(c => c.name === collectionName);
+  return collection?.fields || [];
+}
 
-  const config = {
-    method: method,
-    headers: headers,
-    credentials: 'include'
-  };
+function createBreadcrumb() {
+  const dashboard = document.getElementById('dashboard');
+  const breadcrumb = document.createElement('div');
+  breadcrumb.id = 'breadcrumb';
+  breadcrumb.className = 'breadcrumb';
+  dashboard.insertBefore(breadcrumb, dashboard.firstChild);
+  return breadcrumb;
+}
 
-  if (body) {
-    config.body = JSON.stringify(body);
-  }
-
-  const response = await fetch(url, config);
+function updateBreadcrumb(path) {
+  const breadcrumb = document.getElementById('breadcrumb');
+  const parts = path.split('/');
   
+  let breadcrumbHTML = `<span class="crumb" onclick="window.loadFolderContents('content')"><i class="fas fa-home"></i> Home</span>`;
+  let currentPath = 'content';
+  
+  for (let i = 1; i < parts.length; i++) {
+    currentPath += '/' + parts[i];
+    breadcrumbHTML += ` <i class="fas fa-chevron-right"></i> <span class="crumb" onclick="window.loadFolderContents('${escapeHtml(currentPath)}')">${escapeHtml(parts[i])}</span>`;
+  }
+  
+  breadcrumb.innerHTML = breadcrumbHTML;
+}
+
+function renderFolderContents(items, path) {
+  const postsList = document.getElementById('posts-list');
+  
+  if (!items || items.length === 0) {
+    postsList.innerHTML = '<div class="empty"><i class="fas fa-folder-open"></i> Không có nội dung</div>';
+    return;
+  }
+  
+  const sortedItems = [...items].sort((a, b) => {
+    if (a.type === b.type) return a.name.localeCompare(b.name);
+    return a.type === 'dir' ? -1 : 1;
+  });
+  
+  postsList.innerHTML = `
+    <div class="content-header">
+      <div class="folder-path">${escapeHtml(path)}</div>
+      <div class="action-buttons">
+        <button id="add-post-btn" class="btn-primary">
+          <i class="fas fa-plus"></i> Thêm bài viết
+        </button>
+        <button id="add-folder-btn" class="btn-secondary">
+          <i class="fas fa-folder-plus"></i> Thêm thư mục
+        </button>
+      </div>
+    </div>
+    <div class="content-list">
+      ${sortedItems.map(item => {
+        if (item.type === 'dir') {
+          return `
+            <div class="folder-item">
+              <div class="folder-name" onclick="window.loadFolderContents('${escapeHtml(item.path)}')">
+                <i class="fas fa-folder"></i> ${escapeHtml(item.name)}
+              </div>
+              <div class="folder-actions">
+                <button onclick="window.deleteItem('${escapeHtml(item.path)}', '${escapeHtml(item.sha)}', true)">
+                  <i class="fas fa-trash"></i> Xóa
+                </button>
+              </div>
+            </div>
+          `;
+        } else {
+          if (!item.name.toLowerCase().endsWith('.md')) return '';
+          
+          return `
+            <div class="post-item">
+              <div class="post-title" onclick="window.editPost('${escapeHtml(item.path)}', '${escapeHtml(item.sha)}')">
+                <i class="fas fa-file-alt"></i> ${escapeHtml(item.name.replace(/\.md$/i, ''))}
+              </div>
+              <div class="post-actions">
+                <button class="btn-edit" onclick="window.editPost('${escapeHtml(item.path)}', '${escapeHtml(item.sha)}')">
+                  <i class="fas fa-edit"></i> Sửa
+                </button>
+                <button class="btn-delete" onclick="window.deleteItem('${escapeHtml(item.path)}', '${escapeHtml(item.sha)}', false)">
+                  <i class="fas fa-trash"></i> Xóa
+                </button>
+                <button class="btn-view" onclick="window.viewPost('${escapeHtml(item.path)}')">
+                  <i class="fas fa-eye"></i> Xem
+                </button>
+              </div>
+            </div>
+          `;
+        }
+      }).join('')}
+    </div>
+  `;
+  
+  document.getElementById('add-post-btn').addEventListener('click', () => addNewPost(path));
+  document.getElementById('add-folder-btn').addEventListener('click', () => addNewFolder(path));
+}
+
+// 6. Các hàm xử lý thư mục và bài viết
+async function addNewFolder(parentPath) {
+  const folderName = prompt('Nhập tên thư mục mới:');
+  if (!folderName || !folderName.trim()) return;
+  
+  const formattedName = formatSlug(folderName.trim());
+  const path = `${parentPath}/${formattedName}/README.md`;
+  
+  createNewPost(path, determineCollectionFromPath(path), `# ${folderName}\n\nThư mục này chứa nội dung về ${folderName}.`);
+}
+
+async function deleteItem(path, sha, isFolder) {
+  const itemType = isFolder ? 'thư mục' : 'bài viết';
+  if (!confirm(`Bạn có chắc chắn muốn xóa ${itemType} này không?`)) return;
+  
+  try {
+    const user = window.netlifyIdentity?.currentUser();
+    if (!user?.token?.access_token) throw new Error('Bạn chưa đăng nhập');
+
+    if (isFolder) {
+      await deleteFolderRecursive(path);
+    } else {
+      const response = await fetch(`/.netlify/git/github/contents/${encodeURIComponent(path)}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${user.token.access_token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/vnd.github.v3+json'
+        },
+        body: JSON.stringify({
+          message: `Xóa ${itemType}: ${path}`,
+          sha: sha,
+          branch: 'main'
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || `Lỗi HTTP ${response.status}`);
+      }
+    }
+    
+    alert(`Xóa ${itemType} thành công!`);
+    const parentFolder = path.split('/').slice(0, -1).join('/');
+    loadFolderContents(parentFolder || 'content');
+    
+  } catch (error) {
+    console.error(`Lỗi khi xóa ${itemType}:`, error);
+    alert(`Lỗi: ${error.message || `Không thể xóa ${itemType}`}`);
+  }
+}
+
+async function deleteFolderRecursive(folderPath) {
+  const user = window.netlifyIdentity?.currentUser();
+  if (!user?.token?.access_token) throw new Error('Bạn chưa đăng nhập');
+
+  const response = await fetch(`/.netlify/git/github/contents/${encodeURIComponent(folderPath)}`, {
+    headers: {
+      'Authorization': `Bearer ${user.token.access_token}`,
+      'Accept': 'application/vnd.github.v3+json'
+    }
+  });
+
   if (!response.ok) {
-    const error = await response.json().catch(() => null);
-    throw new Error(error?.message || `Lỗi HTTP ${response.status}`);
+    const error = await response.json();
+    throw new Error(error.message || `Lỗi HTTP ${response.status}`);
   }
 
-  return response.json();
+  const items = await response.json();
+  
+  for (const item of items) {
+    if (item.type === 'dir') {
+      await deleteFolderRecursive(item.path);
+    } else {
+      const deleteResponse = await fetch(`/.netlify/git/github/contents/${encodeURIComponent(item.path)}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${user.token.access_token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/vnd.github.v3+json'
+        },
+        body: JSON.stringify({
+          message: `Xóa file: ${item.path}`,
+          sha: item.sha,
+          branch: 'main'
+        })
+      });
+
+      if (!deleteResponse.ok) {
+        const error = await deleteResponse.json();
+        throw new Error(error.message || `Lỗi HTTP ${deleteResponse.status}`);
+      }
+    }
+  }
+}
+
+function viewPost(path) {
+  const slug = path.replace('content/', '').replace(/\.md$/i, '');
+  const postUrl = `${window.location.origin}/${slug}`;
+  window.open(postUrl, '_blank');
 }
