@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let allPosts = [];
   let currentFolder = 'content';
   let isProcessing = false;
+  let configFields = null;
 
   // 1. KHỞI TẠO NETLIFY IDENTITY
   if (window.netlifyIdentity) {
@@ -23,12 +24,17 @@ document.addEventListener('DOMContentLoaded', () => {
         loginBtn.style.backgroundColor = '#f44336';
         dashboard.style.display = 'flex';
         loadFolderContents(currentFolder);
+        // Tải config khi đăng nhập
+        loadConfig().then(fields => {
+          configFields = fields;
+        });
       } else {
         console.log('Chưa đăng nhập');
         loginBtn.textContent = 'Đăng nhập';
         loginBtn.style.backgroundColor = '#4CAF50';
         dashboard.style.display = 'none';
         allPosts = [];
+        configFields = null;
       }
     };
 
@@ -94,7 +100,58 @@ document.addEventListener('DOMContentLoaded', () => {
     return response.json();
   }
 
-  // 5. TẢI NỘI DUNG THƯ MỤC
+  // 5. TẢI CONFIG.YML
+  async function loadConfig() {
+    try {
+      const config = await callGitHubAPI('/.netlify/git/github/contents/config.yml');
+      const content = atob(config.content);
+      return parseYamlConfig(content);
+    } catch (error) {
+      console.error('Lỗi khi tải config.yml:', error);
+      return null;
+    }
+  }
+
+  function parseYamlConfig(yamlContent) {
+    try {
+      // Phân tích đơn giản - có thể sử dụng thư viện chuyên dụng nếu cần
+      const collectionsMatch = yamlContent.match(/collections:\s*([\s\S]*?)(?=\n\S|$)/);
+      if (!collectionsMatch) return null;
+      
+      const collections = collectionsMatch[1];
+      const fields = {};
+      
+      // Tìm các trường được định nghĩa
+      const fieldMatches = collections.matchAll(/fields:\s*\n([\s\S]*?)(?=\n\s*\S|$)/g);
+      for (const match of fieldMatches) {
+        const fieldBlock = match[1];
+        const fieldLines = fieldBlock.split('\n').filter(line => line.trim());
+        
+        for (const line of fieldLines) {
+          const fieldMatch = line.match(/-\s*name:\s*['"](.*?)['"]/);
+          if (fieldMatch) {
+            const fieldName = fieldMatch[1];
+            const labelMatch = line.match(/label:\s*['"](.*?)['"]/) || [null, fieldName];
+            const typeMatch = line.match(/widget:\s*['"](.*?)['"]/) || [null, 'string'];
+            const defaultMatch = line.match(/default:\s*(.*)/);
+            
+            fields[fieldName] = {
+              label: labelMatch[1],
+              type: typeMatch[1],
+              default: defaultMatch ? defaultMatch[1].trim().replace(/['"]/g, '') : null
+            };
+          }
+        }
+      }
+      
+      return Object.keys(fields).length > 0 ? fields : null;
+    } catch (error) {
+      console.error('Lỗi phân tích config.yml:', error);
+      return null;
+    }
+  }
+
+  // 6. TẢI NỘI DUNG THƯ MỤC
   async function loadFolderContents(path) {
     if (isProcessing) return;
     isProcessing = true;
@@ -137,7 +194,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // 6. TẠO BREADCRUMB
+  // 7. TẠO BREADCRUMB
   function createBreadcrumb() {
     const dashboard = document.getElementById('dashboard');
     const breadcrumb = document.createElement('div');
@@ -147,7 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return breadcrumb;
   }
 
-  // 7. CẬP NHẬT BREADCRUMB
+  // 8. CẬP NHẬT BREADCRUMB
   function updateBreadcrumb(path) {
     const breadcrumb = document.getElementById('breadcrumb');
     const parts = path.split('/');
@@ -163,7 +220,7 @@ document.addEventListener('DOMContentLoaded', () => {
     breadcrumb.innerHTML = breadcrumbHTML;
   }
 
-  // 8. HIỂN THỊ NỘI DUNG THƯ MỤC
+  // 9. HIỂN THỊ NỘI DUNG THƯ MỤC
   function renderFolderContents(items, currentPath) {
     const postsList = document.getElementById('posts-list');
     
@@ -218,8 +275,12 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('add-folder-btn').addEventListener('click', () => addNewFolder(currentPath));
   }
 
-  // 9. THÊM BÀI VIẾT MỚI
-  function addNewPost(folderPath) {
+  // 10. THÊM BÀI VIẾT MỚI
+  async function addNewPost(folderPath) {
+    if (!configFields) {
+      configFields = await loadConfig();
+    }
+    
     let modal = document.getElementById('create-modal');
     if (!modal) {
       modal = document.createElement('div');
@@ -227,6 +288,15 @@ document.addEventListener('DOMContentLoaded', () => {
       modal.className = 'modal';
       document.body.appendChild(modal);
     }
+    
+    // Tạo các trường từ config
+    const fieldsHtml = configFields ? 
+      Object.entries(configFields).map(([name, field]) => `
+        <div class="form-group">
+          <label for="field-${escapeHtml(name)}">${escapeHtml(field.label)}:</label>
+          ${getFieldInputHtml(name, field.type, field.default)}
+        </div>
+      `).join('') : '';
     
     modal.innerHTML = `
       <div class="modal-content">
@@ -239,6 +309,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <label for="new-title">Tiêu đề:</label>
             <input type="text" id="new-title" placeholder="Nhập tiêu đề bài viết" />
           </div>
+          ${fieldsHtml}
           <div class="form-group">
             <label for="new-content">Nội dung:</label>
             <textarea id="new-content" rows="20" placeholder="Nội dung bài viết (Markdown)"></textarea>
@@ -255,7 +326,7 @@ document.addEventListener('DOMContentLoaded', () => {
     addModalStyles();
   }
 
-  // 10. THÊM THƯ MỤC MỚI
+  // 11. THÊM THƯ MỤC MỚI
   function addNewFolder(parentPath) {
     const folderName = prompt('Nhập tên thư mục mới:');
     if (!folderName || !folderName.trim()) return;
@@ -290,6 +361,59 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/-+/g, '-');
   }
 
+  function getFieldInputHtml(name, type, value = '') {
+    switch(type) {
+      case 'text':
+      case 'string':
+        return `<input type="text" id="field-${escapeHtml(name)}" value="${escapeHtml(value)}" />`;
+      case 'number':
+        return `<input type="number" id="field-${escapeHtml(name)}" value="${escapeHtml(value)}" />`;
+      case 'boolean':
+        return `<input type="checkbox" id="field-${escapeHtml(name)}" ${value === 'true' || value === true ? 'checked' : ''} />`;
+      case 'datetime':
+        return `<input type="datetime-local" id="field-${escapeHtml(name)}" value="${escapeHtml(value)}" />`;
+      case 'select':
+        return `<select id="field-${escapeHtml(name)}"></select>`;
+      case 'markdown':
+        return `<textarea id="field-${escapeHtml(name)}" rows="5">${escapeHtml(value)}</textarea>`;
+      default:
+        return `<input type="text" id="field-${escapeHtml(name)}" value="${escapeHtml(value)}" />`;
+    }
+  }
+
+  function parseFrontmatter(content) {
+    const frontmatter = {};
+    let body = content;
+    
+    // Kiểm tra có front matter không
+    if (content.startsWith('---')) {
+      const endFrontmatter = content.indexOf('---', 3);
+      if (endFrontmatter > 0) {
+        const frontmatterText = content.substring(3, endFrontmatter).trim();
+        body = content.substring(endFrontmatter + 3).trim();
+        
+        // Phân tích đơn giản front matter
+        frontmatterText.split('\n').forEach(line => {
+          const match = line.match(/^([^:]+):\s*(.*)$/);
+          if (match) {
+            const key = match[1].trim();
+            let value = match[2].trim();
+            
+            // Xử lý giá trị được trích dẫn
+            if ((value.startsWith('"') && value.endsWith('"')) || 
+                (value.startsWith("'") && value.endsWith("'"))) {
+              value = value.substring(1, value.length - 1);
+            }
+            
+            frontmatter[key] = value;
+          }
+        });
+      }
+    }
+    
+    return { frontmatter, body };
+  }
+
   function addModalStyles() {
     if (!document.getElementById('modal-styles')) {
       const styles = document.createElement('style');
@@ -311,6 +435,8 @@ document.addEventListener('DOMContentLoaded', () => {
           padding: 20px;
           width: 80%;
           max-width: 900px;
+          max-height: 90vh;
+          overflow-y: auto;
           border-radius: 5px;
           box-shadow: 0 4px 8px rgba(0,0,0,0.2);
         }
@@ -334,11 +460,18 @@ document.addEventListener('DOMContentLoaded', () => {
           margin-bottom: 5px;
           font-weight: bold;
         }
-        .form-group input, .form-group textarea {
+        .form-group input[type="text"],
+        .form-group input[type="number"],
+        .form-group input[type="datetime-local"],
+        .form-group select,
+        .form-group textarea {
           width: 100%;
           padding: 8px;
           border: 1px solid #ddd;
           border-radius: 4px;
+        }
+        .form-group input[type="checkbox"] {
+          margin-right: 5px;
         }
         .modal-footer {
           text-align: right;
@@ -421,14 +554,14 @@ document.addEventListener('DOMContentLoaded', () => {
   window.addNewFolder = addNewFolder;
 });
 
-// 11. CHỨC NĂNG XEM BÀI VIẾT
+// 12. CHỨC NĂNG XEM BÀI VIẾT
 function viewPost(path) {
   const slug = path.replace('content/', '').replace(/\.md$/i, '');
   const postUrl = `${window.location.origin}/${slug}`;
   window.open(postUrl, '_blank');
 }
 
-// 12. CHỨC NĂNG SỬA BÀI VIẾT
+// 13. CHỨC NĂNG SỬA BÀI VIẾT
 async function editPost(path, sha) {
   try {
     const fileData = await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(path)}`);
@@ -440,14 +573,25 @@ async function editPost(path, sha) {
   }
 }
 
-// 13. HIỂN THỊ MODAL CHỈNH SỬA
-function showEditModal(path, content, sha) {
+// 14. HIỂN THỊ MODAL CHỈNH SỬA
+async function showEditModal(path, content, sha) {
+  const configFields = await loadConfig();
+  const filename = path.split('/').pop();
+  const { frontmatter, body } = parseFrontmatter(content);
+  
   const modal = document.getElementById('edit-modal') || document.createElement('div');
   modal.id = 'edit-modal';
   modal.className = 'modal';
   document.body.appendChild(modal);
   
-  const filename = path.split('/').pop();
+  // Tạo các trường từ config với giá trị hiện tại
+  const fieldsHtml = configFields ? 
+    Object.entries(configFields).map(([name, field]) => `
+      <div class="form-group">
+        <label for="field-${escapeHtml(name)}">${escapeHtml(field.label)}:</label>
+        ${getFieldInputHtml(name, field.type, frontmatter[name])}
+      </div>
+    `).join('') : '';
   
   modal.innerHTML = `
     <div class="modal-content">
@@ -460,9 +604,10 @@ function showEditModal(path, content, sha) {
           <label for="edit-title">Tiêu đề:</label>
           <input type="text" id="edit-title" value="${escapeHtml(filename.replace(/\.md$/i, ''))}" />
         </div>
+        ${fieldsHtml}
         <div class="form-group">
           <label for="edit-content">Nội dung:</label>
-          <textarea id="edit-content" rows="20">${escapeHtml(content)}</textarea>
+          <textarea id="edit-content" rows="20">${escapeHtml(body)}</textarea>
         </div>
       </div>
       <div class="modal-footer">
@@ -475,7 +620,7 @@ function showEditModal(path, content, sha) {
   modal.style.display = 'block';
 }
 
-// 14. LƯU BÀI VIẾT
+// 15. LƯU BÀI VIẾT
 async function savePost(path, sha) {
   try {
     const titleInput = document.getElementById('edit-title');
@@ -486,12 +631,36 @@ async function savePost(path, sha) {
     }
     
     const title = titleInput.value.trim();
-    const content = contentTextarea.value;
+    const bodyContent = contentTextarea.value;
     
     if (!title) {
       alert('Vui lòng nhập tiêu đề bài viết');
       return;
     }
+    
+    // Lấy giá trị từ các trường config
+    const configFields = await loadConfig();
+    const frontmatter = {};
+    
+    if (configFields) {
+      for (const [name] of Object.entries(configFields)) {
+        const input = document.getElementById(`field-${name}`);
+        if (input) {
+          frontmatter[name] = input.type === 'checkbox' ? input.checked : input.value;
+        }
+      }
+    }
+    
+    // Tạo nội dung với front matter
+    let content = '';
+    if (Object.keys(frontmatter).length > 0) {
+      content += '---\n';
+      for (const [key, value] of Object.entries(frontmatter)) {
+        content += `${key}: ${typeof value === 'string' ? `"${value}"` : value}\n`;
+      }
+      content += '---\n\n';
+    }
+    content += bodyContent;
     
     const updateData = {
       message: `Cập nhật bài viết: ${title}`,
@@ -513,7 +682,7 @@ async function savePost(path, sha) {
   }
 }
 
-// 15. XÓA BÀI VIẾT HOẶC THƯ MỤC
+// 16. XÓA BÀI VIẾT HOẶC THƯ MỤC
 async function deleteItem(path, sha, isFolder) {
   const itemType = isFolder ? 'thư mục' : 'bài viết';
   if (!confirm(`Bạn có chắc chắn muốn xóa ${itemType} này không?`)) return;
@@ -541,7 +710,7 @@ async function deleteItem(path, sha, isFolder) {
   }
 }
 
-// 16. XÓA THƯ MỤC ĐỆ QUY
+// 17. XÓA THƯ MỤC ĐỆ QUY
 async function deleteFolderRecursive(folderPath) {
   const items = await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(folderPath)}`);
   
@@ -560,7 +729,7 @@ async function deleteFolderRecursive(folderPath) {
   }
 }
 
-// 17. TẠO BÀI VIẾT MỚI
+// 18. TẠO BÀI VIẾT MỚI
 async function createNewPost(path, defaultContent = null) {
   try {
     let title, content;
@@ -574,12 +743,36 @@ async function createNewPost(path, defaultContent = null) {
       }
       
       title = titleInput.value.trim();
-      content = contentTextarea.value;
+      let bodyContent = contentTextarea.value;
       
       if (!title) {
         alert('Vui lòng nhập tiêu đề bài viết');
         return;
       }
+      
+      // Lấy giá trị từ các trường config
+      const configFields = await loadConfig();
+      const frontmatter = {};
+      
+      if (configFields) {
+        for (const [name] of Object.entries(configFields)) {
+          const input = document.getElementById(`field-${name}`);
+          if (input) {
+            frontmatter[name] = input.type === 'checkbox' ? input.checked : input.value;
+          }
+        }
+      }
+      
+      // Tạo nội dung với front matter
+      content = '';
+      if (Object.keys(frontmatter).length > 0) {
+        content += '---\n';
+        for (const [key, value] of Object.entries(frontmatter)) {
+          content += `${key}: ${typeof value === 'string' ? `"${value}"` : value}\n`;
+        }
+        content += '---\n\n';
+      }
+      content += bodyContent;
       
       const filename = formatFolderName(title) + '.md';
       path = `${path}/${filename}`;
@@ -667,4 +860,38 @@ async function callGitHubAPI(url, method = 'GET', body = null) {
   }
 
   return response.json();
+}
+
+// Hàm phân tích front matter toàn cục
+function parseFrontmatter(content) {
+  const frontmatter = {};
+  let body = content;
+  
+  // Kiểm tra có front matter không
+  if (content.startsWith('---')) {
+    const endFrontmatter = content.indexOf('---', 3);
+    if (endFrontmatter > 0) {
+      const frontmatterText = content.substring(3, endFrontmatter).trim();
+      body = content.substring(endFrontmatter + 3).trim();
+      
+      // Phân tích đơn giản front matter
+      frontmatterText.split('\n').forEach(line => {
+        const match = line.match(/^([^:]+):\s*(.*)$/);
+        if (match) {
+          const key = match[1].trim();
+          let value = match[2].trim();
+          
+          // Xử lý giá trị được trích dẫn
+          if ((value.startsWith('"') && value.endsWith('"')) || 
+              (value.startsWith("'") && value.endsWith("'"))) {
+            value = value.substring(1, value.length - 1);
+          }
+          
+          frontmatter[key] = value;
+        }
+      });
+    }
+  }
+  
+  return { frontmatter, body };
 }
