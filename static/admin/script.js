@@ -729,3 +729,196 @@ async function savePost(path, sha) {
     alert(`Lỗi: ${error.message || 'Không thể lưu bài viết'}`);
   }
 }
+// 16. TẠO BÀI VIẾT MỚI
+async function createNewPost(folderPath) {
+  try {
+    const titleInput = document.getElementById('new-title');
+    const contentTextarea = document.getElementById('new-content');
+    
+    if (!titleInput || !contentTextarea) {
+      throw new Error('Không tìm thấy form tạo bài viết');
+    }
+    
+    const title = titleInput.value.trim();
+    const bodyContent = contentTextarea.value;
+    
+    if (!title) {
+      alert('Vui lòng nhập tiêu đề bài viết');
+      return;
+    }
+    
+    // Lấy giá trị từ các trường config
+    const configFields = window.configFields;
+    const frontmatter = {};
+    
+    if (configFields) {
+      for (const [name] of Object.entries(configFields)) {
+        const input = document.getElementById(`field-${name}`);
+        if (input) {
+          frontmatter[name] = input.type === 'checkbox' ? input.checked : input.value;
+        }
+      }
+    }
+    
+    // Tạo tên file từ tiêu đề
+    const fileName = formatFileName(title) + '.md';
+    const filePath = `${folderPath}/${fileName}`;
+    
+    // Tạo nội dung với front matter
+    let content = '';
+    if (Object.keys(frontmatter).length > 0) {
+      content += '---\n';
+      for (const [key, value] of Object.entries(frontmatter)) {
+        content += `${key}: ${typeof value === 'string' ? `"${value}"` : value}\n`;
+      }
+      content += '---\n\n';
+    }
+    content += bodyContent;
+    
+    const createData = {
+      message: `Tạo bài viết mới: ${title}`,
+      content: btoa(unescape(encodeURIComponent(content))),
+      branch: 'main'
+    };
+    
+    await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(filePath)}`, 'PUT', createData);
+    
+    document.getElementById('create-modal').style.display = 'none';
+    alert('Tạo bài viết thành công!');
+    window.loadFolderContents(folderPath);
+    
+  } catch (error) {
+    console.error('Lỗi khi tạo bài viết:', error);
+    alert(`Lỗi: ${error.message || 'Không thể tạo bài viết'}`);
+  }
+}
+
+// 17. XÓA BÀI VIẾT/THƯ MỤC
+async function deleteItem(path, sha, isFolder) {
+  if (!confirm(`Bạn có chắc chắn muốn xóa ${isFolder ? 'thư mục' : 'bài viết'} này?`)) {
+    return;
+  }
+  
+  try {
+    const deleteData = {
+      message: `Xóa ${isFolder ? 'thư mục' : 'bài viết'}: ${path.split('/').pop()}`,
+      sha: sha,
+      branch: 'main'
+    };
+    
+    await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(path)}`, 'DELETE', deleteData);
+    
+    alert(`Xóa ${isFolder ? 'thư mục' : 'bài viết'} thành công!`);
+    const folderPath = path.substring(0, path.lastIndexOf('/'));
+    window.loadFolderContents(folderPath);
+    
+  } catch (error) {
+    console.error('Lỗi khi xóa:', error);
+    alert(`Lỗi: ${error.message || 'Không thể xóa'}`);
+  }
+}
+
+// Hàm hỗ trợ bổ sung
+function formatFileName(title) {
+  return title.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/đ/g, 'd')
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-');
+}
+
+// 18. Gọi API GitHub an toàn (bổ sung thêm xử lý lỗi)
+async function callGitHubAPI(url, method = 'GET', body = null) {
+  const user = netlifyIdentity.currentUser();
+  if (!user?.token?.access_token) {
+    throw new Error('Bạn chưa đăng nhập');
+  }
+
+  const headers = {
+    'Authorization': `Bearer ${user.token.access_token}`,
+    'Accept': 'application/vnd.github.v3+json',
+    'Content-Type': 'application/json',
+    'X-Operator': 'netlify',
+    'X-Operator-Id': user.id,
+    'X-Netlify-User': user.id
+  };
+
+  const config = {
+    method: method,
+    headers: headers,
+    credentials: 'include'
+  };
+
+  if (body) {
+    config.body = JSON.stringify(body);
+  }
+
+  try {
+    const response = await fetch(url, config);
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => null);
+      const errorMessage = error?.message || `Lỗi HTTP ${response.status}`;
+      
+      // Xử lý một số lỗi cụ thể
+      if (response.status === 401) {
+        throw new Error('Phiên đăng nhập hết hạn. Vui lòng đăng nhập lại.');
+      } else if (response.status === 404) {
+        throw new Error('Tài nguyên không tồn tại hoặc đã bị xóa.');
+      } else if (response.status === 409) {
+        throw new Error('Xung đột dữ liệu. Có thể SHA không còn hợp lệ.');
+      }
+      
+      throw new Error(errorMessage);
+    }
+
+    return response.json();
+  } catch (error) {
+    console.error('Lỗi khi gọi API:', error);
+    throw error;
+  }
+}
+
+// 19. Thêm kiểm tra kết nối Internet trước khi gọi API
+function checkInternetConnection() {
+  if (!navigator.onLine) {
+    throw new Error('Không có kết nối Internet. Vui lòng kiểm tra lại kết nối.');
+  }
+}
+
+// 20. Cập nhật hàm loadFolderContents để kiểm tra kết nối
+async function loadFolderContents(path) {
+  if (isProcessing) return;
+  isProcessing = true;
+  
+  try {
+    checkInternetConnection();
+    // ... phần còn lại của hàm như trước ...
+  } catch (error) {
+    // ... xử lý lỗi ...
+  } finally {
+    isProcessing = false;
+  }
+}
+
+// 21. Thêm hàm xử lý sự kiện offline/online
+window.addEventListener('online', () => {
+  console.log('Đã kết nối Internet');
+  // Tự động tải lại nội dung nếu đang ở trang quản trị
+  if (document.getElementById('dashboard')?.style.display === 'flex') {
+    window.loadFolderContents(window.currentFolder);
+  }
+});
+
+window.addEventListener('offline', () => {
+  console.log('Mất kết nối Internet');
+  const postsList = document.getElementById('posts-list');
+  if (postsList) {
+    postsList.innerHTML = `
+      <div class="error">
+        ❌ Mất kết nối Internet. Vui lòng kiểm tra lại kết nối.
+      </div>
+    `;
+  }
+});
