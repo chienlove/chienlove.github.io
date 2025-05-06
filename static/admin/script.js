@@ -824,7 +824,7 @@ ${body}
 
 // 23. CHỨC NĂNG XEM BÀI VIẾT
 function viewPost(path) {
-  const slug = path.replace('content/', '').replace(/\.md$/i, '');
+  const slug = path.replace(/^content\//, '').replace(/\.md$/i, '');
   const postUrl = `${window.location.origin}/${slug}`;
   window.open(postUrl, '_blank');
 }
