@@ -1,5 +1,6 @@
 // auth.js - Xử lý xác thực với Netlify Identity
 let currentUser = null;
+let cmsInitialized = false; // Ngăn gọi initCMS nhiều lần
 
 function initAuth() {
   if (window.netlifyIdentity) {
@@ -35,16 +36,19 @@ function handleAuthChange(user) {
   const loginBtn = document.getElementById('login-btn');
   const dashboard = document.getElementById('dashboard');
   const sidebar = document.getElementById('sidebar');
-  
+
   if (user) {
     console.log('Đã đăng nhập:', user.email);
     loginBtn.innerHTML = `<i class="fas fa-sign-out-alt"></i> <span>Đăng xuất (${user.email.split('@')[0]})</span>`;
     loginBtn.style.backgroundColor = '#f44336';
     dashboard.style.display = 'block';
     sidebar.style.display = 'block';
-    
-    // Kích hoạt các chức năng sau khi đăng nhập
-    if (window.initCMS) window.initCMS();
+
+    // Chỉ gọi initCMS một lần duy nhất
+    if (!cmsInitialized && typeof window.initCMS === 'function') {
+      cmsInitialized = true;
+      window.initCMS();
+    }
   } else {
     console.log('Chưa đăng nhập');
     loginBtn.innerHTML = `<i class="fas fa-sign-in-alt"></i> <span>Đăng nhập</span>`;
