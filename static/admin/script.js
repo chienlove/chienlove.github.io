@@ -1,9 +1,11 @@
-// cms-admin.js
+// cms-admin.js - Phiên bản hoàn thiện
 document.addEventListener('DOMContentLoaded', () => {
   // Biến toàn cục
   let allPosts = [];
   let currentFolder = 'content';
   let isProcessing = false;
+  let collectionsConfig = null;
+  let currentCollection = null;
 
   // 1. KHỞI TẠO NETLIFY IDENTITY
   if (window.netlifyIdentity) {
@@ -16,18 +18,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const handleAuthChange = (user) => {
       const loginBtn = document.getElementById('login-btn');
       const dashboard = document.getElementById('dashboard');
+      const sidebar = document.getElementById('sidebar');
       
       if (user) {
         console.log('Đã đăng nhập:', user.email);
-        loginBtn.textContent = `Đăng xuất (${user.email})`;
+        loginBtn.innerHTML = `<i class="fas fa-sign-out-alt"></i> <span>Đăng xuất (${user.email.split('@')[0]})</span>`;
         loginBtn.style.backgroundColor = '#f44336';
-        dashboard.style.display = 'flex';
-        loadFolderContents(currentFolder);
+        dashboard.style.display = 'block';
+        sidebar.style.display = 'block';
+        
+        // Tải cấu hình CMS khi đăng nhập thành công
+        loadCMSConfig().then(() => {
+          updateSidebar();
+          loadFolderContents(currentFolder);
+        });
       } else {
         console.log('Chưa đăng nhập');
-        loginBtn.textContent = 'Đăng nhập';
-        loginBtn.style.backgroundColor = '#4CAF50';
+        loginBtn.innerHTML = `<i class="fas fa-sign-in-alt"></i> <span>Đăng nhập</span>`;
+        loginBtn.style.backgroundColor = '#4cc9f0';
         dashboard.style.display = 'none';
+        sidebar.style.display = 'none';
         allPosts = [];
       }
     };
@@ -58,7 +68,128 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 4. HÀM GỌI API AN TOÀN
+  // 4. TẢI CẤU HÌNH CMS
+  async function loadCMSConfig() {
+    try {
+      const configResponse = await callGitHubAPI('/.netlify/git/github/contents/static/admin/config.yml');
+      const configContent = atob(configResponse.content);
+      collectionsConfig = parseYAML(configContent).collections;
+      console.log('Đã tải cấu hình CMS:', collectionsConfig);
+      return collectionsConfig;
+    } catch (error) {
+      console.error('Lỗi khi tải cấu hình CMS:', error);
+      showNotification('Lỗi tải cấu hình CMS', 'error');
+      return null;
+    }
+  }
+
+  // 5. PHÂN TÍCH YAML
+  function parseYAML(yamlString) {
+    const result = { collections: [] };
+    const lines = yamlString.split('\n');
+    let currentCollection = null;
+    let currentField = null;
+    let inFields = false;
+    
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+      if (trimmedLine === '' || trimmedLine.startsWith('#')) continue;
+      
+      if (trimmedLine === 'collections:') {
+        continue;
+      }
+      
+      if (trimmedLine.startsWith('- name:')) {
+        currentCollection = { fields: [] };
+        result.collections.push(currentCollection);
+        currentCollection.name = trimmedLine.split('name:')[1].trim().replace(/['"]/g, '');
+        continue;
+      }
+      
+      if (currentCollection && trimmedLine.startsWith('label:')) {
+        currentCollection.label = trimmedLine.split('label:')[1].trim().replace(/['"]/g, '');
+        continue;
+      }
+      
+      if (currentCollection && trimmedLine.startsWith('folder:')) {
+        currentCollection.folder = trimmedLine.split('folder:')[1].trim().replace(/['"]/g, '');
+        continue;
+      }
+      
+      if (currentCollection && trimmedLine === 'fields:') {
+        inFields = true;
+        continue;
+      }
+      
+      if (inFields && trimmedLine.startsWith('- {')) {
+        const fieldStr = trimmedLine.match(/\{([^}]+)\}/)[1];
+        const fieldParts = fieldStr.split(',');
+        const field = {};
+        
+        fieldParts.forEach(part => {
+          const [key, value] = part.split(':').map(s => s.trim());
+          if (key && value) {
+            field[key.replace(/['"]/g, '')] = value.replace(/['"]/g, '');
+          }
+        });
+        
+        if (field.name) {
+          currentCollection.fields.push(field);
+        }
+      }
+    }
+    
+    return result;
+  }
+
+  // 6. CẬP NHẬT SIDEBAR THEO COLLECTION
+  function updateSidebar() {
+    const sidebarMenu = document.getElementById('sidebar-menu');
+    if (!sidebarMenu || !collectionsConfig) return;
+    
+    let menuHTML = `
+      <li class="menu-item" data-folder="content">
+        <a href="#" onclick="window.loadFolderContents('content'); return false;">
+          <i class="fas fa-home"></i>
+          <span>Trang chủ</span>
+        </a>
+      </li>
+    `;
+    
+    collectionsConfig.forEach(collection => {
+      const folder = collection.folder || '';
+      menuHTML += `
+        <li class="menu-item" data-folder="${escapeHtml(folder)}" data-collection="${escapeHtml(collection.name)}">
+          <a href="#" onclick="window.loadCollection('${escapeHtml(collection.name)}', '${escapeHtml(folder)}'); return false;">
+            <i class="fas fa-${getCollectionIcon(collection.name)}"></i>
+            <span>${escapeHtml(collection.label || collection.name)}</span>
+          </a>
+        </li>
+      `;
+    });
+    
+    menuHTML += `
+      <li class="menu-item">
+        <a href="#" onclick="window.showSettings(); return false;">
+          <i class="fas fa-cog"></i>
+          <span>Cài đặt</span>
+        </a>
+      </li>
+    `;
+    
+    sidebarMenu.innerHTML = menuHTML;
+    
+    // Đánh dấu menu active
+    const menuItems = sidebarMenu.querySelectorAll('.menu-item');
+    menuItems.forEach(item => {
+      item.addEventListener('click', function() {
+        menuItems.forEach(i => i.classList.remove('active'));
+        this.classList.add('active');
+      });
+    });
+  }
+
+  // 7. HÀM GỌI API AN TOÀN
   async function callGitHubAPI(url, method = 'GET', body = null) {
     const user = netlifyIdentity.currentUser();
     if (!user?.token?.access_token) {
@@ -94,26 +225,92 @@ document.addEventListener('DOMContentLoaded', () => {
     return response.json();
   }
 
-  // 5. TẢI NỘI DUNG THƯ MỤC
+  // 8. TẢI NỘI DUNG COLLECTION
+  async function loadCollection(collectionName, folderPath) {
+    if (isProcessing) return;
+    isProcessing = true;
+    
+    currentCollection = collectionsConfig.find(c => c.name === collectionName);
+    currentFolder = folderPath;
+    const postsList = document.getElementById('posts-list');
+    const contentHeader = document.querySelector('.content-header h2');
+    const createBtn = document.getElementById('create-post');
+    
+    if (contentHeader && currentCollection) {
+      contentHeader.innerHTML = `<i class="fas fa-${getCollectionIcon(collectionName)}"></i> ${escapeHtml(currentCollection.label || currentCollection.name)}`;
+    }
+    
+    if (createBtn) {
+      createBtn.style.display = 'inline-flex';
+      createBtn.onclick = () => addNewEntry(collectionName);
+    }
+    
+    postsList.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Đang tải dữ liệu...</div>';
+    
+    try {
+      const data = await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(folderPath)}`);
+      console.log('Dữ liệu collection:', data);
+      
+      allPosts = Array.isArray(data) ? data : [data];
+      renderCollectionItems(allPosts, currentCollection);
+      
+    } catch (error) {
+      console.error('Lỗi tải dữ liệu collection:', error);
+      postsList.innerHTML = `
+        <div class="error">
+          <i class="fas fa-exclamation-triangle"></i>
+          <p>Lỗi: ${escapeHtml(error.message || 'Không thể tải dữ liệu')}</p>
+          <button class="btn" onclick="window.loadCollection('${escapeHtml(collectionName)}', '${escapeHtml(folderPath)}')">Thử lại</button>
+        </div>
+      `;
+      
+      if (error.message.includes('401')) {
+        netlifyIdentity.logout();
+      }
+    } finally {
+      isProcessing = false;
+    }
+  }
+
+  // 9. TẢI NỘI DUNG THƯ MỤC
   async function loadFolderContents(path) {
     if (isProcessing) return;
     isProcessing = true;
     
     currentFolder = path || 'content';
+    currentCollection = null;
     const postsList = document.getElementById('posts-list');
+    const contentHeader = document.querySelector('.content-header h2');
     const breadcrumb = document.getElementById('breadcrumb') || createBreadcrumb();
+    const createBtn = document.getElementById('create-post');
     
-    postsList.innerHTML = '<div class="loading">Đang tải dữ liệu...</div>';
+    if (contentHeader) {
+      contentHeader.innerHTML = `<i class="fas fa-folder-open"></i> Thư mục`;
+    }
+    
+    if (createBtn) {
+      createBtn.style.display = 'none';
+    }
+    
+    postsList.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Đang tải dữ liệu...</div>';
     updateBreadcrumb(path);
 
+    // Active sidebar menu tương ứng
+    const menuItems = document.querySelectorAll('.sidebar-menu .menu-item');
+    menuItems.forEach(item => {
+      item.classList.remove('active');
+      if (item.dataset.folder === path) {
+        item.classList.add('active');
+      }
+    });
+
     try {
-      // Kiểm tra path hợp lệ
       if (!isValidPath(path)) {
         throw new Error('Đường dẫn không hợp lệ');
       }
 
       const data = await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(path)}`);
-      console.log('Dữ liệu nhận được:', data);
+      console.log('Dữ liệu thư mục:', data);
 
       allPosts = Array.isArray(data) ? data : [data];
       renderFolderContents(allPosts, path);
@@ -122,14 +319,13 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error('Lỗi tải dữ liệu:', error);
       postsList.innerHTML = `
         <div class="error">
-          ❌ Lỗi: ${escapeHtml(error.message || 'Không thể tải dữ liệu')}
-          ${error.message && error.message.includes('401') ? 
-            '<p>Vui lòng đăng nhập lại</p>' : 
-            `<button onclick="window.loadFolderContents('${escapeHtml(path)}')">Thử lại</button>`}
+          <i class="fas fa-exclamation-triangle"></i>
+          <p>Lỗi: ${escapeHtml(error.message || 'Không thể tải dữ liệu')}</p>
+          <button class="btn" onclick="window.loadFolderContents('${escapeHtml(path)}')">Thử lại</button>
         </div>
       `;
       
-      if (error.message.includes('Operator') || error.message.includes('401')) {
+      if (error.message.includes('401')) {
         netlifyIdentity.logout();
       }
     } finally {
@@ -137,38 +333,140 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // 6. TẠO BREADCRUMB
+  // 10. TẠO BREADCRUMB
   function createBreadcrumb() {
     const dashboard = document.getElementById('dashboard');
     const breadcrumb = document.createElement('div');
     breadcrumb.id = 'breadcrumb';
     breadcrumb.className = 'breadcrumb';
-    dashboard.insertBefore(breadcrumb, dashboard.firstChild);
+    dashboard.insertBefore(breadcrumb, dashboard.querySelector('.content-body'));
     return breadcrumb;
   }
 
-  // 7. CẬP NHẬT BREADCRUMB
+  // 11. CẬP NHẬT BREADCRUMB
   function updateBreadcrumb(path) {
     const breadcrumb = document.getElementById('breadcrumb');
+    if (!breadcrumb) return;
+
     const parts = path.split('/');
     
-    let breadcrumbHTML = `<span class="crumb" onclick="window.loadFolderContents('content')">Home</span>`;
+    let breadcrumbHTML = `<span class="crumb" onclick="window.loadFolderContents('content')">Trang chủ</span>`;
     let currentPath = 'content';
     
     for (let i = 1; i < parts.length; i++) {
       currentPath += '/' + parts[i];
-      breadcrumbHTML += ` > <span class="crumb" onclick="window.loadFolderContents('${escapeHtml(currentPath)}')">${escapeHtml(parts[i])}</span>`;
+      breadcrumbHTML += ` <i class="fas fa-chevron-right separator"></i> <span class="crumb" onclick="window.loadFolderContents('${escapeHtml(currentPath)}')">${escapeHtml(parts[i])}</span>`;
     }
     
     breadcrumb.innerHTML = breadcrumbHTML;
   }
 
-  // 8. HIỂN THỊ NỘI DUNG THƯ MỤC
+  // 12. HIỂN THỊ NỘI DUNG COLLECTION
+  function renderCollectionItems(items, collection) {
+    const postsList = document.getElementById('posts-list');
+    
+    if (!items || items.length === 0) {
+      postsList.innerHTML = `
+        <div class="empty">
+          <i class="fas fa-inbox"></i>
+          <p>Chưa có bài viết nào</p>
+          <button class="btn btn-primary" onclick="window.addNewEntry('${escapeHtml(collection.name)}')">
+            <i class="fas fa-plus"></i> Thêm bài viết mới
+          </button>
+        </div>
+      `;
+      return;
+    }
+    
+    const markdownFiles = items.filter(item => item.name.toLowerCase().endsWith('.md'));
+    
+    if (markdownFiles.length === 0) {
+      postsList.innerHTML = `
+        <div class="empty">
+          <i class="fas fa-inbox"></i>
+          <p>Chưa có bài viết nào</p>
+          <button class="btn btn-primary" onclick="window.addNewEntry('${escapeHtml(collection.name)}')">
+            <i class="fas fa-plus"></i> Thêm bài viết mới
+          </button>
+        </div>
+      `;
+      return;
+    }
+    
+    postsList.innerHTML = `
+      <div class="collection-header">
+        <div class="search-box">
+          <input type="text" id="search-input" placeholder="Tìm kiếm..." />
+          <i class="fas fa-search"></i>
+        </div>
+        <button class="btn btn-primary" onclick="window.addNewEntry('${escapeHtml(collection.name)}')">
+          <i class="fas fa-plus"></i> Thêm mới
+        </button>
+      </div>
+      <div class="post-grid">
+        ${markdownFiles.map(file => {
+          const fileName = file.name.replace(/\.md$/i, '');
+          return `
+            <div class="post-card">
+              <div class="post-card-header">
+                <h3 class="post-title">${escapeHtml(fileName)}</h3>
+                <span class="post-date">Cập nhật: ${formatDate(new Date(file.sha))}</span>
+              </div>
+              <div class="post-card-actions">
+                <button class="btn btn-sm btn-edit" onclick="window.editEntry('${escapeHtml(collection.name)}', '${escapeHtml(file.path)}', '${escapeHtml(file.sha)}')">
+                  <i class="fas fa-edit"></i> Sửa
+                </button>
+                <button class="btn btn-sm btn-view" onclick="window.viewPost('${escapeHtml(file.path)}')">
+                  <i class="fas fa-eye"></i> Xem
+                </button>
+                <button class="btn btn-sm btn-delete" onclick="window.deleteItem('${escapeHtml(file.path)}', '${escapeHtml(file.sha)}', false)">
+                  <i class="fas fa-trash"></i> Xóa
+                </button>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+    
+    // Thêm chức năng tìm kiếm
+    const searchInput = document.getElementById('search-input');
+    if (searchInput) {
+      searchInput.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        const postCards = document.querySelectorAll('.post-card');
+        
+        postCards.forEach(card => {
+          const title = card.querySelector('.post-title').textContent.toLowerCase();
+          if (title.includes(searchTerm)) {
+            card.style.display = 'flex';
+          } else {
+            card.style.display = 'none';
+          }
+        });
+      });
+    }
+  }
+
+  // 13. HIỂN THỊ NỘI DUNG THƯ MỤC
   function renderFolderContents(items, currentPath) {
     const postsList = document.getElementById('posts-list');
     
     if (!items || items.length === 0) {
-      postsList.innerHTML = '<div class="empty">Không có nội dung</div>';
+      postsList.innerHTML = `
+        <div class="empty">
+          <i class="fas fa-inbox"></i>
+          <p>Thư mục trống</p>
+          <div class="empty-actions">
+            <button class="btn btn-primary" onclick="window.addNewPost('${escapeHtml(currentPath)}')">
+              <i class="fas fa-file"></i> Thêm bài viết
+            </button>
+            <button class="btn" onclick="window.addNewFolder('${escapeHtml(currentPath)}')">
+              <i class="fas fa-folder-plus"></i> Thêm thư mục
+            </button>
+          </div>
+        </div>
+      `;
       return;
     }
     
@@ -179,20 +477,35 @@ document.addEventListener('DOMContentLoaded', () => {
     
     postsList.innerHTML = `
       <div class="folder-header">
-        <div class="folder-path">${escapeHtml(currentPath)}</div>
-        <button id="add-post-btn" class="action-btn">Thêm bài viết</button>
-        <button id="add-folder-btn" class="action-btn">Thêm thư mục</button>
+        <div class="folder-path">
+          <i class="fas fa-folder-open"></i> ${escapeHtml(currentPath)}
+        </div>
+        <div class="folder-actions">
+          <button class="btn btn-primary" onclick="window.addNewPost('${escapeHtml(currentPath)}')">
+            <i class="fas fa-file"></i> Thêm bài viết
+          </button>
+          <button class="btn" onclick="window.addNewFolder('${escapeHtml(currentPath)}')">
+            <i class="fas fa-folder-plus"></i> Thêm thư mục
+          </button>
+        </div>
       </div>
-      <div class="content-list">
+      <div class="content-grid">
         ${sortedItems.map(item => {
           if (item.type === 'dir') {
             return `
               <div class="folder-item">
-                <div class="folder-name" onclick="window.loadFolderContents('${escapeHtml(item.path)}')">
-                  📁 ${escapeHtml(item.name)}
+                <div class="folder-item-inner" onclick="window.loadFolderContents('${escapeHtml(item.path)}')">
+                  <div class="folder-icon">
+                    <i class="fas fa-folder"></i>
+                  </div>
+                  <div class="folder-details">
+                    <span class="folder-name">${escapeHtml(item.name)}</span>
+                  </div>
                 </div>
-                <div class="folder-actions">
-                  <button onclick="window.deleteItem('${escapeHtml(item.path)}', '${escapeHtml(item.sha)}', true)">Xóa</button>
+                <div class="item-actions">
+                  <button class="btn btn-sm btn-delete" onclick="event.stopPropagation(); window.deleteItem('${escapeHtml(item.path)}', '${escapeHtml(item.sha)}', true)">
+                    <i class="fas fa-trash"></i>
+                  </button>
                 </div>
               </div>
             `;
@@ -200,12 +513,26 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!item.name.toLowerCase().endsWith('.md')) return '';
             
             return `
-              <div class="post-item">
-                <span class="post-title">${escapeHtml(item.name.replace(/\.md$/i, ''))}</span>
-                <div class="post-actions">
-                  <button onclick="window.editPost('${escapeHtml(item.path)}', '${escapeHtml(item.sha)}')">Sửa</button>
-                  <button onclick="window.deleteItem('${escapeHtml(item.path)}', '${escapeHtml(item.sha)}', false)">Xóa</button>
-                  <button onclick="window.viewPost('${escapeHtml(item.path)}')">Xem</button>
+              <div class="file-item">
+                <div class="file-item-inner">
+                  <div class="file-icon">
+                    <i class="fas fa-file-alt"></i>
+                  </div>
+                  <div class="file-details">
+                    <span class="file-name">${escapeHtml(item.name.replace(/\.md$/i, ''))}</span>
+                    <span class="file-date">Cập nhật: ${formatDate(new Date(item.sha))}</span>
+                  </div>
+                </div>
+                <div class="item-actions">
+                  <button class="btn btn-sm btn-edit" onclick="window.editPost('${escapeHtml(item.path)}', '${escapeHtml(item.sha)}')">
+                    <i class="fas fa-edit"></i>
+                  </button>
+                  <button class="btn btn-sm btn-view" onclick="window.viewPost('${escapeHtml(item.path)}')">
+                    <i class="fas fa-eye"></i>
+                  </button>
+                  <button class="btn btn-sm btn-delete" onclick="window.deleteItem('${escapeHtml(item.path)}', '${escapeHtml(item.sha)}', false)">
+                    <i class="fas fa-trash"></i>
+                  </button>
                 </div>
               </div>
             `;
@@ -213,64 +540,254 @@ document.addEventListener('DOMContentLoaded', () => {
         }).join('')}
       </div>
     `;
-    
-    document.getElementById('add-post-btn').addEventListener('click', () => addNewPost(currentPath));
-    document.getElementById('add-folder-btn').addEventListener('click', () => addNewFolder(currentPath));
   }
 
-  // 9. THÊM BÀI VIẾT MỚI
+  // 14. THÊM BÀI VIẾT MỚI - THƯ MỤC THÔNG THƯỜNG
   function addNewPost(folderPath) {
-    let modal = document.getElementById('create-modal');
-    if (!modal) {
-      modal = document.createElement('div');
-      modal.id = 'create-modal';
-      modal.className = 'modal';
-      document.body.appendChild(modal);
+    showModal({
+      title: 'Tạo bài viết mới',
+      confirmText: 'Tạo',
+      body: `
+        <div class="form-group">
+          <label for="new-title">Tiêu đề:</label>
+          <input type="text" id="new-title" placeholder="Nhập tiêu đề bài viết" class="form-control" />
+        </div>
+        <div class="form-group">
+          <label for="new-content">Nội dung:</label>
+          <textarea id="new-content" rows="15" placeholder="Nội dung bài viết (Markdown)" class="form-control"></textarea>
+        </div>
+      `,
+      onConfirm: () => {
+        const title = document.getElementById('new-title').value.trim();
+        const content = document.getElementById('new-content').value;
+        
+        if (!title) {
+          showNotification('Vui lòng nhập tiêu đề bài viết', 'warning');
+          return false;
+        }
+        
+        const filename = formatFolderName(title) + '.md';
+        const path = `${folderPath}/${filename}`;
+        
+        createNewPost(path, `# ${title}\n\n${content}`);
+        return true;
+      }
+    });
+  }
+
+  // 15. THÊM ENTRY MỚI CHO COLLECTION
+  function addNewEntry(collectionName) {
+    const collection = collectionsConfig.find(c => c.name === collectionName);
+    if (!collection) {
+      showNotification('Không tìm thấy cấu hình collection', 'error');
+      return;
     }
     
+    const fields = collection.fields || [];
+    let formHTML = '';
+    
+    // Tạo frontmatter mặc định
+    let defaultFrontMatter = {
+      title: '',
+      date: new Date().toISOString().split('T')[0]
+    };
+    
+    // Tạo form
+    fields.forEach(field => {
+      if (!field.name || !field.label) return;
+      
+      // Bỏ qua trường body vì sẽ xử lý riêng
+      if (field.name === 'body') return;
+      
+      // Thêm giá trị mặc định
+      if (field.default) {
+        defaultFrontMatter[field.name] = field.default;
+      }
+      
+      formHTML += `<div class="form-group">`;
+      
+      switch (field.widget) {
+        case 'datetime':
+          formHTML += `
+            <label for="field-${field.name}">${escapeHtml(field.label)}:</label>
+            <input type="date" id="field-${field.name}" class="form-control" value="${defaultFrontMatter[field.name] || ''}">
+          `;
+          break;
+          
+        case 'select':
+          formHTML += `
+            <label for="field-${field.name}">${escapeHtml(field.label)}:</label>
+            <select id="field-${field.name}" class="form-control">
+              ${(field.options || []).map(option => 
+                `<option value="${escapeHtml(option)}">${escapeHtml(option)}</option>`
+              ).join('')}
+            </select>
+          `;
+          break;
+          
+        case 'text':
+        case 'string':
+          formHTML += `
+            <label for="field-${field.name}">${escapeHtml(field.label)}:</label>
+            <input type="text" id="field-${field.name}" class="form-control" value="${defaultFrontMatter[field.name] || ''}">
+          `;
+          break;
+          
+        case 'textarea':
+          formHTML += `
+            <label for="field-${field.name}">${escapeHtml(field.label)}:</label>
+            <textarea id="field-${field.name}" class="form-control" rows="4">${defaultFrontMatter[field.name] || ''}</textarea>
+          `;
+          break;
+          
+        default:
+          formHTML += `
+            <label for="field-${field.name}">${escapeHtml(field.label)}:</label>
+            <input type="text" id="field-${field.name}" class="form-control" value="${defaultFrontMatter[field.name] || ''}">
+          `;
+      }
+      
+      formHTML += `</div>`;
+    });
+    
+    // Thêm trường nội dung chính (body)
+    formHTML += `
+      <div class="form-group">
+        <label for="field-body">Nội dung:</label>
+        <textarea id="field-body" rows="15" class="form-control" placeholder="Nội dung chính (Markdown)"></textarea>
+      </div>
+    `;
+    
+    showModal({
+      title: `Thêm mới ${collection.label || collection.name}`,
+      confirmText: 'Tạo',
+      body: formHTML,
+      onConfirm: () => {
+        const title = document.getElementById('field-title')?.value.trim() || '';
+        if (!title) {
+          showNotification('Vui lòng nhập tiêu đề', 'warning');
+          return false;
+        }
+        
+        const filename = formatFolderName(title) + '.md';
+        const path = `${collection.folder}/${filename}`;
+        
+        // Thu thập dữ liệu từ form
+        const frontMatter = {};
+        fields.forEach(field => {
+          if (field.name === 'body') return;
+          const value = document.getElementById(`field-${field.name}`)?.value;
+          if (value !== undefined) {
+            frontMatter[field.name] = value;
+          }
+        });
+        
+        const body = document.getElementById('field-body')?.value || '';
+        
+        // Tạo nội dung file markdown với frontmatter
+        const content = `---
+${Object.entries(frontMatter).map(([key, value]) => `${key}: ${value}`).join('\n')}
+---
+
+${body}
+`;
+        
+        createNewPost(path, content);
+        return true;
+      }
+    });
+  }
+
+  // 16. HIỂN THỊ MODAL
+  function showModal({ title, body, confirmText = 'Lưu', onConfirm }) {
+    const modal = document.createElement('div');
+    modal.className = 'modal';
     modal.innerHTML = `
       <div class="modal-content">
         <div class="modal-header">
-          <h2>Tạo bài viết mới</h2>
-          <span class="close-btn" onclick="document.getElementById('create-modal').style.display='none'">&times;</span>
+          <h2>${title}</h2>
+          <span class="close-btn">&times;</span>
         </div>
         <div class="modal-body">
-          <div class="form-group">
-            <label for="new-title">Tiêu đề:</label>
-            <input type="text" id="new-title" placeholder="Nhập tiêu đề bài viết" />
-          </div>
-          <div class="form-group">
-            <label for="new-content">Nội dung:</label>
-            <textarea id="new-content" rows="20" placeholder="Nội dung bài viết (Markdown)"></textarea>
-          </div>
+          ${body}
         </div>
         <div class="modal-footer">
-          <button onclick="window.createNewPost('${escapeHtml(folderPath)}')">Tạo</button>
-          <button onclick="document.getElementById('create-modal').style.display='none'">Hủy</button>
+          <button class="btn" id="modal-cancel">Hủy</button>
+          <button class="btn btn-primary" id="modal-confirm">${confirmText}</button>
         </div>
       </div>
     `;
     
+    document.body.appendChild(modal);
     modal.style.display = 'block';
-    addModalStyles();
+    
+    // Xử lý sự kiện
+    modal.querySelector('.close-btn').addEventListener('click', () => {
+      modal.remove();
+    });
+    
+    modal.querySelector('#modal-cancel').addEventListener('click', () => {
+      modal.remove();
+    });
+    
+    modal.querySelector('#modal-confirm').addEventListener('click', () => {
+      if (onConfirm && onConfirm() !== false) {
+        modal.remove();
+      }
+    });
+    
+    // Đóng modal khi click ra ngoài
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        modal.remove();
+      }
+    });
   }
 
-  // 10. THÊM THƯ MỤC MỚI
-  function addNewFolder(parentPath) {
-    const folderName = prompt('Nhập tên thư mục mới:');
-    if (!folderName || !folderName.trim()) return;
+  // 17. HIỂN THỊ THÔNG BÁO
+  function showNotification(message, type = 'success') {
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
     
-    const formattedName = formatFolderName(folderName.trim());
-    const path = `${parentPath}/${formattedName}/README.md`;
-    
-    createNewPost(path, `# ${folderName}\n\nThư mục này chứa nội dung về ${folderName}.`);
+    setTimeout(() => {
+      notification.remove();
+    }, 3000);
   }
 
-  // Hàm hỗ trợ
+  // 18. ĐỊNH DẠNG NGÀY THÁNG
+  function formatDate(date) {
+    if (!(date instanceof Date)) return '';
+    return date.toLocaleDateString('vi-VN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  // 19. LẤY ICON CHO COLLECTION
+  function getCollectionIcon(collectionName) {
+    const icons = {
+      posts: 'file-alt',
+      pages: 'file',
+      products: 'shopping-bag',
+      categories: 'tags',
+      settings: 'cog',
+      users: 'users'
+    };
+    
+    return icons[collectionName] || 'file';
+  }
+
+  // 20. KIỂM TRA ĐƯỜNG DẪN HỢP LỆ
   function isValidPath(path) {
     return path && !path.includes('../') && !path.startsWith('/') && !path.includes('//');
   }
 
+  // 21. ESCAPE HTML
   function escapeHtml(str) {
     if (!str) return '';
     return str.toString()
@@ -281,6 +798,7 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/'/g, "&#039;");
   }
 
+  // 22. ĐỊNH DẠNG TÊN THƯ MỤC
   function formatFolderName(name) {
     return name.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
       .toLowerCase()
@@ -290,233 +808,241 @@ document.addEventListener('DOMContentLoaded', () => {
       .replace(/-+/g, '-');
   }
 
-  function addModalStyles() {
-    if (!document.getElementById('modal-styles')) {
-      const styles = document.createElement('style');
-      styles.id = 'modal-styles';
-      styles.textContent = `
-        .modal {
-          display: none;
-          position: fixed;
-          z-index: 1000;
-          left: 0;
-          top: 0;
-          width: 100%;
-          height: 100%;
-          background-color: rgba(0,0,0,0.5);
-        }
-        .modal-content {
-          background-color: #fff;
-          margin: 5% auto;
-          padding: 20px;
-          width: 80%;
-          max-width: 900px;
-          border-radius: 5px;
-          box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        }
-        .modal-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          border-bottom: 1px solid #ddd;
-          padding-bottom: 10px;
-          margin-bottom: 20px;
-        }
-        .close-btn {
-          font-size: 24px;
-          cursor: pointer;
-        }
-        .form-group {
-          margin-bottom: 15px;
-        }
-        .form-group label {
-          display: block;
-          margin-bottom: 5px;
-          font-weight: bold;
-        }
-        .form-group input, .form-group textarea {
-          width: 100%;
-          padding: 8px;
-          border: 1px solid #ddd;
-          border-radius: 4px;
-        }
-        .modal-footer {
-          text-align: right;
-          border-top: 1px solid #ddd;
-          padding-top: 15px;
-          margin-top: 20px;
-        }
-        .modal-footer button {
-          padding: 8px 16px;
-          margin-left: 10px;
-          cursor: pointer;
-        }
-        .breadcrumb {
-          padding: 10px 0;
-          margin-bottom: 20px;
-        }
-        .crumb {
-          cursor: pointer;
-          color: #0066cc;
-        }
-        .crumb:hover {
-          text-decoration: underline;
-        }
-        .folder-header {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 10px;
-          background-color: #f5f5f5;
-          border-radius: 4px;
-          margin-bottom: 15px;
-        }
-        .folder-path {
-          font-weight: bold;
-        }
-        .action-btn {
-          padding: 5px 10px;
-          margin-left: 10px;
-          cursor: pointer;
-        }
-        .folder-item, .post-item {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          padding: 10px;
-          border-bottom: 1px solid #eee;
-        }
-        .folder-name, .post-title {
-          cursor: pointer;
-          font-weight: bold;
-          color: #333;
-        }
-        .folder-name:hover {
-          color: #0066cc;
-        }
-        .post-actions button, .folder-actions button {
-          margin-left: 5px;
-          padding: 3px 8px;
-        }
-        .loading, .empty, .error {
-          padding: 20px;
-          text-align: center;
-          font-size: 18px;
-        }
-        .error {
-          color: #d32f2f;
-        }
-      `;
-      document.head.appendChild(styles);
-    }
-  }
-
   // Đăng ký hàm toàn cục
   window.loadFolderContents = loadFolderContents;
+  window.loadCollection = loadCollection;
   window.editPost = editPost;
+  window.editEntry = editPost; // Alias cho collection
   window.deleteItem = deleteItem;
   window.viewPost = viewPost;
   window.createNewPost = createNewPost;
   window.addNewPost = addNewPost;
   window.addNewFolder = addNewFolder;
+  window.addNewEntry = addNewEntry;
+  window.showSettings = () => showNotification('Tính năng đang phát triển', 'warning');
 });
 
-// 11. CHỨC NĂNG XEM BÀI VIẾT
+// 23. CHỨC NĂNG XEM BÀI VIẾT
 function viewPost(path) {
   const slug = path.replace('content/', '').replace(/\.md$/i, '');
   const postUrl = `${window.location.origin}/${slug}`;
   window.open(postUrl, '_blank');
 }
 
-// 12. CHỨC NĂNG SỬA BÀI VIẾT
+// 24. CHỈNH SỬA BÀI VIẾT
 async function editPost(path, sha) {
   try {
     const fileData = await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(path)}`);
     const content = atob(fileData.content);
+    
+    // Kiểm tra xem có phải là collection entry (có frontmatter)
+    if (content.startsWith('---')) {
+      const frontMatterEnd = content.indexOf('---', 3);
+      const frontMatter = content.substring(3, frontMatterEnd).trim();
+      const body = content.substring(frontMatterEnd + 3).trim();
+      
+      // Parse frontmatter đơn giản
+      const fields = {};
+      frontMatter.split('\n').forEach(line => {
+        const [key, ...valueParts] = line.split(':');
+        if (key && valueParts.length > 0) {
+          fields[key.trim()] = valueParts.join(':').trim();
+        }
+      });
+      
+      // Tìm collection tương ứng
+      const collection = window.collectionsConfig?.find(c => path.startsWith(c.folder));
+      
+      if (collection) {
+        showEditCollectionModal(collection, path, sha, fields, body);
+        return;
+      }
+    }
+    
+    // Nếu không phải collection entry, hiển thị editor đơn giản
     showEditModal(path, content, sha);
   } catch (error) {
     console.error('Lỗi khi tải nội dung bài viết:', error);
-    alert(`Lỗi: ${error.message || 'Không thể tải nội dung bài viết'}`);
+    showNotification(`Lỗi: ${error.message || 'Không thể tải nội dung bài viết'}`, 'error');
   }
 }
 
-// 13. HIỂN THỊ MODAL CHỈNH SỬA
-function showEditModal(path, content, sha) {
-  const modal = document.getElementById('edit-modal') || document.createElement('div');
-  modal.id = 'edit-modal';
-  modal.className = 'modal';
-  document.body.appendChild(modal);
+// 25. HIỂN THỊ MODAL CHỈNH SỬA COLLECTION ENTRY
+function showEditCollectionModal(collection, path, sha, fields, body) {
+  let formHTML = '';
   
-  const filename = path.split('/').pop();
+  collection.fields.forEach(field => {
+    if (!field.name || !field.label) return;
+    if (field.name === 'body') return;
+    
+    const value = fields[field.name] || '';
+    
+    formHTML += `<div class="form-group">`;
+    
+    switch (field.widget) {
+      case 'datetime':
+        formHTML += `
+          <label for="field-${field.name}">${escapeHtml(field.label)}:</label>
+          <input type="date" id="field-${field.name}" class="form-control" value="${escapeHtml(value)}">
+        `;
+        break;
+        
+      case 'select':
+        formHTML += `
+          <label for="field-${field.name}">${escapeHtml(field.label)}:</label>
+          <select id="field-${field.name}" class="form-control">
+            ${(field.options || []).map(option => 
+              `<option value="${escapeHtml(option)}" ${option === value ? 'selected' : ''}>${escapeHtml(option)}</option>`
+            ).join('')}
+          </select>
+        `;
+        break;
+        
+      case 'text':
+      case 'string':
+        formHTML += `
+          <label for="field-${field.name}">${escapeHtml(field.label)}:</label>
+          <input type="text" id="field-${field.name}" class="form-control" value="${escapeHtml(value)}">
+        `;
+        break;
+        
+      case 'textarea':
+        formHTML += `
+          <label for="field-${field.name}">${escapeHtml(field.label)}:</label>
+          <textarea id="field-${field.name}" class="form-control" rows="4">${escapeHtml(value)}</textarea>
+        `;
+        break;
+        
+      default:
+        formHTML += `
+          <label for="field-${field.name}">${escapeHtml(field.label)}:</label>
+          <input type="text" id="field-${field.name}" class="form-control" value="${escapeHtml(value)}">
+        `;
+    }
+    
+    formHTML += `</div>`;
+  });
   
-  modal.innerHTML = `
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2>Chỉnh sửa bài viết</h2>
-        <span class="close-btn" onclick="document.getElementById('edit-modal').style.display='none'">&times;</span>
-      </div>
-      <div class="modal-body">
-        <div class="form-group">
-          <label for="edit-title">Tiêu đề:</label>
-          <input type="text" id="edit-title" value="${escapeHtml(filename.replace(/\.md$/i, ''))}" />
-        </div>
-        <div class="form-group">
-          <label for="edit-content">Nội dung:</label>
-          <textarea id="edit-content" rows="20">${escapeHtml(content)}</textarea>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button onclick="window.savePost('${escapeHtml(path)}', '${escapeHtml(sha)}')">Lưu</button>
-        <button onclick="document.getElementById('edit-modal').style.display='none'">Hủy</button>
-      </div>
+  // Thêm trường nội dung chính (body)
+  formHTML += `
+    <div class="form-group">
+      <label for="field-body">Nội dung:</label>
+      <textarea id="field-body" rows="15" class="form-control">${escapeHtml(body)}</textarea>
     </div>
   `;
   
-  modal.style.display = 'block';
+  showModal({
+    title: `Chỉnh sửa ${collection.label || collection.name}`,
+    confirmText: 'Lưu',
+    body: formHTML,
+    onConfirm: () => {
+      const title = document.getElementById('field-title')?.value.trim() || '';
+      if (!title) {
+        showNotification('Vui lòng nhập tiêu đề', 'warning');
+        return false;
+      }
+      
+      // Thu thập dữ liệu từ form
+      const frontMatter = {};
+      collection.fields.forEach(field => {
+        if (field.name === 'body') return;
+        const value = document.getElementById(`field-${field.name}`)?.value;
+        if (value !== undefined) {
+          frontMatter[field.name] = value;
+        }
+      });
+      
+      const newBody = document.getElementById('field-body')?.value || '';
+      
+      // Tạo nội dung file markdown với frontmatter
+      const content = `---
+${Object.entries(frontMatter).map(([key, value]) => `${key}: ${value}`).join('\n')}
+---
+
+${newBody}
+`;
+      
+      savePost(path, sha, content, `Cập nhật ${collection.label || collection.name}: ${title}`);
+      return true;
+    }
+  });
 }
 
-// 14. LƯU BÀI VIẾT
-async function savePost(path, sha) {
+// 26. HIỂN THỊ MODAL CHỈNH SỬA ĐƠN GIẢN
+function showEditModal(path, content, sha) {
+  const filename = path.split('/').pop();
+  
+  showModal({
+    title: 'Chỉnh sửa bài viết',
+    confirmText: 'Lưu',
+    body: `
+      <div class="form-group">
+        <label for="edit-title">Tiêu đề:</label>
+        <input type="text" id="edit-title" class="form-control" value="${escapeHtml(filename.replace(/\.md$/i, ''))}">
+      </div>
+      <div class="form-group">
+        <label for="edit-content">Nội dung:</label>
+        <textarea id="edit-content" rows="20" class="form-control">${escapeHtml(content)}</textarea>
+      </div>
+    `,
+    onConfirm: () => {
+      const title = document.getElementById('edit-title').value.trim();
+      const content = document.getElementById('edit-content').value;
+      
+      if (!title) {
+        showNotification('Vui lòng nhập tiêu đề bài viết', 'warning');
+        return false;
+      }
+      
+      const newFilename = formatFolderName(title) + '.md';
+      const newPath = path.split('/').slice(0, -1).join('/') + '/' + newFilename;
+      
+      savePost(newPath, sha, content, `Cập nhật bài viết: ${title}`, path !== newPath);
+      return true;
+    }
+  });
+}
+
+// 27. LƯU BÀI VIẾT
+async function savePost(path, sha, content, message, isRename = false) {
   try {
-    const titleInput = document.getElementById('edit-title');
-    const contentTextarea = document.getElementById('edit-content');
-    
-    if (!titleInput || !contentTextarea) {
-      throw new Error('Không tìm thấy form chỉnh sửa');
-    }
-    
-    const title = titleInput.value.trim();
-    const content = contentTextarea.value;
-    
-    if (!title) {
-      alert('Vui lòng nhập tiêu đề bài viết');
-      return;
-    }
-    
     const updateData = {
-      message: `Cập nhật bài viết: ${title}`,
+      message: message,
       content: btoa(unescape(encodeURIComponent(content))),
       sha: sha,
       branch: 'main'
     };
     
-    await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(path)}`, 'PUT', updateData);
+    let apiPath = path;
+    if (isRename) {
+      // Nếu đổi tên file, cần gọi API xóa file cũ và tạo file mới
+      const oldPath = path.split('/').slice(0, -1).join('/') + '/' + document.getElementById('edit-title').getAttribute('data-oldname');
+      await deleteItem(oldPath, sha, false, true);
+      apiPath = path;
+      delete updateData.sha; // Không cần sha khi tạo file mới
+    }
     
-    document.getElementById('edit-modal').style.display = 'none';
-    alert('Cập nhật bài viết thành công!');
-    const folderPath = path.substring(0, path.lastIndexOf('/'));
-    window.loadFolderContents(folderPath);
+    await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(apiPath)}`, isRename ? 'PUT' : 'PUT', updateData);
+    
+    showNotification('Lưu thành công!', 'success');
+    const folderPath = path.split('/').slice(0, -1).join('/');
+    
+    if (currentCollection) {
+      window.loadCollection(currentCollection.name, currentCollection.folder);
+    } else {
+      window.loadFolderContents(folderPath);
+    }
     
   } catch (error) {
     console.error('Lỗi khi lưu bài viết:', error);
-    alert(`Lỗi: ${error.message || 'Không thể lưu bài viết'}`);
+    showNotification(`Lỗi: ${error.message || 'Không thể lưu bài viết'}`, 'error');
   }
 }
 
-// 15. XÓA BÀI VIẾT HOẶC THƯ MỤC
-async function deleteItem(path, sha, isFolder) {
+// 28. XÓA BÀI VIẾT HOẶC THƯ MỤC
+async function deleteItem(path, sha, isFolder, silent = false) {
   const itemType = isFolder ? 'thư mục' : 'bài viết';
-  if (!confirm(`Bạn có chắc chắn muốn xóa ${itemType} này không?`)) return;
+  if (!silent && !confirm(`Bạn có chắc chắn muốn xóa ${itemType} này không?`)) return;
   
   try {
     if (isFolder) {
@@ -531,17 +1057,25 @@ async function deleteItem(path, sha, isFolder) {
       await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(path)}`, 'DELETE', deleteData);
     }
     
-    alert(`Xóa ${itemType} thành công!`);
+    if (!silent) {
+      showNotification(`Xóa ${itemType} thành công!`, 'success');
+    }
+    
     const parentFolder = path.split('/').slice(0, -1).join('/');
-    window.loadFolderContents(parentFolder || 'content');
+    
+    if (currentCollection) {
+      window.loadCollection(currentCollection.name, currentCollection.folder);
+    } else {
+      window.loadFolderContents(parentFolder || 'content');
+    }
     
   } catch (error) {
     console.error(`Lỗi khi xóa ${itemType}:`, error);
-    alert(`Lỗi: ${error.message || `Không thể xóa ${itemType}`}`);
+    showNotification(`Lỗi: ${error.message || `Không thể xóa ${itemType}`}`, 'error');
   }
 }
 
-// 16. XÓA THƯ MỤC ĐỆ QUY
+// 29. XÓA THƯ MỤC ĐỆ QUY
 async function deleteFolderRecursive(folderPath) {
   const items = await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(folderPath)}`);
   
@@ -560,80 +1094,60 @@ async function deleteFolderRecursive(folderPath) {
   }
 }
 
-// 17. TẠO BÀI VIẾT MỚI
-async function createNewPost(path, defaultContent = null) {
+// 30. TẠO BÀI VIẾT MỚI
+async function createNewPost(path, content) {
   try {
-    let title, content;
-    
-    if (defaultContent === null) {
-      const titleInput = document.getElementById('new-title');
-      const contentTextarea = document.getElementById('new-content');
-      
-      if (!titleInput || !contentTextarea) {
-        throw new Error('Không tìm thấy form tạo bài viết');
-      }
-      
-      title = titleInput.value.trim();
-      content = contentTextarea.value;
-      
-      if (!title) {
-        alert('Vui lòng nhập tiêu đề bài viết');
-        return;
-      }
-      
-      const filename = formatFolderName(title) + '.md';
-      path = `${path}/${filename}`;
-    } else {
-      title = path.split('/').slice(-2, -1)[0];
-      content = defaultContent;
-    }
-    
     const createData = {
-      message: `Tạo nội dung mới: ${title}`,
+      message: `Tạo nội dung mới: ${path.split('/').pop().replace(/\.md$/i, '')}`,
       content: btoa(unescape(encodeURIComponent(content))),
       branch: 'main'
     };
     
     await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(path)}`, 'PUT', createData);
     
-    const createModal = document.getElementById('create-modal');
-    if (createModal) {
-      createModal.style.display = 'none';
-    }
-    
+    showNotification('Tạo bài viết thành công!', 'success');
     const parentFolder = path.split('/').slice(0, -1).join('/');
-    if (defaultContent === null) {
-      alert('Tạo bài viết thành công!');
+    
+    if (currentCollection) {
+      window.loadCollection(currentCollection.name, currentCollection.folder);
+    } else {
+      window.loadFolderContents(parentFolder || 'content');
     }
-    window.loadFolderContents(parentFolder || 'content');
     
   } catch (error) {
     console.error('Lỗi khi tạo nội dung mới:', error);
-    alert(`Lỗi: ${error.message || 'Không thể tạo nội dung mới'}`);
+    showNotification(`Lỗi: ${error.message || 'Không thể tạo nội dung mới'}`, 'error');
   }
 }
 
-// Hàm hỗ trợ toàn cục
-function escapeHtml(str) {
-  if (!str) return '';
-  return str.toString()
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+// 31. THÊM THƯ MỤC MỚI
+function addNewFolder(parentPath) {
+  showModal({
+    title: 'Tạo thư mục mới',
+    confirmText: 'Tạo',
+    body: `
+      <div class="form-group">
+        <label for="folder-name">Tên thư mục:</label>
+        <input type="text" id="folder-name" placeholder="Nhập tên thư mục" class="form-control" />
+      </div>
+    `,
+    onConfirm: () => {
+      const folderName = document.getElementById('folder-name').value.trim();
+      if (!folderName) {
+        showNotification('Vui lòng nhập tên thư mục', 'warning');
+        return false;
+      }
+      
+      const formattedName = formatFolderName(folderName);
+      const path = `${parentPath}/${formattedName}/README.md`;
+      
+      createNewPost(path, `# ${folderName}\n\nThư mục này chứa nội dung về ${folderName}.`);
+      return true;
+    }
+  });
 }
 
-function formatFolderName(name) {
-  return name.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .replace(/đ/g, 'd')
-    .replace(/\s+/g, '-')
-    .replace(/[^a-z0-9-]/g, '')
-    .replace(/-+/g, '-');
-}
-
-// Hàm gọi API toàn cục
+// 32. HÀM GỌI API TOÀN CỤC
 async function callGitHubAPI(url, method = 'GET', body = null) {
   const user = window.netlifyIdentity?.currentUser();
   if (!user?.token?.access_token) {
@@ -667,4 +1181,24 @@ async function callGitHubAPI(url, method = 'GET', body = null) {
   }
 
   return response.json();
+}
+
+// Hàm hỗ trợ toàn cục
+function escapeHtml(str) {
+  if (!str) return '';
+  return str.toString()
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function formatFolderName(name) {
+  return name.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/đ/g, 'd')
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+    .replace(/-+/g, '-');
 }
