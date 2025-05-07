@@ -14,18 +14,56 @@ document.addEventListener('DOMContentLoaded', () => {
       enableOperator: true
     });
 
-    // 2. XỬ LÝ SỰ KIỆN ĐĂNG NHẬP
+    const loginBtn = document.getElementById('login-btn');
+
+    // 2. XỬ LÝ SỰ KIỆN CLICK NÚT ĐĂNG NHẬP/ĐĂNG XUẤT
+    loginBtn.addEventListener('click', () => {
+      const user = netlifyIdentity.currentUser();
+      if (user) {
+        netlifyIdentity.logout();
+      } else {
+        netlifyIdentity.open('login');
+      }
+    });
+
+    // 3. THEO DÕI SỰ KIỆN ĐĂNG NHẬP/ĐĂNG XUẤT
+    netlifyIdentity.on('login', (user) => {
+      netlifyIdentity.close();
+      handleAuthChange(user);
+    });
+
+    netlifyIdentity.on('logout', () => {
+      handleAuthChange(null);
+    });
+
+    // 4. HÀM CẬP NHẬT GIAO DIỆN KHI CÓ THAY ĐỔI ĐĂNG NHẬP
     const handleAuthChange = (user) => {
       const loginBtn = document.getElementById('login-btn');
       const dashboard = document.getElementById('dashboard');
       const sidebar = document.getElementById('sidebar');
-      
+
       if (user) {
         console.log('Đã đăng nhập:', user.email);
         loginBtn.innerHTML = `<i class="fas fa-sign-out-alt"></i> <span>Đăng xuất (${user.email.split('@')[0]})</span>`;
         loginBtn.style.backgroundColor = '#f44336';
         dashboard.style.display = 'block';
         sidebar.style.display = 'block';
+      } else {
+        console.log('Đã đăng xuất');
+        loginBtn.innerHTML = `<i class="fas fa-sign-in-alt"></i> <span>Đăng nhập</span>`;
+        loginBtn.style.backgroundColor = '#4CAF50';
+        dashboard.style.display = 'none';
+        sidebar.style.display = 'none';
+      }
+    };
+
+    // 5. KIỂM TRA NGƯỜI DÙNG ĐANG ĐĂNG NHẬP
+    const currentUser = netlifyIdentity.currentUser();
+    if (currentUser) {
+      handleAuthChange(currentUser);
+    }
+  }
+});
         
         // Tải cấu hình CMS khi đăng nhập thành công
         loadCMSConfig().then(() => {
