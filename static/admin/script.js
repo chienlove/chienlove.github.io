@@ -30,6 +30,10 @@ document.addEventListener('DOMContentLoaded', () => {
     netlifyIdentity.on('login', (user) => {
       netlifyIdentity.close();
       handleAuthChange(user);
+      loadCMSConfig().then(() => {
+        updateSidebar();
+        loadFolderContents(currentFolder);
+      });
     });
 
     netlifyIdentity.on('logout', () => {
@@ -54,6 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loginBtn.style.backgroundColor = '#4CAF50';
         dashboard.style.display = 'none';
         sidebar.style.display = 'none';
+        allPosts = [];
       }
     };
 
@@ -61,9 +66,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const currentUser = netlifyIdentity.currentUser();
     if (currentUser) {
       handleAuthChange(currentUser);
+      loadCMSConfig().then(() => {
+        updateSidebar();
+        loadFolderContents(currentFolder);
+      });
     }
   }
-});
         
         // Tải cấu hình CMS khi đăng nhập thành công
         loadCMSConfig().then(() => {
