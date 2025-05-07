@@ -862,10 +862,10 @@ function parseFrontMatter(frontMatter) {
       const key = line.substring(0, firstColon).trim();
       let value = line.substring(firstColon + 1).trim();
       
-      // Xử lý giá trị string được bao bởi dấu ngoặc kép
-      if ((value.startsWith('"') && value.endsWith('"')) {
+      // Sửa lỗi cú pháp - bỏ dấu ngoặc thừa
+      if (value.startsWith('"') && value.endsWith('"')) {
         value = value.substring(1, value.length - 1);
-      } else if ((value.startsWith("'") && value.endsWith("'"))) {
+      } else if (value.startsWith("'") && value.endsWith("'")) {
         value = value.substring(1, value.length - 1);
       }
       
