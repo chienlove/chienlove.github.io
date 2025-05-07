@@ -565,104 +565,118 @@ document.addEventListener('DOMContentLoaded', () => {
   const fields = collection.fields || [];
   let formHTML = '';
   
-  // Tạo form với hỗ trợ Unicode
+  // Đảm bảo hiển thị tất cả các trường
   fields.forEach(field => {
     if (!field.name || !field.label) return;
     if (field.name === 'body') return;
     
-    formHTML += `<div class="form-group">`;
-    formHTML += `<label for="field-${field.name}">${escapeHtml(field.label)}${field.required ? '<span class="required">*</span>' : ''}</label>`;
-    
+    // Fix lỗi Unicode trong label
+    const fieldLabel = decodeURIComponent(escape(field.label || field.name));
     const fieldValue = field.default || '';
+    let decodedValue;
+    try {
+      decodedValue = decodeURIComponent(escape(fieldValue));
+    } catch (e) {
+      decodedValue = fieldValue;
+    }
+    
+    formHTML += `<div class="form-group">`;
+    formHTML += `<label for="field-${field.name}">${escapeHtml(fieldLabel)}${field.required ? '<span class="required">*</span>' : ''}</label>`;
     
     switch (field.widget) {
       case 'datetime':
-        formHTML += `<input type="datetime-local" id="field-${field.name}" class="form-control" value="${escapeHtml(fieldValue)}">`;
+        formHTML += `<input type="datetime-local" id="field-${field.name}" class="form-control" value="${escapeHtml(decodedValue)}">`;
         break;
       case 'date':
-        formHTML += `<input type="date" id="field-${field.name}" class="form-control" value="${escapeHtml(fieldValue)}">`;
+        formHTML += `<input type="date" id="field-${field.name}" class="form-control" value="${escapeHtml(decodedValue)}">`;
         break;
       case 'select':
         formHTML += `
           <select id="field-${field.name}" class="form-control">
-            ${(field.options || []).map(option => 
-              `<option value="${escapeHtml(option)}">${escapeHtml(option)}</option>`
-            ).join('')}
+            ${(field.options || []).map(option => {
+              let decodedOption;
+              try {
+                decodedOption = decodeURIComponent(escape(option));
+              } catch (e) {
+                decodedOption = option;
+              }
+              return `<option value="${escapeHtml(option)}" ${option === fieldValue ? 'selected' : ''}>${escapeHtml(decodedOption)}</option>`;
+            }).join('')}
           </select>
         `;
         break;
       case 'textarea':
-        formHTML += `<textarea id="field-${field.name}" class="form-control" rows="4">${escapeHtml(fieldValue)}</textarea>`;
+        formHTML += `<textarea id="field-${field.name}" class="form-control" rows="4">${escapeHtml(decodedValue)}</textarea>`;
         break;
       case 'boolean':
         formHTML += `
           <div class="checkbox-wrapper">
             <input type="checkbox" id="field-${field.name}" ${fieldValue === 'true' ? 'checked' : ''}>
-            <label for="field-${field.name}">${escapeHtml(field.label)}</label>
+            <label for="field-${field.name}">${escapeHtml(fieldLabel)}</label>
           </div>
         `;
         break;
       default:
-        formHTML += `<input type="text" id="field-${field.name}" class="form-control" value="${escapeHtml(fieldValue)}">`;
+        formHTML += `<input type="text" id="field-${field.name}" class="form-control" value="${escapeHtml(decodedValue)}">`;
     }
     
     formHTML += `</div>`;
   });
-    
-    // Thêm trường nội dung chính (body)
-    formHTML += `
-      <div class="form-group">
-        <label for="field-body">Nội dung:</label>
-        <textarea id="field-body" rows="15" class="form-control" placeholder="Nội dung chính (Markdown)"></textarea>
-      </div>
-    `;
-    
-    showModal({
-      title: `Thêm mới ${collection.label || collection.name}`,
-      confirmText: 'Tạo',
-      body: formHTML,
-      onConfirm: () => {
-        const title = document.getElementById('field-title')?.value.trim() || '';
-        if (!title) {
-          showNotification('Vui lòng nhập tiêu đề', 'warning');
-          return false;
+  
+  // Thêm trường nội dung chính (body)
+  formHTML += `
+    <div class="form-group">
+      <label for="field-body">Nội dung:</label>
+      <textarea id="field-body" rows="15" class="form-control" placeholder="Nội dung chính (Markdown)"></textarea>
+    </div>
+  `;
+  
+  showModal({
+    title: `Thêm mới ${decodeURIComponent(escape(collection.label || collection.name))}`,
+    confirmText: 'Tạo',
+    body: formHTML,
+    onConfirm: () => {
+      const title = document.getElementById('field-title')?.value.trim() || '';
+      if (!title) {
+        showNotification('Vui lòng nhập tiêu đề', 'warning');
+        return false;
+      }
+      
+      // Thu thập dữ liệu từ form
+      const frontMatter = {};
+      collection.fields.forEach(field => {
+        if (field.name === 'body') return;
+        
+        let value;
+        if (field.widget === 'boolean') {
+          value = document.getElementById(`field-${field.name}`)?.checked ? 'true' : 'false';
+        } else {
+          value = document.getElementById(`field-${field.name}`)?.value;
         }
         
-        const filename = formatFolderName(title) + '.md';
-        const path = `${collection.folder}/${filename}`;
-        
-        // Thu thập dữ liệu từ form
-        const frontMatter = {};
-        fields.forEach(field => {
-          if (field.name === 'body') return;
-          
-          let value;
-          if (field.widget === 'boolean') {
-            value = document.getElementById(`field-${field.name}`)?.checked ? 'true' : 'false';
-          } else {
-            value = document.getElementById(`field-${field.name}`)?.value;
-          }
-          
-          if (value !== undefined && value !== null) {
-            frontMatter[field.name] = value;
-          }
-        });
-        
-        const body = document.getElementById('field-body')?.value || '';
-        
-        // Tạo nội dung file markdown với frontmatter
-        const content = `---
-${Object.entries(frontMatter).map(([key, value]) => `${key}: ${value}`).join('\n')}
+        if (value !== undefined && value !== null) {
+          frontMatter[field.name] = value;
+        }
+      });
+      
+      const body = document.getElementById('field-body')?.value || '';
+      
+      // Tạo nội dung file markdown với frontmatter
+      const content = `---
+${Object.entries(frontMatter).map(([key, val]) => `${key}: ${val}`).join('\n')}
 ---
 
 ${body}
 `;
-        
-        createNewPost(path, content);
-        return true;
-      }
-    });
-  }
+      
+      const filename = formatFolderName(title) + '.md';
+      const path = `${collection.folder}/${filename}`;
+      
+      createNewPost(path, content);
+      return true;
+    }
+  });
+}
 
   // 16. HIỂN THỊ MODAL
   function showModal({ title, body, confirmText = 'Lưu', onConfirm }) {
@@ -798,7 +812,14 @@ function viewPost(path) {
 async function editPost(path, sha) {
   try {
     const fileData = await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(path)}`);
-    const content = decodeURIComponent(escape(atob(fileData.content)));
+    
+    // Fix lỗi Unicode và ReferenceError
+    let content;
+    try {
+      content = decodeURIComponent(escape(atob(fileData.content)));
+    } catch (e) {
+      content = atob(fileData.content); // Fallback nếu decode không thành công
+    }
     
     // Kiểm tra xem có phải là collection entry (có frontmatter)
     if (content.startsWith('---')) {
@@ -811,7 +832,14 @@ async function editPost(path, sha) {
       frontMatter.split('\n').forEach(line => {
         const [key, ...valueParts] = line.split(':');
         if (key && valueParts.length > 0) {
-          fields[key.trim()] = valueParts.join(':').trim();
+          // Fix lỗi Unicode trong giá trị
+          let value = valueParts.join(':').trim();
+          try {
+            value = decodeURIComponent(escape(value));
+          } catch (e) {
+            console.log('Không thể decode Unicode:', value);
+          }
+          fields[key.trim()] = value;
         }
       });
       
@@ -836,64 +864,81 @@ async function editPost(path, sha) {
 function showEditCollectionModal(collection, path, sha, fields, body) {
   let formHTML = '';
   
+  // Đảm bảo hiển thị tất cả các trường được định nghĩa trong collection
   collection.fields.forEach(field => {
     if (!field.name || !field.label) return;
     if (field.name === 'body') return;
     
+    // Fix lỗi Unicode trong label và giá trị
+    const fieldLabel = decodeURIComponent(escape(field.label || field.name));
     const value = fields[field.name] || '';
+    let decodedValue;
+    try {
+      decodedValue = decodeURIComponent(escape(value));
+    } catch (e) {
+      decodedValue = value;
+    }
     
     formHTML += `<div class="form-group">`;
-    formHTML += `<label for="field-${field.name}">${escapeHtml(field.label)}${field.required ? '<span class="required">*</span>' : ''}</label>`;
+    formHTML += `<label for="field-${field.name}">${escapeHtml(fieldLabel)}${field.required ? '<span class="required">*</span>' : ''}</label>`;
     
     switch (field.widget) {
       case 'datetime':
-        formHTML += `<input type="datetime-local" id="field-${field.name}" class="form-control" value="${escapeHtml(value)}">`;
+        formHTML += `<input type="datetime-local" id="field-${field.name}" class="form-control" value="${escapeHtml(decodedValue)}">`;
         break;
-        
       case 'date':
-        formHTML += `<input type="date" id="field-${field.name}" class="form-control" value="${escapeHtml(value)}">`;
+        formHTML += `<input type="date" id="field-${field.name}" class="form-control" value="${escapeHtml(decodedValue)}">`;
         break;
-        
       case 'select':
         formHTML += `
           <select id="field-${field.name}" class="form-control">
-            ${(field.options || []).map(option => 
-              `<option value="${escapeHtml(option)}" ${option === value ? 'selected' : ''}>${escapeHtml(option)}</option>`
-            ).join('')}
+            ${(field.options || []).map(option => {
+              let decodedOption;
+              try {
+                decodedOption = decodeURIComponent(escape(option));
+              } catch (e) {
+                decodedOption = option;
+              }
+              return `<option value="${escapeHtml(option)}" ${option === value ? 'selected' : ''}>${escapeHtml(decodedOption)}</option>`;
+            }).join('')}
           </select>
         `;
         break;
-        
       case 'textarea':
-        formHTML += `<textarea id="field-${field.name}" class="form-control" rows="4">${escapeHtml(value)}</textarea>`;
+        formHTML += `<textarea id="field-${field.name}" class="form-control" rows="4">${escapeHtml(decodedValue)}</textarea>`;
         break;
-        
       case 'boolean':
         formHTML += `
           <div class="checkbox-wrapper">
             <input type="checkbox" id="field-${field.name}" ${value === 'true' ? 'checked' : ''}>
-            <label for="field-${field.name}">${escapeHtml(field.label)}</label>
+            <label for="field-${field.name}">${escapeHtml(fieldLabel)}</label>
           </div>
         `;
         break;
-        
       default:
-        formHTML += `<input type="text" id="field-${field.name}" class="form-control" value="${escapeHtml(value)}">`;
+        formHTML += `<input type="text" id="field-${field.name}" class="form-control" value="${escapeHtml(decodedValue)}">`;
     }
     
     formHTML += `</div>`;
   });
   
-  // Thêm trường nội dung chính (body)
+  // Thêm trường nội dung chính (body) với xử lý Unicode
+  let decodedBody;
+  try {
+    decodedBody = decodeURIComponent(escape(body));
+  } catch (e) {
+    decodedBody = body;
+  }
+  
   formHTML += `
     <div class="form-group">
       <label for="field-body">Nội dung:</label>
-      <textarea id="field-body" rows="15" class="form-control">${escapeHtml(body)}</textarea>
+      <textarea id="field-body" rows="15" class="form-control">${escapeHtml(decodedBody)}</textarea>
     </div>
   `;
   
   showModal({
-    title: `Chỉnh sửa ${collection.label || collection.name}`,
+    title: `Chỉnh sửa ${decodeURIComponent(escape(collection.label || collection.name))}`,
     confirmText: 'Lưu',
     body: formHTML,
     onConfirm: () => {
