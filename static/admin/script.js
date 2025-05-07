@@ -825,14 +825,16 @@ ${body}
 // 23. CHỨC NĂNG XEM BÀI VIẾT
 function viewPost(path) {
   const slug = path.replace(/^content\//, '').replace(/\.md$/i, '');
-  const postUrl = `${window.location.origin}/${slug}`;
+  const baseURL = window.location.origin;
+  const postUrl = `${baseURL}/${slug}`;
   window.open(postUrl, '_blank');
 }
 
 // 24. CHỈNH SỬA BÀI VIẾT
 async function editPost(path, sha) {
   try {
-    const fileData = await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(path)}`);
+    const encodedPath = encodeURIComponent(path);
+    const fileData = await callGitHubAPI(`/.netlify/git/github/contents/${encodedPath}`);
     const content = atob(fileData.content);
     
     // Kiểm tra xem có phải là collection entry (có frontmatter)
