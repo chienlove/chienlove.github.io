@@ -811,96 +811,78 @@ function viewPost(path) {
 // 24. CHỈNH SỬA BÀI VIẾT (ĐÃ SỬA)
 async function editPost(path, sha) {
   try {
+    // 1. Lấy dữ liệu file từ GitHub
     const fileData = await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(path)}`);
     
-    // Fix lỗi ReferenceError khi decode content
+    // 2. Xử lý nội dung an toàn
     let content;
     try {
-      content = decodeURIComponent(escape(atob(fileData.content)));
+      // Giải mã base64 và xử lý Unicode
+      const base64Content = atob(fileData.content.replace(/\s/g, ''));
+      content = decodeURIComponent(escape(base64Content));
     } catch (e) {
-      console.error('Lỗi khi decode content:', e);
-      content = atob(fileData.content); // Fallback nếu không decode được
+      console.error('Lỗi decode content:', e);
+      // Fallback nếu không decode được
+      content = atob(fileData.content);
     }
-    
-    // Kiểm tra xem có phải là collection entry (có frontmatter)
+
+    // 3. Kiểm tra frontmatter
     if (content.startsWith('---')) {
       const frontMatterEnd = content.indexOf('---', 3);
+      if (frontMatterEnd === -1) {
+        throw new Error('Không tìm thấy kết thúc frontmatter');
+      }
+      
       const frontMatter = content.substring(3, frontMatterEnd).trim();
       const body = content.substring(frontMatterEnd + 3).trim();
       
-      // Parse frontmatter thành object
-      const fields = parseFrontMatter(frontMatter);
+      // 4. Parse frontmatter an toàn
+      const fields = {};
+      const lines = frontMatter.split('\n');
+      for (const line of lines) {
+        if (!line.trim()) continue;
+        
+        const separatorIndex = line.indexOf(':');
+        if (separatorIndex > 0) {
+          const key = line.substring(0, separatorIndex).trim();
+          let value = line.substring(separatorIndex + 1).trim();
+          
+          // Xử lý giá trị được quoted
+          if ((value.startsWith('"') && value.endsWith('"')) {
+            value = value.slice(1, -1);
+          } else if ((value.startsWith("'") && value.endsWith("'"))) {
+            value = value.slice(1, -1);
+          }
+          
+          // Thử parse JSON nếu có thể
+          try {
+            fields[key] = JSON.parse(value);
+          } catch {
+            fields[key] = value;
+          }
+        }
+      }
       
-      // Tìm collection tương ứng
+      // 5. Tìm collection tương ứng
       const collection = window.collectionsConfig?.find(c => path.startsWith(c.folder));
-      
       if (collection) {
         showEditCollectionModal(collection, path, sha, fields, body);
         return;
       }
     }
     
-    // Nếu không phải collection entry, hiển thị editor đơn giản
+    // 6. Nếu không phải collection, hiển thị editor đơn giản
     showEditModal(path, content, sha);
+    
   } catch (error) {
     console.error('Lỗi khi tải nội dung bài viết:', error);
     showNotification(`Lỗi: ${error.message || 'Không thể tải nội dung bài viết'}`, 'error');
-  }
-}
-
-// Hàm parse frontmatter thành object
-function parseFrontMatter(frontMatter) {
-  const result = {};
-  const lines = frontMatter.split('\n');
-  
-  let currentKey = null;
-  let multilineValue = '';
-  let isMultiline = false;
-  
-  for (const line of lines) {
-    if (!line.trim()) continue;
     
-    // Kiểm tra xem đây là dòng tiếp theo của giá trị nhiều dòng không
-    if (isMultiline) {
-      // Kiểm tra kết thúc giá trị nhiều dòng
-      if (line.trim() === '"""' || line.trim() === "'''") {
-        result[currentKey] = multilineValue;
-        isMultiline = false;
-        currentKey = null;
-        multilineValue = '';
-        continue;
-      }
-      multilineValue += line + '\n';
-      continue;
-    }
-    
-    // Xử lý cả trường hợp giá trị có dấu hai chấm trong value
-    const firstColon = line.indexOf(':');
-    if (firstColon > 0) {
-      const key = line.substring(0, firstColon).trim();
-      let value = line.substring(firstColon + 1).trim();
-      
-      // Xử lý giá trị nhiều dòng
-      if (value === '"""' || value === "'''") {
-        isMultiline = true;
-        currentKey = key;
-        multilineValue = '';
-        continue;
-      }
-      
-      // Xử lý giá trị chuỗi thông thường - đã sửa lỗi cú pháp dấu ngoặc thừa
-      if (value.startsWith('"') && value.endsWith('"')) {
-        value = value.substring(1, value.length - 1);
-      } else if (value.startsWith("'") && value.endsWith("'")) {
-        value = value.substring(1, value.length - 1);
-      }
-      
-      // Không cần decode Unicode để tránh lỗi
-      result[key] = value;
+    // Hiển thị thông tin lỗi chi tiết trong console
+    if (error.response) {
+      console.error('Response error:', await error.response.text());
     }
   }
-  
-  return result;
 }
 
 // 25. HIỂN THỊ MODAL CHỈNH SỬA COLLECTION ENTRY (ĐÃ SỬA)
