@@ -83,7 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // 5. PHÂN TÍCH YAML
+  // 5. PHÂN TÍCH YAML (ĐÃ SỬA)
   function parseYAML(yamlString) {
     const result = { collections: [] };
     const lines = yamlString.split('\n');
@@ -148,7 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!sidebarMenu || !collectionsConfig) return;
     
     let menuHTML = `
-      <li class="menu-item" data-folder="content">
+      <li class="menu-item active" data-folder="content">
         <a href="#" onclick="window.loadFolderContents('content'); return false;">
           <i class="fas fa-home"></i>
           <span>Trang chủ</span>
@@ -178,15 +178,6 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
     
     sidebarMenu.innerHTML = menuHTML;
-    
-    // Đánh dấu menu active
-    const menuItems = sidebarMenu.querySelectorAll('.menu-item');
-    menuItems.forEach(item => {
-      item.addEventListener('click', function() {
-        menuItems.forEach(i => i.classList.remove('active'));
-        this.classList.add('active');
-      });
-    });
   }
 
   // 7. HÀM GỌI API AN TOÀN
@@ -272,7 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // 9. TẢI NỘI DUNG THƯ MỤC
+  // 9. TẢI NỘI DUNG THƯ MỤC (ĐÃ SỬA ĐỂ HIỂN THỊ TẤT CẢ THƯ MỤC CON)
   async function loadFolderContents(path) {
     if (isProcessing) return;
     isProcessing = true;
@@ -285,7 +276,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const createBtn = document.getElementById('create-post');
     
     if (contentHeader) {
-      contentHeader.innerHTML = `<i class="fas fa-folder-open"></i> Thư mục`;
+      contentHeader.innerHTML = `<i class="fas fa-folder-open"></i> ${escapeHtml(path)}`;
     }
     
     if (createBtn) {
@@ -413,7 +404,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <span class="post-date">Cập nhật: ${formatDate(new Date(file.sha))}</span>
               </div>
               <div class="post-card-actions">
-                <button class="btn btn-sm btn-edit" onclick="window.editEntry('${escapeHtml(collection.name)}', '${escapeHtml(file.path)}', '${escapeHtml(file.sha)}')">
+                <button class="btn btn-sm btn-edit" onclick="window.editPost('${escapeHtml(file.path)}', '${escapeHtml(file.sha)}')">
                   <i class="fas fa-edit"></i> Sửa
                 </button>
                 <button class="btn btn-sm btn-view" onclick="window.viewPost('${escapeHtml(file.path)}')">
@@ -448,7 +439,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // 13. HIỂN THỊ NỘI DUNG THƯ MỤC
+  // 13. HIỂN THỊ NỘI DUNG THƯ MỤC (ĐÃ SỬA ĐỂ HIỂN THỊ TẤT CẢ NỘI DUNG)
   function renderFolderContents(items, currentPath) {
     const postsList = document.getElementById('posts-list');
     
@@ -575,7 +566,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 15. THÊM ENTRY MỚI CHO COLLECTION
+  // 15. THÊM ENTRY MỚI CHO COLLECTION (ĐÃ SỬA ĐỂ HIỂN THỊ ĐẦY ĐỦ TRƯỜNG)
   function addNewEntry(collectionName) {
     const collection = collectionsConfig.find(c => c.name === collectionName);
     if (!collection) {
@@ -605,46 +596,42 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       
       formHTML += `<div class="form-group">`;
+      formHTML += `<label for="field-${field.name}">${escapeHtml(field.label)}${field.required ? '<span class="required">*</span>' : ''}</label>`;
       
       switch (field.widget) {
         case 'datetime':
-          formHTML += `
-            <label for="field-${field.name}">${escapeHtml(field.label)}:</label>
-            <input type="date" id="field-${field.name}" class="form-control" value="${defaultFrontMatter[field.name] || ''}">
-          `;
+          formHTML += `<input type="datetime-local" id="field-${field.name}" class="form-control" value="${defaultFrontMatter[field.name] || ''}">`;
+          break;
+          
+        case 'date':
+          formHTML += `<input type="date" id="field-${field.name}" class="form-control" value="${defaultFrontMatter[field.name] || ''}">`;
           break;
           
         case 'select':
           formHTML += `
-            <label for="field-${field.name}">${escapeHtml(field.label)}:</label>
             <select id="field-${field.name}" class="form-control">
               ${(field.options || []).map(option => 
-                `<option value="${escapeHtml(option)}">${escapeHtml(option)}</option>`
+                `<option value="${escapeHtml(option)}" ${option === defaultFrontMatter[field.name] ? 'selected' : ''}>${escapeHtml(option)}</option>`
               ).join('')}
             </select>
           `;
           break;
           
-        case 'text':
-        case 'string':
-          formHTML += `
-            <label for="field-${field.name}">${escapeHtml(field.label)}:</label>
-            <input type="text" id="field-${field.name}" class="form-control" value="${defaultFrontMatter[field.name] || ''}">
-          `;
+        case 'textarea':
+          formHTML += `<textarea id="field-${field.name}" class="form-control" rows="4">${defaultFrontMatter[field.name] || ''}</textarea>`;
           break;
           
-        case 'textarea':
+        case 'boolean':
           formHTML += `
-            <label for="field-${field.name}">${escapeHtml(field.label)}:</label>
-            <textarea id="field-${field.name}" class="form-control" rows="4">${defaultFrontMatter[field.name] || ''}</textarea>
+            <div class="checkbox-wrapper">
+              <input type="checkbox" id="field-${field.name}" ${defaultFrontMatter[field.name] === 'true' ? 'checked' : ''}>
+              <label for="field-${field.name}">${escapeHtml(field.label)}</label>
+            </div>
           `;
           break;
           
         default:
-          formHTML += `
-            <label for="field-${field.name}">${escapeHtml(field.label)}:</label>
-            <input type="text" id="field-${field.name}" class="form-control" value="${defaultFrontMatter[field.name] || ''}">
-          `;
+          formHTML += `<input type="text" id="field-${field.name}" class="form-control" value="${defaultFrontMatter[field.name] || ''}">`;
       }
       
       formHTML += `</div>`;
@@ -676,8 +663,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const frontMatter = {};
         fields.forEach(field => {
           if (field.name === 'body') return;
-          const value = document.getElementById(`field-${field.name}`)?.value;
-          if (value !== undefined) {
+          
+          let value;
+          if (field.widget === 'boolean') {
+            value = document.getElementById(`field-${field.name}`)?.checked ? 'true' : 'false';
+          } else {
+            value = document.getElementById(`field-${field.name}`)?.value;
+          }
+          
+          if (value !== undefined && value !== null) {
             frontMatter[field.name] = value;
           }
         });
@@ -822,19 +816,19 @@ ${body}
   window.showSettings = () => showNotification('Tính năng đang phát triển', 'warning');
 });
 
-// 23. CHỨC NĂNG XEM BÀI VIẾT
+// 23. CHỨC NĂNG XEM BÀI VIẾT (ĐÃ SỬA ĐƯỜNG DẪN)
 function viewPost(path) {
+  // Lấy slug từ path (bỏ phần 'content/' và đuôi .md)
   const slug = path.replace(/^content\//, '').replace(/\.md$/i, '');
-  const baseURL = window.location.origin;
-  const postUrl = `${baseURL}/${slug}`;
+  // Tạo URL đúng theo config.toml (bỏ qua thư mục apps nếu có)
+  const postUrl = `${window.location.origin}/${slug}`;
   window.open(postUrl, '_blank');
 }
 
-// 24. CHỈNH SỬA BÀI VIẾT
+// 24. CHỈNH SỬA BÀI VIẾT (ĐÃ SỬA)
 async function editPost(path, sha) {
   try {
-    const encodedPath = encodeURIComponent(path);
-    const fileData = await callGitHubAPI(`/.netlify/git/github/contents/${encodedPath}`);
+    const fileData = await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(path)}`);
     const content = atob(fileData.content);
     
     // Kiểm tra xem có phải là collection entry (có frontmatter)
@@ -869,7 +863,7 @@ async function editPost(path, sha) {
   }
 }
 
-// 25. HIỂN THỊ MODAL CHỈNH SỬA COLLECTION ENTRY
+// 25. HIỂN THỊ MODAL CHỈNH SỬA COLLECTION ENTRY (ĐÃ SỬA)
 function showEditCollectionModal(collection, path, sha, fields, body) {
   let formHTML = '';
   
@@ -880,18 +874,19 @@ function showEditCollectionModal(collection, path, sha, fields, body) {
     const value = fields[field.name] || '';
     
     formHTML += `<div class="form-group">`;
+    formHTML += `<label for="field-${field.name}">${escapeHtml(field.label)}${field.required ? '<span class="required">*</span>' : ''}</label>`;
     
     switch (field.widget) {
       case 'datetime':
-        formHTML += `
-          <label for="field-${field.name}">${escapeHtml(field.label)}:</label>
-          <input type="date" id="field-${field.name}" class="form-control" value="${escapeHtml(value)}">
-        `;
+        formHTML += `<input type="datetime-local" id="field-${field.name}" class="form-control" value="${escapeHtml(value)}">`;
+        break;
+        
+      case 'date':
+        formHTML += `<input type="date" id="field-${field.name}" class="form-control" value="${escapeHtml(value)}">`;
         break;
         
       case 'select':
         formHTML += `
-          <label for="field-${field.name}">${escapeHtml(field.label)}:</label>
           <select id="field-${field.name}" class="form-control">
             ${(field.options || []).map(option => 
               `<option value="${escapeHtml(option)}" ${option === value ? 'selected' : ''}>${escapeHtml(option)}</option>`
@@ -900,26 +895,21 @@ function showEditCollectionModal(collection, path, sha, fields, body) {
         `;
         break;
         
-      case 'text':
-      case 'string':
-        formHTML += `
-          <label for="field-${field.name}">${escapeHtml(field.label)}:</label>
-          <input type="text" id="field-${field.name}" class="form-control" value="${escapeHtml(value)}">
-        `;
+      case 'textarea':
+        formHTML += `<textarea id="field-${field.name}" class="form-control" rows="4">${escapeHtml(value)}</textarea>`;
         break;
         
-      case 'textarea':
+      case 'boolean':
         formHTML += `
-          <label for="field-${field.name}">${escapeHtml(field.label)}:</label>
-          <textarea id="field-${field.name}" class="form-control" rows="4">${escapeHtml(value)}</textarea>
+          <div class="checkbox-wrapper">
+            <input type="checkbox" id="field-${field.name}" ${value === 'true' ? 'checked' : ''}>
+            <label for="field-${field.name}">${escapeHtml(field.label)}</label>
+          </div>
         `;
         break;
         
       default:
-        formHTML += `
-          <label for="field-${field.name}">${escapeHtml(field.label)}:</label>
-          <input type="text" id="field-${field.name}" class="form-control" value="${escapeHtml(value)}">
-        `;
+        formHTML += `<input type="text" id="field-${field.name}" class="form-control" value="${escapeHtml(value)}">`;
     }
     
     formHTML += `</div>`;
@@ -948,8 +938,15 @@ function showEditCollectionModal(collection, path, sha, fields, body) {
       const frontMatter = {};
       collection.fields.forEach(field => {
         if (field.name === 'body') return;
-        const value = document.getElementById(`field-${field.name}`)?.value;
-        if (value !== undefined) {
+        
+        let value;
+        if (field.widget === 'boolean') {
+          value = document.getElementById(`field-${field.name}`)?.checked ? 'true' : 'false';
+        } else {
+          value = document.getElementById(`field-${field.name}`)?.value;
+        }
+        
+        if (value !== undefined && value !== null) {
           frontMatter[field.name] = value;
         }
       });
@@ -958,7 +955,7 @@ function showEditCollectionModal(collection, path, sha, fields, body) {
       
       // Tạo nội dung file markdown với frontmatter
       const content = `---
-${Object.entries(frontMatter).map(([key, value]) => `${key}: ${value}`).join('\n')}
+${Object.entries(frontMatter).map(([key, val]) => `${key}: ${val}`).join('\n')}
 ---
 
 ${newBody}
@@ -980,7 +977,7 @@ function showEditModal(path, content, sha) {
     body: `
       <div class="form-group">
         <label for="edit-title">Tiêu đề:</label>
-        <input type="text" id="edit-title" class="form-control" value="${escapeHtml(filename.replace(/\.md$/i, ''))}">
+        <input type="text" id="edit-title" class="form-control" value="${escapeHtml(filename.replace(/\.md$/i, ''))}" data-oldname="${escapeHtml(filename)}">
       </div>
       <div class="form-group">
         <label for="edit-content">Nội dung:</label>
@@ -1032,7 +1029,7 @@ async function savePost(path, sha, content, message, isRename = false) {
     if (currentCollection) {
       window.loadCollection(currentCollection.name, currentCollection.folder);
     } else {
-      window.loadFolderContents(folderPath);
+      window.loadFolderContents(folderPath || 'content');
     }
     
   } catch (error) {
