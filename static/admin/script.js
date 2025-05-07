@@ -894,9 +894,8 @@ async function editPost(path, sha) {
           let value = line.substring(separatorIndex + 1).trim();
           
           // Xử lý giá trị được quoted
-          if ((value.startsWith('"') && value.endsWith('"')) {
-  value = value.slice(1, -1);
-} else if ((value.startsWith("'") && value.endsWith("'"))) {
+          if ((value.startsWith('"') && value.endsWith('"')) || 
+   (value.startsWith("'") && value.endsWith("'"))) {
   value = value.slice(1, -1);
 }
           
