@@ -813,12 +813,13 @@ async function editPost(path, sha) {
   try {
     const fileData = await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(path)}`);
     
-    // Fix lỗi Unicode và ReferenceError
+    // Fix lỗi ReferenceError khi decode content
     let content;
     try {
       content = decodeURIComponent(escape(atob(fileData.content)));
     } catch (e) {
-      content = atob(fileData.content); // Fallback nếu decode không thành công
+      console.error('Lỗi khi decode content:', e);
+      content = atob(fileData.content); // Fallback nếu không decode được
     }
     
     // Kiểm tra xem có phải là collection entry (có frontmatter)
@@ -827,21 +828,8 @@ async function editPost(path, sha) {
       const frontMatter = content.substring(3, frontMatterEnd).trim();
       const body = content.substring(frontMatterEnd + 3).trim();
       
-      // Parse frontmatter đơn giản
-      const fields = {};
-      frontMatter.split('\n').forEach(line => {
-        const [key, ...valueParts] = line.split(':');
-        if (key && valueParts.length > 0) {
-          // Fix lỗi Unicode trong giá trị
-          let value = valueParts.join(':').trim();
-          try {
-            value = decodeURIComponent(escape(value));
-          } catch (e) {
-            console.log('Không thể decode Unicode:', value);
-          }
-          fields[key.trim()] = value;
-        }
-      });
+      // Parse frontmatter thành object
+      const fields = parseFrontMatter(frontMatter);
       
       // Tìm collection tương ứng
       const collection = window.collectionsConfig?.find(c => path.startsWith(c.folder));
@@ -860,69 +848,159 @@ async function editPost(path, sha) {
   }
 }
 
+// Hàm parse frontmatter thành object
+function parseFrontMatter(frontMatter) {
+  const result = {};
+  const lines = frontMatter.split('\n');
+  
+  for (const line of lines) {
+    if (!line.trim()) continue;
+    
+    // Xử lý cả trường hợp giá trị có dấu hai chấm trong value
+    const firstColon = line.indexOf(':');
+    if (firstColon > 0) {
+      const key = line.substring(0, firstColon).trim();
+      let value = line.substring(firstColon + 1).trim();
+      
+      // Xử lý giá trị string được bao bởi dấu ngoặc kép
+      if ((value.startsWith('"') && value.endsWith('"')) {
+        value = value.substring(1, value.length - 1);
+      } else if ((value.startsWith("'") && value.endsWith("'"))) {
+        value = value.substring(1, value.length - 1);
+      }
+      
+      // Xử lý Unicode
+      try {
+        value = decodeURIComponent(escape(value));
+      } catch (e) {
+        console.log('Không thể decode Unicode:', value);
+      }
+      
+      result[key] = value;
+    }
+  }
+  
+  return result;
+}
+
 // 25. HIỂN THỊ MODAL CHỈNH SỬA COLLECTION ENTRY (ĐÃ SỬA)
 function showEditCollectionModal(collection, path, sha, fields, body) {
   let formHTML = '';
   
-  // Đảm bảo hiển thị tất cả các trường được định nghĩa trong collection
   collection.fields.forEach(field => {
     if (!field.name || !field.label) return;
+    
+    // Xử lý trường body riêng
     if (field.name === 'body') return;
     
-    // Fix lỗi Unicode trong label và giá trị
     const fieldLabel = decodeURIComponent(escape(field.label || field.name));
     const value = fields[field.name] || '';
-    let decodedValue;
-    try {
-      decodedValue = decodeURIComponent(escape(value));
-    } catch (e) {
-      decodedValue = value;
-    }
     
     formHTML += `<div class="form-group">`;
-    formHTML += `<label for="field-${field.name}">${escapeHtml(fieldLabel)}${field.required ? '<span class="required">*</span>' : ''}</label>`;
     
-    switch (field.widget) {
-      case 'datetime':
-        formHTML += `<input type="datetime-local" id="field-${field.name}" class="form-control" value="${escapeHtml(decodedValue)}">`;
-        break;
-      case 'date':
-        formHTML += `<input type="date" id="field-${field.name}" class="form-control" value="${escapeHtml(decodedValue)}">`;
-        break;
-      case 'select':
-        formHTML += `
-          <select id="field-${field.name}" class="form-control">
-            ${(field.options || []).map(option => {
-              let decodedOption;
-              try {
-                decodedOption = decodeURIComponent(escape(option));
-              } catch (e) {
-                decodedOption = option;
-              }
-              return `<option value="${escapeHtml(option)}" ${option === value ? 'selected' : ''}>${escapeHtml(decodedOption)}</option>`;
-            }).join('')}
-          </select>
-        `;
-        break;
-      case 'textarea':
-        formHTML += `<textarea id="field-${field.name}" class="form-control" rows="4">${escapeHtml(decodedValue)}</textarea>`;
-        break;
-      case 'boolean':
-        formHTML += `
-          <div class="checkbox-wrapper">
-            <input type="checkbox" id="field-${field.name}" ${value === 'true' ? 'checked' : ''}>
-            <label for="field-${field.name}">${escapeHtml(fieldLabel)}</label>
-          </div>
-        `;
-        break;
-      default:
-        formHTML += `<input type="text" id="field-${field.name}" class="form-control" value="${escapeHtml(decodedValue)}">`;
+    // Xử lý các loại widget đặc biệt
+    if (field.widget === 'object' && field.fields) {
+      formHTML += `<fieldset class="object-field">
+        <legend>${escapeHtml(fieldLabel)}</legend>`;
+      
+      try {
+        const objectValue = typeof value === 'string' ? JSON.parse(value) : value;
+        field.fields.forEach(subField => {
+          const subFieldLabel = decodeURIComponent(escape(subField.label || subField.name));
+          const subValue = objectValue?.[subField.name] || '';
+          
+          formHTML += `<div class="sub-field">
+            <label>${escapeHtml(subFieldLabel)}</label>
+            <input type="text" 
+                   class="form-control" 
+                   name="${field.name}.${subField.name}" 
+                   value="${escapeHtml(subValue)}"
+                   placeholder="${escapeHtml(subField.hint || '')}">
+          </div>`;
+        });
+      } catch (e) {
+        console.error('Lỗi khi parse object value:', e);
+      }
+      
+      formHTML += `</fieldset>`;
+    } 
+    else if (field.widget === 'list' && field.fields) {
+      formHTML += `<fieldset class="list-field">
+        <legend>${escapeHtml(fieldLabel)}</legend>
+        <div class="list-items" id="list-${field.name}">`;
+      
+      try {
+        const listValue = Array.isArray(value) ? value : (value ? [value] : [{}]);
+        
+        listValue.forEach((item, index) => {
+          formHTML += `<div class="list-item">
+            <button class="btn btn-sm btn-remove-item" type="button" onclick="removeListItem(this)">×</button>`;
+          
+          field.fields.forEach(subField => {
+            const subFieldLabel = decodeURIComponent(escape(subField.label || subField.name));
+            const subValue = item?.[subField.name] || '';
+            
+            formHTML += `<div class="sub-field">
+              <label>${escapeHtml(subFieldLabel)}</label>
+              <input type="text" 
+                     class="form-control" 
+                     name="${field.name}[${index}].${subField.name}" 
+                     value="${escapeHtml(subValue)}">
+            </div>`;
+          });
+          
+          formHTML += `</div>`;
+        });
+      } catch (e) {
+        console.error('Lỗi khi parse list value:', e);
+      }
+      
+      formHTML += `</div>
+        <button type="button" class="btn btn-sm btn-add-item" onclick="addListItem('${field.name}', ${JSON.stringify(field.fields)})">
+          + Thêm mục
+        </button>
+      </fieldset>`;
+    }
+    else {
+      // Xử lý các widget thông thường
+      formHTML += `<label for="field-${field.name}">${escapeHtml(fieldLabel)}${field.required ? '<span class="required">*</span>' : ''}</label>`;
+      
+      switch (field.widget) {
+        case 'datetime':
+          formHTML += `<input type="datetime-local" id="field-${field.name}" class="form-control" value="${escapeHtml(value)}">`;
+          break;
+        case 'date':
+          formHTML += `<input type="date" id="field-${field.name}" class="form-control" value="${escapeHtml(value)}">`;
+          break;
+        case 'select':
+          formHTML += `
+            <select id="field-${field.name}" class="form-control">
+              ${(field.options || []).map(option => 
+                `<option value="${escapeHtml(option)}" ${option === value ? 'selected' : ''}>${escapeHtml(option)}</option>`
+              ).join('')}
+            </select>
+          `;
+          break;
+        case 'textarea':
+          formHTML += `<textarea id="field-${field.name}" class="form-control" rows="4">${escapeHtml(value)}</textarea>`;
+          break;
+        case 'boolean':
+          formHTML += `
+            <div class="checkbox-wrapper">
+              <input type="checkbox" id="field-${field.name}" ${value === 'true' ? 'checked' : ''}>
+              <label for="field-${field.name}">${escapeHtml(fieldLabel)}</label>
+            </div>
+          `;
+          break;
+        default:
+          formHTML += `<input type="text" id="field-${field.name}" class="form-control" value="${escapeHtml(value)}">`;
+      }
     }
     
     formHTML += `</div>`;
   });
   
-  // Thêm trường nội dung chính (body) với xử lý Unicode
+  // Thêm trường nội dung chính (body)
   let decodedBody;
   try {
     decodedBody = decodeURIComponent(escape(body));
@@ -953,15 +1031,44 @@ function showEditCollectionModal(collection, path, sha, fields, body) {
       collection.fields.forEach(field => {
         if (field.name === 'body') return;
         
-        let value;
-        if (field.widget === 'boolean') {
-          value = document.getElementById(`field-${field.name}`)?.checked ? 'true' : 'false';
-        } else {
-          value = document.getElementById(`field-${field.name}`)?.value;
+        if (field.widget === 'object' && field.fields) {
+          const objectValue = {};
+          field.fields.forEach(subField => {
+            const input = document.querySelector(`[name="${field.name}.${subField.name}"]`);
+            if (input) {
+              objectValue[subField.name] = input.value;
+            }
+          });
+          frontMatter[field.name] = objectValue;
         }
-        
-        if (value !== undefined && value !== null) {
-          frontMatter[field.name] = value;
+        else if (field.widget === 'list' && field.fields) {
+          const listItems = [];
+          const itemElements = document.querySelectorAll(`#list-${field.name} .list-item`);
+          
+          itemElements.forEach(itemEl => {
+            const itemValue = {};
+            field.fields.forEach(subField => {
+              const input = itemEl.querySelector(`[name^="${field.name}"][name$="${subField.name}"]`);
+              if (input) {
+                itemValue[subField.name] = input.value;
+              }
+            });
+            listItems.push(itemValue);
+          });
+          
+          frontMatter[field.name] = listItems;
+        }
+        else {
+          let value;
+          if (field.widget === 'boolean') {
+            value = document.getElementById(`field-${field.name}`)?.checked ? 'true' : 'false';
+          } else {
+            value = document.getElementById(`field-${field.name}`)?.value;
+          }
+          
+          if (value !== undefined && value !== null) {
+            frontMatter[field.name] = value;
+          }
         }
       });
       
@@ -969,7 +1076,12 @@ function showEditCollectionModal(collection, path, sha, fields, body) {
       
       // Tạo nội dung file markdown với frontmatter
       const content = `---
-${Object.entries(frontMatter).map(([key, val]) => `${key}: ${val}`).join('\n')}
+${Object.entries(frontMatter).map(([key, val]) => {
+  if (typeof val === 'object') {
+    return `${key}: ${JSON.stringify(val)}`;
+  }
+  return `${key}: ${val}`;
+}).join('\n')}
 ---
 
 ${newBody}
@@ -980,6 +1092,51 @@ ${newBody}
     }
   });
 }
+
+// Hàm thêm mục vào list field
+function addListItem(fieldName, fields) {
+  const listContainer = document.getElementById(`list-${fieldName}`);
+  if (!listContainer) return;
+  
+  const index = listContainer.children.length;
+  let itemHTML = `<div class="list-item">
+    <button class="btn btn-sm btn-remove-item" type="button" onclick="removeListItem(this)">×</button>`;
+  
+  fields.forEach(subField => {
+    const subFieldLabel = decodeURIComponent(escape(subField.label || subField.name));
+    itemHTML += `<div class="sub-field">
+      <label>${escapeHtml(subFieldLabel)}</label>
+      <input type="text" 
+             class="form-control" 
+             name="${fieldName}[${index}].${subField.name}" 
+             value="">
+    </div>`;
+  });
+  
+  itemHTML += `</div>`;
+  listContainer.insertAdjacentHTML('beforeend', itemHTML);
+}
+
+// Hàm xóa mục khỏi list field
+function removeListItem(button) {
+  const listItem = button.closest('.list-item');
+  if (listItem) {
+    listItem.remove();
+    // Cập nhật lại index của các item còn lại
+    const listContainer = listItem.parentElement;
+    const fieldName = listContainer.id.replace('list-', '');
+    
+    Array.from(listContainer.children).forEach((item, index) => {
+      item.querySelectorAll('[name^="' + fieldName + '"]').forEach(input => {
+        input.name = input.name.replace(/\[\d+\]/, `[${index}]`);
+      });
+    });
+  }
+}
+
+// Đăng ký hàm toàn cục
+window.addListItem = addListItem;
+window.removeListItem = removeListItem;
 
 // 26. HIỂN THỊ MODAL CHỈNH SỬA ĐƠN GIẢN
 function showEditModal(path, content, sha) {
