@@ -6,7 +6,7 @@
   <title>CMS Admin - Quản trị nội dung</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="/admin/css/admin.css">
-  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://identity.netlify.com; script-src 'self' https://identity.netlify.com 'unsafe-inline'; connect-src 'self' https://storeios.net">
 </head>
 <body>
   <div class="admin-container">
@@ -56,7 +56,9 @@
     </div>
   </div>
 
-  <!-- Load các file JavaScript -->
+  <!-- Load Netlify Identity trước -->
+  <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <!-- Sau đó mới load script chính -->
   <script src="/admin/script.js"></script>
 </body>
 </html>
