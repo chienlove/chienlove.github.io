@@ -265,64 +265,52 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 9. TẢI NỘI DUNG THƯ MỤC (ĐÃ SỬA ĐỂ HIỂN THỊ TẤT CẢ THƯ MỤC CON)
   async function loadFolderContents(path) {
-    if (isProcessing) return;
-    isProcessing = true;
-    
-    currentFolder = path || 'content';
-    currentCollection = null;
-    const postsList = document.getElementById('posts-list');
-    const contentHeader = document.querySelector('.content-header h2');
-    const breadcrumb = document.getElementById('breadcrumb') || createBreadcrumb();
-    const createBtn = document.getElementById('create-post');
-    
-    if (contentHeader) {
-      contentHeader.innerHTML = `<i class="fas fa-folder-open"></i> ${escapeHtml(path)}`;
+  if (isProcessing) return;
+  isProcessing = true;
+  
+  currentFolder = path || 'content';
+  currentCollection = null;
+  const postsList = document.getElementById('posts-list');
+  
+  postsList.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Đang tải dữ liệu...</div>';
+  
+  try {
+    if (!isValidPath(path)) {
+      throw new Error('Đường dẫn không hợp lệ');
     }
+
+    // Lấy toàn bộ nội dung thư mục (bao gồm cả thư mục con)
+    const data = await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(path)}?recursive=1`);
     
-    if (createBtn) {
-      createBtn.style.display = 'none';
-    }
+    // Lọc chỉ lấy các file/folder trực tiếp trong thư mục hiện tại
+    const currentLevelItems = Array.isArray(data) ? 
+      data.filter(item => {
+        const itemPath = item.path;
+        const relativePath = itemPath.replace(path + '/', '');
+        return !relativePath.includes('/');
+      }) : 
+      [data];
     
-    postsList.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Đang tải dữ liệu...</div>';
-    updateBreadcrumb(path);
+    allPosts = currentLevelItems;
+    renderFolderContents(allPosts, path);
 
-    // Active sidebar menu tương ứng
-    const menuItems = document.querySelectorAll('.sidebar-menu .menu-item');
-    menuItems.forEach(item => {
-      item.classList.remove('active');
-      if (item.dataset.folder === path) {
-        item.classList.add('active');
-      }
-    });
-
-    try {
-      if (!isValidPath(path)) {
-        throw new Error('Đường dẫn không hợp lệ');
-      }
-
-      const data = await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(path)}`);
-      console.log('Dữ liệu thư mục:', data);
-
-      allPosts = Array.isArray(data) ? data : [data];
-      renderFolderContents(allPosts, path);
-
-    } catch (error) {
-      console.error('Lỗi tải dữ liệu:', error);
-      postsList.innerHTML = `
-        <div class="error">
-          <i class="fas fa-exclamation-triangle"></i>
-          <p>Lỗi: ${escapeHtml(error.message || 'Không thể tải dữ liệu')}</p>
-          <button class="btn" onclick="window.loadFolderContents('${escapeHtml(path)}')">Thử lại</button>
-        </div>
-      `;
-      
-      if (error.message.includes('401')) {
-        netlifyIdentity.logout();
-      }
-    } finally {
-      isProcessing = false;
+  } catch (error) {
+    console.error('Lỗi tải dữ liệu:', error);
+    postsList.innerHTML = `
+      <div class="error">
+        <i class="fas fa-exclamation-triangle"></i>
+        <p>Lỗi: ${escapeHtml(error.message || 'Không thể tải dữ liệu')}</p>
+        <button class="btn" onclick="window.loadFolderContents('${escapeHtml(path)}')">Thử lại</button>
+      </div>
+    `;
+    
+    if (error.message.includes('401')) {
+      netlifyIdentity.logout();
     }
+  } finally {
+    isProcessing = false;
   }
+}
 
   // 10. TẠO BREADCRUMB
   function createBreadcrumb() {
@@ -441,37 +429,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 13. HIỂN THỊ NỘI DUNG THƯ MỤC (ĐÃ SỬA ĐỂ HIỂN THỊ TẤT CẢ NỘI DUNG)
   function renderFolderContents(items, currentPath) {
-    const postsList = document.getElementById('posts-list');
-    
-    if (!items || items.length === 0) {
-      postsList.innerHTML = `
-        <div class="empty">
-          <i class="fas fa-inbox"></i>
-          <p>Thư mục trống</p>
-          <div class="empty-actions">
-            <button class="btn btn-primary" onclick="window.addNewPost('${escapeHtml(currentPath)}')">
-              <i class="fas fa-file"></i> Thêm bài viết
-            </button>
-            <button class="btn" onclick="window.addNewFolder('${escapeHtml(currentPath)}')">
-              <i class="fas fa-folder-plus"></i> Thêm thư mục
-            </button>
-          </div>
-        </div>
-      `;
-      return;
-    }
-    
-    const sortedItems = [...items].sort((a, b) => {
-      if (a.type === b.type) return a.name.localeCompare(b.name);
-      return a.type === 'dir' ? -1 : 1;
-    });
-    
+  const postsList = document.getElementById('posts-list');
+  
+  if (!items || items.length === 0) {
     postsList.innerHTML = `
-      <div class="folder-header">
-        <div class="folder-path">
-          <i class="fas fa-folder-open"></i> ${escapeHtml(currentPath)}
-        </div>
-        <div class="folder-actions">
+      <div class="empty">
+        <i class="fas fa-inbox"></i>
+        <p>Thư mục trống</p>
+        <div class="empty-actions">
           <button class="btn btn-primary" onclick="window.addNewPost('${escapeHtml(currentPath)}')">
             <i class="fas fa-file"></i> Thêm bài viết
           </button>
@@ -480,58 +445,81 @@ document.addEventListener('DOMContentLoaded', () => {
           </button>
         </div>
       </div>
-      <div class="content-grid">
-        ${sortedItems.map(item => {
-          if (item.type === 'dir') {
-            return `
-              <div class="folder-item">
-                <div class="folder-item-inner" onclick="window.loadFolderContents('${escapeHtml(item.path)}')">
-                  <div class="folder-icon">
-                    <i class="fas fa-folder"></i>
-                  </div>
-                  <div class="folder-details">
-                    <span class="folder-name">${escapeHtml(item.name)}</span>
-                  </div>
-                </div>
-                <div class="item-actions">
-                  <button class="btn btn-sm btn-delete" onclick="event.stopPropagation(); window.deleteItem('${escapeHtml(item.path)}', '${escapeHtml(item.sha)}', true)">
-                    <i class="fas fa-trash"></i>
-                  </button>
-                </div>
-              </div>
-            `;
-          } else {
-            if (!item.name.toLowerCase().endsWith('.md')) return '';
-            
-            return `
-              <div class="file-item">
-                <div class="file-item-inner">
-                  <div class="file-icon">
-                    <i class="fas fa-file-alt"></i>
-                  </div>
-                  <div class="file-details">
-                    <span class="file-name">${escapeHtml(item.name.replace(/\.md$/i, ''))}</span>
-                    <span class="file-date">Cập nhật: ${formatDate(new Date(item.sha))}</span>
-                  </div>
-                </div>
-                <div class="item-actions">
-                  <button class="btn btn-sm btn-edit" onclick="window.editPost('${escapeHtml(item.path)}', '${escapeHtml(item.sha)}')">
-                    <i class="fas fa-edit"></i>
-                  </button>
-                  <button class="btn btn-sm btn-view" onclick="window.viewPost('${escapeHtml(item.path)}')">
-                    <i class="fas fa-eye"></i>
-                  </button>
-                  <button class="btn btn-sm btn-delete" onclick="window.deleteItem('${escapeHtml(item.path)}', '${escapeHtml(item.sha)}', false)">
-                    <i class="fas fa-trash"></i>
-                  </button>
-                </div>
-              </div>
-            `;
-          }
-        }).join('')}
-      </div>
     `;
+    return;
   }
+  
+  const sortedItems = [...items].sort((a, b) => {
+    if (a.type === b.type) return a.name.localeCompare(b.name);
+    return a.type === 'dir' ? -1 : 1;
+  });
+  
+  postsList.innerHTML = `
+    <div class="folder-header">
+      <div class="folder-path">
+        <i class="fas fa-folder-open"></i> ${escapeHtml(currentPath)}
+      </div>
+      <div class="folder-actions">
+        <button class="btn btn-primary" onclick="window.addNewPost('${escapeHtml(currentPath)}')">
+          <i class="fas fa-file"></i> Thêm bài viết
+        </button>
+        <button class="btn" onclick="window.addNewFolder('${escapeHtml(currentPath)}')">
+          <i class="fas fa-folder-plus"></i> Thêm thư mục
+        </button>
+      </div>
+    </div>
+    <div class="content-grid">
+      ${sortedItems.map(item => {
+        if (item.type === 'dir') {
+          return `
+            <div class="folder-item">
+              <div class="folder-item-inner" onclick="window.loadFolderContents('${escapeHtml(item.path)}')">
+                <div class="folder-icon">
+                  <i class="fas fa-folder"></i>
+                </div>
+                <div class="folder-details">
+                  <span class="folder-name">${escapeHtml(item.name)}</span>
+                </div>
+              </div>
+              <div class="item-actions">
+                <button class="btn btn-sm btn-delete" onclick="event.stopPropagation(); window.deleteItem('${escapeHtml(item.path)}', '${escapeHtml(item.sha)}', true)">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </div>
+          `;
+        } else {
+          if (!item.name.toLowerCase().endsWith('.md')) return '';
+          
+          return `
+            <div class="file-item">
+              <div class="file-item-inner">
+                <div class="file-icon">
+                  <i class="fas fa-file-alt"></i>
+                </div>
+                <div class="file-details">
+                  <span class="file-name">${escapeHtml(item.name.replace(/\.md$/i, ''))}</span>
+                  <span class="file-date">Cập nhật: ${formatDate(new Date(item.sha))}</span>
+                </div>
+              </div>
+              <div class="item-actions">
+                <button class="btn btn-sm btn-edit" onclick="window.editPost('${escapeHtml(item.path)}', '${escapeHtml(item.sha)}')">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-sm btn-view" onclick="window.viewPost('${escapeHtml(item.path)}')">
+                  <i class="fas fa-eye"></i>
+                </button>
+                <button class="btn btn-sm btn-delete" onclick="window.deleteItem('${escapeHtml(item.path)}', '${escapeHtml(item.sha)}', false)">
+                  <i class="fas fa-trash"></i>
+                </button>
+              </div>
+            </div>
+          `;
+        }
+      }).join('')}
+    </div>
+  `;
+}
 
   // 14. THÊM BÀI VIẾT MỚI - THƯ MỤC THÔNG THƯỜNG
   function addNewPost(folderPath) {
@@ -568,74 +556,58 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 15. THÊM ENTRY MỚI CHO COLLECTION (ĐÃ SỬA ĐỂ HIỂN THỊ ĐẦY ĐỦ TRƯỜNG)
   function addNewEntry(collectionName) {
-    const collection = collectionsConfig.find(c => c.name === collectionName);
-    if (!collection) {
-      showNotification('Không tìm thấy cấu hình collection', 'error');
-      return;
+  const collection = collectionsConfig.find(c => c.name === collectionName);
+  if (!collection) {
+    showNotification('Không tìm thấy cấu hình collection', 'error');
+    return;
+  }
+  
+  const fields = collection.fields || [];
+  let formHTML = '';
+  
+  // Tạo form với hỗ trợ Unicode
+  fields.forEach(field => {
+    if (!field.name || !field.label) return;
+    if (field.name === 'body') return;
+    
+    formHTML += `<div class="form-group">`;
+    formHTML += `<label for="field-${field.name}">${escapeHtml(field.label)}${field.required ? '<span class="required">*</span>' : ''}</label>`;
+    
+    const fieldValue = field.default || '';
+    
+    switch (field.widget) {
+      case 'datetime':
+        formHTML += `<input type="datetime-local" id="field-${field.name}" class="form-control" value="${escapeHtml(fieldValue)}">`;
+        break;
+      case 'date':
+        formHTML += `<input type="date" id="field-${field.name}" class="form-control" value="${escapeHtml(fieldValue)}">`;
+        break;
+      case 'select':
+        formHTML += `
+          <select id="field-${field.name}" class="form-control">
+            ${(field.options || []).map(option => 
+              `<option value="${escapeHtml(option)}">${escapeHtml(option)}</option>`
+            ).join('')}
+          </select>
+        `;
+        break;
+      case 'textarea':
+        formHTML += `<textarea id="field-${field.name}" class="form-control" rows="4">${escapeHtml(fieldValue)}</textarea>`;
+        break;
+      case 'boolean':
+        formHTML += `
+          <div class="checkbox-wrapper">
+            <input type="checkbox" id="field-${field.name}" ${fieldValue === 'true' ? 'checked' : ''}>
+            <label for="field-${field.name}">${escapeHtml(field.label)}</label>
+          </div>
+        `;
+        break;
+      default:
+        formHTML += `<input type="text" id="field-${field.name}" class="form-control" value="${escapeHtml(fieldValue)}">`;
     }
     
-    const fields = collection.fields || [];
-    let formHTML = '';
-    
-    // Tạo frontmatter mặc định
-    let defaultFrontMatter = {
-      title: '',
-      date: new Date().toISOString().split('T')[0]
-    };
-    
-    // Tạo form
-    fields.forEach(field => {
-      if (!field.name || !field.label) return;
-      
-      // Bỏ qua trường body vì sẽ xử lý riêng
-      if (field.name === 'body') return;
-      
-      // Thêm giá trị mặc định
-      if (field.default) {
-        defaultFrontMatter[field.name] = field.default;
-      }
-      
-      formHTML += `<div class="form-group">`;
-      formHTML += `<label for="field-${field.name}">${escapeHtml(field.label)}${field.required ? '<span class="required">*</span>' : ''}</label>`;
-      
-      switch (field.widget) {
-        case 'datetime':
-          formHTML += `<input type="datetime-local" id="field-${field.name}" class="form-control" value="${defaultFrontMatter[field.name] || ''}">`;
-          break;
-          
-        case 'date':
-          formHTML += `<input type="date" id="field-${field.name}" class="form-control" value="${defaultFrontMatter[field.name] || ''}">`;
-          break;
-          
-        case 'select':
-          formHTML += `
-            <select id="field-${field.name}" class="form-control">
-              ${(field.options || []).map(option => 
-                `<option value="${escapeHtml(option)}" ${option === defaultFrontMatter[field.name] ? 'selected' : ''}>${escapeHtml(option)}</option>`
-              ).join('')}
-            </select>
-          `;
-          break;
-          
-        case 'textarea':
-          formHTML += `<textarea id="field-${field.name}" class="form-control" rows="4">${defaultFrontMatter[field.name] || ''}</textarea>`;
-          break;
-          
-        case 'boolean':
-          formHTML += `
-            <div class="checkbox-wrapper">
-              <input type="checkbox" id="field-${field.name}" ${defaultFrontMatter[field.name] === 'true' ? 'checked' : ''}>
-              <label for="field-${field.name}">${escapeHtml(field.label)}</label>
-            </div>
-          `;
-          break;
-          
-        default:
-          formHTML += `<input type="text" id="field-${field.name}" class="form-control" value="${defaultFrontMatter[field.name] || ''}">`;
-      }
-      
-      formHTML += `</div>`;
-    });
+    formHTML += `</div>`;
+  });
     
     // Thêm trường nội dung chính (body)
     formHTML += `
@@ -818,18 +790,15 @@ ${body}
 
 // 23. CHỨC NĂNG XEM BÀI VIẾT (ĐÃ SỬA ĐƯỜNG DẪN)
 function viewPost(path) {
-  // Lấy slug từ path (bỏ phần 'content/' và đuôi .md)
-  const slug = path.replace(/^content\//, '').replace(/\.md$/i, '');
-  // Tạo URL đúng theo config.toml (bỏ qua thư mục apps nếu có)
+  const slug = path.split('/').pop().replace(/\.md$/i, '');
   const postUrl = `${window.location.origin}/${slug}`;
   window.open(postUrl, '_blank');
 }
-
 // 24. CHỈNH SỬA BÀI VIẾT (ĐÃ SỬA)
 async function editPost(path, sha) {
   try {
     const fileData = await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(path)}`);
-    const content = atob(fileData.content);
+    const content = decodeURIComponent(escape(atob(fileData.content)));
     
     // Kiểm tra xem có phải là collection entry (có frontmatter)
     if (content.startsWith('---')) {
