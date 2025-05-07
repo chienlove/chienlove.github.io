@@ -853,8 +853,26 @@ function parseFrontMatter(frontMatter) {
   const result = {};
   const lines = frontMatter.split('\n');
   
+  let currentKey = null;
+  let multilineValue = '';
+  let isMultiline = false;
+  
   for (const line of lines) {
     if (!line.trim()) continue;
+    
+    // Kiểm tra xem đây là dòng tiếp theo của giá trị nhiều dòng không
+    if (isMultiline) {
+      // Kiểm tra kết thúc giá trị nhiều dòng
+      if (line.trim() === '"""' || line.trim() === "'''") {
+        result[currentKey] = multilineValue;
+        isMultiline = false;
+        currentKey = null;
+        multilineValue = '';
+        continue;
+      }
+      multilineValue += line + '\n';
+      continue;
+    }
     
     // Xử lý cả trường hợp giá trị có dấu hai chấm trong value
     const firstColon = line.indexOf(':');
@@ -862,20 +880,22 @@ function parseFrontMatter(frontMatter) {
       const key = line.substring(0, firstColon).trim();
       let value = line.substring(firstColon + 1).trim();
       
-      // Sửa lỗi cú pháp - bỏ dấu ngoặc thừa
+      // Xử lý giá trị nhiều dòng
+      if (value === '"""' || value === "'''") {
+        isMultiline = true;
+        currentKey = key;
+        multilineValue = '';
+        continue;
+      }
+      
+      // Xử lý giá trị chuỗi thông thường - đã sửa lỗi cú pháp dấu ngoặc thừa
       if (value.startsWith('"') && value.endsWith('"')) {
         value = value.substring(1, value.length - 1);
       } else if (value.startsWith("'") && value.endsWith("'")) {
         value = value.substring(1, value.length - 1);
       }
       
-      // Xử lý Unicode
-      try {
-        value = decodeURIComponent(escape(value));
-      } catch (e) {
-        console.log('Không thể decode Unicode:', value);
-      }
-      
+      // Không cần decode Unicode để tránh lỗi
       result[key] = value;
     }
   }
