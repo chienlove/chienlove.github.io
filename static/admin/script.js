@@ -895,10 +895,10 @@ async function editPost(path, sha) {
           
           // Xử lý giá trị được quoted
           if ((value.startsWith('"') && value.endsWith('"')) {
-            value = value.slice(1, -1);
-          } else if ((value.startsWith("'") && value.endsWith("'"))) {
-            value = value.slice(1, -1);
-          }
+  value = value.slice(1, -1);
+} else if ((value.startsWith("'") && value.endsWith("'"))) {
+  value = value.slice(1, -1);
+}
           
           // Thử parse JSON nếu có thể
           try {
