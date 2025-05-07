@@ -6,7 +6,17 @@
   <title>CMS Admin - Quản trị nội dung</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="/admin/css/admin.css">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self' https://identity.netlify.com; script-src 'self' https://identity.netlify.com 'unsafe-inline'; connect-src 'self' https://storeios.net">
+  
+  <!-- CSP mới được mở rộng -->
+  <meta http-equiv="Content-Security-Policy" content="
+    default-src 'self';
+    script-src 'self' https://identity.netlify.com https://unpkg.com 'unsafe-inline';
+    style-src 'self' https://cdnjs.cloudflare.com 'unsafe-inline';
+    font-src 'self' https://cdnjs.cloudflare.com;
+    img-src 'self' data:;
+    connect-src 'self' https://storeios.net https://api.github.com https://identity.netlify.com;
+    frame-src 'self' https://identity.netlify.com;
+  ">
 </head>
 <body>
   <div class="admin-container">
@@ -56,9 +66,63 @@
     </div>
   </div>
 
-  <!-- Load Netlify Identity trước -->
-  <script src="https://unpkg.com/netlify-identity-widget@latest/build/netlify-identity-widget.js"></script>
-  <!-- Sau đó mới load script chính -->
-  <script src="/admin/script.js"></script>
+  <!-- Script loader với xử lý lỗi -->
+  <script>
+    function loadScript(src, onSuccess, onError) {
+      return new Promise((resolve, reject) => {
+        const script = document.createElement('script');
+        script.src = src;
+        script.onload = () => {
+          onSuccess && onSuccess();
+          resolve();
+        };
+        script.onerror = () => {
+          onError && onError();
+          reject(new Error(`Failed to load script: ${src}`));
+        };
+        document.body.appendChild(script);
+      });
+    }
+
+    // Kiểm tra xem có phải đang chạy Eruda debug không
+    if (typeof eruda === 'undefined') {
+      // Tải các script theo thứ tự
+      loadScript(
+        'https://unpkg.com/netlify-identity-widget@latest/build/netlify-identity-widget.js',
+        function() {
+          console.log('Netlify Identity Widget loaded');
+          
+          loadScript(
+            '/admin/script.js',
+            function() {
+              console.log('Main application script loaded');
+              
+              // Khởi tạo Netlify Identity sau khi tất cả script đã tải
+              if (window.netlifyIdentity) {
+                netlifyIdentity.init({
+                  APIUrl: 'https://storeios.net/.netlify/identity',
+                  enableOperator: true
+                });
+              }
+            },
+            function() {
+              console.error('Failed to load main application script');
+              document.getElementById('login-btn').onclick = function() {
+                alert('Hệ thống đang bảo trì. Vui lòng thử lại sau.');
+              };
+            }
+          );
+        },
+        function() {
+          console.error('Failed to load Netlify Identity Widget');
+          document.getElementById('login-btn').onclick = function() {
+            alert('Không thể kết nối dịch vụ đăng nhập. Vui lòng thử lại sau.');
+          };
+        }
+      );
+    } else {
+      console.warn('Eruda debug tool detected, skipping normal script loading');
+    }
+  </script>
 </body>
 </html>
