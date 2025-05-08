@@ -2,104 +2,34 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CMS Admin - Quản trị nội dung</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="/admin/css/admin1.css">
-  
-  <!-- CSP mới được mở rộng -->
-  <meta http-equiv="Content-Security-Policy" content="
-    default-src 'self';
-    script-src 'self' https://identity.netlify.com https://unpkg.com 'unsafe-inline';
-    style-src 'self' https://cdnjs.cloudflare.com 'unsafe-inline';
-    font-src 'self' https://cdnjs.cloudflare.com;
-    img-src 'self' data:;
-    connect-src 'self' https://storeios.net https://api.github.com https://identity.netlify.com;
-    frame-src 'self' https://identity.netlify.com;
-  ">
+  <title>Quản lý nội dung | StoreIOS</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/admin/css/admin.css">
+  <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
+  <script defer src="/admin/script.js"></script>
 </head>
 <body>
-  <div class="admin-container">
-    <!-- Header -->
-    <header class="admin-header">
-      <div class="header-left">
-        <i class="fas fa-cog"></i>
-        <h1>CMS Content Manager</h1>
-      </div>
-      <button id="login-btn" class="btn-login">
-        <i class="fas fa-sign-in-alt"></i>
-        <span>Đăng nhập</span>
-      </button>
-    </header>
-
-    <!-- Main Content -->
-    <div class="admin-main">
-      <!-- Sidebar -->
-      <aside class="admin-sidebar" id="sidebar">
-        <nav>
-          <ul class="sidebar-menu" id="sidebar-menu"></ul>
-        </nav>
-      </aside>
-
-      <!-- Content Area -->
-      <main class="admin-content" id="dashboard">
-        <div class="content-header">
-          <h2><i class="fas fa-file-alt"></i> Quản lý nội dung</h2>
-          <button id="create-post" class="btn-primary" style="display: none;">
-            <i class="fas fa-plus"></i> Tạo mới
-          </button>
-        </div>
-
-        <!-- Breadcrumb -->
-        <div class="breadcrumb" id="breadcrumb"></div>
-
-        <!-- Posts List -->
-        <div class="content-body">
-          <div id="posts-list" class="posts-grid">
-            <div class="loading-state">
-              <i class="fas fa-spinner fa-spin"></i>
-              <p>Vui lòng đăng nhập để xem nội dung</p>
-            </div>
-          </div>
-        </div>
-      </main>
+  <header class="header">
+    <div class="container">
+      <h1>Quản lý nội dung</h1>
+      <button id="login-btn">Đăng nhập</button>
     </div>
-  </div>
+  </header>
 
-  <!-- Script loader với xử lý lỗi -->
-  <script>
-  function loadScript(src) {
-    return new Promise((resolve, reject) => {
-      const script = document.createElement('script');
-      script.src = src;
-      script.onload = resolve;
-      script.onerror = reject;
-      document.body.appendChild(script);
-    });
-  }
+  <main class="container">
+    <div id="dashboard" class="dashboard" style="display: none;">
+      <!-- Breadcrumb -->
+      <div id="breadcrumb" class="breadcrumb"></div>
 
-  (async function() {
-    try {
-      await loadScript('https://unpkg.com/netlify-identity-widget@latest/build/netlify-identity-widget.js');
-      console.log('Netlify Identity loaded');
-      
-      await loadScript('/admin/script.js');
-      console.log('Main script loaded');
-      
-      // Khởi tạo sau khi tất cả script đã tải
-      if (window.netlifyIdentity) {
-        netlifyIdentity.init({
-          APIUrl: 'https://storeios.net/.netlify/identity',
-          enableOperator: true
-        });
-      }
-    } catch (error) {
-      console.error('Lỗi tải script:', error);
-      document.getElementById('login-btn').onclick = () => {
-        alert('Hệ thống tạm thời gián đoạn. Vui lòng thử lại sau.');
-      };
-    }
-  })();
-</script>
+      <!-- Danh sách bài viết và thư mục -->
+      <div id="posts-list" class="posts-list"></div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <p>&copy; 2025 StoreIOS - CMS Admin</p>
+    </div>
+  </footer>
 </body>
 </html>
