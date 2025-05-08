@@ -5,22 +5,20 @@
   <title>Quản lý nội dung | StoreIOS</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  <link rel="stylesheet" href="/admin/css/admin.css?v=1.1">
+  <link rel="stylesheet" href="/admin/css/admin.css">
   <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-  <script defer src="/admin/script.js?v=1.0"></script>
+  <script defer src="/admin/js/cms-admin.js"></script>
 </head>
 <body>
   <div class="app-container">
-    <!-- Sidebar Navigation -->
+    <!-- Sidebar -->
     <aside id="sidebar" class="sidebar">
       <div class="sidebar-header">
         <h2>StoreIOS CMS</h2>
         <button class="sidebar-close" id="sidebar-close">&times;</button>
       </div>
       <nav class="sidebar-nav">
-        <ul id="sidebar-menu" class="sidebar-menu">
-          <!-- Dynamic content will be inserted by script.js -->
-        </ul>
+        <ul id="sidebar-menu" class="sidebar-menu"></ul>
       </nav>
       <div class="sidebar-footer">
         <div class="user-info">
@@ -30,7 +28,7 @@
       </div>
     </aside>
 
-    <!-- Main Content Area -->
+    <!-- Main Content -->
     <div class="main-content">
       <header class="header">
         <div class="header-left">
@@ -47,21 +45,17 @@
 
       <main class="container">
         <div id="dashboard" class="dashboard">
-          <!-- Breadcrumb Navigation -->
+          <!-- Breadcrumb -->
           <div id="breadcrumb" class="breadcrumb"></div>
           
-          <!-- Content Header with Actions -->
+          <!-- Content Header -->
           <div class="content-header">
             <h2 id="content-title"><i class="fas fa-home"></i> Trang chủ</h2>
-            <div id="content-actions" class="content-actions">
-              <!-- Dynamic buttons will be inserted by script.js -->
-            </div>
+            <div id="content-actions" class="content-actions"></div>
           </div>
 
-          <!-- Main Content List -->
-          <div id="posts-list" class="posts-list">
-            <!-- Dynamic content will be inserted by script.js -->
-          </div>
+          <!-- Main Content -->
+          <div id="posts-list" class="posts-list"></div>
         </div>
       </main>
 
