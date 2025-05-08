@@ -21,16 +21,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Xử lý mở/đóng sidebar
     function setupSidebar() {
-      sidebarToggle.addEventListener('click', () => {
+      sidebarToggle.addEventListener('click', (e) => {
+        e.stopPropagation();
         sidebar.classList.add('open');
       });
 
-      sidebarClose.addEventListener('click', () => {
+      sidebarClose.addEventListener('click', (e) => {
+        e.stopPropagation();
         sidebar.classList.remove('open');
       });
 
       document.addEventListener('click', (e) => {
-        if (!sidebar.contains(e.target) {
+        if (!sidebar.contains(e.target) && !sidebarToggle.contains(e.target)) {
           sidebar.classList.remove('open');
         }
       });
@@ -80,6 +82,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loginBtn.innerHTML = `<i class="fas fa-sign-in-alt"></i> <span>Đăng nhập</span>`;
         loginBtn.classList.remove('logout');
         dashboard.style.display = 'none';
+        sidebar.style.display = 'none';
         document.body.classList.remove('logged-in');
       }
     }
