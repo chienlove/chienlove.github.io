@@ -68,61 +68,38 @@
 
   <!-- Script loader với xử lý lỗi -->
   <script>
-    function loadScript(src, onSuccess, onError) {
-      return new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = src;
-        script.onload = () => {
-          onSuccess && onSuccess();
-          resolve();
-        };
-        script.onerror = () => {
-          onError && onError();
-          reject(new Error(`Failed to load script: ${src}`));
-        };
-        document.body.appendChild(script);
-      });
-    }
+  function loadScript(src) {
+    return new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = src;
+      script.onload = resolve;
+      script.onerror = reject;
+      document.body.appendChild(script);
+    });
+  }
 
-    // Kiểm tra xem có phải đang chạy Eruda debug không
-    if (typeof eruda === 'undefined') {
-      // Tải các script theo thứ tự
-      loadScript(
-        'https://unpkg.com/netlify-identity-widget@latest/build/netlify-identity-widget.js',
-        function() {
-          console.log('Netlify Identity Widget loaded');
-          
-          loadScript(
-            '/admin/script.js',
-            function() {
-              console.log('Main application script loaded');
-              
-              // Khởi tạo Netlify Identity sau khi tất cả script đã tải
-              if (window.netlifyIdentity) {
-                netlifyIdentity.init({
-                  APIUrl: 'https://storeios.net/.netlify/identity',
-                  enableOperator: true
-                });
-              }
-            },
-            function() {
-              console.error('Failed to load main application script');
-              document.getElementById('login-btn').onclick = function() {
-                alert('Hệ thống đang bảo trì. Vui lòng thử lại sau.');
-              };
-            }
-          );
-        },
-        function() {
-          console.error('Failed to load Netlify Identity Widget');
-          document.getElementById('login-btn').onclick = function() {
-            alert('Không thể kết nối dịch vụ đăng nhập. Vui lòng thử lại sau.');
-          };
-        }
-      );
-    } else {
-      console.warn('Eruda debug tool detected, skipping normal script loading');
+  (async function() {
+    try {
+      await loadScript('https://unpkg.com/netlify-identity-widget@latest/build/netlify-identity-widget.js');
+      console.log('Netlify Identity loaded');
+      
+      await loadScript('/admin/script.js');
+      console.log('Main script loaded');
+      
+      // Khởi tạo sau khi tất cả script đã tải
+      if (window.netlifyIdentity) {
+        netlifyIdentity.init({
+          APIUrl: 'https://storeios.net/.netlify/identity',
+          enableOperator: true
+        });
+      }
+    } catch (error) {
+      console.error('Lỗi tải script:', error);
+      document.getElementById('login-btn').onclick = () => {
+        alert('Hệ thống tạm thời gián đoạn. Vui lòng thử lại sau.');
+      };
     }
-  </script>
+  })();
+</script>
 </body>
 </html>
