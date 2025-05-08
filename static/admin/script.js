@@ -1,10 +1,11 @@
 document.addEventListener('DOMContentLoaded', () => {
   // Biến toàn cục
-  let allPosts = [];
-  let currentFolder = 'content';
-  let isProcessing = false;
-  let collectionsConfig = null;
-  let currentCollection = null;
+let allPosts = [];
+let currentFolder = 'content';
+let isProcessing = false;
+let collectionsConfig = null;
+let currentCollection = null;
+let netlifyIdentity = window.netlifyIdentity;
 
   // 1. Khởi tạo Netlify Identity
   if (window.netlifyIdentity) {
@@ -95,30 +96,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     init();
   }
-
-    // 4. THEO DÕI SỰ KIỆN ĐĂNG NHẬP/ĐĂNG XUẤT
-    netlifyIdentity.on('login', (user) => {
-      handleAuthChange(user);
-      netlifyIdentity.close();
-    });
-    
-    netlifyIdentity.on('logout', () => {
-      handleAuthChange(null);
-    });
-    
-    netlifyIdentity.on('close', () => {
-      if (!netlifyIdentity.currentUser()) {
-        handleAuthChange(null);
-      }
-    });
-
-    // 5. KIỂM TRA TRẠNG THÁI BAN ĐẦU
-    const currentUser = netlifyIdentity.currentUser();
-    if (currentUser) {
-      handleAuthChange(currentUser);
-    } else {
-      handleAuthChange(null);
-    }
 
     // 6. TẢI CẤU HÌNH CMS
     async function loadCMSConfig() {
@@ -833,17 +810,18 @@ ${body}
     }
 
     // Đăng ký hàm toàn cục
-    window.loadFolderContents = loadFolderContents;
-    window.loadCollection = loadCollection;
-    window.editPost = editPost;
-    window.deleteItem = deleteItem;
-    window.viewPost = viewPost;
-    window.createNewPost = createNewPost;
-    window.addNewPost = addNewPost;
-    window.addNewFolder = addNewFolder;
-    window.addNewEntry = addNewEntry;
-    window.showSettings = () => showNotification('Tính năng đang phát triển', 'warning');
-  });
+  window.loadFolderContents = loadFolderContents;
+  window.loadCollection = loadCollection;
+  window.editPost = editPost;
+  window.deleteItem = deleteItem;
+  window.viewPost = viewPost;
+  window.createNewPost = createNewPost;
+  window.addNewPost = addNewPost;
+  window.addNewFolder = addNewFolder;
+  window.addNewEntry = addNewEntry;
+  window.showSettings = () => showNotification('Tính năng đang phát triển', 'warning');
+  window.addListItem = addListItem;
+  window.removeListItem = removeListItem;
 
   // 24. CHỨC NĂNG XEM BÀI VIẾT
   function viewPost(path) {
