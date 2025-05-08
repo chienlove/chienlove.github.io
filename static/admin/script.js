@@ -1,10 +1,9 @@
+// cms-admin.js
 document.addEventListener('DOMContentLoaded', () => {
   // Biến toàn cục
   let allPosts = [];
   let currentFolder = 'content';
   let isProcessing = false;
-  let collectionsConfig = null;
-  let currentCollection = null;
 
   // 1. KHỞI TẠO NETLIFY IDENTITY
   if (window.netlifyIdentity) {
@@ -13,60 +12,51 @@ document.addEventListener('DOMContentLoaded', () => {
       enableOperator: true
     });
 
-    const loginBtn = document.getElementById('login-btn');
-
-    // 2. XỬ LÝ SỰ KIỆN CLICK NÚT ĐĂNG NHẬP/ĐĂNG XUẤT
-    loginBtn.addEventListener('click', () => {
-      const user = netlifyIdentity.currentUser();
-      if (user) {
-        netlifyIdentity.logout();
-      } else {
-        netlifyIdentity.open('login');
-      }
-    });
-
-    // 3. HÀM CẬP NHẬT GIAO DIỆN KHI CÓ THAY ĐỔI ĐĂNG NHẬP
+    // 2. XỬ LÝ SỰ KIỆN ĐĂNG NHẬP
     const handleAuthChange = (user) => {
       const loginBtn = document.getElementById('login-btn');
       const dashboard = document.getElementById('dashboard');
-      const sidebar = document.getElementById('sidebar');
-
+      
       if (user) {
         console.log('Đã đăng nhập:', user.email);
-        loginBtn.innerHTML = `<i class="fas fa-sign-out-alt"></i> <span>Đăng xuất (${user.email.split('@')[0]})</span>`;
+        loginBtn.textContent = `Đăng xuất (${user.email})`;
         loginBtn.style.backgroundColor = '#f44336';
-        dashboard.style.display = 'block';
-        sidebar.style.display = 'block';
+        dashboard.style.display = 'flex';
+        loadFolderContents(currentFolder);
       } else {
-        console.log('Đã đăng xuất');
-        loginBtn.innerHTML = `<i class="fas fa-sign-in-alt"></i> <span>Đăng nhập</span>`;
+        console.log('Chưa đăng nhập');
+        loginBtn.textContent = 'Đăng nhập';
         loginBtn.style.backgroundColor = '#4CAF50';
         dashboard.style.display = 'none';
-        sidebar.style.display = 'none';
         allPosts = [];
       }
     };
 
-    // 4. THEO DÕI SỰ KIỆN ĐĂNG NHẬP/ĐĂNG XUẤT
-    netlifyIdentity.on('login', handleAuthChange);
+    netlifyIdentity.on('init', handleAuthChange);
+    netlifyIdentity.on('login', (user) => {
+      handleAuthChange(user);
+      netlifyIdentity.close();
+    });
     netlifyIdentity.on('logout', () => handleAuthChange(null));
+    
     netlifyIdentity.on('close', () => {
       if (!netlifyIdentity.currentUser()) {
         handleAuthChange(null);
       }
     });
 
-    // 5. KIỂM TRA TRẠNG THÁI BAN ĐẦU
-    const currentUser = netlifyIdentity.currentUser();
-    if (currentUser) {
-      handleAuthChange(currentUser);
-      loadCMSConfig().then(() => {
-        updateSidebar();
-        loadFolderContents(currentFolder);
-      });
-    } else {
-      handleAuthChange(null);
-    }
+    // 3. KIỂM TRA TRẠNG THÁI BAN ĐẦU
+    handleAuthChange(netlifyIdentity.currentUser());
+    
+    // Thêm sự kiện click cho nút đăng nhập
+    document.getElementById('login-btn').addEventListener('click', () => {
+      if (netlifyIdentity.currentUser()) {
+        netlifyIdentity.logout();
+      } else {
+        netlifyIdentity.open('login');
+      }
+    });
+  }
 
     // 6. TẢI CẤU HÌNH CMS
     async function loadCMSConfig() {
