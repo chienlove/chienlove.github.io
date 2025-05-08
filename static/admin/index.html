@@ -4,21 +4,23 @@
   <meta charset="UTF-8">
   <title>Quản lý nội dung | StoreIOS</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap">
-  <link rel="stylesheet" href="/admin/css/admin.css?v=1.0">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="/admin/css/admin.css?v=1.1">
   <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
-  <script defer src="/admin/script.js"></script>
+  <script defer src="/admin/script.js?v=1.0"></script>
 </head>
 <body>
   <div class="app-container">
-    <!-- Sidebar -->
-    <aside id="sidebar" class="sidebar" style="display: none;">
+    <!-- Sidebar Navigation -->
+    <aside id="sidebar" class="sidebar">
       <div class="sidebar-header">
         <h2>StoreIOS CMS</h2>
+        <button class="sidebar-close" id="sidebar-close">&times;</button>
       </div>
       <nav class="sidebar-nav">
-        <ul id="sidebar-menu" class="sidebar-menu"></ul>
+        <ul id="sidebar-menu" class="sidebar-menu">
+          <!-- Dynamic content will be inserted by script.js -->
+        </ul>
       </nav>
       <div class="sidebar-footer">
         <div class="user-info">
@@ -28,7 +30,7 @@
       </div>
     </aside>
 
-    <!-- Main Content -->
+    <!-- Main Content Area -->
     <div class="main-content">
       <header class="header">
         <div class="header-left">
@@ -44,20 +46,22 @@
       </header>
 
       <main class="container">
-        <div id="dashboard" class="dashboard" style="display: none;">
-          <!-- Breadcrumb -->
+        <div id="dashboard" class="dashboard">
+          <!-- Breadcrumb Navigation -->
           <div id="breadcrumb" class="breadcrumb"></div>
-
-          <!-- Content Header -->
+          
+          <!-- Content Header with Actions -->
           <div class="content-header">
-            <h2><i class="fas fa-home"></i> Trang chủ</h2>
-            <button id="create-post" class="btn btn-primary" style="display: none;">
-              <i class="fas fa-plus"></i> Thêm mới
-            </button>
+            <h2 id="content-title"><i class="fas fa-home"></i> Trang chủ</h2>
+            <div id="content-actions" class="content-actions">
+              <!-- Dynamic buttons will be inserted by script.js -->
+            </div>
           </div>
 
-          <!-- Danh sách bài viết và thư mục -->
-          <div id="posts-list" class="posts-list"></div>
+          <!-- Main Content List -->
+          <div id="posts-list" class="posts-list">
+            <!-- Dynamic content will be inserted by script.js -->
+          </div>
         </div>
       </main>
 
@@ -70,6 +74,6 @@
   </div>
 
   <!-- Modal Overlay -->
-  <div id="modal-overlay" class="modal-overlay" style="display: none;"></div>
+  <div id="modal-overlay" class="modal-overlay"></div>
 </body>
 </html>
