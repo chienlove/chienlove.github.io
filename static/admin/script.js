@@ -25,21 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
 
-    // 3. THEO DÕI SỰ KIỆN ĐĂNG NHẬP/ĐĂNG XUẤT
-    netlifyIdentity.on('login', (user) => {
-      netlifyIdentity.close();
-      handleAuthChange(user);
-      loadCMSConfig().then(() => {
-        updateSidebar();
-        loadFolderContents(currentFolder);
-      });
-    });
-
-    netlifyIdentity.on('logout', () => {
-      handleAuthChange(null);
-    });
-
-    // 4. HÀM CẬP NHẬT GIAO DIỆN KHI CÓ THAY ĐỔI ĐĂNG NHẬP
+    // 3. HÀM CẬP NHẬT GIAO DIỆN KHI CÓ THAY ĐỔI ĐĂNG NHẬP
     const handleAuthChange = (user) => {
       const loginBtn = document.getElementById('login-btn');
       const dashboard = document.getElementById('dashboard');
@@ -61,7 +47,28 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     };
 
-    // 5. KIỂM TRA NGƯỜI DÙNG ĐANG ĐĂNG NHẬP
+    // 4. THEO DÕI SỰ KIỆN ĐĂNG NHẬP/ĐĂNG XUẤT
+    netlifyIdentity.on('login', (user) => {
+      netlifyIdentity.close();
+      handleAuthChange(user);
+      loadCMSConfig().then(() => {
+        updateSidebar();
+        loadFolderContents(currentFolder);
+      });
+    });
+
+    netlifyIdentity.on('logout', () => {
+      handleAuthChange(null);
+    });
+
+    netlifyIdentity.on('init', handleAuthChange);
+    netlifyIdentity.on('close', () => {
+      if (!netlifyIdentity.currentUser()) {
+        handleAuthChange(null);
+      }
+    });
+
+    // 5. KIỂM TRA TRẠNG THÁI BAN ĐẦU
     const currentUser = netlifyIdentity.currentUser();
     if (currentUser) {
       handleAuthChange(currentUser);
@@ -70,6 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
         loadFolderContents(currentFolder);
       });
     }
+  }
     
     netlifyIdentity.on('init', handleAuthChange);
   }
