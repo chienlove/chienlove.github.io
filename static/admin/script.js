@@ -1,4 +1,3 @@
-// cms-admin.js - Phiên bản hoàn thiện
 document.addEventListener('DOMContentLoaded', () => {
   // Biến toàn cục
   let allPosts = [];
@@ -71,24 +70,9 @@ document.addEventListener('DOMContentLoaded', () => {
         loadFolderContents(currentFolder);
       });
     }
-  }
-        
-        // Tải cấu hình CMS khi đăng nhập thành công
-        loadCMSConfig().then(() => {
-          updateSidebar();
-          loadFolderContents(currentFolder);
-        });
-      } else {
-        console.log('Chưa đăng nhập');
-        loginBtn.innerHTML = `<i class="fas fa-sign-in-alt"></i> <span>Đăng nhập</span>`;
-        loginBtn.style.backgroundColor = '#4cc9f0';
-        dashboard.style.display = 'none';
-        sidebar.style.display = 'none';
-        allPosts = [];
-      }
-    };
-
+    
     netlifyIdentity.on('init', handleAuthChange);
+  }
     netlifyIdentity.on('login', (user) => {
       handleAuthChange(user);
       netlifyIdentity.close();
