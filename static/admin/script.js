@@ -44,6 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
         dashboard.style.display = 'none';
         sidebar.style.display = 'none';
         allPosts = [];
+      }
     };
 
     // 4. THEO DÕI SỰ KIỆN ĐĂNG NHẬP/ĐĂNG XUẤT
@@ -52,6 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
     netlifyIdentity.on('close', () => {
       if (!netlifyIdentity.currentUser()) {
         handleAuthChange(null);
+      }
     });
 
     // 5. KIỂM TRA TRẠNG THÁI BAN ĐẦU
@@ -61,7 +63,8 @@ document.addEventListener('DOMContentLoaded', () => {
       loadCMSConfig().then(() => {
         updateSidebar();
         loadFolderContents(currentFolder);
-    } else {
+    });
+    }    else {
       handleAuthChange(null);
   }
 
@@ -799,7 +802,7 @@ async function editPost(path, sha) {
           let value = line.substring(separatorIndex + 1).trim();
           
           if ((value.startsWith('"') && value.endsWith('"')) || 
-              (value.startsWith("'") && value.endsWith("'")) {
+              (value.startsWith("'") && value.endsWith("'"))) {
             value = value.slice(1, -1);
           }
           
