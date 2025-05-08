@@ -6,7 +6,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let collectionsConfig = null;
   let currentCollection = null;
 
-      // 1. KHỞI TẠO NETLIFY IDENTITY
+  // 1. KHỞI TẠO NETLIFY IDENTITY
   if (window.netlifyIdentity) {
     netlifyIdentity.init({
       APIUrl: 'https://storeios.net/.netlify/identity',
@@ -78,6 +78,20 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
   }
+    
+    netlifyIdentity.on('init', handleAuthChange);
+  }
+    netlifyIdentity.on('login', (user) => {
+      handleAuthChange(user);
+      netlifyIdentity.close();
+    });
+    netlifyIdentity.on('logout', () => handleAuthChange(null));
+    
+    netlifyIdentity.on('close', () => {
+      if (!netlifyIdentity.currentUser()) {
+        handleAuthChange(null);
+      }
+    });
 
     // 3. KIỂM TRA TRẠNG THÁI BAN ĐẦU
     handleAuthChange(netlifyIdentity.currentUser());
