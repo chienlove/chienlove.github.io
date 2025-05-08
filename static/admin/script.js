@@ -48,20 +48,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // 4. THEO DÕI SỰ KIỆN ĐĂNG NHẬP/ĐĂNG XUẤT
-    netlifyIdentity.on('login', (user) => {
-      netlifyIdentity.close();
-      handleAuthChange(user);
-      loadCMSConfig().then(() => {
-        updateSidebar();
-        loadFolderContents(currentFolder);
-      });
     });
-
-    netlifyIdentity.on('logout', () => {
-      handleAuthChange(null);
-    });
-
-    netlifyIdentity.on('init', handleAuthChange);
     netlifyIdentity.on('close', () => {
       if (!netlifyIdentity.currentUser()) {
         handleAuthChange(null);
@@ -78,13 +65,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     }
   }
-    
-    netlifyIdentity.on('init', handleAuthChange);
   }
-    netlifyIdentity.on('login', (user) => {
-      handleAuthChange(user);
-      netlifyIdentity.close();
-    });
     netlifyIdentity.on('logout', () => handleAuthChange(null));
     
     netlifyIdentity.on('close', () => {
