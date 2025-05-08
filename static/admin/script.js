@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', () => {
         netlifyIdentity.logout();
       } else {
         netlifyIdentity.open('login');
+      }
     });
 
     // 3. HÀM CẬP NHẬT GIAO DIỆN KHI CÓ THAY ĐỔI ĐĂNG NHẬP
@@ -1186,7 +1187,7 @@ async function deleteFolderRecursive(folderPath) {
 async function createNewPost(path, content) {
   try {
     const createData = {
-      message: `Tạo nội dung mới: ${path.split('/').pop().replace(/\.md$/i, ''))}`,
+      message: `Tạo nội dung mới: ${path.split('/').pop().replace(/\.md$/i, '')}`,
       content: btoa(unescape(encodeURIComponent(content))),
       branch: 'main'
     };
