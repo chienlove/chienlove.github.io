@@ -4,32 +4,72 @@
   <meta charset="UTF-8">
   <title>Quản lý nội dung | StoreIOS</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="/admin/css/admin.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap">
+  <link rel="stylesheet" href="/admin/css/admin.css?v=1.0">
   <script defer src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
   <script defer src="/admin/script.js"></script>
 </head>
 <body>
-  <header class="header">
-    <div class="container">
-      <h1>Quản lý nội dung</h1>
-      <button id="login-btn">Đăng nhập</button>
-    </div>
-  </header>
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside id="sidebar" class="sidebar" style="display: none;">
+      <div class="sidebar-header">
+        <h2>StoreIOS CMS</h2>
+      </div>
+      <nav class="sidebar-nav">
+        <ul id="sidebar-menu" class="sidebar-menu"></ul>
+      </nav>
+      <div class="sidebar-footer">
+        <div class="user-info">
+          <i class="fas fa-user-circle"></i>
+          <span id="user-email"></span>
+        </div>
+      </div>
+    </aside>
 
-  <main class="container">
-    <div id="dashboard" class="dashboard" style="display: none;">
-      <!-- Breadcrumb -->
-      <div id="breadcrumb" class="breadcrumb"></div>
+    <!-- Main Content -->
+    <div class="main-content">
+      <header class="header">
+        <div class="header-left">
+          <button class="sidebar-toggle" id="sidebar-toggle">
+            <i class="fas fa-bars"></i>
+          </button>
+          <h1>Quản lý nội dung</h1>
+        </div>
+        <button id="login-btn" class="login-btn">
+          <i class="fas fa-sign-in-alt"></i>
+          <span>Đăng nhập</span>
+        </button>
+      </header>
 
-      <!-- Danh sách bài viết và thư mục -->
-      <div id="posts-list" class="posts-list"></div>
-    </div>
-  </main>
+      <main class="container">
+        <div id="dashboard" class="dashboard" style="display: none;">
+          <!-- Breadcrumb -->
+          <div id="breadcrumb" class="breadcrumb"></div>
 
-  <footer class="footer">
-    <div class="container">
-      <p>&copy; 2025 StoreIOS - CMS Admin</p>
+          <!-- Content Header -->
+          <div class="content-header">
+            <h2><i class="fas fa-home"></i> Trang chủ</h2>
+            <button id="create-post" class="btn btn-primary" style="display: none;">
+              <i class="fas fa-plus"></i> Thêm mới
+            </button>
+          </div>
+
+          <!-- Danh sách bài viết và thư mục -->
+          <div id="posts-list" class="posts-list"></div>
+        </div>
+      </main>
+
+      <footer class="footer">
+        <div class="container">
+          <p>&copy; 2025 StoreIOS - CMS Admin</p>
+        </div>
+      </footer>
     </div>
-  </footer>
+  </div>
+
+  <!-- Modal Overlay -->
+  <div id="modal-overlay" class="modal-overlay" style="display: none;"></div>
 </body>
 </html>
