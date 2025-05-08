@@ -1,10 +1,10 @@
-/* CSS chuyên nghiệp, tối ưu cho mobile */
 :root {
   --primary: #4361ee;
   --primary-dark: #3a56d4;
   --danger: #ef233c;
   --danger-dark: #d90429;
   --success: #4cc9f0;
+  --success-dark: #2bb8e0;
   --warning: #f8961e;
   --light: #f8f9fa;
   --dark: #212529;
@@ -33,10 +33,10 @@ body {
 .app-container {
   display: flex;
   min-height: 100vh;
+  position: relative;
 }
 
 .sidebar {
-  display: none;
   width: var(--sidebar-width);
   background: linear-gradient(135deg, #2b2d42 0%, #1a1a2e 100%);
   color: white;
@@ -51,8 +51,10 @@ body {
 .sidebar.open {
   transform: translateX(0);
 }
+
 body.logged-in .sidebar {
   display: block;
+  transform: translateX(0);
 }
 
 .main-content {
@@ -61,13 +63,18 @@ body.logged-in .sidebar {
   display: flex;
   flex-direction: column;
   transition: var(--transition);
+  margin-left: 0;
+}
+
+body.logged-in .main-content {
+  margin-left: var(--sidebar-width);
 }
 
 .container {
   width: 100%;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 15px;
+  padding: 20px 15px;
   flex: 1;
 }
 
@@ -122,6 +129,9 @@ body.logged-in .sidebar {
   color: white;
   font-size: 1.5rem;
   cursor: pointer;
+  position: absolute;
+  right: 15px;
+  top: 15px;
 }
 
 .login-btn {
@@ -143,7 +153,7 @@ body.logged-in .sidebar {
 }
 
 .login-btn.logout {
-  background-color: var(--danger-color);
+  background-color: var(--danger);
 }
 
 .login-btn.logout:hover {
@@ -157,11 +167,13 @@ body.logged-in .sidebar {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  position: relative;
 }
 
 .sidebar-header h2 {
   font-size: 1.1rem;
   font-weight: 600;
+  color: white;
 }
 
 .sidebar-nav {
@@ -170,10 +182,13 @@ body.logged-in .sidebar {
 
 .sidebar-menu {
   list-style: none;
+  padding: 0;
+  margin: 0;
 }
 
 .menu-item {
   margin: 2px 0;
+  position: relative;
 }
 
 .menu-item a {
@@ -315,6 +330,7 @@ body.logged-in .sidebar {
   padding: 15px;
   transition: var(--transition);
   border: 1px solid var(--border);
+  position: relative;
 }
 
 .folder-item:hover, .file-item:hover, .post-card:hover {
@@ -403,6 +419,24 @@ body.logged-in .sidebar {
 
 .btn-primary:hover {
   background-color: var(--primary-dark);
+}
+
+.btn-edit {
+  background-color: var(--success);
+  color: white;
+}
+
+.btn-edit:hover {
+  background-color: var(--success-dark);
+}
+
+.btn-view {
+  background-color: #6c757d;
+  color: white;
+}
+
+.btn-view:hover {
+  background-color: #5a6268;
 }
 
 .btn-danger {
@@ -577,53 +611,52 @@ textarea.form-control {
 
 /* Responsive Styles */
 @media (max-width: 992px) {
+  .main-content {
+    margin-left: 0;
+  }
+
   .sidebar {
-    width: 80px;
+    width: 280px;
+    transform: translateX(-100%);
   }
-  
-  .sidebar-header h2,
-  .menu-item span,
-  .user-info span {
-    display: none;
+
+  .sidebar.open {
+    transform: translateX(0);
   }
-  
-  .menu-item a {
-    justify-content: center;
-    padding: 15px 0;
-  }
-  
-  .menu-item i {
-    margin-right: 0;
-    font-size: 1.2rem;
-  }
-  
+
   .sidebar-close {
     display: block;
   }
 }
 
 @media (max-width: 768px) {
-  .sidebar {
-    width: 280px;
-    transform: translateX(-100%);
-  }
-  
-  .sidebar.open {
-    transform: translateX(0);
-  }
-  
   .folder-list, .post-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .content-header {
     flex-direction: column;
     align-items: flex-start;
   }
-  
+
   .content-actions {
     width: 100%;
+    justify-content: flex-start;
   }
+
+  .item-actions, .post-card-actions {
+    justify-content: flex-start;
+  }
+}
+
+/* Animation */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-in-out;
 }
 
 /* Utility Classes */
@@ -636,3 +669,12 @@ textarea.form-control {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.text-center {
+  text-align: center;
+}
+
+.mt-2 { margin-top: 0.5rem; }
+.mb-2 { margin-bottom: 0.5rem; }
+.ml-2 { margin-left: 0.5rem; }
+.mr-2 { margin-right: 0.5rem; }
