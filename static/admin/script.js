@@ -1,4 +1,3 @@
-// cms-admin.js
 document.addEventListener('DOMContentLoaded', () => {
   // Biến toàn cục
   let allPosts = [];
@@ -7,74 +6,92 @@ document.addEventListener('DOMContentLoaded', () => {
   let collectionsConfig = null;
   let currentCollection = null;
 
-  // 1. KHỞI TẠO NETLIFY IDENTITY
+  // 1. Khởi tạo Netlify Identity
   if (window.netlifyIdentity) {
     netlifyIdentity.init({
-      APIUrl: 'https://storeios.net/.netlify/identity',
-      enableOperator: true
+      APIUrl: 'https://storeios.net/.netlify/identity'
     });
 
+    // Lấy các phần tử DOM
     const loginBtn = document.getElementById('login-btn');
     const sidebarToggle = document.getElementById('sidebar-toggle');
+    const sidebarClose = document.getElementById('sidebar-close');
     const sidebar = document.getElementById('sidebar');
+    const dashboard = document.getElementById('dashboard');
 
-    // Xử lý toggle sidebar - luôn hoạt động không phụ thuộc đăng nhập
-    sidebarToggle.addEventListener('click', (e) => {
-      e.stopPropagation();
-      sidebar.classList.toggle('open');
-    });
+    // Xử lý mở/đóng sidebar
+    function setupSidebar() {
+      sidebarToggle.addEventListener('click', () => {
+        sidebar.classList.add('open');
+      });
 
-    // Đóng sidebar khi click bên ngoài
-    document.addEventListener('click', (e) => {
-      if (!sidebar.contains(e.target) && e.target !== sidebarToggle) {
+      sidebarClose.addEventListener('click', () => {
         sidebar.classList.remove('open');
-      }
-    });
+      });
 
-    // 2. XỬ LÝ SỰ KIỆN CLICK NÚT ĐĂNG NHẬP/ĐĂNG XUẤT
-    loginBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      const user = netlifyIdentity.currentUser();
+      document.addEventListener('click', (e) => {
+        if (!sidebar.contains(e.target) {
+          sidebar.classList.remove('open');
+        }
+      });
+    }
+
+    // 2. Xử lý đăng nhập/đăng xuất
+    function setupAuth() {
+      loginBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const user = netlifyIdentity.currentUser();
+        if (user) {
+          netlifyIdentity.logout();
+        } else {
+          netlifyIdentity.open('login');
+        }
+      });
+
+      netlifyIdentity.on('login', (user) => {
+        updateUI(user);
+        netlifyIdentity.close();
+      });
+
+      netlifyIdentity.on('logout', () => {
+        updateUI(null);
+      });
+
+      // Kiểm tra trạng thái ban đầu
+      const currentUser = netlifyIdentity.currentUser();
+      updateUI(currentUser);
+    }
+
+    // 3. Cập nhật giao diện khi đăng nhập/đăng xuất
+    function updateUI(user) {
       if (user) {
-        netlifyIdentity.logout();
-      } else {
-        netlifyIdentity.open('login');
-      }
-    });
-
-    // 3. HÀM CẬP NHẬT GIAO DIỆN KHI CÓ THAY ĐỔI ĐĂNG NHẬP
-    const handleAuthChange = (user) => {
-      const dashboard = document.getElementById('dashboard');
-      const userEmail = document.getElementById('user-email');
-
-      if (user) {
-        console.log('Đã đăng nhập:', user.email);
         loginBtn.innerHTML = `<i class="fas fa-sign-out-alt"></i> <span>Đăng xuất (${user.email.split('@')[0]})</span>`;
         loginBtn.classList.add('logout');
         dashboard.style.display = 'block';
         sidebar.style.display = 'block';
+        document.body.classList.add('logged-in');
         
-        if (userEmail) {
-          userEmail.textContent = user.email;
-        }
-
+        // Load dữ liệu
         loadCMSConfig().then(() => {
           updateSidebar();
           loadFolderContents(currentFolder);
         });
       } else {
-        console.log('Đã đăng xuất');
         loginBtn.innerHTML = `<i class="fas fa-sign-in-alt"></i> <span>Đăng nhập</span>`;
         loginBtn.classList.remove('logout');
         dashboard.style.display = 'none';
-        sidebar.style.display = 'none';
-        allPosts = [];
-        
-        if (userEmail) {
-          userEmail.textContent = '';
-        }
+        document.body.classList.remove('logged-in');
       }
-    };
+    }
+
+    // 4. Khởi tạo ứng dụng
+    function init() {
+      setupSidebar();
+      setupAuth();
+    }
+
+    init();
+  }
 
     // 4. THEO DÕI SỰ KIỆN ĐĂNG NHẬP/ĐĂNG XUẤT
     netlifyIdentity.on('login', (user) => {
