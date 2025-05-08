@@ -11,7 +11,6 @@ document.addEventListener('DOMContentLoaded', () => {
     netlifyIdentity.init({
       APIUrl: 'https://storeios.net/.netlify/identity',
       enableOperator: true
-    });
 
     const loginBtn = document.getElementById('login-btn');
 
@@ -22,8 +21,6 @@ document.addEventListener('DOMContentLoaded', () => {
         netlifyIdentity.logout();
       } else {
         netlifyIdentity.open('login');
-      }
-    });
 
     // 3. HÀM CẬP NHẬT GIAO DIỆN KHI CÓ THAY ĐỔI ĐĂNG NHẬP
     const handleAuthChange = (user) => {
@@ -44,16 +41,12 @@ document.addEventListener('DOMContentLoaded', () => {
         dashboard.style.display = 'none';
         sidebar.style.display = 'none';
         allPosts = [];
-      }
     };
 
     // 4. THEO DÕI SỰ KIỆN ĐĂNG NHẬP/ĐĂNG XUẤT
-    });
     netlifyIdentity.on('close', () => {
       if (!netlifyIdentity.currentUser()) {
         handleAuthChange(null);
-      }
-    });
 
     // 5. KIỂM TRA TRẠNG THÁI BAN ĐẦU
     const currentUser = netlifyIdentity.currentUser();
@@ -62,17 +55,11 @@ document.addEventListener('DOMContentLoaded', () => {
       loadCMSConfig().then(() => {
         updateSidebar();
         loadFolderContents(currentFolder);
-      });
-    }
-  }
-  }
     netlifyIdentity.on('logout', () => handleAuthChange(null));
     
     netlifyIdentity.on('close', () => {
       if (!netlifyIdentity.currentUser()) {
         handleAuthChange(null);
-      }
-    });
 
     // 3. KIỂM TRA TRẠNG THÁI BAN ĐẦU
     handleAuthChange(netlifyIdentity.currentUser());
@@ -83,9 +70,6 @@ document.addEventListener('DOMContentLoaded', () => {
         netlifyIdentity.logout();
       } else {
         netlifyIdentity.open('login');
-      }
-    });
-  }
 
   // 4. TẢI CẤU HÌNH CMS
   async function loadCMSConfig() {
@@ -99,8 +83,6 @@ document.addEventListener('DOMContentLoaded', () => {
       console.error('Lỗi khi tải cấu hình CMS:', error);
       showNotification('Lỗi tải cấu hình CMS', 'error');
       return null;
-    }
-  }
 
   // 5. PHÂN TÍCH YAML (ĐÃ SỬA)
   function parseYAML(yamlString) {
@@ -116,29 +98,24 @@ document.addEventListener('DOMContentLoaded', () => {
       
       if (trimmedLine === 'collections:') {
         continue;
-      }
       
       if (trimmedLine.startsWith('- name:')) {
         currentCollection = { fields: [] };
         result.collections.push(currentCollection);
         currentCollection.name = trimmedLine.split('name:')[1].trim().replace(/['"]/g, '');
         continue;
-      }
       
       if (currentCollection && trimmedLine.startsWith('label:')) {
         currentCollection.label = trimmedLine.split('label:')[1].trim().replace(/['"]/g, '');
         continue;
-      }
       
       if (currentCollection && trimmedLine.startsWith('folder:')) {
         currentCollection.folder = trimmedLine.split('folder:')[1].trim().replace(/['"]/g, '');
         continue;
-      }
       
       if (currentCollection && trimmedLine === 'fields:') {
         inFields = true;
         continue;
-      }
       
       if (inFields && trimmedLine.startsWith('- {')) {
         const fieldStr = trimmedLine.match(/\{([^}]+)\}/)[1];
@@ -149,17 +126,11 @@ document.addEventListener('DOMContentLoaded', () => {
           const [key, value] = part.split(':').map(s => s.trim());
           if (key && value) {
             field[key.replace(/['"]/g, '')] = value.replace(/['"]/g, '');
-          }
-        });
         
         if (field.name) {
           currentCollection.fields.push(field);
-        }
-      }
-    }
     
     return result;
-  }
 
   // 6. CẬP NHẬT SIDEBAR THEO COLLECTION
   function updateSidebar() {
@@ -185,7 +156,6 @@ document.addEventListener('DOMContentLoaded', () => {
           </a>
         </li>
       `;
-    });
     
     menuHTML += `
       <li class="menu-item">
@@ -197,14 +167,12 @@ document.addEventListener('DOMContentLoaded', () => {
     `;
     
     sidebarMenu.innerHTML = menuHTML;
-  }
 
   // 7. HÀM GỌI API AN TOÀN
   async function callGitHubAPI(url, method = 'GET', body = null) {
     const user = netlifyIdentity.currentUser();
     if (!user?.token?.access_token) {
       throw new Error('Bạn chưa đăng nhập');
-    }
 
     const headers = {
       'Authorization': `Bearer ${user.token.access_token}`,
@@ -223,17 +191,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (body) {
       config.body = JSON.stringify(body);
-    }
 
     const response = await fetch(url, config);
     
     if (!response.ok) {
       const error = await response.json().catch(() => null);
       throw new Error(error?.message || `Lỗi HTTP ${response.status}`);
-    }
 
     return response.json();
-  }
 
   // 8. TẢI NỘI DUNG COLLECTION
   async function loadCollection(collectionName, folderPath) {
@@ -248,12 +213,10 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (contentHeader && currentCollection) {
       contentHeader.innerHTML = `<i class="fas fa-${getCollectionIcon(collectionName)}"></i> ${escapeHtml(currentCollection.label || currentCollection.name)}`;
-    }
     
     if (createBtn) {
       createBtn.style.display = 'inline-flex';
       createBtn.onclick = () => addNewEntry(collectionName);
-    }
     
     postsList.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Đang tải dữ liệu...</div>';
     
@@ -276,11 +239,8 @@ document.addEventListener('DOMContentLoaded', () => {
       
       if (error.message.includes('401')) {
         netlifyIdentity.logout();
-      }
     } finally {
       isProcessing = false;
-    }
-  }
 
   // 9. TẢI NỘI DUNG THƯ MỤC (ĐÃ SỬA ĐỂ HIỂN THỊ TẤT CẢ THƯ MỤC CON)
   async function loadFolderContents(path) {
@@ -296,7 +256,6 @@ document.addEventListener('DOMContentLoaded', () => {
   try {
     if (!isValidPath(path)) {
       throw new Error('Đường dẫn không hợp lệ');
-    }
 
     // Lấy toàn bộ nội dung thư mục (bao gồm cả thư mục con)
     const data = await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(path)}?recursive=1`);
@@ -325,11 +284,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     if (error.message.includes('401')) {
       netlifyIdentity.logout();
-    }
   } finally {
     isProcessing = false;
-  }
-}
 
   // 10. TẠO BREADCRUMB
   function createBreadcrumb() {
@@ -339,7 +295,6 @@ document.addEventListener('DOMContentLoaded', () => {
     breadcrumb.className = 'breadcrumb';
     dashboard.insertBefore(breadcrumb, dashboard.querySelector('.content-body'));
     return breadcrumb;
-  }
 
   // 11. CẬP NHẬT BREADCRUMB
   function updateBreadcrumb(path) {
@@ -354,10 +309,8 @@ document.addEventListener('DOMContentLoaded', () => {
     for (let i = 1; i < parts.length; i++) {
       currentPath += '/' + parts[i];
       breadcrumbHTML += ` <i class="fas fa-chevron-right separator"></i> <span class="crumb" onclick="window.loadFolderContents('${escapeHtml(currentPath)}')">${escapeHtml(parts[i])}</span>`;
-    }
     
     breadcrumb.innerHTML = breadcrumbHTML;
-  }
 
   // 12. HIỂN THỊ NỘI DUNG COLLECTION
   function renderCollectionItems(items, collection) {
@@ -374,7 +327,6 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
       `;
       return;
-    }
     
     const markdownFiles = items.filter(item => item.name.toLowerCase().endsWith('.md'));
     
@@ -389,7 +341,6 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
       `;
       return;
-    }
     
     postsList.innerHTML = `
       <div class="collection-header">
@@ -440,11 +391,6 @@ document.addEventListener('DOMContentLoaded', () => {
             card.style.display = 'flex';
           } else {
             card.style.display = 'none';
-          }
-        });
-      });
-    }
-  }
 
   // 13. HIỂN THỊ NỘI DUNG THƯ MỤC (ĐÃ SỬA ĐỂ HIỂN THỊ TẤT CẢ NỘI DUNG)
   function renderFolderContents(items, currentPath) {
@@ -466,12 +412,10 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>
     `;
     return;
-  }
   
   const sortedItems = [...items].sort((a, b) => {
     if (a.type === b.type) return a.name.localeCompare(b.name);
     return a.type === 'dir' ? -1 : 1;
-  });
   
   postsList.innerHTML = `
     <div class="folder-header">
@@ -534,11 +478,9 @@ document.addEventListener('DOMContentLoaded', () => {
               </div>
             </div>
           `;
-        }
       }).join('')}
     </div>
   `;
-}
 
   // 14. THÊM BÀI VIẾT MỚI - THƯ MỤC THÔNG THƯỜNG
   function addNewPost(folderPath) {
@@ -562,16 +504,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!title) {
           showNotification('Vui lòng nhập tiêu đề bài viết', 'warning');
           return false;
-        }
         
         const filename = formatFolderName(title) + '.md';
         const path = `${folderPath}/${filename}`;
         
         createNewPost(path, `# ${title}\n\n${content}`);
         return true;
-      }
-    });
-  }
 
   // 15. THÊM ENTRY MỚI CHO COLLECTION (ĐÃ SỬA ĐỂ HIỂN THỊ ĐẦY ĐỦ TRƯỜNG)
   function addNewEntry(collectionName) {
@@ -579,7 +517,6 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!collection) {
     showNotification('Không tìm thấy cấu hình collection', 'error');
     return;
-  }
   
   const fields = collection.fields || [];
   let formHTML = '';
@@ -597,7 +534,6 @@ document.addEventListener('DOMContentLoaded', () => {
       decodedValue = decodeURIComponent(escape(fieldValue));
     } catch (e) {
       decodedValue = fieldValue;
-    }
     
     formHTML += `<div class="form-group">`;
     formHTML += `<label for="field-${field.name}">${escapeHtml(fieldLabel)}${field.required ? '<span class="required">*</span>' : ''}</label>`;
@@ -618,7 +554,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 decodedOption = decodeURIComponent(escape(option));
               } catch (e) {
                 decodedOption = option;
-              }
               return `<option value="${escapeHtml(option)}" ${option === fieldValue ? 'selected' : ''}>${escapeHtml(decodedOption)}</option>`;
             }).join('')}
           </select>
@@ -637,10 +572,8 @@ document.addEventListener('DOMContentLoaded', () => {
         break;
       default:
         formHTML += `<input type="text" id="field-${field.name}" class="form-control" value="${escapeHtml(decodedValue)}">`;
-    }
     
     formHTML += `</div>`;
-  });
   
   // Thêm trường nội dung chính (body)
   formHTML += `
@@ -659,7 +592,6 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!title) {
         showNotification('Vui lòng nhập tiêu đề', 'warning');
         return false;
-      }
       
       // Thu thập dữ liệu từ form
       const frontMatter = {};
@@ -671,12 +603,9 @@ document.addEventListener('DOMContentLoaded', () => {
           value = document.getElementById(`field-${field.name}`)?.checked ? 'true' : 'false';
         } else {
           value = document.getElementById(`field-${field.name}`)?.value;
-        }
         
         if (value !== undefined && value !== null) {
           frontMatter[field.name] = value;
-        }
-      });
       
       const body = document.getElementById('field-body')?.value || '';
       
@@ -693,9 +622,6 @@ ${body}
       
       createNewPost(path, content);
       return true;
-    }
-  });
-}
 
   // 16. HIỂN THỊ MODAL
   function showModal({ title, body, confirmText = 'Lưu', onConfirm }) {
@@ -723,25 +649,18 @@ ${body}
     // Xử lý sự kiện
     modal.querySelector('.close-btn').addEventListener('click', () => {
       modal.remove();
-    });
     
     modal.querySelector('#modal-cancel').addEventListener('click', () => {
       modal.remove();
-    });
     
     modal.querySelector('#modal-confirm').addEventListener('click', () => {
       if (onConfirm && onConfirm() !== false) {
         modal.remove();
-      }
-    });
     
     // Đóng modal khi click ra ngoài
     modal.addEventListener('click', (e) => {
       if (e.target === modal) {
         modal.remove();
-      }
-    });
-  }
 
   // 17. HIỂN THỊ THÔNG BÁO
   function showNotification(message, type = 'success') {
@@ -753,7 +672,6 @@ ${body}
     setTimeout(() => {
       notification.remove();
     }, 3000);
-  }
 
   // 18. ĐỊNH DẠNG NGÀY THÁNG
   function formatDate(date) {
@@ -764,8 +682,6 @@ ${body}
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
-    });
-  }
 
   // 19. LẤY ICON CHO COLLECTION
   function getCollectionIcon(collectionName) {
@@ -779,12 +695,10 @@ ${body}
     };
     
     return icons[collectionName] || 'file';
-  }
 
   // 20. KIỂM TRA ĐƯỜNG DẪN HỢP LỆ
   function isValidPath(path) {
     return path && !path.includes('../') && !path.startsWith('/') && !path.includes('//');
-  }
 
   // 21. ESCAPE HTML
   function escapeHtml(str) {
@@ -795,7 +709,6 @@ ${body}
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#039;");
-  }
 
   // 22. ĐỊNH DẠNG TÊN THƯ MỤC
   function formatFolderName(name) {
@@ -805,7 +718,6 @@ ${body}
       .replace(/\s+/g, '-')
       .replace(/[^a-z0-9-]/g, '')
       .replace(/-+/g, '-');
-  }
 
   // Đăng ký hàm toàn cục
   window.loadFolderContents = loadFolderContents;
@@ -819,14 +731,12 @@ ${body}
   window.addNewFolder = addNewFolder;
   window.addNewEntry = addNewEntry;
   window.showSettings = () => showNotification('Tính năng đang phát triển', 'warning');
-});
 
 // 23. CHỨC NĂNG XEM BÀI VIẾT (ĐÃ SỬA ĐƯỜNG DẪN)
 function viewPost(path) {
   const slug = path.split('/').pop().replace(/\.md$/i, '');
   const postUrl = `${window.location.origin}/${slug}`;
   window.open(postUrl, '_blank');
-}
 // 24. CHỈNH SỬA BÀI VIẾT (ĐÃ SỬA)
 async function editPost(path, sha) {
   try {
@@ -843,14 +753,12 @@ async function editPost(path, sha) {
       console.error('Lỗi decode content:', e);
       // Fallback nếu không decode được
       content = atob(fileData.content);
-    }
 
     // 3. Kiểm tra frontmatter
     if (content.startsWith('---')) {
       const frontMatterEnd = content.indexOf('---', 3);
       if (frontMatterEnd === -1) {
         throw new Error('Không tìm thấy kết thúc frontmatter');
-      }
       
       const frontMatter = content.substring(3, frontMatterEnd).trim();
       const body = content.substring(frontMatterEnd + 3).trim();
@@ -870,24 +778,18 @@ async function editPost(path, sha) {
           if ((value.startsWith('"') && value.endsWith('"')) || 
    (value.startsWith("'") && value.endsWith("'"))) {
   value = value.slice(1, -1);
-}
           
           // Thử parse JSON nếu có thể
           try {
             fields[key] = JSON.parse(value);
           } catch {
             fields[key] = value;
-          }
-        }
-      }
       
       // 5. Tìm collection tương ứng
       const collection = window.collectionsConfig?.find(c => path.startsWith(c.folder));
       if (collection) {
         showEditCollectionModal(collection, path, sha, fields, body);
         return;
-      }
-    }
     
     // 6. Nếu không phải collection, hiển thị editor đơn giản
     showEditModal(path, content, sha);
@@ -899,9 +801,6 @@ async function editPost(path, sha) {
     // Hiển thị thông tin lỗi chi tiết trong console
     if (error.response) {
       console.error('Response error:', await error.response.text());
-    }
-  }
-}
 
 // 25. HIỂN THỊ MODAL CHỈNH SỬA COLLECTION ENTRY (ĐÃ SỬA)
 function showEditCollectionModal(collection, path, sha, fields, body) {
@@ -937,13 +836,10 @@ function showEditCollectionModal(collection, path, sha, fields, body) {
                    value="${escapeHtml(subValue)}"
                    placeholder="${escapeHtml(subField.hint || '')}">
           </div>`;
-        });
       } catch (e) {
         console.error('Lỗi khi parse object value:', e);
-      }
       
       formHTML += `</fieldset>`;
-    } 
     else if (field.widget === 'list' && field.fields) {
       formHTML += `<fieldset class="list-field">
         <legend>${escapeHtml(fieldLabel)}</legend>
@@ -967,20 +863,16 @@ function showEditCollectionModal(collection, path, sha, fields, body) {
                      name="${field.name}[${index}].${subField.name}" 
                      value="${escapeHtml(subValue)}">
             </div>`;
-          });
           
           formHTML += `</div>`;
-        });
       } catch (e) {
         console.error('Lỗi khi parse list value:', e);
-      }
       
       formHTML += `</div>
         <button type="button" class="btn btn-sm btn-add-item" onclick="addListItem('${field.name}', ${JSON.stringify(field.fields)})">
           + Thêm mục
         </button>
       </fieldset>`;
-    }
     else {
       // Xử lý các widget thông thường
       formHTML += `<label for="field-${field.name}">${escapeHtml(fieldLabel)}${field.required ? '<span class="required">*</span>' : ''}</label>`;
@@ -1014,11 +906,8 @@ function showEditCollectionModal(collection, path, sha, fields, body) {
           break;
         default:
           formHTML += `<input type="text" id="field-${field.name}" class="form-control" value="${escapeHtml(value)}">`;
-      }
-    }
     
     formHTML += `</div>`;
-  });
   
   // Thêm trường nội dung chính (body)
   let decodedBody;
@@ -1026,7 +915,6 @@ function showEditCollectionModal(collection, path, sha, fields, body) {
     decodedBody = decodeURIComponent(escape(body));
   } catch (e) {
     decodedBody = body;
-  }
   
   formHTML += `
     <div class="form-group">
@@ -1044,7 +932,6 @@ function showEditCollectionModal(collection, path, sha, fields, body) {
       if (!title) {
         showNotification('Vui lòng nhập tiêu đề', 'warning');
         return false;
-      }
       
       // Thu thập dữ liệu từ form
       const frontMatter = {};
@@ -1057,10 +944,7 @@ function showEditCollectionModal(collection, path, sha, fields, body) {
             const input = document.querySelector(`[name="${field.name}.${subField.name}"]`);
             if (input) {
               objectValue[subField.name] = input.value;
-            }
-          });
           frontMatter[field.name] = objectValue;
-        }
         else if (field.widget === 'list' && field.fields) {
           const listItems = [];
           const itemElements = document.querySelectorAll(`#list-${field.name} .list-item`);
@@ -1071,26 +955,18 @@ function showEditCollectionModal(collection, path, sha, fields, body) {
               const input = itemEl.querySelector(`[name^="${field.name}"][name$="${subField.name}"]`);
               if (input) {
                 itemValue[subField.name] = input.value;
-              }
-            });
             listItems.push(itemValue);
-          });
           
           frontMatter[field.name] = listItems;
-        }
         else {
           let value;
           if (field.widget === 'boolean') {
             value = document.getElementById(`field-${field.name}`)?.checked ? 'true' : 'false';
           } else {
             value = document.getElementById(`field-${field.name}`)?.value;
-          }
           
           if (value !== undefined && value !== null) {
             frontMatter[field.name] = value;
-          }
-        }
-      });
       
       const newBody = document.getElementById('field-body')?.value || '';
       
@@ -1099,7 +975,6 @@ function showEditCollectionModal(collection, path, sha, fields, body) {
 ${Object.entries(frontMatter).map(([key, val]) => {
   if (typeof val === 'object') {
     return `${key}: ${JSON.stringify(val)}`;
-  }
   return `${key}: ${val}`;
 }).join('\n')}
 ---
@@ -1109,9 +984,6 @@ ${newBody}
       
       savePost(path, sha, content, `Cập nhật ${collection.label || collection.name}: ${title}`);
       return true;
-    }
-  });
-}
 
 // Hàm thêm mục vào list field
 function addListItem(fieldName, fields) {
@@ -1131,11 +1003,9 @@ function addListItem(fieldName, fields) {
              name="${fieldName}[${index}].${subField.name}" 
              value="">
     </div>`;
-  });
   
   itemHTML += `</div>`;
   listContainer.insertAdjacentHTML('beforeend', itemHTML);
-}
 
 // Hàm xóa mục khỏi list field
 function removeListItem(button) {
@@ -1149,10 +1019,6 @@ function removeListItem(button) {
     Array.from(listContainer.children).forEach((item, index) => {
       item.querySelectorAll('[name^="' + fieldName + '"]').forEach(input => {
         input.name = input.name.replace(/\[\d+\]/, `[${index}]`);
-      });
-    });
-  }
-}
 
 // Đăng ký hàm toàn cục
 window.addListItem = addListItem;
@@ -1182,16 +1048,12 @@ function showEditModal(path, content, sha) {
       if (!title) {
         showNotification('Vui lòng nhập tiêu đề bài viết', 'warning');
         return false;
-      }
       
       const newFilename = formatFolderName(title) + '.md';
       const newPath = path.split('/').slice(0, -1).join('/') + '/' + newFilename;
       
       savePost(newPath, sha, content, `Cập nhật bài viết: ${title}`, path !== newPath);
       return true;
-    }
-  });
-}
 
 // 27. LƯU BÀI VIẾT
 async function savePost(path, sha, content, message, isRename = false) {
@@ -1210,7 +1072,6 @@ async function savePost(path, sha, content, message, isRename = false) {
       await deleteItem(oldPath, sha, false, true);
       apiPath = path;
       delete updateData.sha; // Không cần sha khi tạo file mới
-    }
     
     await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(apiPath)}`, isRename ? 'PUT' : 'PUT', updateData);
     
@@ -1221,13 +1082,10 @@ async function savePost(path, sha, content, message, isRename = false) {
       window.loadCollection(currentCollection.name, currentCollection.folder);
     } else {
       window.loadFolderContents(folderPath || 'content');
-    }
     
   } catch (error) {
     console.error('Lỗi khi lưu bài viết:', error);
     showNotification(`Lỗi: ${error.message || 'Không thể lưu bài viết'}`, 'error');
-  }
-}
 
 // 28. XÓA BÀI VIẾT HOẶC THƯ MỤC
 async function deleteItem(path, sha, isFolder, silent = false) {
@@ -1245,11 +1103,9 @@ async function deleteItem(path, sha, isFolder, silent = false) {
       };
       
       await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(path)}`, 'DELETE', deleteData);
-    }
     
     if (!silent) {
       showNotification(`Xóa ${itemType} thành công!`, 'success');
-    }
     
     const parentFolder = path.split('/').slice(0, -1).join('/');
     
@@ -1257,13 +1113,10 @@ async function deleteItem(path, sha, isFolder, silent = false) {
       window.loadCollection(currentCollection.name, currentCollection.folder);
     } else {
       window.loadFolderContents(parentFolder || 'content');
-    }
     
   } catch (error) {
     console.error(`Lỗi khi xóa ${itemType}:`, error);
     showNotification(`Lỗi: ${error.message || `Không thể xóa ${itemType}`}`, 'error');
-  }
-}
 
 // 29. XÓA THƯ MỤC ĐỆ QUY
 async function deleteFolderRecursive(folderPath) {
@@ -1280,9 +1133,6 @@ async function deleteFolderRecursive(folderPath) {
       };
       
       await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(item.path)}`, 'DELETE', deleteData);
-    }
-  }
-}
 
 // 30. TẠO BÀI VIẾT MỚI
 async function createNewPost(path, content) {
@@ -1302,13 +1152,10 @@ async function createNewPost(path, content) {
       window.loadCollection(currentCollection.name, currentCollection.folder);
     } else {
       window.loadFolderContents(parentFolder || 'content');
-    }
     
   } catch (error) {
     console.error('Lỗi khi tạo nội dung mới:', error);
     showNotification(`Lỗi: ${error.message || 'Không thể tạo nội dung mới'}`, 'error');
-  }
-}
 
 // 31. THÊM THƯ MỤC MỚI
 function addNewFolder(parentPath) {
@@ -1326,23 +1173,18 @@ function addNewFolder(parentPath) {
       if (!folderName) {
         showNotification('Vui lòng nhập tên thư mục', 'warning');
         return false;
-      }
       
       const formattedName = formatFolderName(folderName);
       const path = `${parentPath}/${formattedName}/README.md`;
       
       createNewPost(path, `# ${folderName}\n\nThư mục này chứa nội dung về ${folderName}.`);
       return true;
-    }
-  });
-}
 
 // 32. HÀM GỌI API TOÀN CỤC
 async function callGitHubAPI(url, method = 'GET', body = null) {
   const user = window.netlifyIdentity?.currentUser();
   if (!user?.token?.access_token) {
     throw new Error('Bạn chưa đăng nhập');
-  }
 
   const headers = {
     'Authorization': `Bearer ${user.token.access_token}`,
@@ -1361,17 +1203,14 @@ async function callGitHubAPI(url, method = 'GET', body = null) {
 
   if (body) {
     config.body = JSON.stringify(body);
-  }
 
   const response = await fetch(url, config);
   
   if (!response.ok) {
     const error = await response.json().catch(() => null);
     throw new Error(error?.message || `Lỗi HTTP ${response.status}`);
-  }
 
   return response.json();
-}
 
 // Hàm hỗ trợ toàn cục
 function escapeHtml(str) {
@@ -1382,7 +1221,6 @@ function escapeHtml(str) {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#039;");
-}
 
 function formatFolderName(name) {
   return name.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
@@ -1391,4 +1229,3 @@ function formatFolderName(name) {
     .replace(/\s+/g, '-')
     .replace(/[^a-z0-9-]/g, '')
     .replace(/-+/g, '-');
-}
