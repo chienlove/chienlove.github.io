@@ -419,3 +419,398 @@ body.logged-in .main-content {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* ==================== MODAL STYLES ==================== */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transition: var(--transition);
+  padding: 20px;
+}
+
+.modal-overlay.active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.modal {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 5px 30px rgba(0, 0, 0, 0.3);
+  width: 100%;
+  max-width: 600px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  transform: translateY(-20px);
+  transition: var(--transition);
+}
+
+.modal-overlay.active .modal {
+  transform: translateY(0);
+}
+
+.modal-content {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modal-header {
+  padding: 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: var(--gray);
+  transition: var(--transition);
+  padding: 5px;
+  line-height: 1;
+}
+
+.modal-close:hover {
+  color: var(--danger);
+}
+
+.modal-body {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.modal-footer {
+  padding: 15px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* Form Styles */
+.form-group {
+  margin-bottom: 15px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.form-group .required {
+  color: var(--danger);
+  margin-left: 3px;
+}
+
+.form-control {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 0.9rem;
+  transition: var(--transition);
+}
+
+.form-control:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+}
+
+textarea.form-control {
+  min-height: 150px;
+  resize: vertical;
+}
+
+.checkbox-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.checkbox-wrapper input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+}
+
+/* Object and List Fields */
+.object-field, .list-field {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 15px;
+  margin-bottom: 15px;
+}
+
+.object-field legend, .list-field legend {
+  font-weight: 500;
+  padding: 0 5px;
+  font-size: 0.9rem;
+}
+
+.sub-field {
+  margin-bottom: 10px;
+}
+
+.sub-field label {
+  font-size: 0.85rem;
+  color: var(--gray);
+}
+
+.list-items {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.list-item {
+  position: relative;
+  padding: 10px;
+  border: 1px dashed var(--border);
+  border-radius: 6px;
+}
+
+.btn-remove-item {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  background-color: var(--danger);
+  color: white;
+  border-radius: 50%;
+  font-size: 0.7rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-remove-item:hover {
+  background-color: var(--danger-dark);
+}
+
+.btn-add-item {
+  background-color: var(--light-gray);
+  color: var(--dark);
+}
+
+.btn-add-item:hover {
+  background-color: var(--border);
+}
+
+/* ==================== NOTIFICATION STYLES ==================== */
+.notification {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  padding: 15px 20px;
+  border-radius: 6px;
+  background-color: white;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transform: translateY(100px);
+  opacity: 0;
+  transition: var(--transition);
+  z-index: 1100;
+}
+
+.notification.show {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.notification i {
+  font-size: 1.2rem;
+}
+
+.notification.success {
+  background-color: #d1fae5;
+  color: #065f46;
+  border-left: 4px solid #10b981;
+}
+
+.notification.error {
+  background-color: #fee2e2;
+  color: #b91c1c;
+  border-left: 4px solid #ef4444;
+}
+
+.notification.warning {
+  background-color: #fef3c7;
+  color: #92400e;
+  border-left: 4px solid #f59e0b;
+}
+
+/* ==================== FOLDER LIST STYLES ==================== */
+.folder-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.folder-item, .file-item {
+  background-color: white;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  transition: var(--transition);
+  overflow: hidden;
+}
+
+.folder-item:hover, .file-item:hover {
+  border-color: var(--primary);
+}
+
+.folder-item-inner, .file-item-inner {
+  padding: 12px 15px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.folder-icon, .file-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 6px;
+  background-color: rgba(67, 97, 238, 0.1);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+}
+
+.file-icon {
+  background-color: rgba(108, 117, 125, 0.1);
+  color: var(--gray);
+}
+
+.folder-details, .file-details {
+  flex: 1;
+}
+
+.folder-name, .file-name {
+  font-weight: 500;
+  margin-bottom: 3px;
+}
+
+.file-date {
+  font-size: 0.75rem;
+  color: var(--gray);
+}
+
+.item-actions {
+  padding: 0 15px 12px 15px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ==================== EMPTY STATE STYLES ==================== */
+.empty {
+  text-align: center;
+  padding: 40px 20px;
+  background-color: white;
+  border-radius: 8px;
+  border: 1px dashed var(--border);
+}
+
+.empty i {
+  font-size: 3rem;
+  color: var(--light-gray);
+  margin-bottom: 15px;
+}
+
+.empty p {
+  color: var(--gray);
+  margin-bottom: 20px;
+}
+
+.empty-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
+/* ==================== LOADING STATE ==================== */
+.loading {
+  text-align: center;
+  padding: 30px;
+  color: var(--gray);
+}
+
+.loading i {
+  margin-right: 10px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ==================== ERROR STATE ==================== */
+.error {
+  text-align: center;
+  padding: 30px;
+  background-color: #fee2e2;
+  border-radius: 8px;
+  color: var(--danger-dark);
+}
+
+.error i {
+  font-size: 2rem;
+  margin-bottom: 15px;
+}
+
+.error p {
+  margin-bottom: 15px;
+}
+
+/* ==================== SEARCH BOX ==================== */
+.search-box {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.search-box input {
+  padding-left: 35px;
+}
+
+.search-box i {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--gray);
+}
+
+/* ==================== COLLECTION HEADER ==================== */
+.collection-header {
+  margin-bottom: 20px;
+}
