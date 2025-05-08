@@ -16,27 +16,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const loginBtn = document.getElementById('login-btn');
     const sidebarToggle = document.getElementById('sidebar-toggle');
-    const sidebarClose = document.getElementById('sidebar-close');
     const sidebar = document.getElementById('sidebar');
 
-    // Xử lý toggle sidebar
-    sidebarToggle.addEventListener('click', () => {
-      sidebar.classList.add('open');
-    });
-
-    sidebarClose.addEventListener('click', () => {
-      sidebar.classList.remove('open');
+    // Xử lý toggle sidebar - luôn hoạt động không phụ thuộc đăng nhập
+    sidebarToggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      sidebar.classList.toggle('open');
     });
 
     // Đóng sidebar khi click bên ngoài
     document.addEventListener('click', (e) => {
-      if (!sidebar.contains(e.target) {
+      if (!sidebar.contains(e.target) && e.target !== sidebarToggle) {
         sidebar.classList.remove('open');
       }
     });
 
     // 2. XỬ LÝ SỰ KIỆN CLICK NÚT ĐĂNG NHẬP/ĐĂNG XUẤT
-    loginBtn.addEventListener('click', () => {
+    loginBtn.addEventListener('click', (e) => {
+      e.preventDefault();
       const user = netlifyIdentity.currentUser();
       if (user) {
         netlifyIdentity.logout();
@@ -80,8 +77,15 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // 4. THEO DÕI SỰ KIỆN ĐĂNG NHẬP/ĐĂNG XUẤT
-    netlifyIdentity.on('login', handleAuthChange);
-    netlifyIdentity.on('logout', () => handleAuthChange(null));
+    netlifyIdentity.on('login', (user) => {
+      handleAuthChange(user);
+      netlifyIdentity.close();
+    });
+    
+    netlifyIdentity.on('logout', () => {
+      handleAuthChange(null);
+    });
+    
     netlifyIdentity.on('close', () => {
       if (!netlifyIdentity.currentUser()) {
         handleAuthChange(null);
