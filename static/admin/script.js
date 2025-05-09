@@ -172,42 +172,41 @@ let netlifyIdentity = window.netlifyIdentity;
     }
 
     // 8. CẬP NHẬT SIDEBAR THEO COLLECTION
-    function updateSidebar() {
-      const sidebarMenu = document.getElementById('sidebar-menu');
-      if (!sidebarMenu || !collectionsConfig) return;
-      
-      let menuHTML = `
-        <li class="menu-item active" data-folder="content">
-          <a href="#" onclick="loadFolderContents('content'); return false;">
-            <i class="fas fa-home"></i>
-            <span>Trang chủ</span>
-          </a>
-        </li>
-      `;
-      
-      collectionsConfig.forEach(collection => {
-        const folder = collection.folder || '';
-        menuHTML += `
-          <li class="menu-item" data-folder="${escapeHtml(folder)}" data-collection="${escapeHtml(collection.name)}">
-            <a href="#" onclick="loadCollection('${escapeHtml(collection.name)}', '${escapeHtml(folder)}'); return false;">
-              <i class="fas fa-${getCollectionIcon(collection.name)}"></i>
-              <span>${escapeHtml(collection.label || collection.name)}</span>
-            </a>
-          </li>
-        `;
-      });
-      
-      menuHTML += `
-        <li class="menu-item">
-          <a href="#" onclick="showSettings(); return false;">
-            <i class="fas fa-cog"></i>
-            <span>Cài đặt</span>
-          </a>
-        </li>
-      `;
-      
-      sidebarMenu.innerHTML = menuHTML;
-    }
+function updateSidebar() {
+  const sidebarMenu = document.getElementById('sidebar-menu');
+  if (!sidebarMenu || !collectionsConfig) return;
+  
+  let menuHTML = `
+    <li class="menu-item active" data-folder="content">
+      <a href="#" onclick="loadFolderContents('content'); return false;">
+        <i class="fas fa-home"></i>
+        <span>Trang chủ</span>
+      </a>
+    </li>
+  `;
+  
+  collectionsConfig.forEach(collection => {
+    const folder = collection.folder || '';
+    // Sửa lỗi tiếng Việt: bỏ escapeHtml cho label
+    menuHTML += `
+      <li class="menu-item" data-folder="${escapeHtml(folder)}" data-collection="${escapeHtml(collection.name)}">
+        <a href="#" onclick="event.stopPropagation(); loadCollection('${escapeHtml(collection.name)}', '${escapeHtml(folder)}');">
+          <i class="fas fa-${getCollectionIcon(collection.name)}"></i>
+          <span>${collection.label || collection.name}</span>
+        </a>
+      </li>
+    `;
+  });
+  
+  sidebarMenu.innerHTML = menuHTML;
+  
+  // Thêm sự kiện đóng sidebar khi click menu item
+  document.querySelectorAll('#sidebar-menu .menu-item a').forEach(item => {
+    item.addEventListener('click', () => {
+      document.getElementById('sidebar').classList.remove('open');
+    });
+  });
+}
 
     // 9. HÀM GỌI API AN TOÀN
     async function callGitHubAPI(url, method = 'GET', body = null) {
@@ -580,38 +579,30 @@ function addNewEntry(collectionName) {
     return;
   }
   
-  const fields = collection.fields || [];
   let formHTML = '';
   
-  fields.forEach(field => {
-    if (!field.name || !field.label) return;
-    if (field.name === 'body') return;
-    
-    const fieldLabel = field.label; // Sửa lỗi tiếng Việt - bỏ decodeURIComponent
-    const fieldValue = field.default || '';
+  collection.fields.forEach(field => {
+    if (!field.name || !field.label || field.name === 'body') return;
     
     formHTML += `<div class="form-group">`;
-    formHTML += `<label for="field-${field.name}">${escapeHtml(fieldLabel)}${field.required ? '<span class="required">*</span>' : ''}</label>`;
+    formHTML += `<label for="field-${field.name}">${field.label}${field.required ? '<span class="required">*</span>' : ''}</label>`;
     
-    // Thêm hint nếu có
-    const hint = field.hint ? `placeholder="${escapeHtml(field.hint)}"` : '';
-    
-    switch (field.widget) {
-      case 'string':
-        formHTML += `<input type="text" id="field-${field.name}" class="form-control" value="${escapeHtml(fieldValue)}" ${hint}>`;
-        break;
-      case 'list':
-        formHTML += `
-          <div class="list-field">
-            <div class="list-items" id="list-${field.name}"></div>
-            <button type="button" class="btn btn-sm btn-add-item" onclick="addListItem('${field.name}', ${JSON.stringify(field.fields || [])})">
-              + Thêm mục
-            </button>
-          </div>
-        `;
-        break;
-      default:
-        formHTML += `<input type="text" id="field-${field.name}" class="form-control" value="${escapeHtml(fieldValue)}" ${hint}>`;
+    if (field.widget === 'list' && field.fields) {
+      formHTML += `
+        <div class="list-field" id="list-container-${field.name}">
+          <div class="list-items" id="list-${field.name}"></div>
+          <button type="button" class="btn btn-sm btn-add-item" 
+            onclick="addListItem('${field.name}', ${JSON.stringify(field.fields)})">
+            + Thêm phiên bản
+          </button>
+        </div>
+      `;
+    } else {
+      formHTML += `
+        <input type="text" id="field-${field.name}" class="form-control" 
+          value="${field.default || ''}" 
+          placeholder="${field.hint || ''}">
+      `;
     }
     
     formHTML += `</div>`;
@@ -620,65 +611,47 @@ function addNewEntry(collectionName) {
   formHTML += `
     <div class="form-group">
       <label for="field-body">Nội dung:</label>
-      <textarea id="field-body" rows="15" class="form-control" placeholder="Nội dung chính (Markdown)"></textarea>
+      <textarea id="field-body" rows="15" class="form-control"></textarea>
     </div>
   `;
   
   showModal({
     title: `Thêm mới ${collection.label || collection.name}`,
-    confirmText: 'Tạo',
     body: formHTML,
     onConfirm: () => {
-      const title = document.getElementById('field-title')?.value.trim() || '';
-      if (!title) {
-        showNotification('Vui lòng nhập tiêu đề', 'warning');
-        return false;
-      }
-      
       const frontMatter = {};
+      
       collection.fields.forEach(field => {
         if (field.name === 'body') return;
         
-        if (field.widget === 'list') {
-          const listItems = [];
-          const itemElements = document.querySelectorAll(`#list-${field.name} .list-item`);
-          
-          itemElements.forEach(itemEl => {
-            const itemValue = {};
-            (field.fields || []).forEach(subField => {
-              const input = itemEl.querySelector(`[name^="${field.name}"][name$="${subField.name}"]`);
-              if (input) itemValue[subField.name] = input.value;
+        if (field.widget === 'list' && field.fields) {
+          const items = [];
+          document.querySelectorAll(`#list-${field.name} .list-item`).forEach(itemEl => {
+            const itemData = {};
+            field.fields.forEach(subField => {
+              const input = itemEl.querySelector(`[name$="${subField.name}"]`);
+              if (input) itemData[subField.name] = input.value;
             });
-            listItems.push(itemValue);
+            items.push(itemData);
           });
-          
-          frontMatter[field.name] = listItems;
+          frontMatter[field.name] = items;
         } else {
           const value = document.getElementById(`field-${field.name}`)?.value;
-          if (value !== undefined) {
-            frontMatter[field.name] = value;
-          }
+          if (value) frontMatter[field.name] = value;
         }
       });
       
-      const body = document.getElementById('field-body')?.value || '';
-      
       const content = `---
-${Object.entries(frontMatter).map(([key, val]) => {
-  if (Array.isArray(val)) {
-    return `${key}: ${JSON.stringify(val)}`;
-  }
-  return `${key}: ${val}`;
-}).join('\n')}
+${Object.entries(frontMatter).map(([key, val]) => 
+  `${key}: ${typeof val === 'object' ? JSON.stringify(val) : val}`
+).join('\n')}
 ---
 
-${body}
+${document.getElementById('field-body').value}
 `;
       
-      const filename = formatFolderName(title) + '.md';
-      const path = `${collection.folder}/${filename}`;
-      
-      createNewPost(path, content);
+      const filename = `${formatFolderName(frontMatter.title || 'new-post')}.md`;
+      createNewPost(`${collection.folder}/${filename}`, content);
       return true;
     }
   });
