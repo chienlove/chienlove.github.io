@@ -1,50 +1,81 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Worker Editor</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Fira+Code&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/codemirror.min.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/theme/dracula.min.css">
-  <link rel="stylesheet" href="css/worker.css?v=1.1">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cloudflare Worker Editor Pro</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/worker.css?v=1.2">
 </head>
 <body>
-  <div class="container">
-    <header>
-      <h1><i class="fas fa-code"></i> Worker Editor</h1>
-      <div class="auth-section">
-        <input type="password" id="password" placeholder="Nhập mật khẩu">
-        <button id="login-btn" class="btn btn-primary">Đăng nhập</button>
-      </div>
-    </header>
+    <div class="app-container">
+        <header class="app-header">
+            <div class="header-content">
+                <h1><i class="fas fa-cloud"></i> Cloudflare Worker Editor</h1>
+                <div class="auth-section" id="auth-section">
+                    <div class="input-group">
+                        <input type="password" id="password" placeholder="Nhập mật khẩu quản trị">
+                        <button id="login-btn" class="btn btn-primary">
+                            <i class="fas fa-sign-in-alt"></i> Đăng nhập
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </header>
 
-    <main>
-      <div class="worker-selector" style="display: none;">
-        <h2><i class="fas fa-list"></i> Danh sách Workers</h2>
-        <div class="worker-list" id="worker-list"></div>
-      </div>
+        <main class="app-main">
+            <div class="worker-selector" id="worker-selector" style="display:none">
+                <div class="section-header">
+                    <h2><i class="fas fa-list-ul"></i> Danh sách Workers</h2>
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" id="worker-search" placeholder="Tìm kiếm worker...">
+                    </div>
+                </div>
+                <div class="worker-list" id="worker-list"></div>
+            </div>
 
-      <div class="editor-container" style="display: none;">
-        <div class="editor-header">
-          <h2><i class="fas fa-file-code"></i> <span id="current-worker-name"></span></h2>
-          <button id="back-btn" class="btn btn-secondary">Quay lại</button>
-        </div>
-        <textarea id="code-editor"></textarea>
-        <div class="actions">
-          <button id="update-btn" class="btn btn-success">Cập nhật</button>
-        </div>
-      </div>
+            <div class="editor-container" id="editor-container" style="display:none">
+                <div class="editor-header">
+                    <div class="worker-info">
+                        <h2><i class="fas fa-file-code"></i> <span id="current-worker-name"></span></h2>
+                        <div class="worker-meta">
+                            <span class="last-modified" id="last-modified"></span>
+                        </div>
+                    </div>
+                    <div class="editor-actions">
+                        <button id="back-btn" class="btn btn-outline">
+                            <i class="fas fa-arrow-left"></i> Danh sách
+                        </button>
+                        <button id="update-btn" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Lưu thay đổi
+                        </button>
+                    </div>
+                </div>
+                <div class="code-editor-container">
+                    <textarea id="code-editor"></textarea>
+                </div>
+            </div>
 
-      <div id="status" class="status"></div>
-    </main>
-  </div>
+            <div id="status-message" class="status-message"></div>
+        </main>
 
-  <!-- Scripts -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/codemirror.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/mode/javascript/javascript.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/addon/edit/matchbrackets.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/addon/selection/active-line.min.js"></script>
-  <script src="js/worker.js"></script>
+        <footer class="app-footer">
+            <p>© 2023 Cloudflare Worker Editor | Phiên bản 2.0</p>
+        </footer>
+    </div>
+
+    <!-- CodeMirror Resources -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/theme/dracula.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/mode/javascript/javascript.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/addon/edit/matchbrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/addon/edit/closebrackets.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/addon/selection/active-line.min.js"></script>
+    
+    <!-- Main JS -->
+    <script src="js/worker.js"></script>
 </body>
 </html>

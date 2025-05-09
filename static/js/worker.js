@@ -1,199 +1,243 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Khởi tạo CodeMirror editor
+    // Khởi tạo CodeMirror editor với cấu hình đầy đủ
     const codeEditor = CodeMirror.fromTextArea(document.getElementById('code-editor'), {
         mode: 'javascript',
         theme: 'dracula',
         lineNumbers: true,
+        lineWrapping: true,
         autoCloseBrackets: true,
         matchBrackets: true,
-        indentUnit: 2,
-        tabSize: 2,
-        lineWrapping: true,
+        indentUnit: 4,
+        tabSize: 4,
         extraKeys: {
-            'Ctrl-A': 'selectAll',    // Cho Windows/Linux
-            'Cmd-A': 'selectAll',     // Cho Mac
-            'Ctrl-Space': 'autocomplete'
+            'Ctrl-A': 'selectAll',
+            'Cmd-A': 'selectAll',
+            'Ctrl-Space': 'autocomplete',
+            'Ctrl-Enter': () => updateWorker(),
+            'Cmd-Enter': () => updateWorker()
         },
-        styleActiveLine: true
+        styleActiveLine: true,
+        foldGutter: true,
+        gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"]
     });
 
-    // Điều chỉnh chiều cao của editor
-    window.addEventListener('resize', () => {
-        codeEditor.setSize(null, '100%');
-    });
-
-    // Lấy tham chiếu đến các phần tử DOM
-    const loginBtn = document.getElementById('login-btn');
-    const passwordInput = document.getElementById('password');
-    const statusDiv = document.getElementById('status');
-    const workerListDiv = document.getElementById('worker-list');
-    const workerSelectorDiv = document.querySelector('.worker-selector');
-    const editorContainerDiv = document.querySelector('.editor-container');
-    const currentWorkerSpan = document.querySelector('.editor-header h2 span');
-    const updateBtn = document.getElementById('update-btn');
-    const backBtn = document.getElementById('back-btn');
+    // Các phần tử DOM
+    const elements = {
+        loginBtn: document.getElementById('login-btn'),
+        passwordInput: document.getElementById('password'),
+        statusMessage: document.getElementById('status-message'),
+        workerListDiv: document.getElementById('worker-list'),
+        workerSelectorDiv: document.getElementById('worker-selector'),
+        editorContainerDiv: document.getElementById('editor-container'),
+        currentWorkerName: document.getElementById('current-worker-name'),
+        lastModified: document.getElementById('last-modified'),
+        updateBtn: document.getElementById('update-btn'),
+        backBtn: document.getElementById('back-btn'),
+        authSection: document.getElementById('auth-section'),
+        workerSearch: document.getElementById('worker-search')
+    };
 
     // Biến toàn cục
-    let currentWorkerId = null;
+    let currentWorker = {
+        id: null,
+        name: '',
+        lastModified: ''
+    };
     let password = '';
+    let workers = [];
 
-    // Hàm hiển thị thông báo trạng thái
-    function showStatus(message, isError = false) {
-        statusDiv.textContent = message;
-        statusDiv.className = isError ? 'status error' : 'status success';
+    // Hiển thị thông báo
+    function showStatus(message, type = 'success', duration = 5000) {
+        elements.statusMessage.textContent = message;
+        elements.statusMessage.className = `status-message show ${type}`;
         
         setTimeout(() => {
-            statusDiv.className = 'status';
-        }, 5000);
+            elements.statusMessage.classList.remove('show');
+        }, duration);
     }
 
-    // Xử lý sự kiện nút "Đăng nhập"
-    loginBtn.addEventListener('click', async () => {
-        password = passwordInput.value.trim();
+    // Xử lý đăng nhập
+    elements.loginBtn.addEventListener('click', handleLogin);
+    elements.passwordInput.addEventListener('keyup', (e) => {
+        if (e.key === 'Enter') handleLogin();
+    });
+
+    async function handleLogin() {
+        password = elements.passwordInput.value.trim();
         
         if (!password) {
-            showStatus('Vui lòng nhập mật khẩu', true);
+            showStatus('Vui lòng nhập mật khẩu', 'error');
             return;
         }
         
         try {
-            loginBtn.disabled = true;
-            loginBtn.textContent = 'Đang xác thực...';
+            setLoading(elements.loginBtn, true);
             
             const response = await fetch(`/api/list-workers?password=${encodeURIComponent(password)}`);
             
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Không thể lấy danh sách worker');
+                const error = await response.json();
+                throw new Error(error.error || 'Đăng nhập thất bại');
             }
             
             const data = await response.json();
-            renderWorkerList(data.workers);
+            workers = data.workers;
+            renderWorkerList(workers);
             
-            // Ẩn phần đăng nhập, hiển thị danh sách worker
-            document.querySelector('.auth-section').style.display = 'none';
-            workerSelectorDiv.style.display = 'block';
+            elements.authSection.style.display = 'none';
+            elements.workerSelectorDiv.style.display = 'block';
             
             showStatus('Đăng nhập thành công');
         } catch (error) {
-            console.error('Error authenticating:', error);
-            showStatus(`Lỗi: ${error.message}`, true);
+            console.error('Login error:', error);
+            showStatus(error.message, 'error');
         } finally {
-            loginBtn.disabled = false;
-            loginBtn.textContent = 'Đăng nhập';
+            setLoading(elements.loginBtn, false);
         }
-    });
+    }
 
     // Hiển thị danh sách worker
     function renderWorkerList(workers) {
-        workerListDiv.innerHTML = '';
+        elements.workerListDiv.innerHTML = '';
         
         if (workers.length === 0) {
-            workerListDiv.innerHTML = '<p>Không tìm thấy worker nào.</p>';
+            elements.workerListDiv.innerHTML = '<div class="empty-state">Không tìm thấy worker nào</div>';
             return;
         }
         
         workers.forEach(worker => {
-            const workerCard = document.createElement('div');
-            workerCard.className = 'worker-card';
-            workerCard.innerHTML = `
-                <h3>${worker.name}</h3>
+            const card = document.createElement('div');
+            card.className = 'worker-card fade-in';
+            card.innerHTML = `
+                <h3>${worker.name || worker.id}</h3>
                 <p>ID: ${worker.id}</p>
-                <p>Cập nhật: ${new Date(worker.lastModified).toLocaleString()}</p>
+                <p>Cập nhật: ${formatDate(worker.lastModified)}</p>
             `;
-            
-            workerCard.addEventListener('click', () => loadWorker(worker.id));
-            
-            workerListDiv.appendChild(workerCard);
+            card.addEventListener('click', () => loadWorker(worker));
+            elements.workerListDiv.appendChild(card);
         });
     }
 
-    // Tải mã của worker được chọn
-    async function loadWorker(workerId) {
+    // Tải worker
+    async function loadWorker(worker) {
         try {
-            showStatus('Đang tải mã worker...');
+            showStatus('Đang tải worker...', 'info');
             
-            const response = await fetch(`/api/get-worker?worker_id=${encodeURIComponent(workerId)}&password=${encodeURIComponent(password)}`);
+            const response = await fetch(`/api/get-worker?worker_id=${encodeURIComponent(worker.id)}&password=${encodeURIComponent(password)}`);
             
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Không thể tải mã worker');
+                const error = await response.json();
+                throw new Error(error.error || 'Không thể tải worker');
             }
             
             const data = await response.json();
             
-            // Cập nhật UI
-            currentWorkerId = workerId;
-            currentWorkerSpan.textContent = workerId;
-            codeEditor.setValue(data.code);
+            currentWorker = {
+                id: worker.id,
+                name: worker.name || worker.id,
+                lastModified: worker.lastModified
+            };
             
-            // Chuyển đổi view
-            workerSelectorDiv.style.display = 'none';
-            editorContainerDiv.style.display = 'block';
-            
-            showStatus(`Đã tải mã worker ${workerId} thành công`);
+            updateUIForEditor(data.code);
+            showStatus(`Đã tải worker "${currentWorker.name}"`, 'success');
         } catch (error) {
-            console.error('Error loading worker:', error);
-            showStatus(`Lỗi: ${error.message}`, true);
+            console.error('Load worker error:', error);
+            showStatus(error.message, 'error');
         }
     }
 
-    // Xử lý sự kiện nút "Cập nhật Worker"
-    updateBtn.addEventListener('click', async () => {
-        if (!currentWorkerId) {
-            showStatus('Không có worker nào được chọn', true);
+    // Cập nhật UI khi vào chế độ editor
+    function updateUIForEditor(code) {
+        elements.currentWorkerName.textContent = currentWorker.name;
+        elements.lastModified.textContent = `Cập nhật lần cuối: ${formatDate(currentWorker.lastModified)}`;
+        codeEditor.setValue(code);
+        elements.workerSelectorDiv.style.display = 'none';
+        elements.editorContainerDiv.style.display = 'flex';
+        codeEditor.refresh();
+    }
+
+    // Xử lý cập nhật worker
+    elements.updateBtn.addEventListener('click', updateWorker);
+
+    async function updateWorker() {
+        if (!currentWorker.id) {
+            showStatus('Không có worker được chọn', 'error');
             return;
         }
         
         const code = codeEditor.getValue();
-        
-        if (!code) {
-            showStatus('Mã không được để trống', true);
+        if (!code.trim()) {
+            showStatus('Mã worker không được để trống', 'error');
             return;
         }
         
         try {
-            updateBtn.disabled = true;
-            updateBtn.textContent = 'Đang cập nhật...';
+            setLoading(elements.updateBtn, true);
             
             const response = await fetch('/api/update-worker', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    code,
-                    password,
-                    workerId: currentWorkerId
+                    code: code,
+                    password: password,
+                    workerId: currentWorker.id
                 })
             });
             
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || 'Không thể cập nhật worker');
+                const error = await response.json();
+                throw new Error(error.error || 'Cập nhật thất bại');
             }
             
-            showStatus(`Đã cập nhật worker ${currentWorkerId} thành công`);
+            // Cập nhật thời gian sửa đổi
+            currentWorker.lastModified = new Date().toISOString();
+            elements.lastModified.textContent = `Cập nhật lần cuối: ${formatDate(currentWorker.lastModified)}`;
+            
+            showStatus(`Đã cập nhật worker "${currentWorker.name}" thành công`, 'success');
         } catch (error) {
-            console.error('Error updating worker:', error);
-            showStatus(`Lỗi: ${error.message}`, true);
+            console.error('Update error:', error);
+            showStatus(error.message, 'error');
         } finally {
-            updateBtn.disabled = false;
-            updateBtn.textContent = 'Cập nhật Worker';
+            setLoading(elements.updateBtn, false);
         }
+    }
+
+    // Quay lại danh sách
+    elements.backBtn.addEventListener('click', () => {
+        elements.editorContainerDiv.style.display = 'none';
+        elements.workerSelectorDiv.style.display = 'block';
+        currentWorker.id = null;
     });
 
-    // Quay lại danh sách worker
-    backBtn.addEventListener('click', () => {
-        editorContainerDiv.style.display = 'none';
-        workerSelectorDiv.style.display = 'block';
-        currentWorkerId = null;
+    // Tìm kiếm worker
+    elements.workerSearch.addEventListener('input', (e) => {
+        const searchTerm = e.target.value.toLowerCase();
+        const filtered = workers.filter(worker => 
+            (worker.name && worker.name.toLowerCase().includes(searchTerm)) || 
+            worker.id.toLowerCase().includes(searchTerm)
+        );
+        renderWorkerList(filtered);
     });
 
-    // Hỗ trợ đăng nhập bằng Enter
-    passwordInput.addEventListener('keyup', (event) => {
-        if (event.key === 'Enter') {
-            loginBtn.click();
+    // Helper functions
+    function setLoading(button, isLoading) {
+        button.disabled = isLoading;
+        if (isLoading) {
+            button.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${button.textContent}`;
+        } else {
+            const icon = button === elements.loginBtn ? 'sign-in-alt' : 'save';
+            button.innerHTML = `<i class="fas fa-${icon}"></i> ${button.textContent}`;
         }
+    }
+
+    function formatDate(dateString) {
+        if (!dateString) return 'Không rõ';
+        const date = new Date(dateString);
+        return date.toLocaleString('vi-VN');
+    }
+
+    // Điều chỉnh kích thước editor khi resize
+    window.addEventListener('resize', () => {
+        codeEditor.refresh();
     });
 });
