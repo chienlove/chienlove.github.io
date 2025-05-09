@@ -1,34 +1,37 @@
 exports.handler = async (event) => {
-    // Log request info for debugging
-    console.log('Request Headers:', event.headers);
-    console.log('Request Method:', event.httpMethod);
-    
+    // Log request info
+    console.log('Incoming request:', {
+        method: event.httpMethod,
+        headers: event.headers,
+        body: event.body
+    });
+
     try {
-        // Validate HTTP Method
+        // Validate HTTP method
         if (event.httpMethod !== 'POST') {
             return respond(405, {
-                error: 'METHOD_NOT_ALLOWED',
+                error: 'method_not_allowed',
                 message: 'Only POST requests are accepted'
             });
         }
 
-        // Parse and validate request body
+        // Parse request body
         let body;
         try {
             body = JSON.parse(event.body);
         } catch (e) {
             return respond(400, {
-                error: 'INVALID_JSON',
-                message: 'Request body must be valid JSON'
+                error: 'invalid_json',
+                message: 'Invalid JSON format'
             });
         }
 
-        // Check required fields
+        // Validate required fields
         const requiredFields = ['code', 'password', 'workerId'];
         const missingFields = requiredFields.filter(field => !body[field]);
         if (missingFields.length) {
             return respond(400, {
-                error: 'MISSING_FIELDS',
+                error: 'missing_fields',
                 message: `Missing required fields: ${missingFields.join(', ')}`,
                 required: requiredFields
             });
@@ -37,39 +40,33 @@ exports.handler = async (event) => {
         // Verify password
         if (body.password !== process.env.EDITOR_PASSWORD) {
             return respond(401, {
-                error: 'UNAUTHORIZED',
+                error: 'unauthorized',
                 message: 'Invalid password'
             });
         }
 
         // Prepare Cloudflare API request
-        const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
-        const apiToken = process.env.CLOUDFLARE_API_TOKEN;
-        const apiUrl = `https://api.cloudflare.com/client/v4/accounts/${accountId}/workers/scripts/${body.workerId}`;
-        
-        console.log('Making request to Cloudflare API:', apiUrl);
-        
+        const apiUrl = `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${body.workerId}`;
+        const apiHeaders = {
+            'Authorization': `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
+            'Content-Type': 'application/javascript'
+        };
+
+        console.log('Making request to:', apiUrl);
         const apiResponse = await fetch(apiUrl, {
             method: 'PUT',
-            headers: {
-                'Authorization': `Bearer ${apiToken}`,
-                'Content-Type': 'application/javascript'
-            },
+            headers: apiHeaders,
             body: body.code
         });
 
         const apiResult = await apiResponse.json();
-        console.log('Cloudflare API Response:', apiResult);
+        console.log('Cloudflare API response:', apiResult);
 
         if (!apiResponse.ok) {
-            const errors = apiResult.errors || [{ message: 'Unknown Cloudflare API error' }];
             return respond(apiResponse.status, {
-                error: 'CLOUDFLARE_API_ERROR',
+                error: 'cloudflare_api_error',
                 message: 'Failed to update worker',
-                details: {
-                    errors: errors.map(e => e.message),
-                    response: apiResult
-                }
+                details: apiResult.errors || 'Unknown error'
             });
         }
 
@@ -82,16 +79,16 @@ exports.handler = async (event) => {
         });
 
     } catch (error) {
-        console.error('SERVER ERROR:', error);
+        console.error('Server error:', error);
         return respond(500, {
-            error: 'INTERNAL_SERVER_ERROR',
+            error: 'server_error',
             message: error.message,
             ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
         });
     }
 };
 
-// Helper function for consistent response format
+// Helper function for consistent responses
 function respond(statusCode, body) {
     return {
         statusCode,
