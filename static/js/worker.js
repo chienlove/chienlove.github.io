@@ -31,8 +31,6 @@ function initEditor() {
         viewportMargin: Infinity,
         styleActiveLine: true,
         extraKeys: {
-            'Ctrl-A': function(cm) { selectAllCode(cm); return false; },
-            'Cmd-A': function(cm) { selectAllCode(cm); return false; },
             'Ctrl-Enter': function(cm) { updateWorker(); return false; },
             'Cmd-Enter': function(cm) { updateWorker(); return false; },
             'Ctrl-/': 'toggleComment',
@@ -54,40 +52,6 @@ function initEditor() {
 
     window.addEventListener('resize', resizeEditor);
     resizeEditor();
-
-    // Setup toolbar buttons
-    setupToolbar();
-}
-
-// Select all text with proper highlighting
-function selectAllCode(cm) {
-    const firstLine = cm.firstLine();
-    const lastLine = cm.lastLine();
-    cm.setSelection({line: firstLine, ch: 0}, {line: lastLine, ch: cm.getLine(lastLine).length});
-    cm.focus();
-}
-
-// Setup editor toolbar
-function setupToolbar() {
-    document.getElementById('select-all-btn').addEventListener('click', (e) => {
-        e.preventDefault();
-        selectAllCode(codeEditor);
-    });
-
-    document.getElementById('copy-btn').addEventListener('click', () => {
-        const selected = codeEditor.getSelection();
-        if (selected) {
-            navigator.clipboard.writeText(selected)
-                .then(() => showStatus('Đã sao chép vào clipboard', 'success'))
-                .catch(err => showStatus('Lỗi khi sao chép: ' + err, 'error'));
-        } else {
-            showStatus('Không có nội dung được chọn', 'warning');
-        }
-    });
-
-    document.getElementById('comment-btn').addEventListener('click', () => {
-        codeEditor.execCommand('toggleComment');
-    });
 }
 
 // Show status message
@@ -307,7 +271,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     // Store original icons for buttons
-    document.querySelectorAll('.btn i, .tool-btn i').forEach(icon => {
+    document.querySelectorAll('.btn i').forEach(icon => {
         icon.parentElement.dataset.icon = icon.className;
     });
 });
