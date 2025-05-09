@@ -831,219 +831,185 @@ ${body}
   }
 
   // 25. CHỈNH SỬA BÀI VIẾT
-  async function editPost(path, sha) {
+async function editPost(path, sha) {
+  try {
+    const fileData = await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(path)}`);
+    
+    let content;
     try {
-      const fileData = await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(path)}`);
-      
-      let content;
-      try {
-        const base64Content = atob(fileData.content.replace(/\s/g, ''));
-        content = decodeURIComponent(escape(base64Content));
-      } catch (e) {
-        console.error('Lỗi decode content:', e);
-        content = atob(fileData.content);
-      }
+      const base64Content = atob(fileData.content.replace(/\s/g, ''));
+      content = decodeURIComponent(escape(base64Content));
+    } catch (e) {
+      console.error('Lỗi decode content:', e);
+      content = atob(fileData.content);
+    }
 
-      if (content.startsWith('---')) {
-        const frontMatterEnd = content.indexOf('---', 3);
-        if (frontMatterEnd === -1) {
-          throw new Error('Không tìm thấy kết thúc frontmatter');
-        }
+    // Kiểm tra xem có phải là collection item không
+    const collection = collectionsConfig?.find(c => path.startsWith(c.folder));
+    
+    if (content.startsWith('---') && collection) {
+      const frontMatterEnd = content.indexOf('---', 3);
+      if (frontMatterEnd === -1) {
+        throw new Error('Không tìm thấy kết thúc frontmatter');
+      }
+      
+      const frontMatter = content.substring(3, frontMatterEnd).trim();
+      const body = content.substring(frontMatterEnd + 3).trim();
+      
+      // Parse frontmatter thành object
+      const fields = {};
+      const lines = frontMatter.split('\n');
+      for (const line of lines) {
+        if (!line.trim()) continue;
         
-        const frontMatter = content.substring(3, frontMatterEnd).trim();
-        const body = content.substring(frontMatterEnd + 3).trim();
-        
-        const fields = {};
-        const lines = frontMatter.split('\n');
-        for (const line of lines) {
-          if (!line.trim()) continue;
+        const separatorIndex = line.indexOf(':');
+        if (separatorIndex > 0) {
+          const key = line.substring(0, separatorIndex).trim();
+          let value = line.substring(separatorIndex + 1).trim();
           
-          const separatorIndex = line.indexOf(':');
-          if (separatorIndex > 0) {
-            const key = line.substring(0, separatorIndex).trim();
-            let value = line.substring(separatorIndex + 1).trim();
-            
-            if ((value.startsWith('"') && value.endsWith('"')) || 
-                (value.startsWith("'") && value.endsWith("'"))) {
-              value = value.slice(1, -1);
-            }
-            
+          // Xử lý giá trị được bọc trong quotes hoặc dạng JSON
+          if ((value.startsWith('"') && value.endsWith('"')) || 
+              (value.startsWith("'") && value.endsWith("'"))) {
+            value = value.slice(1, -1);
+          } else if (value.startsWith('[') || value.startsWith('{')) {
             try {
-              fields[key] = JSON.parse(value);
-            } catch {
-              fields[key] = value;
+              value = JSON.parse(value);
+            } catch (e) {
+              console.error('Lỗi parse JSON:', e);
             }
           }
-        }
-        
-        const collection = window.collectionsConfig?.find(c => path.startsWith(c.folder));
-        if (collection) {
-          showEditCollectionModal(collection, path, sha, fields, body);
-          return;
+          
+          fields[key] = value;
         }
       }
       
-      showEditModal(path, content, sha);
-      
-    } catch (error) {
-      console.error('Lỗi khi tải nội dung bài viết:', error);
-      showNotification(`Lỗi: ${error.message || 'Không thể tải nội dung bài viết'}`, 'error');
+      // Hiển thị modal chỉnh sửa với đầy đủ trường
+      showEditCollectionModal(collection, path, sha, fields, body);
+      return;
     }
-  }
-
-  // 26. HIỂN THỊ MODAL CHỈNH SỬA COLLECTION ENTRY
-function showEditCollectionModal(collection, path, sha, fields, body) {
-    let formHTML = '';
     
-    collection.fields.forEach(field => {
-        if (!field.name || !field.label) return;
+    // Nếu không phải collection item hoặc không có frontmatter, hiển thị editor đơn giản
+    showEditModal(path, content, sha);
+    
+  } catch (error) {
+    console.error('Lỗi khi tải nội dung bài viết:', error);
+    showNotification(`Lỗi: ${error.message || 'Không thể tải nội dung bài viết'}`, 'error');
+  }
+}
+
+// 26. HIỂN THỊ MODAL CHỈNH SỬA COLLECTION ENTRY
+function showEditCollectionModal(collection, path, sha, fields, body) {
+  let formHTML = '';
+  
+  collection.fields.forEach(field => {
+    if (!field.name || !field.label || field.name === 'body') return;
+    
+    const fieldLabel = field.label || field.name;
+    const value = fields[field.name] || '';
+    const hint = field.hint ? `placeholder="${escapeHtml(field.hint)}"` : '';
+    
+    formHTML += `<div class="form-group">`;
+    
+    if (field.widget === 'list' && field.fields) {
+      formHTML += `<fieldset class="list-field">
+        <legend>${escapeHtml(fieldLabel)}</legend>
+        <div class="list-items" id="list-${field.name}">`;
+      
+      try {
+        const listValue = Array.isArray(value) ? value : (value ? [value] : []);
         
+        listValue.forEach((item, index) => {
+          formHTML += `<div class="list-item">
+            <button class="btn btn-sm btn-remove-item" type="button" onclick="removeListItem(this)">×</button>`;
+          
+          field.fields.forEach(subField => {
+            const subFieldLabel = subField.label || subField.name;
+            const subValue = item?.[subField.name] || '';
+            const subHint = subField.hint ? `placeholder="${escapeHtml(subField.hint)}"` : '';
+            
+            formHTML += `<div class="sub-field">
+              <label>${escapeHtml(subFieldLabel)}</label>
+              <input type="text" 
+                     class="form-control" 
+                     name="${field.name}[${index}].${subField.name}" 
+                     value="${escapeHtml(subValue)}"
+                     ${subHint}>
+            </div>`;
+          });
+          
+          formHTML += `</div>`;
+        });
+      } catch (e) {
+        console.error('Lỗi khi parse list value:', e);
+      }
+      
+      formHTML += `</div>
+        <button type="button" class="btn btn-sm btn-add-item" onclick="addListItem('${field.name}', ${JSON.stringify(field.fields)})">
+          + Thêm mục
+        </button>
+      </fieldset>`;
+    } else {
+      formHTML += `<label for="field-${field.name}">${escapeHtml(fieldLabel)}${field.required ? '<span class="required">*</span>' : ''}</label>`;
+      
+      switch (field.widget) {
+        case 'datetime':
+          formHTML += `<input type="datetime-local" id="field-${field.name}" class="form-control" value="${escapeHtml(value)}">`;
+          break;
+        case 'date':
+          formHTML += `<input type="date" id="field-${field.name}" class="form-control" value="${escapeHtml(value)}">`;
+          break;
+        case 'select':
+          formHTML += `
+            <select id="field-${field.name}" class="form-control">
+              ${(field.options || []).map(option => 
+                `<option value="${escapeHtml(option)}" ${option === value ? 'selected' : ''}>${escapeHtml(option)}</option>`
+              ).join('')}
+            </select>
+          `;
+          break;
+        case 'textarea':
+          formHTML += `<textarea id="field-${field.name}" class="form-control" rows="4" ${hint}>${escapeHtml(value)}</textarea>`;
+          break;
+        case 'boolean':
+          formHTML += `
+            <div class="checkbox-wrapper">
+              <input type="checkbox" id="field-${field.name}" ${value === 'true' ? 'checked' : ''}>
+              <label for="field-${field.name}">${escapeHtml(fieldLabel)}</label>
+            </div>
+          `;
+          break;
+        default:
+          formHTML += `<input type="text" id="field-${field.name}" class="form-control" value="${escapeHtml(value)}" ${hint}>`;
+      }
+    }
+    
+    formHTML += `</div>`;
+  });
+  
+  formHTML += `
+    <div class="form-group">
+      <label for="field-body">Nội dung:</label>
+      <textarea id="field-body" rows="15" class="form-control">${escapeHtml(body)}</textarea>
+    </div>
+  `;
+  
+  showModal({
+    title: `Chỉnh sửa ${collection.label || collection.name}`,
+    confirmText: 'Lưu',
+    body: formHTML,
+    onConfirm: () => {
+      const frontMatter = {};
+      
+      // Xử lý các trường thông thường
+      collection.fields.forEach(field => {
         if (field.name === 'body') return;
         
-        // Fix lỗi tiếng Việt trong label
-        const fieldLabel = field.label || field.name;
-        const value = fields[field.name] || field.default || '';
+        let value;
+        const fieldElement = document.getElementById(`field-${field.name}`);
         
-        formHTML += `<div class="form-group">`;
-        
-        if (field.widget === 'object' && field.fields) {
-            formHTML += `<fieldset class="object-field">
-              <legend>${escapeHtml(fieldLabel)}</legend>`;
-            
-            try {
-                const objectValue = typeof value === 'string' ? JSON.parse(value) : value;
-                field.fields.forEach(subField => {
-                    const subFieldLabel = subField.label || subField.name;
-                    const subValue = objectValue?.[subField.name] || '';
-                    
-                    formHTML += `<div class="sub-field">
-                      <label>${escapeHtml(subFieldLabel)}</label>
-                      <input type="text" 
-                             class="form-control" 
-                             name="${field.name}.${subField.name}" 
-                             value="${escapeHtml(subValue)}"
-                             placeholder="${escapeHtml(subField.hint || '')}">
-                    </div>`;
-                });
-            } catch (e) {
-                console.error('Lỗi khi parse object value:', e);
-            }
-            
-            formHTML += `</fieldset>`;
-        }
-        else if (field.widget === 'list' && field.fields) {
-            formHTML += `<fieldset class="list-field">
-              <legend>${escapeHtml(fieldLabel)}</legend>
-              <div class="list-items" id="list-${field.name}">`;
-            
-            try {
-                const listValue = Array.isArray(value) ? value : (value ? [value] : [{}]);
-                
-                listValue.forEach((item, index) => {
-                    formHTML += `<div class="list-item">
-                      <button class="btn btn-sm btn-remove-item" type="button" onclick="removeListItem(this)">×</button>`;
-                    
-                    field.fields.forEach(subField => {
-                        const subFieldLabel = subField.label || subField.name;
-                        const subValue = item?.[subField.name] || '';
-                        
-                        formHTML += `<div class="sub-field">
-                          <label>${escapeHtml(subFieldLabel)}</label>
-                          <input type="text" 
-                                 class="form-control" 
-                                 name="${field.name}[${index}].${subField.name}" 
-                                 value="${escapeHtml(subValue)}"
-                                 placeholder="${escapeHtml(subField.hint || '')}">
-                        </div>`;
-                    });
-                    
-                    formHTML += `</div>`;
-                });
-            } catch (e) {
-                console.error('Lỗi khi parse list value:', e);
-            }
-            
-            formHTML += `</div>
-              <button type="button" class="btn btn-sm btn-add-item" onclick="addListItem('${field.name}', ${JSON.stringify(field.fields)})">
-                + Thêm mục
-              </button>
-            </fieldset>`;
-        }
-        else {
-            formHTML += `<label for="field-${field.name}">${escapeHtml(fieldLabel)}${field.required ? '<span class="required">*</span>' : ''}</label>`;
-            
-            switch (field.widget) {
-                case 'datetime':
-                    formHTML += `<input type="datetime-local" id="field-${field.name}" class="form-control" value="${escapeHtml(value)}">`;
-                    break;
-                case 'date':
-                    formHTML += `<input type="date" id="field-${field.name}" class="form-control" value="${escapeHtml(value)}">`;
-                    break;
-                case 'select':
-                    formHTML += `
-                      <select id="field-${field.name}" class="form-control">
-                        ${(field.options || []).map(option => 
-                          `<option value="${escapeHtml(option)}" ${option === value ? 'selected' : ''}>${escapeHtml(option)}</option>`
-                        ).join('')}
-                      </select>
-                    `;
-                    break;
-                case 'textarea':
-                    formHTML += `<textarea id="field-${field.name}" class="form-control" rows="4">${escapeHtml(value)}</textarea>`;
-                    break;
-                case 'boolean':
-                    formHTML += `
-                      <div class="checkbox-wrapper">
-                        <input type="checkbox" id="field-${field.name}" ${value === 'true' ? 'checked' : ''}>
-                        <label for="field-${field.name}">${escapeHtml(fieldLabel)}</label>
-                      </div>
-                    `;
-                    break;
-                default:
-                    formHTML += `<input type="text" 
-                               id="field-${field.name}" 
-                               class="form-control" 
-                               value="${escapeHtml(value)}"
-                               placeholder="${escapeHtml(field.hint || '')}">`;
-            }
-        }
-        
-        formHTML += `</div>`;
-    });
-    
-    formHTML += `
-      <div class="form-group">
-        <label for="field-body">Nội dung:</label>
-        <textarea id="field-body" rows="15" class="form-control">${escapeHtml(body)}</textarea>
-      </div>
-    `;
-    
-    showModal({
-        title: `Chỉnh sửa ${collection.label || collection.name}`,
-        confirmText: 'Lưu',
-        body: formHTML,
-        onConfirm: () => {
-        const title = document.getElementById('field-title')?.value.trim() || '';
-        if (!title) {
-          showNotification('Vui lòng nhập tiêu đề', 'warning');
-          return false;
-        }
-        
-        const frontMatter = {};
-        collection.fields.forEach(field => {
-          if (field.name === 'body') return;
-          
-          if (field.widget === 'object' && field.fields) {
-            const objectValue = {};
-            field.fields.forEach(subField => {
-              const input = document.querySelector(`[name="${field.name}.${subField.name}"]`);
-              if (input) {
-                objectValue[subField.name] = input.value;
-              }
-            });
-            frontMatter[field.name] = objectValue;
-          }
-          else if (field.widget === 'list' && field.fields) {
+        if (!fieldElement) {
+          // Xử lý các trường trong list
+          if (field.widget === 'list' && field.fields) {
             const listItems = [];
             const itemElements = document.querySelectorAll(`#list-${field.name} .list-item`);
             
@@ -1051,93 +1017,49 @@ function showEditCollectionModal(collection, path, sha, fields, body) {
               const itemValue = {};
               field.fields.forEach(subField => {
                 const input = itemEl.querySelector(`[name^="${field.name}"][name$="${subField.name}"]`);
-                if (input) {
-                  itemValue[subField.name] = input.value;
-                }
+                if (input) itemValue[subField.name] = input.value;
               });
               listItems.push(itemValue);
             });
             
-            frontMatter[field.name] = listItems;
+            frontMatter[field.name] = listItems.length > 0 ? listItems : null;
           }
-          else {
-            let value;
-            if (field.widget === 'boolean') {
-              value = document.getElementById(`field-${field.name}`)?.checked ? 'true' : 'false';
-            } else {
-              value = document.getElementById(`field-${field.name}`)?.value;
-            }
-            
-            if (value !== undefined && value !== null) {
-              frontMatter[field.name] = value;
-            }
-          }
-        });
+          return;
+        }
         
-        const newBody = document.getElementById('field-body')?.value || '';
+        switch (field.widget) {
+          case 'boolean':
+            value = fieldElement.checked ? 'true' : 'false';
+            break;
+          default:
+            value = fieldElement.value;
+        }
         
-        const content = `---
-${Object.entries(frontMatter).map(([key, val]) => {
-  if (typeof val === 'object') {
-    return `${key}: ${JSON.stringify(val)}`;
-  }
-  return `${key}: ${val}`;
-}).join('\n')}
----
-
-${newBody}
-`;
-        
-        savePost(path, sha, content, `Cập nhật ${collection.label || collection.name}: ${title}`);
-        return true;
-      }
-    });
-  }
-
-  // Hàm thêm mục vào list field
-  function addListItem(fieldName, fields) {
-    const listContainer = document.getElementById(`list-${fieldName}`);
-    if (!listContainer) return;
-    
-    const index = listContainer.children.length;
-    let itemHTML = `<div class="list-item">
-      <button class="btn btn-sm btn-remove-item" type="button" onclick="removeListItem(this)">×</button>`;
-    
-    fields.forEach(subField => {
-      const subFieldLabel = decodeURIComponent(escape(subField.label || subField.name));
-      itemHTML += `<div class="sub-field">
-        <label>${escapeHtml(subFieldLabel)}</label>
-        <input type="text" 
-               class="form-control" 
-               name="${fieldName}[${index}].${subField.name}" 
-               value="">
-      </div>`;
-    });
-    
-    itemHTML += `</div>`;
-    listContainer.insertAdjacentHTML('beforeend', itemHTML);
-  }
-
-  // Hàm xóa mục khỏi list field
-  function removeListItem(button) {
-    const listItem = button.closest('.list-item');
-    if (listItem) {
-      listItem.remove();
-      const listContainer = listItem.parentElement;
-      const fieldName = listContainer.id.replace('list-', '');
-      
-      Array.from(listContainer.children).forEach((item, index) => {
-        item.querySelectorAll('[name^="' + fieldName + '"]').forEach(input => {
-          input.name = input.name.replace(/\[\d+\]/, `[${index}]`);
-        });
+        if (value !== undefined && value !== '') {
+          frontMatter[field.name] = value;
+        }
       });
+      
+      const newBody = document.getElementById('field-body')?.value || '';
+      
+      // Tạo nội dung file mới
+      let newContent = '---\n';
+      Object.entries(frontMatter).forEach(([key, val]) => {
+        if (val !== null && val !== undefined) {
+          if (typeof val === 'object') {
+            newContent += `${key}: ${JSON.stringify(val)}\n`;
+          } else {
+            newContent += `${key}: ${val}\n`;
+          }
+        }
+      });
+      newContent += `---\n\n${newBody}`;
+      
+      savePost(path, sha, newContent, `Cập nhật ${collection.label || collection.name}`);
+      return true;
     }
-  }
-
-  // Đăng ký hàm toàn cục
-  window.addListItem = addListItem;
-  window.removeListItem = removeListItem;
-
+  });
+}
   // 27. HIỂN THỊ MODAL CHỈNH SỬA ĐƠN GIẢN
   function showEditModal(path, content, sha) {
     const filename = path.split('/').pop();
