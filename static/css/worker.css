@@ -90,7 +90,7 @@ body {
     justify-content: center;
     align-items: center;
     z-index: 1000;
-    padding: 2rem;
+    padding: 20px;
 }
 
 .login-card {
@@ -99,6 +99,7 @@ body {
     box-shadow: var(--shadow-lg);
     width: 100%;
     max-width: 450px;
+    margin: 0 auto;
     overflow: hidden;
     animation: fadeIn 0.3s ease;
 }
@@ -373,11 +374,17 @@ body {
     height: calc(100% - 60px);
 }
 
+.editor-wrapper {
+    height: 100% !important;
+}
+
 .CodeMirror {
     height: 100% !important;
     font-family: 'Fira Code', monospace;
     font-size: 14px;
-    line-height: 1.6;
+    line-height: 1.5;
+    transform: none !important;
+    viewportMargin: 10;
 }
 
 .CodeMirror-scroll {
@@ -490,6 +497,7 @@ body {
     
     .login-card {
         margin: 1rem;
+        max-width: 90%;
     }
 }
 

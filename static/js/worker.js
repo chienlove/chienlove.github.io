@@ -28,8 +28,9 @@ function initEditor() {
         indentUnit: 4,
         tabSize: 4,
         scrollbarStyle: 'native',
-        viewportMargin: Infinity,
+        viewportMargin: 10,
         styleActiveLine: true,
+        lineWiseCopyCut: false,
         extraKeys: {
             'Ctrl-Enter': function(cm) { updateWorker(); return false; },
             'Cmd-Enter': function(cm) { updateWorker(); return false; },
@@ -68,15 +69,23 @@ function showStatus(message, type = 'success', duration = 5000) {
 
 // Set loading state
 function setLoading(element, isLoading, text = '') {
+    if (!element) return;
+    
     element.disabled = isLoading;
     const icon = element.querySelector('i');
-    if (isLoading) {
-        element.dataset.originalText = element.textContent;
-        icon.className = 'fas fa-spinner fa-spin';
-        element.innerHTML = `${icon.outerHTML} ${text}`;
-    } else {
-        icon.className = element.dataset.icon;
-        element.textContent = element.dataset.originalText || text;
+    
+    if (icon) {
+        if (isLoading) {
+            element.dataset.originalText = element.textContent;
+            element.dataset.originalIcon = icon.className;
+            icon.className = 'fas fa-spinner fa-spin';
+            element.innerHTML = `${icon.outerHTML} ${text}`;
+        } else {
+            if (element.dataset.originalIcon) {
+                icon.className = element.dataset.originalIcon;
+            }
+            element.textContent = element.dataset.originalText || text;
+        }
     }
 }
 
@@ -203,7 +212,11 @@ async function updateWorker() {
 
     const updateBtn = document.getElementById('update-btn');
     try {
-        setLoading(updateBtn, true, 'Đang lưu...');
+        try {
+            setLoading(updateBtn, true, 'Đang lưu...');
+        } catch (e) {
+            console.error('Lỗi khi set loading:', e);
+        }
         
         const response = await fetch('/api/update-worker', {
             method: 'POST',
@@ -235,7 +248,11 @@ async function updateWorker() {
         showStatus(`Lỗi: ${errorMessage}`, 'error');
         console.error('Update Error:', error);
     } finally {
-        setLoading(updateBtn, false, 'Lưu thay đổi');
+        try {
+            setLoading(updateBtn, false, 'Lưu thay đổi');
+        } catch (e) {
+            console.error('Lỗi khi tắt loading:', e);
+        }
     }
 }
 
@@ -272,6 +289,8 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Store original icons for buttons
     document.querySelectorAll('.btn i').forEach(icon => {
-        icon.parentElement.dataset.icon = icon.className;
+        if (icon.parentElement) {
+            icon.parentElement.dataset.icon = icon.className;
+        }
     });
 });
