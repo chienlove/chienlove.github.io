@@ -540,156 +540,149 @@ let netlifyIdentity = window.netlifyIdentity;
     }
 
     // 15. THÊM BÀI VIẾT MỚI - THƯ MỤC THÔNG THƯỜNG
-    function addNewPost(folderPath) {
-      showModal({
-        title: 'Tạo bài viết mới',
-        confirmText: 'Tạo',
-        body: `
-          <div class="form-group">
-            <label for="new-title">Tiêu đề:</label>
-            <input type="text" id="new-title" placeholder="Nhập tiêu đề bài viết" class="form-control" />
-          </div>
-          <div class="form-group">
-            <label for="new-content">Nội dung:</label>
-            <textarea id="new-content" rows="15" placeholder="Nội dung bài viết (Markdown)" class="form-control"></textarea>
-          </div>
-        `,
-        onConfirm: () => {
-          const title = document.getElementById('new-title').value.trim();
-          const content = document.getElementById('new-content').value;
-          
-          if (!title) {
-            showNotification('Vui lòng nhập tiêu đề bài viết', 'warning');
-            return false;
-          }
-          
-          const filename = formatFolderName(title) + '.md';
-          const path = `${folderPath}/${filename}`;
-          
-          createNewPost(path, `# ${title}\n\n${content}`);
-          return true;
-        }
-      });
-    }
-
-    // 16. THÊM ENTRY MỚI CHO COLLECTION
-    function addNewEntry(collectionName) {
-      const collection = collectionsConfig.find(c => c.name === collectionName);
-      if (!collection) {
-        showNotification('Không tìm thấy cấu hình collection', 'error');
-        return;
+function addNewPost(folderPath) {
+  showModal({
+    title: 'Tạo bài viết mới',
+    confirmText: 'Tạo',
+    body: `
+      <div class="form-group">
+        <label for="new-title">Tiêu đề:</label>
+        <input type="text" id="new-title" placeholder="Nhập tiêu đề bài viết" class="form-control" />
+      </div>
+      <div class="form-group">
+        <label for="new-content">Nội dung:</label>
+        <textarea id="new-content" rows="15" placeholder="Nội dung bài viết (Markdown)" class="form-control"></textarea>
+      </div>
+    `,
+    onConfirm: () => {
+      const title = document.getElementById('new-title').value.trim();
+      const content = document.getElementById('new-content').value;
+      
+      if (!title) {
+        showNotification('Vui lòng nhập tiêu đề bài viết', 'warning');
+        return false;
       }
       
-      const fields = collection.fields || [];
-      let formHTML = '';
+      const filename = formatFolderName(title) + '.md';
+      const path = `${folderPath}/${filename}`;
       
-      fields.forEach(field => {
-        if (!field.name || !field.label) return;
+      createNewPost(path, `# ${title}\n\n${content}`);
+      return true;
+    }
+  });
+}
+
+// 16. THÊM ENTRY MỚI CHO COLLECTION
+function addNewEntry(collectionName) {
+  const collection = collectionsConfig.find(c => c.name === collectionName);
+  if (!collection) {
+    showNotification('Không tìm thấy cấu hình collection', 'error');
+    return;
+  }
+  
+  const fields = collection.fields || [];
+  let formHTML = '';
+  
+  fields.forEach(field => {
+    if (!field.name || !field.label) return;
+    if (field.name === 'body') return;
+    
+    const fieldLabel = field.label; // Sửa lỗi tiếng Việt - bỏ decodeURIComponent
+    const fieldValue = field.default || '';
+    
+    formHTML += `<div class="form-group">`;
+    formHTML += `<label for="field-${field.name}">${escapeHtml(fieldLabel)}${field.required ? '<span class="required">*</span>' : ''}</label>`;
+    
+    // Thêm hint nếu có
+    const hint = field.hint ? `placeholder="${escapeHtml(field.hint)}"` : '';
+    
+    switch (field.widget) {
+      case 'string':
+        formHTML += `<input type="text" id="field-${field.name}" class="form-control" value="${escapeHtml(fieldValue)}" ${hint}>`;
+        break;
+      case 'list':
+        formHTML += `
+          <div class="list-field">
+            <div class="list-items" id="list-${field.name}"></div>
+            <button type="button" class="btn btn-sm btn-add-item" onclick="addListItem('${field.name}', ${JSON.stringify(field.fields || [])})">
+              + Thêm mục
+            </button>
+          </div>
+        `;
+        break;
+      default:
+        formHTML += `<input type="text" id="field-${field.name}" class="form-control" value="${escapeHtml(fieldValue)}" ${hint}>`;
+    }
+    
+    formHTML += `</div>`;
+  });
+  
+  formHTML += `
+    <div class="form-group">
+      <label for="field-body">Nội dung:</label>
+      <textarea id="field-body" rows="15" class="form-control" placeholder="Nội dung chính (Markdown)"></textarea>
+    </div>
+  `;
+  
+  showModal({
+    title: `Thêm mới ${collection.label || collection.name}`,
+    confirmText: 'Tạo',
+    body: formHTML,
+    onConfirm: () => {
+      const title = document.getElementById('field-title')?.value.trim() || '';
+      if (!title) {
+        showNotification('Vui lòng nhập tiêu đề', 'warning');
+        return false;
+      }
+      
+      const frontMatter = {};
+      collection.fields.forEach(field => {
         if (field.name === 'body') return;
         
-        const fieldLabel = decodeURIComponent(escape(field.label || field.name));
-        const fieldValue = field.default || '';
-        let decodedValue;
-        try {
-          decodedValue = decodeURIComponent(escape(fieldValue));
-        } catch (e) {
-          decodedValue = fieldValue;
-        }
-        
-        formHTML += `<div class="form-group">`;
-        formHTML += `<label for="field-${field.name}">${escapeHtml(fieldLabel)}${field.required ? '<span class="required">*</span>' : ''}</label>`;
-        
-        switch (field.widget) {
-          case 'datetime':
-            formHTML += `<input type="datetime-local" id="field-${field.name}" class="form-control" value="${escapeHtml(decodedValue)}">`;
-            break;
-          case 'date':
-            formHTML += `<input type="date" id="field-${field.name}" class="form-control" value="${escapeHtml(decodedValue)}">`;
-            break;
-          case 'select':
-            formHTML += `
-              <select id="field-${field.name}" class="form-control">
-                ${(field.options || []).map(option => {
-                  let decodedOption;
-                  try {
-                    decodedOption = decodeURIComponent(escape(option));
-                  } catch (e) {
-                    decodedOption = option;
-                  }
-                  return `<option value="${escapeHtml(option)}" ${option === fieldValue ? 'selected' : ''}>${escapeHtml(decodedOption)}</option>`;
-                }).join('')}
-              </select>
-            `;
-            break;
-          case 'textarea':
-            formHTML += `<textarea id="field-${field.name}" class="form-control" rows="4">${escapeHtml(decodedValue)}</textarea>`;
-            break;
-          case 'boolean':
-            formHTML += `
-              <div class="checkbox-wrapper">
-                <input type="checkbox" id="field-${field.name}" ${fieldValue === 'true' ? 'checked' : ''}>
-                <label for="field-${field.name}">${escapeHtml(fieldLabel)}</label>
-              </div>
-            `;
-            break;
-          default:
-            formHTML += `<input type="text" id="field-${field.name}" class="form-control" value="${escapeHtml(decodedValue)}">`;
-        }
-        
-        formHTML += `</div>`;
-      });
-      
-      formHTML += `
-        <div class="form-group">
-          <label for="field-body">Nội dung:</label>
-          <textarea id="field-body" rows="15" class="form-control" placeholder="Nội dung chính (Markdown)"></textarea>
-        </div>
-      `;
-      
-      showModal({
-        title: `Thêm mới ${decodeURIComponent(escape(collection.label || collection.name))}`,
-        confirmText: 'Tạo',
-        body: formHTML,
-        onConfirm: () => {
-          const title = document.getElementById('field-title')?.value.trim() || '';
-          if (!title) {
-            showNotification('Vui lòng nhập tiêu đề', 'warning');
-            return false;
-          }
+        if (field.widget === 'list') {
+          const listItems = [];
+          const itemElements = document.querySelectorAll(`#list-${field.name} .list-item`);
           
-          const frontMatter = {};
-          collection.fields.forEach(field => {
-            if (field.name === 'body') return;
-            
-            let value;
-            if (field.widget === 'boolean') {
-              value = document.getElementById(`field-${field.name}`)?.checked ? 'true' : 'false';
-            } else {
-              value = document.getElementById(`field-${field.name}`)?.value;
-            }
-            
-            if (value !== undefined && value !== null) {
-              frontMatter[field.name] = value;
-            }
+          itemElements.forEach(itemEl => {
+            const itemValue = {};
+            (field.fields || []).forEach(subField => {
+              const input = itemEl.querySelector(`[name^="${field.name}"][name$="${subField.name}"]`);
+              if (input) itemValue[subField.name] = input.value;
+            });
+            listItems.push(itemValue);
           });
           
-          const body = document.getElementById('field-body')?.value || '';
-          
-          const content = `---
-${Object.entries(frontMatter).map(([key, val]) => `${key}: ${val}`).join('\n')}
+          frontMatter[field.name] = listItems;
+        } else {
+          const value = document.getElementById(`field-${field.name}`)?.value;
+          if (value !== undefined) {
+            frontMatter[field.name] = value;
+          }
+        }
+      });
+      
+      const body = document.getElementById('field-body')?.value || '';
+      
+      const content = `---
+${Object.entries(frontMatter).map(([key, val]) => {
+  if (Array.isArray(val)) {
+    return `${key}: ${JSON.stringify(val)}`;
+  }
+  return `${key}: ${val}`;
+}).join('\n')}
 ---
 
 ${body}
 `;
-          
-          const filename = formatFolderName(title) + '.md';
-          const path = `${collection.folder}/${filename}`;
-          
-          createNewPost(path, content);
-          return true;
-        }
-      });
+      
+      const filename = formatFolderName(title) + '.md';
+      const path = `${collection.folder}/${filename}`;
+      
+      createNewPost(path, content);
+      return true;
     }
+  });
+}
 
     // 17. HIỂN THỊ MODAL
     function showModal({ title, body, confirmText = 'Lưu', onConfirm }) {
