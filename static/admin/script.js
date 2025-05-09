@@ -245,121 +245,186 @@ function updateSidebar() {
     }
 
     // 10. TẢI NỘI DUNG COLLECTION
-    async function loadCollection(collectionName, folderPath) {
-      if (isProcessing) return;
-      isProcessing = true;
+async function loadCollection(collectionName, folderPath) {
+  if (isProcessing) return;
+  isProcessing = true;
+  
+  // Kiểm tra collection hợp lệ
+  const collection = collectionsConfig.find(c => c.name === collectionName);
+  if (!collection) {
+    showNotification('Collection không tồn tại', 'error');
+    isProcessing = false;
+    return;
+  }
+
+  currentCollection = collection;
+  currentFolder = folderPath;
+  const postsList = document.getElementById('posts-list');
+  const contentTitle = document.getElementById('content-title');
+  const contentActions = document.getElementById('content-actions');
+  
+  // Cập nhật UI
+  contentTitle.innerHTML = `<i class="fas fa-${getCollectionIcon(collectionName)}"></i> ${collection.label || collection.name}`;
+  
+  contentActions.innerHTML = `
+    <button class="btn btn-primary" onclick="addNewEntry('${collectionName}')">
+      <i class="fas fa-plus"></i> Thêm mới
+    </button>
+    <button class="btn" onclick="loadFolderContents()">
+      <i class="fas fa-arrow-left"></i> Quay lại
+    </button>
+  `;
+  
+  postsList.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Đang tải dữ liệu...</div>';
+  
+  try {
+    const data = await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(folderPath)}`);
+    
+    // Lọc chỉ lấy file .md và sắp xếp
+    const markdownFiles = Array.isArray(data) 
+      ? data.filter(item => item.name.toLowerCase().endsWith('.md'))
+      : [data];
       
-      currentCollection = collectionsConfig.find(c => c.name === collectionName);
-      currentFolder = folderPath;
-      const postsList = document.getElementById('posts-list');
-      const contentTitle = document.getElementById('content-title');
-      const contentActions = document.getElementById('content-actions');
-      
-      if (contentTitle && currentCollection) {
-        contentTitle.innerHTML = `<i class="fas fa-${getCollectionIcon(collectionName)}"></i> ${escapeHtml(currentCollection.label || currentCollection.name)}`;
-      }
-      
-      if (contentActions) {
-        contentActions.innerHTML = `
-          <button class="btn btn-primary" onclick="addNewEntry('${escapeHtml(collectionName)}')">
-            <i class="fas fa-plus"></i> Thêm mới
+    markdownFiles.sort((a, b) => new Date(b.sha) - new Date(a.sha));
+    
+    // Render danh sách bài viết
+    if (markdownFiles.length === 0) {
+      postsList.innerHTML = `
+        <div class="empty">
+          <i class="fas fa-inbox"></i>
+          <p>Chưa có bài viết nào</p>
+          <button class="btn btn-primary" onclick="addNewEntry('${collectionName}')">
+            <i class="fas fa-plus"></i> Thêm bài viết mới
           </button>
-        `;
-      }
-      
-      postsList.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Đang tải dữ liệu...</div>';
-      
-      try {
-        const data = await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(folderPath)}`);
-        console.log('Dữ liệu collection:', data);
-        
-        allPosts = Array.isArray(data) ? data : [data];
-        renderCollectionItems(allPosts, currentCollection);
-        
-      } catch (error) {
-        console.error('Lỗi tải dữ liệu collection:', error);
-        postsList.innerHTML = `
-          <div class="error">
-            <i class="fas fa-exclamation-triangle"></i>
-            <p>Lỗi: ${escapeHtml(error.message || 'Không thể tải dữ liệu')}</p>
-            <button class="btn" onclick="loadCollection('${escapeHtml(collectionName)}', '${escapeHtml(folderPath)}')">Thử lại</button>
+        </div>
+      `;
+    } else {
+      postsList.innerHTML = `
+        <div class="collection-header">
+          <div class="search-box">
+            <input type="text" id="search-input" placeholder="Tìm kiếm..." />
+            <i class="fas fa-search"></i>
           </div>
-        `;
-        
-        if (error.message.includes('401')) {
-          netlifyIdentity.logout();
-        }
-      } finally {
-        isProcessing = false;
+        </div>
+        <div class="post-grid">
+          ${markdownFiles.map(file => `
+            <div class="post-card">
+              <div class="post-card-header">
+                <h3 class="post-title">${escapeHtml(file.name.replace(/\.md$/i, ''))}</h3>
+                <span class="post-date">${formatDate(new Date(file.sha))}</span>
+              </div>
+              <div class="post-card-actions">
+                <button class="btn btn-sm btn-edit" onclick="editPost('${escapeHtml(file.path)}', '${escapeHtml(file.sha)}')">
+                  <i class="fas fa-edit"></i> Sửa
+                </button>
+                <button class="btn btn-sm btn-view" onclick="viewPost('${escapeHtml(file.path)}')">
+                  <i class="fas fa-eye"></i> Xem
+                </button>
+                <button class="btn btn-sm btn-delete" onclick="deleteItem('${escapeHtml(file.path)}', '${escapeHtml(file.sha)}', false)">
+                  <i class="fas fa-trash"></i> Xóa
+                </button>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+      
+      // Thêm chức năng tìm kiếm
+      const searchInput = document.getElementById('search-input');
+      if (searchInput) {
+        searchInput.addEventListener('input', function() {
+          const term = this.value.toLowerCase();
+          document.querySelectorAll('.post-card').forEach(card => {
+            const title = card.querySelector('.post-title').textContent.toLowerCase();
+            card.style.display = title.includes(term) ? 'flex' : 'none';
+          });
+        });
       }
     }
+  } catch (error) {
+    console.error('Lỗi tải collection:', error);
+    postsList.innerHTML = `
+      <div class="error">
+        <i class="fas fa-exclamation-triangle"></i>
+        <p>Lỗi: ${escapeHtml(error.message || 'Không thể tải dữ liệu')}</p>
+        <button class="btn" onclick="loadCollection('${collectionName}', '${folderPath}')">
+          Thử lại
+        </button>
+      </div>
+    `;
+  } finally {
+    isProcessing = false;
+  }
+}
 
-    // 11. TẢI NỘI DUNG THƯ MỤC
-    async function loadFolderContents(path) {
-      if (isProcessing) return;
-      isProcessing = true;
+    // 11. TẢI NỘI DUNG THƯ MỤC (Phiên bản chỉ hiện collection)
+async function loadFolderContents() {
+  if (isProcessing) return;
+  isProcessing = true;
+  
+  const postsList = document.getElementById('posts-list');
+  const contentTitle = document.getElementById('content-title');
+  const contentActions = document.getElementById('content-actions');
+  
+  // Hiển thị tiêu đề
+  contentTitle.innerHTML = `<i class="fas fa-folder-open"></i> Danh sách Collection`;
+  
+  // Ẩn nút thêm thư mục vì chỉ làm việc với collection
+  contentActions.innerHTML = `
+    <button class="btn btn-primary" onclick="showCollectionSelection()">
+      <i class="fas fa-eye"></i> Xem Collection
+    </button>
+  `;
+  
+  postsList.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Đang tải dữ liệu...</div>';
+  
+  try {
+    // Chỉ lấy danh sách collection từ config
+    const collectionFolders = collectionsConfig.map(c => c.folder);
+    
+    // Tạo danh sách thư mục dạng card
+    let html = `<div class="collection-grid">`;
+    
+    for (const collection of collectionsConfig) {
+      // Lấy 3 bài viết mới nhất để hiển thị preview
+      const data = await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(collection.folder)}?sort=updated&direction=desc&per_page=3`);
+      const latestPosts = Array.isArray(data) ? data.slice(0, 3) : [];
       
-      currentFolder = path || 'content';
-      currentCollection = null;
-      const postsList = document.getElementById('posts-list');
-      const contentTitle = document.getElementById('content-title');
-      const contentActions = document.getElementById('content-actions');
-      
-      // Cập nhật breadcrumb
-      updateBreadcrumb(path);
-      
-      if (contentTitle) {
-        contentTitle.innerHTML = `<i class="fas fa-folder-open"></i> ${escapeHtml(path)}`;
-      }
-      
-      if (contentActions) {
-        contentActions.innerHTML = `
-          <button class="btn btn-primary" onclick="addNewPost('${escapeHtml(path)}')">
-            <i class="fas fa-file"></i> Thêm bài viết
-          </button>
-          <button class="btn" onclick="addNewFolder('${escapeHtml(path)}')">
-            <i class="fas fa-folder-plus"></i> Thêm thư mục
-          </button>
-        `;
-      }
-      
-      postsList.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Đang tải dữ liệu...</div>';
-      
-      try {
-        if (!isValidPath(path)) {
-          throw new Error('Đường dẫn không hợp lệ');
-        }
-
-        const data = await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(path)}?recursive=1`);
-        
-        const currentLevelItems = Array.isArray(data) ? 
-          data.filter(item => {
-            const itemPath = item.path;
-            const relativePath = itemPath.replace(path + '/', '');
-            return !relativePath.includes('/');
-          }) : 
-          [data];
-        
-        allPosts = currentLevelItems;
-        renderFolderContents(allPosts, path);
-
-      } catch (error) {
-        console.error('Lỗi tải dữ liệu:', error);
-        postsList.innerHTML = `
-          <div class="error">
-            <i class="fas fa-exclamation-triangle"></i>
-            <p>Lỗi: ${escapeHtml(error.message || 'Không thể tải dữ liệu')}</p>
-            <button class="btn" onclick="loadFolderContents('${escapeHtml(path)}')">Thử lại</button>
+      html += `
+        <div class="collection-card" onclick="loadCollection('${collection.name}', '${collection.folder}')">
+          <div class="collection-header">
+            <i class="fas fa-${getCollectionIcon(collection.name)}"></i>
+            <h3>${collection.label || collection.name}</h3>
           </div>
-        `;
-        
-        if (error.message.includes('401')) {
-          netlifyIdentity.logout();
-        }
-      } finally {
-        isProcessing = false;
-      }
+          <div class="collection-stats">
+            <span><i class="fas fa-file-alt"></i> ${latestPosts.length} bài viết</span>
+          </div>
+          <div class="latest-posts">
+            ${latestPosts.map(post => `
+              <div class="post-preview">
+                ${post.name.replace(/\.md$/, '')}
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
     }
+    
+    html += `</div>`;
+    postsList.innerHTML = html;
+    
+  } catch (error) {
+    console.error('Lỗi tải dữ liệu:', error);
+    postsList.innerHTML = `
+      <div class="error">
+        <i class="fas fa-exclamation-triangle"></i>
+        <p>Lỗi: ${error.message || 'Không thể tải dữ liệu'}</p>
+      </div>
+    `;
+  } finally {
+    isProcessing = false;
+  }
+}
 
     // 12. CẬP NHẬT BREADCRUMB
     function updateBreadcrumb(path) {
