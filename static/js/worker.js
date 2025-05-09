@@ -6,10 +6,19 @@ let currentWorker = {
   lastModified: null
 };
 let password = '';
+let workers = [];
 
 // Initialize editor
 function initEditor() {
-  codeEditor = CodeMirror.fromTextArea(document.getElementById('code-editor'), {
+  const editorContainer = document.getElementById('code-editor-container');
+  
+  // Create editor wrapper
+  const editorWrapper = document.createElement('div');
+  editorWrapper.className = 'editor-wrapper';
+  editorContainer.appendChild(editorWrapper);
+  
+  // Initialize CodeMirror with scroll fixes
+  codeEditor = CodeMirror(editorWrapper, {
     mode: 'javascript',
     theme: 'dracula',
     lineNumbers: true,
@@ -18,6 +27,8 @@ function initEditor() {
     matchBrackets: true,
     indentUnit: 4,
     tabSize: 4,
+    scrollbarStyle: 'native',
+    viewportMargin: Infinity,
     extraKeys: {
       'Ctrl-A': selectAllCode,
       'Cmd-A': selectAllCode,
@@ -27,6 +38,17 @@ function initEditor() {
     },
     styleActiveLine: true
   });
+
+  // Handle editor resize
+  function resizeEditor() {
+    const height = window.innerHeight - editorContainer.getBoundingClientRect().top - 20;
+    editorWrapper.style.height = `${height}px`;
+    codeEditor.setSize('100%', '100%');
+    codeEditor.refresh();
+  }
+
+  window.addEventListener('resize', resizeEditor);
+  resizeEditor();
 }
 
 // Select all text in editor
@@ -43,11 +65,14 @@ function showStatus(message, isError = false) {
 }
 
 // Set loading state
-function setLoading(element, isLoading) {
+function setLoading(element, isLoading, text = '') {
   element.disabled = isLoading;
-  const icon = element.querySelector('i') || document.createElement('i');
-  icon.className = isLoading ? 'fas fa-spinner fa-spin' : element.dataset.icon;
-  element.innerHTML = `${icon.outerHTML} ${element.textContent.trim()}`;
+  if (isLoading) {
+    element.dataset.originalText = element.textContent;
+    element.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${text}`;
+  } else {
+    element.textContent = element.dataset.originalText || text;
+  }
 }
 
 // Format date
@@ -65,7 +90,7 @@ async function handleLogin() {
 
   const loginBtn = document.getElementById('login-btn');
   try {
-    setLoading(loginBtn, true);
+    setLoading(loginBtn, true, 'Đang xác thực...');
     const response = await fetch(`/api/list-workers?password=${encodeURIComponent(password)}`);
     
     if (!response.ok) {
@@ -74,34 +99,36 @@ async function handleLogin() {
     }
 
     const data = await response.json();
-    renderWorkerList(data.workers);
-    document.querySelector('.auth-section').style.display = 'none';
+    workers = data.workers;
+    renderWorkerList(workers);
+    document.getElementById('auth-section').style.display = 'none';
     document.getElementById('worker-selector').style.display = 'block';
     showStatus('Đăng nhập thành công');
   } catch (error) {
     showStatus(error.message, true);
     console.error('Login error:', error);
   } finally {
-    setLoading(loginBtn, false);
+    setLoading(loginBtn, false, 'Đăng nhập');
   }
 }
 
 // Render worker list
 function renderWorkerList(workers) {
   const container = document.getElementById('worker-list');
-  container.innerHTML = workers.map(worker => `
-    <div class="worker-card" onclick="loadWorker('${worker.id}')">
-      <h3>${worker.name || worker.id}</h3>
-      <p>ID: ${worker.id}</p>
-      <p>Cập nhật: ${formatDate(worker.lastModified)}</p>
-    </div>
-  `).join('') || '<p class="empty">Không tìm thấy worker nào</p>';
+  container.innerHTML = workers.length ? 
+    workers.map(worker => `
+      <div class="worker-card" onclick="loadWorker('${worker.id}')">
+        <h3>${worker.name || worker.id}</h3>
+        <p>ID: ${worker.id}</p>
+        <p>Cập nhật: ${formatDate(worker.lastModified)}</p>
+      </div>
+    `).join('') : '<p class="empty">Không tìm thấy worker nào</p>';
 }
 
 // Load worker (global function)
 window.loadWorker = async function(workerId) {
   try {
-    showStatus('Đang tải worker...');
+    showStatus('Đang tải worker...', 'info');
     const response = await fetch(`/api/get-worker?worker_id=${encodeURIComponent(workerId)}&password=${encodeURIComponent(password)}`);
     
     if (!response.ok) {
@@ -117,9 +144,9 @@ window.loadWorker = async function(workerId) {
     };
 
     updateEditorUI(data.code);
-    showStatus(`Đã tải worker "${currentWorker.name}"`);
+    showStatus(`Đã tải worker "${currentWorker.name}"`, 'success');
   } catch (error) {
-    showStatus(`Lỗi: ${error.message}`, true);
+    showStatus(error.message, true);
     console.error('Load error:', error);
   }
 };
@@ -130,26 +157,26 @@ function updateEditorUI(code) {
   document.getElementById('last-modified').textContent = `Cập nhật lần cuối: ${formatDate(currentWorker.lastModified)}`;
   codeEditor.setValue(code);
   document.getElementById('worker-selector').style.display = 'none';
-  document.getElementById('editor-container').style.display = 'block';
+  document.getElementById('editor-container').style.display = 'flex';
   codeEditor.refresh();
 }
 
 // Update worker
 async function updateWorker() {
   if (!currentWorker.id) {
-    showStatus('Vui lòng chọn worker', true);
+    showStatus('Vui lòng chọn worker trước', true);
     return;
   }
-
+  
   const code = codeEditor.getValue();
   if (!code.trim()) {
-    showStatus('Mã worker không được trống', true);
+    showStatus('Mã worker không được để trống', true);
     return;
   }
 
   const updateBtn = document.getElementById('update-btn');
   try {
-    setLoading(updateBtn, true);
+    setLoading(updateBtn, true, 'Đang lưu...');
     const response = await fetch('/api/update-worker', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -167,12 +194,12 @@ async function updateWorker() {
 
     currentWorker.lastModified = data.lastModified || new Date().toISOString();
     document.getElementById('last-modified').textContent = `Cập nhật lần cuối: ${formatDate(currentWorker.lastModified)}`;
-    showStatus('Cập nhật thành công!');
+    showStatus('Cập nhật thành công!', 'success');
   } catch (error) {
     showStatus(error.message, true);
     console.error('Update error:', error);
   } finally {
-    setLoading(updateBtn, false);
+    setLoading(updateBtn, false, 'Lưu thay đổi');
   }
 }
 
@@ -182,9 +209,24 @@ function backToList() {
   document.getElementById('worker-selector').style.display = 'block';
 }
 
+// Search workers
+function setupSearch() {
+  const searchInput = document.getElementById('worker-search');
+  searchInput.addEventListener('input', (e) => {
+    const term = e.target.value.toLowerCase();
+    const filtered = workers.filter(worker => 
+      (worker.name && worker.name.toLowerCase().includes(term)) || 
+      worker.id.toLowerCase().includes(term)
+    );
+    renderWorkerList(filtered);
+  });
+}
+
 // Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', () => {
   initEditor();
+  setupSearch();
+  
   document.getElementById('login-btn').addEventListener('click', handleLogin);
   document.getElementById('update-btn').addEventListener('click', updateWorker);
   document.getElementById('back-btn').addEventListener('click', backToList);
