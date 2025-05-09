@@ -10,8 +10,11 @@ document.addEventListener('DOMContentLoaded', () => {
         tabSize: 2,
         lineWrapping: true,
         extraKeys: {
+            'Ctrl-A': 'selectAll',    // Cho Windows/Linux
+            'Cmd-A': 'selectAll',     // Cho Mac
             'Ctrl-Space': 'autocomplete'
-        }
+        },
+        styleActiveLine: true
     });
 
     // Điều chỉnh chiều cao của editor
