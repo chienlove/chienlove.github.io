@@ -6,7 +6,6 @@ let currentWorker = {
   lastModified: null
 };
 let password = '';
-let workers = [];
 
 // Initialize editor
 function initEditor() {
@@ -17,7 +16,7 @@ function initEditor() {
   editorWrapper.className = 'editor-wrapper';
   editorContainer.appendChild(editorWrapper);
   
-  // Initialize CodeMirror with scroll fixes
+  // Initialize CodeMirror
   codeEditor = CodeMirror(editorWrapper, {
     mode: 'javascript',
     theme: 'dracula',
@@ -99,8 +98,7 @@ async function handleLogin() {
     }
 
     const data = await response.json();
-    workers = data.workers;
-    renderWorkerList(workers);
+    renderWorkerList(data.workers);
     document.getElementById('auth-section').style.display = 'none';
     document.getElementById('worker-selector').style.display = 'block';
     showStatus('Đăng nhập thành công');
@@ -115,14 +113,13 @@ async function handleLogin() {
 // Render worker list
 function renderWorkerList(workers) {
   const container = document.getElementById('worker-list');
-  container.innerHTML = workers.length ? 
-    workers.map(worker => `
-      <div class="worker-card" onclick="loadWorker('${worker.id}')">
-        <h3>${worker.name || worker.id}</h3>
-        <p>ID: ${worker.id}</p>
-        <p>Cập nhật: ${formatDate(worker.lastModified)}</p>
-      </div>
-    `).join('') : '<p class="empty">Không tìm thấy worker nào</p>';
+  container.innerHTML = workers.map(worker => `
+    <div class="worker-card" onclick="loadWorker('${worker.id}')">
+      <h3>${worker.name || worker.id}</h3>
+      <p>ID: ${worker.id}</p>
+      <p>Cập nhật: ${formatDate(worker.lastModified)}</p>
+    </div>
+  `).join('') || '<p class="empty">Không tìm thấy worker nào</p>';
 }
 
 // Load worker (global function)
@@ -157,7 +154,7 @@ function updateEditorUI(code) {
   document.getElementById('last-modified').textContent = `Cập nhật lần cuối: ${formatDate(currentWorker.lastModified)}`;
   codeEditor.setValue(code);
   document.getElementById('worker-selector').style.display = 'none';
-  document.getElementById('editor-container').style.display = 'flex';
+  document.getElementById('editor-container').style.display = 'block';
   codeEditor.refresh();
 }
 
@@ -179,7 +176,10 @@ async function updateWorker() {
     setLoading(updateBtn, true, 'Đang lưu...');
     const response = await fetch('/api/update-worker', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest'
+      },
       body: JSON.stringify({
         code: code,
         password: password,
@@ -196,7 +196,11 @@ async function updateWorker() {
     document.getElementById('last-modified').textContent = `Cập nhật lần cuối: ${formatDate(currentWorker.lastModified)}`;
     showStatus('Cập nhật thành công!', 'success');
   } catch (error) {
-    showStatus(error.message, true);
+    let errorMessage = error.message;
+    if (error.message.includes('Failed to fetch')) {
+      errorMessage = 'Không thể kết nối đến server';
+    }
+    showStatus(`Lỗi: ${errorMessage}`, true);
     console.error('Update error:', error);
   } finally {
     setLoading(updateBtn, false, 'Lưu thay đổi');
@@ -209,23 +213,9 @@ function backToList() {
   document.getElementById('worker-selector').style.display = 'block';
 }
 
-// Search workers
-function setupSearch() {
-  const searchInput = document.getElementById('worker-search');
-  searchInput.addEventListener('input', (e) => {
-    const term = e.target.value.toLowerCase();
-    const filtered = workers.filter(worker => 
-      (worker.name && worker.name.toLowerCase().includes(term)) || 
-      worker.id.toLowerCase().includes(term)
-    );
-    renderWorkerList(filtered);
-  });
-}
-
 // Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', () => {
   initEditor();
-  setupSearch();
   
   document.getElementById('login-btn').addEventListener('click', handleLogin);
   document.getElementById('update-btn').addEventListener('click', updateWorker);
