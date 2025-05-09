@@ -1,11 +1,9 @@
 name: Hugo Build and Deploy
-
 on:
   push:
     branches:
       - master
   workflow_dispatch:
-
 jobs:
   build-deploy:
     runs-on: ubuntu-latest
@@ -25,7 +23,6 @@ jobs:
           npm install
           npm install faunadb
           npm install jszip
-          npm install esbuild --save-dev
     
       - name: Clear Hugo Cache and Public Folder
         run: |
@@ -56,51 +53,3 @@ jobs:
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
           NETLIFY_CLEAR_CACHE: 'true'
         timeout-minutes: 10
-    
-      - name: Install Wrangler
-        run: npm install -g wrangler
-
-      - name: Check src directory
-        run: ls -R ipa-downloader/src
-
-      - name: Bundle JavaScript with esbuild
-        run: |
-           npx esbuild ipa-downloader/src/index.js --bundle --format=esm --outfile=ipa-downloader/dist/index.js
-
-      - name: Check bundled file
-        run: cat ipa-downloader/dist/index.js
-      
-      - name: Download ipatool binary
-        run: |
-              curl -L https://github.com/majd/ipatool/releases/download/v2.1.4/ipatool-2.1.4-linux-amd64.tar.gz -o ipatool.tar.gz
-              tar -xzf ipatool.tar.gz
-
-      - name: Make ipatool executable
-        run: |
-              chmod +x ./bin/ipatool-2.1.4-linux-amd64
-              ./bin/ipatool-2.1.4-linux-amd64 --version  
-
-      - name: Verify ipatool installation
-        run: ./bin/ipatool-2.1.4-linux-amd64 --version  # Cập nhật path/to/ipatool
-
-      - name: Save ipatool to repo
-        run: |
-          if [ ! -f "netlify/functions/bin/ipatool-2.1.4-linux-amd64" ]; then
-            mkdir -p netlify/functions/bin/
-            cp ./bin/ipatool-2.1.4-linux-amd64 netlify/functions/bin/
-            git config --local user.email "action@github.com"
-            git config --local user.name "GitHub Action"
-            git add netlify/functions/bin/
-            if [ -n "$(git status --porcelain)" ]; then
-              git commit -m "Add ipatool binary"
-              git push
-            fi
-          else
-            echo "ipatool binary already exists in repo, skipping..."
-          fi
-      - name: Deploy Worker
-        run: |
-          cd ipa-downloader
-          wrangler deploy dist/index.js
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
