@@ -100,7 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
     init();
   }
 
-  // 5. TẢI CẤU HÌNH CMS
+  // 5. Tải cấu hình CMS
   async function loadCMSConfig() {
     try {
       const configResponse = await callGitHubAPI('/.netlify/git/github/contents/static/admin/config.yml');
@@ -115,7 +115,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // 6. PHÂN TÍCH YAML
+  // 6. Phân tích YAML
   function parseYAML(yamlString) {
     const result = { collections: [] };
     const lines = yamlString.split('\n');
@@ -174,7 +174,229 @@ document.addEventListener('DOMContentLoaded', () => {
     return result;
   }
 
-  // 7. CẬP NHẬT SIDEBAR THEO COLLECTION
+  // 7. Kiểm tra nested field
+  function isNestedField(field) {
+    return field.widget === 'object' || 
+           (field.widget === 'list' && field.fields && field.fields.length > 0);
+  }
+
+  // 8. Render field HTML (đã sửa lỗi tiếng Việt)
+  function getFieldHTML(field, idPrefix = '', defaultValue = '', nameAttribute = '') {
+    const fieldId = idPrefix || field.name;
+    const fieldName = nameAttribute || fieldId;
+    const label = field.label || field.name;
+    const value = defaultValue !== undefined ? defaultValue : field.default || '';
+    const hint = field.hint || '';
+
+    let html = `<div class="form-group">
+      <label for="${fieldId}">${label}${field.required ? '<span class="required">*</span>' : ''}</label>`;
+    
+    switch (field.widget) {
+      case 'string':
+        html += `<input type="text" id="${fieldId}" name="${fieldName}" class="form-control" 
+               value="${escapeHtml(value)}" placeholder="${hint}">`;
+        break;
+      case 'text':
+        html += `<textarea id="${fieldId}" name="${fieldName}" class="form-control" rows="3"
+                 placeholder="${hint}">${escapeHtml(value)}</textarea>`;
+        break;
+      case 'markdown':
+        html += `<textarea id="${fieldId}" name="${fieldName}" class="form-control" rows="10"
+                 placeholder="${hint}">${escapeHtml(value)}</textarea>`;
+        break;
+      case 'image':
+        html += `<input type="file" id="${fieldId}" name="${fieldName}" class="form-control">`;
+        break;
+      case 'datetime':
+        html += `<input type="datetime-local" id="${fieldId}" name="${fieldName}" class="form-control"
+               value="${escapeHtml(value)}">`;
+        break;
+      case 'select':
+        html += `<select id="${fieldId}" name="${fieldName}" class="form-control">
+          ${(field.options || []).map(opt => 
+            `<option value="${escapeHtml(opt)}" ${opt === value ? 'selected' : ''}>${escapeHtml(opt)}</option>`
+          ).join('')}
+        </select>`;
+        break;
+      default:
+        html += `<input type="text" id="${fieldId}" name="${fieldName}" class="form-control"
+               value="${escapeHtml(value)}" placeholder="${hint}">`;
+    }
+
+    html += `</div>`;
+    return html;
+  }
+
+  // 9. Render nested field
+  function renderNestedField(field, parentName = '', defaultValue = {}) {
+    let html = '';
+
+    if (field.widget === 'object') {
+      html += `<div class="nested-field-group">
+                <h3>${field.label}</h3>`;
+
+      field.fields.forEach(subField => {
+        const fullName = parentName ? `${parentName}_${subField.name}` : subField.name;
+        html += getFieldHTML(subField, fullName, defaultValue[subField.name]);
+      });
+
+      html += `</div>`;
+    } 
+    else if (field.widget === 'list') {
+      html += `<div class="nested-list-field">
+                <h3>${field.label}</h3>
+                <div class="list-items" id="${field.name}_items">`;
+
+      if (Array.isArray(defaultValue)) {
+        defaultValue.forEach((item, index) => {
+          html += `<div class="list-item" id="${field.name}_${index}">
+                    <button class="btn btn-sm btn-remove-item" 
+                            onclick="removeListItem('${field.name}_${index}')">×</button>`;
+          field.fields.forEach(subField => {
+            const fullName = `${field.name}_${index}_${subField.name}`;
+            const nameAttr = `${field.name}[${index}].${subField.name}`;
+            html += getFieldHTML(subField, fullName, item[subField.name], nameAttr);
+          });
+          html += `</div>`;
+        });
+      }
+
+      html += `</div>
+                <button type="button" class="btn btn-sm btn-add-item" 
+                        onclick="addListItem('${field.name}', ${JSON.stringify(field.fields)})">
+                  + Thêm mục
+                </button>
+              </div>`;
+    }
+
+    return html;
+  }
+
+  // 10. Thêm entry mới (đã tích hợp nested fields)
+  window.addNewEntry = function(collectionName) {
+    const collection = collectionsConfig.find(c => c.name === collectionName);
+    if (!collection) {
+      showNotification('Không tìm thấy collection', 'error');
+      return;
+    }
+
+    let formHTML = '';
+    const nestedFields = [];
+
+    // Render tất cả fields
+    collection.fields.forEach(field => {
+      if (isNestedField(field)) {
+        nestedFields.push(field);
+        formHTML += renderNestedField(field);
+      } else {
+        formHTML += getFieldHTML(field);
+      }
+    });
+
+    // Thêm trường body nếu không có
+    if (!collection.fields.some(f => f.name === 'body')) {
+      formHTML += `
+        <div class="form-group">
+          <label for="body">Nội dung</label>
+          <textarea id="body" rows="15" class="form-control"></textarea>
+        </div>
+      `;
+    }
+
+    showModal({
+      title: `Thêm mới ${collection.label}`,
+      body: formHTML,
+      onConfirm: () => {
+        const frontmatter = {};
+        
+        // Xử lý các field thông thường
+        collection.fields.forEach(field => {
+          if (!isNestedField(field)) {
+            const value = document.getElementById(field.name)?.value;
+            if (value !== undefined && value !== '') {
+              frontmatter[field.name] = value;
+            }
+          }
+        });
+
+        // Xử lý nested fields
+        nestedFields.forEach(field => {
+          if (field.widget === 'object') {
+            const objData = {};
+            field.fields.forEach(subField => {
+              const value = document.getElementById(`${field.name}_${subField.name}`)?.value;
+              if (value !== undefined && value !== '') {
+                objData[subField.name] = value;
+              }
+            });
+            if (Object.keys(objData).length > 0) {
+              frontmatter[field.name] = objData;
+            }
+          } 
+          else if (field.widget === 'list') {
+            const listData = [];
+            document.querySelectorAll(`#${field.name}_items .list-item`).forEach(itemEl => {
+              const itemData = {};
+              field.fields.forEach(subField => {
+                const input = itemEl.querySelector(`[name*="${subField.name}"]`);
+                if (input && input.value) {
+                  itemData[subField.name] = input.value;
+                }
+              });
+              if (Object.keys(itemData).length > 0) {
+                listData.push(itemData);
+              }
+            });
+            if (listData.length > 0) {
+              frontmatter[field.name] = listData;
+            }
+          }
+        });
+
+        // Tạo nội dung file
+        const content = `---
+${Object.entries(frontmatter).map(([key, val]) => 
+  `${key}: ${typeof val === 'object' ? JSON.stringify(val) : val}`
+).join('\n')}
+---
+
+${document.getElementById('body')?.value || ''}`;
+
+        const filename = `${formatFolderName(frontmatter.title || 'new-post')}.md`;
+        createNewPost(`${collection.folder}/${filename}`, content);
+        return true;
+      }
+    });
+  };
+
+  // 11. Thêm item vào list field
+  window.addListItem = function(fieldName, subFields) {
+    const container = document.getElementById(`${fieldName}_items`);
+    const itemId = Date.now();
+    
+    let itemHTML = `<div class="list-item" id="${fieldName}_${itemId}">
+                    <button class="btn btn-sm btn-remove-item" 
+                            onclick="removeListItem('${fieldName}_${itemId}')">×</button>`;
+
+    subFields.forEach(subField => {
+      itemHTML += getFieldHTML(
+        subField, 
+        `${fieldName}_${itemId}_${subField.name}`,
+        '',
+        `${fieldName}[${itemId}].${subField.name}`
+      );
+    });
+
+    itemHTML += `</div>`;
+    container.insertAdjacentHTML('beforeend', itemHTML);
+  };
+
+  // 12. Xóa item khỏi list field
+  window.removeListItem = function(itemId) {
+    document.getElementById(itemId)?.remove();
+  };
+
+  // 13. Cập nhật sidebar
   function updateSidebar() {
     const sidebarMenu = document.getElementById('sidebar-menu');
     if (!sidebarMenu) return;
@@ -200,20 +422,10 @@ document.addEventListener('DOMContentLoaded', () => {
           </li>
         `;
       });
-    } else {
-      menuHTML += `
-        <li class="menu-item disabled">
-          <a href="#">
-            <i class="fas fa-exclamation-circle"></i>
-            <span>Không có collection nào</span>
-          </a>
-        </li>
-      `;
     }
     
     sidebarMenu.innerHTML = menuHTML;
     
-    // Thêm sự kiện đóng sidebar khi click menu item
     document.querySelectorAll('#sidebar-menu .menu-item a').forEach(item => {
       item.addEventListener('click', () => {
         document.getElementById('sidebar').classList.remove('open');
@@ -221,17 +433,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // 8. TẢI NỘI DUNG COLLECTION
-  async function loadCollection(collectionName, folderPath) {
+  // 14. Tải nội dung collection
+  window.loadCollection = async function(collectionName, folderPath) {
     if (isProcessing) return;
     isProcessing = true;
     
     try {
-      // Kiểm tra collection hợp lệ
       const collection = collectionsConfig?.find(c => c.name === collectionName);
       if (!collection) {
         showNotification('Collection không tồn tại', 'error');
-        isProcessing = false;
         return;
       }
 
@@ -241,7 +451,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const contentTitle = document.getElementById('content-title');
       const contentActions = document.getElementById('content-actions');
       
-      // Cập nhật UI
       contentTitle.innerHTML = `<i class="fas fa-${getCollectionIcon(collectionName)}"></i> ${collection.label || collection.name}`;
       
       contentActions.innerHTML = `
@@ -257,14 +466,12 @@ document.addEventListener('DOMContentLoaded', () => {
       
       const data = await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(folderPath)}`);
       
-      // Lọc chỉ lấy file .md và sắp xếp
       const markdownFiles = Array.isArray(data) 
         ? data.filter(item => item.name.toLowerCase().endsWith('.md'))
         : [data];
         
       markdownFiles.sort((a, b) => new Date(b.sha) - new Date(a.sha));
       
-      // Render danh sách bài viết
       if (markdownFiles.length === 0) {
         postsList.innerHTML = `
           <div class="empty">
@@ -306,7 +513,6 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
         `;
         
-        // Thêm chức năng tìm kiếm
         const searchInput = document.getElementById('search-input');
         if (searchInput) {
           searchInput.addEventListener('input', function() {
@@ -333,10 +539,10 @@ document.addEventListener('DOMContentLoaded', () => {
     } finally {
       isProcessing = false;
     }
-  }
+  };
 
-  // 9. TẢI NỘI DUNG THƯ MỤC
-  async function loadFolderContents(folderPath = 'content') {
+  // 15. Tải nội dung thư mục
+  window.loadFolderContents = async function(folderPath = 'content') {
     if (isProcessing) return;
     isProcessing = true;
     
@@ -346,10 +552,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const contentTitle = document.getElementById('content-title');
       const contentActions = document.getElementById('content-actions');
       
-      // Hiển thị tiêu đề
       contentTitle.innerHTML = `<i class="fas fa-folder-open"></i> Danh sách Collection`;
       
-      // Ẩn nút thêm thư mục vì chỉ làm việc với collection
       contentActions.innerHTML = `
         <button class="btn" onclick="window.location.reload()">
           <i class="fas fa-sync-alt"></i> Làm mới
@@ -358,7 +562,6 @@ document.addEventListener('DOMContentLoaded', () => {
       
       postsList.innerHTML = '<div class="loading"><i class="fas fa-spinner fa-spin"></i> Đang tải dữ liệu...</div>';
       
-      // Chỉ lấy danh sách collection từ config
       if (!collectionsConfig || collectionsConfig.length === 0) {
         postsList.innerHTML = `
           <div class="error">
@@ -369,12 +572,10 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       
-      // Tạo danh sách thư mục dạng card
       let html = `<div class="collection-grid">`;
       
       for (const collection of collectionsConfig) {
         try {
-          // Lấy 3 bài viết mới nhất để hiển thị preview
           const data = await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(collection.folder)}?sort=updated&direction=desc&per_page=3`);
           const latestPosts = Array.isArray(data) ? data.slice(0, 3) : [];
           
@@ -428,326 +629,134 @@ document.addEventListener('DOMContentLoaded', () => {
     } finally {
       isProcessing = false;
     }
-  }
+  };
 
-  // 10. THÊM ENTRY MỚI CHO COLLECTION
-  function addNewEntry(collectionName) {
-    const collection = collectionsConfig?.find(c => c.name === collectionName);
-    if (!collection) {
-      showNotification('Không tìm thấy cấu hình collection', 'error');
-      return;
-    }
-    
-    let formHTML = '';
-    
-    collection.fields.forEach(field => {
-      if (!field.name || !field.label || field.name === 'body') return;
+  // 16. Chỉnh sửa bài viết
+  window.editPost = async function(path, sha) {
+    try {
+      const fileData = await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(path)}`);
+      let content = atob(fileData.content);
       
-      formHTML += `<div class="form-group">`;
-      formHTML += `<label for="field-${field.name}">${field.label}${field.required ? '<span class="required">*</span>' : ''}</label>`;
-      
-      if (field.widget === 'list' && field.fields) {
-        formHTML += `
-          <div class="list-field" id="list-container-${field.name}">
-            <div class="list-items" id="list-${field.name}"></div>
-            <button type="button" class="btn btn-sm btn-add-item" 
-              onclick="addListItem('${field.name}', ${JSON.stringify(field.fields)})">
-              + Thêm phiên bản
-            </button>
-          </div>
-        `;
-      } else {
-        formHTML += `
-          <input type="text" id="field-${field.name}" class="form-control" 
-            value="${field.default || ''}" 
-            placeholder="${field.hint || ''}">
-        `;
+      const collection = collectionsConfig.find(c => path.startsWith(c.folder));
+      if (!collection) {
+        showEditModal(path, content, sha);
+        return;
+      }
+
+      const frontMatterMatch = content.match(/^---\n([\s\S]*?)\n---/);
+      if (!frontMatterMatch) {
+        showEditModal(path, content, sha);
+        return;
       }
       
-      formHTML += `</div>`;
-    });
-    
-    formHTML += `
-      <div class="form-group">
-        <label for="field-body">Nội dung:</label>
-        <textarea id="field-body" rows="15" class="form-control"></textarea>
-      </div>
-    `;
-    
-    showModal({
-      title: `Thêm mới ${collection.label || collection.name}`,
-      body: formHTML,
-      onConfirm: () => {
-        const frontMatter = {};
-        
-        collection.fields.forEach(field => {
-          if (field.name === 'body') return;
-          
-          if (field.widget === 'list' && field.fields) {
-            const items = [];
-            document.querySelectorAll(`#list-${field.name} .list-item`).forEach(itemEl => {
-              const itemData = {};
-              field.fields.forEach(subField => {
-                const input = itemEl.querySelector(`[name$="${subField.name}"]`);
-                if (input) itemData[subField.name] = input.value;
-              });
-              items.push(itemData);
-            });
-            frontMatter[field.name] = items;
-          } else {
-            const value = document.getElementById(`field-${field.name}`)?.value;
-            if (value) frontMatter[field.name] = value;
+      const frontMatterContent = frontMatterMatch[1];
+      const body = content.replace(/^---\n[\s\S]*?\n---\n/, '');
+      const fields = {};
+      
+      // Parse frontmatter
+      frontMatterContent.split('\n').forEach(line => {
+        const match = line.match(/^([^:]+):\s*(.*)$/);
+        if (match) {
+          try {
+            fields[match[1]] = JSON.parse(match[2]);
+          } catch {
+            fields[match[1]] = match[2];
           }
-        });
-        
-        const content = `---
-${Object.entries(frontMatter).map(([key, val]) => 
+        }
+      });
+      
+      let formHTML = '';
+      const nestedFields = [];
+
+      // Render tất cả fields
+      collection.fields.forEach(field => {
+        if (isNestedField(field)) {
+          nestedFields.push(field);
+          formHTML += renderNestedField(field, '', fields[field.name] || {});
+        } else {
+          formHTML += getFieldHTML(field, '', fields[field.name]);
+        }
+      });
+
+      // Thêm trường body nếu không có
+      if (!collection.fields.some(f => f.name === 'body')) {
+        formHTML += `
+          <div class="form-group">
+            <label for="body">Nội dung chính</label>
+            <textarea id="body" rows="15" class="form-control">${escapeHtml(body)}</textarea>
+          </div>
+        `;
+      }
+
+      showModal({
+        title: `Chỉnh sửa ${collection.label}`,
+        body: formHTML,
+        onConfirm: () => {
+          const frontmatter = {};
+          
+          // Xử lý các field thông thường
+          collection.fields.forEach(field => {
+            if (!isNestedField(field)) {
+              const value = document.getElementById(field.name)?.value;
+              if (value !== undefined && value !== '') {
+                frontmatter[field.name] = value;
+              }
+            }
+          });
+
+          // Xử lý nested fields
+          nestedFields.forEach(field => {
+            if (field.widget === 'object') {
+              const objData = {};
+              field.fields.forEach(subField => {
+                const value = document.getElementById(`${field.name}_${subField.name}`)?.value;
+                if (value !== undefined && value !== '') {
+                  objData[subField.name] = value;
+                }
+              });
+              if (Object.keys(objData).length > 0) {
+                frontmatter[field.name] = objData;
+              }
+            } 
+            else if (field.widget === 'list') {
+              const listData = [];
+              document.querySelectorAll(`#${field.name}_items .list-item`).forEach(itemEl => {
+                const itemData = {};
+                field.fields.forEach(subField => {
+                  const input = itemEl.querySelector(`[name*="${subField.name}"]`);
+                  if (input && input.value) {
+                    itemData[subField.name] = input.value;
+                  }
+                });
+                if (Object.keys(itemData).length > 0) {
+                  listData.push(itemData);
+                }
+              });
+              if (listData.length > 0) {
+                frontmatter[field.name] = listData;
+              }
+            }
+          });
+
+          const newContent = `---
+${Object.entries(frontmatter).map(([key, val]) => 
   `${key}: ${typeof val === 'object' ? JSON.stringify(val) : val}`
 ).join('\n')}
 ---
 
-${document.getElementById('field-body').value}
-`;
-        
-        const filename = `${formatFolderName(frontMatter.title || 'new-post')}.md`;
-        createNewPost(`${collection.folder}/${filename}`, content);
-        return true;
-      }
-    });
-  }
-
-  // 11. CHỈNH SỬA BÀI VIẾT
-  async function editPost(path, sha) {
-    try {
-      const fileData = await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(path)}`);
-      
-      let content;
-      try {
-        const base64Content = atob(fileData.content.replace(/\s/g, ''));
-        content = decodeURIComponent(escape(base64Content));
-      } catch (e) {
-        console.error('Lỗi decode content:', e);
-        content = atob(fileData.content);
-      }
-
-      // Kiểm tra xem có phải là collection item không
-      const collection = collectionsConfig?.find(c => path.startsWith(c.folder));
-      
-      if (content.startsWith('---') && collection) {
-        const frontMatterEnd = content.indexOf('---', 3);
-        if (frontMatterEnd === -1) {
-          throw new Error('Không tìm thấy kết thúc frontmatter');
-        }
-        
-        const frontMatter = content.substring(3, frontMatterEnd).trim();
-        const body = content.substring(frontMatterEnd + 3).trim();
-        
-        // Parse frontmatter thành object
-        const fields = {};
-        const lines = frontMatter.split('\n');
-        for (const line of lines) {
-          if (!line.trim()) continue;
+${document.getElementById('body')?.value || ''}`;
           
-          const separatorIndex = line.indexOf(':');
-          if (separatorIndex > 0) {
-            const key = line.substring(0, separatorIndex).trim();
-            let value = line.substring(separatorIndex + 1).trim();
-            
-            // Xử lý giá trị được bọc trong quotes hoặc dạng JSON
-            if ((value.startsWith('"') && value.endsWith('"')) || 
-                (value.startsWith("'") && value.endsWith("'"))) {
-              value = value.slice(1, -1);
-            } else if (value.startsWith('[') || value.startsWith('{')) {
-              try {
-                value = JSON.parse(value);
-              } catch (e) {
-                console.error('Lỗi parse JSON:', e);
-              }
-            }
-            
-            fields[key] = value;
-          }
+          savePost(path, sha, newContent, `Cập nhật ${collection.label}`);
+          return true;
         }
-        
-        // Hiển thị modal chỉnh sửa với đầy đủ trường
-        showEditCollectionModal(collection, path, sha, fields, body);
-        return;
-      }
-      
-      // Nếu không phải collection item hoặc không có frontmatter, hiển thị editor đơn giản
-      showEditModal(path, content, sha);
-      
+      });
     } catch (error) {
       console.error('Lỗi khi tải nội dung bài viết:', error);
       showNotification(`Lỗi: ${error.message || 'Không thể tải nội dung bài viết'}`, 'error');
     }
-  }
+  };
 
-  // 12. HIỂN THỊ MODAL CHỈNH SỬA COLLECTION ENTRY
-  function showEditCollectionModal(collection, path, sha, fields, body) {
-    let formHTML = '';
-    
-    collection.fields.forEach(field => {
-      if (!field.name || !field.label || field.name === 'body') return;
-      
-      const fieldLabel = field.label || field.name;
-      const value = fields[field.name] || '';
-      const hint = field.hint ? `placeholder="${escapeHtml(field.hint)}"` : '';
-      
-      formHTML += `<div class="form-group">`;
-      
-      if (field.widget === 'list' && field.fields) {
-        formHTML += `<fieldset class="list-field">
-          <legend>${escapeHtml(fieldLabel)}</legend>
-          <div class="list-items" id="list-${field.name}">`;
-        
-        try {
-          const listValue = Array.isArray(value) ? value : (value ? [value] : []);
-          
-          listValue.forEach((item, index) => {
-            formHTML += `<div class="list-item">
-              <button class="btn btn-sm btn-remove-item" type="button" onclick="removeListItem(this)">×</button>`;
-            
-            field.fields.forEach(subField => {
-              const subFieldLabel = subField.label || subField.name;
-              const subValue = item?.[subField.name] || '';
-              const subHint = subField.hint ? `placeholder="${escapeHtml(subField.hint)}"` : '';
-              
-              formHTML += `<div class="sub-field">
-                <label>${escapeHtml(subFieldLabel)}</label>
-                <input type="text" 
-                       class="form-control" 
-                       name="${field.name}[${index}].${subField.name}" 
-                       value="${escapeHtml(subValue)}"
-                       ${subHint}>
-              </div>`;
-            });
-            
-            formHTML += `</div>`;
-          });
-        } catch (e) {
-          console.error('Lỗi khi parse list value:', e);
-        }
-        
-        formHTML += `</div>
-          <button type="button" class="btn btn-sm btn-add-item" onclick="addListItem('${field.name}', ${JSON.stringify(field.fields)})">
-            + Thêm mục
-          </button>
-        </fieldset>`;
-      } else {
-        formHTML += `<label for="field-${field.name}">${escapeHtml(fieldLabel)}${field.required ? '<span class="required">*</span>' : ''}</label>`;
-        
-        switch (field.widget) {
-          case 'datetime':
-            formHTML += `<input type="datetime-local" id="field-${field.name}" class="form-control" value="${escapeHtml(value)}">`;
-            break;
-          case 'date':
-            formHTML += `<input type="date" id="field-${field.name}" class="form-control" value="${escapeHtml(value)}">`;
-            break;
-          case 'select':
-            formHTML += `
-              <select id="field-${field.name}" class="form-control">
-                ${(field.options || []).map(option => 
-                  `<option value="${escapeHtml(option)}" ${option === value ? 'selected' : ''}>${escapeHtml(option)}</option>`
-                ).join('')}
-              </select>
-            `;
-            break;
-          case 'textarea':
-            formHTML += `<textarea id="field-${field.name}" class="form-control" rows="4" ${hint}>${escapeHtml(value)}</textarea>`;
-            break;
-          case 'boolean':
-            formHTML += `
-              <div class="checkbox-wrapper">
-                <input type="checkbox" id="field-${field.name}" ${value === 'true' ? 'checked' : ''}>
-                <label for="field-${field.name}">${escapeHtml(fieldLabel)}</label>
-              </div>
-            `;
-            break;
-          default:
-            formHTML += `<input type="text" id="field-${field.name}" class="form-control" value="${escapeHtml(value)}" ${hint}>`;
-        }
-      }
-      
-      formHTML += `</div>`;
-    });
-    
-    formHTML += `
-      <div class="form-group">
-        <label for="field-body">Nội dung:</label>
-        <textarea id="field-body" rows="15" class="form-control">${escapeHtml(body)}</textarea>
-      </div>
-    `;
-    
-    showModal({
-      title: `Chỉnh sửa ${collection.label || collection.name}`,
-      confirmText: 'Lưu',
-      body: formHTML,
-      onConfirm: () => {
-        const frontMatter = {};
-        
-        // Xử lý các trường thông thường
-        collection.fields.forEach(field => {
-          if (field.name === 'body') return;
-          
-          let value;
-          const fieldElement = document.getElementById(`field-${field.name}`);
-          
-          if (!fieldElement) {
-            // Xử lý các trường trong list
-            if (field.widget === 'list' && field.fields) {
-              const listItems = [];
-              const itemElements = document.querySelectorAll(`#list-${field.name} .list-item`);
-              
-              itemElements.forEach(itemEl => {
-                const itemValue = {};
-                field.fields.forEach(subField => {
-                  const input = itemEl.querySelector(`[name^="${field.name}"][name$="${subField.name}"]`);
-                  if (input) itemValue[subField.name] = input.value;
-                });
-                listItems.push(itemValue);
-              });
-              
-              frontMatter[field.name] = listItems.length > 0 ? listItems : null;
-            }
-            return;
-          }
-          
-          switch (field.widget) {
-            case 'boolean':
-              value = fieldElement.checked ? 'true' : 'false';
-              break;
-            default:
-              value = fieldElement.value;
-          }
-          
-          if (value !== undefined && value !== '') {
-            frontMatter[field.name] = value;
-          }
-        });
-        
-        const newBody = document.getElementById('field-body')?.value || '';
-        
-        // Tạo nội dung file mới
-        let newContent = '---\n';
-        Object.entries(frontMatter).forEach(([key, val]) => {
-          if (val !== null && val !== undefined) {
-            if (typeof val === 'object') {
-              newContent += `${key}: ${JSON.stringify(val)}\n`;
-            } else {
-              newContent += `${key}: ${val}\n`;
-            }
-          }
-        });
-        newContent += `---\n\n${newBody}`;
-        
-        savePost(path, sha, newContent, `Cập nhật ${collection.label || collection.name}`);
-        return true;
-      }
-    });
-  }
-
-  // 13. HIỂN THỊ MODAL CHỈNH SỬA ĐƠN GIẢN
+  // 17. Hiển thị modal chỉnh sửa đơn giản
   function showEditModal(path, content, sha) {
     const filename = path.split('/').pop();
     
@@ -782,8 +791,8 @@ ${document.getElementById('field-body').value}
     });
   }
 
-  // 14. LƯU BÀI VIẾT
-  async function savePost(path, sha, content, message, isRename = false) {
+  // 18. Lưu bài viết
+  window.savePost = async function(path, sha, content, message, isRename = false) {
     try {
       const updateData = {
         message: message,
@@ -815,10 +824,10 @@ ${document.getElementById('field-body').value}
       console.error('Lỗi khi lưu bài viết:', error);
       showNotification(`Lỗi: ${error.message || 'Không thể lưu bài viết'}`, 'error');
     }
-  }
+  };
 
-  // 15. XÓA BÀI VIẾT HOẶC THƯ MỤC
-  async function deleteItem(path, sha, isFolder, silent = false) {
+  // 19. Xóa bài viết/thư mục
+  window.deleteItem = async function(path, sha, isFolder, silent = false) {
     const itemType = isFolder ? 'thư mục' : 'bài viết';
     if (!silent && !confirm(`Bạn có chắc chắn muốn xóa ${itemType} này không?`)) return;
     
@@ -851,9 +860,9 @@ ${document.getElementById('field-body').value}
       console.error(`Lỗi khi xóa ${itemType}:`, error);
       showNotification(`Lỗi: ${error.message || `Không thể xóa ${itemType}`}`, 'error');
     }
-  }
+  };
 
-  // 16. XÓA THƯ MỤC ĐỆ QUY
+  // 20. Xóa thư mục đệ quy
   async function deleteFolderRecursive(folderPath) {
     const items = await callGitHubAPI(`/.netlify/git/github/contents/${encodeURIComponent(folderPath)}`);
     
@@ -872,8 +881,8 @@ ${document.getElementById('field-body').value}
     }
   }
 
-  // 17. TẠO BÀI VIẾT MỚI
-  async function createNewPost(path, content) {
+  // 21. Tạo bài viết mới
+  window.createNewPost = async function(path, content) {
     try {
       const createData = {
         message: `Tạo nội dung mới: ${path.split('/').pop().replace(/\.md$/i, '')}`,
@@ -896,9 +905,79 @@ ${document.getElementById('field-body').value}
       console.error('Lỗi khi tạo nội dung mới:', error);
       showNotification(`Lỗi: ${error.message || 'Không thể tạo nội dung mới'}`, 'error');
     }
+  };
+
+  // 22. Thêm thư mục mới
+  window.addNewFolder = function(parentPath) {
+    showModal({
+      title: 'Tạo thư mục mới',
+      confirmText: 'Tạo',
+      body: `
+        <div class="form-group">
+          <label for="folder-name">Tên thư mục:</label>
+          <input type="text" id="folder-name" placeholder="Nhập tên thư mục" class="form-control" />
+        </div>
+      `,
+      onConfirm: () => {
+        const folderName = document.getElementById('folder-name').value.trim();
+        if (!folderName) {
+          showNotification('Vui lòng nhập tên thư mục', 'warning');
+          return false;
+        }
+        
+        const formattedName = formatFolderName(folderName);
+        const path = `${parentPath}/${formattedName}/README.md`;
+        
+        createNewPost(path, `# ${folderName}\n\nThư mục này chứa nội dung về ${folderName}.`);
+        return true;
+      }
+    });
+  };
+
+  // 23. Xem bài viết
+  window.viewPost = function(path) {
+    const slug = path.split('/').pop().replace(/\.md$/i, '');
+    const postUrl = `${window.location.origin}/${slug}`;
+    window.open(postUrl, '_blank');
+  };
+
+  // 24. Gọi API GitHub
+  async function callGitHubAPI(url, method = 'GET', body = null) {
+    const user = window.netlifyIdentity?.currentUser();
+    if (!user?.token?.access_token) {
+      throw new Error('Bạn chưa đăng nhập');
+    }
+
+    const headers = {
+      'Authorization': `Bearer ${user.token.access_token}`,
+      'Accept': 'application/vnd.github.v3+json',
+      'Content-Type': 'application/json',
+      'X-Operator': 'netlify',
+      'X-Operator-Id': user.id,
+      'X-Netlify-User': user.id
+    };
+
+    const config = {
+      method: method,
+      headers: headers,
+      credentials: 'include'
+    };
+
+    if (body) {
+      config.body = JSON.stringify(body);
+    }
+
+    const response = await fetch(url, config);
+    
+    if (!response.ok) {
+      const error = await response.json().catch(() => null);
+      throw new Error(error?.message || `Lỗi HTTP ${response.status}`);
+    }
+
+    return response.json();
   }
 
-  // 18. HIỂN THỊ MODAL
+  // 25. Hiển thị modal
   function showModal({ title, body, confirmText = 'Lưu', onConfirm }) {
     const modalOverlay = document.getElementById('modal-overlay');
     const modal = document.createElement('div');
@@ -944,7 +1023,7 @@ ${document.getElementById('field-body').value}
     });
   }
 
-  // 19. HIỂN THỊ THÔNG BÁO
+  // 26. Hiển thị thông báo
   function showNotification(message, type = 'success') {
     const notification = document.createElement('div');
     notification.className = `notification ${type}`;
@@ -964,7 +1043,7 @@ ${document.getElementById('field-body').value}
     }, 3000);
   }
 
-  // 20. ĐỊNH DẠNG NGÀY THÁNG
+  // 27. Định dạng ngày tháng
   function formatDate(date) {
     if (!(date instanceof Date)) return '';
     return date.toLocaleDateString('vi-VN', {
@@ -976,7 +1055,7 @@ ${document.getElementById('field-body').value}
     });
   }
 
-  // 21. LẤY ICON CHO COLLECTION
+  // 28. Lấy icon cho collection
   function getCollectionIcon(collectionName) {
     const icons = {
       posts: 'file-alt',
@@ -984,13 +1063,15 @@ ${document.getElementById('field-body').value}
       products: 'shopping-bag',
       categories: 'tags',
       settings: 'cog',
-      users: 'users'
+      users: 'users',
+      app: 'mobile-alt',
+      'jailbreak-tools': 'tools'
     };
     
     return icons[collectionName] || 'file';
   }
 
-  // 22. ESCAPE HTML
+  // 29. Escape HTML
   function escapeHtml(str) {
     if (!str) return '';
     return str.toString()
@@ -1001,7 +1082,7 @@ ${document.getElementById('field-body').value}
       .replace(/'/g, "&#039;");
   }
 
-  // 23. ĐỊNH DẠNG TÊN THƯ MỤC
+  // 30. Định dạng tên thư mục
   function formatFolderName(name) {
     return name.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
       .toLowerCase()
@@ -1009,53 +1090,6 @@ ${document.getElementById('field-body').value}
       .replace(/\s+/g, '-')
       .replace(/[^a-z0-9-]/g, '')
       .replace(/-+/g, '-');
-  }
-
-  // 24. THÊM ITEM VÀO LIST FIELD
-  function addListItem(fieldName, subFields) {
-    const listContainer = document.getElementById(`list-${fieldName}`);
-    if (!listContainer) return;
-    
-    const itemCount = listContainer.querySelectorAll('.list-item').length;
-    const itemId = `${fieldName}-${itemCount}`;
-    
-    let itemHTML = `
-      <div class="list-item">
-        <button class="btn btn-sm btn-remove-item" type="button" onclick="removeListItem(this)">×</button>
-    `;
-    
-    subFields.forEach(subField => {
-      const subFieldLabel = subField.label || subField.name;
-      const subHint = subField.hint ? `placeholder="${escapeHtml(subField.hint)}"` : '';
-      
-      itemHTML += `
-        <div class="sub-field">
-          <label>${escapeHtml(subFieldLabel)}</label>
-          <input type="text" 
-                 class="form-control" 
-                 name="${fieldName}[${itemCount}].${subField.name}" 
-                 ${subHint}>
-        </div>
-      `;
-    });
-    
-    itemHTML += `</div>`;
-    listContainer.insertAdjacentHTML('beforeend', itemHTML);
-  }
-
-  // 25. XÓA ITEM KHỎI LIST FIELD
-  function removeListItem(button) {
-    const listItem = button.closest('.list-item');
-    if (listItem) {
-      listItem.remove();
-    }
-  }
-
-  // 26. XEM BÀI VIẾT
-  function viewPost(path) {
-    const slug = path.split('/').pop().replace(/\.md$/i, '');
-    const postUrl = `${window.location.origin}/${slug}`;
-    window.open(postUrl, '_blank');
   }
 
   // Đăng ký hàm toàn cục
@@ -1071,40 +1105,4 @@ ${document.getElementById('field-body').value}
   window.showSettings = () => showNotification('Tính năng đang phát triển', 'warning');
   window.addListItem = addListItem;
   window.removeListItem = removeListItem;
-
-  // 27. GỌI API GITHUB
-  async function callGitHubAPI(url, method = 'GET', body = null) {
-    const user = window.netlifyIdentity?.currentUser();
-    if (!user?.token?.access_token) {
-      throw new Error('Bạn chưa đăng nhập');
-    }
-
-    const headers = {
-      'Authorization': `Bearer ${user.token.access_token}`,
-      'Accept': 'application/vnd.github.v3+json',
-      'Content-Type': 'application/json',
-      'X-Operator': 'netlify',
-      'X-Operator-Id': user.id,
-      'X-Netlify-User': user.id
-    };
-
-    const config = {
-      method: method,
-      headers: headers,
-      credentials: 'include'
-    };
-
-    if (body) {
-      config.body = JSON.stringify(body);
-    }
-
-    const response = await fetch(url, config);
-    
-    if (!response.ok) {
-      const error = await response.json().catch(() => null);
-      throw new Error(error?.message || `Lỗi HTTP ${response.status}`);
-    }
-
-    return response.json();
-  }
 });
