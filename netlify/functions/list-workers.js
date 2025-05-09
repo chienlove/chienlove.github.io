@@ -71,3 +71,8 @@ exports.handler = async (event, context) => {
     };
   }
 };
+console.log('Env vars:', {
+  EDITOR_PASSWORD: !!process.env.EDITOR_PASSWORD,
+  CLOUDFLARE_API_TOKEN: !!process.env.CLOUDFLARE_API_TOKEN,
+  CLOUDFLARE_ACCOUNT_ID: !!process.env.CLOUDFLARE_ACCOUNT_ID
+});
