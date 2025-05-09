@@ -892,138 +892,137 @@ ${body}
   }
 
   // 26. HIỂN THỊ MODAL CHỈNH SỬA COLLECTION ENTRY
-  function showEditCollectionModal(collection, path, sha, fields, body) {
+function showEditCollectionModal(collection, path, sha, fields, body) {
     let formHTML = '';
     
     collection.fields.forEach(field => {
-      if (!field.name || !field.label) return;
-      
-      if (field.name === 'body') return;
-      
-      const fieldLabel = decodeURIComponent(escape(field.label || field.name));
-      const value = fields[field.name] || '';
-      
-      formHTML += `<div class="form-group">`;
-      
-      if (field.widget === 'object' && field.fields) {
-        formHTML += `<fieldset class="object-field">
-          <legend>${escapeHtml(fieldLabel)}</legend>`;
+        if (!field.name || !field.label) return;
         
-        try {
-          const objectValue = typeof value === 'string' ? JSON.parse(value) : value;
-          field.fields.forEach(subField => {
-            const subFieldLabel = decodeURIComponent(escape(subField.label || subField.name));
-            const subValue = objectValue?.[subField.name] || '';
+        if (field.name === 'body') return;
+        
+        // Fix lỗi tiếng Việt trong label
+        const fieldLabel = field.label || field.name;
+        const value = fields[field.name] || field.default || '';
+        
+        formHTML += `<div class="form-group">`;
+        
+        if (field.widget === 'object' && field.fields) {
+            formHTML += `<fieldset class="object-field">
+              <legend>${escapeHtml(fieldLabel)}</legend>`;
             
-            formHTML += `<div class="sub-field">
-              <label>${escapeHtml(subFieldLabel)}</label>
-              <input type="text" 
-                     class="form-control" 
-                     name="${field.name}.${subField.name}" 
-                     value="${escapeHtml(subValue)}"
-                     placeholder="${escapeHtml(subField.hint || '')}">
-            </div>`;
-          });
-        } catch (e) {
-          console.error('Lỗi khi parse object value:', e);
+            try {
+                const objectValue = typeof value === 'string' ? JSON.parse(value) : value;
+                field.fields.forEach(subField => {
+                    const subFieldLabel = subField.label || subField.name;
+                    const subValue = objectValue?.[subField.name] || '';
+                    
+                    formHTML += `<div class="sub-field">
+                      <label>${escapeHtml(subFieldLabel)}</label>
+                      <input type="text" 
+                             class="form-control" 
+                             name="${field.name}.${subField.name}" 
+                             value="${escapeHtml(subValue)}"
+                             placeholder="${escapeHtml(subField.hint || '')}">
+                    </div>`;
+                });
+            } catch (e) {
+                console.error('Lỗi khi parse object value:', e);
+            }
+            
+            formHTML += `</fieldset>`;
+        }
+        else if (field.widget === 'list' && field.fields) {
+            formHTML += `<fieldset class="list-field">
+              <legend>${escapeHtml(fieldLabel)}</legend>
+              <div class="list-items" id="list-${field.name}">`;
+            
+            try {
+                const listValue = Array.isArray(value) ? value : (value ? [value] : [{}]);
+                
+                listValue.forEach((item, index) => {
+                    formHTML += `<div class="list-item">
+                      <button class="btn btn-sm btn-remove-item" type="button" onclick="removeListItem(this)">×</button>`;
+                    
+                    field.fields.forEach(subField => {
+                        const subFieldLabel = subField.label || subField.name;
+                        const subValue = item?.[subField.name] || '';
+                        
+                        formHTML += `<div class="sub-field">
+                          <label>${escapeHtml(subFieldLabel)}</label>
+                          <input type="text" 
+                                 class="form-control" 
+                                 name="${field.name}[${index}].${subField.name}" 
+                                 value="${escapeHtml(subValue)}"
+                                 placeholder="${escapeHtml(subField.hint || '')}">
+                        </div>`;
+                    });
+                    
+                    formHTML += `</div>`;
+                });
+            } catch (e) {
+                console.error('Lỗi khi parse list value:', e);
+            }
+            
+            formHTML += `</div>
+              <button type="button" class="btn btn-sm btn-add-item" onclick="addListItem('${field.name}', ${JSON.stringify(field.fields)})">
+                + Thêm mục
+              </button>
+            </fieldset>`;
+        }
+        else {
+            formHTML += `<label for="field-${field.name}">${escapeHtml(fieldLabel)}${field.required ? '<span class="required">*</span>' : ''}</label>`;
+            
+            switch (field.widget) {
+                case 'datetime':
+                    formHTML += `<input type="datetime-local" id="field-${field.name}" class="form-control" value="${escapeHtml(value)}">`;
+                    break;
+                case 'date':
+                    formHTML += `<input type="date" id="field-${field.name}" class="form-control" value="${escapeHtml(value)}">`;
+                    break;
+                case 'select':
+                    formHTML += `
+                      <select id="field-${field.name}" class="form-control">
+                        ${(field.options || []).map(option => 
+                          `<option value="${escapeHtml(option)}" ${option === value ? 'selected' : ''}>${escapeHtml(option)}</option>`
+                        ).join('')}
+                      </select>
+                    `;
+                    break;
+                case 'textarea':
+                    formHTML += `<textarea id="field-${field.name}" class="form-control" rows="4">${escapeHtml(value)}</textarea>`;
+                    break;
+                case 'boolean':
+                    formHTML += `
+                      <div class="checkbox-wrapper">
+                        <input type="checkbox" id="field-${field.name}" ${value === 'true' ? 'checked' : ''}>
+                        <label for="field-${field.name}">${escapeHtml(fieldLabel)}</label>
+                      </div>
+                    `;
+                    break;
+                default:
+                    formHTML += `<input type="text" 
+                               id="field-${field.name}" 
+                               class="form-control" 
+                               value="${escapeHtml(value)}"
+                               placeholder="${escapeHtml(field.hint || '')}">`;
+            }
         }
         
-        formHTML += `</fieldset>`;
-      }
-      else if (field.widget === 'list' && field.fields) {
-        formHTML += `<fieldset class="list-field">
-          <legend>${escapeHtml(fieldLabel)}</legend>
-          <div class="list-items" id="list-${field.name}">`;
-        
-        try {
-          const listValue = Array.isArray(value) ? value : (value ? [value] : [{}]);
-          
-          listValue.forEach((item, index) => {
-            formHTML += `<div class="list-item">
-              <button class="btn btn-sm btn-remove-item" type="button" onclick="removeListItem(this)">×</button>`;
-            
-            field.fields.forEach(subField => {
-              const subFieldLabel = decodeURIComponent(escape(subField.label || subField.name));
-              const subValue = item?.[subField.name] || '';
-              
-              formHTML += `<div class="sub-field">
-                <label>${escapeHtml(subFieldLabel)}</label>
-                <input type="text" 
-                       class="form-control" 
-                       name="${field.name}[${index}].${subField.name}" 
-                       value="${escapeHtml(subValue)}">
-              </div>`;
-            });
-            
-            formHTML += `</div>`;
-          });
-        } catch (e) {
-          console.error('Lỗi khi parse list value:', e);
-        }
-        
-        formHTML += `</div>
-          <button type="button" class="btn btn-sm btn-add-item" onclick="addListItem('${field.name}', ${JSON.stringify(field.fields)})">
-            + Thêm mục
-          </button>
-        </fieldset>`;
-      }
-      else {
-        formHTML += `<label for="field-${field.name}">${escapeHtml(fieldLabel)}${field.required ? '<span class="required">*</span>' : ''}</label>`;
-        
-        switch (field.widget) {
-          case 'datetime':
-            formHTML += `<input type="datetime-local" id="field-${field.name}" class="form-control" value="${escapeHtml(value)}">`;
-            break;
-          case 'date':
-            formHTML += `<input type="date" id="field-${field.name}" class="form-control" value="${escapeHtml(value)}">`;
-            break;
-          case 'select':
-            formHTML += `
-              <select id="field-${field.name}" class="form-control">
-                ${(field.options || []).map(option => 
-                  `<option value="${escapeHtml(option)}" ${option === value ? 'selected' : ''}>${escapeHtml(option)}</option>`
-                ).join('')}
-              </select>
-            `;
-            break;
-          case 'textarea':
-            formHTML += `<textarea id="field-${field.name}" class="form-control" rows="4">${escapeHtml(value)}</textarea>`;
-            break;
-          case 'boolean':
-            formHTML += `
-              <div class="checkbox-wrapper">
-                <input type="checkbox" id="field-${field.name}" ${value === 'true' ? 'checked' : ''}>
-                <label for="field-${field.name}">${escapeHtml(fieldLabel)}</label>
-              </div>
-            `;
-            break;
-          default:
-            formHTML += `<input type="text" id="field-${field.name}" class="form-control" value="${escapeHtml(value)}">`;
-        }
-      }
-      
-      formHTML += `</div>`;
+        formHTML += `</div>`;
     });
-    
-    let decodedBody;
-    try {
-      decodedBody = decodeURIComponent(escape(body));
-    } catch (e) {
-      decodedBody = body;
-    }
     
     formHTML += `
       <div class="form-group">
         <label for="field-body">Nội dung:</label>
-        <textarea id="field-body" rows="15" class="form-control">${escapeHtml(decodedBody)}</textarea>
+        <textarea id="field-body" rows="15" class="form-control">${escapeHtml(body)}</textarea>
       </div>
     `;
     
     showModal({
-      title: `Chỉnh sửa ${decodeURIComponent(escape(collection.label || collection.name))}`,
-      confirmText: 'Lưu',
-      body: formHTML,
-      onConfirm: () => {
+        title: `Chỉnh sửa ${collection.label || collection.name}`,
+        confirmText: 'Lưu',
+        body: formHTML,
+        onConfirm: () => {
         const title = document.getElementById('field-title')?.value.trim() || '';
         if (!title) {
           showNotification('Vui lòng nhập tiêu đề', 'warning');
