@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Worker Editor</title>
+    <link rel="stylesheet" href="css/worker.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/dracula.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Worker Editor</h1>
+            <div class="auth-section">
+                <input type="password" id="password" placeholder="Mật khẩu">
+                <button id="login-btn" class="btn btn-primary">Đăng nhập</button>
+            </div>
+        </header>
+        
+        <main>
+            <div class="worker-selector" style="display: none;">
+                <h2>Chọn Worker</h2>
+                <div class="worker-list" id="worker-list">
+                    <!-- Workers sẽ được thêm vào đây bằng JavaScript -->
+                </div>
+            </div>
+            
+            <div class="editor-container" style="display: none;">
+                <div class="editor-header">
+                    <h2 id="current-worker">Worker: <span></span></h2>
+                    <button id="back-btn" class="btn btn-secondary">Quay lại</button>
+                </div>
+                <textarea id="code-editor"></textarea>
+                
+                <div class="actions">
+                    <button id="update-btn" class="btn btn-success">Cập nhật Worker</button>
+                </div>
+            </div>
+            
+            <div id="status" class="status"></div>
+        </main>
+        
+        <footer>
+            <p>Worker Editor © 2025</p>
+        </footer>
+    </div>
+    
+    <script src="js/worker.js"></script>
+</body>
+</html>
