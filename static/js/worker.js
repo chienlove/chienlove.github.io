@@ -31,10 +31,10 @@ function initEditor() {
         viewportMargin: Infinity,
         styleActiveLine: true,
         extraKeys: {
-            'Ctrl-A': selectAllCode,
-            'Cmd-A': selectAllCode,
-            'Ctrl-Enter': updateWorker,
-            'Cmd-Enter': updateWorker,
+            'Ctrl-A': function(cm) { selectAllCode(cm); return false; },
+            'Cmd-A': function(cm) { selectAllCode(cm); return false; },
+            'Ctrl-Enter': function(cm) { updateWorker(); return false; },
+            'Cmd-Enter': function(cm) { updateWorker(); return false; },
             'Ctrl-/': 'toggleComment',
             'Cmd-/': 'toggleComment',
             'Ctrl-Space': 'autocomplete',
@@ -61,15 +61,16 @@ function initEditor() {
 
 // Select all text with proper highlighting
 function selectAllCode(cm) {
-    cm.execCommand("selectAll");
+    const firstLine = cm.firstLine();
     const lastLine = cm.lastLine();
-    cm.setSelection({line: 0, ch: 0}, {line: lastLine, ch: cm.getLine(lastLine).length});
+    cm.setSelection({line: firstLine, ch: 0}, {line: lastLine, ch: cm.getLine(lastLine).length});
     cm.focus();
 }
 
 // Setup editor toolbar
 function setupToolbar() {
-    document.getElementById('select-all-btn').addEventListener('click', () => {
+    document.getElementById('select-all-btn').addEventListener('click', (e) => {
+        e.preventDefault();
         selectAllCode(codeEditor);
     });
 
