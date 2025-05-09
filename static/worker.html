@@ -3,26 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Worker Editor</title>
-    <link rel="stylesheet" href="css/worker.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/theme/dracula.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/codemirror.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.2/mode/javascript/javascript.min.js"></script>
+    <title>Cloudflare Worker Editor</title>
+    <link rel="stylesheet" href="/css/worker.css?v=1.0">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/codemirror.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/theme/dracula.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/codemirror.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/mode/javascript/javascript.min.js"></script>
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>Worker Editor</h1>
+            <h1><i class="fas fa-code"></i> Cloudflare Worker Editor</h1>
             <div class="auth-section">
-                <input type="password" id="password" placeholder="Mật khẩu">
-                <button id="login-btn" class="btn btn-primary">Đăng nhập</button>
+                <input type="password" id="password" placeholder="Nhập mật khẩu quản trị">
+                <button id="login-btn" class="btn btn-primary">
+                    <i class="fas fa-sign-in-alt"></i> Đăng nhập
+                </button>
             </div>
         </header>
         
         <main>
             <div class="worker-selector" style="display: none;">
-                <h2>Chọn Worker</h2>
+                <h2><i class="fas fa-list-ul"></i> Danh sách Workers</h2>
                 <div class="worker-list" id="worker-list">
                     <!-- Workers sẽ được thêm vào đây bằng JavaScript -->
                 </div>
@@ -30,13 +34,17 @@
             
             <div class="editor-container" style="display: none;">
                 <div class="editor-header">
-                    <h2 id="current-worker">Worker: <span></span></h2>
-                    <button id="back-btn" class="btn btn-secondary">Quay lại</button>
+                    <h2><i class="fas fa-file-code"></i> Worker: <span></span></h2>
+                    <button id="back-btn" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> Quay lại
+                    </button>
                 </div>
                 <textarea id="code-editor"></textarea>
                 
                 <div class="actions">
-                    <button id="update-btn" class="btn btn-success">Cập nhật Worker</button>
+                    <button id="update-btn" class="btn btn-success">
+                        <i class="fas fa-save"></i> Cập nhật Worker
+                    </button>
                 </div>
             </div>
             
@@ -44,7 +52,7 @@
         </main>
         
         <footer>
-            <p>Worker Editor © 2025</p>
+            <p>Cloudflare Worker Editor © 2025 | Powered by Cloudflare API</p>
         </footer>
     </div>
     
