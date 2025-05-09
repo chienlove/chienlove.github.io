@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const workerListDiv = document.getElementById('worker-list');
     const workerSelectorDiv = document.querySelector('.worker-selector');
     const editorContainerDiv = document.querySelector('.editor-container');
-    const currentWorkerSpan = document.querySelector('#current-worker span');
+    const currentWorkerSpan = document.querySelector('.editor-header h2 span');
     const updateBtn = document.getElementById('update-btn');
     const backBtn = document.getElementById('back-btn');
 
