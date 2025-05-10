@@ -15,8 +15,6 @@ function initEditor() {
     editorWrapper.className = 'editor-wrapper';
     editorContainer.appendChild(editorWrapper);
     
-    // Sử dụng lại shortcuts mặc định của editor
-    // đặc biệt là Ctrl-A/Cmd-A để chọn tất cả
     codeEditor = CodeMirror(editorWrapper, {
         mode: 'javascript',
         theme: 'dracula',
@@ -25,16 +23,22 @@ function initEditor() {
         autoCloseBrackets: true,
         matchBrackets: true,
         indentUnit: 4,
-        tabSize: 4
+        tabSize: 4,
+        extraKeys: {
+            'Ctrl-Enter': function() { updateWorker(); },
+            'Cmd-Enter': function() { updateWorker(); },
+            'Ctrl-/': 'toggleComment',
+            'Cmd-/': 'toggleComment'
+        }
     });
     
-    // Thêm phím tắt riêng sau khi tạo editor
-    codeEditor.setOption('extraKeys', {
-        'Ctrl-Enter': function() { updateWorker(); },
-        'Cmd-Enter': function() { updateWorker(); },
-        'Ctrl-/': 'toggleComment',
-        'Cmd-/': 'toggleComment'
-        // Không định nghĩa lại Ctrl-A/Cmd-A để sử dụng hành vi mặc định
+    // Thêm sự kiện keydown trực tiếp để xử lý Ctrl-A/Cmd-A
+    codeEditor.getWrapperElement().addEventListener('keydown', function(e) {
+        // Ctrl+A hoặc Cmd+A (Mac)
+        if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
+            e.preventDefault(); // Ngăn hành vi mặc định
+            codeEditor.execCommand('selectAll');
+        }
     });
 
     function resizeEditor() {
@@ -74,31 +78,7 @@ function setLoading(element, isLoading, text = '') {
     }
 }
 
-function formatDate(dateString) {
-    if (!dateString) return 'Chưa rõ';
-    
-    try {
-        // Xử lý kiểm tra hợp lệ
-        const date = new Date(dateString);
-        if (isNaN(date.getTime())) {
-            console.log('Invalid date string:', dateString);
-            return 'Chưa rõ';
-        }
-        
-        // Đảm bảo format ngày tháng đúng 
-        return date.toLocaleString('vi-VN', {
-            year: 'numeric',
-            month: '2-digit', 
-            day: '2-digit',
-            hour: '2-digit', 
-            minute: '2-digit',
-            second: '2-digit'
-        });
-    } catch (e) {
-        console.error('Error formatting date:', e);
-        return 'Chưa rõ';
-    }
-}
+// Không dùng hàm này nữa vì xử lý trực tiếp trong từng trường hợp
 
 // API functions
 async function handleLogin() {
@@ -132,11 +112,46 @@ async function handleLogin() {
 
 function renderWorkerList(workers) {
     const container = document.getElementById('worker-list');
-    container.innerHTML = workers.length ? workers.map(worker => `
+    
+    // Đảm bảo mỗi worker có lastModified hợp lệ
+    const processedWorkers = workers.map(worker => {
+        // Clone để không làm thay đổi dữ liệu gốc
+        const processedWorker = {...worker};
+        
+        // Kiểm tra và sửa lastModified nếu cần
+        if (!processedWorker.lastModified) {
+            console.log(`Worker ${processedWorker.id} không có lastModified`);
+            // Không gán thời gian hiện tại cho danh sách
+            processedWorker._formattedDate = 'Chưa rõ';
+        } else {
+            try {
+                const testDate = new Date(processedWorker.lastModified);
+                if (isNaN(testDate.getTime())) {
+                    console.log(`Worker ${processedWorker.id} có lastModified không hợp lệ: ${processedWorker.lastModified}`);
+                    processedWorker._formattedDate = 'Chưa rõ';
+                } else {
+                    processedWorker._formattedDate = testDate.toLocaleString('vi-VN', {
+                        year: 'numeric',
+                        month: '2-digit', 
+                        day: '2-digit',
+                        hour: '2-digit', 
+                        minute: '2-digit'
+                    });
+                }
+            } catch (e) {
+                console.error(`Lỗi xử lý ngày tháng cho worker ${processedWorker.id}:`, e);
+                processedWorker._formattedDate = 'Chưa rõ';
+            }
+        }
+        
+        return processedWorker;
+    });
+    
+    container.innerHTML = processedWorkers.length ? processedWorkers.map(worker => `
         <div class="worker-card" onclick="loadWorker('${worker.id}')">
             <h3><i class="fas fa-cube"></i> ${worker.name || worker.id}</h3>
             <p><i class="fas fa-fingerprint"></i> ID: ${worker.id}</p>
-            <p><i class="far fa-clock"></i> Cập nhật: ${formatDate(worker.lastModified)}</p>
+            <p><i class="far fa-clock"></i> Cập nhật: ${worker._formattedDate}</p>
         </div>
     `).join('') : '<div class="empty-state"><i class="fas fa-inbox"></i> Không tìm thấy worker nào</div>';
 }
@@ -149,32 +164,42 @@ window.loadWorker = async function(workerId) {
         
         if (!response.ok) throw new Error(data.error || 'Không thể tải worker');
 
-        // Đảm bảo lastModified là một chuỗi thời gian hợp lệ
+        // Xử lý ngày tháng cho worker được chọn
+        let formattedDate = 'Chưa rõ';
         let lastModified = null;
+        
         if (data.lastModified) {
-            const testDate = new Date(data.lastModified);
-            if (!isNaN(testDate.getTime())) {
-                lastModified = data.lastModified;
-            } else {
-                console.warn('Server trả về lastModified không hợp lệ:', data.lastModified);
-                // Sử dụng thời gian hiện tại nếu lastModified không hợp lệ
-                lastModified = new Date().toISOString();
+            try {
+                const testDate = new Date(data.lastModified);
+                if (!isNaN(testDate.getTime())) {
+                    lastModified = data.lastModified;
+                    formattedDate = testDate.toLocaleString('vi-VN', {
+                        year: 'numeric',
+                        month: '2-digit', 
+                        day: '2-digit',
+                        hour: '2-digit', 
+                        minute: '2-digit',
+                        second: '2-digit'
+                    });
+                } else {
+                    console.warn('Server trả về lastModified không hợp lệ:', data.lastModified);
+                    // Không gán thời gian hiện tại, giữ là null
+                }
+            } catch (e) {
+                console.error('Lỗi xử lý ngày tháng cho worker:', e);
             }
-        } else {
-            // Nếu không có lastModified, sử dụng thời gian hiện tại
-            lastModified = new Date().toISOString();
         }
 
         currentWorker = {
             id: workerId,
             name: data.name || workerId,
-            lastModified: lastModified
+            lastModified: lastModified // Có thể null
         };
 
         codeEditor.setValue(data.code || '');
         codeEditor.refresh();
         document.getElementById('current-worker-name').textContent = currentWorker.name;
-        document.getElementById('last-modified').textContent = formatDate(currentWorker.lastModified);
+        document.getElementById('last-modified').textContent = formattedDate;
         document.getElementById('worker-id').textContent = currentWorker.id;
         
         document.getElementById('worker-selector').style.display = 'none';
@@ -218,22 +243,38 @@ async function updateWorker() {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Cập nhật thất bại');
 
-        // Đảm bảo lastModified luôn hợp lệ
-        let newLastModified;
+        // Xử lý ngày tháng trả về
+        let formattedDate = 'Chưa rõ';
+        let lastModified = null;
+        
         if (data.lastModified) {
-            const testDate = new Date(data.lastModified);
-            if (!isNaN(testDate.getTime())) {
-                newLastModified = data.lastModified;
-            } else {
-                console.warn('Server trả về lastModified không hợp lệ khi cập nhật:', data.lastModified);
-                newLastModified = new Date().toISOString();
+            try {
+                const testDate = new Date(data.lastModified);
+                if (!isNaN(testDate.getTime())) {
+                    lastModified = data.lastModified;
+                    formattedDate = testDate.toLocaleString('vi-VN', {
+                        year: 'numeric',
+                        month: '2-digit', 
+                        day: '2-digit',
+                        hour: '2-digit', 
+                        minute: '2-digit',
+                        second: '2-digit'
+                    });
+                } else {
+                    console.warn('Server trả về lastModified không hợp lệ khi cập nhật:', data.lastModified);
+                }
+            } catch (e) {
+                console.error('Lỗi xử lý ngày tháng khi cập nhật:', e);
             }
         } else {
-            newLastModified = new Date().toISOString();
+            console.log('Server không trả về lastModified khi cập nhật');
         }
         
-        currentWorker.lastModified = newLastModified;
-        document.getElementById('last-modified').textContent = formatDate(currentWorker.lastModified);
+        // Lưu giá trị gốc (có thể null)
+        currentWorker.lastModified = lastModified;
+        
+        // Hiển thị ngày đã xử lý
+        document.getElementById('last-modified').textContent = formattedDate;
         showStatus('Cập nhật thành công!', 'success');
     } catch (error) {
         showStatus(error.message.includes('Failed to fetch') 
