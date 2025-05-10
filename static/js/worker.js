@@ -15,6 +15,8 @@ function initEditor() {
     editorWrapper.className = 'editor-wrapper';
     editorContainer.appendChild(editorWrapper);
     
+    // Sử dụng lại shortcuts mặc định của editor
+    // đặc biệt là Ctrl-A/Cmd-A để chọn tất cả
     codeEditor = CodeMirror(editorWrapper, {
         mode: 'javascript',
         theme: 'dracula',
@@ -23,16 +25,16 @@ function initEditor() {
         autoCloseBrackets: true,
         matchBrackets: true,
         indentUnit: 4,
-        tabSize: 4,
-        extraKeys: {
-            'Ctrl-Enter': () => { updateWorker(); return false; },
-            'Cmd-Enter': () => { updateWorker(); return false; },
-            'Ctrl-/': 'toggleComment',
-            'Cmd-/': 'toggleComment',
-            // Sửa lỗi phím tắt Ctrl-A/Cmd-A
-            'Ctrl-A': (cm) => { cm.execCommand('selectAll'); },
-            'Cmd-A': (cm) => { cm.execCommand('selectAll'); }
-        }
+        tabSize: 4
+    });
+    
+    // Thêm phím tắt riêng sau khi tạo editor
+    codeEditor.setOption('extraKeys', {
+        'Ctrl-Enter': function() { updateWorker(); },
+        'Cmd-Enter': function() { updateWorker(); },
+        'Ctrl-/': 'toggleComment',
+        'Cmd-/': 'toggleComment'
+        // Không định nghĩa lại Ctrl-A/Cmd-A để sử dụng hành vi mặc định
     });
 
     function resizeEditor() {
@@ -57,32 +59,45 @@ function showStatus(message, type = 'success', duration = 3000) {
 
 function setLoading(element, isLoading, text = '') {
     if (!element) return;
+    
     element.disabled = isLoading;
-    const icon = element.querySelector('i');
-    if (icon) {
-        if (isLoading) {
-            element.dataset.originalText = element.textContent;
-            icon.className = 'fas fa-spinner fa-spin';
-            element.innerHTML = `${icon.outerHTML} ${text}`;
-        } else {
-            element.textContent = element.dataset.originalText || text;
-            if (icon && icon.dataset && icon.dataset.originalIcon) {
-                icon.className = icon.dataset.originalIcon;
-            }
-        }
+    
+    if (isLoading) {
+        // Lưu trạng thái ban đầu
+        element.dataset.originalText = element.textContent;
+        
+        // Tạo spinner mới thay vì sử dụng icon có sẵn
+        element.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${text}`;
+    } else {
+        // Khôi phục trạng thái ban đầu
+        element.textContent = element.dataset.originalText || text;
     }
 }
 
 function formatDate(dateString) {
     if (!dateString) return 'Chưa rõ';
     
-    // Xử lý kiểm tra hợp lệ
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) {
+    try {
+        // Xử lý kiểm tra hợp lệ
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) {
+            console.log('Invalid date string:', dateString);
+            return 'Chưa rõ';
+        }
+        
+        // Đảm bảo format ngày tháng đúng 
+        return date.toLocaleString('vi-VN', {
+            year: 'numeric',
+            month: '2-digit', 
+            day: '2-digit',
+            hour: '2-digit', 
+            minute: '2-digit',
+            second: '2-digit'
+        });
+    } catch (e) {
+        console.error('Error formatting date:', e);
         return 'Chưa rõ';
     }
-    
-    return date.toLocaleString('vi-VN');
 }
 
 // API functions
@@ -134,10 +149,26 @@ window.loadWorker = async function(workerId) {
         
         if (!response.ok) throw new Error(data.error || 'Không thể tải worker');
 
+        // Đảm bảo lastModified là một chuỗi thời gian hợp lệ
+        let lastModified = null;
+        if (data.lastModified) {
+            const testDate = new Date(data.lastModified);
+            if (!isNaN(testDate.getTime())) {
+                lastModified = data.lastModified;
+            } else {
+                console.warn('Server trả về lastModified không hợp lệ:', data.lastModified);
+                // Sử dụng thời gian hiện tại nếu lastModified không hợp lệ
+                lastModified = new Date().toISOString();
+            }
+        } else {
+            // Nếu không có lastModified, sử dụng thời gian hiện tại
+            lastModified = new Date().toISOString();
+        }
+
         currentWorker = {
             id: workerId,
             name: data.name || workerId,
-            lastModified: data.lastModified || null
+            lastModified: lastModified
         };
 
         codeEditor.setValue(data.code || '');
@@ -187,7 +218,21 @@ async function updateWorker() {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Cập nhật thất bại');
 
-        currentWorker.lastModified = data.lastModified || new Date().toISOString();
+        // Đảm bảo lastModified luôn hợp lệ
+        let newLastModified;
+        if (data.lastModified) {
+            const testDate = new Date(data.lastModified);
+            if (!isNaN(testDate.getTime())) {
+                newLastModified = data.lastModified;
+            } else {
+                console.warn('Server trả về lastModified không hợp lệ khi cập nhật:', data.lastModified);
+                newLastModified = new Date().toISOString();
+            }
+        } else {
+            newLastModified = new Date().toISOString();
+        }
+        
+        currentWorker.lastModified = newLastModified;
         document.getElementById('last-modified').textContent = formatDate(currentWorker.lastModified);
         showStatus('Cập nhật thành công!', 'success');
     } catch (error) {
