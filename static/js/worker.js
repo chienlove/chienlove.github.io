@@ -12,12 +12,10 @@ let workers = [];
 function initEditor() {
     const editorContainer = document.getElementById('code-editor-container');
     
-    // Create editor wrapper
     const editorWrapper = document.createElement('div');
     editorWrapper.className = 'editor-wrapper';
     editorContainer.appendChild(editorWrapper);
     
-    // Initialize CodeMirror with all features
     codeEditor = CodeMirror(editorWrapper, {
         mode: 'javascript',
         theme: 'dracula',
@@ -43,7 +41,6 @@ function initEditor() {
         gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"]
     });
 
-    // Handle editor resize
     function resizeEditor() {
         const height = window.innerHeight - editorContainer.getBoundingClientRect().top - 20;
         editorWrapper.style.height = `${height}px`;
@@ -55,7 +52,6 @@ function initEditor() {
     resizeEditor();
 }
 
-// Show status message
 function showStatus(message, type = 'success', duration = 5000) {
     const statusEl = document.getElementById('status-message');
     statusEl.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i> ${message}`;
@@ -67,7 +63,6 @@ function showStatus(message, type = 'success', duration = 5000) {
     }, duration);
 }
 
-// Set loading state
 function setLoading(element, isLoading, text = '') {
     if (!element) return;
     
@@ -89,7 +84,6 @@ function setLoading(element, isLoading, text = '') {
     }
 }
 
-// Format date
 function formatDate(dateString) {
     if (!dateString) return 'Chưa rõ';
     const date = new Date(dateString);
@@ -102,7 +96,6 @@ function formatDate(dateString) {
     });
 }
 
-// Handle login
 async function handleLogin() {
     password = document.getElementById('password').value.trim();
     if (!password) {
@@ -114,13 +107,7 @@ async function handleLogin() {
     try {
         setLoading(loginBtn, true, 'Đang xác thực...');
         
-        const response = await fetch(`/api/list-workers`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ password })
-        });
+        const response = await fetch(`/api/list-workers?password=${encodeURIComponent(password)}`);
         
         if (!response.ok) {
             const error = await response.json();
@@ -143,7 +130,6 @@ async function handleLogin() {
     }
 }
 
-// Render worker list
 function renderWorkerList(workers) {
     const container = document.getElementById('worker-list');
     if (workers.length === 0) {
@@ -160,21 +146,11 @@ function renderWorkerList(workers) {
     `).join('');
 }
 
-// Load worker (global function)
 window.loadWorker = async function(workerId) {
     try {
         showStatus('Đang tải worker...', 'info');
         
-        const response = await fetch(`/api/get-worker`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                worker_id: workerId,
-                password: password
-            })
-        });
+        const response = await fetch(`/api/get-worker?worker_id=${encodeURIComponent(workerId)}&password=${encodeURIComponent(password)}`);
         
         if (!response.ok) {
             const error = await response.json();
@@ -196,7 +172,6 @@ window.loadWorker = async function(workerId) {
     }
 };
 
-// Update editor UI
 function updateEditorUI(code) {
     document.getElementById('current-worker-name').textContent = currentWorker.name;
     document.getElementById('last-modified').textContent = formatDate(currentWorker.lastModified);
@@ -208,11 +183,9 @@ function updateEditorUI(code) {
     document.getElementById('worker-selector').style.display = 'none';
     document.getElementById('editor-container').style.display = 'flex';
     
-    // Focus editor after short delay
     setTimeout(() => codeEditor.focus(), 100);
 }
 
-// Update worker
 async function updateWorker() {
     if (!currentWorker.id) {
         showStatus('Vui lòng chọn worker trước', 'error');
@@ -229,16 +202,12 @@ async function updateWorker() {
     try {
         setLoading(updateBtn, true, 'Đang lưu...');
         
-        const response = await fetch('/api/update-worker', {
+        const response = await fetch(`/api/update-worker?worker_id=${encodeURIComponent(currentWorker.id)}&password=${encodeURIComponent(password)}`, {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({
-                code: code,
-                password: password,
-                worker_id: currentWorker.id
-            })
+            body: JSON.stringify({ code })
         });
 
         if (!response.ok) {
@@ -263,13 +232,11 @@ async function updateWorker() {
     }
 }
 
-// Back to list
 function backToList() {
     document.getElementById('editor-container').style.display = 'none';
     document.getElementById('worker-selector').style.display = 'block';
 }
 
-// Setup search
 function setupSearch() {
     const searchInput = document.getElementById('worker-search');
     searchInput.addEventListener('input', (e) => {
@@ -282,7 +249,6 @@ function setupSearch() {
     });
 }
 
-// Initialize on DOM ready
 document.addEventListener('DOMContentLoaded', () => {
     initEditor();
     setupSearch();
@@ -294,7 +260,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Enter') handleLogin();
     });
     
-    // Store original icons for buttons
     document.querySelectorAll('.btn i').forEach(icon => {
         if (icon.parentElement) {
             icon.parentElement.dataset.icon = icon.className;
