@@ -29,9 +29,8 @@ function initEditor() {
             'Cmd-Enter': () => { updateWorker(); return false; },
             'Ctrl-/': 'toggleComment',
             'Cmd-/': 'toggleComment',
-            // Sửa lỗi phím tắt Ctrl-A/Cmd-A
-            'Ctrl-A': (cm) => { cm.execCommand('selectAll'); },
-            'Cmd-A': (cm) => { cm.execCommand('selectAll'); }
+            'Ctrl-A': (cm) => { cm.execCommand('selectAll'); return false; },
+            'Cmd-A': (cm) => { cm.execCommand('selectAll'); return false; }
         }
     });
 
@@ -66,22 +65,14 @@ function setLoading(element, isLoading, text = '') {
             element.innerHTML = `${icon.outerHTML} ${text}`;
         } else {
             element.textContent = element.dataset.originalText || text;
-            if (icon && icon.dataset && icon.dataset.originalIcon) {
-                icon.className = icon.dataset.originalIcon;
-            }
+            icon.className = element.querySelector('i').dataset.originalIcon;
         }
     }
 }
 
 function formatDate(dateString) {
     if (!dateString) return 'Chưa rõ';
-    
-    // Xử lý kiểm tra hợp lệ
     const date = new Date(dateString);
-    if (isNaN(date.getTime())) {
-        return 'Chưa rõ';
-    }
-    
     return date.toLocaleString('vi-VN');
 }
 
@@ -137,11 +128,11 @@ window.loadWorker = async function(workerId) {
         currentWorker = {
             id: workerId,
             name: data.name || workerId,
-            lastModified: data.lastModified || null
+            lastModified: data.lastModified
         };
 
         codeEditor.setValue(data.code || '');
-        codeEditor.refresh();
+codeEditor.refresh();
         document.getElementById('current-worker-name').textContent = currentWorker.name;
         document.getElementById('last-modified').textContent = formatDate(currentWorker.lastModified);
         document.getElementById('worker-id').textContent = currentWorker.id;
