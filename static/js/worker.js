@@ -8,10 +8,9 @@ let currentWorker = {
 let password = '';
 let workers = [];
 
-// Initialize editor with full features
+// Initialize editor
 function initEditor() {
     const editorContainer = document.getElementById('code-editor-container');
-    
     const editorWrapper = document.createElement('div');
     editorWrapper.className = 'editor-wrapper';
     editorContainer.appendChild(editorWrapper);
@@ -25,20 +24,12 @@ function initEditor() {
         matchBrackets: true,
         indentUnit: 4,
         tabSize: 4,
-        scrollbarStyle: 'native',
-        viewportMargin: 10,
-        styleActiveLine: true,
-        lineWiseCopyCut: false,
         extraKeys: {
-            'Ctrl-Enter': function(cm) { updateWorker(); return false; },
-            'Cmd-Enter': function(cm) { updateWorker(); return false; },
+            'Ctrl-Enter': () => { updateWorker(); return false; },
+            'Cmd-Enter': () => { updateWorker(); return false; },
             'Ctrl-/': 'toggleComment',
-            'Cmd-/': 'toggleComment',
-            'Ctrl-Space': 'autocomplete',
-            'Shift-Tab': 'indentLess'
-        },
-        foldGutter: true,
-        gutters: ["CodeMirror-linenumbers", "CodeMirror-foldgutter"]
+            'Cmd-/': 'toggleComment'
+        }
     });
 
     function resizeEditor() {
@@ -52,34 +43,27 @@ function initEditor() {
     resizeEditor();
 }
 
-function showStatus(message, type = 'success', duration = 5000) {
+// Helper functions
+function showStatus(message, type = 'success', duration = 3000) {
     const statusEl = document.getElementById('status-message');
-    statusEl.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i> ${message}`;
+    statusEl.textContent = message;
     statusEl.className = `status-message ${type} show`;
-    
     clearTimeout(statusEl.timeout);
-    statusEl.timeout = setTimeout(() => {
-        statusEl.classList.remove('show');
-    }, duration);
+    statusEl.timeout = setTimeout(() => statusEl.classList.remove('show'), duration);
 }
 
 function setLoading(element, isLoading, text = '') {
     if (!element) return;
-    
     element.disabled = isLoading;
     const icon = element.querySelector('i');
-    
     if (icon) {
         if (isLoading) {
             element.dataset.originalText = element.textContent;
-            element.dataset.originalIcon = icon.className;
             icon.className = 'fas fa-spinner fa-spin';
             element.innerHTML = `${icon.outerHTML} ${text}`;
         } else {
-            if (element.dataset.originalIcon) {
-                icon.className = element.dataset.originalIcon;
-            }
             element.textContent = element.dataset.originalText || text;
+            icon.className = element.querySelector('i').dataset.originalIcon;
         }
     }
 }
@@ -87,15 +71,10 @@ function setLoading(element, isLoading, text = '') {
 function formatDate(dateString) {
     if (!dateString) return 'Chưa rõ';
     const date = new Date(dateString);
-    return date.toLocaleString('vi-VN', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
+    return date.toLocaleString('vi-VN');
 }
 
+// API functions
 async function handleLogin() {
     password = document.getElementById('password').value.trim();
     if (!password) {
@@ -108,19 +87,14 @@ async function handleLogin() {
         setLoading(loginBtn, true, 'Đang xác thực...');
         
         const response = await fetch(`/api/list-workers?password=${encodeURIComponent(password)}`);
-        
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Đăng nhập thất bại');
-        }
-
         const data = await response.json();
-        workers = data.workers;
-        renderWorkerList(workers);
         
+        if (!response.ok) throw new Error(data.error || 'Đăng nhập thất bại');
+
+        workers = data.workers || [];
+        renderWorkerList(workers);
         document.getElementById('auth-section').style.display = 'none';
         document.getElementById('worker-selector').style.display = 'block';
-        
         showStatus('Đăng nhập thành công', 'success');
     } catch (error) {
         showStatus(error.message, 'error');
@@ -132,59 +106,44 @@ async function handleLogin() {
 
 function renderWorkerList(workers) {
     const container = document.getElementById('worker-list');
-    if (workers.length === 0) {
-        container.innerHTML = '<div class="empty-state"><i class="fas fa-inbox"></i> Không tìm thấy worker nào</div>';
-        return;
-    }
-
-    container.innerHTML = workers.map(worker => `
+    container.innerHTML = workers.length ? workers.map(worker => `
         <div class="worker-card" onclick="loadWorker('${worker.id}')">
             <h3><i class="fas fa-cube"></i> ${worker.name || worker.id}</h3>
             <p><i class="fas fa-fingerprint"></i> ID: ${worker.id}</p>
             <p><i class="far fa-clock"></i> Cập nhật: ${formatDate(worker.lastModified)}</p>
         </div>
-    `).join('');
+    `).join('') : '<div class="empty-state"><i class="fas fa-inbox"></i> Không tìm thấy worker nào</div>';
 }
 
 window.loadWorker = async function(workerId) {
     try {
         showStatus('Đang tải worker...', 'info');
-        
         const response = await fetch(`/api/get-worker?worker_id=${encodeURIComponent(workerId)}&password=${encodeURIComponent(password)}`);
-        
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || 'Không thể tải worker');
-        }
-
         const data = await response.json();
+        
+        if (!response.ok) throw new Error(data.error || 'Không thể tải worker');
+
         currentWorker = {
             id: workerId,
             name: data.name || workerId,
             lastModified: data.lastModified
         };
 
-        updateEditorUI(data.code);
+        codeEditor.setValue(data.code || '');
+        document.getElementById('current-worker-name').textContent = currentWorker.name;
+        document.getElementById('last-modified').textContent = formatDate(currentWorker.lastModified);
+        document.getElementById('worker-id').textContent = currentWorker.id;
+        
+        document.getElementById('worker-selector').style.display = 'none';
+        document.getElementById('editor-container').style.display = 'flex';
+        setTimeout(() => codeEditor.focus(), 100);
+        
         showStatus(`Đã tải worker "${currentWorker.name}"`, 'success');
     } catch (error) {
-        showStatus(`Lỗi: ${error.message}`, 'error');
+        showStatus(error.message, 'error');
         console.error('Load Worker Error:', error);
     }
 };
-
-function updateEditorUI(code) {
-    document.getElementById('current-worker-name').textContent = currentWorker.name;
-    document.getElementById('last-modified').textContent = formatDate(currentWorker.lastModified);
-    document.getElementById('worker-id').textContent = currentWorker.id;
-    
-    codeEditor.setValue(code);
-    codeEditor.clearHistory();
-    
-    document.getElementById('worker-selector').style.display = 'none';
-    document.getElementById('editor-container').style.display = 'flex';
-    
-    setTimeout(() => codeEditor.focus(), 100);
-}
 
 async function updateWorker() {
     if (!currentWorker.id) {
@@ -192,8 +151,8 @@ async function updateWorker() {
         return;
     }
     
-    const code = codeEditor.getValue();
-    if (!code.trim()) {
+    const code = codeEditor.getValue().trim();
+    if (!code) {
         showStatus('Mã worker không được để trống', 'error');
         return;
     }
@@ -202,30 +161,27 @@ async function updateWorker() {
     try {
         setLoading(updateBtn, true, 'Đang lưu...');
         
-        const response = await fetch(`/api/update-worker?worker_id=${encodeURIComponent(currentWorker.id)}&password=${encodeURIComponent(password)}`, {
+        const response = await fetch('/api/update-worker', {
             method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ code })
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                worker_id: currentWorker.id,
+                password: password,
+                code: code,
+                name: currentWorker.name
+            })
         });
-
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || error.message || 'Cập nhật thất bại');
-        }
-
+        
         const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Cập nhật thất bại');
+
         currentWorker.lastModified = data.lastModified || new Date().toISOString();
         document.getElementById('last-modified').textContent = formatDate(currentWorker.lastModified);
-        
         showStatus('Cập nhật thành công!', 'success');
     } catch (error) {
-        let errorMessage = error.message;
-        if (error.message.includes('Failed to fetch')) {
-            errorMessage = 'Không thể kết nối đến server';
-        }
-        showStatus(`Lỗi: ${errorMessage}`, 'error');
+        showStatus(error.message.includes('Failed to fetch') 
+            ? 'Không thể kết nối đến server' 
+            : error.message, 'error');
         console.error('Update Error:', error);
     } finally {
         setLoading(updateBtn, false, 'Lưu thay đổi');
@@ -249,6 +205,7 @@ function setupSearch() {
     });
 }
 
+// Initialize
 document.addEventListener('DOMContentLoaded', () => {
     initEditor();
     setupSearch();
@@ -258,11 +215,5 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('back-btn').addEventListener('click', backToList);
     document.getElementById('password').addEventListener('keyup', (e) => {
         if (e.key === 'Enter') handleLogin();
-    });
-    
-    document.querySelectorAll('.btn i').forEach(icon => {
-        if (icon.parentElement) {
-            icon.parentElement.dataset.icon = icon.className;
-        }
     });
 });

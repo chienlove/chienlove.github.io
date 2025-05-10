@@ -3,39 +3,33 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cloudflare Worker Editor Pro</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+    <title>Cloudflare Worker Editor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/codemirror.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/theme/dracula.min.css">
-    <link rel="stylesheet" href="css/worker.css?v=1.9">
+    <link rel="stylesheet" href="css/worker.css?v=2.0">
 </head>
 <body>
     <div class="app-container">
         <header class="app-header">
-            <div class="header-content">
-                <div class="logo">
-                    <i class="fas fa-cloud"></i>
-                    <h1>Worker Editor Pro</h1>
-                </div>
+            <div class="logo">
+                <i class="fas fa-cloud"></i>
+                <h1>Worker Editor</h1>
             </div>
         </header>
 
         <main class="app-main">
             <div class="login-popup" id="auth-section">
                 <div class="login-card">
-                    <div class="login-header">
-                        <h2><i class="fas fa-lock"></i> Đăng nhập</h2>
+                    <h2><i class="fas fa-lock"></i> Đăng nhập</h2>
+                    <div class="input-group">
+                        <i class="fas fa-key"></i>
+                        <input type="password" id="password" placeholder="Mật khẩu quản trị">
                     </div>
-                    <div class="login-body">
-                        <div class="input-group">
-                            <i class="fas fa-key"></i>
-                            <input type="password" id="password" placeholder="Nhập mật khẩu quản trị...">
-                        </div>
-                        <button id="login-btn" class="btn btn-primary">
-                            <i class="fas fa-sign-in-alt"></i> Đăng nhập
-                        </button>
-                    </div>
+                    <button id="login-btn" class="btn btn-primary">
+                        <i class="fas fa-sign-in-alt"></i> Đăng nhập
+                    </button>
                 </div>
             </div>
 
@@ -44,7 +38,7 @@
                     <h2><i class="fas fa-list-ul"></i> Danh sách Workers</h2>
                     <div class="search-box">
                         <i class="fas fa-search"></i>
-                        <input type="text" id="worker-search" placeholder="Tìm kiếm worker...">
+                        <input type="text" id="worker-search" placeholder="Tìm kiếm...">
                     </div>
                 </div>
                 <div class="worker-list" id="worker-list"></div>
@@ -75,7 +69,7 @@
         </main>
 
         <footer class="app-footer">
-            <p><i class="far fa-copyright"></i> 2023 Cloudflare Worker Editor Pro | Phiên bản 3.3</p>
+            <p><i class="far fa-copyright"></i> 2023 Worker Editor | Phiên bản 2.0</p>
         </footer>
     </div>
 
@@ -84,7 +78,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/addon/edit/matchbrackets.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/addon/edit/closebrackets.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/addon/comment/comment.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.12/addon/selection/active-line.min.js"></script>
-    <script src="js/worker.js?v=1.9"></script>
+    <script src="js/worker.js?v=2.0"></script>
 </body>
 </html>
