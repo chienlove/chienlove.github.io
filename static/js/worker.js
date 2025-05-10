@@ -28,7 +28,9 @@ function initEditor() {
             'Ctrl-Enter': () => { updateWorker(); return false; },
             'Cmd-Enter': () => { updateWorker(); return false; },
             'Ctrl-/': 'toggleComment',
-            'Cmd-/': 'toggleComment'
+            'Cmd-/': 'toggleComment',
+            'Ctrl-A': (cm) => { cm.execCommand('selectAll'); return false; },
+            'Cmd-A': (cm) => { cm.execCommand('selectAll'); return false; }
         }
     });
 
