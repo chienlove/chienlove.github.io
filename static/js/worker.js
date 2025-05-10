@@ -165,7 +165,7 @@ async function updateWorker() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                worker_id: currentWorker.id,
+                workerId: currentWorker.id,
                 password: password,
                 code: code,
                 name: currentWorker.name
