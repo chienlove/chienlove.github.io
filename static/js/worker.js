@@ -132,6 +132,7 @@ window.loadWorker = async function(workerId) {
         };
 
         codeEditor.setValue(data.code || '');
+codeEditor.refresh();
         document.getElementById('current-worker-name').textContent = currentWorker.name;
         document.getElementById('last-modified').textContent = formatDate(currentWorker.lastModified);
         document.getElementById('worker-id').textContent = currentWorker.id;
