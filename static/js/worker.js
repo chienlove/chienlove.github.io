@@ -114,7 +114,13 @@ async function handleLogin() {
     try {
         setLoading(loginBtn, true, 'Đang xác thực...');
         
-        const response = await fetch(`/api/list-workers?password=${encodeURIComponent(password)}`);
+        const response = await fetch(`/api/list-workers`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ password })
+        });
         
         if (!response.ok) {
             const error = await response.json();
@@ -159,7 +165,16 @@ window.loadWorker = async function(workerId) {
     try {
         showStatus('Đang tải worker...', 'info');
         
-        const response = await fetch(`/api/get-worker?worker_id=${encodeURIComponent(workerId)}&password=${encodeURIComponent(password)}`);
+        const response = await fetch(`/api/get-worker`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                worker_id: workerId,
+                password: password
+            })
+        });
         
         if (!response.ok) {
             const error = await response.json();
@@ -212,30 +227,26 @@ async function updateWorker() {
 
     const updateBtn = document.getElementById('update-btn');
     try {
-        try {
-            setLoading(updateBtn, true, 'Đang lưu...');
-        } catch (e) {
-            console.error('Lỗi khi set loading:', e);
-        }
+        setLoading(updateBtn, true, 'Đang lưu...');
         
         const response = await fetch('/api/update-worker', {
             method: 'POST',
             headers: { 
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 code: code,
                 password: password,
-                workerId: currentWorker.id
+                worker_id: currentWorker.id
             })
         });
 
-        const data = await response.json();
         if (!response.ok) {
-            throw new Error(data.error || data.message || 'Cập nhật thất bại');
+            const error = await response.json();
+            throw new Error(error.error || error.message || 'Cập nhật thất bại');
         }
 
+        const data = await response.json();
         currentWorker.lastModified = data.lastModified || new Date().toISOString();
         document.getElementById('last-modified').textContent = formatDate(currentWorker.lastModified);
         
@@ -248,11 +259,7 @@ async function updateWorker() {
         showStatus(`Lỗi: ${errorMessage}`, 'error');
         console.error('Update Error:', error);
     } finally {
-        try {
-            setLoading(updateBtn, false, 'Lưu thay đổi');
-        } catch (e) {
-            console.error('Lỗi khi tắt loading:', e);
-        }
+        setLoading(updateBtn, false, 'Lưu thay đổi');
     }
 }
 
