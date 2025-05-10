@@ -104,11 +104,14 @@ body {
     animation: fadeIn 0.3s ease;
 }
 
-.login-card h2 {
+.login-header {
     background: linear-gradient(135deg, var(--primary-dark), var(--primary));
     color: white;
     padding: 1.5rem;
     text-align: center;
+}
+
+.login-header h2 {
     font-size: 1.5rem;
     font-weight: 600;
     display: flex;
@@ -117,29 +120,8 @@ body {
     gap: 0.75rem;
 }
 
-.login-card .input-group {
-    margin: 1.5rem;
-    position: relative;
-}
-
-.password-group {
-    padding-right: 3rem;
-}
-
-.password-toggle {
-    position: absolute;
-    right: 1rem;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--gray-500);
-    cursor: pointer;
-    background: none;
-    border: none;
-    font-size: 1rem;
-}
-
-.password-toggle:hover {
-    color: var(--primary);
+.login-body {
+    padding: 2rem;
 }
 
 .input-group {
@@ -149,7 +131,7 @@ body {
     background: var(--gray-100);
     border-radius: var(--border-radius);
     padding: 0.75rem 1rem;
-    margin-bottom: 1rem;
+    margin-bottom: 1.5rem;
     transition: var(--transition);
     border: 1px solid var(--gray-300);
 }
@@ -174,20 +156,6 @@ body {
     outline: none;
 }
 
-.remember-me {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin: 0 1.5rem 1.5rem;
-    font-size: 0.9rem;
-    color: var(--gray-700);
-}
-
-.remember-me input {
-    width: auto;
-    margin: 0;
-}
-
 .btn {
     display: inline-flex;
     align-items: center;
@@ -200,8 +168,7 @@ body {
     transition: var(--transition);
     border: none;
     font-size: 0.95rem;
-    width: calc(100% - 3rem);
-    margin: 0 1.5rem 1.5rem;
+    width: 100%;
 }
 
 .btn-primary {
@@ -393,7 +360,6 @@ body {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    white-space: nowrap;
 }
 
 .editor-actions {
@@ -492,13 +458,6 @@ body {
 
 .app-footer i {
     margin-right: 0.25rem;
-}
-
-/* Prevent zoom on mobile */
-@media screen and (max-width: 768px) {
-    input, select, textarea {
-        font-size: 16px !important;
-    }
 }
 
 /* Responsive */

@@ -28,18 +28,18 @@ function initEditor() {
             'Ctrl-Enter': function() { updateWorker(); },
             'Cmd-Enter': function() { updateWorker(); },
             'Ctrl-/': 'toggleComment',
-            'Cmd-/': 'toggleComment'
+            'Cmd-/': 'toggleComment',
+            'Ctrl-A': function(cm) { cm.execCommand("selectAll"); },
+            'Cmd-A': function(cm) { cm.execCommand("selectAll"); }
         }
     });
     
-    // Thêm sự kiện keydown trực tiếp để xử lý Ctrl-A/Cmd-A
-    codeEditor.getWrapperElement().addEventListener('keydown', function(e) {
-        // Ctrl+A hoặc Cmd+A (Mac)
-        if ((e.ctrlKey || e.metaKey) && e.key === 'a') {
-            e.preventDefault(); // Ngăn hành vi mặc định
-            codeEditor.execCommand('selectAll');
+    // Prevent zoom on mobile
+    codeEditor.getWrapperElement().addEventListener('touchstart', function(e) {
+        if (e.touches.length > 1) {
+            e.preventDefault();
         }
-    });
+    }, { passive: false });
 
     function resizeEditor() {
         const height = window.innerHeight - editorContainer.getBoundingClientRect().top - 20;
@@ -67,18 +67,36 @@ function setLoading(element, isLoading, text = '') {
     element.disabled = isLoading;
     
     if (isLoading) {
-        // Lưu trạng thái ban đầu
         element.dataset.originalText = element.textContent;
-        
-        // Tạo spinner mới thay vì sử dụng icon có sẵn
         element.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${text}`;
     } else {
-        // Khôi phục trạng thái ban đầu
         element.textContent = element.dataset.originalText || text;
     }
 }
 
-// Không dùng hàm này nữa vì xử lý trực tiếp trong từng trường hợp
+// Password toggle functionality
+function setupPasswordToggle() {
+    const toggleBtn = document.getElementById('toggle-password');
+    const passwordInput = document.getElementById('password');
+    
+    toggleBtn.addEventListener('click', function() {
+        const isPassword = passwordInput.type === 'password';
+        passwordInput.type = isPassword ? 'text' : 'password';
+        toggleBtn.innerHTML = isPassword ? '<i class="fas fa-eye-slash"></i>' : '<i class="fas fa-eye"></i>';
+    });
+}
+
+// Load saved password if remember me is checked
+function loadSavedPassword() {
+    const rememberMe = localStorage.getItem('rememberPassword') === 'true';
+    if (rememberMe) {
+        const savedPassword = localStorage.getItem('savedPassword');
+        if (savedPassword) {
+            document.getElementById('password').value = savedPassword;
+            document.getElementById('remember-password').checked = true;
+        }
+    }
+}
 
 // API functions
 async function handleLogin() {
@@ -86,6 +104,16 @@ async function handleLogin() {
     if (!password) {
         showStatus('Vui lòng nhập mật khẩu', 'error');
         return;
+    }
+
+    // Save password if remember me is checked
+    const rememberMe = document.getElementById('remember-password').checked;
+    if (rememberMe) {
+        localStorage.setItem('savedPassword', password);
+        localStorage.setItem('rememberPassword', 'true');
+    } else {
+        localStorage.removeItem('savedPassword');
+        localStorage.removeItem('rememberPassword');
     }
 
     const loginBtn = document.getElementById('login-btn');
@@ -113,21 +141,15 @@ async function handleLogin() {
 function renderWorkerList(workers) {
     const container = document.getElementById('worker-list');
     
-    // Đảm bảo mỗi worker có lastModified hợp lệ
     const processedWorkers = workers.map(worker => {
-        // Clone để không làm thay đổi dữ liệu gốc
         const processedWorker = {...worker};
         
-        // Kiểm tra và sửa lastModified nếu cần
         if (!processedWorker.lastModified) {
-            console.log(`Worker ${processedWorker.id} không có lastModified`);
-            // Không gán thời gian hiện tại cho danh sách
             processedWorker._formattedDate = 'Chưa rõ';
         } else {
             try {
                 const testDate = new Date(processedWorker.lastModified);
                 if (isNaN(testDate.getTime())) {
-                    console.log(`Worker ${processedWorker.id} có lastModified không hợp lệ: ${processedWorker.lastModified}`);
                     processedWorker._formattedDate = 'Chưa rõ';
                 } else {
                     processedWorker._formattedDate = testDate.toLocaleString('vi-VN', {
@@ -139,7 +161,6 @@ function renderWorkerList(workers) {
                     });
                 }
             } catch (e) {
-                console.error(`Lỗi xử lý ngày tháng cho worker ${processedWorker.id}:`, e);
                 processedWorker._formattedDate = 'Chưa rõ';
             }
         }
@@ -164,7 +185,6 @@ window.loadWorker = async function(workerId) {
         
         if (!response.ok) throw new Error(data.error || 'Không thể tải worker');
 
-        // Xử lý ngày tháng cho worker được chọn
         let formattedDate = 'Chưa rõ';
         let lastModified = null;
         
@@ -181,9 +201,6 @@ window.loadWorker = async function(workerId) {
                         minute: '2-digit',
                         second: '2-digit'
                     });
-                } else {
-                    console.warn('Server trả về lastModified không hợp lệ:', data.lastModified);
-                    // Không gán thời gian hiện tại, giữ là null
                 }
             } catch (e) {
                 console.error('Lỗi xử lý ngày tháng cho worker:', e);
@@ -193,7 +210,7 @@ window.loadWorker = async function(workerId) {
         currentWorker = {
             id: workerId,
             name: data.name || workerId,
-            lastModified: lastModified // Có thể null
+            lastModified: lastModified
         };
 
         codeEditor.setValue(data.code || '');
@@ -243,7 +260,6 @@ async function updateWorker() {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Cập nhật thất bại');
 
-        // Xử lý ngày tháng trả về
         let formattedDate = 'Chưa rõ';
         let lastModified = null;
         
@@ -260,20 +276,13 @@ async function updateWorker() {
                         minute: '2-digit',
                         second: '2-digit'
                     });
-                } else {
-                    console.warn('Server trả về lastModified không hợp lệ khi cập nhật:', data.lastModified);
                 }
             } catch (e) {
                 console.error('Lỗi xử lý ngày tháng khi cập nhật:', e);
             }
-        } else {
-            console.log('Server không trả về lastModified khi cập nhật');
         }
         
-        // Lưu giá trị gốc (có thể null)
         currentWorker.lastModified = lastModified;
-        
-        // Hiển thị ngày đã xử lý
         document.getElementById('last-modified').textContent = formattedDate;
         showStatus('Cập nhật thành công!', 'success');
     } catch (error) {
@@ -307,6 +316,8 @@ function setupSearch() {
 document.addEventListener('DOMContentLoaded', () => {
     initEditor();
     setupSearch();
+    setupPasswordToggle();
+    loadSavedPassword();
     
     document.getElementById('login-btn').addEventListener('click', handleLogin);
     document.getElementById('update-btn').addEventListener('click', updateWorker);
