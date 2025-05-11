@@ -39,7 +39,7 @@ function initEditor() {
         }
     });
 
-    // Fix scrolling and selection
+    // Fix scrolling on mobile
     editorWrapper.addEventListener('touchstart', function(e) {
         if (e.touches.length > 1) e.preventDefault();
     }, { passive: false });
@@ -53,6 +53,55 @@ function initEditor() {
 
     window.addEventListener('resize', resizeEditor);
     resizeEditor();
+}
+
+// Helper functions
+function showStatus(message, type = 'success', duration = 3000) {
+    const statusEl = document.getElementById('status-message');
+    statusEl.textContent = message;
+    statusEl.className = `status-message ${type} show`;
+    clearTimeout(statusEl.timeout);
+    statusEl.timeout = setTimeout(() => statusEl.classList.remove('show'), duration);
+}
+
+function setLoading(element, isLoading, text = '') {
+    if (!element) return;
+    
+    element.disabled = isLoading;
+    
+    if (isLoading) {
+        element.dataset.originalHTML = element.innerHTML;
+        element.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${text}`;
+    } else {
+        element.innerHTML = element.dataset.originalHTML || text;
+    }
+}
+
+// Password toggle functionality
+function setupPasswordToggle() {
+    const toggleBtn = document.getElementById('toggle-password');
+    const passwordInput = document.getElementById('password');
+    
+    toggleBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        const isPassword = passwordInput.type === 'password';
+        passwordInput.type = isPassword ? 'text' : 'password';
+        toggleBtn.innerHTML = isPassword ? '<i class="fas fa-eye-slash"></i>' : '<i class="fas fa-eye"></i>';
+        
+        // Keep focus on input after toggle
+        passwordInput.focus();
+    });
+}
+
+// Load saved password if remember me is checked
+function loadSavedPassword() {
+    const savedPassword = localStorage.getItem('savedPassword');
+    const rememberMe = localStorage.getItem('rememberPassword') === 'true';
+    
+    if (rememberMe && savedPassword) {
+        document.getElementById('password').value = savedPassword;
+        document.getElementById('remember-password').checked = true;
+    }
 }
 
 // Format date properly
@@ -79,20 +128,43 @@ function formatDate(dateString) {
 
 // API functions
 async function handleLogin() {
-    password = document.getElementById('password').value.trim();
+    const passwordInput = document.getElementById('password');
+    password = passwordInput.value.trim();
+    
     if (!password) {
         showStatus('Vui lòng nhập mật khẩu', 'error');
+        passwordInput.focus();
         return;
+    }
+
+    const rememberMe = document.getElementById('remember-password').checked;
+    if (rememberMe) {
+        localStorage.setItem('savedPassword', password);
+        localStorage.setItem('rememberPassword', 'true');
+    } else {
+        localStorage.removeItem('savedPassword');
+        localStorage.removeItem('rememberPassword');
     }
 
     const loginBtn = document.getElementById('login-btn');
     try {
         setLoading(loginBtn, true, 'Đang xác thực...');
         
-        const response = await fetch(`/api/list-workers?password=${encodeURIComponent(password)}`);
+        // Thêm timeout để tránh treo giao diện
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        
+        const response = await fetch(`/api/list-workers?password=${encodeURIComponent(password)}`, {
+            signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
         const data = await response.json();
         
-        if (!response.ok) throw new Error(data.error || 'Đăng nhập thất bại');
+        if (!response.ok) {
+            throw new Error(data.error || 'Đăng nhập thất bại');
+        }
 
         workers = data.workers || [];
         renderWorkerList(workers);
@@ -100,10 +172,13 @@ async function handleLogin() {
         document.getElementById('worker-selector').style.display = 'block';
         showStatus('Đăng nhập thành công', 'success');
     } catch (error) {
-        showStatus(error.message, 'error');
+        const errorMsg = error.name === 'AbortError' 
+            ? 'Kết nối quá hạn, vui lòng thử lại' 
+            : error.message;
+        showStatus(errorMsg, 'error');
         console.error('Login Error:', error);
     } finally {
-        setLoading(loginBtn, false, 'Đăng nhập');
+        setLoading(loginBtn, false, '<i class="fas fa-sign-in-alt"></i> Đăng nhập');
     }
 }
 
@@ -149,7 +224,65 @@ window.loadWorker = async function(workerId) {
     }
 };
 
-// ... (giữ nguyên các hàm khác như updateWorker, backToList, setupSearch)
+async function updateWorker() {
+    if (!currentWorker.id) {
+        showStatus('Vui lòng chọn worker trước', 'error');
+        return;
+    }
+    
+    const code = codeEditor.getValue().trim();
+    if (!code) {
+        showStatus('Mã worker không được để trống', 'error');
+        return;
+    }
+
+    const updateBtn = document.getElementById('update-btn');
+    try {
+        setLoading(updateBtn, true, 'Đang lưu...');
+        
+        const response = await fetch('/api/update-worker', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                workerId: currentWorker.id,
+                password: password,
+                code: code,
+                name: currentWorker.name
+            })
+        });
+        
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Cập nhật thất bại');
+
+        currentWorker.lastModified = data.lastModified || new Date().toISOString();
+        document.getElementById('last-modified').textContent = formatDate(currentWorker.lastModified);
+        showStatus('Cập nhật thành công!', 'success');
+    } catch (error) {
+        showStatus(error.message.includes('Failed to fetch') 
+            ? 'Không thể kết nối đến server' 
+            : error.message, 'error');
+        console.error('Update Error:', error);
+    } finally {
+        setLoading(updateBtn, false, '<i class="fas fa-save"></i> Lưu thay đổi');
+    }
+}
+
+function backToList() {
+    document.getElementById('editor-container').style.display = 'none';
+    document.getElementById('worker-selector').style.display = 'block';
+}
+
+function setupSearch() {
+    const searchInput = document.getElementById('worker-search');
+    searchInput.addEventListener('input', (e) => {
+        const term = e.target.value.toLowerCase();
+        const filtered = workers.filter(worker => 
+            (worker.name && worker.name.toLowerCase().includes(term)) || 
+            worker.id.toLowerCase().includes(term)
+        );
+        renderWorkerList(filtered);
+    });
+}
 
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
@@ -161,6 +294,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('login-btn').addEventListener('click', handleLogin);
     document.getElementById('update-btn').addEventListener('click', updateWorker);
     document.getElementById('back-btn').addEventListener('click', backToList);
+    
+    // Handle Enter key in password field
     document.getElementById('password').addEventListener('keyup', (e) => {
         if (e.key === 'Enter') handleLogin();
     });
