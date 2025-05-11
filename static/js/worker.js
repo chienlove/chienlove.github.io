@@ -8,14 +8,16 @@ let currentWorker = {
 let password = '';
 let workers = [];
 
-// Initialize editor
+// Initialize editor with iOS fixes
 function initEditor() {
     const editorContainer = document.getElementById('code-editor-container');
     const editorWrapper = document.createElement('div');
     editorWrapper.className = 'editor-wrapper';
     editorContainer.appendChild(editorWrapper);
     
-    codeEditor = CodeMirror(editorWrapper, {
+    // iOS specific configuration
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const editorOptions = {
         mode: 'javascript',
         theme: 'dracula',
         lineNumbers: true,
@@ -37,7 +39,23 @@ function initEditor() {
                 cm.setSelection({line: 0, ch: 0}, {line: cm.lastLine(), ch: cm.getLine(cm.lastLine()).length});
             }
         }
-    });
+    };
+
+    // iOS specific fixes
+    if (isIOS) {
+        editorOptions.inputStyle = 'contenteditable';
+        editorOptions.spellcheck = false;
+        editorOptions.autocorrect = 'off';
+        editorOptions.autocapitalize = 'off';
+    }
+
+    codeEditor = CodeMirror(editorWrapper, editorOptions);
+
+    // Apply iOS selection fixes
+    if (isIOS) {
+        editorWrapper.style.userSelect = 'text';
+        editorWrapper.style.webkitUserSelect = 'text';
+    }
 
     // Fix scrolling on mobile
     editorWrapper.addEventListener('touchstart', function(e) {
@@ -249,26 +267,41 @@ async function updateWorker() {
         
         const response = await fetch('/api/update-worker', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${password}`
+            },
             body: JSON.stringify({
                 workerId: currentWorker.id,
-                password: password,
                 code: code,
                 name: currentWorker.name
             })
         });
         
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Cập nhật thất bại');
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        }
 
+        const data = await response.json();
         currentWorker.lastModified = data.lastModified || new Date().toISOString();
         document.getElementById('last-modified').textContent = formatDate(currentWorker.lastModified);
         showStatus('Cập nhật thành công!', 'success');
     } catch (error) {
-        showStatus(error.message.includes('Failed to fetch') 
+        const errorMsg = error.message.includes('Failed to fetch') 
             ? 'Không thể kết nối đến server' 
-            : error.message, 'error');
+            : error.message;
+        showStatus(errorMsg, 'error');
         console.error('Update Error:', error);
+        
+        // Retry logic for Cloudflare API errors
+        if (error.message.includes('Cloudflare') || error.message.includes('524')) {
+            setTimeout(() => {
+                if (confirm('Lỗi kết nối Cloudflare. Bạn có muốn thử lại?')) {
+                    updateWorker();
+                }
+            }, 1000);
+        }
     } finally {
         setLoading(updateBtn, false, '<i class="fas fa-save"></i> Lưu thay đổi');
     }

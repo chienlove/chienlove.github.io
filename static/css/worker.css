@@ -25,6 +25,33 @@
     --transition: all 0.2s ease;
 }
 
+/* iOS Selection Fixes */
+@media (pointer: coarse) {
+    .CodeMirror {
+        font-size: 16px !important;
+    }
+    .CodeMirror-lines {
+        user-select: text;
+        -webkit-user-select: text;
+    }
+    .CodeMirror-line {
+        cursor: text;
+    }
+    .CodeMirror-line > span {
+        -webkit-user-select: text;
+        user-select: text;
+    }
+}
+
+.cm-content, .cm-line {
+    user-select: text !important;
+    -webkit-user-select: text !important;
+}
+
+.editor-wrapper {
+    -webkit-overflow-scrolling: touch;
+}
+
 /* Prevent zoom on mobile */
 @viewport {
     width: device-width;
@@ -56,6 +83,8 @@ body {
     flex-direction: column;
     min-height: 100vh;
 }
+
+/* Rest of your existing CSS remains the same... */
 
 .app-header {
     background: linear-gradient(135deg, var(--primary-dark), var(--primary));
