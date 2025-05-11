@@ -25,10 +25,20 @@
     --transition: all 0.2s ease;
 }
 
+/* Prevent zoom on mobile devices */
+@viewport {
+    width: device-width;
+    zoom: 1.0;
+    min-zoom: 1.0;
+    max-zoom: 1.0;
+    user-zoom: fixed;
+}
+
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
 }
 
 body {
@@ -36,6 +46,9 @@ body {
     background-color: #f5f7ff;
     color: var(--gray-900);
     line-height: 1.6;
+    touch-action: manipulation;
+    text-size-adjust: 100%;
+    -webkit-text-size-adjust: 100%;
 }
 
 .app-container {
@@ -136,6 +149,7 @@ body {
     background: none;
     border: none;
     font-size: 1rem;
+    z-index: 2;
 }
 
 .password-toggle:hover {
@@ -172,6 +186,7 @@ body {
     padding: 0.25rem 0;
     font-size: 1rem;
     outline: none;
+    min-width: 0;
 }
 
 .remember-me {
@@ -181,11 +196,13 @@ body {
     margin: 0 1.5rem 1.5rem;
     font-size: 0.9rem;
     color: var(--gray-700);
+    user-select: none;
 }
 
 .remember-me input {
     width: auto;
     margin: 0;
+    accent-color: var(--primary);
 }
 
 .btn {
@@ -202,6 +219,8 @@ body {
     font-size: 0.95rem;
     width: calc(100% - 3rem);
     margin: 0 1.5rem 1.5rem;
+    user-select: none;
+    touch-action: manipulation;
 }
 
 .btn-primary {
@@ -233,6 +252,7 @@ body {
     margin: 0 auto;
     width: 100%;
     height: calc(100vh - 120px);
+    touch-action: manipulation;
 }
 
 .worker-selector {
@@ -281,6 +301,7 @@ body {
     border-radius: var(--border-radius);
     font-size: 1rem;
     transition: var(--transition);
+    touch-action: manipulation;
 }
 
 .search-box input:focus {
@@ -296,6 +317,7 @@ body {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 1.25rem;
+    touch-action: pan-y;
 }
 
 .worker-card {
@@ -306,6 +328,7 @@ body {
     transition: var(--transition);
     border: 1px solid var(--gray-200);
     box-shadow: var(--shadow-sm);
+    user-select: none;
 }
 
 .worker-card:hover {
@@ -322,11 +345,15 @@ body {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .worker-card h3 i {
     font-size: 1rem;
     color: var(--gray-500);
+    flex-shrink: 0;
 }
 
 .worker-card p {
@@ -336,11 +363,15 @@ body {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .worker-card p i {
     width: 16px;
     color: var(--gray-400);
+    flex-shrink: 0;
 }
 
 .editor-container {
@@ -351,6 +382,7 @@ body {
     height: 100%;
     display: flex;
     flex-direction: column;
+    touch-action: manipulation;
 }
 
 .editor-header {
@@ -406,10 +438,13 @@ body {
     position: relative;
     overflow: hidden;
     height: calc(100% - 60px);
+    touch-action: pan-y;
 }
 
 .editor-wrapper {
     height: 100% !important;
+    position: relative;
+    touch-action: none;
 }
 
 .CodeMirror {
@@ -418,16 +453,21 @@ body {
     font-size: 14px;
     line-height: 1.5;
     transform: none !important;
-    viewportMargin: 10;
+    viewportMargin: Infinity;
+    text-size-adjust: 100%;
+    -webkit-text-size-adjust: 100%;
+    touch-action: none;
 }
 
 .CodeMirror-scroll {
     overflow: auto !important;
     max-height: 100%;
+    touch-action: none;
 }
 
 .CodeMirror-vscrollbar, .CodeMirror-hscrollbar {
     z-index: 5;
+    touch-action: none;
 }
 
 .CodeMirror-selected {
@@ -456,6 +496,7 @@ body {
     align-items: center;
     gap: 0.5rem;
     font-size: 0.9rem;
+    touch-action: manipulation;
 }
 
 .status-message.show {
@@ -494,25 +535,36 @@ body {
     margin-right: 0.25rem;
 }
 
-/* Prevent zoom on mobile */
+.empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 2rem;
+    color: var(--gray-500);
+}
+
+.empty-state i {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    color: var(--gray-400);
+}
+
+/* Prevent zoom and ensure proper behavior on mobile */
 @media screen and (max-width: 768px) {
-    input, select, textarea {
+    input, select, textarea, .CodeMirror {
         font-size: 16px !important;
     }
-}
-
-/* Responsive */
-@media (max-width: 1024px) {
-    .header-content {
-        flex-direction: column;
-        gap: 1rem;
+    
+    textarea, input[type="text"], input[type="password"], .CodeMirror {
+        touch-action: manipulation;
     }
-}
-
-@media (max-width: 768px) {
+    
+    .CodeMirror {
+        font-size: 16px;
+    }
+    
     .app-main {
-        padding: 0.5rem;
         height: calc(100vh - 110px);
+        padding: 0.5rem;
     }
     
     .worker-list {

@@ -24,21 +24,24 @@ function initEditor() {
         matchBrackets: true,
         indentUnit: 4,
         tabSize: 4,
+        viewportMargin: Infinity, // Ngăn chặn zoom
         extraKeys: {
             'Ctrl-Enter': function() { updateWorker(); },
             'Cmd-Enter': function() { updateWorker(); },
             'Ctrl-/': 'toggleComment',
             'Cmd-/': 'toggleComment',
-            'Ctrl-A': function(cm) { cm.execCommand("selectAll"); },
-            'Cmd-A': function(cm) { cm.execCommand("selectAll"); }
+            'Ctrl-A': function(cm) {
+                cm.setSelection({line: 0, ch: 0}, {line: cm.lastLine(), ch: cm.getLine(cm.lastLine()).length});
+            },
+            'Cmd-A': function(cm) {
+                cm.setSelection({line: 0, ch: 0}, {line: cm.lastLine(), ch: cm.getLine(cm.lastLine()).length});
+            }
         }
     });
     
-    // Prevent zoom on mobile
-    codeEditor.getWrapperElement().addEventListener('touchstart', function(e) {
-        if (e.touches.length > 1) {
-            e.preventDefault();
-        }
+    // Ngăn chặn zoom trên mobile
+    editorWrapper.addEventListener('touchstart', function(e) {
+        if (e.touches.length > 1) e.preventDefault();
     }, { passive: false });
 
     function resizeEditor() {
@@ -63,14 +66,12 @@ function showStatus(message, type = 'success', duration = 3000) {
 
 function setLoading(element, isLoading, text = '') {
     if (!element) return;
-    
     element.disabled = isLoading;
-    
     if (isLoading) {
-        element.dataset.originalText = element.textContent;
+        element.dataset.originalText = element.innerHTML;
         element.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${text}`;
     } else {
-        element.textContent = element.dataset.originalText || text;
+        element.innerHTML = element.dataset.originalText || text;
     }
 }
 
@@ -98,6 +99,28 @@ function loadSavedPassword() {
     }
 }
 
+// Format date function
+function formatDate(dateString) {
+    if (!dateString) return 'Chưa rõ';
+    
+    try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return 'Chưa rõ';
+        
+        return date.toLocaleString('vi-VN', {
+            year: 'numeric',
+            month: '2-digit', 
+            day: '2-digit',
+            hour: '2-digit', 
+            minute: '2-digit',
+            second: '2-digit'
+        });
+    } catch (e) {
+        console.error('Lỗi định dạng ngày:', e);
+        return 'Chưa rõ';
+    }
+}
+
 // API functions
 async function handleLogin() {
     password = document.getElementById('password').value.trim();
@@ -106,7 +129,6 @@ async function handleLogin() {
         return;
     }
 
-    // Save password if remember me is checked
     const rememberMe = document.getElementById('remember-password').checked;
     if (rememberMe) {
         localStorage.setItem('savedPassword', password);
@@ -140,39 +162,11 @@ async function handleLogin() {
 
 function renderWorkerList(workers) {
     const container = document.getElementById('worker-list');
-    
-    const processedWorkers = workers.map(worker => {
-        const processedWorker = {...worker};
-        
-        if (!processedWorker.lastModified) {
-            processedWorker._formattedDate = 'Chưa rõ';
-        } else {
-            try {
-                const testDate = new Date(processedWorker.lastModified);
-                if (isNaN(testDate.getTime())) {
-                    processedWorker._formattedDate = 'Chưa rõ';
-                } else {
-                    processedWorker._formattedDate = testDate.toLocaleString('vi-VN', {
-                        year: 'numeric',
-                        month: '2-digit', 
-                        day: '2-digit',
-                        hour: '2-digit', 
-                        minute: '2-digit'
-                    });
-                }
-            } catch (e) {
-                processedWorker._formattedDate = 'Chưa rõ';
-            }
-        }
-        
-        return processedWorker;
-    });
-    
-    container.innerHTML = processedWorkers.length ? processedWorkers.map(worker => `
+    container.innerHTML = workers.length ? workers.map(worker => `
         <div class="worker-card" onclick="loadWorker('${worker.id}')">
             <h3><i class="fas fa-cube"></i> ${worker.name || worker.id}</h3>
             <p><i class="fas fa-fingerprint"></i> ID: ${worker.id}</p>
-            <p><i class="far fa-clock"></i> Cập nhật: ${worker._formattedDate}</p>
+            <p><i class="far fa-clock"></i> Cập nhật: ${formatDate(worker.lastModified)}</p>
         </div>
     `).join('') : '<div class="empty-state"><i class="fas fa-inbox"></i> Không tìm thấy worker nào</div>';
 }
@@ -185,38 +179,16 @@ window.loadWorker = async function(workerId) {
         
         if (!response.ok) throw new Error(data.error || 'Không thể tải worker');
 
-        let formattedDate = 'Chưa rõ';
-        let lastModified = null;
-        
-        if (data.lastModified) {
-            try {
-                const testDate = new Date(data.lastModified);
-                if (!isNaN(testDate.getTime())) {
-                    lastModified = data.lastModified;
-                    formattedDate = testDate.toLocaleString('vi-VN', {
-                        year: 'numeric',
-                        month: '2-digit', 
-                        day: '2-digit',
-                        hour: '2-digit', 
-                        minute: '2-digit',
-                        second: '2-digit'
-                    });
-                }
-            } catch (e) {
-                console.error('Lỗi xử lý ngày tháng cho worker:', e);
-            }
-        }
-
         currentWorker = {
             id: workerId,
             name: data.name || workerId,
-            lastModified: lastModified
+            lastModified: data.lastModified || null
         };
 
         codeEditor.setValue(data.code || '');
         codeEditor.refresh();
         document.getElementById('current-worker-name').textContent = currentWorker.name;
-        document.getElementById('last-modified').textContent = formattedDate;
+        document.getElementById('last-modified').textContent = formatDate(currentWorker.lastModified);
         document.getElementById('worker-id').textContent = currentWorker.id;
         
         document.getElementById('worker-selector').style.display = 'none';
@@ -260,30 +232,8 @@ async function updateWorker() {
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || 'Cập nhật thất bại');
 
-        let formattedDate = 'Chưa rõ';
-        let lastModified = null;
-        
-        if (data.lastModified) {
-            try {
-                const testDate = new Date(data.lastModified);
-                if (!isNaN(testDate.getTime())) {
-                    lastModified = data.lastModified;
-                    formattedDate = testDate.toLocaleString('vi-VN', {
-                        year: 'numeric',
-                        month: '2-digit', 
-                        day: '2-digit',
-                        hour: '2-digit', 
-                        minute: '2-digit',
-                        second: '2-digit'
-                    });
-                }
-            } catch (e) {
-                console.error('Lỗi xử lý ngày tháng khi cập nhật:', e);
-            }
-        }
-        
-        currentWorker.lastModified = lastModified;
-        document.getElementById('last-modified').textContent = formattedDate;
+        currentWorker.lastModified = data.lastModified || new Date().toISOString();
+        document.getElementById('last-modified').textContent = formatDate(currentWorker.lastModified);
         showStatus('Cập nhật thành công!', 'success');
     } catch (error) {
         showStatus(error.message.includes('Failed to fetch') 
