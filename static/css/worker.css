@@ -25,7 +25,7 @@
     --transition: all 0.2s ease;
 }
 
-/* Prevent zoom on mobile devices */
+/* Prevent zoom on mobile */
 @viewport {
     width: device-width;
     zoom: 1.0;
@@ -60,7 +60,7 @@ body {
 .app-header {
     background: linear-gradient(135deg, var(--primary-dark), var(--primary));
     color: white;
-    padding: 1rem 0;
+    padding: 1rem;
     box-shadow: var(--shadow-md);
     position: sticky;
     top: 0;
@@ -70,7 +70,6 @@ body {
 .header-content {
     max-width: 1400px;
     margin: 0 auto;
-    padding: 0 2rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -130,13 +129,40 @@ body {
     gap: 0.75rem;
 }
 
-.login-card .input-group {
-    margin: 1.5rem;
-    position: relative;
+.login-body {
+    padding: 1.5rem;
 }
 
-.password-group {
-    padding-right: 3rem;
+.input-group {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: var(--gray-100);
+    border-radius: var(--border-radius);
+    border: 1px solid var(--gray-300);
+    transition: var(--transition);
+    margin-bottom: 1rem;
+}
+
+.input-group:focus-within {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+    background: white;
+}
+
+.input-group i {
+    padding: 0 1rem;
+    color: var(--gray-500);
+}
+
+.input-group input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 0.75rem 0;
+    font-size: 1rem;
+    outline: none;
+    min-width: 0;
 }
 
 .password-toggle {
@@ -144,11 +170,11 @@ body {
     right: 1rem;
     top: 50%;
     transform: translateY(-50%);
-    color: var(--gray-500);
-    cursor: pointer;
     background: none;
     border: none;
-    font-size: 1rem;
+    color: var(--gray-500);
+    cursor: pointer;
+    padding: 0.5rem;
     z-index: 2;
 }
 
@@ -156,44 +182,11 @@ body {
     color: var(--primary);
 }
 
-.input-group {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    background: var(--gray-100);
-    border-radius: var(--border-radius);
-    padding: 0.75rem 1rem;
-    margin-bottom: 1rem;
-    transition: var(--transition);
-    border: 1px solid var(--gray-300);
-}
-
-.input-group:focus-within {
-    background: white;
-    border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
-}
-
-.input-group i {
-    color: var(--gray-600);
-    font-size: 1rem;
-}
-
-.input-group input {
-    flex: 1;
-    border: none;
-    background: transparent;
-    padding: 0.25rem 0;
-    font-size: 1rem;
-    outline: none;
-    min-width: 0;
-}
-
 .remember-me {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    margin: 0 1.5rem 1.5rem;
+    margin-bottom: 1.5rem;
     font-size: 0.9rem;
     color: var(--gray-700);
     user-select: none;
@@ -217,8 +210,7 @@ body {
     transition: var(--transition);
     border: none;
     font-size: 0.95rem;
-    width: calc(100% - 3rem);
-    margin: 0 1.5rem 1.5rem;
+    width: 100%;
     user-select: none;
     touch-action: manipulation;
 }
@@ -421,12 +413,11 @@ body {
     flex-wrap: wrap;
 }
 
-worker-meta span {
+.worker-meta span {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     white-space: nowrap;
-    font-size: 0.8rem;
 }
 
 .editor-actions {
@@ -439,14 +430,17 @@ worker-meta span {
     position: relative;
     overflow: auto;
     -webkit-overflow-scrolling: touch;
+    height: calc(100% - 60px);
 }
 
 .editor-wrapper {
-    position: relative;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     height: 100%;
     width: 100%;
-    overflow: auto;
-    -webkit-overflow-scrolling: touch;
 }
 
 .CodeMirror {
@@ -454,22 +448,21 @@ worker-meta span {
     font-family: 'Fira Code', monospace;
     font-size: 14px;
     line-height: 1.5;
-    transform: none !important;
-    viewportMargin: Infinity;
-    text-size-adjust: 100%;
-    -webkit-text-size-adjust: 100%;
-    touch-action: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
 }
 
 .CodeMirror-scroll {
     overflow: auto !important;
+    -webkit-overflow-scrolling: touch;
     max-height: 100%;
-    touch-action: none;
 }
 
 .CodeMirror-vscrollbar, .CodeMirror-hscrollbar {
     z-index: 5;
-    touch-action: none;
 }
 
 .CodeMirror-selected {
@@ -550,23 +543,22 @@ worker-meta span {
     color: var(--gray-400);
 }
 
-/* Prevent zoom and ensure proper behavior on mobile */
-@media screen and (max-width: 768px) {
-    input, select, textarea, .CodeMirror {
-        font-size: 16px !important;
+/* Responsive styles */
+@media (max-width: 1024px) {
+    .header-content {
+        flex-direction: column;
+        gap: 1rem;
     }
-    
-    textarea, input[type="text"], input[type="password"], .CodeMirror {
-        touch-action: manipulation;
-    }
-    
-    .CodeMirror {
-        font-size: 16px;
+}
+
+@media (max-width: 768px) {
+    body {
+        font-size: 15px;
     }
     
     .app-main {
-        height: calc(100vh - 110px);
         padding: 0.5rem;
+        height: calc(100vh - 110px);
     }
     
     .worker-list {
@@ -593,6 +585,21 @@ worker-meta span {
     .login-card {
         margin: 1rem;
         max-width: 90%;
+    }
+    
+    .CodeMirror {
+        font-size: 15px;
+    }
+}
+
+/* Prevent zoom on form elements */
+@media screen and (max-width: 768px) {
+    input, select, textarea, .CodeMirror {
+        font-size: 16px !important;
+    }
+    
+    textarea, input[type="text"], input[type="password"], .CodeMirror {
+        touch-action: manipulation;
     }
 }
 
