@@ -234,13 +234,18 @@ window.loadWorker = async function(workerId) {
 };
 
 async function updateWorker() {
-    // Validate worker selection
-    if (!currentWorker.id || currentWorker.id === 'file') {
-        showStatus('Vui lòng chọn worker hợp lệ trước khi lưu', 'error');
+    // Kiểm tra worker hợp lệ
+    if (!currentWorker.id || !/^[a-z0-9_-]+$/i.test(currentWorker.id)) {
+        showStatus('Vui lòng chọn worker hợp lệ từ danh sách', 'error');
         return;
     }
 
-    const code = codeEditor.getValue().trim();
+    // Lấy và làm sạch code
+    let code = codeEditor.getValue();
+    
+    // Xóa các chuỗi hex (--xxxx) do lỗi copy/paste
+    code = code.replace(/--[a-f0-9]+/g, '').trim();
+    
     if (!code) {
         showStatus('Nội dung worker không được để trống', 'error');
         return;
@@ -248,17 +253,26 @@ async function updateWorker() {
 
     const updateBtn = document.getElementById('update-btn');
     try {
-        // Hiển thị trạng thái loading
+        // Set trạng thái loading
         updateBtn.disabled = true;
         updateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang lưu...';
 
-        // Kiểm tra cú pháp cơ bản
+        // Kiểm tra cú pháp nghiêm ngặt hơn
         try {
-            new Function(code);
+            // Tạo hàm test với strict mode
+            new Function('"use strict";\n' + code);
         } catch (syntaxError) {
-            const lineMatch = syntaxError.message.match(/line (\d+)/);
-            const line = lineMatch ? lineMatch[1] : 'unknown';
-            throw new Error(`Lỗi cú pháp (dòng ${line}): ${syntaxError.message.split('\n')[0]}`);
+            let line = 'unknown';
+            const lineMatch = syntaxError.message.match(/at (\d+):(\d+)/);
+            if (lineMatch) line = lineMatch[1];
+            
+            console.error('Syntax Error:', {
+                line: line,
+                message: syntaxError.message,
+                code: code.split('\n')[line-1]
+            });
+            
+            throw new Error(`Lỗi cú pháp dòng ${line}: ${syntaxError.message.split('\n')[0]}`);
         }
 
         // Gọi API update
@@ -275,40 +289,36 @@ async function updateWorker() {
         const data = await response.json();
         
         if (!response.ok) {
-            // Xử lý lỗi từ Cloudflare API
-            const cloudflareError = data.details?.[0] || {};
-            let errorMsg = 'Lỗi khi lưu worker';
+            console.error('API Error:', {
+                status: response.status,
+                workerId: currentWorker.id,
+                error: data
+            });
             
-            if (cloudflareError.code === 10034) { // Syntax Error
-                errorMsg = `Lỗi cú pháp: ${cloudflareError.message.split('\n')[0]}`;
-            } else if (cloudflareError.message) {
-                errorMsg += `: ${cloudflareError.message}`;
-            }
-            
-            throw new Error(errorMsg);
+            throw new Error(data.message || `Lỗi API (${response.status})`);
         }
 
         // Cập nhật UI khi thành công
         currentWorker.lastModified = data.lastModified || new Date().toISOString();
         document.getElementById('last-modified').textContent = formatDate(currentWorker.lastModified);
-        showStatus('Đã lưu worker thành công!', 'success');
+        showStatus('Lưu thành công!', 'success');
 
     } catch (error) {
-        console.error('Lỗi khi lưu:', {
+        console.error('Update Failed:', {
             workerId: currentWorker.id,
             error: error.message,
-            codePreview: code.substring(0, 100)
+            code: code.substring(0, 100)
         });
         
-        // Hiển thị thông báo lỗi chi tiết
-        let displayMessage = error.message;
-        if (error.message.includes('SyntaxError')) {
-            displayMessage = error.message.replace(/at .*?\.js:\d+:\d+/, '').trim();
+        // Hiển thị thông báo lỗi thân thiện
+        let displayMsg = error.message;
+        if (error.message.includes('numeric literal')) {
+            displayMsg = 'Lỗi cú pháp: Số không hợp lệ trong code';
         }
+        showStatus(displayMsg, 'error');
         
-        showStatus(displayMessage, 'error');
     } finally {
-        // Khôi phục trạng thái nút bình thường
+        // Khôi phục nút về trạng thái ban đầu
         updateBtn.disabled = false;
         updateBtn.innerHTML = '<i class="fas fa-save"></i> Lưu thay đổi';
     }
