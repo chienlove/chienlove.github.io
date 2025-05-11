@@ -234,64 +234,83 @@ window.loadWorker = async function(workerId) {
 };
 
 async function updateWorker() {
-    if (!currentWorker.id) {
-        showStatus('Vui lòng chọn worker trước', 'error');
+    // Validate worker selection
+    if (!currentWorker.id || currentWorker.id === 'file') {
+        showStatus('Vui lòng chọn worker hợp lệ trước khi lưu', 'error');
         return;
     }
-    
+
     const code = codeEditor.getValue().trim();
     if (!code) {
-        showStatus('Mã worker không được để trống', 'error');
+        showStatus('Nội dung worker không được để trống', 'error');
         return;
     }
 
     const updateBtn = document.getElementById('update-btn');
     try {
-        setLoading(updateBtn, true, 'Đang lưu...');
-        
-        // Thêm validate cơ bản
-        if (currentWorker.id === 'file') {
-            throw new Error('Worker ID không hợp lệ');
+        // Hiển thị trạng thái loading
+        updateBtn.disabled = true;
+        updateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang lưu...';
+
+        // Kiểm tra cú pháp cơ bản
+        try {
+            new Function(code);
+        } catch (syntaxError) {
+            const lineMatch = syntaxError.message.match(/line (\d+)/);
+            const line = lineMatch ? lineMatch[1] : 'unknown';
+            throw new Error(`Lỗi cú pháp (dòng ${line}): ${syntaxError.message.split('\n')[0]}`);
         }
 
+        // Gọi API update
         const response = await fetch('/api/update-worker', {
             method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json'
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 workerId: currentWorker.id,
                 code: code,
                 password: password
             })
         });
-        
+
         const data = await response.json();
         
         if (!response.ok) {
-            console.error('Update failed:', data);
-            throw new Error(data.message || `Lỗi khi cập nhật (mã ${response.status})`);
+            // Xử lý lỗi từ Cloudflare API
+            const cloudflareError = data.details?.[0] || {};
+            let errorMsg = 'Lỗi khi lưu worker';
+            
+            if (cloudflareError.code === 10034) { // Syntax Error
+                errorMsg = `Lỗi cú pháp: ${cloudflareError.message.split('\n')[0]}`;
+            } else if (cloudflareError.message) {
+                errorMsg += `: ${cloudflareError.message}`;
+            }
+            
+            throw new Error(errorMsg);
         }
 
+        // Cập nhật UI khi thành công
         currentWorker.lastModified = data.lastModified || new Date().toISOString();
         document.getElementById('last-modified').textContent = formatDate(currentWorker.lastModified);
-        showStatus('Cập nhật thành công!', 'success');
-        
+        showStatus('Đã lưu worker thành công!', 'success');
+
     } catch (error) {
-        console.error('Update error:', {
+        console.error('Lỗi khi lưu:', {
             workerId: currentWorker.id,
             error: error.message,
             codePreview: code.substring(0, 100)
         });
         
-        let errorMsg = error.message;
-        if (error.message.includes('Syntax error')) {
-            errorMsg = `Lỗi cú pháp: ${error.message.split(':')[1]?.trim() || 'không xác định'}`;
+        // Hiển thị thông báo lỗi chi tiết
+        let displayMessage = error.message;
+        if (error.message.includes('SyntaxError')) {
+            displayMessage = error.message.replace(/at .*?\.js:\d+:\d+/, '').trim();
         }
         
-        showStatus(errorMsg, 'error');
+        showStatus(displayMessage, 'error');
     } finally {
-        setLoading(updateBtn, false, '<i class="fas fa-save"></i> Lưu thay đổi');
+        // Khôi phục trạng thái nút bình thường
+        updateBtn.disabled = false;
+        updateBtn.innerHTML = '<i class="fas fa-save"></i> Lưu thay đổi';
     }
 }
 
