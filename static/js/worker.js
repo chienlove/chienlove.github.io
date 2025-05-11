@@ -264,14 +264,25 @@ async function updateWorker() {
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             
-            // Xử lý lỗi từ Cloudflare API chi tiết hơn
+            // Xử lý lỗi từ Cloudflare API chi tiết
             if (errorData.error === 'cloudflare_api_error') {
-                console.error('Cloudflare API Error Details:', {
+                console.error('Chi tiết lỗi Cloudflare:', {
                     workerId: currentWorker.id,
                     codeLength: code.length,
-                    apiErrors: errorData.details
+                    errors: errorData.details
                 });
-                throw new Error(`Lỗi Cloudflare: ${errorData.message}`);
+                
+                // Tạo thông báo lỗi chi tiết
+                let errorMessage = 'Lỗi Cloudflare: ';
+                if (errorData.details && errorData.details.length > 0) {
+                    errorMessage += errorData.details.map(e => 
+                        `${e.message} (code: ${e.code})`
+                    ).join(', ');
+                } else {
+                    errorMessage += errorData.message || 'Lỗi không xác định';
+                }
+                
+                throw new Error(errorMessage);
             }
             throw new Error(errorData.message || 'Cập nhật thất bại');
         }
@@ -281,11 +292,23 @@ async function updateWorker() {
         document.getElementById('last-modified').textContent = formatDate(currentWorker.lastModified);
         showStatus('Cập nhật thành công!', 'success');
     } catch (error) {
-        const errorMsg = error.message.includes('Failed to fetch') 
-            ? 'Không thể kết nối đến server' 
-            : error.message;
-        showStatus(errorMsg, 'error');
-        console.error('Update Error:', error);
+        let displayMessage = error.message;
+        
+        // Xử lý thông báo lỗi đặc biệt
+        if (error.message.includes('code:') && error.message.includes('Lỗi Cloudflare')) {
+            displayMessage = error.message.replace(/\(code: \d+\)/g, '');
+        }
+        
+        showStatus(displayMessage, 'error');
+        
+        // Debug thêm trong console
+        if (error.message.includes('Lỗi Cloudflare')) {
+            console.group('Chi tiết lỗi Cloudflare');
+            console.log('Worker ID:', currentWorker.id);
+            console.log('Code length:', code.length);
+            console.log('Error details:', error.message);
+            console.groupEnd();
+        }
     } finally {
         setLoading(updateBtn, false, '<i class="fas fa-save"></i> Lưu thay đổi');
     }
