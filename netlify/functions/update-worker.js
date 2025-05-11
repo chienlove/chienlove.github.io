@@ -1,11 +1,9 @@
 const fetch = require('node-fetch');
 
 exports.handler = async (event) => {
-    // Debug log
     console.log('Incoming request:', {
         method: event.httpMethod,
         path: event.path,
-        headers: event.headers,
         body: event.body ? JSON.parse(event.body) : null
     });
 
@@ -49,9 +47,7 @@ exports.handler = async (event) => {
 
         // 5. Prepare Cloudflare API Request
         const apiUrl = `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${body.workerId}`;
-        console.log('Calling Cloudflare API:', apiUrl);
-        console.log('Code length:', body.code.length);
-
+        
         // 6. Make API Call
         const apiResponse = await fetch(apiUrl, {
             method: 'PUT',
@@ -64,17 +60,13 @@ exports.handler = async (event) => {
 
         // 7. Handle API Response
         const apiResult = await apiResponse.json();
-        console.log('Cloudflare API response:', {
-            status: apiResponse.status,
-            data: apiResult
-        });
-
+        
         if (!apiResponse.ok) {
             const errorMessages = apiResult.errors?.map(e => e.message) || ['Unknown Cloudflare API error'];
             return respond(apiResponse.status, {
                 error: 'cloudflare_api_error',
                 message: errorMessages.join(' | '),
-                details: apiResult
+                details: apiResult.errors
             });
         }
 
@@ -87,14 +79,10 @@ exports.handler = async (event) => {
         });
 
     } catch (error) {
-        console.error('Server Error:', {
-            message: error.message,
-            stack: error.stack
-        });
+        console.error('Server Error:', error);
         return respond(500, {
             error: 'internal_server_error',
-            message: error.message,
-            ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+            message: error.message
         });
     }
 };
@@ -106,8 +94,7 @@ function respond(statusCode, body) {
         body: JSON.stringify(body),
         headers: {
             'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Headers': 'Content-Type'
+            'Access-Control-Allow-Origin': '*'
         }
     };
 }

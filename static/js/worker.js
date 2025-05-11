@@ -8,14 +8,15 @@ let currentWorker = {
 let password = '';
 let workers = [];
 
-// Initialize editor
+// Initialize editor with iOS fixes
 function initEditor() {
     const editorContainer = document.getElementById('code-editor-container');
     const editorWrapper = document.createElement('div');
     editorWrapper.className = 'editor-wrapper';
     editorContainer.appendChild(editorWrapper);
     
-    codeEditor = CodeMirror(editorWrapper, {
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const editorOptions = {
         mode: 'javascript',
         theme: 'dracula',
         lineNumbers: true,
@@ -24,21 +25,42 @@ function initEditor() {
         matchBrackets: true,
         indentUnit: 4,
         tabSize: 4,
+        viewportMargin: Infinity,
+        inputStyle: isIOS ? 'contenteditable' : 'textarea',
+        spellcheck: false,
         extraKeys: {
-            'Ctrl-Enter': () => { updateWorker(); return false; },
-            'Cmd-Enter': () => { updateWorker(); return false; },
+            'Ctrl-Enter': function() { updateWorker(); },
+            'Cmd-Enter': function() { updateWorker(); },
             'Ctrl-/': 'toggleComment',
             'Cmd-/': 'toggleComment',
-            'Ctrl-A': (cm) => { cm.execCommand('selectAll'); return false; },
-            'Cmd-A': (cm) => { cm.execCommand('selectAll'); return false; }
+            'Ctrl-A': function(cm) {
+                cm.setSelection({line: 0, ch: 0}, {line: cm.lastLine(), ch: cm.getLine(cm.lastLine()).length});
+            },
+            'Cmd-A': function(cm) {
+                cm.setSelection({line: 0, ch: 0}, {line: cm.lastLine(), ch: cm.getLine(cm.lastLine()).length});
+            }
         }
-    });
+    };
+
+    codeEditor = CodeMirror(editorWrapper, editorOptions);
+
+    if (isIOS) {
+        editorWrapper.style.userSelect = 'text';
+        editorWrapper.style.webkitUserSelect = 'text';
+    }
+
+    // Fix scrolling on mobile
+    editorWrapper.addEventListener('touchstart', function(e) {
+        if (e.touches.length > 1) e.preventDefault();
+    }, { passive: false });
 
     function resizeEditor() {
+        const editorContainer = document.getElementById('code-editor-container');
         const height = window.innerHeight - editorContainer.getBoundingClientRect().top - 20;
-        editorWrapper.style.height = `${height}px`;
+        editorContainer.style.height = `${height}px`;
         codeEditor.setSize('100%', '100%');
         codeEditor.refresh();
+        setTimeout(() => codeEditor.refresh(), 100);
     }
 
     window.addEventListener('resize', resizeEditor);
@@ -56,42 +78,102 @@ function showStatus(message, type = 'success', duration = 3000) {
 
 function setLoading(element, isLoading, text = '') {
     if (!element) return;
+    
     element.disabled = isLoading;
-    const icon = element.querySelector('i');
-    if (icon) {
-        if (isLoading) {
-            element.dataset.originalText = element.textContent;
-            icon.className = 'fas fa-spinner fa-spin';
-            element.innerHTML = `${icon.outerHTML} ${text}`;
-        } else {
-            element.textContent = element.dataset.originalText || text;
-            icon.className = element.querySelector('i').dataset.originalIcon;
-        }
+    
+    if (isLoading) {
+        element.dataset.originalHTML = element.innerHTML;
+        element.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${text}`;
+    } else {
+        element.innerHTML = element.dataset.originalHTML || text;
     }
 }
 
+// Password toggle functionality
+function setupPasswordToggle() {
+    const toggleBtn = document.getElementById('toggle-password');
+    const passwordInput = document.getElementById('password');
+    
+    toggleBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        const isPassword = passwordInput.type === 'password';
+        passwordInput.type = isPassword ? 'text' : 'password';
+        toggleBtn.innerHTML = isPassword ? '<i class="fas fa-eye-slash"></i>' : '<i class="fas fa-eye"></i>';
+        passwordInput.focus();
+    });
+}
+
+// Load saved password if remember me is checked
+function loadSavedPassword() {
+    const savedPassword = localStorage.getItem('savedPassword');
+    const rememberMe = localStorage.getItem('rememberPassword') === 'true';
+    
+    if (rememberMe && savedPassword) {
+        document.getElementById('password').value = savedPassword;
+        document.getElementById('remember-password').checked = true;
+    }
+}
+
+// Format date properly
 function formatDate(dateString) {
-    if (!dateString) return 'Chưa rõ';
-    const date = new Date(dateString);
-    return date.toLocaleString('vi-VN');
+    if (!dateString || dateString === 'null' || dateString === 'undefined') return 'Chưa rõ';
+    
+    try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return 'Chưa rõ';
+        
+        return date.toLocaleString('vi-VN', {
+            year: 'numeric',
+            month: '2-digit', 
+            day: '2-digit',
+            hour: '2-digit', 
+            minute: '2-digit',
+            second: '2-digit'
+        });
+    } catch (e) {
+        console.error('Lỗi định dạng ngày:', dateString, e);
+        return 'Chưa rõ';
+    }
 }
 
 // API functions
 async function handleLogin() {
-    password = document.getElementById('password').value.trim();
+    const passwordInput = document.getElementById('password');
+    password = passwordInput.value.trim();
+    
     if (!password) {
         showStatus('Vui lòng nhập mật khẩu', 'error');
+        passwordInput.focus();
         return;
+    }
+
+    const rememberMe = document.getElementById('remember-password').checked;
+    if (rememberMe) {
+        localStorage.setItem('savedPassword', password);
+        localStorage.setItem('rememberPassword', 'true');
+    } else {
+        localStorage.removeItem('savedPassword');
+        localStorage.removeItem('rememberPassword');
     }
 
     const loginBtn = document.getElementById('login-btn');
     try {
         setLoading(loginBtn, true, 'Đang xác thực...');
         
-        const response = await fetch(`/api/list-workers?password=${encodeURIComponent(password)}`);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        
+        const response = await fetch(`/api/list-workers?password=${encodeURIComponent(password)}`, {
+            signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
         const data = await response.json();
         
-        if (!response.ok) throw new Error(data.error || 'Đăng nhập thất bại');
+        if (!response.ok) {
+            throw new Error(data.error || 'Đăng nhập thất bại');
+        }
 
         workers = data.workers || [];
         renderWorkerList(workers);
@@ -99,10 +181,13 @@ async function handleLogin() {
         document.getElementById('worker-selector').style.display = 'block';
         showStatus('Đăng nhập thành công', 'success');
     } catch (error) {
-        showStatus(error.message, 'error');
+        const errorMsg = error.name === 'AbortError' 
+            ? 'Kết nối quá hạn, vui lòng thử lại' 
+            : error.message;
+        showStatus(errorMsg, 'error');
         console.error('Login Error:', error);
     } finally {
-        setLoading(loginBtn, false, 'Đăng nhập');
+        setLoading(loginBtn, false, '<i class="fas fa-sign-in-alt"></i> Đăng nhập');
     }
 }
 
@@ -128,11 +213,11 @@ window.loadWorker = async function(workerId) {
         currentWorker = {
             id: workerId,
             name: data.name || workerId,
-            lastModified: data.lastModified
+            lastModified: data.lastModified || null
         };
 
         codeEditor.setValue(data.code || '');
-codeEditor.refresh();
+        codeEditor.refresh();
         document.getElementById('current-worker-name').textContent = currentWorker.name;
         document.getElementById('last-modified').textContent = formatDate(currentWorker.lastModified);
         document.getElementById('worker-id').textContent = currentWorker.id;
@@ -166,28 +251,47 @@ async function updateWorker() {
         
         const response = await fetch('/api/update-worker', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json'
+            },
             body: JSON.stringify({
                 workerId: currentWorker.id,
-                password: password,
                 code: code,
+                password: password,
                 name: currentWorker.name
             })
         });
         
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Cập nhật thất bại');
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            
+            // Xử lý lỗi từ Cloudflare API
+            if (errorData.error === 'cloudflare_api_error') {
+                throw new Error(`Lỗi Cloudflare: ${errorData.message}`);
+            }
+            throw new Error(errorData.message || 'Cập nhật thất bại');
+        }
 
+        const data = await response.json();
         currentWorker.lastModified = data.lastModified || new Date().toISOString();
         document.getElementById('last-modified').textContent = formatDate(currentWorker.lastModified);
         showStatus('Cập nhật thành công!', 'success');
     } catch (error) {
         showStatus(error.message.includes('Failed to fetch') 
             ? 'Không thể kết nối đến server' 
-            : error.message, 'error');
+            : error.message, 
+        'error');
         console.error('Update Error:', error);
+        
+        // Thêm gợi ý debug
+        if (error.message.includes('Cloudflare')) {
+            console.error('Cloudflare API Error Details:', {
+                workerId: currentWorker.id,
+                codeLength: code.length
+            });
+        }
     } finally {
-        setLoading(updateBtn, false, 'Lưu thay đổi');
+        setLoading(updateBtn, false, '<i class="fas fa-save"></i> Lưu thay đổi');
     }
 }
 
@@ -212,10 +316,13 @@ function setupSearch() {
 document.addEventListener('DOMContentLoaded', () => {
     initEditor();
     setupSearch();
+    setupPasswordToggle();
+    loadSavedPassword();
     
     document.getElementById('login-btn').addEventListener('click', handleLogin);
     document.getElementById('update-btn').addEventListener('click', updateWorker);
     document.getElementById('back-btn').addEventListener('click', backToList);
+    
     document.getElementById('password').addEventListener('keyup', (e) => {
         if (e.key === 'Enter') handleLogin();
     });

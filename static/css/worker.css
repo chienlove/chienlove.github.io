@@ -25,10 +25,44 @@
     --transition: all 0.2s ease;
 }
 
+/* ================= iOS FIXES ================= */
+@media (pointer: coarse) {
+    .CodeMirror {
+        font-size: 16px !important;
+    }
+    .CodeMirror-lines {
+        user-select: text;
+        -webkit-user-select: text;
+    }
+    .CodeMirror-line > span {
+        -webkit-user-select: text;
+        user-select: text;
+    }
+}
+
+.cm-content, .cm-line {
+    user-select: text !important;
+    -webkit-user-select: text !important;
+}
+
+.editor-wrapper {
+    -webkit-overflow-scrolling: touch;
+}
+
+/* ================= BASE STYLES ================= */
+@viewport {
+    width: device-width;
+    zoom: 1.0;
+    min-zoom: 1.0;
+    max-zoom: 1.0;
+    user-zoom: fixed;
+}
+
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
 }
 
 body {
@@ -36,6 +70,9 @@ body {
     background-color: #f5f7ff;
     color: var(--gray-900);
     line-height: 1.6;
+    touch-action: manipulation;
+    text-size-adjust: 100%;
+    -webkit-text-size-adjust: 100%;
 }
 
 .app-container {
@@ -44,10 +81,11 @@ body {
     min-height: 100vh;
 }
 
+/* ================= HEADER ================= */
 .app-header {
     background: linear-gradient(135deg, var(--primary-dark), var(--primary));
     color: white;
-    padding: 1rem 0;
+    padding: 1rem;
     box-shadow: var(--shadow-md);
     position: sticky;
     top: 0;
@@ -57,7 +95,6 @@ body {
 .header-content {
     max-width: 1400px;
     margin: 0 auto;
-    padding: 0 2rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -79,6 +116,7 @@ body {
     font-weight: 600;
 }
 
+/* ================= LOGIN FORM ================= */
 .login-popup {
     position: fixed;
     top: 0;
@@ -104,14 +142,11 @@ body {
     animation: fadeIn 0.3s ease;
 }
 
-.login-header {
+.login-card h2 {
     background: linear-gradient(135deg, var(--primary-dark), var(--primary));
     color: white;
     padding: 1.5rem;
     text-align: center;
-}
-
-.login-header h2 {
     font-size: 1.5rem;
     font-weight: 600;
     display: flex;
@@ -121,39 +156,72 @@ body {
 }
 
 .login-body {
-    padding: 2rem;
+    padding: 1.5rem;
 }
 
 .input-group {
+    position: relative;
     display: flex;
     align-items: center;
-    gap: 0.5rem;
     background: var(--gray-100);
     border-radius: var(--border-radius);
-    padding: 0.75rem 1rem;
-    margin-bottom: 1.5rem;
-    transition: var(--transition);
     border: 1px solid var(--gray-300);
+    transition: var(--transition);
+    margin-bottom: 1rem;
 }
 
 .input-group:focus-within {
-    background: white;
     border-color: var(--primary);
     box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.2);
+    background: white;
 }
 
 .input-group i {
-    color: var(--gray-600);
-    font-size: 1rem;
+    padding: 0 1rem;
+    color: var(--gray-500);
 }
 
 .input-group input {
     flex: 1;
     border: none;
     background: transparent;
-    padding: 0.25rem 0;
+    padding: 0.75rem 0;
     font-size: 1rem;
     outline: none;
+    min-width: 0;
+}
+
+.password-toggle {
+    position: absolute;
+    right: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--gray-500);
+    cursor: pointer;
+    padding: 0.5rem;
+    z-index: 2;
+}
+
+.password-toggle:hover {
+    color: var(--primary);
+}
+
+.remember-me {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+    color: var(--gray-700);
+    user-select: none;
+}
+
+.remember-me input {
+    width: auto;
+    margin: 0;
+    accent-color: var(--primary);
 }
 
 .btn {
@@ -169,6 +237,8 @@ body {
     border: none;
     font-size: 0.95rem;
     width: 100%;
+    user-select: none;
+    touch-action: manipulation;
 }
 
 .btn-primary {
@@ -193,6 +263,7 @@ body {
     border-color: white;
 }
 
+/* ================= MAIN CONTENT ================= */
 .app-main {
     flex: 1;
     padding: 1rem;
@@ -200,6 +271,7 @@ body {
     margin: 0 auto;
     width: 100%;
     height: calc(100vh - 120px);
+    touch-action: manipulation;
 }
 
 .worker-selector {
@@ -248,6 +320,7 @@ body {
     border-radius: var(--border-radius);
     font-size: 1rem;
     transition: var(--transition);
+    touch-action: manipulation;
 }
 
 .search-box input:focus {
@@ -263,6 +336,7 @@ body {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 1.25rem;
+    touch-action: pan-y;
 }
 
 .worker-card {
@@ -273,6 +347,7 @@ body {
     transition: var(--transition);
     border: 1px solid var(--gray-200);
     box-shadow: var(--shadow-sm);
+    user-select: none;
 }
 
 .worker-card:hover {
@@ -289,11 +364,15 @@ body {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .worker-card h3 i {
     font-size: 1rem;
     color: var(--gray-500);
+    flex-shrink: 0;
 }
 
 .worker-card p {
@@ -303,13 +382,31 @@ body {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .worker-card p i {
     width: 16px;
     color: var(--gray-400);
+    flex-shrink: 0;
 }
 
+.empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 2rem;
+    color: var(--gray-500);
+}
+
+.empty-state i {
+    font-size: 2rem;
+    margin-bottom: 1rem;
+    color: var(--gray-400);
+}
+
+/* ================= EDITOR ================= */
 .editor-container {
     background-color: white;
     border-radius: var(--border-radius);
@@ -318,6 +415,7 @@ body {
     height: 100%;
     display: flex;
     flex-direction: column;
+    touch-action: manipulation;
 }
 
 .editor-header {
@@ -360,6 +458,7 @@ body {
     display: flex;
     align-items: center;
     gap: 0.5rem;
+    white-space: nowrap;
 }
 
 .editor-actions {
@@ -371,24 +470,38 @@ body {
     flex: 1;
     position: relative;
     overflow: hidden;
+    -webkit-overflow-scrolling: touch;
     height: calc(100% - 60px);
 }
 
 .editor-wrapper {
-    height: 100% !important;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 100%;
+    width: 100%;
+    overflow: auto;
 }
 
 .CodeMirror {
-    height: 100% !important;
+    height: auto !important;
+    min-height: 100%;
     font-family: 'Fira Code', monospace;
     font-size: 14px;
     line-height: 1.5;
-    transform: none !important;
-    viewportMargin: 10;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
 }
 
 .CodeMirror-scroll {
     overflow: auto !important;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
     max-height: 100%;
 }
 
@@ -404,6 +517,7 @@ body {
     background: rgba(67, 97, 238, 0.3) !important;
 }
 
+/* ================= STATUS MESSAGE ================= */
 .status-message {
     position: fixed;
     bottom: 1rem;
@@ -422,6 +536,7 @@ body {
     align-items: center;
     gap: 0.5rem;
     font-size: 0.9rem;
+    touch-action: manipulation;
 }
 
 .status-message.show {
@@ -448,6 +563,7 @@ body {
     color: white;
 }
 
+/* ================= FOOTER ================= */
 .app-footer {
     text-align: center;
     padding: 1rem;
@@ -460,7 +576,7 @@ body {
     margin-right: 0.25rem;
 }
 
-/* Responsive */
+/* ================= RESPONSIVE ================= */
 @media (max-width: 1024px) {
     .header-content {
         flex-direction: column;
@@ -469,6 +585,10 @@ body {
 }
 
 @media (max-width: 768px) {
+    body {
+        font-size: 15px;
+    }
+    
     .app-main {
         padding: 0.5rem;
         height: calc(100vh - 110px);
@@ -499,8 +619,24 @@ body {
         margin: 1rem;
         max-width: 90%;
     }
+    
+    .CodeMirror {
+        font-size: 16px;
+    }
 }
 
+/* Prevent zoom on form elements */
+@media screen and (max-width: 768px) {
+    input, select, textarea, .CodeMirror {
+        font-size: 16px !important;
+    }
+    
+    textarea, input[type="text"], input[type="password"], .CodeMirror {
+        touch-action: manipulation;
+    }
+}
+
+/* ================= ANIMATIONS ================= */
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
