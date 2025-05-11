@@ -421,11 +421,12 @@ body {
     flex-wrap: wrap;
 }
 
-.worker-meta span {
+worker-meta span {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     white-space: nowrap;
+    font-size: 0.8rem;
 }
 
 .editor-actions {
@@ -436,15 +437,16 @@ body {
 #code-editor-container {
     flex: 1;
     position: relative;
-    overflow: hidden;
-    height: calc(100% - 60px);
-    touch-action: pan-y;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .editor-wrapper {
-    height: 100% !important;
     position: relative;
-    touch-action: none;
+    height: 100%;
+    width: 100%;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .CodeMirror {
