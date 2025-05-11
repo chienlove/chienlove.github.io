@@ -249,6 +249,13 @@ async function updateWorker() {
     try {
         setLoading(updateBtn, true, 'Đang lưu...');
         
+        // Kiểm tra cú pháp JavaScript trước khi gửi
+        try {
+            new Function(code); // Validate syntax
+        } catch (syntaxError) {
+            throw new Error(`Lỗi cú pháp: ${syntaxError.message.split('\n')[0]}`);
+        }
+
         const response = await fetch('/api/update-worker', {
             method: 'POST',
             headers: { 
@@ -264,25 +271,29 @@ async function updateWorker() {
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             
-            // Xử lý lỗi từ Cloudflare API chi tiết
             if (errorData.error === 'cloudflare_api_error') {
-                console.error('Chi tiết lỗi Cloudflare:', {
-                    workerId: currentWorker.id,
-                    codeLength: code.length,
-                    errors: errorData.details
-                });
+                // Xử lý lỗi đặc biệt từ Cloudflare
+                const cloudflareError = errorData.details?.[0] || {};
+                let userFriendlyMessage = 'Lỗi Cloudflare: ';
                 
-                // Tạo thông báo lỗi chi tiết
-                let errorMessage = 'Lỗi Cloudflare: ';
-                if (errorData.details && errorData.details.length > 0) {
-                    errorMessage += errorData.details.map(e => 
-                        `${e.message} (code: ${e.code})`
-                    ).join(', ');
-                } else {
-                    errorMessage += errorData.message || 'Lỗi không xác định';
+                switch (cloudflareError.code) {
+                    case 10021:
+                        userFriendlyMessage += 'Worker không tồn tại hoặc không có quyền truy cập';
+                        break;
+                    case 10034:
+                        userFriendlyMessage += `Lỗi cú pháp: ${cloudflareError.message}`;
+                        break;
+                    default:
+                        userFriendlyMessage += cloudflareError.message || 'Lỗi không xác định';
                 }
                 
-                throw new Error(errorMessage);
+                console.error('Cloudflare API Error:', {
+                    workerId: currentWorker.id,
+                    codeLength: code.length,
+                    errorDetails: cloudflareError
+                });
+                
+                throw new Error(userFriendlyMessage);
             }
             throw new Error(errorData.message || 'Cập nhật thất bại');
         }
@@ -292,21 +303,14 @@ async function updateWorker() {
         document.getElementById('last-modified').textContent = formatDate(currentWorker.lastModified);
         showStatus('Cập nhật thành công!', 'success');
     } catch (error) {
-        let displayMessage = error.message;
+        showStatus(error.message, 'error');
         
-        // Xử lý thông báo lỗi đặc biệt
-        if (error.message.includes('code:') && error.message.includes('Lỗi Cloudflare')) {
-            displayMessage = error.message.replace(/\(code: \d+\)/g, '');
-        }
-        
-        showStatus(displayMessage, 'error');
-        
-        // Debug thêm trong console
-        if (error.message.includes('Lỗi Cloudflare')) {
-            console.group('Chi tiết lỗi Cloudflare');
-            console.log('Worker ID:', currentWorker.id);
-            console.log('Code length:', code.length);
-            console.log('Error details:', error.message);
+        // Hiển thị chi tiết lỗi trong console để debug
+        if (error.message.includes('Lỗi Cloudflare') || error.message.includes('Lỗi cú pháp')) {
+            console.group('Chi tiết lỗi');
+            console.log('Worker:', currentWorker.id);
+            console.log('Code snippet:', code.substring(0, 100) + '...');
+            console.log('Full error:', error);
             console.groupEnd();
         }
     } finally {
