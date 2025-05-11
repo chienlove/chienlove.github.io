@@ -45,10 +45,17 @@ function initEditor() {
     }, { passive: false });
 
     function resizeEditor() {
+        const editorContainer = document.getElementById('code-editor-container');
         const height = window.innerHeight - editorContainer.getBoundingClientRect().top - 20;
-        editorWrapper.style.height = `${height}px`;
+        
+        editorContainer.style.height = `${height}px`;
         codeEditor.setSize('100%', '100%');
         codeEditor.refresh();
+        
+        // Force redraw for mobile devices
+        setTimeout(() => {
+            codeEditor.refresh();
+        }, 100);
     }
 
     window.addEventListener('resize', resizeEditor);

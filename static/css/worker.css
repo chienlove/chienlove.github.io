@@ -428,7 +428,7 @@ body {
 #code-editor-container {
     flex: 1;
     position: relative;
-    overflow: auto;
+    overflow: hidden;
     -webkit-overflow-scrolling: touch;
     height: calc(100% - 60px);
 }
@@ -441,10 +441,12 @@ body {
     bottom: 0;
     height: 100%;
     width: 100%;
+    overflow: auto;
 }
 
 .CodeMirror {
-    height: 100% !important;
+    height: auto !important;
+    min-height: 100%;
     font-family: 'Fira Code', monospace;
     font-size: 14px;
     line-height: 1.5;
@@ -458,6 +460,7 @@ body {
 .CodeMirror-scroll {
     overflow: auto !important;
     -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
     max-height: 100%;
 }
 
@@ -588,7 +591,7 @@ body {
     }
     
     .CodeMirror {
-        font-size: 15px;
+        font-size: 16px;
     }
 }
 
