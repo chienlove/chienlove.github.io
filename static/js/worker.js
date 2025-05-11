@@ -15,7 +15,6 @@ function initEditor() {
     editorWrapper.className = 'editor-wrapper';
     editorContainer.appendChild(editorWrapper);
     
-    // iOS specific configuration
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     const editorOptions = {
         mode: 'javascript',
@@ -27,6 +26,8 @@ function initEditor() {
         indentUnit: 4,
         tabSize: 4,
         viewportMargin: Infinity,
+        inputStyle: isIOS ? 'contenteditable' : 'textarea',
+        spellcheck: false,
         extraKeys: {
             'Ctrl-Enter': function() { updateWorker(); },
             'Cmd-Enter': function() { updateWorker(); },
@@ -41,17 +42,8 @@ function initEditor() {
         }
     };
 
-    // iOS specific fixes
-    if (isIOS) {
-        editorOptions.inputStyle = 'contenteditable';
-        editorOptions.spellcheck = false;
-        editorOptions.autocorrect = 'off';
-        editorOptions.autocapitalize = 'off';
-    }
-
     codeEditor = CodeMirror(editorWrapper, editorOptions);
 
-    // Apply iOS selection fixes
     if (isIOS) {
         editorWrapper.style.userSelect = 'text';
         editorWrapper.style.webkitUserSelect = 'text';
@@ -65,15 +57,10 @@ function initEditor() {
     function resizeEditor() {
         const editorContainer = document.getElementById('code-editor-container');
         const height = window.innerHeight - editorContainer.getBoundingClientRect().top - 20;
-        
         editorContainer.style.height = `${height}px`;
         codeEditor.setSize('100%', '100%');
         codeEditor.refresh();
-        
-        // Force redraw for mobile devices
-        setTimeout(() => {
-            codeEditor.refresh();
-        }, 100);
+        setTimeout(() => codeEditor.refresh(), 100);
     }
 
     window.addEventListener('resize', resizeEditor);
@@ -112,8 +99,6 @@ function setupPasswordToggle() {
         const isPassword = passwordInput.type === 'password';
         passwordInput.type = isPassword ? 'text' : 'password';
         toggleBtn.innerHTML = isPassword ? '<i class="fas fa-eye-slash"></i>' : '<i class="fas fa-eye"></i>';
-        
-        // Keep focus on input after toggle
         passwordInput.focus();
     });
 }
@@ -175,7 +160,6 @@ async function handleLogin() {
     try {
         setLoading(loginBtn, true, 'Đang xác thực...');
         
-        // Thêm timeout để tránh treo giao diện
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 10000);
         
@@ -269,7 +253,7 @@ async function updateWorker() {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${password}`
+                'Authorization': password
             },
             body: JSON.stringify({
                 workerId: currentWorker.id,
@@ -280,7 +264,7 @@ async function updateWorker() {
         
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+            throw new Error(errorData.error || `Lỗi HTTP! status: ${response.status}`);
         }
 
         const data = await response.json();
@@ -288,20 +272,8 @@ async function updateWorker() {
         document.getElementById('last-modified').textContent = formatDate(currentWorker.lastModified);
         showStatus('Cập nhật thành công!', 'success');
     } catch (error) {
-        const errorMsg = error.message.includes('Failed to fetch') 
-            ? 'Không thể kết nối đến server' 
-            : error.message;
-        showStatus(errorMsg, 'error');
+        showStatus(`Lỗi: ${error.message}`, 'error');
         console.error('Update Error:', error);
-        
-        // Retry logic for Cloudflare API errors
-        if (error.message.includes('Cloudflare') || error.message.includes('524')) {
-            setTimeout(() => {
-                if (confirm('Lỗi kết nối Cloudflare. Bạn có muốn thử lại?')) {
-                    updateWorker();
-                }
-            }, 1000);
-        }
     } finally {
         setLoading(updateBtn, false, '<i class="fas fa-save"></i> Lưu thay đổi');
     }
@@ -335,7 +307,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('update-btn').addEventListener('click', updateWorker);
     document.getElementById('back-btn').addEventListener('click', backToList);
     
-    // Handle Enter key in password field
     document.getElementById('password').addEventListener('keyup', (e) => {
         if (e.key === 'Enter') handleLogin();
     });

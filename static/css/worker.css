@@ -34,9 +34,6 @@
         user-select: text;
         -webkit-user-select: text;
     }
-    .CodeMirror-line {
-        cursor: text;
-    }
     .CodeMirror-line > span {
         -webkit-user-select: text;
         user-select: text;
@@ -83,8 +80,6 @@ body {
     flex-direction: column;
     min-height: 100vh;
 }
-
-/* Rest of your existing CSS remains the same... */
 
 .app-header {
     background: linear-gradient(135deg, var(--primary-dark), var(--primary));
