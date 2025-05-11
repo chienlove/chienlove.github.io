@@ -10,10 +10,16 @@ exports.handler = async (event) => {
     try {
         // 1. Validate HTTP Method
         if (event.httpMethod !== 'POST') {
-            return respond(405, {
-                error: 'method_not_allowed',
-                message: 'Only POST requests are accepted'
-            });
+            return {
+                statusCode: 405,
+                body: JSON.stringify({
+                    error: 'method_not_allowed',
+                    message: 'Only POST requests are accepted'
+                }),
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            };
         }
 
         // 2. Parse and Validate Body
@@ -21,33 +27,56 @@ exports.handler = async (event) => {
         try {
             body = JSON.parse(event.body);
         } catch (e) {
-            return respond(400, {
-                error: 'invalid_json',
-                message: 'Invalid JSON format in request body'
-            });
+            return {
+                statusCode: 400,
+                body: JSON.stringify({
+                    error: 'invalid_json',
+                    message: 'Invalid JSON format in request body'
+                }),
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            };
         }
 
         // 3. Check Required Fields
         const requiredFields = ['code', 'password', 'workerId'];
         const missingFields = requiredFields.filter(field => !body[field]);
         if (missingFields.length > 0) {
-            return respond(400, {
-                error: 'missing_fields',
-                message: `Missing required fields: ${missingFields.join(', ')}`
-            });
+            return {
+                statusCode: 400,
+                body: JSON.stringify({
+                    error: 'missing_fields',
+                    message: `Missing required fields: ${missingFields.join(', ')}`
+                }),
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            };
         }
 
         // 4. Verify Password
         if (body.password !== process.env.EDITOR_PASSWORD) {
-            return respond(401, {
-                error: 'unauthorized',
-                message: 'Invalid password'
-            });
+            return {
+                statusCode: 401,
+                body: JSON.stringify({
+                    error: 'unauthorized',
+                    message: 'Invalid password'
+                }),
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            };
         }
 
         // 5. Prepare Cloudflare API Request
         const apiUrl = `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${body.workerId}`;
         
+        console.log('Calling Cloudflare API with:', {
+            workerId: body.workerId,
+            codeLength: body.code.length
+        });
+
         // 6. Make API Call
         const apiResponse = await fetch(apiUrl, {
             method: 'PUT',
@@ -62,39 +91,45 @@ exports.handler = async (event) => {
         const apiResult = await apiResponse.json();
         
         if (!apiResponse.ok) {
-            const errorMessages = apiResult.errors?.map(e => e.message) || ['Unknown Cloudflare API error'];
-            return respond(apiResponse.status, {
-                error: 'cloudflare_api_error',
-                message: errorMessages.join(' | '),
-                details: apiResult.errors
-            });
+            console.error('Cloudflare API Error:', apiResult);
+            return {
+                statusCode: apiResponse.status,
+                body: JSON.stringify({
+                    error: 'cloudflare_api_error',
+                    message: apiResult.errors?.map(e => e.message).join(' | ') || 'Unknown Cloudflare API error',
+                    details: apiResult.errors
+                }),
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            };
         }
 
         // 8. Success Response
-        return respond(200, {
-            success: true,
-            message: 'Worker updated successfully',
-            lastModified: new Date().toISOString(),
-            workerId: body.workerId
-        });
+        return {
+            statusCode: 200,
+            body: JSON.stringify({
+                success: true,
+                message: 'Worker updated successfully',
+                lastModified: new Date().toISOString(),
+                workerId: body.workerId
+            }),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        };
 
     } catch (error) {
         console.error('Server Error:', error);
-        return respond(500, {
-            error: 'internal_server_error',
-            message: error.message
-        });
+        return {
+            statusCode: 500,
+            body: JSON.stringify({
+                error: 'internal_server_error',
+                message: error.message
+            }),
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        };
     }
 };
-
-// Helper function for consistent responses
-function respond(statusCode, body) {
-    return {
-        statusCode,
-        body: JSON.stringify(body),
-        headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
-        }
-    };
-}

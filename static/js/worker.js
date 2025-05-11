@@ -257,16 +257,20 @@ async function updateWorker() {
             body: JSON.stringify({
                 workerId: currentWorker.id,
                 code: code,
-                password: password,
-                name: currentWorker.name
+                password: password
             })
         });
         
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             
-            // Xử lý lỗi từ Cloudflare API
+            // Xử lý lỗi từ Cloudflare API chi tiết hơn
             if (errorData.error === 'cloudflare_api_error') {
+                console.error('Cloudflare API Error Details:', {
+                    workerId: currentWorker.id,
+                    codeLength: code.length,
+                    apiErrors: errorData.details
+                });
                 throw new Error(`Lỗi Cloudflare: ${errorData.message}`);
             }
             throw new Error(errorData.message || 'Cập nhật thất bại');
@@ -277,19 +281,11 @@ async function updateWorker() {
         document.getElementById('last-modified').textContent = formatDate(currentWorker.lastModified);
         showStatus('Cập nhật thành công!', 'success');
     } catch (error) {
-        showStatus(error.message.includes('Failed to fetch') 
+        const errorMsg = error.message.includes('Failed to fetch') 
             ? 'Không thể kết nối đến server' 
-            : error.message, 
-        'error');
+            : error.message;
+        showStatus(errorMsg, 'error');
         console.error('Update Error:', error);
-        
-        // Thêm gợi ý debug
-        if (error.message.includes('Cloudflare')) {
-            console.error('Cloudflare API Error Details:', {
-                workerId: currentWorker.id,
-                codeLength: code.length
-            });
-        }
     } finally {
         setLoading(updateBtn, false, '<i class="fas fa-save"></i> Lưu thay đổi');
     }
