@@ -1,146 +1,105 @@
 const fetch = require('node-fetch');
 
 exports.handler = async (event) => {
-    // Debug log incoming request (ẩn password)
-    const requestBody = event.body ? JSON.parse(event.body) : null;
-    console.log('Incoming request:', {
+    // Debug log (ẩn password nhạy cảm)
+    const requestBody = event.body ? JSON.parse(event.body) : {};
+    const logBody = {...requestBody};
+    if (logBody.password) logBody.password = '******';
+    
+    console.log('Request received:', {
         method: event.httpMethod,
         path: event.path,
-        body: {
-            ...requestBody,
-            password: requestBody?.password ? '******' : undefined
-        }
+        body: logBody,
+        codeLength: requestBody.code?.length || 0
     });
 
     try {
         // 1. Validate HTTP Method
         if (event.httpMethod !== 'POST') {
-            return formatResponse(405, {
-                error: 'method_not_allowed',
-                message: 'Chỉ hỗ trợ yêu cầu POST'
-            });
+            throw new Error('Only POST requests are accepted');
         }
 
         // 2. Parse and Validate Body
-        let body;
-        try {
-            body = JSON.parse(event.body);
-        } catch (e) {
-            return formatResponse(400, {
-                error: 'invalid_json',
-                message: 'Dữ liệu JSON không hợp lệ'
-            });
-        }
-
-        // 3. Check Required Fields
-        const requiredFields = ['code', 'password', 'workerId'];
-        const missingFields = requiredFields.filter(field => !body[field]);
-        if (missingFields.length > 0) {
-            return formatResponse(400, {
-                error: 'missing_fields',
-                message: `Thiếu các trường bắt buộc: ${missingFields.join(', ')}`
-            });
-        }
-
-        // 4. Verify Password
-        if (body.password !== process.env.EDITOR_PASSWORD) {
-            return formatResponse(401, {
-                error: 'unauthorized',
-                message: 'Mật khẩu không chính xác'
-            });
-        }
-
-        // 5. Validate Worker ID format
-        if (!/^[a-z0-9_-]+$/.test(body.workerId)) {
-            return formatResponse(400, {
-                error: 'invalid_worker_id',
-                message: 'Worker ID chỉ được chứa chữ thường, số, dấu gạch ngang và gạch dưới'
-            });
-        }
-
-        // 6. Prepare Cloudflare API Request
-        const apiUrl = `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${body.workerId}`;
+        const { workerId, code, password } = JSON.parse(event.body);
         
-        console.log('Calling Cloudflare API for worker:', body.workerId);
-        console.log('Code length:', body.code.length, 'characters');
+        if (!workerId || !code || !password) {
+            throw new Error('Missing required fields: workerId, code or password');
+        }
 
-        // 7. Make API Call
+        // 3. Verify Password
+        if (password !== process.env.EDITOR_PASSWORD) {
+            throw new Error('Invalid password');
+        }
+
+        // 4. Validate Worker ID format
+        if (!/^[a-z0-9_-]+$/i.test(workerId)) {
+            throw new Error('Invalid Worker ID format');
+        }
+
+        // 5. Call Cloudflare API
+        const apiUrl = `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${workerId}`;
+        
+        console.log('Calling Cloudflare API for worker:', workerId);
+        console.log('Code preview:', code.substring(0, 50) + '...');
+
         const apiResponse = await fetch(apiUrl, {
             method: 'PUT',
             headers: {
                 'Authorization': `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
                 'Content-Type': 'application/javascript'
             },
-            body: body.code
+            body: code
         });
 
-        // 8. Handle API Response
         const apiResult = await apiResponse.json();
         
         if (!apiResponse.ok) {
+            const errorDetails = apiResult.errors?.[0] || {};
             console.error('Cloudflare API Error:', {
                 status: apiResponse.status,
-                workerId: body.workerId,
-                errors: apiResult.errors,
-                codePreview: body.code.substring(0, 100) + '...'
+                workerId,
+                codeLength: code.length,
+                error: errorDetails
             });
 
-            // Xử lý các lỗi phổ biến của Cloudflare
-            const firstError = apiResult.errors?.[0] || {};
-            let userMessage = 'Lỗi khi cập nhật Worker';
-            
-            switch (firstError.code) {
-                case 10021:
-                    userMessage = 'Worker không tồn tại hoặc không có quyền truy cập';
-                    break;
-                case 10034:
-                    userMessage = `Lỗi cú pháp: ${firstError.message.split('\n')[0]}`;
-                    break;
-                case 10000:
-                    userMessage = 'Script vượt quá giới hạn kích thước';
-                    break;
-                default:
-                    userMessage = firstError.message || userMessage;
+            let errorMessage = 'Cloudflare API Error: ';
+            if (errorDetails.code === 10034) {
+                errorMessage += `Syntax error at line ${errorDetails.message.match(/line (\d+)/)?.[1] || 'unknown'}`;
+            } else {
+                errorMessage += errorDetails.message || 'Unknown error';
             }
 
-            return formatResponse(apiResponse.status, {
-                error: 'cloudflare_api_error',
-                message: userMessage,
-                details: apiResult.errors
-            });
+            throw new Error(errorMessage);
         }
 
-        // 9. Success Response
-        console.log('Worker updated successfully:', body.workerId);
-        return formatResponse(200, {
-            success: true,
-            message: 'Cập nhật Worker thành công',
-            lastModified: new Date().toISOString(),
-            workerId: body.workerId
-        });
+        console.log('Update successful for worker:', workerId);
+        return {
+            statusCode: 200,
+            body: JSON.stringify({
+                success: true,
+                workerId,
+                lastModified: new Date().toISOString()
+            }),
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            }
+        };
 
     } catch (error) {
-        console.error('Unexpected Error:', {
-            message: error.message,
-            stack: error.stack,
-            workerId: requestBody?.workerId || 'unknown'
-        });
-        return formatResponse(500, {
-            error: 'internal_server_error',
-            message: 'Lỗi hệ thống không mong muốn'
-        });
+        console.error('Error processing request:', error.message);
+        return {
+            statusCode: error.message.includes('Invalid password') ? 401 : 
+                      error.message.includes('Missing') ? 400 : 500,
+            body: JSON.stringify({
+                error: 'update_failed',
+                message: error.message,
+                workerId: requestBody.workerId || 'unknown'
+            }),
+            headers: {
+                'Content-Type': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            }
+        };
     }
 };
-
-// Helper function for consistent responses
-function formatResponse(statusCode, body) {
-    return {
-        statusCode,
-        body: JSON.stringify(body),
-        headers: {
-            'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*',
-            'Access-Control-Allow-Headers': 'Content-Type'
-        }
-    };
-}

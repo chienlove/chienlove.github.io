@@ -249,11 +249,9 @@ async function updateWorker() {
     try {
         setLoading(updateBtn, true, 'Đang lưu...');
         
-        // Kiểm tra cú pháp JavaScript trước khi gửi
-        try {
-            new Function(code); // Validate syntax
-        } catch (syntaxError) {
-            throw new Error(`Lỗi cú pháp: ${syntaxError.message.split('\n')[0]}`);
+        // Thêm validate cơ bản
+        if (currentWorker.id === 'file') {
+            throw new Error('Worker ID không hợp lệ');
         }
 
         const response = await fetch('/api/update-worker', {
@@ -268,51 +266,30 @@ async function updateWorker() {
             })
         });
         
+        const data = await response.json();
+        
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            
-            if (errorData.error === 'cloudflare_api_error') {
-                // Xử lý lỗi đặc biệt từ Cloudflare
-                const cloudflareError = errorData.details?.[0] || {};
-                let userFriendlyMessage = 'Lỗi Cloudflare: ';
-                
-                switch (cloudflareError.code) {
-                    case 10021:
-                        userFriendlyMessage += 'Worker không tồn tại hoặc không có quyền truy cập';
-                        break;
-                    case 10034:
-                        userFriendlyMessage += `Lỗi cú pháp: ${cloudflareError.message}`;
-                        break;
-                    default:
-                        userFriendlyMessage += cloudflareError.message || 'Lỗi không xác định';
-                }
-                
-                console.error('Cloudflare API Error:', {
-                    workerId: currentWorker.id,
-                    codeLength: code.length,
-                    errorDetails: cloudflareError
-                });
-                
-                throw new Error(userFriendlyMessage);
-            }
-            throw new Error(errorData.message || 'Cập nhật thất bại');
+            console.error('Update failed:', data);
+            throw new Error(data.message || `Lỗi khi cập nhật (mã ${response.status})`);
         }
 
-        const data = await response.json();
         currentWorker.lastModified = data.lastModified || new Date().toISOString();
         document.getElementById('last-modified').textContent = formatDate(currentWorker.lastModified);
         showStatus('Cập nhật thành công!', 'success');
-    } catch (error) {
-        showStatus(error.message, 'error');
         
-        // Hiển thị chi tiết lỗi trong console để debug
-        if (error.message.includes('Lỗi Cloudflare') || error.message.includes('Lỗi cú pháp')) {
-            console.group('Chi tiết lỗi');
-            console.log('Worker:', currentWorker.id);
-            console.log('Code snippet:', code.substring(0, 100) + '...');
-            console.log('Full error:', error);
-            console.groupEnd();
+    } catch (error) {
+        console.error('Update error:', {
+            workerId: currentWorker.id,
+            error: error.message,
+            codePreview: code.substring(0, 100)
+        });
+        
+        let errorMsg = error.message;
+        if (error.message.includes('Syntax error')) {
+            errorMsg = `Lỗi cú pháp: ${error.message.split(':')[1]?.trim() || 'không xác định'}`;
         }
+        
+        showStatus(errorMsg, 'error');
     } finally {
         setLoading(updateBtn, false, '<i class="fas fa-save"></i> Lưu thay đổi');
     }
