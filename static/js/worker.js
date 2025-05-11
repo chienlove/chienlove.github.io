@@ -252,19 +252,27 @@ async function updateWorker() {
         const response = await fetch('/api/update-worker', {
             method: 'POST',
             headers: { 
-                'Content-Type': 'application/json',
-                'Authorization': password
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 workerId: currentWorker.id,
                 code: code,
-                name: currentWorker.name
+                password: password // Thêm password vào body thay vì dùng header
             })
         });
         
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.error || `Lỗi HTTP! status: ${response.status}`);
+            
+            // Xử lý thông báo lỗi chi tiết hơn
+            let errorMessage = errorData.message || 'Cập nhật thất bại';
+            if (errorData.error === 'missing_fields') {
+                errorMessage = `Thiếu trường bắt buộc: ${errorData.message.split(': ')[1]}`;
+            } else if (errorData.error === 'unauthorized') {
+                errorMessage = 'Mật khẩu không đúng';
+            }
+            
+            throw new Error(errorMessage);
         }
 
         const data = await response.json();
@@ -272,7 +280,10 @@ async function updateWorker() {
         document.getElementById('last-modified').textContent = formatDate(currentWorker.lastModified);
         showStatus('Cập nhật thành công!', 'success');
     } catch (error) {
-        showStatus(`Lỗi: ${error.message}`, 'error');
+        showStatus(error.message.includes('Failed to fetch') 
+            ? 'Không thể kết nối đến server' 
+            : error.message, 
+        'error');
         console.error('Update Error:', error);
     } finally {
         setLoading(updateBtn, false, '<i class="fas fa-save"></i> Lưu thay đổi');
