@@ -288,14 +288,19 @@ async function updateWorker() {
     try {
         setLoading(updateBtn, true, 'Đang lưu...');
 
-        // Thêm log debug để kiểm tra
-        console.log('Worker ID:', currentWorker.id);
-        console.log('Code length:', code.length);
-        console.log('First 50 chars:', code.substring(0, 50));
+        // Thêm log debug chi tiết
+        console.debug('=== DEBUG INFO ===');
+        console.debug('Worker ID:', currentWorker.id);
+        console.debug('Code length:', code.length);
+        console.debug('First 100 chars:', code.substring(0, 100));
+        console.debug('Last 100 chars:', code.substring(code.length - 100));
 
         const response = await fetch('/api/update-worker', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
             body: JSON.stringify({
                 workerId: currentWorker.id,
                 code: code,
@@ -303,38 +308,53 @@ async function updateWorker() {
             })
         });
 
-        // Xử lý response chi tiết hơn
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => null);
-            const errorMsg = errorData?.error?.message || 
-                            errorData?.message || 
-                            `HTTP ${response.status}: ${response.statusText}`;
-            throw new Error(errorMsg || 'Lỗi không xác định từ Cloudflare');
+        // Xử lý response với kiểm tra chi tiết
+        const contentType = response.headers.get('content-type');
+        let responseData;
+        
+        if (contentType && contentType.includes('application/json')) {
+            responseData = await response.json();
+        } else {
+            const text = await response.text();
+            throw new Error(`Phản hồi không hợp lệ: ${text.substring(0, 200)}`);
         }
 
-        const result = await response.json();
-        
-        // Cập nhật thông tin thành công
-        currentWorker.lastModified = result.lastModified || new Date().toISOString();
+        if (!response.ok) {
+            // Phân tích lỗi từ Cloudflare chi tiết
+            const cloudflareError = responseData.errors?.[0] || {};
+            let errorMsg = cloudflareError.message || 'Lỗi từ Cloudflare API';
+            
+            // Chuẩn hóa thông báo lỗi
+            if (errorMsg.includes('SyntaxError')) {
+                const lineMatch = errorMsg.match(/line (\d+)/);
+                errorMsg = `Lỗi cú pháp${lineMatch ? ` dòng ${lineMatch[1]}` : ''}: ${errorMsg.split('\n')[0]}`;
+            }
+            
+            throw new Error(errorMsg);
+        }
+
+        // Cập nhật thành công
+        currentWorker.lastModified = responseData.lastModified || new Date().toISOString();
         document.getElementById('last-modified').textContent = formatDate(currentWorker.lastModified);
         showStatus('Lưu thành công!', 'success');
 
     } catch (error) {
-        console.error('Chi tiết lỗi:', {
+        console.error('Chi tiết lỗi đầy đủ:', {
             workerId: currentWorker.id,
             error: error,
-            stack: error.stack
+            stack: error.stack,
+            codeSnippet: codeEditor.getValue().substring(0, 200)
         });
         
-        // Phân loại lỗi cụ thể
-        let errorMsg = error.message;
-        if (error.message.includes('SyntaxError')) {
-            errorMsg = `Lỗi cú pháp: ${error.message.split('\n')[0]}`;
+        // Thông báo lỗi thân thiện
+        let userMessage = error.message;
+        if (error.message.includes('Unexpected token')) {
+            userMessage = 'Lỗi cú pháp JavaScript: ' + error.message.split('\n')[0];
         } else if (error.message.includes('Unauthorized')) {
-            errorMsg = 'Lỗi xác thực: Token API không hợp lệ hoặc hết hạn';
+            userMessage = 'Lỗi xác thực: Vui lòng kiểm tra lại mật khẩu hoặc API token';
         }
         
-        showStatus(errorMsg, 'error', 5000);
+        showStatus(userMessage, 'error', 6000);
     } finally {
         setLoading(updateBtn, false, '<i class="fas fa-save"></i> Lưu thay đổi');
     }
