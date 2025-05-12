@@ -288,49 +288,35 @@ async function updateWorker() {
     try {
         setLoading(updateBtn, true, 'Đang lưu...');
 
-        // Thêm log debug chi tiết
-        console.debug('=== DEBUG INFO ===');
-        console.debug('Worker ID:', currentWorker.id);
-        console.debug('Code length:', code.length);
-        console.debug('First 100 chars:', code.substring(0, 100));
-        console.debug('Last 100 chars:', code.substring(code.length - 100));
-
+        // Thêm metadata vào code để debug
+        const debugCode = `// Worker: ${currentWorker.id}\n// Last update: ${new Date().toISOString()}\n${code}`;
+        
         const response = await fetch('/api/update-worker', {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
+                'X-Debug-Mode': 'true'
             },
             body: JSON.stringify({
                 workerId: currentWorker.id,
-                code: code,
+                code: debugCode,
                 password: password
             })
         });
 
-        // Xử lý response với kiểm tra chi tiết
-        const contentType = response.headers.get('content-type');
+        // Xử lý response
+        const responseText = await response.text();
         let responseData;
         
-        if (contentType && contentType.includes('application/json')) {
-            responseData = await response.json();
-        } else {
-            const text = await response.text();
-            throw new Error(`Phản hồi không hợp lệ: ${text.substring(0, 200)}`);
+        try {
+            responseData = JSON.parse(responseText);
+        } catch (e) {
+            throw new Error(`Invalid response: ${responseText.substring(0, 200)}`);
         }
 
         if (!response.ok) {
-            // Phân tích lỗi từ Cloudflare chi tiết
             const cloudflareError = responseData.errors?.[0] || {};
-            let errorMsg = cloudflareError.message || 'Lỗi từ Cloudflare API';
-            
-            // Chuẩn hóa thông báo lỗi
-            if (errorMsg.includes('SyntaxError')) {
-                const lineMatch = errorMsg.match(/line (\d+)/);
-                errorMsg = `Lỗi cú pháp${lineMatch ? ` dòng ${lineMatch[1]}` : ''}: ${errorMsg.split('\n')[0]}`;
-            }
-            
-            throw new Error(errorMsg);
+            throw new Error(cloudflareError.message || `HTTP ${response.status}: ${response.statusText}`);
         }
 
         // Cập nhật thành công
@@ -339,19 +325,18 @@ async function updateWorker() {
         showStatus('Lưu thành công!', 'success');
 
     } catch (error) {
-        console.error('Chi tiết lỗi đầy đủ:', {
+        console.error('Full error details:', {
             workerId: currentWorker.id,
-            error: error,
+            error: error.toString(),
             stack: error.stack,
-            codeSnippet: codeEditor.getValue().substring(0, 200)
+            code: codeEditor.getValue().substring(0, 200)
         });
         
-        // Thông báo lỗi thân thiện
         let userMessage = error.message;
         if (error.message.includes('Unexpected token')) {
-            userMessage = 'Lỗi cú pháp JavaScript: ' + error.message.split('\n')[0];
+            userMessage = 'Lỗi cú pháp: ' + error.message.split('\n')[0];
         } else if (error.message.includes('Unauthorized')) {
-            userMessage = 'Lỗi xác thực: Vui lòng kiểm tra lại mật khẩu hoặc API token';
+            userMessage = 'Lỗi xác thực: Kiểm tra lại mật khẩu hoặc API token';
         }
         
         showStatus(userMessage, 'error', 6000);
