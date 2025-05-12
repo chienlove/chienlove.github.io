@@ -272,17 +272,15 @@ async function parseApiResponse(response) {
 }
 
 async function updateWorker() {
-    if (!currentWorker.id || !/^[a-z0-9_-]+$/i.test(currentWorker.id)) {
-        showStatus('Vui lòng chọn worker hợp lệ từ danh sách', 'error');
+    if (!currentWorker.id) {
+        showStatus('Vui lòng chọn worker hợp lệ', 'error');
         return;
     }
 
     let code = codeEditor.getValue();
     
-    // Prepare code exactly like Cloudflare Dashboard does
-    code = prepareWorkerCodeForCloudflare(code);
-    
-    if (!code) {
+    // Kiểm tra code trống
+    if (!code.trim()) {
         showStatus('Nội dung worker không được để trống', 'error');
         return;
     }
@@ -291,6 +289,7 @@ async function updateWorker() {
     try {
         setLoading(updateBtn, true, 'Đang lưu...');
 
+        // Gửi code nguyên bản không qua xử lý (để giống với Dashboard)
         const response = await fetch('/api/update-worker', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -301,31 +300,66 @@ async function updateWorker() {
             })
         });
 
-        const data = await parseApiResponse(response);
+        // Xử lý response đặc biệt cho Cloudflare
+        const result = await parseCloudflareResponse(response);
         
-        currentWorker.lastModified = data.lastModified || new Date().toISOString();
+        if (result.error) {
+            throw new Error(result.message);
+        }
+
+        // Cập nhật thông tin worker
+        currentWorker.lastModified = new Date().toISOString();
         document.getElementById('last-modified').textContent = formatDate(currentWorker.lastModified);
         showStatus('Lưu thành công!', 'success');
 
     } catch (error) {
-        console.error('Update Failed:', {
+        console.error('Lỗi khi lưu:', {
             workerId: currentWorker.id,
             error: error.message
         });
         
-        // Handle Cloudflare syntax errors specifically
-        if (error.message.includes('syntax_error')) {
-            try {
-                const errorData = JSON.parse(error.message.replace('Phản hồi không hợp lệ từ API: ', ''));
-                showStatus(`Lỗi cú pháp${errorData.line !== 'unknown' ? ` dòng ${errorData.line}` : ''}: ${errorData.message}`, 'error', 5000);
-            } catch (e) {
-                showStatus(error.message, 'error', 5000);
-            }
-        } else {
-            showStatus(error.message || 'Lỗi không xác định khi cập nhật', 'error', 5000);
+        // Hiển thị thông báo lỗi thân thiện
+        let errorMsg = error.message;
+        if (errorMsg.includes('Unexpected token') || errorMsg.includes('SyntaxError')) {
+            errorMsg = 'Lỗi cú pháp JavaScript: ' + errorMsg.split('\n')[0];
         }
+        showStatus(errorMsg, 'error', 5000);
+        
     } finally {
         setLoading(updateBtn, false, '<i class="fas fa-save"></i> Lưu thay đổi');
+    }
+}
+
+// Xử lý response từ Cloudflare API
+async function parseCloudflareResponse(response) {
+    try {
+        const data = await response.json();
+        
+        if (!response.ok) {
+            // Xử lý lỗi từ Cloudflare
+            const firstError = data.errors?.[0] || {};
+            let message = firstError.message || 'Lỗi không xác định từ Cloudflare';
+            
+            // Chuẩn hóa thông báo lỗi cú pháp
+            if (message.includes('SyntaxError')) {
+                message = message.split('\n')[0];
+            }
+            
+            return {
+                error: true,
+                message: message
+            };
+        }
+        
+        return data;
+        
+    } catch (e) {
+        // Fallback khi response không phải JSON
+        const text = await response.text();
+        return {
+            error: true,
+            message: text.substring(0, 200) || 'Lỗi không xác định'
+        };
     }
 }
 
