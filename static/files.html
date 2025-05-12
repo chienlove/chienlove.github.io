@@ -71,12 +71,21 @@
             color: white;
         }
         
-        #fileInput {
+        input[type="file"] {
             width: 100%;
             padding: 10px;
             border: 1px solid var(--border);
             border-radius: 6px;
             margin: 15px 0;
+        }
+        
+        select, textarea, input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            margin: 5px 0 15px;
+            font-family: inherit;
         }
         
         #progressContainer {
@@ -133,17 +142,80 @@
             margin: 10px 0;
             font-size: 14px;
         }
+        
+        .release-options {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: #f6f8fa;
+            border-radius: 6px;
+        }
+        
+        .release-options label {
+            display: block;
+            margin: 10px 0 5px;
+            font-weight: 600;
+        }
+        
+        .radio-group {
+            margin: 10px 0;
+        }
+        
+        .radio-group input {
+            margin-right: 8px;
+        }
+        
+        #releaseList {
+            margin-top: 20px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .release-item {
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        
+        .release-item:hover {
+            background: var(--bg);
+        }
+        
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>GitHub Release Uploader</h1>
+        <h1>GitHub Release Uploader Pro</h1>
         
         <div id="loginSection" class="panel">
             <button id="loginButton" class="btn btn-primary">Login with GitHub</button>
         </div>
         
         <div id="uploadSection" class="panel hidden">
+            <div class="release-options">
+                <div class="radio-group">
+                    <label>
+                        <input type="radio" name="releaseType" value="existing" checked> Use Existing Release
+                    </label>
+                    <select id="existingReleases"></select>
+                </div>
+                
+                <div class="radio-group">
+                    <label>
+                        <input type="radio" name="releaseType" value="new"> Create New Release
+                    </label>
+                    <div id="newReleaseFields" class="hidden">
+                        <input type="text" id="releaseName" placeholder="Release name">
+                        <textarea id="releaseNotes" placeholder="Release description" rows="3"></textarea>
+                    </div>
+                </div>
+            </div>
+
             <input type="file" id="fileInput">
             
             <div id="fileInfo" class="file-info hidden"></div>
@@ -156,12 +228,12 @@
             <button id="uploadButton" class="btn btn-primary">Upload</button>
             <button id="cancelButton" class="btn btn-danger hidden">Cancel</button>
             
-            <div id="status" class="status-info">
-                Ready to upload files (max 2GB)
-            </div>
+            <div id="status" class="status-info">Ready to upload files (max 2GB)</div>
+
+            <div id="releaseList" class="hidden"></div>
         </div>
     </div>
 
-    <script src="/js/upload.js?v=1.1"></script>
+    <script src="/js/upload.js?v=1.2"></script>
 </body>
 </html>

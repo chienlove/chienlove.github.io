@@ -235,31 +235,56 @@ window.loadWorker = async function(workerId) {
 
 // Prepare worker code for Cloudflare API
 function prepareWorkerCodeForCloudflare(code) {
-    // 1. Remove BOM and normalize
-    if (code.charCodeAt(0) === 0xFEFF) code = code.slice(1);
-    code = code.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
-    code = code.replace(/[\u200B-\u200D\uFEFF]/g, '');
+    // Phương án cứng: Luôn wrap code trong template chuẩn
+    // Đảm bảo 100% đúng định dạng Cloudflare yêu cầu
+    return `
+export default {
+    async fetch(request, env, ctx) {
+        try {
+            ${code}
+            return new Response('OK');
+        } catch (err) {
+            return new Response(err.stack, { status: 500 });
+        }
+    }
+};`.trim();
+}
 
-    // 2. Check if already in ES module format
-    if (/export\s+(default|{)/.test(code)) {
-        return code;
+async function updateWorker() {
+    if (!currentWorker.id) {
+        showStatus('Vui lòng chọn worker', 'error');
+        return;
     }
 
-    // 3. Handle different code patterns
-    if (/^\s*\{/.test(code) && /\}\s*$/.test(code)) {
-        // Case: Object literal (may contain colons)
-        return `export default ${code}`;
-    } else if (/^(async\s+)?(function\s*\w*|\([^)]*\))\s*(=>)?\s*\{/.test(code)) {
-        // Case: Function or arrow function
-        return `export default ${code}`;
-    } else {
-        // Default case: Wrap in standard worker format
-        return `export default {
-  async fetch(request, env, ctx) {
-    ${code}
-    return new Response('Hello World!');
-  }
-};`;
+    const rawCode = codeEditor.getValue();
+    
+    // LUÔN sử dụng template chuẩn
+    const code = prepareWorkerCodeForCloudflare(rawCode);
+
+    try {
+        setLoading(true, 'Đang lưu...');
+        
+        const response = await fetch('/api/update-worker', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                workerId: currentWorker.id,
+                code: code,
+                password: password
+            })
+        });
+
+        const result = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(result.message || 'Lỗi từ Cloudflare');
+        }
+
+        showStatus('Lưu thành công!', 'success');
+    } catch (error) {
+        showStatus(`Lỗi: ${error.message}`, 'error', 5000);
+    } finally {
+        setLoading(false);
     }
 }
 

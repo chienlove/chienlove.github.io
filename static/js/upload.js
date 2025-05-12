@@ -9,6 +9,8 @@ class GitHubUploader {
         };
         
         this.token = localStorage.getItem('github_token');
+        this.currentRelease = null;
+        this.uploadXHR = null;
         this.initialize();
     }
 
@@ -30,11 +32,14 @@ class GitHubUploader {
             progressContainer: document.getElementById('progressContainer'),
             progressBar: document.getElementById('progressBar'),
             progressText: document.getElementById('progressText'),
-            fileInfo: document.getElementById('fileInfo')
+            fileInfo: document.getElementById('fileInfo'),
+            releaseTypeRadios: document.querySelectorAll('input[name="releaseType"]'),
+            existingReleases: document.getElementById('existingReleases'),
+            newReleaseFields: document.getElementById('newReleaseFields'),
+            releaseName: document.getElementById('releaseName'),
+            releaseNotes: document.getElementById('releaseNotes'),
+            releaseList: document.getElementById('releaseList')
         };
-        
-        // Debug: Kiểm tra elements
-        console.log('Cached elements:', this.elements);
     }
 
     bindEvents() {
@@ -42,7 +47,19 @@ class GitHubUploader {
         this.elements.fileInput.addEventListener('change', (e) => this.handleFileSelect(e));
         this.elements.uploadButton.addEventListener('click', () => this.handleUpload());
         this.elements.cancelButton.addEventListener('click', () => this.cancelUpload());
+        
+        this.elements.releaseTypeRadios.forEach(radio => {
+            radio.addEventListener('change', () => this.toggleReleaseType());
+        });
+        
+        this.elements.existingReleases.addEventListener('change', () => this.loadReleaseDetails());
+        
         window.addEventListener('message', (e) => this.handleOAuthCallback(e));
+    }
+
+    toggleReleaseType() {
+        const isNewRelease = document.querySelector('input[name="releaseType"]:checked').value === 'new';
+        this.elements.newReleaseFields.classList.toggle('hidden', !isNewRelease);
     }
 
     checkAuth() {
@@ -50,6 +67,7 @@ class GitHubUploader {
             this.showLogin();
         } else {
             this.showUpload();
+            this.loadReleases();
         }
     }
 
@@ -67,18 +85,103 @@ class GitHubUploader {
 
     setStatus(message, type = 'info') {
         this.elements.status.className = `status-${type}`;
-        this.elements.status.textContent = message;
+        this.elements.status.innerHTML = message;
     }
 
     updateProgress(percent, message = '') {
         if (!this.elements.progressText) {
-            console.error('Progress text element missing');
+            console.error('Progress text element not found');
             return;
         }
         
         this.elements.progressContainer.style.display = 'block';
         this.elements.progressBar.style.width = `${percent}%`;
         this.elements.progressText.textContent = message;
+    }
+
+    async loadReleases() {
+        try {
+            const response = await fetch(`https://api.github.com/repos/${this.config.REPO_OWNER}/${this.config.REPO_NAME}/releases`, {
+                headers: {
+                    'Authorization': `token ${this.token}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            });
+            
+            if (!response.ok) throw new Error('Failed to load releases');
+            
+            const releases = await response.json();
+            this.populateReleaseDropdown(releases);
+            this.displayReleaseList(releases);
+            
+        } catch (error) {
+            console.error('Error loading releases:', error);
+            this.setStatus(`Error: ${error.message}`, 'error');
+        }
+    }
+
+    populateReleaseDropdown(releases) {
+        const select = this.elements.existingReleases;
+        select.innerHTML = '<option value="">Select a release</option>';
+        
+        releases.forEach(release => {
+            const option = document.createElement('option');
+            option.value = release.id;
+            option.textContent = release.name || release.tag_name;
+            select.appendChild(option);
+        });
+    }
+
+    displayReleaseList(releases) {
+        const listContainer = this.elements.releaseList;
+        listContainer.innerHTML = '';
+        listContainer.classList.remove('hidden');
+        
+        releases.forEach(release => {
+            const releaseItem = document.createElement('div');
+            releaseItem.className = 'release-item';
+            releaseItem.innerHTML = `
+                <h3>${release.name || release.tag_name}</h3>
+                <p>${release.body || 'No description'}</p>
+                <div class="files-header">
+                    <strong>Files (${release.assets.length}):</strong>
+                </div>
+            `;
+            
+            release.assets.forEach(asset => {
+                const fileItem = document.createElement('div');
+                fileItem.className = 'file-item';
+                fileItem.innerHTML = `
+                    <span>${asset.name}</span>
+                    <span>${this.formatSize(asset.size)}</span>
+                `;
+                releaseItem.appendChild(fileItem);
+            });
+            
+            listContainer.appendChild(releaseItem);
+        });
+    }
+
+    async loadReleaseDetails() {
+        const releaseId = this.elements.existingReleases.value;
+        if (!releaseId) return;
+        
+        try {
+            const response = await fetch(`https://api.github.com/repos/${this.config.REPO_OWNER}/${this.config.REPO_NAME}/releases/${releaseId}`, {
+                headers: {
+                    'Authorization': `token ${this.token}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            });
+            
+            if (!response.ok) throw new Error('Failed to load release details');
+            
+            this.currentRelease = await response.json();
+            
+        } catch (error) {
+            console.error('Error loading release:', error);
+            this.setStatus(`Error: ${error.message}`, 'error');
+        }
     }
 
     login() {
@@ -153,21 +256,24 @@ class GitHubUploader {
         }
 
         try {
-            this.setStatus('Creating release...', 'info');
-            this.updateProgress(0, 'Starting upload...');
+            this.setStatus('Preparing upload...', 'info');
+            this.updateProgress(0, 'Starting...');
             this.elements.uploadButton.disabled = true;
             this.elements.cancelButton.classList.remove('hidden');
 
-            // 1. Tạo release
-            const release = await this.createRelease();
+            // 1. Prepare release (create new or use existing)
+            const release = await this.prepareRelease();
             this.updateProgress(30, 'Uploading file...');
 
             // 2. Upload file
             const result = await this.uploadFile(file, release.upload_url);
             
-            // 3. Hoàn thành
+            // 3. Finalize
             this.updateProgress(100, 'Upload complete!');
-            this.setStatus(`Upload successful! Download: ${result.browser_download_url}`, 'success');
+            this.showSuccessMessage(release, result);
+            
+            // Refresh releases list
+            this.loadReleases();
             
         } catch (error) {
             if (error.name !== 'AbortError') {
@@ -179,68 +285,110 @@ class GitHubUploader {
         }
     }
 
-    async createRelease() {
-        const response = await fetch(`https://api.github.com/repos/${this.config.REPO_OWNER}/${this.config.REPO_NAME}/releases`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `token ${this.token}`,
-                'Accept': 'application/vnd.github.v3+json',
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                tag_name: `release-${Date.now()}`,
-                name: `Release ${new Date().toLocaleString()}`,
-                body: 'Uploaded via GitHub Uploader',
-                draft: false,
-                prerelease: false
-            })
-        });
+    async prepareRelease() {
+        const isNewRelease = document.querySelector('input[name="releaseType"]:checked').value === 'new';
+        
+        if (isNewRelease) {
+            // Create new release
+            const name = this.elements.releaseName.value || `Release ${new Date().toLocaleString()}`;
+            const body = this.elements.releaseNotes.value || 'Uploaded via GitHub Uploader';
+            
+            const response = await fetch(`https://api.github.com/repos/${this.config.REPO_OWNER}/${this.config.REPO_NAME}/releases`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `token ${this.token}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    tag_name: `v${Date.now()}`,
+                    name: name,
+                    body: body,
+                    draft: false,
+                    prerelease: false
+                })
+            });
 
-        if (!response.ok) {
-            const error = await response.json().catch(() => ({}));
-            throw new Error(error.message || 'Failed to create release');
+            if (!response.ok) {
+                const error = await response.json().catch(() => ({}));
+                throw new Error(error.message || 'Failed to create release');
+            }
+
+            return await response.json();
+        } else {
+            // Use existing release
+            if (!this.currentRelease) {
+                throw new Error('Please select a release first');
+            }
+            return this.currentRelease;
         }
-
-        return await response.json();
     }
 
     uploadFile(file, uploadUrl) {
         return new Promise((resolve, reject) => {
-            const xhr = new XMLHttpRequest();
             const url = uploadUrl.replace('{?name,label}', `?name=${encodeURIComponent(file.name)}`);
+            this.uploadXHR = new XMLHttpRequest();
             
-            xhr.open('POST', url, true);
-            xhr.setRequestHeader('Authorization', `token ${this.token}`);
-            xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
-            xhr.setRequestHeader('Accept', 'application/vnd.github.v3+json');
+            this.uploadXHR.open('POST', url, true);
+            this.uploadXHR.setRequestHeader('Authorization', `token ${this.token}`);
+            this.uploadXHR.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+            this.uploadXHR.setRequestHeader('Accept', 'application/vnd.github.v3+json');
 
-            xhr.upload.onprogress = (e) => {
+            this.uploadXHR.upload.onprogress = (e) => {
                 if (e.lengthComputable) {
                     const percent = Math.round((e.loaded / e.total) * 70);
                     this.updateProgress(30 + percent, `Uploading: ${30 + percent}%`);
                 }
             };
 
-            xhr.onload = () => {
-                if (xhr.status >= 200 && xhr.status < 300) {
+            this.uploadXHR.onload = () => {
+                if (this.uploadXHR.status >= 200 && this.uploadXHR.status < 300) {
                     try {
-                        resolve(JSON.parse(xhr.responseText));
+                        resolve(JSON.parse(this.uploadXHR.responseText));
+                    this.uploadXHR = null;
+                    this.setStatus('File processing completed', 'info');
+                    setTimeout(() => {
+                        this.setStatus('Upload fully completed!', 'success');
+                    }, 1000);
                     } catch {
                         resolve({ status: 'success' });
                     }
                 } else {
-                    reject(new Error(`Upload failed with status ${xhr.status}`));
+                    reject(new Error(`Server responded with ${this.uploadXHR.status}`));
                 }
             };
 
-            xhr.onerror = () => reject(new Error('Network error during upload'));
-            xhr.onabort = () => reject(new DOMException('Upload aborted', 'AbortError'));
+            this.uploadXHR.onerror = () => {
+                if (this.uploadXHR.readyState !== 4) {
+                    reject(new Error('Network error during upload'));
+                }
+            };
 
-            xhr.send(file);
+            this.uploadXHR.send(file);
         });
     }
 
+    showSuccessMessage(release, uploadResult) {
+        const releaseUrl = release.html_url;
+        const downloadUrl = uploadResult.browser_download_url || 
+                          `${releaseUrl}/assets/${this.elements.fileInput.files[0].name}`;
+        
+        this.setStatus(`
+            <div class="upload-success">
+                <h3>Upload Successful!</h3>
+                <p>File has been uploaded to release: <strong>${release.name || release.tag_name}</strong></p>
+                <div class="success-actions">
+                    <a href="${releaseUrl}" target="_blank" class="btn btn-primary">View Release</a>
+                    <a href="${downloadUrl}" target="_blank" class="btn btn-primary">Download File</a>
+                </div>
+            </div>
+        `, 'success');
+    }
+
     cancelUpload() {
+        if (this.uploadXHR) {
+            this.uploadXHR.abort();
+        }
         this.setStatus('Upload cancelled', 'info');
         this.resetUpload();
     }
@@ -252,11 +400,11 @@ class GitHubUploader {
         this.elements.fileInfo.classList.add('hidden');
         setTimeout(() => {
             this.updateProgress(0, '');
-        }, 1000);
+        }, 1500);
     }
 }
 
-// Khởi tạo khi DOM sẵn sàng
+// Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     try {
         new GitHubUploader();
