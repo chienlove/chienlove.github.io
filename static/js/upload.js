@@ -10,6 +10,7 @@ class GitHubUploader {
     constructor() {
         this.token = localStorage.getItem('github_token');
         this.uploadAbortController = null;
+        this.currentRelease = null;
         this.initializeElements();
         this.attachEventListeners();
         this.checkAuth();
@@ -27,7 +28,11 @@ class GitHubUploader {
             progressContainer: document.getElementById('progressContainer'),
             progressBar: document.getElementById('progressBar'),
             progressText: document.getElementById('progressText'),
-            fileInfo: document.getElementById('fileInfo')
+            fileInfo: document.getElementById('fileInfo'),
+            releaseSelector: document.getElementById('releaseSelector'),
+            releaseNameInput: document.getElementById('releaseName'),
+            releaseNotesInput: document.getElementById('releaseNotes'),
+            fileTableBody: document.querySelector('#fileTable tbody')
         };
     }
 
@@ -36,6 +41,7 @@ class GitHubUploader {
         this.elements.fileInput.addEventListener('change', (e) => this.handleFileSelect(e));
         this.elements.uploadButton.addEventListener('click', () => this.handleUpload());
         this.elements.cancelButton.addEventListener('click', () => this.cancelUpload());
+        this.elements.releaseSelector.addEventListener('change', (e) => this.handleReleaseSelect(e));
         window.addEventListener('message', (event) => this.handleOAuthCallback(event));
     }
 
@@ -59,6 +65,46 @@ class GitHubUploader {
             this.elements.loginSection.style.display = 'none';
             this.elements.uploadSection.style.display = 'block';
             this.setStatus('Sẵn sàng để tải tệp', 'info');
+            this.loadReleases();
+        }
+    }
+
+    async loadReleases() {
+        try {
+            const response = await fetch(`https://api.github.com/repos/${CONFIG.REPO_OWNER}/${CONFIG.REPO_NAME}/releases`, {
+                headers: {
+                    'Authorization': `token ${this.token}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            });
+            
+            const releases = await response.json();
+            this.populateReleaseSelector(releases);
+        } catch (error) {
+            console.error('Error loading releases:', error);
+        }
+    }
+
+    populateReleaseSelector(releases) {
+        const selector = this.elements.releaseSelector;
+        selector.innerHTML = '<option value="new">-- Tạo Release Mới --</option>';
+        
+        releases.forEach(release => {
+            const option = document.createElement('option');
+            option.value = release.id;
+            option.textContent = release.name || release.tag_name;
+            selector.appendChild(option);
+        });
+    }
+
+    handleReleaseSelect(event) {
+        const releaseId = event.target.value;
+        if (releaseId === 'new') {
+            this.elements.releaseNameInput.style.display = 'block';
+            this.elements.releaseNotesInput.style.display = 'block';
+        } else {
+            this.elements.releaseNameInput.style.display = 'none';
+            this.elements.releaseNotesInput.style.display = 'none';
         }
     }
 
@@ -113,9 +159,9 @@ class GitHubUploader {
         const fileSize = this.formatFileSize(file.size);
         this.elements.fileInfo.style.display = 'block';
         this.elements.fileInfo.innerHTML = `
-            Tệp đã chọn: ${file.name}<br>
-            Kích thước: ${fileSize}<br>
-            Loại: ${file.type || 'application/octet-stream'}
+            <strong>Tệp đã chọn:</strong> ${file.name}<br>
+            <strong>Kích thước:</strong> ${fileSize}<br>
+            <strong>Loại:</strong> ${file.type || 'Không xác định'}
         `;
     }
 
@@ -140,53 +186,73 @@ class GitHubUploader {
         try {
             this.elements.uploadButton.disabled = true;
             this.elements.cancelButton.style.display = 'inline-block';
-            this.uploadAbortController = new AbortController();
             
-            this.setStatus('Đang tạo release...', 'info');
+            this.setStatus('Đang xử lý...', 'info');
             this.updateProgress(0, 'Chuẩn bị tải lên...');
 
-            const release = await this.createRelease();
+            // Xác định release (tạo mới hoặc dùng có sẵn)
+            const release = await this.prepareRelease();
+            this.currentRelease = release;
             this.updateProgress(30, 'Đang upload file...');
             
+            // Upload file
             const uploadResult = await this.uploadFileToRelease(file, release.upload_url);
             
-            this.updateProgress(100, 'Tải lên hoàn tất');
-            this.setStatus(`Tải tệp lên thành công!<br><a href="${uploadResult.browser_download_url}" target="_blank" class="download-link">Tải xuống</a>`, 'success');
-
+            // Cập nhật UI
+            this.updateProgress(100, 'Hoàn tất!');
+            this.showSuccessMessage(release, uploadResult);
             this.resetForm();
+            this.loadReleases(); // Refresh danh sách release
         } catch (error) {
             if (error.name !== 'AbortError') {
                 console.error('Upload error:', error);
-                this.setStatus(`Lỗi tải lên: ${error.message}`, 'error');
+                this.setStatus(`Lỗi: ${error.message}`, 'error');
             }
             this.resetForm();
-        } finally {
-            this.uploadAbortController = null;
         }
     }
 
-    async createRelease() {
-        const response = await fetch(`https://api.github.com/repos/${CONFIG.REPO_OWNER}/${CONFIG.REPO_NAME}/releases`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `token ${this.token}`,
-                'Content-Type': 'application/json',
-                'Accept': 'application/vnd.github.v3+json'
-            },
-            body: JSON.stringify({
-                tag_name: `v${Date.now()}`,
-                name: `Release ${new Date().toLocaleString()}`,
-                body: 'Tải lên từ web',
-                draft: false,
-                prerelease: false
-            })
-        });
+    async prepareRelease() {
+        const selectedReleaseId = this.elements.releaseSelector.value;
+        
+        if (selectedReleaseId === 'new') {
+            // Tạo release mới
+            const releaseName = this.elements.releaseNameInput.value || `Release ${new Date().toLocaleString()}`;
+            const releaseNotes = this.elements.releaseNotesInput.value || 'Tải lên từ web';
+            
+            const response = await fetch(`https://api.github.com/repos/${CONFIG.REPO_OWNER}/${CONFIG.REPO_NAME}/releases`, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `token ${this.token}`,
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/vnd.github.v3+json'
+                },
+                body: JSON.stringify({
+                    tag_name: `v${Date.now()}`,
+                    name: releaseName,
+                    body: releaseNotes,
+                    draft: false,
+                    prerelease: false
+                })
+            });
 
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.message || `Tạo release thất bại: ${response.statusText}`);
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || `Tạo release thất bại`);
+            }
+            return await response.json();
+        } else {
+            // Lấy thông tin release có sẵn
+            const response = await fetch(`https://api.github.com/repos/${CONFIG.REPO_OWNER}/${CONFIG.REPO_NAME}/releases/${selectedReleaseId}`, {
+                headers: {
+                    'Authorization': `token ${this.token}`,
+                    'Accept': 'application/vnd.github.v3+json'
+                }
+            });
+            
+            if (!response.ok) throw new Error('Không thể lấy thông tin release');
+            return await response.json();
         }
-        return await response.json();
     }
 
     async uploadFileToRelease(file, uploadUrl) {
@@ -201,41 +267,55 @@ class GitHubUploader {
 
             xhr.upload.onprogress = (event) => {
                 if (event.lengthComputable) {
-                    const percentComplete = Math.round((event.loaded / event.total) * 100);
-                    this.updateProgress(30 + (percentComplete * 0.7), `Đang tải lên: ${percentComplete}%`);
+                    const percentComplete = Math.round((event.loaded / event.total) * 70); // 70% cho upload
+                    this.updateProgress(30 + percentComplete, `Đang tải lên: ${Math.round((30 + percentComplete))}%`);
                 }
             };
 
             xhr.onload = () => {
                 if (xhr.status >= 200 && xhr.status < 300) {
                     try {
-                        const response = JSON.parse(xhr.responseText);
+                        const response = xhr.responseText ? JSON.parse(xhr.responseText) : { status: 'success' };
                         resolve(response);
-                    } catch (e) {
-                        reject(new Error('Invalid JSON response'));
+                    } catch {
+                        resolve({ status: 'success' }); // GitHub đôi khi trả về response trống
                     }
                 } else {
-                    reject(new Error(`Upload failed: ${xhr.status} - ${xhr.statusText}`));
+                    reject(new Error(`Upload failed: ${xhr.status}`));
                 }
             };
 
             xhr.onerror = () => {
-                reject(new Error('Network error during upload'));
-            };
-
-            xhr.onabort = () => {
-                reject(new DOMException('Upload cancelled', 'AbortError'));
+                if (xhr.readyState !== 4) {
+                    reject(new Error('Lỗi kết nối'));
+                }
             };
 
             xhr.send(file);
         });
     }
 
+    showSuccessMessage(release, uploadResult) {
+        const releaseUrl = release.html_url;
+        const downloadUrl = uploadResult.browser_download_url || 
+                          `${releaseUrl}/assets/${this.elements.fileInput.files[0].name}`;
+        
+        this.setStatus(`
+            <div class="upload-success">
+                <h4>🎉 Tải lên thành công!</h4>
+                <div class="success-actions">
+                    <a href="${releaseUrl}" target="_blank" class="btn btn-view">Xem Release</a>
+                    <a href="${downloadUrl}" target="_blank" class="btn btn-download">Tải Xuống</a>
+                </div>
+            </div>
+        `, 'success');
+    }
+
     cancelUpload() {
         if (this.uploadAbortController) {
             this.uploadAbortController.abort();
         }
-        this.setStatus('Tải lên đã bị huỷ', 'info');
+        this.setStatus('Đã hủy tải lên', 'info');
         this.resetForm();
     }
 
