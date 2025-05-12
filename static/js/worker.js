@@ -249,26 +249,25 @@ function prepareWorkerCodeForCloudflare(code) {
     // 4. Remove invisible Unicode characters
     code = code.replace(/[\u200B-\u200D\uFEFF]/g, '');
     
+    // 5. Ensure it's in proper ES module format
+    if (!code.includes('export default') && !code.includes('export {')) {
+        // If it's a simple function, wrap it in export default
+        if (code.match(/^(async\s+)?function\s+\w+\s*\(/)) {
+            code = `export default ${code}`;
+        } else if (code.match(/^\(.*\)\s*=>/)) {
+            code = `export default ${code}`;
+        } else {
+            // Otherwise, wrap in standard worker format
+            code = `export default {
+  async fetch(request, env, ctx) {
+    ${code}
+    return new Response('Hello World!');
+  },
+};`;
+        }
+    }
+    
     return code;
-}
-
-// Parse API response
-async function parseApiResponse(response) {
-    const contentType = response.headers.get('content-type');
-    let data;
-    
-    if (contentType && contentType.includes('application/json')) {
-        data = await response.json();
-    } else {
-        const text = await response.text();
-        throw new Error(`Phản hồi không hợp lệ từ API: ${text.substring(0, 100)}`);
-    }
-    
-    if (!response.ok) {
-        throw new Error(data.error || `Lỗi API (${response.status})`);
-    }
-    
-    return data;
 }
 
 async function updateWorker() {
@@ -277,8 +276,8 @@ async function updateWorker() {
         return;
     }
 
-    // CHỈ LẤY NỘI DUNG CODE TỪ EDITOR
-    const code = codeEditor.getValue();
+    const rawCode = codeEditor.getValue();
+    const code = prepareWorkerCodeForCloudflare(rawCode);
     
     if (!code.trim()) {
         showStatus('Nội dung worker không được để trống', 'error');
@@ -289,7 +288,6 @@ async function updateWorker() {
     try {
         setLoading(updateBtn, true, 'Đang lưu...');
 
-        // GỬI CHỈ CODE KHÔNG KÈM FILE KHÁC
         const response = await fetch('/api/update-worker', {
             method: 'POST',
             headers: { 
@@ -297,7 +295,7 @@ async function updateWorker() {
             },
             body: JSON.stringify({
                 workerId: currentWorker.id,
-                code: code,  // CHỈ GỬI CODE JS
+                code: code,
                 password: password
             })
         });
@@ -305,7 +303,7 @@ async function updateWorker() {
         const result = await response.json();
         
         if (!response.ok) {
-            throw new Error(result.error || 'Lỗi từ Cloudflare API');
+            throw new Error(result.error || result.message || 'Lỗi từ Cloudflare API');
         }
 
         currentWorker.lastModified = result.lastModified || new Date().toISOString();
@@ -317,39 +315,6 @@ async function updateWorker() {
         showStatus(error.message, 'error', 5000);
     } finally {
         setLoading(updateBtn, false, '<i class="fas fa-save"></i> Lưu thay đổi');
-    }
-}
-
-// Xử lý response từ Cloudflare API
-async function parseCloudflareResponse(response) {
-    try {
-        const data = await response.json();
-        
-        if (!response.ok) {
-            // Xử lý lỗi từ Cloudflare
-            const firstError = data.errors?.[0] || {};
-            let message = firstError.message || 'Lỗi không xác định từ Cloudflare';
-            
-            // Chuẩn hóa thông báo lỗi cú pháp
-            if (message.includes('SyntaxError')) {
-                message = message.split('\n')[0];
-            }
-            
-            return {
-                error: true,
-                message: message
-            };
-        }
-        
-        return data;
-        
-    } catch (e) {
-        // Fallback khi response không phải JSON
-        const text = await response.text();
-        return {
-            error: true,
-            message: text.substring(0, 200) || 'Lỗi không xác định'
-        };
     }
 }
 
