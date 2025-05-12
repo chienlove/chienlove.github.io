@@ -9,6 +9,7 @@ const CONFIG = {
 class GitHubUploader {
     constructor() {
         this.token = localStorage.getItem('github_token');
+        this.uploadAbortController = null;
         this.initializeElements();
         this.attachEventListeners();
         this.checkAuth();
@@ -137,18 +138,30 @@ class GitHubUploader {
         }
 
         try {
+            this.elements.uploadButton.disabled = true;
+            this.elements.cancelButton.style.display = 'inline-block';
+            this.uploadAbortController = new AbortController();
+            
             this.setStatus('Đang tạo release...', 'info');
             this.updateProgress(0, 'Chuẩn bị tải lên...');
 
             const release = await this.createRelease();
+            this.updateProgress(30, 'Đang upload file...');
+            
             const uploadResult = await this.uploadFileToRelease(file, release.upload_url);
-
+            
             this.updateProgress(100, 'Tải lên hoàn tất');
-            this.setStatus(`Tải tệp lên thành công!<br><a href="${uploadResult.browser_download_url}" target="_blank">Tải xuống</a>`, 'success');
+            this.setStatus(`Tải tệp lên thành công!<br><a href="${uploadResult.browser_download_url}" target="_blank" class="download-link">Tải xuống</a>`, 'success');
 
             this.resetForm();
         } catch (error) {
-            this.setStatus(`Lỗi tải lên: ${error.message}`, 'error');
+            if (error.name !== 'AbortError') {
+                console.error('Upload error:', error);
+                this.setStatus(`Lỗi tải lên: ${error.message}`, 'error');
+            }
+            this.resetForm();
+        } finally {
+            this.uploadAbortController = null;
         }
     }
 
@@ -169,40 +182,69 @@ class GitHubUploader {
             })
         });
 
-        if (!response.ok) throw new Error(`Tạo release thất bại: ${response.statusText}`);
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.message || `Tạo release thất bại: ${response.statusText}`);
+        }
         return await response.json();
     }
 
     async uploadFileToRelease(file, uploadUrl) {
         const finalUrl = uploadUrl.replace('{?name,label}', `?name=${encodeURIComponent(file.name)}`);
-        const response = await fetch(finalUrl, {
-            method: 'POST',
-            headers: {
-                'Authorization': `token ${this.token}`,
-                'Content-Type': file.type || 'application/octet-stream',
-                'Accept': 'application/vnd.github.v3+json'
-            },
-            body: file
+        
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', finalUrl, true);
+            xhr.setRequestHeader('Authorization', `token ${this.token}`);
+            xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+            xhr.setRequestHeader('Accept', 'application/vnd.github.v3+json');
+
+            xhr.upload.onprogress = (event) => {
+                if (event.lengthComputable) {
+                    const percentComplete = Math.round((event.loaded / event.total) * 100);
+                    this.updateProgress(30 + (percentComplete * 0.7), `Đang tải lên: ${percentComplete}%`);
+                }
+            };
+
+            xhr.onload = () => {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        resolve(response);
+                    } catch (e) {
+                        reject(new Error('Invalid JSON response'));
+                    }
+                } else {
+                    reject(new Error(`Upload failed: ${xhr.status} - ${xhr.statusText}`));
+                }
+            };
+
+            xhr.onerror = () => {
+                reject(new Error('Network error during upload'));
+            };
+
+            xhr.onabort = () => {
+                reject(new DOMException('Upload cancelled', 'AbortError'));
+            };
+
+            xhr.send(file);
         });
+    }
 
-        if (!response.ok) {
-            const errorText = await response.text();
-            throw new Error(`Upload lỗi: ${response.status} - ${errorText}`);
+    cancelUpload() {
+        if (this.uploadAbortController) {
+            this.uploadAbortController.abort();
         }
-
-        return await response.json();
+        this.setStatus('Tải lên đã bị huỷ', 'info');
+        this.resetForm();
     }
 
     resetForm() {
         this.elements.uploadButton.disabled = false;
+        this.elements.cancelButton.style.display = 'none';
         this.elements.fileInput.value = '';
         this.elements.fileInfo.style.display = 'none';
         this.updateProgress(0, '');
-    }
-
-    cancelUpload() {
-        this.setStatus('Tải lên đã bị huỷ', 'info');
-        this.resetForm();
     }
 }
 

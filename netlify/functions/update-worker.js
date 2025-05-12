@@ -15,20 +15,29 @@ function prepareWorkerCode(code) {
     // 4. Remove invisible Unicode characters
     code = code.replace(/[\u200B-\u200D\uFEFF]/g, '');
     
-    // 5. Ensure it's in proper ES module format
-    if (!code.includes('export default') && !code.includes('export {')) {
-        // If it's a simple function, wrap it in export default
-        if (code.match(/^(async\s+)?function\s+\w+\s*\(/)) {
+    // 5. Convert to proper ES module format
+    if (!code.includes('export default')) {
+        // Check for common patterns
+        if (code.match(/^\s*\{[\s\S]*\}\s*$/)) {
+            // If it's an object, wrap with export default
             code = `export default ${code}`;
-        } else if (code.match(/^\(.*\)\s*=>/)) {
+        } else if (code.match(/^(async\s+)?function\s+(\w+|\([^)]*\))\s*\(/)) {
+            // If it's a function (named or anonymous)
+            code = `export default ${code}`;
+        } else if (code.match(/^\(?([^=]*)\)?\s*=>/)) {
+            // If it's an arrow function
             code = `export default ${code}`;
         } else {
-            // Otherwise, wrap in standard worker format
+            // Default case - wrap in standard worker format
             code = `export default {
   async fetch(request, env, ctx) {
-    ${code}
-    return new Response('Hello World!');
-  },
+    try {
+      ${code}
+      return new Response('Hello World!');
+    } catch (err) {
+      return new Response(err.stack, { status: 500 });
+    }
+  }
 };`;
         }
     }
@@ -66,6 +75,7 @@ exports.handler = async (event) => {
 
         // Prepare code for Cloudflare
         const preparedCode = prepareWorkerCode(code);
+        console.log("Prepared code:", preparedCode); // Debug log
 
         // Call Cloudflare API
         const apiUrl = `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${workerId}`;
@@ -82,11 +92,11 @@ exports.handler = async (event) => {
         const apiResult = await apiResponse.json();
         
         if (!apiResponse.ok) {
-            // Extract the first error message if available
+            // Extract and clean error message
             const errorMessage = apiResult.errors?.[0]?.message || 'Lỗi không xác định từ Cloudflare';
-            
-            // Clean up syntax error messages
-            const cleanMessage = errorMessage.split('\n')[0];
+            const cleanMessage = errorMessage
+                .split('\n')[0]
+                .replace(/at worker\.js:\d+:\d+/g, '');
             
             return {
                 statusCode: apiResponse.status,

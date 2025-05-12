@@ -249,20 +249,25 @@ function prepareWorkerCodeForCloudflare(code) {
     // 4. Remove invisible Unicode characters
     code = code.replace(/[\u200B-\u200D\uFEFF]/g, '');
     
-    // 5. Ensure it's in proper ES module format
-    if (!code.includes('export default') && !code.includes('export {')) {
-        // If it's a simple function, wrap it in export default
-        if (code.match(/^(async\s+)?function\s+\w+\s*\(/)) {
+    // 5. Convert to proper ES module format
+    if (!code.includes('export default')) {
+        // Check if it's already in object format
+        if (code.match(/^\s*\{[\s\S]*\}\s*$/)) {
+            // If it's an object, wrap with export default
+            code = `export default ${code}`;
+        } else if (code.match(/^(async\s+)?function\s+\w+\s*\(/)) {
+            // If it's a function, convert to module
             code = `export default ${code}`;
         } else if (code.match(/^\(.*\)\s*=>/)) {
+            // If it's an arrow function, convert to module
             code = `export default ${code}`;
         } else {
-            // Otherwise, wrap in standard worker format
+            // Default case - wrap in standard worker format
             code = `export default {
   async fetch(request, env, ctx) {
     ${code}
     return new Response('Hello World!');
-  },
+  }
 };`;
         }
     }
