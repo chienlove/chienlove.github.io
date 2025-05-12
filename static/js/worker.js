@@ -277,7 +277,7 @@ async function updateWorker() {
         return;
     }
 
-    let code = codeEditor.getValue();
+    const code = codeEditor.getValue();
     
     if (!code.trim()) {
         showStatus('Nội dung worker không được để trống', 'error');
@@ -288,58 +288,44 @@ async function updateWorker() {
     try {
         setLoading(updateBtn, true, 'Đang lưu...');
 
-        // Thêm metadata vào code để debug
-        const debugCode = `// Worker: ${currentWorker.id}\n// Last update: ${new Date().toISOString()}\n${code}`;
-        
+        // Gửi nguyên bản code giống hệt Dashboard
         const response = await fetch('/api/update-worker', {
             method: 'POST',
             headers: { 
                 'Content-Type': 'application/json',
-                'X-Debug-Mode': 'true'
+                'X-Cloudflare-Simulation': 'dashboard'
             },
             body: JSON.stringify({
                 workerId: currentWorker.id,
-                code: debugCode,
-                password: password
+                code: code,
+                password: password,
+                raw: true
             })
         });
 
-        // Xử lý response
-        const responseText = await response.text();
-        let responseData;
+        const result = await response.json();
         
-        try {
-            responseData = JSON.parse(responseText);
-        } catch (e) {
-            throw new Error(`Invalid response: ${responseText.substring(0, 200)}`);
-        }
-
         if (!response.ok) {
-            const cloudflareError = responseData.errors?.[0] || {};
-            throw new Error(cloudflareError.message || `HTTP ${response.status}: ${response.statusText}`);
+            const error = result.errors?.[0] || {};
+            throw new Error(error.message || 'Lỗi từ Cloudflare API');
         }
 
-        // Cập nhật thành công
-        currentWorker.lastModified = responseData.lastModified || new Date().toISOString();
+        currentWorker.lastModified = result.lastModified || new Date().toISOString();
         document.getElementById('last-modified').textContent = formatDate(currentWorker.lastModified);
         showStatus('Lưu thành công!', 'success');
 
     } catch (error) {
-        console.error('Full error details:', {
-            workerId: currentWorker.id,
-            error: error.toString(),
-            stack: error.stack,
-            code: codeEditor.getValue().substring(0, 200)
-        });
+        console.error('Lỗi chi tiết:', error);
         
-        let userMessage = error.message;
-        if (error.message.includes('Unexpected token')) {
-            userMessage = 'Lỗi cú pháp: ' + error.message.split('\n')[0];
-        } else if (error.message.includes('Unauthorized')) {
-            userMessage = 'Lỗi xác thực: Kiểm tra lại mật khẩu hoặc API token';
+        let message = error.message;
+        if (message.includes('SyntaxError')) {
+            const lineMatch = message.match(/line (\d+)/);
+            message = lineMatch 
+                ? `Lỗi cú pháp dòng ${lineMatch[1]}: ${message.split('\n')[0]}`
+                : `Lỗi cú pháp: ${message.split('\n')[0]}`;
         }
         
-        showStatus(userMessage, 'error', 6000);
+        showStatus(message, 'error', 5000);
     } finally {
         setLoading(updateBtn, false, '<i class="fas fa-save"></i> Lưu thay đổi');
     }
