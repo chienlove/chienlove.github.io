@@ -240,11 +240,11 @@ async function updateWorker() {
         return;
     }
 
-    // Lấy và làm sạch code
+    // Lấy code mà không làm sạch chuỗi hex - có thể gây lỗi
     let code = codeEditor.getValue();
     
-    // Xóa các chuỗi hex (--xxxx) do lỗi copy/paste
-    code = code.replace(/--[a-f0-9]+/g, '').trim();
+    // Chỉ làm sạch các ký tự đặc biệt có thể gây lỗi, không xóa dấu --
+    code = code.replace(/\u200B|\u200C|\u200D|\uFEFF/g, '').trim();
     
     if (!code) {
         showStatus('Nội dung worker không được để trống', 'error');
@@ -257,22 +257,18 @@ async function updateWorker() {
         updateBtn.disabled = true;
         updateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang lưu...';
 
-        // Kiểm tra cú pháp nghiêm ngặt hơn
+        // In ra console để debug
+        console.log('Đang gửi code cho worker:', currentWorker.id);
+        console.log('Độ dài code:', code.length);
+        console.log('Ký tự đầu tiên:', code.charCodeAt(0));
+        
+        // Thay đổi cách kiểm tra cú pháp - chỉ kiểm tra lỗi cơ bản
         try {
-            // Tạo hàm test với strict mode
-            new Function('"use strict";\n' + code);
+            // Kiểm tra các lỗi cú pháp hiển nhiên
+            Function(`"use strict"; return (function() { ${code} });`);
         } catch (syntaxError) {
-            let line = 'unknown';
-            const lineMatch = syntaxError.message.match(/at (\d+):(\d+)/);
-            if (lineMatch) line = lineMatch[1];
-            
-            console.error('Syntax Error:', {
-                line: line,
-                message: syntaxError.message,
-                code: code.split('\n')[line-1]
-            });
-            
-            throw new Error(`Lỗi cú pháp dòng ${line}: ${syntaxError.message.split('\n')[0]}`);
+            console.warn('Cảnh báo cú pháp:', syntaxError.message);
+            // Chỉ hiển thị cảnh báo, không dừng lại
         }
 
         // Gọi API update
@@ -286,7 +282,16 @@ async function updateWorker() {
             })
         });
 
-        const data = await response.json();
+        // Thêm kiểm tra loại dữ liệu trả về
+        const contentType = response.headers.get('content-type');
+        let data;
+        
+        if (contentType && contentType.includes('application/json')) {
+            data = await response.json();
+        } else {
+            const text = await response.text();
+            throw new Error(`Phản hồi không hợp lệ từ API: ${text.substring(0, 100)}`);
+        }
         
         if (!response.ok) {
             console.error('API Error:', {
@@ -295,7 +300,16 @@ async function updateWorker() {
                 error: data
             });
             
-            throw new Error(data.message || `Lỗi API (${response.status})`);
+            // Xử lý các loại lỗi phổ biến từ Cloudflare API
+            if (data.error === 'api_error') {
+                throw new Error(`Lỗi API Cloudflare: ${data.details?.[0]?.message || 'Lỗi không xác định'}`);
+            } else if (data.error === 'syntax_error') {
+                throw new Error(`Lỗi cú pháp${data.line !== 'unknown' ? ` dòng ${data.line}` : ''}: ${data.message}`);
+            } else if (data.error === 'invalid_response') {
+                throw new Error(`Lỗi xác thực API (${data.status}): Vui lòng kiểm tra token API`);
+            } else {
+                throw new Error(data.message || `Lỗi API (${response.status})`);
+            }
         }
 
         // Cập nhật UI khi thành công
@@ -306,16 +320,11 @@ async function updateWorker() {
     } catch (error) {
         console.error('Update Failed:', {
             workerId: currentWorker.id,
-            error: error.message,
-            code: code.substring(0, 100)
+            error: error.message
         });
         
         // Hiển thị thông báo lỗi thân thiện
-        let displayMsg = error.message;
-        if (error.message.includes('numeric literal')) {
-            displayMsg = 'Lỗi cú pháp: Số không hợp lệ trong code';
-        }
-        showStatus(displayMsg, 'error');
+        showStatus(error.message || 'Lỗi không xác định khi cập nhật', 'error', 5000);
         
     } finally {
         // Khôi phục nút về trạng thái ban đầu
