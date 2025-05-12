@@ -277,6 +277,7 @@ async function updateWorker() {
         return;
     }
 
+    // CHỈ LẤY NỘI DUNG CODE TỪ EDITOR
     const code = codeEditor.getValue();
     
     if (!code.trim()) {
@@ -288,26 +289,23 @@ async function updateWorker() {
     try {
         setLoading(updateBtn, true, 'Đang lưu...');
 
-        // Gửi nguyên bản code giống hệt Dashboard
+        // GỬI CHỈ CODE KHÔNG KÈM FILE KHÁC
         const response = await fetch('/api/update-worker', {
             method: 'POST',
             headers: { 
-                'Content-Type': 'application/json',
-                'X-Cloudflare-Simulation': 'dashboard'
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 workerId: currentWorker.id,
-                code: code,
-                password: password,
-                raw: true
+                code: code,  // CHỈ GỬI CODE JS
+                password: password
             })
         });
 
         const result = await response.json();
         
         if (!response.ok) {
-            const error = result.errors?.[0] || {};
-            throw new Error(error.message || 'Lỗi từ Cloudflare API');
+            throw new Error(result.error || 'Lỗi từ Cloudflare API');
         }
 
         currentWorker.lastModified = result.lastModified || new Date().toISOString();
@@ -316,16 +314,7 @@ async function updateWorker() {
 
     } catch (error) {
         console.error('Lỗi chi tiết:', error);
-        
-        let message = error.message;
-        if (message.includes('SyntaxError')) {
-            const lineMatch = message.match(/line (\d+)/);
-            message = lineMatch 
-                ? `Lỗi cú pháp dòng ${lineMatch[1]}: ${message.split('\n')[0]}`
-                : `Lỗi cú pháp: ${message.split('\n')[0]}`;
-        }
-        
-        showStatus(message, 'error', 5000);
+        showStatus(error.message, 'error', 5000);
     } finally {
         setLoading(updateBtn, false, '<i class="fas fa-save"></i> Lưu thay đổi');
     }

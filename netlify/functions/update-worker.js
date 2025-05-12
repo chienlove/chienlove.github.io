@@ -2,44 +2,40 @@ const fetch = require('node-fetch');
 
 exports.handler = async (event) => {
     try {
-        // 1. Kiểm tra headers và body
+        // CHỈ CHẤP NHẬN JSON
         if (event.headers['content-type'] !== 'application/json') {
-            throw new Error('Chỉ chấp nhận JSON');
+            throw new Error('Chỉ chấp nhận dữ liệu JSON');
         }
 
-        const { workerId, code, password, raw } = JSON.parse(event.body);
+        const { workerId, code, password } = JSON.parse(event.body);
         
-        // 2. Xác thực
+        // XÁC THỰC
         if (password !== process.env.EDITOR_PASSWORD) {
             return { statusCode: 401, body: JSON.stringify({ error: 'Unauthorized' }) };
         }
 
-        // 3. Chuẩn bị request giống Dashboard
+        // GỌI CLOUDFLARE API CHỈ VỚI CODE
         const apiUrl = `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${workerId}`;
         
         const apiResponse = await fetch(apiUrl, {
             method: 'PUT',
             headers: {
                 'Authorization': `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
-                'Content-Type': 'application/javascript',
-                'X-Cloudflare-Intent': 'editor' // Giống Dashboard
+                'Content-Type': 'application/javascript' // QUAN TRỌNG
             },
-            body: code // Gửi nguyên bản
+            body: code // CHỈ GỬI CODE JS
         });
 
-        // 4. Xử lý response giống Dashboard
-        const responseText = await apiResponse.text();
-        let apiResult;
+        const apiResult = await apiResponse.json();
         
-        try {
-            apiResult = JSON.parse(responseText);
-        } catch {
-            throw new Error(`Cloudflare trả về response không hợp lệ: ${responseText.substring(0, 200)}`);
-        }
-
         if (!apiResponse.ok) {
-            const error = apiResult.errors?.[0] || {};
-            throw new Error(error.message || 'Lỗi không xác định từ Cloudflare');
+            return {
+                statusCode: apiResponse.status,
+                body: JSON.stringify({
+                    error: 'cloudflare_error',
+                    message: apiResult.errors?.[0]?.message || 'Lỗi không xác định từ Cloudflare'
+                })
+            };
         }
 
         return {
