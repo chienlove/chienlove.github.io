@@ -1,6 +1,6 @@
-exports.handler = async function(event, context) {
-  const code = event.queryStringParameters.code;
-  
+exports.handler = async function (event, context) {
+  const code = event.queryStringParameters.code || '';
+
   return {
     statusCode: 200,
     headers: {
@@ -9,26 +9,29 @@ exports.handler = async function(event, context) {
     },
     body: `
       <html>
+        <head><title>GitHub OAuth Callback</title></head>
         <body>
-          <p id="message">Authentication successful. Processing...</p>
+          <p id="message">Đăng nhập thành công. Đang xử lý...</p>
           <script>
             function sendMessageAndClose() {
               if (window.opener) {
                 window.opener.postMessage({ type: 'oauth', code: '${code}' }, '*');
-                document.getElementById('message').textContent = 'Authentication successful. You can close this window.';
+                document.getElementById('message').textContent = 'Đăng nhập thành công. Bạn có thể đóng cửa sổ này.';
               } else {
-                document.getElementById('message').textContent = 'Authentication successful. Please close this window and refresh the original page.';
+                document.getElementById('message').textContent = 'Đăng nhập thành công. Hãy quay lại trang chính.';
               }
             }
-            // Gọi hàm ngay lập tức
+
             sendMessageAndClose();
-            
-            // Thêm một listener để nhận phản hồi từ cửa sổ chính
+
             window.addEventListener('message', function(event) {
               if (event.data === 'token_received') {
                 window.close();
               }
             });
+
+            // Tự động đóng nếu người dùng quên
+            setTimeout(() => window.close(), 5000);
           </script>
         </body>
       </html>

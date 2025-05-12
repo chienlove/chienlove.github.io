@@ -1,112 +1,83 @@
 const axios = require('axios');
 
-exports.handler = async function(event, context) {
-  // CORS headers
+exports.handler = async function (event, context) {
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Allow-Headers': 'Content-Type',
     'Access-Control-Max-Age': '86400',
   };
 
-  // Handle preflight OPTIONS request
+  // Handle preflight request
   if (event.httpMethod === 'OPTIONS') {
-    return {
-      statusCode: 204,
-      headers,
-      body: ''
-    };
+    return { statusCode: 204, headers, body: '' };
   }
 
-  // Validate request method
   if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      headers,
-      body: JSON.stringify({ error: 'Method Not Allowed' })
-    };
+    return { statusCode: 405, headers, body: JSON.stringify({ error: 'Method Not Allowed' }) };
   }
-
-  console.log("get-token function called");
 
   try {
-    // Validate request body
-    if (!event.body) {
-      throw new Error('Missing request body');
-    }
+    const body = JSON.parse(event.body || '{}');
+    const code = body.code;
 
-    // Parse and validate code from request body
-    const { code } = JSON.parse(event.body);
     if (!code) {
-      throw new Error('Missing authorization code');
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ error: 'Missing authorization code' })
+      };
     }
 
-    console.log("Received code:", code);
+    // Exchange code for access token
+    const tokenRes = await axios.post(
+      'https://github.com/login/oauth/access_token',
+      {
+        client_id: process.env.GITHUB_CLIENT_ID,
+        client_secret: process.env.GITHUB_CLIENT_SECRET,
+        code
+      },
+      {
+        headers: {
+          Accept: 'application/json',
+          'Content-Type': 'application/json'
+        }
+      }
+    );
 
-    // Request access token from GitHub
-    const tokenResponse = await axios.post('https://github.com/login/oauth/access_token', {
-      client_id: process.env.GITHUB_CLIENT_ID,
-      client_secret: process.env.GITHUB_CLIENT_SECRET,
-      code: code
-    }, {
+    const { access_token, error_description } = tokenRes.data;
+
+    if (!access_token) {
+      throw new Error(error_description || 'Failed to retrieve access token');
+    }
+
+    // Validate token
+    await axios.get('https://api.github.com/user', {
       headers: {
-        Accept: 'application/json',
-        'Content-Type': 'application/json'
+        Authorization: `token ${access_token}`,
+        Accept: 'application/vnd.github.v3+json'
       }
     });
 
-    console.log("Token response received");
-
-    const { access_token, error_description } = tokenResponse.data;
-
-    // Check for error in GitHub response
-    if (!access_token) {
-      throw new Error(error_description || 'Failed to get access token from GitHub');
-    }
-
-    // Validate token by making a test API call
-    try {
-      await axios.get('https://api.github.com/user', {
-        headers: {
-          Authorization: `token ${access_token}`,
-          Accept: 'application/vnd.github.v3+json'
-        }
-      });
-      console.log("Token validated successfully");
-    } catch (error) {
-      console.error("Token validation failed:", error.response?.data);
-      throw new Error('Invalid token received from GitHub');
-    }
-
-    // Return successful response with token
     return {
       statusCode: 200,
       headers: {
         ...headers,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({
-        access_token,
-        token_type: 'bearer'
-      })
+      body: JSON.stringify({ access_token, token_type: 'bearer' })
     };
-
-  } catch (error) {
-    // Error handling with appropriate status codes
-    console.error("Error in get-token function:", error);
-    
-    const statusCode = error.response?.status || 500;
-    const errorMessage = error.message || 'Internal Server Error';
-
+  } catch (err) {
+    console.error('OAuth Error:', err.response?.data || err.message);
     return {
-      statusCode,
+      statusCode: err.response?.status || 500,
       headers: {
         ...headers,
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        error: errorMessage,
-        details: error.response?.data || {}
+        error: err.message || 'Internal Server Error',
+        details: err.response?.data || {}
       })
     };
   }
