@@ -279,7 +279,6 @@ async function updateWorker() {
 
     let code = codeEditor.getValue();
     
-    // Kiểm tra code trống
     if (!code.trim()) {
         showStatus('Nội dung worker không được để trống', 'error');
         return;
@@ -289,7 +288,11 @@ async function updateWorker() {
     try {
         setLoading(updateBtn, true, 'Đang lưu...');
 
-        // Gửi code nguyên bản không qua xử lý (để giống với Dashboard)
+        // Thêm log debug để kiểm tra
+        console.log('Worker ID:', currentWorker.id);
+        console.log('Code length:', code.length);
+        console.log('First 50 chars:', code.substring(0, 50));
+
         const response = await fetch('/api/update-worker', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -300,31 +303,38 @@ async function updateWorker() {
             })
         });
 
-        // Xử lý response đặc biệt cho Cloudflare
-        const result = await parseCloudflareResponse(response);
-        
-        if (result.error) {
-            throw new Error(result.message);
+        // Xử lý response chi tiết hơn
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => null);
+            const errorMsg = errorData?.error?.message || 
+                            errorData?.message || 
+                            `HTTP ${response.status}: ${response.statusText}`;
+            throw new Error(errorMsg || 'Lỗi không xác định từ Cloudflare');
         }
 
-        // Cập nhật thông tin worker
-        currentWorker.lastModified = new Date().toISOString();
+        const result = await response.json();
+        
+        // Cập nhật thông tin thành công
+        currentWorker.lastModified = result.lastModified || new Date().toISOString();
         document.getElementById('last-modified').textContent = formatDate(currentWorker.lastModified);
         showStatus('Lưu thành công!', 'success');
 
     } catch (error) {
-        console.error('Lỗi khi lưu:', {
+        console.error('Chi tiết lỗi:', {
             workerId: currentWorker.id,
-            error: error.message
+            error: error,
+            stack: error.stack
         });
         
-        // Hiển thị thông báo lỗi thân thiện
+        // Phân loại lỗi cụ thể
         let errorMsg = error.message;
-        if (errorMsg.includes('Unexpected token') || errorMsg.includes('SyntaxError')) {
-            errorMsg = 'Lỗi cú pháp JavaScript: ' + errorMsg.split('\n')[0];
+        if (error.message.includes('SyntaxError')) {
+            errorMsg = `Lỗi cú pháp: ${error.message.split('\n')[0]}`;
+        } else if (error.message.includes('Unauthorized')) {
+            errorMsg = 'Lỗi xác thực: Token API không hợp lệ hoặc hết hạn';
         }
-        showStatus(errorMsg, 'error', 5000);
         
+        showStatus(errorMsg, 'error', 5000);
     } finally {
         setLoading(updateBtn, false, '<i class="fas fa-save"></i> Lưu thay đổi');
     }

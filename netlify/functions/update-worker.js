@@ -2,61 +2,79 @@ const fetch = require('node-fetch');
 
 exports.handler = async (event) => {
     try {
-        // Validate request
+        // 1. Kiểm tra request cơ bản
+        if (!event.body) {
+            return { statusCode: 400, body: JSON.stringify({ error: 'Missing request body' }) };
+        }
+
         const { workerId, code, password } = JSON.parse(event.body);
         
         if (!workerId || !code || !password) {
             return { statusCode: 400, body: JSON.stringify({ error: 'Missing required parameters' }) };
         }
 
-        // Verify password
+        // 2. Xác thực mật khẩu
         if (password !== process.env.EDITOR_PASSWORD) {
             return { statusCode: 401, body: JSON.stringify({ error: 'Unauthorized' }) };
         }
 
-        // Gọi Cloudflare API
+        // 3. Chuẩn bị API request
         const apiUrl = `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${workerId}`;
         
+        console.log(`Updating worker: ${workerId}`);
+        console.log(`Code length: ${code.length}`);
+
+        // 4. Gọi Cloudflare API
         const apiResponse = await fetch(apiUrl, {
             method: 'PUT',
             headers: {
                 'Authorization': `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
                 'Content-Type': 'application/javascript'
             },
-            body: code // Gửi nguyên bản code đã được chuẩn hóa
+            body: code
         });
 
-        // Cloudflare API thường trả về JSON ngay cả khi có lỗi
-        const apiResult = await apiResponse.json();
+        // 5. Xử lý response
+        const responseText = await apiResponse.text();
+        let apiResult;
         
+        try {
+            apiResult = JSON.parse(responseText);
+        } catch (e) {
+            console.error('Failed to parse API response:', responseText);
+            return {
+                statusCode: 500,
+                body: JSON.stringify({
+                    error: 'invalid_response',
+                    message: 'Cloudflare API returned malformed response',
+                    details: responseText.substring(0, 200)
+                })
+            };
+        }
+
+        // 6. Kiểm tra lỗi từ Cloudflare
         if (!apiResponse.ok) {
-            // Xử lý lỗi đặc biệt từ Cloudflare
-            const firstError = apiResult.errors?.[0] || {};
-            let errorMessage = firstError.message || 'Unknown API error';
+            console.error('Cloudflare API error:', apiResult);
             
-            // Nếu là lỗi cú pháp, trích xuất thông tin dòng lỗi
+            const firstError = apiResult.errors?.[0] || {};
+            let errorMessage = firstError.message || 'Unknown Cloudflare API error';
+            
+            // Chuẩn hóa thông báo lỗi
             if (errorMessage.includes('SyntaxError')) {
-                const lineMatch = errorMessage.match(/line (\d+)/);
-                return {
-                    statusCode: 422, // Unprocessable Entity
-                    body: JSON.stringify({
-                        error: 'syntax_error',
-                        message: errorMessage.split('\n')[0],
-                        line: lineMatch ? lineMatch[1] : 'unknown'
-                    })
-                };
+                errorMessage = errorMessage.split('\n')[0];
             }
             
             return {
                 statusCode: apiResponse.status,
                 body: JSON.stringify({
-                    error: 'api_error',
+                    error: 'cloudflare_error',
                     message: errorMessage,
                     details: apiResult.errors
                 })
             };
         }
 
+        // 7. Trả về thành công
         return {
             statusCode: 200,
             body: JSON.stringify({
@@ -66,12 +84,13 @@ exports.handler = async (event) => {
         };
         
     } catch (error) {
-        console.error('Internal error:', error);
+        console.error('Server error:', error);
         return {
             statusCode: 500,
             body: JSON.stringify({
-                error: 'internal_error',
-                message: error.message
+                error: 'server_error',
+                message: error.message,
+                stack: error.stack
             })
         };
     }
