@@ -233,18 +233,54 @@ window.loadWorker = async function(workerId) {
     }
 };
 
+// Prepare worker code for Cloudflare API
+function prepareWorkerCodeForCloudflare(code) {
+    // 1. Remove BOM if exists
+    if (code.charCodeAt(0) === 0xFEFF) {
+        code = code.slice(1);
+    }
+    
+    // 2. Normalize line endings to LF
+    code = code.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+    
+    // 3. Trim whitespace
+    code = code.trim();
+    
+    // 4. Remove invisible Unicode characters
+    code = code.replace(/[\u200B-\u200D\uFEFF]/g, '');
+    
+    return code;
+}
+
+// Parse API response
+async function parseApiResponse(response) {
+    const contentType = response.headers.get('content-type');
+    let data;
+    
+    if (contentType && contentType.includes('application/json')) {
+        data = await response.json();
+    } else {
+        const text = await response.text();
+        throw new Error(`Phản hồi không hợp lệ từ API: ${text.substring(0, 100)}`);
+    }
+    
+    if (!response.ok) {
+        throw new Error(data.error || `Lỗi API (${response.status})`);
+    }
+    
+    return data;
+}
+
 async function updateWorker() {
-    // Kiểm tra worker hợp lệ
     if (!currentWorker.id || !/^[a-z0-9_-]+$/i.test(currentWorker.id)) {
         showStatus('Vui lòng chọn worker hợp lệ từ danh sách', 'error');
         return;
     }
 
-    // Lấy code mà không làm sạch chuỗi hex - có thể gây lỗi
     let code = codeEditor.getValue();
     
-    // Chỉ làm sạch các ký tự đặc biệt có thể gây lỗi, không xóa dấu --
-    code = code.replace(/\u200B|\u200C|\u200D|\uFEFF/g, '').trim();
+    // Prepare code exactly like Cloudflare Dashboard does
+    code = prepareWorkerCodeForCloudflare(code);
     
     if (!code) {
         showStatus('Nội dung worker không được để trống', 'error');
@@ -253,25 +289,8 @@ async function updateWorker() {
 
     const updateBtn = document.getElementById('update-btn');
     try {
-        // Set trạng thái loading
-        updateBtn.disabled = true;
-        updateBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang lưu...';
+        setLoading(updateBtn, true, 'Đang lưu...');
 
-        // In ra console để debug
-        console.log('Đang gửi code cho worker:', currentWorker.id);
-        console.log('Độ dài code:', code.length);
-        console.log('Ký tự đầu tiên:', code.charCodeAt(0));
-        
-        // Thay đổi cách kiểm tra cú pháp - chỉ kiểm tra lỗi cơ bản
-        try {
-            // Kiểm tra các lỗi cú pháp hiển nhiên
-            Function(`"use strict"; return (function() { ${code} });`);
-        } catch (syntaxError) {
-            console.warn('Cảnh báo cú pháp:', syntaxError.message);
-            // Chỉ hiển thị cảnh báo, không dừng lại
-        }
-
-        // Gọi API update
         const response = await fetch('/api/update-worker', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -282,37 +301,8 @@ async function updateWorker() {
             })
         });
 
-        // Thêm kiểm tra loại dữ liệu trả về
-        const contentType = response.headers.get('content-type');
-        let data;
+        const data = await parseApiResponse(response);
         
-        if (contentType && contentType.includes('application/json')) {
-            data = await response.json();
-        } else {
-            const text = await response.text();
-            throw new Error(`Phản hồi không hợp lệ từ API: ${text.substring(0, 100)}`);
-        }
-        
-        if (!response.ok) {
-            console.error('API Error:', {
-                status: response.status,
-                workerId: currentWorker.id,
-                error: data
-            });
-            
-            // Xử lý các loại lỗi phổ biến từ Cloudflare API
-            if (data.error === 'api_error') {
-                throw new Error(`Lỗi API Cloudflare: ${data.details?.[0]?.message || 'Lỗi không xác định'}`);
-            } else if (data.error === 'syntax_error') {
-                throw new Error(`Lỗi cú pháp${data.line !== 'unknown' ? ` dòng ${data.line}` : ''}: ${data.message}`);
-            } else if (data.error === 'invalid_response') {
-                throw new Error(`Lỗi xác thực API (${data.status}): Vui lòng kiểm tra token API`);
-            } else {
-                throw new Error(data.message || `Lỗi API (${response.status})`);
-            }
-        }
-
-        // Cập nhật UI khi thành công
         currentWorker.lastModified = data.lastModified || new Date().toISOString();
         document.getElementById('last-modified').textContent = formatDate(currentWorker.lastModified);
         showStatus('Lưu thành công!', 'success');
@@ -323,13 +313,19 @@ async function updateWorker() {
             error: error.message
         });
         
-        // Hiển thị thông báo lỗi thân thiện
-        showStatus(error.message || 'Lỗi không xác định khi cập nhật', 'error', 5000);
-        
+        // Handle Cloudflare syntax errors specifically
+        if (error.message.includes('syntax_error')) {
+            try {
+                const errorData = JSON.parse(error.message.replace('Phản hồi không hợp lệ từ API: ', ''));
+                showStatus(`Lỗi cú pháp${errorData.line !== 'unknown' ? ` dòng ${errorData.line}` : ''}: ${errorData.message}`, 'error', 5000);
+            } catch (e) {
+                showStatus(error.message, 'error', 5000);
+            }
+        } else {
+            showStatus(error.message || 'Lỗi không xác định khi cập nhật', 'error', 5000);
+        }
     } finally {
-        // Khôi phục nút về trạng thái ban đầu
-        updateBtn.disabled = false;
-        updateBtn.innerHTML = '<i class="fas fa-save"></i> Lưu thay đổi';
+        setLoading(updateBtn, false, '<i class="fas fa-save"></i> Lưu thay đổi');
     }
 }
 
