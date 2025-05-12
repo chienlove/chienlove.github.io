@@ -235,44 +235,32 @@ window.loadWorker = async function(workerId) {
 
 // Prepare worker code for Cloudflare API
 function prepareWorkerCodeForCloudflare(code) {
-    // 1. Remove BOM if exists
-    if (code.charCodeAt(0) === 0xFEFF) {
-        code = code.slice(1);
-    }
-    
-    // 2. Normalize line endings to LF
-    code = code.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-    
-    // 3. Trim whitespace
-    code = code.trim();
-    
-    // 4. Remove invisible Unicode characters
+    // 1. Remove BOM and normalize
+    if (code.charCodeAt(0) === 0xFEFF) code = code.slice(1);
+    code = code.replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
     code = code.replace(/[\u200B-\u200D\uFEFF]/g, '');
-    
-    // 5. Convert to proper ES module format
-    if (!code.includes('export default')) {
-        // Check if it's already in object format
-        if (code.match(/^\s*\{[\s\S]*\}\s*$/)) {
-            // If it's an object, wrap with export default
-            code = `export default ${code}`;
-        } else if (code.match(/^(async\s+)?function\s+\w+\s*\(/)) {
-            // If it's a function, convert to module
-            code = `export default ${code}`;
-        } else if (code.match(/^\(.*\)\s*=>/)) {
-            // If it's an arrow function, convert to module
-            code = `export default ${code}`;
-        } else {
-            // Default case - wrap in standard worker format
-            code = `export default {
+
+    // 2. Check if already in ES module format
+    if (/export\s+(default|{)/.test(code)) {
+        return code;
+    }
+
+    // 3. Handle different code patterns
+    if (/^\s*\{/.test(code) && /\}\s*$/.test(code)) {
+        // Case: Object literal (may contain colons)
+        return `export default ${code}`;
+    } else if (/^(async\s+)?(function\s*\w*|\([^)]*\))\s*(=>)?\s*\{/.test(code)) {
+        // Case: Function or arrow function
+        return `export default ${code}`;
+    } else {
+        // Default case: Wrap in standard worker format
+        return `export default {
   async fetch(request, env, ctx) {
     ${code}
     return new Response('Hello World!');
   }
 };`;
-        }
     }
-    
-    return code;
 }
 
 async function updateWorker() {
