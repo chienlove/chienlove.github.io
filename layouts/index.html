@@ -1,26 +1,5 @@
 {{ define "main" }}
 <main class="container">
-    <!-- Chuyên mục Ứng dụng -->
-    <div class="section">
-        <h2 class="section-title">Ứng dụng</h2>
-        <div class="app-list">
-            {{ range first 10 (where .Site.RegularPages "Type" "in" (slice "apps")) }}
-                <div class="app-item">
-                    <a href="{{ .Permalink }}" class="app-link">
-                        <img src="{{ .Params.Icon }}" alt="{{ .Title }}" class="app-icon">
-                        <div class="app-item-content">
-                            <h3 class="app-title">{{ .Title }}</h3>
-                            <p class="app-developer">{{ .Params.Developer }}</p>
-                        </div>
-                    </a>
-                    <div class="app-meta">
-                        <a href="{{ .Permalink }}" class="download-btn">Tải</a>
-                        <span class="app-version"><i class="fas fa-arrow-up"></i> {{ .Params.Version }}</span>
-                    </div>
-                </div>
-            {{ end }}
-        </div>
-    </div>
 
     <!-- Chuyên mục Tool Jailbreak -->
     <div class="section">
@@ -49,32 +28,6 @@
             {{ end }}
         </div>
     </div>
-
-    <div class="section">
-    <h2 class="section-title">Bài viết mới nhất</h2>
-    <div class="post-list">
-        {{ range first 10 (where .Site.RegularPages "Type" "in" (slice "posts")) }}
-        <article class="post-item">
-            <a href="{{ .Permalink }}" class="post-link">
-                {{ with .Params.thumbnail }}
-                <img src="{{ . }}" alt="{{ $.Title }}" class="post-image">
-                {{ end }}
-                <div class="post-item-content">
-                    {{ with .Params.category }}
-                    <span class="post-category">{{ . }}</span>
-                    {{ end }}
-                    <h3 class="post-title">{{ .Title }}</h3>
-                    <span class="post-time" data-time="{{ .Date.Format "2006-01-02T15:04:05Z07:00" }}">Đang tải...</span>
-                    <p class="post-summary">{{ .Summary | truncate 150 }}</p>
-                </div>
-            </a>
-            <div class="post-meta">
-                <a href="{{ .Permalink }}" class="read-more">Đọc thêm</a>
-            </div>
-        </article>
-        {{ end }}
-    </div>
-</div>
     <!-- status -->
   <script>
   fetch('/api/check-status')  // Đường dẫn đến Netlify Function
