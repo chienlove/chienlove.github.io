@@ -1,5 +1,0 @@
-# Chuyển hướng yêu cầu đến API để xử lý tải xuống
-/download/:appId  /.netlify/functions/download?appId=:appId  302
-
-# Chuyển hướng yêu cầu đến trang intermediate
-/intermediate/:appId  /intermediate.html?appId=:appId  200
