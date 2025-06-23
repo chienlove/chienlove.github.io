@@ -3,44 +3,44 @@ set -e
 
 EMAIL="$1"
 PASSWORD="$2"
-VERSION="v1.0.3"
-DOWNLOAD_URL="https://github.com/majd/ipatool/releases/download/$VERSION/ipatool"
+VERSION="2.2.0"
+FILENAME="ipatool-$VERSION-linux-amd64"
+TARBALL="$FILENAME.tar.gz"
+DOWNLOAD_URL="https://github.com/majd/ipatool/releases/download/v$VERSION/$TARBALL"
 
 if [[ -z "$EMAIL" || -z "$PASSWORD" ]]; then
   echo "❌ Missing Apple ID or password"
   exit 1
 fi
 
-# === Download ipatool v1.0.3 (no extract needed)
+# === Download ipatool
 if [[ ! -f "./ipatool" ]]; then
   echo "⬇️ Downloading ipatool $VERSION..."
-  curl -L -o ipatool "$DOWNLOAD_URL"
+  curl -L -o "$TARBALL" "$DOWNLOAD_URL"
+  tar -xzf "$TARBALL"
+  cp "$FILENAME/bin/ipatool" ./ipatool
   chmod +x ipatool
+  rm -rf "$TARBALL" "$FILENAME"
 fi
 
-# === Authenticate
-echo "🔐 Logging in to Apple ID..."
-RESULT=$(./ipatool login -u "$EMAIL" -p "$PASSWORD" --json || true)
+# === Run signin
+echo "🔐 Signing in..."
+OUTPUT=$(./ipatool auth signin --username "$EMAIL" --password "$PASSWORD" 2>&1 || true)
 
-echo "$RESULT" > result.json
+echo "$OUTPUT"
 
-STATE=$(jq -r '.state' result.json)
-DSID=$(jq -r '.session?.account?.dsPersonId // empty' result.json)
-AUTH_TYPE=$(jq -r '.authType // empty' result.json)
-ERROR_MSG=$(jq -r '.errorMessage // empty' result.json)
-
-# === Handle result
-if [[ "$STATE" == "success" && -n "$DSID" ]]; then
-  echo "✅ Login successful. dsid=$DSID"
+# === Check result
+if echo "$OUTPUT" | grep -iq "Two-factor authentication is enabled"; then
+  echo "🔐 Apple ID requires 2FA."
   exit 0
-elif [[ "$AUTH_TYPE" == "hsa2" ]]; then
-  echo "🔐 2FA required."
-  exit 0
-elif [[ -n "$ERROR_MSG" ]]; then
-  echo "❌ Error: $ERROR_MSG"
+elif echo "$OUTPUT" | grep -iq "Invalid credentials"; then
+  echo "❌ Invalid Apple ID or password."
   exit 1
+elif echo "$OUTPUT" | grep -iq "Signed in successfully"; then
+  echo "✅ Login successful (2FA not enabled)."
+  exit 0
 else
-  echo "❓ Unknown state. Full output:"
-  cat result.json
+  echo "❓ Unknown response:"
+  echo "$OUTPUT"
   exit 1
 fi
