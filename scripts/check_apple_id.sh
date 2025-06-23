@@ -18,7 +18,6 @@ if [[ ! -f "./ipatool" ]]; then
   curl -L -o "$TARBALL" "$DOWNLOAD_URL"
   tar -xzf "$TARBALL"
 
-  # ✅ Đường dẫn thực tế sau khi giải nén
   BIN_FILE="bin/ipatool-$VERSION-linux-amd64"
   if [[ ! -f "$BIN_FILE" ]]; then
     echo "❌ Binary not found at $BIN_FILE"
@@ -30,25 +29,28 @@ if [[ ! -f "./ipatool" ]]; then
   rm -rf "$TARBALL" bin/
 fi
 
-# === Xem các lệnh có sẵn (bạn yêu cầu thêm help)
+# === Show version & help
 echo "ℹ️ Checking ipatool version and help:"
 ./ipatool --version
 ./ipatool --help
 
-# === Run signin
-echo "🔐 Signing in..."
-OUTPUT=$(./ipatool auth signin --username "$EMAIL" --password "$PASSWORD" 2>&1 || true)
+# === Sign in (correct syntax for v2.2.0)
+echo "🔐 Signing in (non-interactive)..."
+export IPATOOL_USERNAME="$EMAIL"
+export IPATOOL_PASSWORD="$PASSWORD"
+
+OUTPUT=$(./ipatool auth signin --non-interactive 2>&1 || true)
 
 echo "$OUTPUT"
 
-# === Check result
+# === Parse output
 if echo "$OUTPUT" | grep -iq "Two-factor authentication is enabled"; then
   echo "🔐 Apple ID requires 2FA."
   exit 0
-elif echo "$OUTPUT" | grep -iq "Invalid credentials"; then
+elif echo "$OUTPUT" | grep -iq "invalid credentials"; then
   echo "❌ Invalid Apple ID or password."
   exit 1
-elif echo "$OUTPUT" | grep -iq "Signed in successfully"; then
+elif echo "$OUTPUT" | grep -iq "signed in successfully"; then
   echo "✅ Login successful (2FA not enabled)."
   exit 0
 else
