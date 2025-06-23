@@ -4,8 +4,7 @@ set -e
 EMAIL="$1"
 PASSWORD="$2"
 VERSION="2.2.0"
-FILENAME="ipatool-$VERSION-linux-amd64"
-TARBALL="$FILENAME.tar.gz"
+TARBALL="ipatool-$VERSION-linux-amd64.tar.gz"
 DOWNLOAD_URL="https://github.com/majd/ipatool/releases/download/v$VERSION/$TARBALL"
 
 if [[ -z "$EMAIL" || -z "$PASSWORD" ]]; then
@@ -19,17 +18,22 @@ if [[ ! -f "./ipatool" ]]; then
   curl -L -o "$TARBALL" "$DOWNLOAD_URL"
   tar -xzf "$TARBALL"
 
-  # ✅ Lấy đúng tên file trong bin/ (dù tên là gì)
-  BIN_PATH=$(find "$FILENAME/bin" -type f -name "ipatool*" | head -n 1)
-  if [[ ! -f "$BIN_PATH" ]]; then
-    echo "❌ Cannot find ipatool binary in extracted folder."
+  # ✅ Đường dẫn thực tế sau khi giải nén
+  BIN_FILE="bin/ipatool-$VERSION-linux-amd64"
+  if [[ ! -f "$BIN_FILE" ]]; then
+    echo "❌ Binary not found at $BIN_FILE"
     exit 1
   fi
 
-  cp "$BIN_PATH" ./ipatool
+  cp "$BIN_FILE" ./ipatool
   chmod +x ipatool
-  rm -rf "$TARBALL" "$FILENAME"
+  rm -rf "$TARBALL" bin/
 fi
+
+# === Xem các lệnh có sẵn (bạn yêu cầu thêm help)
+echo "ℹ️ Checking ipatool version and help:"
+./ipatool --version
+./ipatool --help
 
 # === Run signin
 echo "🔐 Signing in..."
