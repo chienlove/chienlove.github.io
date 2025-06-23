@@ -29,22 +29,17 @@ if [[ ! -f "./ipatool" ]]; then
   rm -rf "$TARBALL" bin/
 fi
 
-# === Show version & help
-echo "ℹ️ Checking ipatool version and help:"
+# === Show version
+echo "ℹ️ ipatool version:"
 ./ipatool --version
-./ipatool --help
 
-# === Sign in using correct command
-echo "🔐 Signing in with ipatool v$VERSION..."
-
-export IPATOOL_USERNAME="$EMAIL"
-export IPATOOL_PASSWORD="$PASSWORD"
-
-OUTPUT=$(./ipatool auth login --non-interactive 2>&1 || true)
+# === Login with correct flags (v2.2.0)
+echo "🔐 Logging in..."
+OUTPUT=$(./ipatool auth login --email "$EMAIL" --password "$PASSWORD" --non-interactive 2>&1 || true)
 
 echo "$OUTPUT"
 
-# === Check result
+# === Parse result
 if echo "$OUTPUT" | grep -iq "Two-factor authentication is enabled"; then
   echo "🔐 Apple ID requires 2FA."
   exit 0
