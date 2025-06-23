@@ -9,14 +9,19 @@ if [[ -z "$EMAIL" || -z "$PASSWORD" ]]; then
   exit 1
 fi
 
-# Download ipatool if not exists
+# === DOWNLOAD IPATOOL ===
+VERSION="2.2.0"
+URL="https://github.com/majd/ipatool/releases/download/v$VERSION/ipatool-$VERSION-linux-amd64.tar.gz"
+
 if [[ ! -f "./ipatool" ]]; then
-  echo "⬇️ Downloading ipatool..."
-  curl -L -o ipatool https://github.com/majd/ipatool/releases/latest/download/ipatool_linux_amd64
+  echo "⬇️ Downloading ipatool v$VERSION..."
+  curl -L -o ipatool.tar.gz "$URL"
+  tar -xzf ipatool.tar.gz
   chmod +x ipatool
+  rm ipatool.tar.gz
 fi
 
-# Run login
+# === LOGIN ===
 echo "🔐 Logging in to Apple ID..."
 RESULT=$(./ipatool login -u "$EMAIL" -p "$PASSWORD" --json || true)
 
@@ -27,7 +32,7 @@ DSID=$(jq -r '.session?.account?.dsPersonId // empty' result.json)
 AUTH_TYPE=$(jq -r '.authType // empty' result.json)
 ERROR_MSG=$(jq -r '.errorMessage // empty' result.json)
 
-# Determine result
+# === CHECK RESULT ===
 if [[ "$STATE" == "success" && -n "$DSID" ]]; then
   echo "✅ Login successful. dsid=$DSID"
   exit 0
