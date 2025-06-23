@@ -18,7 +18,15 @@ if [[ ! -f "./ipatool" ]]; then
   echo "⬇️ Downloading ipatool $VERSION..."
   curl -L -o "$TARBALL" "$DOWNLOAD_URL"
   tar -xzf "$TARBALL"
-  cp "$FILENAME/bin/ipatool" ./ipatool
+
+  # ✅ Lấy đúng tên file trong bin/ (dù tên là gì)
+  BIN_PATH=$(find "$FILENAME/bin" -type f -name "ipatool*" | head -n 1)
+  if [[ ! -f "$BIN_PATH" ]]; then
+    echo "❌ Cannot find ipatool binary in extracted folder."
+    exit 1
+  fi
+
+  cp "$BIN_PATH" ./ipatool
   chmod +x ipatool
   rm -rf "$TARBALL" "$FILENAME"
 fi
