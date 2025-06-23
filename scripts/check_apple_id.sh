@@ -18,9 +18,9 @@ if [[ ! -f "./ipatool" ]]; then
   echo "⬇️ Downloading ipatool v$VERSION..."
   curl -L -o "$TARBALL" "$DOWNLOAD_URL"
   tar -xzf "$TARBALL"
-  mv "$FILENAME" ipatool  # 👉 Rename to 'ipatool' for easier usage
+  cp "$FILENAME/ipatool" ./ipatool  # ✅ Correct copy
   chmod +x ipatool
-  rm "$TARBALL"
+  rm -rf "$TARBALL" "$FILENAME"
 fi
 
 # === LOGIN ===
