@@ -11,7 +11,7 @@ fi
 
 # === DOWNLOAD IPATOOL ===
 VERSION="2.2.0"
-URL="https://github.com/majd/ipatool/releases/download/v$VERSION/ipatool-$VERSION-linux-amd64.tar.gz"
+URL="https://github.com/majd/ipatool/releases/download/v2.2.0/ipatool-2.2.0-linux-amd64.tar.gz"
 
 if [[ ! -f "./ipatool" ]]; then
   echo "⬇️ Downloading ipatool v$VERSION..."
