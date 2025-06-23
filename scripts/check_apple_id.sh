@@ -34,16 +34,17 @@ echo "ℹ️ Checking ipatool version and help:"
 ./ipatool --version
 ./ipatool --help
 
-# === Sign in (correct syntax for v2.2.0)
-echo "🔐 Signing in (non-interactive)..."
+# === Sign in using correct command
+echo "🔐 Signing in with ipatool v$VERSION..."
+
 export IPATOOL_USERNAME="$EMAIL"
 export IPATOOL_PASSWORD="$PASSWORD"
 
-OUTPUT=$(./ipatool auth signin --non-interactive 2>&1 || true)
+OUTPUT=$(./ipatool auth login --non-interactive 2>&1 || true)
 
 echo "$OUTPUT"
 
-# === Parse output
+# === Check result
 if echo "$OUTPUT" | grep -iq "Two-factor authentication is enabled"; then
   echo "🔐 Apple ID requires 2FA."
   exit 0
