@@ -6,7 +6,6 @@ PASSWORD="$2"
 VERSION="2.2.0"
 TARBALL="ipatool-$VERSION-linux-amd64.tar.gz"
 DOWNLOAD_URL="https://github.com/majd/ipatool/releases/download/v$VERSION/$TARBALL"
-EXTRACT_DIR="ipatool-$VERSION-linux-amd64"
 
 if [[ -z "$EMAIL" || -z "$PASSWORD" ]]; then
   echo "❌ Missing Apple ID or password"
@@ -19,12 +18,12 @@ if [[ ! -f "./ipatool" ]]; then
   curl -L -o "$TARBALL" "$DOWNLOAD_URL"
   tar -xzf "$TARBALL"
   
-  # ✅ Copy đúng file từ thư mục bin và đổi tên cho dễ dùng
-  cp "$EXTRACT_DIR/bin/ipatool-$VERSION-linux-amd64" ./ipatool
+  # ✅ Đúng đường dẫn thực thi
+  cp "./bin/ipatool-$VERSION-linux-amd64" ./ipatool
   chmod +x ipatool
 
   # 🧹 Dọn dẹp
-  rm -rf "$TARBALL" "$EXTRACT_DIR"
+  rm -rf "$TARBALL" bin/
 fi
 
 # === LOGIN ===
