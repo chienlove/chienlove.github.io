@@ -29,28 +29,32 @@ if [[ ! -f "./ipatool" ]]; then
   rm -rf "$TARBALL" bin/
 fi
 
-# === Show version
-echo "ℹ️ ipatool version:"
-./ipatool --version
-
-# === Login with correct flags (v2.2.0)
+# === Login
 echo "🔐 Logging in..."
-OUTPUT=$(./ipatool auth login --email "$EMAIL" --password "$PASSWORD" --non-interactive 2>&1 || true)
+LOGIN_OUTPUT=$(./ipatool auth login --email "$EMAIL" --password "$PASSWORD" --non-interactive 2>&1 || true)
+echo "$LOGIN_OUTPUT"
 
-echo "$OUTPUT"
-
-# === Parse result
-if echo "$OUTPUT" | grep -iq "Two-factor authentication is enabled"; then
-  echo "🔐 Apple ID requires 2FA."
+# === Handle result
+if echo "$LOGIN_OUTPUT" | grep -iq "signed in successfully"; then
+  echo "✅ Login successful (2FA not enabled)"
   exit 0
-elif echo "$OUTPUT" | grep -iq "invalid credentials"; then
+elif echo "$LOGIN_OUTPUT" | grep -iq "2FA code is required"; then
+  echo "🔐 2FA required. Verifying session..."
+
+  # Try running auth info to see if session is valid
+  INFO_OUTPUT=$(./ipatool auth info 2>&1 || true)
+  if echo "$INFO_OUTPUT" | grep -iq "email"; then
+    echo "🔐 Apple ID is valid, requires 2FA."
+    exit 0
+  else
+    echo "❌ Invalid Apple ID or password (fake 2FA)."
+    exit 1
+  fi
+elif echo "$LOGIN_OUTPUT" | grep -iq "invalid credentials"; then
   echo "❌ Invalid Apple ID or password."
   exit 1
-elif echo "$OUTPUT" | grep -iq "signed in successfully"; then
-  echo "✅ Login successful (2FA not enabled)."
-  exit 0
 else
   echo "❓ Unknown response:"
-  echo "$OUTPUT"
+  echo "$LOGIN_OUTPUT"
   exit 1
 fi
