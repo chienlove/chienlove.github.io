@@ -3,6 +3,10 @@ set -e
 
 EMAIL="$1"
 PASSWORD="$2"
+VERSION="2.2.0"
+FILENAME="ipatool-$VERSION-linux-amd64"
+TARBALL="$FILENAME.tar.gz"
+DOWNLOAD_URL="https://github.com/majd/ipatool/releases/download/v$VERSION/$TARBALL"
 
 if [[ -z "$EMAIL" || -z "$PASSWORD" ]]; then
   echo "❌ Missing Apple ID or password"
@@ -10,15 +14,13 @@ if [[ -z "$EMAIL" || -z "$PASSWORD" ]]; then
 fi
 
 # === DOWNLOAD IPATOOL ===
-VERSION="2.2.0"
-URL="https://github.com/majd/ipatool/releases/download/v$VERSION/ipatool-$VERSION-linux-amd64.tar.gz"
-
 if [[ ! -f "./ipatool" ]]; then
   echo "⬇️ Downloading ipatool v$VERSION..."
-  curl -L -o ipatool.tar.gz "$URL"
-  tar -xzf ipatool.tar.gz
+  curl -L -o "$TARBALL" "$DOWNLOAD_URL"
+  tar -xzf "$TARBALL"
+  mv "$FILENAME" ipatool  # 👉 Rename to 'ipatool' for easier usage
   chmod +x ipatool
-  rm ipatool.tar.gz
+  rm "$TARBALL"
 fi
 
 # === LOGIN ===
