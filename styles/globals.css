@@ -1,0 +1,200 @@
+/* Reset */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background-color: #f2f2f7;
+  color: #1c1c1e;
+  line-height: 1.5;
+}
+
+a {
+  text-decoration: none;
+  color: inherit;
+}
+
+/* Container */
+.container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+}
+
+/* Header */
+.header {
+  background-color: white;
+  padding: 1rem 2rem;
+  border-bottom: 1px solid #dcdcdc;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
+.header h1 {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+/* App List */
+.app-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+/* App Card */
+.app-card {
+  background-color: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+  transition: transform 0.2s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-card:hover {
+  transform: translateY(-4px);
+}
+
+.app-card img.icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  margin-right: 12px;
+}
+
+.app-card .card-header {
+  display: flex;
+  padding: 1rem;
+}
+
+.app-card .card-info {
+  flex: 1;
+}
+
+.app-card .name {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1c1c1e;
+}
+
+.app-card .author {
+  color: #8e8e93;
+  font-size: 0.9rem;
+  margin-top: 4px;
+}
+
+.app-card .card-footer {
+  padding: 1rem;
+  border-top: 1px solid #eee;
+}
+
+.app-card .open-button {
+  background-color: #007aff;
+  color: white;
+  font-weight: 600;
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+}
+
+.open-button:hover {
+  background-color: #005ecb;
+}
+
+/* App Detail Page */
+.app-detail {
+  background-color: white;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.05);
+}
+
+.app-detail img.banner {
+  width: 100%;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+}
+
+.app-detail .app-info {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.app-detail .icon {
+  width: 100px;
+  height: 100px;
+  border-radius: 20px;
+  margin-right: 1.5rem;
+}
+
+.app-detail .name {
+  font-size: 1.8rem;
+  font-weight: 700;
+}
+
+.app-detail .author {
+  color: #8e8e93;
+  font-size: 1rem;
+  margin-top: 0.5rem;
+}
+
+.app-detail .description {
+  margin-top: 1rem;
+  font-size: 1rem;
+  color: #1c1c1e;
+}
+
+.app-detail .info-grid {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  row-gap: 10px;
+  column-gap: 20px;
+  margin-top: 2rem;
+}
+
+.app-detail .info-grid .label {
+  font-weight: 600;
+  color: #3c3c43;
+}
+
+.app-detail .info-grid .value {
+  color: #1c1c1e;
+}
+
+/* Search */
+.search-bar {
+  margin-top: 2rem;
+  display: flex;
+  gap: 10px;
+}
+
+.search-bar input {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+}
+
+.search-bar button {
+  background-color: #007aff;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.2rem;
+  border-radius: 10px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.search-bar button:hover {
+  background-color: #005ecb;
+}
