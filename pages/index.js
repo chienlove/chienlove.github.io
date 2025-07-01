@@ -4,34 +4,55 @@ import AppCard from '../components/AppCard';
 import { useState } from 'react';
 
 export default function Home({ initialApps }) {
-  const [apps, setApps] = useState(initialApps);
+  const [apps, setApps] = useState(initialApps || []);
   const [q, setQ] = useState('');
 
-  const handleSearch = async e => {
+  const handleSearch = async (e) => {
     e.preventDefault();
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('apps')
       .select('*')
       .ilike('name', `%${q}%`)
       .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Lỗi tìm kiếm:', error.message);
+      return;
+    }
+
     setApps(data);
   };
 
   return (
     <Layout>
       <form onSubmit={handleSearch}>
-        <input value={q} onChange={e=>setQ(e.target.value)} placeholder="Tìm kiếm app..." />
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Tìm kiếm app..."
+        />
         <button type="submit">Tìm</button>
       </form>
-      {apps.map(app => <AppCard key={app.id} app={app} />)}
+
+      {apps.length > 0 ? (
+        apps.map((app) => <AppCard key={app.id} app={app} />)
+      ) : (
+        <p>Không có ứng dụng nào.</p>
+      )}
     </Layout>
   );
 }
 
 export async function getServerSideProps() {
-  const { data: initialApps } = await supabase
+  const { data: initialApps, error } = await supabase
     .from('apps')
     .select('*')
     .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Supabase error:', error.message);
+    return { props: { initialApps: [] } };
+  }
+
   return { props: { initialApps } };
 }
