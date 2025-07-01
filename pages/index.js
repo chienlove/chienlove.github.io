@@ -25,17 +25,20 @@ export default function Home({ initialApps }) {
 
   return (
     <Layout>
-      <form onSubmit={handleSearch}>
+      <form onSubmit={handleSearch} style={{ marginBottom: 20 }}>
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Tìm kiếm app..."
+          style={{ padding: 8, width: '70%', marginRight: 10 }}
         />
-        <button type="submit">Tìm</button>
+        <button type="submit" style={{ padding: 8 }}>Tìm</button>
       </form>
 
       {apps.length > 0 ? (
-        apps.map((app) => <AppCard key={app.id} app={app} />)
+        apps.map((app) => (
+          <AppCard key={app.id} app={app} />
+        ))
       ) : (
         <p>Không có ứng dụng nào.</p>
       )}
@@ -50,9 +53,11 @@ export async function getServerSideProps() {
     .order('created_at', { ascending: false });
 
   if (error) {
-    console.error('Supabase error:', error.message);
+    console.error('❌ Supabase error:', error.message);
     return { props: { initialApps: [] } };
   }
+
+  console.log('✅ Dữ liệu từ Supabase:', initialApps);
 
   return { props: { initialApps } };
 }

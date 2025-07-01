@@ -2,7 +2,7 @@ import Link from 'next/link';
 
 export default function AppCard({ app }) {
   return (
-    <Link href={`/${app.id}`}>
+    <Link href={`/${app.id}`} passHref>
       <div style={{
         display: 'flex',
         margin: 10,
@@ -29,7 +29,7 @@ export default function AppCard({ app }) {
 
         <div style={{ marginLeft: 12 }}>
           <h3>
-            {app.name || 'App chưa có tên'}
+            {app.name || 'Chưa đặt tên'}
             {app.version && <small> v{app.version}</small>}
           </h3>
           {app.description ? (
