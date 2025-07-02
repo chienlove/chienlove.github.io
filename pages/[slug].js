@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabase';
 import Layout from '../components/Layout';
+import { useRouter } from 'next/router';
+import { useEffect, useState } from 'react';
 
 export default function Detail() {
   const router = useRouter();
   const rawSlug = router.query.slug;
-  const slug = (rawSlug || '').toLowerCase(); // ✅ Xử lý lowercase
+  const slug = (rawSlug || '').toLowerCase();  // ✅ xử lý lowercase
   const [app, setApp] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -17,7 +17,7 @@ export default function Detail() {
       try {
         setLoading(true);
 
-        // Truy vấn slug không phân biệt hoa/thường
+        // ✅ Truy vấn slug không phân biệt hoa/thường
         let { data: appData, error } = await supabase
           .from('apps')
           .select('*')
@@ -84,93 +84,107 @@ export default function Detail() {
 
   return (
     <Layout title={app.name}>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4">
-        {/* Header */}
-        <div className="flex items-center space-x-4 mb-4">
-          <button
-            onClick={() => router.back()}
-            className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-white">{app.name}</h1>
-        </div>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12">
+        <div className="container mx-auto px-4">
+          <div className="max-w-4xl mx-auto bg-white dark:bg-gray-800 rounded-xl shadow-md overflow-hidden">
+            <div className="p-6 md:p-8">
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                  <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-white">
+                    {app.name || 'Không tên'}
+                    {app.version && (
+                      <small className="ml-2 text-lg text-gray-600 dark:text-gray-300">
+                        v{app.version}
+                      </small>
+                    )}
+                  </h1>
+                  {app.author && (
+                    <p className="text-gray-600 dark:text-gray-400 mt-2">
+                      <span className="font-medium">Tác giả:</span> {app.author}
+                    </p>
+                  )}
+                </div>
 
-        {/* App Icon and Title */}
-        <div className="flex items-center justify-center mb-4">
-          <img
-            src={app.icon_url || '/placeholder-icon.png'} // Thay thế bằng URL icon thực tế
-            alt="App Icon"
-            className="w-32 h-32 object-cover rounded-full shadow-md"
-          />
-        </div>
+                {app.testflight_url && (
+                  <a
+                    href={app.testflight_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition whitespace-nowrap text-center"
+                  >
+                    Tham gia TestFlight
+                  </a>
+                )}
+              </div>
+            </div>
 
-        {/* Action Buttons */}
-        <div className="flex justify-center space-x-4 mb-6">
-          <button className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-lg font-medium transition">
-            MỞ
-          </button>
-          <button className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium transition">
-            GỬI PHẢN HỒI
-          </button>
-        </div>
-
-        {/* Developer Information */}
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md mb-6">
-          <div className="flex items-center space-x-4">
-            <div className="flex-shrink-0">
+            <div className="w-full h-64 md:h-80 bg-gray-100 dark:bg-gray-700">
               <img
-                src="https://via.placeholder.com/40x40?text=User" // Thay thế bằng avatar nhà phát triển
-                alt="Developer Avatar"
-                className="w-10 h-10 rounded-full"
+                src={app.banner_url || '/placeholder-banner.jpg'}
+                alt="Banner"
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.target.src = '/placeholder-banner.jpg';
+                  e.target.className =
+                    'w-full h-full object-contain p-8 bg-gray-100 dark:bg-gray-700';
+                }}
               />
             </div>
-            <div>
-              <p className="text-gray-800 dark:text-white font-medium">{app.author || 'Không rõ'}</p>
-              <p className="text-gray-500 dark:text-gray-400 text-sm">{app.category || 'Chưa có danh mục'}</p>
-            </div>
-          </div>
-          <div className="mt-4 flex justify-between">
-            <div>
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 inline-block mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              <span className="text-gray-800 dark:text-white font-medium">Hết hạn</span>
-            </div>
-            <div>
-              <p className="text-xl font-bold text-gray-800 dark:text-white">{app.expiration_days || '0'}</p>
-              <p className="text-gray-500 dark:text-gray-400 text-sm">Ngày</p>
-            </div>
-          </div>
-        </div>
 
-        {/* Content Inspection */}
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md mb-6">
-          <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Nội dung kiểm tra</h2>
-          <p className="text-gray-700 dark:text-gray-300 whitespace-pre-line">
-            {app.content_inspection || 'Chưa có thông tin nội dung kiểm tra'}
-          </p>
-        </div>
-
-        {/* Screenshots */}
-        <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md">
-          <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Ảnh màn hình</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Array.isArray(app.screenshots) && app.screenshots.length > 0 ? (
-              app.screenshots.map((screenshot, index) => (
-                <div key={index} className="relative overflow-hidden rounded-lg shadow-md">
-                  <img
-                    src={screenshot}
-                    alt={`Screenshot ${index + 1}`}
-                    className="w-full h-48 object-cover"
-                  />
+            <div className="p-6 md:p-8">
+              {app.description ? (
+                <div className="mb-8">
+                  <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Mô tả</h2>
+                  <p className="text-gray-700 dark:text-gray-300 whitespace-pre-line">
+                    {app.description}
+                  </p>
                 </div>
-              ))
-            ) : (
-              <p className="italic text-gray-400">Chưa có ảnh màn hình.</p>
-            )}
+              ) : (
+                <p className="italic text-gray-400 mb-8">Chưa có mô tả.</p>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                {app.size && (
+                  <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg">
+                    <h3 className="font-medium text-gray-800 dark:text-gray-200 mb-1">Dung lượng</h3>
+                    <p className="text-gray-600 dark:text-gray-400">{app.size} MB</p>
+                  </div>
+                )}
+                {app.device && (
+                  <div className="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg">
+                    <h3 className="font-medium text-gray-800 dark:text-gray-200 mb-1">Thiết bị hỗ trợ</h3>
+                    <p className="text-gray-600 dark:text-gray-400">{app.device}</p>
+                  </div>
+                )}
+              </div>
+
+              {Array.isArray(app.screenshots) && app.screenshots.length > 0 ? (
+                <div className="mb-8">
+                  <h2 className="text-xl font-bold text-gray-800 dark:text-white mb-4">Ảnh màn hình</h2>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {app.screenshots.map((url, i) => (
+                      <div
+                        key={i}
+                        className="rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700"
+                      >
+                        <img
+                          src={url}
+                          alt={`Screenshot ${i + 1}`}
+                          className="w-full h-48 object-cover"
+                          onError={(e) => {
+                            e.target.src = '/placeholder-screenshot.jpg';
+                            e.target.className =
+                              'w-full h-48 object-contain p-4 bg-gray-100 dark:bg-gray-700';
+                          }}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <p className="italic text-gray-400">Chưa có ảnh màn hình.</p>
+              )}
+            </div>
           </div>
         </div>
       </div>
