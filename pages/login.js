@@ -2,6 +2,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabase';
+import { Layout } from '../components/Layout';
 import { toast, ToastContainer } from 'react-toastify';
 
 export default function Login() {
