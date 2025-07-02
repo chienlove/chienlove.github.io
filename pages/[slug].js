@@ -57,32 +57,32 @@ export default function Detail() {
   }, [slug]);
 
   if (loading) {
-    return (
-      <Layout>
-        <div className="min-h-screen flex items-center justify-center">
-          <p>Đang tải ứng dụng...</p>
-        </div>
-      </Layout>
-    );
-  }
+  return (
+    <Layout>
+      <div className="min-h-screen flex items-center justify-center">
+        <p>Đang tải ứng dụng...</p>
+      </div>
+    </Layout>
+  );
+}
 
-  if (!app) {
-    return (
-      <Layout>
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">Không tìm thấy ứng dụng</h1>
-            <button 
-              onClick={() => router.push('/')}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-            >
-              Quay về trang chủ
-            </button>
-          </div>
+if (!app) {
+  return (
+    <Layout>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-4">Không tìm thấy ứng dụng</h1>
+          <button 
+            onClick={() => router.push('/')}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Quay về trang chủ
+          </button>
         </div>
-      </Layout>
-    );
-  }
+      </div>
+    </Layout>
+  );
+}
 
   return (
     <Layout>
