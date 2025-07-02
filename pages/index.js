@@ -15,31 +15,26 @@ export default function Home({ initialApps }) {
       .ilike('name', `%${q}%`)
       .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('Lỗi tìm kiếm Supabase:', error.message);
-      return;
-    }
-
-    setApps(data);
+    if (!error) setApps(data);
   };
 
   return (
     <Layout>
-      <form onSubmit={handleSearch} style={{ marginBottom: 20 }}>
+      <form onSubmit={handleSearch} className="search-form">
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Tìm kiếm app..."
-          style={{ padding: 8, width: '70%', marginRight: 10 }}
         />
-        <button type="submit" style={{ padding: 8 }}>Tìm</button>
+        <button type="submit">Tìm</button>
       </form>
-
-      {apps.length > 0 ? (
-        apps.map((app) => <AppCard key={app.id} app={app} />)
-      ) : (
-        <p>Không có ứng dụng nào.</p>
-      )}
+      <div className="app-list">
+        {apps.length > 0 ? (
+          apps.map((app) => <AppCard key={app.id} app={app} />)
+        ) : (
+          <p>Không có ứng dụng nào.</p>
+        )}
+      </div>
     </Layout>
   );
 }
@@ -50,10 +45,5 @@ export async function getServerSideProps() {
     .select('*')
     .order('created_at', { ascending: false });
 
-  if (error) {
-    console.error('Supabase error:', error.message);
-    return { props: { initialApps: [] } };
-  }
-
-  return { props: { initialApps } };
+  return { props: { initialApps: error ? [] : initialApps } };
 }
