@@ -1,9 +1,9 @@
-// pages/login.js
 import { useState } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabase';
-import { Layout } from '../components/Layout';
 import { toast, ToastContainer } from 'react-toastify';
+import Layout from '../components/Layout'; // 👈 Đã thêm dòng này
+import 'react-toastify/dist/ReactToastify.css';
 
 export default function Login() {
   const router = useRouter();
@@ -125,7 +125,6 @@ export default function Login() {
         </div>
       </div>
 
-      {/* Toast notification */}
       <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} />
     </Layout>
   );
