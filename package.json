@@ -15,7 +15,7 @@
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "uuid": "^9.0.1",
-    "fast-average-color": "9.3.2"
+    "fast-average-color": "9.5.0"
   },
   "devDependencies": {
     "eslint": "8.55.0",
