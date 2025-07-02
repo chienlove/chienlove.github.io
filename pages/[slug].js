@@ -5,7 +5,8 @@ import { useEffect, useState } from 'react';
 
 export default function Detail() {
   const router = useRouter();
-  const { slug } = router.query;
+  const rawSlug = router.query.slug;
+  const slug = (rawSlug || '').toLowerCase();  // ✅ xử lý lowercase
   const [app, setApp] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -15,13 +16,16 @@ export default function Detail() {
     const fetchApp = async () => {
       try {
         setLoading(true);
+
+        // ✅ Truy vấn slug không phân biệt hoa/thường
         let { data: appData, error } = await supabase
           .from('apps')
           .select('*')
-          .eq('slug', slug)
+          .ilike('slug', slug)
           .single();
 
         if (error || !appData) {
+          // Nếu slug không đúng, thử tìm theo ID
           const { data: appById } = await supabase
             .from('apps')
             .select('*')
