@@ -1,8 +1,8 @@
 import { supabase } from '../lib/supabase';
 import Layout from '../components/Layout';
 import { useRouter } from 'next/router';
-import { useEffect, useState, useRef } from 'react';
-import FastAverageColor from 'fast-average-color';
+import { useEffect, useState } from 'react';
+import { FastAverageColor } from 'fast-average-color';
 
 export default function Detail() {
   const router = useRouter();
@@ -11,8 +11,6 @@ export default function Detail() {
   const [app, setApp] = useState(null);
   const [loading, setLoading] = useState(true);
   const [dominantColor, setDominantColor] = useState('#f5f5f7');
-  const bannerRef = useRef(null);
-  const fac = new FastAverageColor();
 
   useEffect(() => {
     if (!slug) return;
@@ -42,14 +40,17 @@ export default function Detail() {
         }
 
         setApp(appData);
-        
-        // Lấy màu chủ đạo từ icon
-        if (appData.icon_url) {
+
+        // Chỉ chạy phía client
+        if (typeof window !== 'undefined' && appData.icon_url) {
+          const fac = new FastAverageColor();
           try {
             const color = await fac.getColorAsync(appData.icon_url);
             setDominantColor(color.hex);
           } catch (e) {
             console.error('Error extracting color:', e);
+          } finally {
+            fac.destroy();
           }
         }
       } catch (err) {
