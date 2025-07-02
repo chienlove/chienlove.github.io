@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "../lib/supabase";
+import { v4 as uuidv4 } from 'uuid';
 
 export default function Admin() {
   const router = useRouter();
@@ -20,155 +21,196 @@ export default function Admin() {
   const [editingCategoryId, setEditingCategoryId] = useState(null);
   const [newField, setNewField] = useState("");
   const [screenshotInput, setScreenshotInput] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+
+  // Kiểm tra UUID hợp lệ
+  const isValidUUID = (id) => {
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    return id && uuidRegex.test(id);
+  };
 
   useEffect(() => {
     checkAdmin();
   }, []);
 
   useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
+    document.documentElement.classList.toggle("dark", darkMode);
   }, [darkMode]);
 
   useEffect(() => {
-    // Khởi tạo trường screenshots từ form
     if (form.screenshots) {
-      setScreenshotInput(form.screenshots.join(", "));
-    } else {
-      setScreenshotInput("");
+      setScreenshotInput(form.screenshots.join("\n"));
     }
   }, [form]);
 
   async function checkAdmin() {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return router.push("/login");
+    try {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error || !user) return router.push("/login");
 
-    const { data, error } = await supabase
-      .from("users")
-      .select("role")
-      .eq("id", user.id)
-      .single();
+      const { data } = await supabase
+        .from("users")
+        .select("role")
+        .eq("id", user.id)
+        .single();
 
-    if (error || data?.role !== "admin") return router.push("/");
-    setUser(user);
-    await fetchCategories();
-    await fetchApps();
-    setLoading(false);
+      if (!data || data?.role !== "admin") return router.push("/");
+      
+      setUser(user);
+      await Promise.all([fetchCategories(), fetchApps()]);
+    } catch (error) {
+      console.error("Admin check error:", error);
+      setErrorMessage("Lỗi kiểm tra quyền admin");
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function fetchCategories() {
-    const { data } = await supabase.from("categories").select("*");
-    setCategories(data || []);
+    try {
+      const { data, error } = await supabase.from("categories").select("*");
+      if (error) throw error;
+      setCategories(data || []);
+    } catch (error) {
+      console.error("Fetch categories error:", error);
+      setErrorMessage("Lỗi tải danh sách chuyên mục");
+    }
   }
 
   async function fetchApps() {
-    const { data } = await supabase
-      .from("apps")
-      .select("*")
-      .order("created_at", { ascending: false });
-    setApps(data || []);
+    try {
+      const { data, error } = await supabase
+        .from("apps")
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      setApps(data || []);
+    } catch (error) {
+      console.error("Fetch apps error:", error);
+      setErrorMessage("Lỗi tải danh sách ứng dụng");
+    }
   }
 
   function handleEdit(app) {
+    if (!isValidUUID(app.category_id)) {
+      setErrorMessage("ID chuyên mục không hợp lệ");
+      return;
+    }
+    
     setEditingId(app.id);
-    setSelectedCategory(app.category_id.toString());
+    setSelectedCategory(app.category_id);
     setForm(app);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
   async function handleDelete(id) {
-    if (confirm("Xác nhận xoá ứng dụng?")) {
-      await supabase.from("apps").delete().eq("id", id);
-      fetchApps();
+    if (!confirm("Xác nhận xoá ứng dụng?")) return;
+    
+    try {
+      const { error } = await supabase.from("apps").delete().eq("id", id);
+      if (error) throw error;
+      await fetchApps();
+    } catch (error) {
+      console.error("Delete app error:", error);
+      setErrorMessage("Lỗi khi xoá ứng dụng");
     }
-  }
-
-  async function handleLogout() {
-    await supabase.auth.signOut();
-    router.push("/login");
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
     setSubmitting(true);
-    
+    setErrorMessage("");
+
     if (!selectedCategory) {
-      alert("Vui lòng chọn chuyên mục");
+      setErrorMessage("Vui lòng chọn chuyên mục");
       setSubmitting(false);
       return;
     }
 
-    // Xử lý screenshots từ input
-    const screenshots = screenshotInput
-      .split(",")
-      .map(url => url.trim())
-      .filter(url => url.length > 0);
-
-    const payload = {
-      ...form,
-      category_id: parseInt(selectedCategory),
-      screenshots,
-      updated_at: new Date().toISOString()
-    };
+    if (!isValidUUID(selectedCategory)) {
+      setErrorMessage("ID chuyên mục không hợp lệ");
+      setSubmitting(false);
+      return;
+    }
 
     try {
-      let error = null;
-      
+      const screenshots = screenshotInput
+        .split(/[\n,]+/)
+        .map(url => url.trim())
+        .filter(url => url.length > 0 && url.startsWith("http"));
+
+      const payload = {
+        ...form,
+        category_id: selectedCategory,
+        screenshots,
+        updated_at: new Date().toISOString()
+      };
+
       if (editingId) {
-        const { error: updateError } = await supabase
+        const { error } = await supabase
           .from("apps")
           .update(payload)
           .eq("id", editingId);
-        error = updateError;
+        if (error) throw error;
       } else {
-        const { error: insertError } = await supabase
+        const { error } = await supabase
           .from("apps")
-          .insert([{ ...payload, created_at: new Date().toISOString() }]);
-        error = insertError;
+          .insert([{ 
+            ...payload, 
+            id: uuidv4(),
+            created_at: new Date().toISOString() 
+          }]);
+        if (error) throw error;
       }
 
-      if (error) throw error;
-
-      alert(editingId ? "Cập nhật ứng dụng thành công!" : "Thêm ứng dụng mới thành công!");
-      
-      setForm({});
-      setEditingId(null);
-      setSelectedCategory("");
-      setScreenshotInput("");
+      alert(editingId ? "Cập nhật thành công!" : "Thêm mới thành công!");
+      resetForm();
       await fetchApps();
     } catch (error) {
-      console.error("Lỗi khi lưu ứng dụng:", error);
-      alert(`Có lỗi xảy ra: ${error.message}`);
+      console.error("Submit error:", error);
+      setErrorMessage(error.message || "Lỗi khi lưu dữ liệu");
     } finally {
       setSubmitting(false);
     }
   }
 
-  // ===== Category Management Functions =====
+  function resetForm() {
+    setForm({});
+    setEditingId(null);
+    setSelectedCategory("");
+    setScreenshotInput("");
+  }
+
   async function handleCategorySubmit(e) {
     e.preventDefault();
     setSubmitting(true);
+    setErrorMessage("");
     
-    const payload = {
-      name: categoryForm.name,
-      fields: categoryForm.fields,
-    };
-
     try {
+      const payload = {
+        name: categoryForm.name,
+        fields: categoryForm.fields,
+      };
+
       if (editingCategoryId) {
-        await supabase.from("categories").update(payload).eq("id", editingCategoryId);
+        const { error } = await supabase
+          .from("categories")
+          .update(payload)
+          .eq("id", editingCategoryId);
+        if (error) throw error;
       } else {
-        await supabase.from("categories").insert([payload]);
+        const { error } = await supabase
+          .from("categories")
+          .insert([{ ...payload, id: uuidv4() }]);
+        if (error) throw error;
       }
+
       setCategoryForm({ name: "", fields: [] });
       setEditingCategoryId(null);
-      fetchCategories();
+      await fetchCategories();
     } catch (error) {
-      console.error("Error saving category:", error);
-      alert("Có lỗi xảy ra khi lưu chuyên mục");
+      console.error("Category submit error:", error);
+      setErrorMessage(error.message || "Lỗi khi lưu chuyên mục");
     } finally {
       setSubmitting(false);
     }
@@ -190,11 +232,10 @@ export default function Admin() {
     try {
       await supabase.from("apps").delete().eq("category_id", id);
       await supabase.from("categories").delete().eq("id", id);
-      fetchCategories();
-      fetchApps();
+      await Promise.all([fetchCategories(), fetchApps()]);
     } catch (error) {
-      console.error("Error deleting category:", error);
-      alert("Có lỗi xảy ra khi xoá chuyên mục");
+      console.error("Delete category error:", error);
+      setErrorMessage("Lỗi khi xoá chuyên mục");
     }
   }
 
@@ -214,11 +255,11 @@ export default function Admin() {
     }));
   }
 
-  const filteredApps = apps.filter((a) =>
-    a.name?.toLowerCase().includes(search.toLowerCase())
+  const filteredApps = apps.filter(app =>
+    app.name?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const currentFields = categories.find((c) => c.id.toString() === selectedCategory)?.fields || [];
+  const currentFields = categories.find(c => c.id === selectedCategory)?.fields || [];
 
   if (loading) {
     return (
@@ -236,54 +277,67 @@ export default function Admin() {
       >
         <div className="p-4 flex justify-between items-center">
           <h2 className="text-xl font-bold">Admin Panel</h2>
-          <button onClick={() => setSidebarOpen(false)} className="md:hidden">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
+          <button 
+            onClick={() => setSidebarOpen(false)} 
+            className="md:hidden text-gray-500 hover:text-gray-700"
+          >
+            ✕
           </button>
         </div>
 
         <nav className="p-4 space-y-2">
           <button
             onClick={() => setActiveTab("apps")}
-            className={`w-full flex items-center gap-3 px-4 py-2 rounded ${activeTab === "apps" ? "bg-gray-200 dark:bg-gray-700" : "hover:bg-gray-200 dark:hover:bg-gray-700"}`}
+            className={`w-full text-left flex items-center gap-3 px-4 py-2 rounded ${
+              activeTab === "apps" 
+                ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200" 
+                : "hover:bg-gray-200 dark:hover:bg-gray-700"
+            }`}
           >
             📦 Ứng dụng
           </button>
           <button
             onClick={() => setActiveTab("categories")}
-            className={`w-full flex items-center gap-3 px-4 py-2 rounded ${activeTab === "categories" ? "bg-gray-200 dark:bg-gray-700" : "hover:bg-gray-200 dark:hover:bg-gray-700"}`}
+            className={`w-full text-left flex items-center gap-3 px-4 py-2 rounded ${
+              activeTab === "categories" 
+                ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200" 
+                : "hover:bg-gray-200 dark:hover:bg-gray-700"
+            }`}
           >
             📁 Chuyên mục
           </button>
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-gray-700 flex items-center">
-          <img src="https://placehold.co/40x40" alt="User Avatar" className="w-8 h-8 rounded-full" />
-          <span className="ml-2">{user?.email}</span>
+          <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
+            {user?.email?.charAt(0).toUpperCase()}
+          </div>
+          <span className="ml-2 truncate">{user?.email}</span>
           <button 
-            onClick={handleLogout}
+            onClick={async () => {
+              await supabase.auth.signOut();
+              router.push("/login");
+            }}
             className="ml-auto text-sm text-red-500 hover:underline"
+            title="Đăng xuất"
           >
-            Đăng xuất
+            ↪
           </button>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-6 md:p-8">
+      <main className="flex-1 p-4 md:p-6 overflow-auto">
         {/* Header */}
-        <header className="flex justify-between items-center mb-8">
+        <header className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setSidebarOpen(true)}
               className="md:hidden p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
+              ☰
             </button>
-            <h1 className="text-2xl font-bold">
+            <h1 className="text-xl md:text-2xl font-bold">
               {activeTab === "apps" ? "Quản lý Ứng dụng" : "Quản lý Chuyên mục"}
             </h1>
           </div>
@@ -293,35 +347,32 @@ export default function Admin() {
               className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
               title={darkMode ? "Chế độ sáng" : "Chế độ tối"}
             >
-              {darkMode ? (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
-                  />
-                </svg>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
-                  />
-                </svg>
-              )}
+              {darkMode ? "☀️" : "🌙"}
             </button>
           </div>
         </header>
 
+        {/* Error Message */}
+        {errorMessage && (
+          <div className="mb-4 p-3 bg-red-100 border-l-4 border-red-500 text-red-700 dark:bg-red-900 dark:text-red-100">
+            <div className="flex justify-between items-center">
+              <p>{errorMessage}</p>
+              <button 
+                onClick={() => setErrorMessage("")}
+                className="text-red-700 dark:text-red-300 hover:text-red-900 dark:hover:text-red-100"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
+
         {activeTab === "apps" ? (
           <>
             {/* Add App Form */}
-            <section className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-8">
-              <h2 className="text-xl font-semibold mb-4">
-                {editingId ? "Sửa ứng dụng" : "Thêm ứng dụng mới"}
+            <section className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-md mb-6">
+              <h2 className="text-lg md:text-xl font-semibold mb-4">
+                {editingId ? "✏️ Sửa ứng dụng" : "➕ Thêm ứng dụng mới"}
               </h2>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
@@ -333,12 +384,12 @@ export default function Admin() {
                       setForm({});
                       setEditingId(null);
                     }}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required
                   >
-                    <option value="">-- chọn --</option>
+                    <option value="">-- Chọn chuyên mục --</option>
                     {categories.map((cat) => (
-                      <option key={cat.id} value={cat.id.toString()}>
+                      <option key={cat.id} value={cat.id}>
                         {cat.name}
                       </option>
                     ))}
@@ -351,41 +402,37 @@ export default function Admin() {
                     {field.toLowerCase().includes("mô tả") || field.toLowerCase().includes("description") ? (
                       <textarea
                         value={form[field] || ""}
-                        onChange={(e) =>
-                          setForm((f) => ({ ...f, [field]: e.target.value }))
-                        }
+                        onChange={(e) => setForm(f => ({ ...f, [field]: e.target.value }))}
                         placeholder={`Nhập ${field}`}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 min-h-[120px]"
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 min-h-[120px] focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         required
                       />
                     ) : (
                       <input
                         type="text"
                         value={form[field] || ""}
-                        onChange={(e) =>
-                          setForm((f) => ({ ...f, [field]: e.target.value }))
-                        }
+                        onChange={(e) => setForm(f => ({ ...f, [field]: e.target.value }))}
                         placeholder={`Nhập ${field}`}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         required
                       />
                     )}
                   </div>
                 ))}
 
-                {/* Field: Screenshots */}
+                {/* Screenshots Field */}
                 <div>
                   <label className="block text-sm font-medium mb-1">
-                    Ảnh màn hình (nhập URL, mỗi URL một dòng hoặc cách nhau bằng dấu phẩy)
+                    Ảnh màn hình (mỗi URL một dòng)
                   </label>
                   <textarea
                     value={screenshotInput}
                     onChange={(e) => setScreenshotInput(e.target.value)}
-                    placeholder={`https://example.com/image1.jpg\nhttps://example.com/image2.jpg`}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 min-h-[100px]"
+                    placeholder="https://example.com/image1.jpg\nhttps://example.com/image2.jpg"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 min-h-[100px] focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    Mẹo: Bạn có thể dán nhiều URL cùng lúc, hệ thống tự động phân tách
+                    Có thể nhập nhiều URL, mỗi URL một dòng hoặc cách nhau bằng dấu phẩy
                   </p>
                 </div>
 
@@ -394,18 +441,19 @@ export default function Admin() {
                     {screenshotInput
                       .split(/[\n,]+/)
                       .map(url => url.trim())
-                      .filter(url => url.length > 0)
+                      .filter(url => url.startsWith("http"))
                       .map((url, i) => (
                         <div key={i} className="relative group">
                           <img 
                             src={url} 
                             alt={`Screenshot ${i}`} 
-                            className="w-full h-auto rounded border border-gray-200 dark:border-gray-700"
+                            className="w-full h-32 object-cover rounded border border-gray-200 dark:border-gray-700"
                             onError={(e) => {
                               e.target.src = "https://placehold.co/300x200?text=Ảnh+không+tồn+tại";
+                              e.target.className = "w-full h-32 object-contain rounded border border-gray-200 dark:border-gray-700 p-2 bg-gray-100";
                             }}
                           />
-                          <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-1 truncate">
+                          <div className="absolute inset-x-0 bottom-0 bg-black bg-opacity-50 text-white text-xs p-1 truncate">
                             {url.length > 30 ? url.substring(0, 30) + "..." : url}
                           </div>
                         </div>
@@ -413,67 +461,105 @@ export default function Admin() {
                   </div>
                 )}
 
-                <button
-                  type="submit"
-                  disabled={submitting || !selectedCategory}
-                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-blue-300"
-                >
-                  {submitting ? "Đang lưu..." : editingId ? "Cập nhật" : "Thêm ứng dụng"}
-                </button>
+                <div className="flex justify-end gap-3 pt-4">
+                  {editingId && (
+                    <button
+                      type="button"
+                      onClick={resetForm}
+                      className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-700"
+                    >
+                      Hủy
+                    </button>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={submitting || !selectedCategory}
+                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-blue-400 dark:bg-blue-700 dark:hover:bg-blue-800"
+                  >
+                    {submitting ? (
+                      <span className="flex items-center">
+                        <span className="animate-spin mr-2">↻</span>
+                        Đang lưu...
+                      </span>
+                    ) : editingId ? (
+                      "Cập nhật"
+                    ) : (
+                      "Thêm ứng dụng"
+                    )}
+                  </button>
+                </div>
               </form>
             </section>
 
             {/* Apps List */}
-            <section className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-              <h2 className="text-xl font-semibold mb-4">Danh sách ứng dụng</h2>
-              <div className="mb-4">
-                <input
-                  type="text"
-                  placeholder="🔍 Tìm theo tên..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
-                />
+            <section className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-md">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg md:text-xl font-semibold">Danh sách ứng dụng</h2>
+                <div className="relative w-64">
+                  <input
+                    type="text"
+                    placeholder="🔍 Tìm theo tên..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="w-full px-4 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  />
+                  <span className="absolute left-3 top-2.5">🔍</span>
+                </div>
               </div>
-              <div className="space-y-3">
+              
+              <div className="space-y-2">
                 {filteredApps.length > 0 ? (
-                  filteredApps.map((app) => (
-                    <div
-                      key={app.id}
-                      className="flex justify-between items-center p-4 border rounded hover:bg-gray-50 dark:hover:bg-gray-700"
-                    >
-                      <div>
-                        <strong>{app.name}</strong> • 
-                        <small className="ml-2">{categories.find(c => c.id === app.category_id)?.name}</small>
+                  filteredApps.map((app) => {
+                    const category = categories.find(c => c.id === app.category_id);
+                    return (
+                      <div
+                        key={app.id}
+                        className="flex justify-between items-center p-3 border rounded hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium truncate">{app.name}</h3>
+                          <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
+                            {category && (
+                              <span className="inline-block px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs mr-2 dark:bg-blue-900 dark:text-blue-200">
+                                {category.name}
+                              </span>
+                            )}
+                            {app.version && <span>Phiên bản: {app.version}</span>}
+                          </div>
+                        </div>
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => handleEdit(app)}
+                            className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                            title="Sửa"
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            onClick={() => handleDelete(app.id)}
+                            className="p-1.5 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                            title="Xóa"
+                          >
+                            🗑️
+                          </button>
+                        </div>
                       </div>
-                      <div className="space-x-2">
-                        <button
-                          onClick={() => handleEdit(app)}
-                          className="text-blue-500 hover:underline"
-                        >
-                          Sửa
-                        </button>
-                        <button
-                          onClick={() => handleDelete(app.id)}
-                          className="text-red-500 hover:underline"
-                        >
-                          Xóa
-                        </button>
-                      </div>
-                    </div>
-                  ))
+                    );
+                  })
                 ) : (
-                  <p className="text-center py-4 text-gray-500">Không có ứng dụng nào</p>
+                  <div className="text-center py-6 text-gray-500 dark:text-gray-400">
+                    {search ? "Không tìm thấy ứng dụng phù hợp" : "Chưa có ứng dụng nào"}
+                  </div>
                 )}
               </div>
             </section>
           </>
         ) : (
           <>
-            {/* Category Management Form */}
-            <section className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md mb-8">
-              <h2 className="text-xl font-semibold mb-4">
-                {editingCategoryId ? "Sửa chuyên mục" : "Thêm chuyên mục mới"}
+            {/* Category Management */}
+            <section className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-md mb-6">
+              <h2 className="text-lg md:text-xl font-semibold mb-4">
+                {editingCategoryId ? "✏️ Sửa chuyên mục" : "➕ Thêm chuyên mục mới"}
               </h2>
               <form onSubmit={handleCategorySubmit} className="space-y-4">
                 <div>
@@ -483,7 +569,7 @@ export default function Admin() {
                     value={categoryForm.name}
                     onChange={(e) => setCategoryForm({...categoryForm, name: e.target.value})}
                     placeholder="Nhập tên chuyên mục"
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required
                   />
                 </div>
@@ -496,12 +582,12 @@ export default function Admin() {
                       value={newField}
                       onChange={(e) => setNewField(e.target.value)}
                       placeholder="Nhập tên trường mới"
-                      className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+                      className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
                     <button
                       type="button"
                       onClick={addField}
-                      className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+                      className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
                     >
                       Thêm
                     </button>
@@ -511,15 +597,16 @@ export default function Admin() {
                     <div className="space-y-2">
                       {categoryForm.fields.map((field, index) => (
                         <div key={index} className="flex items-center gap-2">
-                          <span className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded">
+                          <span className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded-full text-sm">
                             {field}
                           </span>
                           <button
                             type="button"
                             onClick={() => removeField(index)}
-                            className="text-red-500 hover:text-red-700"
+                            className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+                            title="Xóa trường này"
                           >
-                            ×
+                            ✕
                           </button>
                         </div>
                       ))}
@@ -527,54 +614,87 @@ export default function Admin() {
                   )}
                 </div>
 
-                <button
-                  type="submit"
-                  disabled={submitting || !categoryForm.name || categoryForm.fields.length === 0}
-                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:bg-blue-300"
-                >
-                  {submitting ? "Đang lưu..." : editingCategoryId ? "Cập nhật" : "Thêm chuyên mục"}
-                </button>
+                <div className="flex justify-end gap-3 pt-4">
+                  {editingCategoryId && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditingCategoryId(null);
+                        setCategoryForm({ name: "", fields: [] });
+                      }}
+                      className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-700"
+                    >
+                      Hủy
+                    </button>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={submitting || !categoryForm.name || categoryForm.fields.length === 0}
+                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-blue-400 dark:bg-blue-700 dark:hover:bg-blue-800"
+                  >
+                    {submitting ? (
+                      <span className="flex items-center">
+                        <span className="animate-spin mr-2">↻</span>
+                        Đang lưu...
+                      </span>
+                    ) : editingCategoryId ? (
+                      "Cập nhật"
+                    ) : (
+                      "Thêm chuyên mục"
+                    )}
+                  </button>
+                </div>
               </form>
             </section>
 
             {/* Categories List */}
-            <section className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-              <h2 className="text-xl font-semibold mb-4">Danh sách chuyên mục</h2>
+            <section className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-md">
+              <h2 className="text-lg md:text-xl font-semibold mb-4">Danh sách chuyên mục</h2>
+              
               <div className="space-y-3">
                 {categories.length > 0 ? (
                   categories.map((category) => (
                     <div
                       key={category.id}
-                      className="flex justify-between items-center p-4 border rounded hover:bg-gray-50 dark:hover:bg-gray-700"
+                      className="p-3 border rounded hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                     >
-                      <div>
-                        <strong>{category.name}</strong>
-                        <div className="mt-1 flex flex-wrap gap-1">
-                          {category.fields.map((field, i) => (
-                            <span key={i} className="text-xs px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded">
-                              {field}
-                            </span>
-                          ))}
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="font-medium">{category.name}</h3>
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {category.fields.map((field, i) => (
+                              <span 
+                                key={i} 
+                                className="inline-block px-2 py-0.5 bg-gray-200 dark:bg-gray-600 rounded-full text-xs"
+                              >
+                                {field}
+                              </span>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                      <div className="space-x-2">
-                        <button
-                          onClick={() => handleEditCategory(category)}
-                          className="text-blue-500 hover:underline"
-                        >
-                          Sửa
-                        </button>
-                        <button
-                          onClick={() => handleDeleteCategory(category.id)}
-                          className="text-red-500 hover:underline"
-                        >
-                          Xóa
-                        </button>
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => handleEditCategory(category)}
+                            className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+                            title="Sửa"
+                          >
+                            ✏️
+                          </button>
+                          <button
+                            onClick={() => handleDeleteCategory(category.id)}
+                            className="p-1.5 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
+                            title="Xóa"
+                          >
+                            🗑️
+                          </button>
+                        </div>
                       </div>
                     </div>
                   ))
                 ) : (
-                  <p className="text-center py-4 text-gray-500">Không có chuyên mục nào</p>
+                  <div className="text-center py-6 text-gray-500 dark:text-gray-400">
+                    Chưa có chuyên mục nào
+                  </div>
                 )}
               </div>
             </section>
