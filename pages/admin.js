@@ -15,10 +15,11 @@ export default function Admin() {
   const [submitting, setSubmitting] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
-  const [activeTab, setActiveTab] = useState("apps"); // 'apps' or 'categories'
+  const [activeTab, setActiveTab] = useState("apps");
   const [categoryForm, setCategoryForm] = useState({ name: "", fields: [] });
   const [editingCategoryId, setEditingCategoryId] = useState(null);
   const [newField, setNewField] = useState("");
+  const [screenshotInput, setScreenshotInput] = useState("");
 
   useEffect(() => {
     checkAdmin();
@@ -31,6 +32,15 @@ export default function Admin() {
       document.documentElement.classList.remove("dark");
     }
   }, [darkMode]);
+
+  useEffect(() => {
+    // Khởi tạo trường screenshots từ form
+    if (form.screenshots) {
+      setScreenshotInput(form.screenshots.join(", "));
+    } else {
+      setScreenshotInput("");
+    }
+  }, [form]);
 
   async function checkAdmin() {
     const { data: { user } } = await supabase.auth.getUser();
@@ -64,7 +74,7 @@ export default function Admin() {
 
   function handleEdit(app) {
     setEditingId(app.id);
-    setSelectedCategory(app.category_id.toString()); // Chuyển sang string để select hoạt động
+    setSelectedCategory(app.category_id.toString());
     setForm(app);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
@@ -84,23 +94,54 @@ export default function Admin() {
   async function handleSubmit(e) {
     e.preventDefault();
     setSubmitting(true);
+    
+    if (!selectedCategory) {
+      alert("Vui lòng chọn chuyên mục");
+      setSubmitting(false);
+      return;
+    }
+
+    // Xử lý screenshots từ input
+    const screenshots = screenshotInput
+      .split(",")
+      .map(url => url.trim())
+      .filter(url => url.length > 0);
+
     const payload = {
       ...form,
-      category_id: parseInt(selectedCategory), // Chuyển sang number trước khi lưu
+      category_id: parseInt(selectedCategory),
+      screenshots,
+      updated_at: new Date().toISOString()
     };
 
     try {
+      let error = null;
+      
       if (editingId) {
-        await supabase.from("apps").update(payload).eq("id", editingId);
+        const { error: updateError } = await supabase
+          .from("apps")
+          .update(payload)
+          .eq("id", editingId);
+        error = updateError;
       } else {
-        await supabase.from("apps").insert([payload]);
+        const { error: insertError } = await supabase
+          .from("apps")
+          .insert([{ ...payload, created_at: new Date().toISOString() }]);
+        error = insertError;
       }
+
+      if (error) throw error;
+
+      alert(editingId ? "Cập nhật ứng dụng thành công!" : "Thêm ứng dụng mới thành công!");
+      
       setForm({});
       setEditingId(null);
-      fetchApps();
+      setSelectedCategory("");
+      setScreenshotInput("");
+      await fetchApps();
     } catch (error) {
-      console.error("Error saving app:", error);
-      alert("Có lỗi xảy ra khi lưu ứng dụng");
+      console.error("Lỗi khi lưu ứng dụng:", error);
+      alert(`Có lỗi xảy ra: ${error.message}`);
     } finally {
       setSubmitting(false);
     }
@@ -147,9 +188,7 @@ export default function Admin() {
     if (!confirm("Xoá chuyên mục sẽ xoá tất cả ứng dụng thuộc chuyên mục này. Xác nhận xoá?")) return;
     
     try {
-      // Xoá tất cả apps thuộc category này trước
       await supabase.from("apps").delete().eq("category_id", id);
-      // Sau đó xoá category
       await supabase.from("categories").delete().eq("id", id);
       fetchCategories();
       fetchApps();
@@ -309,44 +348,68 @@ export default function Admin() {
                 {selectedCategory && currentFields.map((field) => (
                   <div key={field}>
                     <label className="block text-sm font-medium mb-1">{field}</label>
-                    <input
-                      type="text"
-                      value={form[field] || ""}
-                      onChange={(e) =>
-                        setForm((f) => ({ ...f, [field]: e.target.value }))
-                      }
-                      placeholder={`Nhập ${field}`}
-                      className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
-                      required
-                    />
+                    {field.toLowerCase().includes("mô tả") || field.toLowerCase().includes("description") ? (
+                      <textarea
+                        value={form[field] || ""}
+                        onChange={(e) =>
+                          setForm((f) => ({ ...f, [field]: e.target.value }))
+                        }
+                        placeholder={`Nhập ${field}`}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 min-h-[120px]"
+                        required
+                      />
+                    ) : (
+                      <input
+                        type="text"
+                        value={form[field] || ""}
+                        onChange={(e) =>
+                          setForm((f) => ({ ...f, [field]: e.target.value }))
+                        }
+                        placeholder={`Nhập ${field}`}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+                        required
+                      />
+                    )}
                   </div>
                 ))}
 
                 {/* Field: Screenshots */}
                 <div>
-                  <label className="block text-sm font-medium mb-1">Ảnh màn hình (dán link, cách nhau bằng dấu phẩy)</label>
-                  <input
-                    type="text"
-                    value={form.screenshots?.join(",") || ""}
-                    onChange={(e) =>
-                      setForm((f) => ({
-                        ...f,
-                        screenshots: e.target.value
-                          .split(",")
-                          .map((x) => x.trim())
-                          .filter(Boolean),
-                      }))
-                    }
-                    placeholder="Ví dụ: https://example.com/image1.jpg, https://example.com/image2.jpg"
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+                  <label className="block text-sm font-medium mb-1">
+                    Ảnh màn hình (nhập URL, mỗi URL một dòng hoặc cách nhau bằng dấu phẩy)
+                  </label>
+                  <textarea
+                    value={screenshotInput}
+                    onChange={(e) => setScreenshotInput(e.target.value)}
+                    placeholder={`https://example.com/image1.jpg\nhttps://example.com/image2.jpg`}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 min-h-[100px]"
                   />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Mẹo: Bạn có thể dán nhiều URL cùng lúc, hệ thống tự động phân tách
+                  </p>
                 </div>
 
-                {form.screenshots?.length > 0 && (
-                  <div className="grid grid-cols-2 gap-2 mt-4">
-                    {form.screenshots.map((url, i) => (
-                      <img key={i} src={url} alt={`Screenshot ${i}`} className="w-full rounded" />
-                    ))}
+                {screenshotInput && (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-4">
+                    {screenshotInput
+                      .split(/[\n,]+/)
+                      .map(url => url.trim())
+                      .filter(url => url.length > 0)
+                      .map((url, i) => (
+                        <div key={i} className="relative group">
+                          <img 
+                            src={url} 
+                            alt={`Screenshot ${i}`} 
+                            className="w-full h-auto rounded border border-gray-200 dark:border-gray-700"
+                            onError={(e) => {
+                              e.target.src = "https://placehold.co/300x200?text=Ảnh+không+tồn+tại";
+                            }}
+                          />
+                          <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 text-white text-xs p-1 truncate">
+                            {url.length > 30 ? url.substring(0, 30) + "..." : url}
+                          </div>
+                        </div>
+                      ))}
                   </div>
                 )}
 
