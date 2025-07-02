@@ -131,3 +131,51 @@ input:disabled, select:disabled {
   color: #0070f3;
   text-decoration: underline;
 }
+.admin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.admin-form {
+  margin: 20px 0;
+  background: #f9f9f9;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+
+.admin-form input,
+.admin-form select {
+  width: 100%;
+  margin-top: 4px;
+}
+
+.app-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  background: #fff;
+}
+
+.app-item button {
+  margin-left: 10px;
+}
+
+.screenshots-preview {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+  overflow-x: auto;
+}
+
+.screenshots-preview img {
+  width: 100px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
