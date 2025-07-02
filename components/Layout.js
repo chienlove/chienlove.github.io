@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 
-export default function App() {
+export default function App({ children }) {
   const [darkMode, setDarkMode] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
@@ -95,14 +95,9 @@ export default function App() {
         </div>
       </header>
 
-      {/* Main Content */}
+      {/* Main Content (hiển thị nội dung con) */}
       <main className="container mx-auto px-4 py-6">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-3xl font-bold mb-6">Welcome to TestFlight Share</h1>
-          <p className="text-lg text-gray-600 dark:text-gray-300 mb-8">
-            Đây là một layout hiện đại, đáp ứng đầy đủ nhu cầu người dùng với header có menu hamburger, tìm kiếm và footer đầy đủ.
-          </p>
-        </div>
+        {children}
       </main>
 
       {/* Footer */}
