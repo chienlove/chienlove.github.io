@@ -29,6 +29,15 @@ export default function Admin() {
     return id && uuidRegex.test(id);
   };
 
+  // Tạo slug từ tên ứng dụng
+  const createSlug = (name) => {
+    return name
+      .toLowerCase()
+      .replace(/[^\w\s]/gi, '')
+      .replace(/\s+/g, '-')
+      .trim();
+  };
+
   useEffect(() => {
     checkAdmin();
   }, []);
@@ -143,7 +152,8 @@ export default function Admin() {
         ...form,
         category_id: selectedCategory,
         screenshots,
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        slug: createSlug(form.name) // Thêm slug vào payload
       };
 
       if (editingId) {
@@ -496,14 +506,16 @@ export default function Admin() {
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-lg md:text-xl font-semibold">Danh sách ứng dụng</h2>
                 <div className="relative w-64">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <span>🔍</span>
+                  </div>
                   <input
                     type="text"
-                    placeholder="🔍 Tìm theo tên..."
+                    placeholder="Tìm theo tên..."
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     className="w-full px-4 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   />
-                  <span className="absolute left-3 top-2.5">🔍</span>
                 </div>
               </div>
               
