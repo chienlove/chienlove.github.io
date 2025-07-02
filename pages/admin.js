@@ -153,7 +153,7 @@ export default function Admin() {
         category_id: selectedCategory,
         screenshots,
         updated_at: new Date().toISOString(),
-        slug: createSlug(form.name) // Thêm slug vào payload
+        slug: form.name ? createSlug(form.name) : uuidv4() // Thêm slug vào payload
       };
 
       if (editingId) {
@@ -390,8 +390,9 @@ export default function Admin() {
                   <select
                     value={selectedCategory}
                     onChange={(e) => {
-                      setSelectedCategory(e.target.value);
-                      setForm({});
+                      const newCategory = e.target.value;
+                      setSelectedCategory(newCategory);
+                      setForm((prev) => ({ ...prev, category_id: newCategory }));
                       setEditingId(null);
                     }}
                     className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
