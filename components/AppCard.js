@@ -5,37 +5,40 @@ export default function AppCard({ app }) {
     <Link href={`/${app.id}`} passHref>
       <div style={{
         display: 'flex',
-        margin: 10,
-        padding: 10,
+        alignItems: 'flex-start',
+        margin: '10px 0',
+        padding: 12,
         border: '1px solid #ddd',
         borderRadius: 8,
+        cursor: 'pointer',
         textDecoration: 'none',
-        color: 'inherit',
-        cursor: 'pointer'
+        color: 'inherit'
       }}>
-        {app.icon_url ? (
-          <img src={app.icon_url} width={64} height={64} alt="icon" />
-        ) : (
-          <div style={{
-            width: 64, height: 64,
-            background: '#ccc',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: 12,
-            color: '#666'
-          }}>No Icon</div>
-        )}
-
-        <div style={{ marginLeft: 12 }}>
-          <h3>
-            {app.name || 'Chưa đặt tên'}
-            {app.version && <small> v{app.version}</small>}
+        <img
+          src={app.icon_url || '/default-icon.png'}
+          width={60}
+          height={60}
+          alt="icon"
+          style={{ borderRadius: 12, objectFit: 'cover' }}
+        />
+        <div style={{ marginLeft: 12, flex: 1 }}>
+          <h3 style={{ margin: 0 }}>
+            {app.name}
+            {app.version && <small style={{ marginLeft: 8, fontSize: 12, color: '#666' }}>v{app.version}</small>}
           </h3>
           {app.description ? (
-            <p>{app.description.slice(0, 100)}...</p>
+            <p style={{ margin: '6px 0', color: '#444' }}>{app.description.slice(0, 80)}...</p>
           ) : (
-            <p><i>Không có mô tả</i></p>
+            <p style={{ margin: '6px 0', color: '#999' }}><i>Không có mô tả</i></p>
+          )}
+          {app.testflight_url && (
+            <a href={app.testflight_url} target="_blank" rel="noopener noreferrer" style={{
+              fontSize: 13,
+              color: '#0070f3',
+              textDecoration: 'underline'
+            }}>
+              Tham gia TestFlight
+            </a>
           )}
         </div>
       </div>
