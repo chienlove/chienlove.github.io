@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "build:css": "tailwindcss build styles/globals.css -o styles/tailwind.css"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.5",
