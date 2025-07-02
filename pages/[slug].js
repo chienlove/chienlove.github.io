@@ -100,7 +100,16 @@ export default function Detail() {
   return (
     <Layout title={app.name}>
       <div className="relative">
-        <div className="w-full pb-8" style={{ backgroundColor: dominantColor }}>
+        <div
+          className="w-full pb-8"
+          style={{
+            backgroundImage: `linear-gradient(to bottom, ${dominantColor}, ${
+              typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches
+                ? '#111827'
+                : '#ffffff'
+            })`
+          }}
+        >
           <div className="container mx-auto px-4 pt-10 text-center">
             <div className="w-24 h-24 md:w-28 md:h-28 mx-auto rounded-2xl overflow-hidden border-4 border-white shadow-lg">
               <img
