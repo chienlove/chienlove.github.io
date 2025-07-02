@@ -1,16 +1,66 @@
-// pages/[slug].js
 import { supabase } from '../lib/supabase';
 import Layout from '../components/Layout';
 import { useRouter } from 'next/router';
+import { useEffect, useState } from 'react';
 
-export default function Detail({ app }) {
+export default function Detail() {
   const router = useRouter();
+  const { slug } = router.query;
+  const [app, setApp] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  if (router.isFallback) {
+  useEffect(() => {
+    if (!slug) return;
+
+    const fetchApp = async () => {
+      try {
+        setLoading(true);
+        
+        // First try to fetch by slug
+        let { data: appData, error } = await supabase
+          .from('apps')
+          .select('*')
+          .eq('slug', slug)
+          .single();
+
+        // If not found by slug, try by ID
+        if (error || !appData) {
+          const { data: appById } = await supabase
+            .from('apps')
+            .select('*')
+            .eq('id', slug)
+            .single();
+
+          if (appById) {
+            // If found by ID, redirect to slug URL
+            router.replace(`/${appById.slug}`);
+            return;
+          }
+        }
+
+        if (!appData && !error) {
+          // No app found
+          router.replace('/404');
+          return;
+        }
+
+        setApp(appData);
+      } catch (err) {
+        console.error('Error fetching app:', err);
+        router.replace('/404');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchApp();
+  }, [slug]);
+
+  if (loading) {
     return (
       <Layout>
         <div className="min-h-screen flex items-center justify-center">
-          <p>Đang tải...</p>
+          <p>Đang tải ứng dụng...</p>
         </div>
       </Layout>
     );
@@ -21,8 +71,7 @@ export default function Detail({ app }) {
       <Layout>
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">Ứng dụng không tồn tại</h1>
-            <p className="mb-4">Không tìm thấy ứng dụng bạn yêu cầu.</p>
+            <h1 className="text-2xl font-bold mb-4">Không tìm thấy ứng dụng</h1>
             <button 
               onClick={() => router.push('/')}
               className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
