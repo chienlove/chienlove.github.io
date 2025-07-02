@@ -1,5 +1,6 @@
-// App.jsx
 import { useState, useEffect } from 'react';
+import Head from 'next/head';
+import Link from 'next/link';
 
 export default function App() {
   const [darkMode, setDarkMode] = useState(false);
