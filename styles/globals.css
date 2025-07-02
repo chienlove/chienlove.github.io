@@ -1,123 +1,133 @@
+/* styles/global.css */
 body {
   margin: 0;
-  font-family: system-ui, sans-serif;
-  background: #f8f9fa;
+  font-family: 'Segoe UI', Roboto, sans-serif;
+  background: #f4f6f8;
   color: #333;
 }
 
-.container {
-  max-width: 800px;
+a {
+  color: #0070f3;
+  text-decoration: none;
+}
+
+.layout {
+  max-width: 900px;
   margin: auto;
   padding: 20px;
 }
 
 header {
-  text-align: center;
-  margin-bottom: 20px;
-}
-
-.search-form {
   display: flex;
-  gap: 10px;
+  justify-content: space-between;
+  align-items: center;
+  background: white;
+  padding: 16px 20px;
+  border-bottom: 1px solid #eaeaea;
+  border-radius: 8px;
   margin-bottom: 20px;
 }
 
-.search-form input {
-  flex: 1;
-  padding: 10px;
-  font-size: 16px;
+header h1 {
+  margin: 0;
+  font-size: 22px;
 }
 
-.search-form button {
-  padding: 10px 20px;
-  background: #0070f3;
-  color: white;
-  border: none;
-  cursor: pointer;
-  border-radius: 4px;
+header nav a {
+  margin-left: 20px;
+  font-weight: 500;
 }
 
-.app-list {
+main {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+form {
   display: flex;
   flex-direction: column;
   gap: 15px;
+  margin-top: 20px;
 }
 
-.card {
+form input, form select {
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 15px;
+  width: 100%;
+}
+
+form label {
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+button {
+  background: #0070f3;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 15px;
+  transition: background 0.2s ease;
+}
+
+button:hover {
+  background: #005ac1;
+}
+
+hr {
+  border: none;
+  border-top: 1px solid #eee;
+  margin: 30px 0;
+}
+
+h2, h3 {
+  margin-top: 0;
+}
+
+input:disabled, select:disabled {
+  background: #eee;
+}
+.app-card {
   display: flex;
-  padding: 12px;
+  align-items: flex-start;
+  gap: 15px;
+  padding: 14px;
   border: 1px solid #ddd;
-  border-radius: 8px;
-  background: white;
-  text-decoration: none;
-  color: inherit;
-  gap: 12px;
+  border-radius: 10px;
+  background: #fff;
+  margin-bottom: 16px;
   transition: box-shadow 0.2s;
 }
 
-.card:hover {
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+.app-card:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
-.card img {
+.app-icon {
   width: 60px;
   height: 60px;
-  border-radius: 12px;
+  border-radius: 14px;
   object-fit: cover;
 }
 
-.card .link {
+.app-info h3 {
+  margin: 0 0 6px;
+}
+
+.app-info p {
+  margin: 0 0 8px;
+  font-size: 14px;
+  color: #444;
+}
+
+.testflight-link {
+  font-size: 14px;
   color: #0070f3;
-  font-size: 13px;
   text-decoration: underline;
-  display: inline-block;
-  margin-top: 4px;
-}
-
-.app-detail .banner {
-  width: 100%;
-  border-radius: 8px;
-  margin: 15px 0;
-}
-
-.app-detail .author {
-  font-style: italic;
-  color: #555;
-}
-
-.app-detail .desc {
-  margin: 12px 0;
-  line-height: 1.6;
-}
-
-.app-detail .meta {
-  list-style: none;
-  padding: 0;
-  margin: 10px 0 20px;
-}
-
-.app-detail .meta li {
-  margin-bottom: 6px;
-}
-
-.app-detail .btn {
-  display: inline-block;
-  background: #0070f3;
-  color: white;
-  padding: 10px 15px;
-  border-radius: 6px;
-  text-decoration: none;
-  margin: 15px 0;
-}
-
-.screenshots {
-  display: flex;
-  gap: 10px;
-  overflow-x: auto;
-}
-
-.screenshots img {
-  width: 180px;
-  border-radius: 8px;
-  border: 1px solid #ccc;
 }

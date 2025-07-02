@@ -1,26 +1,27 @@
+// pages/index.js
 import { supabase } from '../lib/supabase';
 import Layout from '../components/Layout';
 import AppCard from '../components/AppCard';
 import { useState } from 'react';
 
 export default function Home({ initialApps }) {
-  const [apps, setApps] = useState(initialApps || []);
+  const [apps, setApps] = useState(initialApps);
   const [q, setQ] = useState('');
 
-  const handleSearch = async (e) => {
+  async function handleSearch(e) {
     e.preventDefault();
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('apps')
       .select('*')
       .ilike('name', `%${q}%`)
       .order('created_at', { ascending: false });
 
-    if (!error) setApps(data);
-  };
+    setApps(data);
+  }
 
   return (
     <Layout>
-      <form onSubmit={handleSearch} className="search-form">
+      <form onSubmit={handleSearch}>
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
@@ -28,6 +29,7 @@ export default function Home({ initialApps }) {
         />
         <button type="submit">Tìm</button>
       </form>
+
       <div className="app-list">
         {apps.length > 0 ? (
           apps.map((app) => <AppCard key={app.id} app={app} />)
@@ -40,10 +42,10 @@ export default function Home({ initialApps }) {
 }
 
 export async function getServerSideProps() {
-  const { data: initialApps, error } = await supabase
+  const { data } = await supabase
     .from('apps')
     .select('*')
     .order('created_at', { ascending: false });
 
-  return { props: { initialApps: error ? [] : initialApps } };
+  return { props: { initialApps: data || [] } };
 }
