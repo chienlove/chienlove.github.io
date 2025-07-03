@@ -159,14 +159,14 @@ export default function Detail() {
             <p className="text-gray-800 dark:text-white whitespace-pre-line">
               {showFullDescription
                 ? app.description
-                : truncate(app.description, 800)}
+                : truncate(app.description, 500)}
             </p>
-            {app.description && app.description.length > 800 && (
+            {app.description && app.description.length > 500 && (
               <button
                 onClick={() => setShowFullDescription(!showFullDescription)}
                 className="mt-2 text-sm text-blue-600 hover:underline"
               >
-                {showFullDescription ? 'Thu gọn' : 'Xem thêm'}
+                {showFullDescription ? 'Thu gọn' : 'Xem thêm...'}
               </button>
             )}
           </div>
