@@ -28,7 +28,7 @@ export default function Detail() {
     const fetchApp = async () => {
       try {
         setLoading(true);
-        let { data: appData, error } = await supabase
+        const { data: appData, error } = await supabase
           .from('apps')
           .select('*')
           .ilike('slug', slug)
@@ -75,7 +75,8 @@ export default function Detail() {
     fetchApp();
   }, [slug]);
 
-  const truncate = (text, limit) => text?.length > limit ? text.slice(0, limit) + '...' : text;
+  const truncate = (text, limit) =>
+    text?.length > limit ? text.slice(0, limit) + '...' : text;
 
   if (loading) {
     return (
@@ -111,7 +112,7 @@ export default function Detail() {
         {/* Breadcrumb */}
         <div className="absolute top-4 left-4 z-30">
           <Link href="/">
-            <a className="inline-flex items-center bg-white/90 px-3 py-1.5 rounded-full shadow text-blue-600 font-semibold text-sm hover:text-blue-800">
+            <a className="inline-flex items-center bg-white/90 px-4 py-2 rounded-full shadow text-blue-700 font-semibold text-base hover:text-blue-900">
               <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
               Trở lại
             </a>
@@ -120,10 +121,10 @@ export default function Detail() {
 
         {/* Header */}
         <div
-          className="w-full pb-6"
+          className="w-full pb-8"
           style={{ backgroundImage: `linear-gradient(to bottom, ${dominantColor}, #f0f2f5)` }}
         >
-          <div className="px-4 pt-16 text-center">
+          <div className="px-4 pt-20 text-center">
             <div className="w-24 h-24 mx-auto rounded-2xl overflow-hidden border-4 border-white shadow-lg">
               <img
                 src={app.icon_url || '/placeholder-icon.png'}
@@ -159,8 +160,8 @@ export default function Detail() {
         </div>
 
         {/* Main content */}
-        <div className="px-4 -mt-8 space-y-6 max-w-screen-xl mx-auto">
-          {/* Thông tin */}
+        <div className="max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 mt-6 space-y-6">
+          {/* Card: Thông tin */}
           <div className="bg-white rounded-xl p-4 shadow">
             <div className="flex justify-around text-sm font-semibold text-gray-600 border-b pb-2 mb-2">
               <div className="flex items-center gap-1">
@@ -183,7 +184,7 @@ export default function Detail() {
             </div>
           </div>
 
-          {/* Mô tả */}
+          {/* Card: Mô tả */}
           <div className="bg-white rounded-xl p-4 shadow">
             <h2 className="text-lg font-bold text-gray-800 mb-2">Mô tả</h2>
             <p className="text-gray-700 whitespace-pre-line">
@@ -199,7 +200,7 @@ export default function Detail() {
             )}
           </div>
 
-          {/* Ảnh màn hình */}
+          {/* Card: Screenshots */}
           {Array.isArray(app.screenshots) && app.screenshots.length > 0 && (
             <div className="bg-white rounded-xl p-4 shadow">
               <h2 className="text-lg font-bold text-gray-800 mb-3">Ảnh màn hình</h2>
@@ -220,7 +221,7 @@ export default function Detail() {
             </div>
           )}
 
-          {/* Ứng dụng cùng chuyên mục */}
+          {/* Card: Ứng dụng cùng chuyên mục */}
           {related.length > 0 && (
             <div className="bg-white rounded-xl p-4 shadow">
               <h2 className="text-lg font-bold text-gray-800 mb-4">Ứng dụng cùng chuyên mục</h2>
