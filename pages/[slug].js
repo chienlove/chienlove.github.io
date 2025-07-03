@@ -108,7 +108,6 @@ export default function Detail() {
   return (
     <Layout title={app.name} fullWidth>
       <div className="bg-gray-100 min-h-screen pb-12">
-
         {/* Breadcrumb */}
         <div className="absolute top-4 left-4 z-30">
           <Link href="/">
@@ -134,11 +133,11 @@ export default function Detail() {
             </div>
             <h1 className="mt-4 text-2xl font-bold text-white drop-shadow">{app.name}</h1>
             {app.author && <p className="text-white opacity-90 text-sm">{app.author}</p>}
-            <div className="mt-4">
+            <div className="mt-4 space-x-2">
               {app.category === 'testflight' && app.testflight_url && (
                 <a
                   href={app.testflight_url}
-                  className="inline-block border border-white text-white hover:bg-white hover:text-blue-600 transition px-4 py-2 rounded-full text-sm font-semibold"
+                  className="inline-block border border-white text-blue-100 hover:text-blue-600 hover:bg-white transition px-4 py-2 rounded-full text-sm font-semibold"
                   target="_blank" rel="noopener noreferrer"
                 >
                   <FontAwesomeIcon icon={faRocket} className="mr-2" />
@@ -148,7 +147,7 @@ export default function Detail() {
               {app.category === 'jailbreak' && app.download_link && (
                 <a
                   href={app.download_link}
-                  className="inline-block border border-white text-white hover:bg-white hover:text-green-600 transition px-4 py-2 rounded-full text-sm font-semibold"
+                  className="inline-block border border-white text-green-100 hover:text-green-600 hover:bg-white transition px-4 py-2 rounded-full text-sm font-semibold"
                   target="_blank" rel="noopener noreferrer"
                 >
                   <FontAwesomeIcon icon={faDownload} className="mr-2" />
@@ -237,10 +236,17 @@ export default function Detail() {
                         />
                         <div>
                           <p className="text-sm font-semibold text-gray-800">{item.name}</p>
-                          <p className="text-xs text-gray-500">{item.author} • {item.version}</p>
+                          <div className="flex items-center gap-2 text-xs text-gray-500">
+                            {item.author && <span>{item.author}</span>}
+                            {item.version && (
+                              <span className="bg-gray-200 text-gray-800 px-2 py-0.5 rounded text-xs font-medium">
+                                {item.version}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
-                      <FontAwesomeIcon icon={faDownload} className="text-gray-400" />
+                      <FontAwesomeIcon icon={faDownload} className="text-blue-500" />
                     </a>
                   </Link>
                 ))}
