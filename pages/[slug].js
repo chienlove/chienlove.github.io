@@ -16,7 +16,8 @@ import {
 
 export default function Detail() {
   const router = useRouter();
-  const slug = (router.query.slug || '').toLowerCase();
+  const rawSlug = router.query.slug;
+  const slug = (rawSlug || '').toLowerCase();
   const [app, setApp] = useState(null);
   const [related, setRelated] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -36,14 +37,14 @@ export default function Detail() {
           .single();
 
         if (error || !appData) {
-          const { data: fallback } = await supabase
+          const { data: appById } = await supabase
             .from('apps')
             .select('*')
             .eq('id', slug)
             .single();
 
-          if (fallback) {
-            router.replace(`/${fallback.slug}`);
+          if (appById) {
+            router.replace(`/${appById.slug}`);
             return;
           }
           router.replace('/404');
@@ -61,13 +62,13 @@ export default function Detail() {
 
         setRelated(relatedApps || []);
 
-        if (appData.icon_url) {
+        if (typeof window !== 'undefined' && appData.icon_url) {
           const fac = new FastAverageColor();
           try {
             const color = await fac.getColorAsync(appData.icon_url);
             setDominantColor(color.hex);
           } catch (e) {
-            console.error('Color error:', e);
+            console.error('Color extraction error:', e);
           } finally {
             fac.destroy();
           }
@@ -101,15 +102,17 @@ export default function Detail() {
   if (!app) {
     return (
       <Layout>
-        <div className="min-h-screen flex items-center justify-center text-center">
-          <h1 className="text-2xl font-bold mb-4">Không tìm thấy ứng dụng</h1>
-          <button
-            onClick={() => router.push('/')}
-            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-bold"
-          >
-            <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
-            Quay về trang chủ
-          </button>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4">Không tìm thấy ứng dụng</h1>
+            <button
+              onClick={() => router.push('/')}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-bold"
+            >
+              <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
+              Quay về trang chủ
+            </button>
+          </div>
         </div>
       </Layout>
     );
@@ -121,14 +124,14 @@ export default function Detail() {
         {/* Breadcrumb */}
         <div className="absolute top-3 left-3 z-20">
           <Link href="/">
-            <a className="inline-flex items-center bg-white/80 backdrop-blur text-blue-600 hover:text-blue-800 text-sm font-bold px-3 py-1.5 rounded-full shadow">
+            <a className="inline-flex items-center bg-white/80 backdrop-blur-sm text-blue-600 hover:text-blue-800 text-sm font-bold px-3 py-1.5 rounded-full shadow">
               <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
               Trở lại
             </a>
           </Link>
         </div>
 
-        {/* App icon + background */}
+        {/* App Header */}
         <div
           className="w-full pb-8"
           style={{
@@ -143,7 +146,7 @@ export default function Detail() {
             <div className="w-24 h-24 md:w-28 md:h-28 mx-auto rounded-2xl overflow-hidden border-4 border-white shadow-lg">
               <img
                 src={app.icon_url || '/placeholder-icon.png'}
-                alt={app.name}
+                alt={`${app.name} icon`}
                 className="w-full h-full object-cover"
               />
             </div>
@@ -154,14 +157,16 @@ export default function Detail() {
           </div>
         </div>
 
+        {/* Main content */}
         <div className="container mx-auto px-4 -mt-12 relative z-10">
-          {/* Button install / join */}
+
+          {/* Action Button */}
           {app.category === 'testflight' && app.testflight_url && (
             <a
               href={app.testflight_url}
               target="_blank"
               rel="noopener noreferrer"
-              className="block bg-blue-600 hover:bg-blue-700 text-white text-center py-3 rounded-xl font-bold transition active:scale-95"
+              className="block bg-blue-600 hover:bg-blue-700 text-white text-center py-3 rounded-xl font-bold transition active:scale-95 mb-4"
             >
               <FontAwesomeIcon icon={faRocket} className="mr-2" />
               Tham gia TestFlight
@@ -172,39 +177,30 @@ export default function Detail() {
               href={app.download_link}
               target="_blank"
               rel="noopener noreferrer"
-              className="block bg-green-600 hover:bg-green-700 text-white text-center py-3 rounded-xl font-bold transition active:scale-95"
+              className="block bg-green-600 hover:bg-green-700 text-white text-center py-3 rounded-xl font-bold transition active:scale-95 mb-4"
             >
               <FontAwesomeIcon icon={faDownload} className="mr-2" />
               Cài đặt ứng dụng
             </a>
           )}
 
-          {/* Thông tin ứng dụng */}
-          <div className="flex flex-wrap items-center gap-6 text-sm text-gray-700 dark:text-gray-300 mt-6 border-b border-gray-200 dark:border-gray-700 pb-4">
-            {app.version && (
-              <div className="flex items-center gap-2">
-                <FontAwesomeIcon icon={faCodeBranch} className="text-blue-500 w-4" />
-                <span className="font-medium">Phiên bản:</span>
-                <span>{app.version}</span>
-              </div>
-            )}
-            {app.size && (
-              <div className="flex items-center gap-2">
-                <FontAwesomeIcon icon={faDatabase} className="text-green-500 w-4" />
-                <span className="font-medium">Dung lượng:</span>
-                <span>{app.size} MB</span>
-              </div>
-            )}
-            {app.author && (
-              <div className="flex items-center gap-2">
-                <FontAwesomeIcon icon={faUser} className="text-purple-500 w-4" />
-                <span className="font-medium">Tác giả:</span>
-                <span>{app.author}</span>
-              </div>
-            )}
+          {/* Info Row */}
+          <div className="grid grid-cols-3 gap-4 text-center text-sm text-gray-800 dark:text-white font-medium border-b border-gray-200 dark:border-gray-700 pb-4 mb-4">
+            <div>
+              <p className="mb-1 text-gray-500 dark:text-gray-400">Phiên bản</p>
+              <p><FontAwesomeIcon icon={faCodeBranch} className="mr-1 text-blue-500" />{app.version || 'Không rõ'}</p>
+            </div>
+            <div>
+              <p className="mb-1 text-gray-500 dark:text-gray-400">Tác giả</p>
+              <p><FontAwesomeIcon icon={faUser} className="mr-1 text-purple-500" />{app.author || 'Không rõ'}</p>
+            </div>
+            <div>
+              <p className="mb-1 text-gray-500 dark:text-gray-400">Dung lượng</p>
+              <p><FontAwesomeIcon icon={faDatabase} className="mr-1 text-green-500" />{app.size ? `${app.size} MB` : 'Không rõ'}</p>
+            </div>
           </div>
 
-          {/* Mô tả */}
+          {/* Description */}
           <div className="py-6 border-b border-gray-200 dark:border-gray-700">
             <h2 className="text-lg font-bold text-black dark:text-white mb-2">Mô tả</h2>
             <p className="text-gray-800 dark:text-white whitespace-pre-line">
@@ -222,7 +218,7 @@ export default function Detail() {
             )}
           </div>
 
-          {/* Ảnh màn hình */}
+          {/* Screenshots */}
           {Array.isArray(app.screenshots) && app.screenshots.length > 0 && (
             <div className="py-6">
               <h2 className="text-lg font-bold text-black dark:text-white mb-3">Ảnh màn hình</h2>
@@ -243,30 +239,26 @@ export default function Detail() {
             </div>
           )}
 
-          {/* Ứng dụng cùng chuyên mục */}
+          {/* Related apps */}
           {related.length > 0 && (
             <div className="py-8">
               <h2 className="text-lg font-bold text-black dark:text-white mb-4">Ứng dụng cùng chuyên mục</h2>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              <div className="space-y-4">
                 {related.map((item) => (
                   <Link href={`/${item.slug}`} key={item.id}>
-                    <a className="block bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 hover:shadow transition">
-                      <div className="flex flex-col items-center">
-                        <img
-                          src={item.icon_url || '/placeholder-icon.png'}
-                          alt={item.name}
-                          className="w-16 h-16 rounded-lg object-cover mb-2"
-                        />
-                        <p className="text-center text-sm font-bold text-gray-900 dark:text-white truncate w-full">{item.name}</p>
-                        {item.author && (
-                          <p className="text-center text-xs text-gray-500 dark:text-gray-400 mt-1 truncate w-full">{item.author}</p>
-                        )}
-                        {item.version && (
-                          <span className="mt-2 inline-block bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-0.5 rounded-full">
-                            v{item.version}
-                          </span>
-                        )}
+                    <a className="flex items-center bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 hover:shadow transition">
+                      <img
+                        src={item.icon_url || '/placeholder-icon.png'}
+                        alt={item.name}
+                        className="w-14 h-14 rounded-xl object-cover mr-4"
+                      />
+                      <div className="flex-1">
+                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{item.name}</h3>
+                        <p className="text-xs text-gray-600 dark:text-gray-400">{item.author || 'Không rõ'}</p>
                       </div>
+                      <span className="ml-auto text-xs bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white px-2 py-1 rounded">
+                        {item.version || 'v?'}
+                      </span>
                     </a>
                   </Link>
                 ))}
