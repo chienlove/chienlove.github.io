@@ -109,7 +109,7 @@ export default function Detail() {
     <Layout fullWidth>
       <div className="bg-gray-100 min-h-screen pb-12">
 
-        {/* ✅ Header chuẩn chiều rộng và padding */}
+        {/* Header */}
         <div className="w-full flex justify-center mt-10 bg-gray-100">
           <div className="relative w-full max-w-screen-2xl px-2 sm:px-4 md:px-6 pb-8 bg-white rounded-none">
             <div
@@ -118,9 +118,10 @@ export default function Detail() {
                 backgroundImage: `linear-gradient(to bottom, ${dominantColor}, #f0f2f5)`,
               }}
             >
+              {/* Breadcrumb with hover/click effect */}
               <div className="absolute top-3 left-3 z-10">
                 <Link href="/">
-                  <a className="inline-flex items-center justify-center w-8 h-8 text-blue-600 hover:text-blue-800 bg-white rounded-full shadow-sm">
+                  <a className="inline-flex items-center justify-center w-9 h-9 text-blue-600 hover:text-white bg-white hover:bg-blue-600 active:scale-95 transition-all duration-150 rounded-full shadow-sm">
                     <FontAwesomeIcon icon={faArrowLeft} className="w-4 h-4" />
                   </a>
                 </Link>
@@ -165,9 +166,9 @@ export default function Detail() {
           </div>
         </div>
 
-        {/* ✅ Card bên dưới */}
+        {/* Nội dung bên dưới */}
         <div className="max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 mt-6 space-y-6">
-          {/* Card: Thông tin */}
+          {/* Thông tin */}
           <div className="bg-white rounded-xl p-4 shadow">
             <div className="flex justify-around text-sm font-semibold text-gray-600 border-b pb-2 mb-2">
               <div className="flex items-center gap-1">
@@ -190,7 +191,7 @@ export default function Detail() {
             </div>
           </div>
 
-          {/* Card: Mô tả */}
+          {/* Mô tả */}
           <div className="bg-white rounded-xl p-4 shadow">
             <h2 className="text-lg font-bold text-gray-800 mb-2">Mô tả</h2>
             <p className="text-gray-700 whitespace-pre-line">
@@ -206,7 +207,7 @@ export default function Detail() {
             )}
           </div>
 
-          {/* Card: Screenshots */}
+          {/* Ảnh màn hình */}
           {Array.isArray(app.screenshots) && app.screenshots.length > 0 && (
             <div className="bg-white rounded-xl p-4 shadow">
               <h2 className="text-lg font-bold text-gray-800 mb-3">Ảnh màn hình</h2>
@@ -220,21 +221,21 @@ export default function Detail() {
             </div>
           )}
 
-          {/* Card: Ứng dụng cùng chuyên mục */}
+          {/* Ứng dụng cùng chuyên mục */}
           {related.length > 0 && (
             <div className="bg-white rounded-xl p-4 shadow">
               <h2 className="text-lg font-bold text-gray-800 mb-4">Ứng dụng cùng chuyên mục</h2>
               <div className="divide-y divide-gray-200">
                 {related.map((item) => (
                   <Link href={`/${item.slug}`} key={item.id}>
-                    <a className="flex items-center justify-between py-3 hover:bg-gray-50 px-2 rounded-lg transition">
-                      <div className="flex items-center gap-3">
+                    <a className="flex items-center justify-between py-4 hover:bg-gray-50 px-2 rounded-lg transition">
+                      <div className="flex items-center gap-4">
                         <img
                           src={item.icon_url || '/placeholder-icon.png'}
                           alt={item.name}
-                          className="w-10 h-10 rounded-lg object-cover"
+                          className="w-14 h-14 rounded-xl object-cover shadow-sm"
                         />
-                        <div>
+                        <div className="flex flex-col">
                           <p className="text-sm font-semibold text-gray-800">{item.name}</p>
                           <div className="flex items-center gap-2 text-xs text-gray-500">
                             {item.author && <span>{item.author}</span>}
@@ -246,7 +247,7 @@ export default function Detail() {
                           </div>
                         </div>
                       </div>
-                      <FontAwesomeIcon icon={faDownload} className="text-blue-500" />
+                      <FontAwesomeIcon icon={faDownload} className="text-blue-500 text-lg" />
                     </a>
                   </Link>
                 ))}
