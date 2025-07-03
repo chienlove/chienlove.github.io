@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { supabase } from '../lib/supabase';
 import Layout from '../components/Layout';
 import { useRouter } from 'next/router';
@@ -99,14 +100,14 @@ export default function Detail() {
 
   return (
     <Layout title={app.name}>
+  <div className="relative">
     <div className="container mx-auto px-4 pt-4">
-  <Link href="/">
-    <a className="inline-flex items-center text-blue-600 hover:text-blue-800 text-lg font-semibold">
-      <span className="text-2xl leading-none">‹</span>
-      <span className="sr-only">Quay lại</span>
-    </a>
-  </Link>
-</div>
+      <Link href="/">
+        <a className="inline-flex items-center text-blue-600 hover:text-blue-800 text-xl font-semibold">
+          <span className="text-2xl leading-none">‹</span>
+        </a>
+      </Link>
+    </div>
       <div className="relative">
         <div
           className="w-full pb-8"
