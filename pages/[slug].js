@@ -109,56 +109,58 @@ export default function Detail() {
     <Layout fullWidth>
       <div className="bg-gray-100 min-h-screen pb-12">
 
-        {/* Header đã sửa triệt để */}
+        {/* Header triệt để gọn, gradient không full lề, breadcrumb đẹp */}
         <div className="w-full flex justify-center mt-10">
-          <div
-            className="relative w-full max-w-4xl px-4 pb-8"
-            style={{
-              backgroundImage: `linear-gradient(to bottom, ${dominantColor}, #f0f2f5)`,
-            }}
-          >
-            {/* Breadcrumb nhỏ gọn, nằm gọn trong header */}
-            <div className="absolute top-3 left-3">
-              <Link href="/">
-                <a className="inline-flex items-center justify-center w-8 h-8 text-blue-600 hover:text-blue-800 bg-white rounded-full shadow-sm">
-                  <FontAwesomeIcon icon={faArrowLeft} className="w-4 h-4" />
-                </a>
-              </Link>
-            </div>
-
-            <div className="pt-10 text-center">
-              <div className="w-24 h-24 mx-auto overflow-hidden border-4 border-white rounded-2xl">
-                <img
-                  src={app.icon_url || '/placeholder-icon.png'}
-                  alt={app.name}
-                  className="w-full h-full object-cover"
-                />
+          <div className="relative w-full max-w-4xl px-4 pb-8 bg-white rounded-none">
+            <div
+              className="w-full"
+              style={{
+                backgroundImage: `linear-gradient(to bottom, ${dominantColor}, #f0f2f5)`,
+              }}
+            >
+              {/* Breadcrumb nhỏ gọn */}
+              <div className="absolute top-3 left-3 z-10">
+                <Link href="/">
+                  <a className="inline-flex items-center justify-center w-8 h-8 text-blue-600 hover:text-blue-800 bg-white rounded-full shadow-sm">
+                    <FontAwesomeIcon icon={faArrowLeft} className="w-4 h-4" />
+                  </a>
+                </Link>
               </div>
-              <h1 className="mt-4 text-2xl font-bold text-gray-900 drop-shadow">{app.name}</h1>
-              {app.author && (
-                <p className="text-gray-700 text-sm">{app.author}</p>
-              )}
-              <div className="mt-4 space-x-2">
-                {app.category === 'testflight' && app.testflight_url && (
-                  <a
-                    href={app.testflight_url}
-                    className="inline-block border border-blue-500 text-blue-700 hover:bg-blue-100 transition px-4 py-2 rounded-full text-sm font-semibold"
-                    target="_blank" rel="noopener noreferrer"
-                  >
-                    <FontAwesomeIcon icon={faRocket} className="mr-2" />
-                    Tham gia TestFlight
-                  </a>
+
+              <div className="pt-10 text-center px-4">
+                <div className="w-24 h-24 mx-auto overflow-hidden border-4 border-white rounded-2xl">
+                  <img
+                    src={app.icon_url || '/placeholder-icon.png'}
+                    alt={app.name}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <h1 className="mt-4 text-2xl font-bold text-gray-900 drop-shadow">{app.name}</h1>
+                {app.author && (
+                  <p className="text-gray-700 text-sm">{app.author}</p>
                 )}
-                {app.category === 'jailbreak' && app.download_link && (
-                  <a
-                    href={app.download_link}
-                    className="inline-block border border-green-500 text-green-700 hover:bg-green-100 transition px-4 py-2 rounded-full text-sm font-semibold"
-                    target="_blank" rel="noopener noreferrer"
-                  >
-                    <FontAwesomeIcon icon={faDownload} className="mr-2" />
-                    Cài đặt ứng dụng
-                  </a>
-                )}
+                <div className="mt-4 space-x-2">
+                  {app.category === 'testflight' && app.testflight_url && (
+                    <a
+                      href={app.testflight_url}
+                      className="inline-block border border-blue-500 text-blue-700 hover:bg-blue-100 transition px-4 py-2 rounded-full text-sm font-semibold"
+                      target="_blank" rel="noopener noreferrer"
+                    >
+                      <FontAwesomeIcon icon={faRocket} className="mr-2" />
+                      Tham gia TestFlight
+                    </a>
+                  )}
+                  {app.category === 'jailbreak' && app.download_link && (
+                    <a
+                      href={app.download_link}
+                      className="inline-block border border-green-500 text-green-700 hover:bg-green-100 transition px-4 py-2 rounded-full text-sm font-semibold"
+                      target="_blank" rel="noopener noreferrer"
+                    >
+                      <FontAwesomeIcon icon={faDownload} className="mr-2" />
+                      Cài đặt ứng dụng
+                    </a>
+                  )}
+                </div>
               </div>
             </div>
           </div>
