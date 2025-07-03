@@ -99,6 +99,14 @@ export default function Detail() {
 
   return (
     <Layout title={app.name}>
+    <div className="container mx-auto px-4 pt-4">
+  <Link href="/">
+    <a className="inline-flex items-center text-blue-600 hover:text-blue-800 text-lg font-semibold">
+      <span className="text-2xl leading-none">‹</span>
+      <span className="sr-only">Quay lại</span>
+    </a>
+  </Link>
+</div>
       <div className="relative">
         <div
           className="w-full pb-8"
