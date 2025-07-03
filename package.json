@@ -15,7 +15,10 @@
     "react": "18.2.0",
     "react-dom": "18.2.0",
     "uuid": "^9.0.1",
-    "fast-average-color": "9.5.0"
+    "fast-average-color": "9.5.0",
+    "@fortawesome/fontawesome-svg-core": "^6.5.0",
+    "@fortawesome/free-solid-svg-icons": "^6.5.0",
+    "@fortawesome/react-fontawesome": "^0.2.0"
   },
   "devDependencies": {
     "eslint": "8.55.0",

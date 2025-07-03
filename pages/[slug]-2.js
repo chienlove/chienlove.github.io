@@ -5,9 +5,6 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { FastAverageColor } from 'fast-average-color';
 
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faDownload, faRocket } from '@fortawesome/free-solid-svg-icons';
-
 export default function Detail() {
   const router = useRouter();
   const rawSlug = router.query.slug;
@@ -103,16 +100,15 @@ export default function Detail() {
 
   return (
     <Layout title={app.name}>
-      <div className="relative">
-        <div className="container mx-auto px-4 pt-4">
-          <Link href="/">
-            <a className="inline-flex items-center text-blue-600 hover:text-blue-800 text-xl font-semibold">
-              <span className="text-2xl leading-none">‹</span>
-            </a>
-          </Link>
-        </div>
-      </div>
-
+  <div className="relative">
+    <div className="container mx-auto px-4 pt-4">
+      <Link href="/">
+        <a className="inline-flex items-center text-blue-600 hover:text-blue-800 text-xl font-semibold">
+          <span className="text-2xl leading-none">‹</span>
+        </a>
+      </Link>
+    </div>
+   </div> 
       <div className="relative">
         <div
           className="w-full pb-8"
@@ -144,40 +140,15 @@ export default function Detail() {
         </div>
 
         <div className="container mx-auto px-4 -mt-12 relative z-10">
-          {app.category === 'testflight' && app.testflight_url && (
+          {app.testflight_url && (
             <a
               href={app.testflight_url}
               target="_blank"
               rel="noopener noreferrer"
               className="block bg-blue-600 hover:bg-blue-700 text-white text-center py-3 rounded-xl font-medium transition active:scale-95"
             >
-              <FontAwesomeIcon icon={faRocket} className="mr-2" />
               Tham gia TestFlight
             </a>
-          )}
-
-          {app.category === 'jailbreak' && app.download_link && (
-            <a
-              href={app.download_link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block bg-green-600 hover:bg-green-700 text-white text-center py-3 rounded-xl font-medium transition active:scale-95"
-            >
-              <FontAwesomeIcon icon={faDownload} className="mr-2" />
-              Cài đặt ứng dụng
-            </a>
-          )}
-
-          {app.category === 'testflight' && !app.testflight_url && (
-            <p className="text-red-500 text-center font-medium mt-2">
-              Liên kết TestFlight chưa được cập nhật.
-            </p>
-          )}
-
-          {app.category === 'jailbreak' && !app.download_link && (
-            <p className="text-red-500 text-center font-medium mt-2">
-              Đường dẫn cài đặt chưa có.
-            </p>
           )}
 
           <div className="grid grid-cols-2 gap-6 text-sm text-gray-700 dark:text-gray-300 mt-5 border-b border-gray-200 dark:border-gray-700 pb-4">
