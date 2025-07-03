@@ -55,39 +55,72 @@ export default function Layout({ children }) {
 
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 shadow-md sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-          <Link href="/">
-            <a className="text-xl font-bold text-blue-600 dark:text-blue-400">🚀 TestFlight Share</a>
-          </Link>
+  <div className="container mx-auto px-4 py-3 flex flex-col md:flex-row md:items-center justify-between gap-3">
+    {/* Logo */}
+    <div className="flex items-center justify-between w-full md:w-auto">
+      <Link href="/">
+        <a className="text-xl font-bold text-blue-600 dark:text-blue-400">🚀 TestFlight Share</a>
+      </Link>
 
-          <div className="flex items-center gap-4">
-            {/* Toggle dark mode */}
-            <button
-              onClick={() => setDarkMode(!darkMode)}
-              title="Chuyển giao diện"
-              className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition"
-            >
-              {darkMode ? <SunIcon className="w-5 h-5" /> : <MoonIcon className="w-5 h-5" />}
-            </button>
+      {/* Mobile menu button */}
+      <button
+        className="md:hidden p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
+        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+      >
+        <MenuIcon className="w-6 h-6" />
+      </button>
+    </div>
 
-            {/* Hamburger menu (mobile only) */}
-            <button
-              className="md:hidden p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-              <MenuIcon className="w-6 h-6" />
-            </button>
-          </div>
-        </div>
+    {/* Tìm kiếm gọn đẹp */}
+    <form
+      onSubmit={handleSearch}
+      className="flex flex-wrap gap-2 items-center justify-start md:justify-end w-full md:w-auto"
+    >
+      <input
+        type="text"
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="Tìm ứng dụng..."
+        className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-44 md:w-56"
+      />
+      <select
+        value={activeCategory}
+        onChange={(e) => handleCategory(e.target.value)}
+        className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-800 dark:text-white"
+      >
+        <option value="all">Tất cả chuyên mục</option>
+        {categories.map((c) => (
+          <option key={c.id} value={c.id}>
+            {c.name}
+          </option>
+        ))}
+      </select>
+      <button
+        type="submit"
+        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold"
+      >
+        Tìm
+      </button>
+    </form>
 
-        {/* Mobile menu */}
-        {mobileMenuOpen && (
-          <div className="md:hidden bg-white dark:bg-gray-800 px-4 py-3 border-t dark:border-gray-700 space-y-2">
-            <Link href="/about"><a className="block">Giới thiệu</a></Link>
-            <Link href="/contact"><a className="block">Liên hệ</a></Link>
-          </div>
-        )}
-      </header>
+    {/* Dark mode toggle */}
+    <button
+      onClick={() => setDarkMode(!darkMode)}
+      title="Chuyển giao diện"
+      className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition"
+    >
+      {darkMode ? <SunIcon className="w-5 h-5" /> : <MoonIcon className="w-5 h-5" />}
+    </button>
+  </div>
+
+  {/* Mobile menu (dropdown) */}
+  {mobileMenuOpen && (
+    <div className="md:hidden bg-white dark:bg-gray-800 px-4 py-3 border-t dark:border-gray-700 space-y-2">
+      <Link href="/about"><a className="block">Giới thiệu</a></Link>
+      <Link href="/contact"><a className="block">Liên hệ</a></Link>
+    </div>
+  )}
+</header>
 
       {/* Tìm kiếm nâng cao */}
       <section className="bg-gradient-to-r from-blue-500 to-purple-600 py-8 text-white">
