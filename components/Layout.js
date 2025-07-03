@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabase';
 import AppCard from './AppCard';
 
 export default function Layout({ children }) {
+  const router = useRouter();
   const [darkMode, setDarkMode] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [q, setQ] = useState('');
@@ -47,6 +49,13 @@ export default function Layout({ children }) {
     setSearching(false);
   };
 
+  const handleAppClick = (slug) => {
+    setApps([]);
+    setQ('');
+    setActiveCategory('all');
+    router.push(`/${slug}`);
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors">
       <Head>
@@ -61,19 +70,19 @@ export default function Layout({ children }) {
             <a className="text-xl font-bold text-blue-600 dark:text-blue-400">🚀 TestFlight Share</a>
           </Link>
 
-          {/* Search form */}
+          {/* Search Form */}
           <form onSubmit={handleSearch} className="hidden md:flex items-center gap-2 flex-1 justify-end">
             <input
               type="text"
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Tìm app..."
-              className="w-full max-w-xs px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-sm text-gray-900 dark:text-white"
+              className="w-full max-w-xs px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-base text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
             <select
               value={activeCategory}
               onChange={(e) => handleCategory(e.target.value)}
-              className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-700 text-sm text-gray-800 dark:text-white"
+              className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-700 text-base text-gray-800 dark:text-white"
             >
               <option value="all">Tất cả</option>
               {categories.map((cat) => (
@@ -90,7 +99,7 @@ export default function Layout({ children }) {
             </button>
           </form>
 
-          {/* Dark mode toggle + menu mobile */}
+          {/* Toggle & Hamburger */}
           <div className="flex items-center gap-2">
             <button
               onClick={() => setDarkMode(!darkMode)}
@@ -109,7 +118,7 @@ export default function Layout({ children }) {
           </div>
         </div>
 
-        {/* Mobile search menu */}
+        {/* Mobile search */}
         {mobileMenuOpen && (
           <div className="md:hidden bg-white dark:bg-gray-800 px-4 pb-4 space-y-3">
             <form onSubmit={handleSearch} className="flex flex-col gap-2">
@@ -118,12 +127,12 @@ export default function Layout({ children }) {
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="Tìm app..."
-                className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-sm"
+                className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-base"
               />
               <select
                 value={activeCategory}
                 onChange={(e) => handleCategory(e.target.value)}
-                className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-700 text-sm"
+                className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-700 text-base"
               >
                 <option value="all">Tất cả</option>
                 {categories.map((cat) => (
@@ -147,10 +156,17 @@ export default function Layout({ children }) {
       {searching ? (
         <div className="container mx-auto px-4 py-6 text-center text-gray-500">Đang tìm kiếm...</div>
       ) : apps.length > 0 ? (
-        <div className="container mx-auto px-4 py-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {apps.map((app) => (
-            <AppCard key={app.id} app={app} />
-          ))}
+        <div className="container mx-auto px-4 py-6">
+          <div className="text-sm text-gray-500 mb-3">
+            Đã tìm thấy {apps.length} ứng dụng
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {apps.map((app) => (
+              <div key={app.id} onClick={() => handleAppClick(app.slug)} className="cursor-pointer">
+                <AppCard app={app} />
+              </div>
+            ))}
+          </div>
         </div>
       ) : q || activeCategory !== 'all' ? (
         <div className="container mx-auto px-4 py-6 text-center text-gray-500">
@@ -158,10 +174,10 @@ export default function Layout({ children }) {
         </div>
       ) : null}
 
-      {/* Nội dung chính */}
+      {/* Nội dung */}
       <main className="container mx-auto px-4 py-6 flex-1">{children}</main>
 
-      {/* Footer đẹp hiện đại */}
+      {/* Footer */}
       <footer className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 py-6">
         <div className="container mx-auto px-4 flex flex-col md:flex-row items-center justify-between text-sm text-gray-600 dark:text-gray-400">
           <p>&copy; {new Date().getFullYear()} TestFlight Share. All rights reserved.</p>
