@@ -1,3 +1,4 @@
+// 📁 components/Layout.js
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -5,7 +6,7 @@ import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabase';
 import AppCard from './AppCard';
 
-export default function Layout({ children }) {
+export default function Layout({ children, fullWidth = false }) {
   const router = useRouter();
   const [darkMode, setDarkMode] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -65,24 +66,22 @@ export default function Layout({ children }) {
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white dark:bg-gray-800 shadow">
         <div className="container mx-auto px-4 py-3 flex items-center justify-between gap-4">
-          {/* Logo */}
           <Link href="/">
             <a className="text-xl font-bold text-blue-600 dark:text-blue-400">🚀 TestFlight Share</a>
           </Link>
 
-          {/* Search Form */}
           <form onSubmit={handleSearch} className="hidden md:flex items-center gap-2 flex-1 justify-end">
             <input
               type="text"
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder="Tìm app..."
-              className="w-full max-w-xs px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-base text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full max-w-xs px-4 py-2 rounded-lg border bg-gray-50 dark:bg-gray-700 text-base"
             />
             <select
               value={activeCategory}
               onChange={(e) => handleCategory(e.target.value)}
-              className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-700 text-base text-gray-800 dark:text-white"
+              className="px-4 py-2 rounded-lg border bg-white dark:bg-gray-700 text-base"
             >
               <option value="all">Tất cả</option>
               {categories.map((cat) => (
@@ -99,7 +98,6 @@ export default function Layout({ children }) {
             </button>
           </form>
 
-          {/* Toggle & Hamburger */}
           <div className="flex items-center gap-2">
             <button
               onClick={() => setDarkMode(!darkMode)}
@@ -118,7 +116,6 @@ export default function Layout({ children }) {
           </div>
         </div>
 
-        {/* Mobile search */}
         {mobileMenuOpen && (
           <div className="md:hidden bg-white dark:bg-gray-800 px-4 pb-4 space-y-3">
             <form onSubmit={handleSearch} className="flex flex-col gap-2">
@@ -127,12 +124,12 @@ export default function Layout({ children }) {
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
                 placeholder="Tìm app..."
-                className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-base"
+                className="px-3 py-2 rounded-lg border bg-gray-50 dark:bg-gray-700"
               />
               <select
                 value={activeCategory}
                 onChange={(e) => handleCategory(e.target.value)}
-                className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-700 text-base"
+                className="px-3 py-2 rounded-lg border bg-white dark:bg-gray-700"
               >
                 <option value="all">Tất cả</option>
                 {categories.map((cat) => (
@@ -157,9 +154,7 @@ export default function Layout({ children }) {
         <div className="container mx-auto px-4 py-6 text-center text-gray-500">Đang tìm kiếm...</div>
       ) : apps.length > 0 ? (
         <div className="container mx-auto px-4 py-6">
-          <div className="text-sm text-gray-500 mb-3">
-            Đã tìm thấy {apps.length} ứng dụng
-          </div>
+          <div className="text-sm text-gray-500 mb-3">Đã tìm thấy {apps.length} ứng dụng</div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {apps.map((app) => (
               <div key={app.id} onClick={() => handleAppClick(app.slug)} className="cursor-pointer">
@@ -174,17 +169,17 @@ export default function Layout({ children }) {
         </div>
       ) : null}
 
-      {/* Nội dung */}
-      <main className="container mx-auto px-4 py-6 flex-1">{children}</main>
+      {/* Nội dung trang con */}
+      <main className={`${fullWidth ? 'w-full px-0' : 'container mx-auto px-4'} py-6 flex-1`}>
+        {children}
+      </main>
 
-      {/* Footer */}
-      <footer className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 py-6">
-        <div className="container mx-auto px-4 flex flex-col md:flex-row items-center justify-between text-sm text-gray-600 dark:text-gray-400">
-          <p>&copy; {new Date().getFullYear()} TestFlight Share. All rights reserved.</p>
-          <div className="flex gap-4 mt-2 md:mt-0">
-            <Link href="/about"><a className="hover:underline">Giới thiệu</a></Link>
-            <Link href="/contact"><a className="hover:underline">Liên hệ</a></Link>
-            <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="hover:underline">GitHub</a>
+      <footer className="bg-white dark:bg-gray-800 border-t py-6 text-sm text-gray-600 dark:text-gray-400">
+        <div className="container mx-auto px-4 flex justify-between items-center flex-wrap gap-3">
+          <p>&copy; {new Date().getFullYear()} TestFlight Share</p>
+          <div className="flex gap-4">
+            <Link href="/about"><a>Giới thiệu</a></Link>
+            <Link href="/contact"><a>Liên hệ</a></Link>
           </div>
         </div>
       </footer>
@@ -192,11 +187,10 @@ export default function Layout({ children }) {
   );
 }
 
-// Icons
 function MoonIcon({ className }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12.79A9 9 0 0112.21 3 7 7 0 0012 21a9 9 0 009-8.21z" />
     </svg>
   );
 }
@@ -204,7 +198,7 @@ function MoonIcon({ className }) {
 function SunIcon({ className }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.36 6.36l-.71-.71M6.34 6.34l-.71-.71M17.66 6.34l-.71.71M6.34 17.66l-.71.71M12 8a4 4 0 100 8 4 4 0 000-8z" />
     </svg>
   );
 }

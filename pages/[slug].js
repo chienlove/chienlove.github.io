@@ -1,5 +1,3 @@
-// 📁 pages/Detail.js
-
 import { supabase } from '../lib/supabase';
 import Layout from '../components/Layout';
 import { useRouter } from 'next/router';
@@ -81,7 +79,7 @@ export default function Detail() {
 
   if (loading) {
     return (
-      <Layout>
+      <Layout fullWidth>
         <div className="min-h-screen flex items-center justify-center">Đang tải...</div>
       </Layout>
     );
@@ -89,7 +87,7 @@ export default function Detail() {
 
   if (!app) {
     return (
-      <Layout>
+      <Layout fullWidth>
         <div className="min-h-screen flex items-center justify-center">
           <div className="text-center">
             <h1 className="text-2xl font-bold mb-4">Không tìm thấy ứng dụng</h1>
@@ -107,12 +105,13 @@ export default function Detail() {
   }
 
   return (
-    <Layout title={app.name}>
+    <Layout title={app.name} fullWidth>
       <div className="bg-gray-100 min-h-screen pb-12">
+
         {/* Breadcrumb */}
-        <div className="absolute top-4 left-4 z-20">
+        <div className="absolute top-4 left-4 z-30">
           <Link href="/">
-            <a className="inline-flex items-center bg-white/80 px-3 py-1.5 rounded-full shadow text-blue-600 font-semibold text-sm hover:text-blue-800">
+            <a className="inline-flex items-center bg-white/90 px-3 py-1.5 rounded-full shadow text-blue-600 font-semibold text-sm hover:text-blue-800">
               <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
               Trở lại
             </a>
@@ -124,7 +123,7 @@ export default function Detail() {
           className="w-full pb-6"
           style={{ backgroundImage: `linear-gradient(to bottom, ${dominantColor}, #f0f2f5)` }}
         >
-          <div className="container mx-auto px-4 pt-12 text-center">
+          <div className="px-4 pt-16 text-center">
             <div className="w-24 h-24 mx-auto rounded-2xl overflow-hidden border-4 border-white shadow-lg">
               <img
                 src={app.icon_url || '/placeholder-icon.png'}
@@ -134,41 +133,46 @@ export default function Detail() {
             </div>
             <h1 className="mt-4 text-2xl font-bold text-white drop-shadow">{app.name}</h1>
             {app.author && <p className="text-white opacity-90 text-sm">{app.author}</p>}
+            <div className="mt-4">
+              {app.category === 'testflight' && app.testflight_url && (
+                <a
+                  href={app.testflight_url}
+                  className="inline-block border border-white text-white hover:bg-white hover:text-blue-600 transition px-4 py-2 rounded-full text-sm font-semibold"
+                  target="_blank" rel="noopener noreferrer"
+                >
+                  <FontAwesomeIcon icon={faRocket} className="mr-2" />
+                  Tham gia TestFlight
+                </a>
+              )}
+              {app.category === 'jailbreak' && app.download_link && (
+                <a
+                  href={app.download_link}
+                  className="inline-block border border-white text-white hover:bg-white hover:text-green-600 transition px-4 py-2 rounded-full text-sm font-semibold"
+                  target="_blank" rel="noopener noreferrer"
+                >
+                  <FontAwesomeIcon icon={faDownload} className="mr-2" />
+                  Cài đặt ứng dụng
+                </a>
+              )}
+            </div>
           </div>
         </div>
 
         {/* Main content */}
-        <div className="container mx-auto px-4 -mt-8 space-y-6">
-          {/* Card: Action Button */}
+        <div className="px-4 -mt-8 space-y-6 max-w-screen-xl mx-auto">
+          {/* Thông tin */}
           <div className="bg-white rounded-xl p-4 shadow">
-            {app.category === 'testflight' && app.testflight_url && (
-              <a
-                href={app.testflight_url}
-                className="block bg-blue-600 hover:bg-blue-700 text-white text-center py-3 rounded-xl font-bold"
-                target="_blank" rel="noopener noreferrer"
-              >
-                <FontAwesomeIcon icon={faRocket} className="mr-2" />
-                Tham gia TestFlight
-              </a>
-            )}
-            {app.category === 'jailbreak' && app.download_link && (
-              <a
-                href={app.download_link}
-                className="block bg-green-600 hover:bg-green-700 text-white text-center py-3 rounded-xl font-bold"
-                target="_blank" rel="noopener noreferrer"
-              >
-                <FontAwesomeIcon icon={faDownload} className="mr-2" />
-                Cài đặt ứng dụng
-              </a>
-            )}
-          </div>
-
-          {/* Card: Thông tin */}
-          <div className="bg-white rounded-xl p-4 shadow">
-            <div className="text-center text-sm text-gray-600 font-semibold border-b pb-2 mb-2">
-              <div className="flex justify-around">
+            <div className="flex justify-around text-sm font-semibold text-gray-600 border-b pb-2 mb-2">
+              <div className="flex items-center gap-1">
+                <FontAwesomeIcon icon={faCodeBranch} />
                 <span>Phiên bản</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <FontAwesomeIcon icon={faUser} />
                 <span>Tác giả</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <FontAwesomeIcon icon={faDatabase} />
                 <span>Dung lượng</span>
               </div>
             </div>
@@ -179,7 +183,7 @@ export default function Detail() {
             </div>
           </div>
 
-          {/* Card: Mô tả */}
+          {/* Mô tả */}
           <div className="bg-white rounded-xl p-4 shadow">
             <h2 className="text-lg font-bold text-gray-800 mb-2">Mô tả</h2>
             <p className="text-gray-700 whitespace-pre-line">
@@ -195,7 +199,7 @@ export default function Detail() {
             )}
           </div>
 
-          {/* Card: Screenshots */}
+          {/* Ảnh màn hình */}
           {Array.isArray(app.screenshots) && app.screenshots.length > 0 && (
             <div className="bg-white rounded-xl p-4 shadow">
               <h2 className="text-lg font-bold text-gray-800 mb-3">Ảnh màn hình</h2>
@@ -216,25 +220,26 @@ export default function Detail() {
             </div>
           )}
 
-          {/* Card: Ứng dụng cùng chuyên mục */}
+          {/* Ứng dụng cùng chuyên mục */}
           {related.length > 0 && (
             <div className="bg-white rounded-xl p-4 shadow">
               <h2 className="text-lg font-bold text-gray-800 mb-4">Ứng dụng cùng chuyên mục</h2>
               <div className="divide-y divide-gray-200">
                 {related.map((item) => (
                   <Link href={`/${item.slug}`} key={item.id}>
-                    <a className="flex items-center py-3 hover:bg-gray-50 px-2 rounded-lg transition">
-                      <img
-                        src={item.icon_url || '/placeholder-icon.png'}
-                        alt={item.name}
-                        className="w-12 h-12 rounded-lg object-cover mr-4"
-                      />
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold text-gray-800">{item.name}</p>
-                        <p className="text-xs text-gray-500">
-                          {item.author} • <span className="bg-gray-200 text-gray-800 px-2 py-0.5 rounded text-xs font-medium">{item.version || 'N/A'}</span>
-                        </p>
+                    <a className="flex items-center justify-between py-3 hover:bg-gray-50 px-2 rounded-lg transition">
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={item.icon_url || '/placeholder-icon.png'}
+                          alt={item.name}
+                          className="w-10 h-10 rounded-lg object-cover"
+                        />
+                        <div>
+                          <p className="text-sm font-semibold text-gray-800">{item.name}</p>
+                          <p className="text-xs text-gray-500">{item.author} • {item.version}</p>
+                        </div>
                       </div>
+                      <FontAwesomeIcon icon={faDownload} className="text-gray-400" />
                     </a>
                   </Link>
                 ))}
