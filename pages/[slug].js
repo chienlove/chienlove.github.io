@@ -16,8 +16,7 @@ import {
 
 export default function Detail() {
   const router = useRouter();
-  const rawSlug = router.query.slug;
-  const slug = (rawSlug || '').toLowerCase();
+  const slug = (router.query.slug || '').toLowerCase();
   const [app, setApp] = useState(null);
   const [related, setRelated] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -37,14 +36,14 @@ export default function Detail() {
           .single();
 
         if (error || !appData) {
-          const { data: appById } = await supabase
+          const { data: fallback } = await supabase
             .from('apps')
             .select('*')
             .eq('id', slug)
             .single();
 
-          if (appById) {
-            router.replace(`/${appById.slug}`);
+          if (fallback) {
+            router.replace(`/${fallback.slug}`);
             return;
           }
           router.replace('/404');
@@ -55,20 +54,20 @@ export default function Detail() {
 
         const { data: relatedApps } = await supabase
           .from('apps')
-          .select('id, name, slug, icon_url')
+          .select('id, name, slug, icon_url, author, version')
           .eq('category', appData.category)
           .neq('id', appData.id)
           .limit(6);
 
         setRelated(relatedApps || []);
 
-        if (typeof window !== 'undefined' && appData.icon_url) {
+        if (appData.icon_url) {
           const fac = new FastAverageColor();
           try {
             const color = await fac.getColorAsync(appData.icon_url);
             setDominantColor(color.hex);
           } catch (e) {
-            console.error('Error extracting color:', e);
+            console.error('Color error:', e);
           } finally {
             fac.destroy();
           }
@@ -102,17 +101,15 @@ export default function Detail() {
   if (!app) {
     return (
       <Layout>
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">Không tìm thấy ứng dụng</h1>
-            <button
-              onClick={() => router.push('/')}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-bold"
-            >
-              <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
-              Quay về trang chủ
-            </button>
-          </div>
+        <div className="min-h-screen flex items-center justify-center text-center">
+          <h1 className="text-2xl font-bold mb-4">Không tìm thấy ứng dụng</h1>
+          <button
+            onClick={() => router.push('/')}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-bold"
+          >
+            <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
+            Quay về trang chủ
+          </button>
         </div>
       </Layout>
     );
@@ -121,17 +118,17 @@ export default function Detail() {
   return (
     <Layout title={app.name}>
       <div className="relative">
-        {/* Breadcrumb overlay */}
-        <div className="absolute top-4 left-4 z-20">
+        {/* Breadcrumb */}
+        <div className="absolute top-3 left-3 z-20">
           <Link href="/">
-            <a className="inline-flex items-center bg-white/70 backdrop-blur-sm text-blue-600 hover:text-blue-800 text-sm font-medium px-3 py-1.5 rounded-full shadow">
+            <a className="inline-flex items-center bg-white/80 backdrop-blur text-blue-600 hover:text-blue-800 text-sm font-bold px-3 py-1.5 rounded-full shadow">
               <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
               Trở lại
             </a>
           </Link>
         </div>
 
-        {/* Header with icon & background */}
+        {/* App icon + background */}
         <div
           className="w-full pb-8"
           style={{
@@ -146,12 +143,8 @@ export default function Detail() {
             <div className="w-24 h-24 md:w-28 md:h-28 mx-auto rounded-2xl overflow-hidden border-4 border-white shadow-lg">
               <img
                 src={app.icon_url || '/placeholder-icon.png'}
-                alt={`${app.name} icon`}
+                alt={app.name}
                 className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.src = '/placeholder-icon.png';
-                }}
               />
             </div>
             <h1 className="mt-4 text-2xl font-bold text-white drop-shadow">{app.name}</h1>
@@ -161,9 +154,8 @@ export default function Detail() {
           </div>
         </div>
 
-        {/* Content section */}
         <div className="container mx-auto px-4 -mt-12 relative z-10">
-          {/* Action button */}
+          {/* Button install / join */}
           {app.category === 'testflight' && app.testflight_url && (
             <a
               href={app.testflight_url}
@@ -187,36 +179,32 @@ export default function Detail() {
             </a>
           )}
 
-          {/* Info Section */}
-          <div className="grid grid-cols-2 gap-6 text-sm text-gray-700 dark:text-gray-300 mt-8 border-b border-gray-200 dark:border-gray-700 pb-4">
-            <div className="flex items-center gap-2">
-              <FontAwesomeIcon icon={faCodeBranch} className="text-blue-500 w-4" />
-              <div>
-                <h2 className="font-medium">Phiên bản</h2>
-                <p>{app.version || 'Không rõ'}</p>
+          {/* Thông tin ứng dụng */}
+          <div className="flex flex-wrap items-center gap-6 text-sm text-gray-700 dark:text-gray-300 mt-6 border-b border-gray-200 dark:border-gray-700 pb-4">
+            {app.version && (
+              <div className="flex items-center gap-2">
+                <FontAwesomeIcon icon={faCodeBranch} className="text-blue-500 w-4" />
+                <span className="font-medium">Phiên bản:</span>
+                <span>{app.version}</span>
               </div>
-            </div>
+            )}
             {app.size && (
               <div className="flex items-center gap-2">
                 <FontAwesomeIcon icon={faDatabase} className="text-green-500 w-4" />
-                <div>
-                  <h2 className="font-medium">Dung lượng</h2>
-                  <p>{app.size} MB</p>
-                </div>
+                <span className="font-medium">Dung lượng:</span>
+                <span>{app.size} MB</span>
               </div>
             )}
             {app.author && (
-              <div className="flex items-center gap-2 col-span-2 md:col-span-1">
+              <div className="flex items-center gap-2">
                 <FontAwesomeIcon icon={faUser} className="text-purple-500 w-4" />
-                <div>
-                  <h2 className="font-medium">Tác giả</h2>
-                  <p>{app.author}</p>
-                </div>
+                <span className="font-medium">Tác giả:</span>
+                <span>{app.author}</span>
               </div>
             )}
           </div>
 
-          {/* Description */}
+          {/* Mô tả */}
           <div className="py-6 border-b border-gray-200 dark:border-gray-700">
             <h2 className="text-lg font-bold text-black dark:text-white mb-2">Mô tả</h2>
             <p className="text-gray-800 dark:text-white whitespace-pre-line">
@@ -234,7 +222,7 @@ export default function Detail() {
             )}
           </div>
 
-          {/* Screenshots */}
+          {/* Ảnh màn hình */}
           {Array.isArray(app.screenshots) && app.screenshots.length > 0 && (
             <div className="py-6">
               <h2 className="text-lg font-bold text-black dark:text-white mb-3">Ảnh màn hình</h2>
@@ -248,10 +236,6 @@ export default function Detail() {
                       src={url}
                       alt={`Screenshot ${i + 1}`}
                       className="w-full h-auto object-cover"
-                      onError={(e) => {
-                        e.target.onerror = null;
-                        e.target.src = '/placeholder-screenshot.jpg';
-                      }}
                     />
                   </div>
                 ))}
@@ -259,26 +243,30 @@ export default function Detail() {
             </div>
           )}
 
-          {/* Related apps */}
+          {/* Ứng dụng cùng chuyên mục */}
           {related.length > 0 && (
             <div className="py-8">
               <h2 className="text-lg font-bold text-black dark:text-white mb-4">Ứng dụng cùng chuyên mục</h2>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {related.map((item) => (
                   <Link href={`/${item.slug}`} key={item.id}>
-                    <a className="block bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 hover:shadow">
-                      <img
-                        src={item.icon_url || '/placeholder-icon.png'}
-                        alt={item.name}
-                        className="w-16 h-16 mx-auto rounded-lg object-cover mb-2"
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src = '/placeholder-icon.png';
-                        }}
-                      />
-                      <p className="text-center text-sm font-medium text-gray-800 dark:text-white truncate">
-                        {item.name}
-                      </p>
+                    <a className="block bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 hover:shadow transition">
+                      <div className="flex flex-col items-center">
+                        <img
+                          src={item.icon_url || '/placeholder-icon.png'}
+                          alt={item.name}
+                          className="w-16 h-16 rounded-lg object-cover mb-2"
+                        />
+                        <p className="text-center text-sm font-bold text-gray-900 dark:text-white truncate w-full">{item.name}</p>
+                        {item.author && (
+                          <p className="text-center text-xs text-gray-500 dark:text-gray-400 mt-1 truncate w-full">{item.author}</p>
+                        )}
+                        {item.version && (
+                          <span className="mt-2 inline-block bg-blue-100 text-blue-800 text-xs font-semibold px-2 py-0.5 rounded-full">
+                            v{item.version}
+                          </span>
+                        )}
+                      </div>
                     </a>
                   </Link>
                 ))}
