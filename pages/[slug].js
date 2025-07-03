@@ -109,9 +109,9 @@ export default function Detail() {
     <Layout fullWidth>
       <div className="bg-gray-100 min-h-screen pb-12">
 
-        {/* ✅ Header đúng chuẩn: không full lề, đúng chiều rộng, không bo, breadcrumb nhỏ gọn */}
-        <div className="w-full flex justify-center mt-10">
-          <div className="relative w-full max-w-screen-2xl px-4 pb-8 bg-white rounded-none">
+        {/* ✅ Header chuẩn chiều rộng và padding */}
+        <div className="w-full flex justify-center mt-10 bg-gray-100">
+          <div className="relative w-full max-w-screen-2xl px-2 sm:px-4 md:px-6 pb-8 bg-white rounded-none">
             <div
               className="w-full"
               style={{
@@ -165,7 +165,7 @@ export default function Detail() {
           </div>
         </div>
 
-        {/* ✅ Các card bên dưới giữ nguyên */}
+        {/* ✅ Card bên dưới */}
         <div className="max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 mt-6 space-y-6">
           {/* Card: Thông tin */}
           <div className="bg-white rounded-xl p-4 shadow">
