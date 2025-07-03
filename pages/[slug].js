@@ -108,6 +108,7 @@ export default function Detail() {
         </a>
       </Link>
     </div>
+   </div> 
       <div className="relative">
         <div
           className="w-full pb-8"
