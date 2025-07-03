@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { supabase } from '../lib/supabase';
@@ -48,118 +48,104 @@ export default function Layout({ children }) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-white transition-colors duration-300">
+    <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors">
       <Head>
         <title>TestFlight Share</title>
       </Head>
 
       {/* Header */}
-      <header className="bg-white dark:bg-gray-800 shadow-md sticky top-0 z-50">
-  <div className="container mx-auto px-4 py-3 flex flex-col md:flex-row md:items-center justify-between gap-3">
-    {/* Logo */}
-    <div className="flex items-center justify-between w-full md:w-auto">
-      <Link href="/">
-        <a className="text-xl font-bold text-blue-600 dark:text-blue-400">🚀 TestFlight Share</a>
-      </Link>
+      <header className="sticky top-0 z-50 bg-white dark:bg-gray-800 shadow">
+        <div className="container mx-auto px-4 py-3 flex items-center justify-between gap-4">
+          {/* Logo */}
+          <Link href="/">
+            <a className="text-xl font-bold text-blue-600 dark:text-blue-400">🚀 TestFlight Share</a>
+          </Link>
 
-      {/* Mobile menu button */}
-      <button
-        className="md:hidden p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
-        onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-      >
-        <MenuIcon className="w-6 h-6" />
-      </button>
-    </div>
-
-    {/* Tìm kiếm gọn đẹp */}
-    <form
-      onSubmit={handleSearch}
-      className="flex flex-wrap gap-2 items-center justify-start md:justify-end w-full md:w-auto"
-    >
-      <input
-        type="text"
-        value={q}
-        onChange={(e) => setQ(e.target.value)}
-        placeholder="Tìm ứng dụng..."
-        className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-sm text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-44 md:w-56"
-      />
-      <select
-        value={activeCategory}
-        onChange={(e) => handleCategory(e.target.value)}
-        className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm text-gray-800 dark:text-white"
-      >
-        <option value="all">Tất cả chuyên mục</option>
-        {categories.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.name}
-          </option>
-        ))}
-      </select>
-      <button
-        type="submit"
-        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold"
-      >
-        Tìm
-      </button>
-    </form>
-
-    {/* Dark mode toggle */}
-    <button
-      onClick={() => setDarkMode(!darkMode)}
-      title="Chuyển giao diện"
-      className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition"
-    >
-      {darkMode ? <SunIcon className="w-5 h-5" /> : <MoonIcon className="w-5 h-5" />}
-    </button>
-  </div>
-
-  {/* Mobile menu (dropdown) */}
-  {mobileMenuOpen && (
-    <div className="md:hidden bg-white dark:bg-gray-800 px-4 py-3 border-t dark:border-gray-700 space-y-2">
-      <Link href="/about"><a className="block">Giới thiệu</a></Link>
-      <Link href="/contact"><a className="block">Liên hệ</a></Link>
-    </div>
-  )}
-</header>
-
-      {/* Tìm kiếm nâng cao */}
-      <section className="bg-gradient-to-r from-blue-500 to-purple-600 py-8 text-white">
-        <div className="container mx-auto px-4">
-          <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-3">
+          {/* Search form */}
+          <form onSubmit={handleSearch} className="hidden md:flex items-center gap-2 flex-1 justify-end">
             <input
               type="text"
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder="Tìm ứng dụng..."
-              className="flex-1 px-4 py-3 rounded-full text-gray-800 focus:outline-none"
+              placeholder="Tìm app..."
+              className="w-full max-w-xs px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-sm text-gray-900 dark:text-white"
             />
             <select
               value={activeCategory}
               onChange={(e) => handleCategory(e.target.value)}
-              className="px-4 py-3 rounded-full text-gray-800"
+              className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-700 text-sm text-gray-800 dark:text-white"
             >
-              <option value="all">Tất cả chuyên mục</option>
-              {categories.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
+              <option value="all">Tất cả</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
                 </option>
               ))}
             </select>
             <button
               type="submit"
-              className="bg-white text-blue-600 px-6 py-3 rounded-full font-semibold hover:bg-gray-100 transition"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold"
             >
-              Tìm kiếm
+              Tìm
             </button>
           </form>
+
+          {/* Dark mode toggle + menu mobile */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
+              title="Đổi giao diện"
+            >
+              {darkMode ? <SunIcon className="w-5 h-5" /> : <MoonIcon className="w-5 h-5" />}
+            </button>
+
+            <button
+              className="md:hidden p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              <MenuIcon className="w-6 h-6" />
+            </button>
+          </div>
         </div>
-      </section>
+
+        {/* Mobile search menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden bg-white dark:bg-gray-800 px-4 pb-4 space-y-3">
+            <form onSubmit={handleSearch} className="flex flex-col gap-2">
+              <input
+                type="text"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Tìm app..."
+                className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 text-sm"
+              />
+              <select
+                value={activeCategory}
+                onChange={(e) => handleCategory(e.target.value)}
+                className="px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-700 text-sm"
+              >
+                <option value="all">Tất cả</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="submit"
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold"
+              >
+                Tìm
+              </button>
+            </form>
+          </div>
+        )}
+      </header>
 
       {/* Kết quả tìm kiếm */}
       {searching ? (
-        <div className="container mx-auto px-4 py-6 text-center text-gray-600 dark:text-gray-400">
-          Đang tìm kiếm...
-        </div>
+        <div className="container mx-auto px-4 py-6 text-center text-gray-500">Đang tìm kiếm...</div>
       ) : apps.length > 0 ? (
         <div className="container mx-auto px-4 py-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {apps.map((app) => (
@@ -167,21 +153,19 @@ export default function Layout({ children }) {
           ))}
         </div>
       ) : q || activeCategory !== 'all' ? (
-        <div className="container mx-auto px-4 py-6 text-center text-gray-600 dark:text-gray-400">
-          Không tìm thấy ứng dụng phù hợp
+        <div className="container mx-auto px-4 py-6 text-center text-gray-500">
+          Không tìm thấy ứng dụng phù hợp.
         </div>
       ) : null}
 
-      {/* Nội dung trang con */}
-      <main className="container mx-auto px-4 py-8 flex-1">
-        {children}
-      </main>
+      {/* Nội dung chính */}
+      <main className="container mx-auto px-4 py-6 flex-1">{children}</main>
 
-      {/* Footer hiện đại */}
-      <footer className="bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-sm mt-auto">
-        <div className="container mx-auto px-4 py-6 flex flex-col md:flex-row justify-between items-center gap-4">
+      {/* Footer đẹp hiện đại */}
+      <footer className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 py-6">
+        <div className="container mx-auto px-4 flex flex-col md:flex-row items-center justify-between text-sm text-gray-600 dark:text-gray-400">
           <p>&copy; {new Date().getFullYear()} TestFlight Share. All rights reserved.</p>
-          <div className="flex gap-4">
+          <div className="flex gap-4 mt-2 md:mt-0">
             <Link href="/about"><a className="hover:underline">Giới thiệu</a></Link>
             <Link href="/contact"><a className="hover:underline">Liên hệ</a></Link>
             <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="hover:underline">GitHub</a>
