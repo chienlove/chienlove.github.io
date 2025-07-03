@@ -1,7 +1,7 @@
-import Link from 'next/link';
 import { supabase } from '../lib/supabase';
 import Layout from '../components/Layout';
 import { useRouter } from 'next/router';
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { FastAverageColor } from 'fast-average-color';
 
