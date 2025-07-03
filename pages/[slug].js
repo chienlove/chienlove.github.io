@@ -1,3 +1,4 @@
+// pages/[slug].js
 import { supabase } from '../lib/supabase';
 import Layout from '../components/Layout';
 import { useRouter } from 'next/router';
@@ -6,12 +7,8 @@ import { useEffect, useState } from 'react';
 import { FastAverageColor } from 'fast-average-color';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faDownload,
-  faRocket,
-  faArrowLeft,
-  faCodeBranch,
-  faDatabase,
-  faUser
+  faDownload, faRocket, faArrowLeft,
+  faCodeBranch, faDatabase, faUser
 } from '@fortawesome/free-solid-svg-icons';
 
 export default function Detail() {
@@ -109,9 +106,9 @@ export default function Detail() {
     <Layout title={app.name} fullWidth>
       <div className="bg-gray-100 min-h-screen pb-12 relative">
         {/* Breadcrumb */}
-        <div className="absolute top-4 left-4 z-30">
+        <div className="absolute top-3 left-3 z-30">
           <Link href="/">
-            <a className="inline-flex items-center bg-white/90 px-4 py-2 rounded-full shadow text-blue-700 font-semibold text-base hover:text-blue-900">
+            <a className="inline-flex items-center bg-white/90 px-3 py-1.5 rounded-full shadow text-blue-700 font-medium text-sm hover:text-blue-900">
               <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
               Trở lại
             </a>
@@ -120,10 +117,10 @@ export default function Detail() {
 
         {/* Header */}
         <div
-          className="w-full pb-8"
+          className="w-full flex justify-center pt-20 pb-8"
           style={{ backgroundImage: `linear-gradient(to bottom, ${dominantColor}, #f0f2f5)` }}
         >
-          <div className="max-w-screen-lg mx-auto px-4 pt-24 text-center">
+          <div className="w-full max-w-screen-2xl px-2 sm:px-4 md:px-6 text-center">
             <div className="w-24 h-24 mx-auto rounded-2xl overflow-hidden border-4 border-white shadow-lg">
               <img
                 src={app.icon_url || '/placeholder-icon.png'}
@@ -131,8 +128,8 @@ export default function Detail() {
                 className="w-full h-full object-cover"
               />
             </div>
-            <h1 className="mt-4 text-2xl font-bold text-white drop-shadow">{app.name}</h1>
-            {app.author && <p className="text-white opacity-90 text-sm">{app.author}</p>}
+            <h1 className="mt-4 text-2xl font-bold text-gray-100 drop-shadow">{app.name}</h1>
+            {app.author && <p className="text-gray-200 opacity-90 text-sm">{app.author}</p>}
             <div className="mt-4 space-x-2">
               {app.category === 'testflight' && app.testflight_url && (
                 <a
@@ -160,7 +157,7 @@ export default function Detail() {
 
         {/* Main content */}
         <div className="max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 mt-6 space-y-6">
-          {/* Thông tin */}
+          {/* Card: Thông tin */}
           <div className="bg-white rounded-xl p-4 shadow">
             <div className="flex justify-around text-sm font-semibold text-gray-600 border-b pb-2 mb-2">
               <div className="flex items-center gap-1">
@@ -183,7 +180,7 @@ export default function Detail() {
             </div>
           </div>
 
-          {/* Mô tả */}
+          {/* Card: Mô tả */}
           <div className="bg-white rounded-xl p-4 shadow">
             <h2 className="text-lg font-bold text-gray-800 mb-2">Mô tả</h2>
             <p className="text-gray-700 whitespace-pre-line">
@@ -199,7 +196,7 @@ export default function Detail() {
             )}
           </div>
 
-          {/* Ảnh màn hình */}
+          {/* Card: Ảnh màn hình */}
           {Array.isArray(app.screenshots) && app.screenshots.length > 0 && (
             <div className="bg-white rounded-xl p-4 shadow">
               <h2 className="text-lg font-bold text-gray-800 mb-3">Ảnh màn hình</h2>
@@ -220,7 +217,7 @@ export default function Detail() {
             </div>
           )}
 
-          {/* Ứng dụng cùng chuyên mục */}
+          {/* Card: Ứng dụng cùng chuyên mục */}
           {related.length > 0 && (
             <div className="bg-white rounded-xl p-4 shadow">
               <h2 className="text-lg font-bold text-gray-800 mb-4">Ứng dụng cùng chuyên mục</h2>
