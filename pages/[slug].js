@@ -109,16 +109,15 @@ export default function Detail() {
     <Layout fullWidth>
       <div className="bg-gray-100 min-h-screen pb-12">
 
-        {/* Header triệt để gọn, gradient không full lề, breadcrumb đẹp */}
+        {/* ✅ Header đúng chuẩn: không full lề, đúng chiều rộng, không bo, breadcrumb nhỏ gọn */}
         <div className="w-full flex justify-center mt-10">
-          <div className="relative w-full max-w-4xl px-4 pb-8 bg-white rounded-none">
+          <div className="relative w-full max-w-screen-2xl px-4 pb-8 bg-white rounded-none">
             <div
               className="w-full"
               style={{
                 backgroundImage: `linear-gradient(to bottom, ${dominantColor}, #f0f2f5)`,
               }}
             >
-              {/* Breadcrumb nhỏ gọn */}
               <div className="absolute top-3 left-3 z-10">
                 <Link href="/">
                   <a className="inline-flex items-center justify-center w-8 h-8 text-blue-600 hover:text-blue-800 bg-white rounded-full shadow-sm">
@@ -166,7 +165,7 @@ export default function Detail() {
           </div>
         </div>
 
-        {/* Các phần còn lại */}
+        {/* ✅ Các card bên dưới giữ nguyên */}
         <div className="max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 mt-6 space-y-6">
           {/* Card: Thông tin */}
           <div className="bg-white rounded-xl p-4 shadow">
