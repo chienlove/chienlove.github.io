@@ -1,3 +1,5 @@
+// 📁 pages/Detail.js
+
 import { supabase } from '../lib/supabase';
 import Layout from '../components/Layout';
 import { useRouter } from 'next/router';
@@ -16,17 +18,15 @@ import {
 
 export default function Detail() {
   const router = useRouter();
-  const rawSlug = router.query.slug;
-  const slug = (rawSlug || '').toLowerCase();
+  const slug = (router.query.slug || '').toLowerCase();
   const [app, setApp] = useState(null);
   const [related, setRelated] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [dominantColor, setDominantColor] = useState('#f5f5f7');
+  const [dominantColor, setDominantColor] = useState('#f0f2f5');
   const [showFullDescription, setShowFullDescription] = useState(false);
 
   useEffect(() => {
     if (!slug) return;
-
     const fetchApp = async () => {
       try {
         setLoading(true);
@@ -36,15 +36,14 @@ export default function Detail() {
           .ilike('slug', slug)
           .single();
 
-        if (error || !appData) {
-          const { data: appById } = await supabase
+        if (!appData || error) {
+          const { data: fallback } = await supabase
             .from('apps')
             .select('*')
             .eq('id', slug)
             .single();
-
-          if (appById) {
-            router.replace(`/${appById.slug}`);
+          if (fallback) {
+            router.replace(`/${fallback.slug}`);
             return;
           }
           router.replace('/404');
@@ -58,24 +57,18 @@ export default function Detail() {
           .select('id, name, slug, icon_url, author, version')
           .eq('category', appData.category)
           .neq('id', appData.id)
-          .limit(6);
+          .limit(10);
 
         setRelated(relatedApps || []);
 
-        if (typeof window !== 'undefined' && appData.icon_url) {
+        if (appData.icon_url && typeof window !== 'undefined') {
           const fac = new FastAverageColor();
           try {
             const color = await fac.getColorAsync(appData.icon_url);
             setDominantColor(color.hex);
-          } catch (e) {
-            console.error('Color extraction error:', e);
-          } finally {
-            fac.destroy();
-          }
+          } catch {}
+          fac.destroy();
         }
-      } catch (err) {
-        console.error('Fetch error:', err);
-        router.replace('/404');
       } finally {
         setLoading(false);
       }
@@ -84,17 +77,12 @@ export default function Detail() {
     fetchApp();
   }, [slug]);
 
-  const truncate = (text, limit) => {
-    if (!text) return '';
-    return text.length > limit ? text.substring(0, limit).trim() + '...' : text;
-  };
+  const truncate = (text, limit) => text?.length > limit ? text.slice(0, limit) + '...' : text;
 
   if (loading) {
     return (
       <Layout>
-        <div className="min-h-screen flex items-center justify-center">
-          <p>Đang tải ứng dụng...</p>
-        </div>
+        <div className="min-h-screen flex items-center justify-center">Đang tải...</div>
       </Layout>
     );
   }
@@ -107,10 +95,10 @@ export default function Detail() {
             <h1 className="text-2xl font-bold mb-4">Không tìm thấy ứng dụng</h1>
             <button
               onClick={() => router.push('/')}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-bold"
+              className="px-4 py-2 bg-blue-600 text-white rounded font-bold"
             >
               <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
-              Quay về trang chủ
+              Về trang chủ
             </button>
           </div>
         </div>
@@ -120,95 +108,84 @@ export default function Detail() {
 
   return (
     <Layout title={app.name}>
-      <div className="relative">
+      <div className="bg-gray-100 min-h-screen pb-12">
         {/* Breadcrumb */}
-        <div className="absolute top-3 left-3 z-20">
+        <div className="absolute top-4 left-4 z-20">
           <Link href="/">
-            <a className="inline-flex items-center bg-white/80 backdrop-blur-sm text-blue-600 hover:text-blue-800 text-sm font-bold px-3 py-1.5 rounded-full shadow">
+            <a className="inline-flex items-center bg-white/80 px-3 py-1.5 rounded-full shadow text-blue-600 font-semibold text-sm hover:text-blue-800">
               <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
               Trở lại
             </a>
           </Link>
         </div>
 
-        {/* App Header */}
+        {/* Header */}
         <div
-          className="w-full pb-8"
-          style={{
-            backgroundImage: `linear-gradient(to bottom, ${dominantColor}, ${
-              typeof window !== 'undefined' && window.matchMedia('(prefers-color-scheme: dark)').matches
-                ? '#111827'
-                : '#ffffff'
-            })`
-          }}
+          className="w-full pb-6"
+          style={{ backgroundImage: `linear-gradient(to bottom, ${dominantColor}, #f0f2f5)` }}
         >
-          <div className="container mx-auto px-4 pt-10 text-center">
-            <div className="w-24 h-24 md:w-28 md:h-28 mx-auto rounded-2xl overflow-hidden border-4 border-white shadow-lg">
+          <div className="container mx-auto px-4 pt-12 text-center">
+            <div className="w-24 h-24 mx-auto rounded-2xl overflow-hidden border-4 border-white shadow-lg">
               <img
                 src={app.icon_url || '/placeholder-icon.png'}
-                alt={`${app.name} icon`}
+                alt={app.name}
                 className="w-full h-full object-cover"
               />
             </div>
             <h1 className="mt-4 text-2xl font-bold text-white drop-shadow">{app.name}</h1>
-            {app.author && (
-              <p className="text-white text-sm opacity-90">{app.author}</p>
-            )}
+            {app.author && <p className="text-white opacity-90 text-sm">{app.author}</p>}
           </div>
         </div>
 
         {/* Main content */}
-        <div className="container mx-auto px-4 -mt-12 relative z-10">
+        <div className="container mx-auto px-4 -mt-8 space-y-6">
+          {/* Card: Action Button */}
+          <div className="bg-white rounded-xl p-4 shadow">
+            {app.category === 'testflight' && app.testflight_url && (
+              <a
+                href={app.testflight_url}
+                className="block bg-blue-600 hover:bg-blue-700 text-white text-center py-3 rounded-xl font-bold"
+                target="_blank" rel="noopener noreferrer"
+              >
+                <FontAwesomeIcon icon={faRocket} className="mr-2" />
+                Tham gia TestFlight
+              </a>
+            )}
+            {app.category === 'jailbreak' && app.download_link && (
+              <a
+                href={app.download_link}
+                className="block bg-green-600 hover:bg-green-700 text-white text-center py-3 rounded-xl font-bold"
+                target="_blank" rel="noopener noreferrer"
+              >
+                <FontAwesomeIcon icon={faDownload} className="mr-2" />
+                Cài đặt ứng dụng
+              </a>
+            )}
+          </div>
 
-          {/* Action Button */}
-          {app.category === 'testflight' && app.testflight_url && (
-            <a
-              href={app.testflight_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block bg-blue-600 hover:bg-blue-700 text-white text-center py-3 rounded-xl font-bold transition active:scale-95 mb-4"
-            >
-              <FontAwesomeIcon icon={faRocket} className="mr-2" />
-              Tham gia TestFlight
-            </a>
-          )}
-          {app.category === 'jailbreak' && app.download_link && (
-            <a
-              href={app.download_link}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block bg-green-600 hover:bg-green-700 text-white text-center py-3 rounded-xl font-bold transition active:scale-95 mb-4"
-            >
-              <FontAwesomeIcon icon={faDownload} className="mr-2" />
-              Cài đặt ứng dụng
-            </a>
-          )}
-
-          {/* Info Row */}
-          <div className="grid grid-cols-3 gap-4 text-center text-sm text-gray-800 dark:text-white font-medium border-b border-gray-200 dark:border-gray-700 pb-4 mb-4">
-            <div>
-              <p className="mb-1 text-gray-500 dark:text-gray-400">Phiên bản</p>
-              <p><FontAwesomeIcon icon={faCodeBranch} className="mr-1 text-blue-500" />{app.version || 'Không rõ'}</p>
+          {/* Card: Thông tin */}
+          <div className="bg-white rounded-xl p-4 shadow">
+            <div className="text-center text-sm text-gray-600 font-semibold border-b pb-2 mb-2">
+              <div className="flex justify-around">
+                <span>Phiên bản</span>
+                <span>Tác giả</span>
+                <span>Dung lượng</span>
+              </div>
             </div>
-            <div>
-              <p className="mb-1 text-gray-500 dark:text-gray-400">Tác giả</p>
-              <p><FontAwesomeIcon icon={faUser} className="mr-1 text-purple-500" />{app.author || 'Không rõ'}</p>
-            </div>
-            <div>
-              <p className="mb-1 text-gray-500 dark:text-gray-400">Dung lượng</p>
-              <p><FontAwesomeIcon icon={faDatabase} className="mr-1 text-green-500" />{app.size ? `${app.size} MB` : 'Không rõ'}</p>
+            <div className="flex justify-around text-center text-gray-800 font-medium">
+              <span>{app.version || 'Không rõ'}</span>
+              <span>{app.author || 'Không rõ'}</span>
+              <span>{app.size ? `${app.size} MB` : 'Không rõ'}</span>
             </div>
           </div>
 
-          {/* Description */}
-          <div className="py-6 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-lg font-bold text-black dark:text-white mb-2">Mô tả</h2>
-            <p className="text-gray-800 dark:text-white whitespace-pre-line">
-              {showFullDescription
-                ? app.description
-                : truncate(app.description, 500)}
+          {/* Card: Mô tả */}
+          <div className="bg-white rounded-xl p-4 shadow">
+            <h2 className="text-lg font-bold text-gray-800 mb-2">Mô tả</h2>
+            <p className="text-gray-700 whitespace-pre-line">
+              {showFullDescription ? app.description : truncate(app.description, 500)}
             </p>
-            {app.description && app.description.length > 500 && (
+            {app.description?.length > 500 && (
               <button
                 onClick={() => setShowFullDescription(!showFullDescription)}
                 className="mt-2 text-sm text-blue-600 hover:underline font-bold"
@@ -218,15 +195,15 @@ export default function Detail() {
             )}
           </div>
 
-          {/* Screenshots */}
+          {/* Card: Screenshots */}
           {Array.isArray(app.screenshots) && app.screenshots.length > 0 && (
-            <div className="py-6">
-              <h2 className="text-lg font-bold text-black dark:text-white mb-3">Ảnh màn hình</h2>
+            <div className="bg-white rounded-xl p-4 shadow">
+              <h2 className="text-lg font-bold text-gray-800 mb-3">Ảnh màn hình</h2>
               <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1">
                 {app.screenshots.map((url, i) => (
                   <div
                     key={i}
-                    className="flex-shrink-0 w-48 md:w-56 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700"
+                    className="flex-shrink-0 w-48 md:w-56 rounded-xl overflow-hidden border"
                   >
                     <img
                       src={url}
@@ -239,26 +216,25 @@ export default function Detail() {
             </div>
           )}
 
-          {/* Related apps */}
+          {/* Card: Ứng dụng cùng chuyên mục */}
           {related.length > 0 && (
-            <div className="py-8">
-              <h2 className="text-lg font-bold text-black dark:text-white mb-4">Ứng dụng cùng chuyên mục</h2>
-              <div className="space-y-4">
+            <div className="bg-white rounded-xl p-4 shadow">
+              <h2 className="text-lg font-bold text-gray-800 mb-4">Ứng dụng cùng chuyên mục</h2>
+              <div className="divide-y divide-gray-200">
                 {related.map((item) => (
                   <Link href={`/${item.slug}`} key={item.id}>
-                    <a className="flex items-center bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 hover:shadow transition">
+                    <a className="flex items-center py-3 hover:bg-gray-50 px-2 rounded-lg transition">
                       <img
                         src={item.icon_url || '/placeholder-icon.png'}
                         alt={item.name}
-                        className="w-14 h-14 rounded-xl object-cover mr-4"
+                        className="w-12 h-12 rounded-lg object-cover mr-4"
                       />
                       <div className="flex-1">
-                        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">{item.name}</h3>
-                        <p className="text-xs text-gray-600 dark:text-gray-400">{item.author || 'Không rõ'}</p>
+                        <p className="text-sm font-semibold text-gray-800">{item.name}</p>
+                        <p className="text-xs text-gray-500">
+                          {item.author} • <span className="bg-gray-200 text-gray-800 px-2 py-0.5 rounded text-xs font-medium">{item.version || 'N/A'}</span>
+                        </p>
                       </div>
-                      <span className="ml-auto text-xs bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white px-2 py-1 rounded">
-                        {item.version || 'v?'}
-                      </span>
                     </a>
                   </Link>
                 ))}
