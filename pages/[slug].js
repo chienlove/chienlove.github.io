@@ -5,7 +5,14 @@ import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { FastAverageColor } from 'fast-average-color';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faDownload, faRocket, faArrowLeft } from '@fortawesome/free-solid-svg-icons';
+import {
+  faDownload,
+  faRocket,
+  faArrowLeft,
+  faCodeBranch,
+  faDatabase,
+  faUser
+} from '@fortawesome/free-solid-svg-icons';
 
 export default function Detail() {
   const router = useRouter();
@@ -46,7 +53,6 @@ export default function Detail() {
 
         setApp(appData);
 
-        // Fetch related apps
         const { data: relatedApps } = await supabase
           .from('apps')
           .select('id, name, slug, icon_url')
@@ -56,7 +62,6 @@ export default function Detail() {
 
         setRelated(relatedApps || []);
 
-        // Get dominant color from icon
         if (typeof window !== 'undefined' && appData.icon_url) {
           const fac = new FastAverageColor();
           try {
@@ -116,17 +121,17 @@ export default function Detail() {
   return (
     <Layout title={app.name}>
       <div className="relative">
-        <div className="container mx-auto px-4 pt-4">
+        {/* Breadcrumb overlay */}
+        <div className="absolute top-4 left-4 z-20">
           <Link href="/">
-            <a className="inline-flex items-center text-blue-600 hover:text-blue-800 text-base font-semibold">
+            <a className="inline-flex items-center bg-white/70 backdrop-blur-sm text-blue-600 hover:text-blue-800 text-sm font-medium px-3 py-1.5 rounded-full shadow">
               <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
               Trở lại
             </a>
           </Link>
         </div>
-      </div>
 
-      <div className="relative">
+        {/* Header with icon & background */}
         <div
           className="w-full pb-8"
           style={{
@@ -156,7 +161,9 @@ export default function Detail() {
           </div>
         </div>
 
+        {/* Content section */}
         <div className="container mx-auto px-4 -mt-12 relative z-10">
+          {/* Action button */}
           {app.category === 'testflight' && app.testflight_url && (
             <a
               href={app.testflight_url}
@@ -168,7 +175,6 @@ export default function Detail() {
               Tham gia TestFlight
             </a>
           )}
-
           {app.category === 'jailbreak' && app.download_link && (
             <a
               href={app.download_link}
@@ -181,19 +187,36 @@ export default function Detail() {
             </a>
           )}
 
-          <div className="grid grid-cols-2 gap-6 text-sm text-gray-700 dark:text-gray-300 mt-5 border-b border-gray-200 dark:border-gray-700 pb-4">
-            <div>
-              <h2 className="font-medium">Phiên bản</h2>
-              <p>{app.version || 'Không rõ'}</p>
+          {/* Info Section */}
+          <div className="grid grid-cols-2 gap-6 text-sm text-gray-700 dark:text-gray-300 mt-8 border-b border-gray-200 dark:border-gray-700 pb-4">
+            <div className="flex items-center gap-2">
+              <FontAwesomeIcon icon={faCodeBranch} className="text-blue-500 w-4" />
+              <div>
+                <h2 className="font-medium">Phiên bản</h2>
+                <p>{app.version || 'Không rõ'}</p>
+              </div>
             </div>
             {app.size && (
-              <div>
-                <h2 className="font-medium">Dung lượng</h2>
-                <p>{app.size} MB</p>
+              <div className="flex items-center gap-2">
+                <FontAwesomeIcon icon={faDatabase} className="text-green-500 w-4" />
+                <div>
+                  <h2 className="font-medium">Dung lượng</h2>
+                  <p>{app.size} MB</p>
+                </div>
+              </div>
+            )}
+            {app.author && (
+              <div className="flex items-center gap-2 col-span-2 md:col-span-1">
+                <FontAwesomeIcon icon={faUser} className="text-purple-500 w-4" />
+                <div>
+                  <h2 className="font-medium">Tác giả</h2>
+                  <p>{app.author}</p>
+                </div>
               </div>
             )}
           </div>
 
+          {/* Description */}
           <div className="py-6 border-b border-gray-200 dark:border-gray-700">
             <h2 className="text-lg font-bold text-black dark:text-white mb-2">Mô tả</h2>
             <p className="text-gray-800 dark:text-white whitespace-pre-line">
@@ -204,13 +227,14 @@ export default function Detail() {
             {app.description && app.description.length > 500 && (
               <button
                 onClick={() => setShowFullDescription(!showFullDescription)}
-                className="mt-2 text-sm text-blue-600 hover:underline"
+                className="mt-2 text-sm text-blue-600 hover:underline font-bold"
               >
                 {showFullDescription ? 'Thu gọn' : 'Xem thêm...'}
               </button>
             )}
           </div>
 
+          {/* Screenshots */}
           {Array.isArray(app.screenshots) && app.screenshots.length > 0 && (
             <div className="py-6">
               <h2 className="text-lg font-bold text-black dark:text-white mb-3">Ảnh màn hình</h2>
@@ -235,6 +259,7 @@ export default function Detail() {
             </div>
           )}
 
+          {/* Related apps */}
           {related.length > 0 && (
             <div className="py-8">
               <h2 className="text-lg font-bold text-black dark:text-white mb-4">Ứng dụng cùng chuyên mục</h2>
