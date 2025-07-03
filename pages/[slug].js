@@ -12,6 +12,7 @@ export default function Detail() {
   const rawSlug = router.query.slug;
   const slug = (rawSlug || '').toLowerCase();
   const [app, setApp] = useState(null);
+  const [related, setRelated] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dominantColor, setDominantColor] = useState('#f5f5f7');
   const [showFullDescription, setShowFullDescription] = useState(false);
@@ -45,6 +46,17 @@ export default function Detail() {
 
         setApp(appData);
 
+        // Fetch related apps
+        const { data: relatedApps } = await supabase
+          .from('apps')
+          .select('id, name, slug, icon_url')
+          .eq('category', appData.category)
+          .neq('id', appData.id)
+          .limit(6);
+
+        setRelated(relatedApps || []);
+
+        // Get dominant color from icon
         if (typeof window !== 'undefined' && appData.icon_url) {
           const fac = new FastAverageColor();
           try {
@@ -218,6 +230,32 @@ export default function Detail() {
                       }}
                     />
                   </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {related.length > 0 && (
+            <div className="py-8">
+              <h2 className="text-lg font-bold text-black dark:text-white mb-4">Ứng dụng cùng chuyên mục</h2>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {related.map((item) => (
+                  <Link href={`/${item.slug}`} key={item.id}>
+                    <a className="block bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 hover:shadow">
+                      <img
+                        src={item.icon_url || '/placeholder-icon.png'}
+                        alt={item.name}
+                        className="w-16 h-16 mx-auto rounded-lg object-cover mb-2"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = '/placeholder-icon.png';
+                        }}
+                      />
+                      <p className="text-center text-sm font-medium text-gray-800 dark:text-white truncate">
+                        {item.name}
+                      </p>
+                    </a>
+                  </Link>
                 ))}
               </div>
             </div>
