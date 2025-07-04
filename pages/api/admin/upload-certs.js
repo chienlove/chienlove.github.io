@@ -1,5 +1,5 @@
-import { put } from '@vercel/blob';
 import { IncomingForm } from 'formidable';
+import fs from 'fs';
 import { createClient } from '@supabase/supabase-js';
 
 export const config = { api: { bodyParser: false } };
@@ -9,27 +9,50 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+function readFile(file) {
+  return fs.readFileSync(file.filepath);
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed' });
 
   try {
     const { fields, files } = await new Promise((resolve, reject) => {
-      const form = new IncomingForm();
+      const form = new IncomingForm({ keepExtensions: true });
       form.parse(req, (err, fields, files) => err ? reject(err) : resolve({ fields, files }));
     });
 
     const timestamp = Date.now();
-    const [p12Blob, provisionBlob] = await Promise.all([
-      put(`certs/${timestamp}.p12`, files.p12[0], { access: 'public' }),
-      put(`provisions/${timestamp}.mobileprovision`, files.provision[0], { access: 'public' })
-    ]);
+    const p12Buffer = readFile(files.p12[0]);
+    const provisionBuffer = readFile(files.provision[0]);
+
+    const { data: p12Data, error: p12Error } = await supabase.storage
+      .from('certificates')
+      .upload(`cert-${timestamp}.p12`, p12Buffer, {
+        contentType: 'application/x-pkcs12',
+        upsert: true
+      });
+
+    const { data: provisionData, error: provisionError } = await supabase.storage
+      .from('certificates')
+      .upload(`profile-${timestamp}.mobileprovision`, provisionBuffer, {
+        contentType: 'application/octet-stream',
+        upsert: true
+      });
+
+    if (p12Error || provisionError) {
+      throw new Error('Lỗi khi upload lên Supabase Storage');
+    }
+
+    const p12Url = supabase.storage.from('certificates').getPublicUrl(p12Data.path).data.publicUrl;
+    const provisionUrl = supabase.storage.from('certificates').getPublicUrl(provisionData.path).data.publicUrl;
 
     const { error } = await supabase
       .from('certificates')
       .upsert({
         id: 1,
-        p12_url: p12Blob.url,
-        provision_url: provisionBlob.url,
+        p12_url: p12Url,
+        provision_url: provisionUrl,
         password: fields.password[0],
         updated_at: new Date().toISOString()
       });
@@ -53,8 +76,8 @@ export default async function handler(req, res) {
 
     res.status(200).json({
       message: 'Chứng chỉ đã được lưu và ký IPA thành công!',
-      p12Url: p12Blob.url,
-      provisionUrl: provisionBlob.url
+      p12Url,
+      provisionUrl
     });
   } catch (error) {
     console.error('Upload error:', error);
