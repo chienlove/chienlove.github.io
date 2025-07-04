@@ -1,8 +1,6 @@
 import { supabase } from '../lib/supabase';
 import Layout from '../components/Layout';
-import Link from 'next/link';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faDownload } from '@fortawesome/free-solid-svg-icons';
+import AppCard from '../components/AppCard';
 
 export default function Home({ categoriesWithApps }) {
   return (
@@ -19,46 +17,10 @@ export default function Home({ categoriesWithApps }) {
                 {category.name}
               </h2>
 
+              {/* ✅ Dùng AppCard gọn đẹp */}
               <div className="divide-y divide-gray-200 dark:divide-gray-700">
                 {category.apps.map((app) => (
-                  <Link
-                    href={`/${app.slug}`}
-                    key={app.id}
-                    className="flex items-start gap-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 px-1 rounded-lg transition"
-                  >
-                    {/* Icon */}
-                    <div className="w-14 h-14 rounded-2xl overflow-hidden border border-gray-300 dark:border-gray-600 flex-shrink-0 mt-1">
-                      <img
-                        src={app.icon_url || '/placeholder-icon.png'}
-                        alt={app.name}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src = '/placeholder-icon.png';
-                        }}
-                      />
-                    </div>
-
-                    {/* Info */}
-                    <div className="flex-1 min-w-0 border-b border-gray-200 dark:border-gray-700 pb-3">
-                      <div className="flex justify-between items-center">
-                        <h3 className="text-base font-semibold text-gray-900 dark:text-white truncate">
-                          {app.name}
-                        </h3>
-                        {app.version && (
-                          <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200 px-2 py-1 rounded-full font-medium">
-                            v{app.version}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center justify-between mt-1">
-                        <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
-                          {app.author || 'Không rõ tác giả'}
-                        </p>
-                        <FontAwesomeIcon icon={faDownload} className="text-blue-500 text-sm ml-2" />
-                      </div>
-                    </div>
-                  </Link>
+                  <AppCard key={app.id} app={app} mode="list" />
                 ))}
               </div>
             </div>
