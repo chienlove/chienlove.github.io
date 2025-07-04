@@ -4,8 +4,9 @@ import { createClient } from '@supabase/supabase-js';
 
 export const config = {
   api: {
-    bodyParser: false, // vì dùng multipart/form-data
-  },
+    bodyParser: false,
+    externalResolver: true
+  }
 };
 
 const supabase = createClient(
