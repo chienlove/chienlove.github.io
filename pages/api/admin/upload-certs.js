@@ -1,5 +1,3 @@
-import { put } from '@vercel/blob';
-import { getSession } from 'next-auth/react';
 import { IncomingForm } from 'formidable';
 import { createClient } from '@supabase/supabase-js';
 
@@ -11,8 +9,13 @@ const supabase = createClient(
 );
 
 export default async function handler(req, res) {
-  const session = await getSession({ req });
-  if (!session?.user?.isAdmin) return res.status(403).json({ message: 'Unauthorized' });
+  const authHeader = req.headers.authorization || "";
+  const token = authHeader.replace("Bearer ", "");
+
+  if (token !== process.env.INTERNAL_UPLOAD_SECRET) {
+    return res.status(403).json({ message: 'Unauthorized' });
+  }
+
   if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed' });
 
   try {
