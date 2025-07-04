@@ -315,18 +315,13 @@ export default function Admin() {
                 : "hover:bg-gray-200 dark:hover:bg-gray-700"
             }`}
           >
-            📁 Chuyên mục
-          </button>
+            📁 Chuyên mục</button>
           <button
-    onClick={() => setActiveTab("certs")}
-    className={`w-full text-left flex items-center gap-3 px-4 py-2 rounded ${
-      activeTab === "certs" 
-        ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200" 
-        : "hover:bg-gray-200 dark:hover:bg-gray-700"
-    }`}
-  >
-    🔐 Chứng chỉ
-  </button>
+            onClick={() => setActiveTab("certs")}
+            className={`w-full text-left flex items-center gap-3 px-4 py-2 rounded ${activeTab === "certs" ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200" : "hover:bg-gray-200 dark:hover:bg-gray-700"}`}
+          >
+            🛡️ Chứng chỉ
+          </button>
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-gray-700 flex items-center">
@@ -723,7 +718,12 @@ export default function Admin() {
               </div>
             </section>
           </>
-        )}
+          )}
+        {activeTab === "certs" && (
+          <section className="max-w-xl mx-auto">
+            <CertUploader />
+          </section>
+)}
       </main>
     </div>
   );

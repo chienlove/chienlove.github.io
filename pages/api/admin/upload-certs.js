@@ -1,13 +1,19 @@
+// pages/api/admin/upload-certs.js
 import { put } from '@vercel/blob';
 import { getSession } from 'next-auth/react';
 import { IncomingForm } from 'formidable';
+import { createClient } from '@supabase/supabase-js';
 
 export const config = { api: { bodyParser: false } };
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
 export default async function handler(req, res) {
   const session = await getSession({ req });
   if (!session?.user?.isAdmin) return res.status(403).json({ message: 'Unauthorized' });
-
   if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed' });
 
   try {
@@ -16,18 +22,25 @@ export default async function handler(req, res) {
       form.parse(req, (err, fields, files) => err ? reject(err) : resolve({ fields, files }));
     });
 
-    // Upload lên Vercel Blob
+    const timestamp = Date.now();
     const [p12Blob, provisionBlob] = await Promise.all([
-      put(`certs/${Date.now()}.p12`, files.p12[0], { access: 'public' }),
-      put(`provisions/${Date.now()}.mobileprovision`, files.provision[0], { access: 'public' })
+      put(`certs/${timestamp}.p12`, files.p12[0], { access: 'public' }),
+      put(`provisions/${timestamp}.mobileprovision`, files.provision[0], { access: 'public' })
     ]);
 
-    // Lưu thông tin vào biến môi trường (hoặc database)
-    process.env.SIGNING_P12_URL = p12Blob.url;
-    process.env.PROVISION_URL = provisionBlob.url;
-    process.env.SIGNING_PASSWORD = fields.password[0];
+    const { error } = await supabase
+      .from('certificates')
+      .upsert({
+        id: 1,
+        p12_url: p12Blob.url,
+        provision_url: provisionBlob.url,
+        password: fields.password[0],
+        updated_at: new Date().toISOString()
+      });
 
-    res.status(200).json({ 
+    if (error) throw error;
+
+    res.status(200).json({
       message: 'Chứng chỉ đã được lưu thành công',
       p12Url: p12Blob.url,
       provisionUrl: provisionBlob.url
