@@ -85,7 +85,7 @@ export default function Layout({ children, fullWidth = false }) {
           <Link href="/" className="text-xl font-bold">
   <span className="bg-gradient-to-r from-green-700 via-green-500 to-green-300 bg-clip-text text-transparent animate-gradient-x
                   drop-shadow-[0_0_8px_rgba(74,222,128,0.6)] hover:drop-shadow-[0_0_12px_rgba(74,222,128,0.8)] transition-all duration-300">
-    StreiOS
+    ꗟ𝕥𝕣ⅇ𝕚⌾𝕊
   </span>
 </Link>
 
