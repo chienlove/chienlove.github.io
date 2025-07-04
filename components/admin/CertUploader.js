@@ -64,7 +64,7 @@ export default function CertUploader() {
           return;
         }
 
-        await axios.post("/api/admin/use-cert", {
+        await axios.post("/api/admin/use-certs", {
           name: selectedCert,
           tag: form.tag,
           identifier: form.identifier
