@@ -113,7 +113,7 @@ export default function Detail() {
         <div className="w-full flex justify-center mt-10 bg-gray-100">
           <div className="relative w-full max-w-screen-2xl px-2 sm:px-4 md:px-6 pb-8 bg-white rounded-none">
             <div
-              className="w-full"
+              className="w-full pb-6"
               style={{
                 backgroundImage: `linear-gradient(to bottom, ${dominantColor}, #f0f2f5)`,
               }}

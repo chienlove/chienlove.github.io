@@ -109,7 +109,7 @@ export default function Detail() {
     <Layout fullWidth>
       <div className="bg-gray-100 min-h-screen pb-12">
 
-        {/* ✅ Header chuẩn chiều rộng và padding */}
+        {/* Header */}
         <div className="w-full flex justify-center mt-10 bg-gray-100">
           <div className="relative w-full max-w-screen-2xl px-2 sm:px-4 md:px-6 pb-8 bg-white rounded-none">
             <div
@@ -118,11 +118,13 @@ export default function Detail() {
                 backgroundImage: `linear-gradient(to bottom, ${dominantColor}, #f0f2f5)`,
               }}
             >
+              {/* Breadcrumb with hover/click effect */}
               <div className="absolute top-3 left-3 z-10">
-                <Link href="/">
-                  <a className="inline-flex items-center justify-center w-8 h-8 text-blue-600 hover:text-blue-800 bg-white rounded-full shadow-sm">
-                    <FontAwesomeIcon icon={faArrowLeft} className="w-4 h-4" />
-                  </a>
+                <Link
+                  href="/"
+                  className="inline-flex items-center justify-center w-9 h-9 text-blue-600 hover:text-white bg-white hover:bg-blue-600 active:scale-95 transition-all duration-150 rounded-full shadow-sm"
+                >
+                  <FontAwesomeIcon icon={faArrowLeft} className="w-4 h-4" />
                 </Link>
               </div>
 
@@ -165,32 +167,32 @@ export default function Detail() {
           </div>
         </div>
 
-        {/* ✅ Card bên dưới */}
+        {/* Thông tin dạng 3 cột như ảnh minh họa */}
         <div className="max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 mt-6 space-y-6">
-          {/* Card: Thông tin */}
-          <div className="bg-white rounded-xl p-4 shadow">
-            <div className="flex justify-around text-sm font-semibold text-gray-600 border-b pb-2 mb-2">
-              <div className="flex items-center gap-1">
-                <FontAwesomeIcon icon={faCodeBranch} />
-                <span>Phiên bản</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <FontAwesomeIcon icon={faUser} />
-                <span>Tác giả</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <FontAwesomeIcon icon={faDatabase} />
-                <span>Dung lượng</span>
-              </div>
+          <div className="bg-white rounded-xl p-4 shadow flex justify-around text-center divide-x divide-gray-300">
+            {/* Tác giả */}
+            <div className="flex-1 px-2">
+              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Tác giả</p>
+              <FontAwesomeIcon icon={faUser} className="text-2xl text-gray-600 mb-1" />
+              <p className="text-sm text-gray-800">{app.author || 'Không rõ'}</p>
             </div>
-            <div className="flex justify-around text-center text-gray-800 font-medium">
-              <span>{app.version || 'Không rõ'}</span>
-              <span>{app.author || 'Không rõ'}</span>
-              <span>{app.size ? `${app.size} MB` : 'Không rõ'}</span>
+
+            {/* Phiên bản */}
+            <div className="flex-1 px-2">
+              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Phiên bản</p>
+              <FontAwesomeIcon icon={faCodeBranch} className="text-2xl text-gray-600 mb-1" />
+              <p className="text-sm text-gray-800">{app.version || 'Không rõ'}</p>
+            </div>
+
+            {/* Dung lượng */}
+            <div className="flex-1 px-2">
+              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Dung lượng</p>
+              <FontAwesomeIcon icon={faDatabase} className="text-2xl text-gray-600 mb-1" />
+              <p className="text-sm text-gray-800">{app.size ? `${app.size} MB` : 'Không rõ'}</p>
             </div>
           </div>
 
-          {/* Card: Mô tả */}
+          {/* Mô tả */}
           <div className="bg-white rounded-xl p-4 shadow">
             <h2 className="text-lg font-bold text-gray-800 mb-2">Mô tả</h2>
             <p className="text-gray-700 whitespace-pre-line">
@@ -206,7 +208,7 @@ export default function Detail() {
             )}
           </div>
 
-          {/* Card: Screenshots */}
+          {/* Ảnh màn hình */}
           {Array.isArray(app.screenshots) && app.screenshots.length > 0 && (
             <div className="bg-white rounded-xl p-4 shadow">
               <h2 className="text-lg font-bold text-gray-800 mb-3">Ảnh màn hình</h2>
@@ -220,34 +222,36 @@ export default function Detail() {
             </div>
           )}
 
-          {/* Card: Ứng dụng cùng chuyên mục */}
+          {/* Ứng dụng cùng chuyên mục */}
           {related.length > 0 && (
             <div className="bg-white rounded-xl p-4 shadow">
               <h2 className="text-lg font-bold text-gray-800 mb-4">Ứng dụng cùng chuyên mục</h2>
               <div className="divide-y divide-gray-200">
                 {related.map((item) => (
-                  <Link href={`/${item.slug}`} key={item.id}>
-                    <a className="flex items-center justify-between py-3 hover:bg-gray-50 px-2 rounded-lg transition">
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={item.icon_url || '/placeholder-icon.png'}
-                          alt={item.name}
-                          className="w-10 h-10 rounded-lg object-cover"
-                        />
-                        <div>
-                          <p className="text-sm font-semibold text-gray-800">{item.name}</p>
-                          <div className="flex items-center gap-2 text-xs text-gray-500">
-                            {item.author && <span>{item.author}</span>}
-                            {item.version && (
-                              <span className="bg-gray-200 text-gray-800 px-2 py-0.5 rounded text-xs font-medium">
-                                {item.version}
-                              </span>
-                            )}
-                          </div>
+                  <Link
+                    href={`/${item.slug}`}
+                    key={item.id}
+                    className="flex items-center justify-between py-4 hover:bg-gray-50 px-2 rounded-lg transition"
+                  >
+                    <div className="flex items-center gap-4">
+                      <img
+                        src={item.icon_url || '/placeholder-icon.png'}
+                        alt={item.name}
+                        className="w-14 h-14 rounded-xl object-cover shadow-sm"
+                      />
+                      <div className="flex flex-col">
+                        <p className="text-sm font-semibold text-gray-800">{item.name}</p>
+                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                          {item.author && <span>{item.author}</span>}
+                          {item.version && (
+                            <span className="bg-gray-200 text-gray-800 px-2 py-0.5 rounded text-xs font-medium">
+                              {item.version}
+                            </span>
+                          )}
                         </div>
                       </div>
-                      <FontAwesomeIcon icon={faDownload} className="text-blue-500" />
-                    </a>
+                    </div>
+                    <FontAwesomeIcon icon={faDownload} className="text-blue-500 text-lg" />
                   </Link>
                 ))}
               </div>
