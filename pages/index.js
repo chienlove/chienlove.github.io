@@ -17,8 +17,8 @@ export default function Home({ categoriesWithApps }) {
                 {category.name}
               </h2>
 
-              {/* ✅ Dùng AppCard gọn đẹp */}
-              <div className="divide-y divide-gray-200 dark:divide-gray-700">
+              {/* Hiển thị danh sách ứng dụng */}
+              <div>
                 {category.apps.map((app) => (
                   <AppCard key={app.id} app={app} mode="list" />
                 ))}

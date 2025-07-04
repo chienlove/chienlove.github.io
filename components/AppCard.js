@@ -5,40 +5,63 @@ import { faDownload } from '@fortawesome/free-solid-svg-icons';
 export default function AppCard({ app, mode = 'card' }) {
   const isList = mode === 'list';
 
+  // Badge "NEW" trong vòng 24h
+  function isNew(createdAt) {
+    if (!createdAt) return false;
+    const created = new Date(createdAt);
+    const now = new Date();
+    const diffHours = (now - created) / (1000 * 60 * 60);
+    return diffHours <= 24;
+  }
+
   return (
     <Link
       href={`/${app.slug}`}
       className={
         isList
-          ? 'flex items-center justify-between py-3 hover:bg-gray-50 dark:hover:bg-gray-700 px-2 rounded-lg transition'
+          ? 'flex items-start justify-between gap-3 px-2 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition rounded-lg'
           : 'flex items-center gap-4 p-4 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition duration-200'
       }
     >
-      <div className="flex items-center gap-3">
+      {/* Icon */}
+      <div className="w-14 h-14 rounded-2xl overflow-hidden border border-gray-300 dark:border-gray-600 flex-shrink-0 mt-1">
         <img
           src={app.icon_url || '/placeholder-icon.png'}
           alt={app.name}
-          className={
-            isList
-              ? 'w-12 h-12 rounded-lg object-cover'
-              : 'w-16 h-16 rounded-xl object-cover shadow-sm'
-          }
+          className="w-full h-full object-cover"
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = '/placeholder-icon.png';
+          }}
         />
-        <div className="flex flex-col">
-          <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">{app.name}</p>
-          <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 mt-1">
+      </div>
+
+      {/* Nội dung */}
+      <div className="flex-1 min-w-0 border-t border-gray-200 dark:border-gray-700 pt-2">
+        <div className="flex items-center justify-between">
+          <h3 className="text-[16px] font-semibold text-gray-900 dark:text-white truncate">
+            {app.name}
+            {isNew(app.created_at) && (
+              <span className="ml-2 text-[10px] font-bold text-red-600 bg-red-100 dark:bg-red-700 dark:text-white px-2 py-0.5 rounded-full">
+                NEW
+              </span>
+            )}
+          </h3>
+        </div>
+        <div className="flex items-center justify-between mt-1">
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 truncate">
             {app.author && <span>{app.author}</span>}
             {app.version && (
               <span className="bg-gray-200 dark:bg-gray-700 dark:text-gray-100 text-gray-800 px-2 py-0.5 rounded text-xs font-medium">
-                {app.version}
+                v{app.version}
               </span>
             )}
           </div>
         </div>
       </div>
 
-      {/* Icon tải xuống nằm giữa, to hơn */}
-      <div className="flex items-center justify-center w-10 h-10">
+      {/* Icon tải */}
+      <div className="flex items-center justify-center w-10 h-full">
         <FontAwesomeIcon icon={faDownload} className="text-blue-500 text-xl" />
       </div>
     </Link>
