@@ -83,10 +83,10 @@ export default function Layout({ children, fullWidth = false }) {
         <div className="w-full max-w-screen-2xl mx-auto px-4 py-3 flex items-center justify-between">
           {/* Logo */}
           <Link href="/" className="text-xl font-bold">
-            <span className="bg-gradient-to-r from-green-700 via-green-500 to-green-300 bg-clip-text text-transparent">
-              StreiOS
-            </span>
-          </Link>
+  <span className="bg-gradient-to-r from-green-700 via-green-500 to-green-300 bg-clip-text text-transparent animate-gradient-x">
+    StreiOS
+  </span>
+         </Link>
 
           {/* Menu desktop */}
           <nav className="hidden md:flex items-center gap-6">
