@@ -1,0 +1,65 @@
+name: Sign IPA and Reupload
+
+on:
+  workflow_dispatch:
+
+jobs:
+  sign:
+    runs-on: macos-latest
+
+    env:
+      GH_PAT: ${{ secrets.GH_PAT }}
+      REPO: ${{ github.repository }}
+      SUPABASE_URL: https://zkbzykamrzvvrhodiypk.supabase.co
+      SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Install tools
+        run: |
+          brew install curl jq gh
+
+      - name: Get cert info from Supabase
+        run: |
+          curl -s "${SUPABASE_URL}/rest/v1/certificates?select=*" \
+            -H "apikey: $SERVICE_ROLE_KEY" \
+            -H "Authorization: Bearer $SERVICE_ROLE_KEY" \
+            | jq '.[0]' > cert.json
+
+          echo "CERT_P12_URL=$(jq -r '.p12_url' cert.json)" >> $GITHUB_ENV
+          echo "CERT_PROVISION_URL=$(jq -r '.provision_url' cert.json)" >> $GITHUB_ENV
+          echo "CERT_PASSWORD=$(jq -r '.password' cert.json)" >> $GITHUB_ENV
+
+      - name: Download certificate files
+        run: |
+          curl -L "$CERT_P12_URL" -o cert.p12
+          curl -L "$CERT_PROVISION_URL" -o profile.mobileprovision
+
+      - name: Get latest release tag
+        id: get_release
+        run: |
+          TAG=$(gh release list -L1 --json tagName -q '.[0].tagName' --repo "$REPO")
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Download IPA from release
+        run: |
+          echo "🔽 Downloading IPA from release..."
+          gh release download "${{ steps.get_release.outputs.tag }}" --repo "$REPO" --pattern "*.ipa"
+          IPA_NAME=$(ls *.ipa)
+          echo "IPA_NAME=$IPA_NAME" >> $GITHUB_ENV
+
+      - name: Sign IPA (fake for demo)
+        run: |
+          echo "🔏 Signing..."
+          security import cert.p12 -P "$CERT_PASSWORD" -A
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          cp profile.mobileprovision ~/Library/MobileDevice/Provisioning\ Profiles/
+          cp "$IPA_NAME" signed.ipa  # Replace this with real signing logic
+
+      - name: Upload signed IPA back to release (overwrite)
+        run: |
+          echo "📤 Uploading signed IPA..."
+          mv signed.ipa "$IPA_NAME"
+          gh release upload "${{ steps.get_release.outputs.tag }}" "$IPA_NAME" --clobber --repo "$REPO"
