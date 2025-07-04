@@ -118,11 +118,16 @@ export default function CertUploader() {
       {mode === "select" && (
         <div>
           <label className="block font-medium">Chọn chứng chỉ</label>
-          <select className="border rounded w-full p-2" value={selectedCert} onChange={(e) => setSelectedCert(e.target.value)} required>
+          <select
+            className="border rounded w-full p-2"
+            value={selectedCert}
+            onChange={(e) => setSelectedCert(e.target.value)}
+            required
+          >
             <option value="">-- Chọn --</option>
             {certs.map((cert) => (
               <option key={cert.id} value={cert.name}>
-                {cert.name} ({new Date(cert.updated_at).toLocaleDateString()})
+                {cert.name}
               </option>
             ))}
           </select>
