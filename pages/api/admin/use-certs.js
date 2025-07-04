@@ -1,10 +1,16 @@
 export const config = {
   api: {
-    bodyParser: true, // Đảm bảo có thể đọc JSON từ req.body
+    bodyParser: true,
   },
 };
 
 import { createClient } from '@supabase/supabase-js';
+
+// Kiểm tra biến môi trường
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  console.error("❌ Missing Supabase configuration");
+  throw new Error("Supabase configuration missing");
+}
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -26,46 +32,67 @@ export default async function handler(req, res) {
       return res.status(400).json({ message: 'Thiếu thông tin bắt buộc.' });
     }
 
-    // Lấy cert từ Supabase theo name
+    // Kiểm tra GitHub PAT
+    if (!process.env.GH_PAT) {
+      console.error("❌ Missing GitHub PAT");
+      return res.status(500).json({ message: 'Cấu hình server không đầy đủ' });
+    }
+
+    // Truy vấn Supabase
     const { data: cert, error } = await supabase
       .from('certificates')
       .select('*')
       .eq('name', name)
       .single();
 
-    if (error || !cert) {
-      console.error("❌ Không tìm thấy chứng chỉ:", error?.message || 'not found');
+    if (error) {
+      console.error("❌ Supabase error:", error);
+      return res.status(500).json({ 
+        message: 'Lỗi truy vấn database',
+        details: error.message 
+      });
+    }
+
+    if (!cert) {
       return res.status(404).json({ message: 'Không tìm thấy chứng chỉ.' });
     }
 
     console.log("✅ [use-certs] Cert found:", cert.name);
 
-    // Gửi GitHub Action
-    const trigger = await fetch(`https://api.github.com/repos/chienlove/chienlove.github.io/actions/workflows/sign-ipa.yml/dispatches`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${process.env.GH_PAT}`,
-        Accept: 'application/vnd.github+json',
-      },
-      body: JSON.stringify({
-        ref: 'main',
-        inputs: {
-          tag,
-          identifier
-        }
-      })
-    });
+    // Gọi GitHub API
+    const response = await fetch(
+      `https://api.github.com/repos/chienlove/chienlove.github.io/actions/workflows/sign-ipa.yml/dispatches`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${process.env.GH_PAT}`,
+          Accept: 'application/vnd.github+json',
+          'X-GitHub-Api-Version': '2022-11-28'
+        },
+        body: JSON.stringify({
+          ref: 'main',
+          inputs: { tag, identifier }
+        })
+      }
+    );
 
-    if (!trigger.ok) {
-      const text = await trigger.text();
-      console.error("❌ GitHub trigger lỗi:", text);
-      return res.status(500).json({ message: 'GitHub Action lỗi: ' + text });
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      console.error("❌ GitHub error:", response.status, errorData);
+      return res.status(500).json({
+        message: 'GitHub Action failed',
+        status: response.status,
+        details: errorData
+      });
     }
 
     return res.status(200).json({ message: '✅ Đã gửi yêu cầu ký IPA.' });
 
   } catch (err) {
-    console.error("❌ Lỗi server:", err);
-    return res.status(500).json({ message: err.message || 'Internal server error' });
+    console.error("❌ Server error:", err);
+    return res.status(500).json({ 
+      message: err.message || 'Internal server error',
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+    });
   }
 }
