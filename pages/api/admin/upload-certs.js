@@ -59,14 +59,14 @@ export default async function handler(req, res) {
 
     if (error) throw error;
 
-    await fetch('https://api.github.com/repos/your-username/your-repo/actions/workflows/sign-ipa.yml/dispatches', {
+    await fetch('https://api.github.com/repos/chienlove/chienlove.github.io/actions/workflows/sign-ipa.yml/dispatches', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${process.env.GH_PAT}`,
         Accept: 'application/vnd.github+json'
       },
       body: JSON.stringify({
-        ref: 'main',
+        ref: 'master',
         inputs: {
           tag: fields.tag[0],
           identifier: fields.identifier[0]
