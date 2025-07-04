@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabase';
 import AppCard from './AppCard';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faBars, faMoon, faSun, faTools, faThList, faInfoCircle, faTimes } from '@fortawesome/free-solid-svg-icons';
 
 export default function Layout({ children, fullWidth = false }) {
   const router = useRouter();
@@ -14,6 +16,7 @@ export default function Layout({ children, fullWidth = false }) {
   const [categories, setCategories] = useState([]);
   const [activeCategory, setActiveCategory] = useState('all');
   const [searching, setSearching] = useState(false);
+  const [searchSuggestions, setSearchSuggestions] = useState([]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
@@ -26,6 +29,18 @@ export default function Layout({ children, fullWidth = false }) {
     }
     fetchCategories();
   }, []);
+
+  useEffect(() => {
+    if (q.length >= 2) {
+      supabase
+        .from('apps')
+        .select('id, name, slug')
+        .ilike('name', `%${q}%`)
+        .then(({ data }) => setSearchSuggestions(data || []));
+    } else {
+      setSearchSuggestions([]);
+    }
+  }, [q]);
 
   const handleSearch = async (e) => {
     e.preventDefault();
@@ -53,6 +68,7 @@ export default function Layout({ children, fullWidth = false }) {
     setApps([]);
     setQ('');
     setActiveCategory('all');
+    setSearchSuggestions([]);
     router.push(`/${slug}`);
   };
 
@@ -63,8 +79,8 @@ export default function Layout({ children, fullWidth = false }) {
       </Head>
 
       {/* Header */}
-      <header className="sticky top-0 z-50 bg-white dark:bg-gray-800 shadow">
-        <div className="max-w-screen-2xl mx-auto px-4 py-3 flex items-center justify-between">
+      <header className="sticky top-0 z-50 w-full bg-white dark:bg-gray-800 shadow">
+        <div className="w-full max-w-screen-2xl mx-auto px-4 py-3 flex items-center justify-between">
           {/* Logo */}
           <Link href="/" className="text-xl font-bold">
             <span className="bg-gradient-to-r from-green-700 via-green-500 to-green-300 bg-clip-text text-transparent">
@@ -72,74 +88,113 @@ export default function Layout({ children, fullWidth = false }) {
             </span>
           </Link>
 
-          {/* Desktop Menu */}
+          {/* Menu desktop */}
           <nav className="hidden md:flex items-center gap-6">
-            <Link href="/tools"><a className="hover:text-green-600">Công cụ</a></Link>
-            <Link href="/categories"><a className="hover:text-green-600">Chuyên mục</a></Link>
-            <Link href="/about"><a className="hover:text-green-600">Giới thiệu</a></Link>
+            <Link href="/tools">
+              <a className="hover:text-green-600 flex items-center gap-1">
+                <FontAwesomeIcon icon={faTools} /> Công cụ
+              </a>
+            </Link>
+
+            <div className="relative group">
+              <button className="hover:text-green-600 flex items-center gap-1">
+                <FontAwesomeIcon icon={faThList} /> Chuyên mục
+              </button>
+              <div className="absolute hidden group-hover:block bg-white dark:bg-gray-800 shadow rounded w-48 mt-2 z-50">
+                {categories.map((cat) => (
+                  <Link key={cat.id} href={`/category/${cat.id}`}>
+                    <a className="block px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700">{cat.name}</a>
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            <Link href="/about">
+              <a className="hover:text-green-600 flex items-center gap-1">
+                <FontAwesomeIcon icon={faInfoCircle} /> Giới thiệu
+              </a>
+            </Link>
           </nav>
 
-          {/* Right: Search + Theme */}
+          {/* Right */}
           <div className="flex items-center gap-2">
             <button
               onClick={() => setDarkMode(!darkMode)}
               className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
               title="Đổi giao diện"
             >
-              {darkMode ? <SunIcon className="w-5 h-5" /> : <MoonIcon className="w-5 h-5" />}
+              <FontAwesomeIcon icon={darkMode ? faSun : faMoon} className="w-5 h-5" />
             </button>
 
             <button
               className="md:hidden p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              onClick={() => setMobileMenuOpen(true)}
             >
-              <MenuIcon className="w-6 h-6" />
+              <FontAwesomeIcon icon={faBars} className="w-5 h-5" />
             </button>
           </div>
         </div>
-
-        {/* Mobile menu */}
-        {mobileMenuOpen && (
-          <div className="md:hidden bg-white dark:bg-gray-800 px-4 pb-4 space-y-3">
-            <Link href="/tools"><a className="block py-1">Công cụ</a></Link>
-            <Link href="/categories"><a className="block py-1">Chuyên mục</a></Link>
-            <Link href="/about"><a className="block py-1">Giới thiệu</a></Link>
-            <form onSubmit={handleSearch} className="flex flex-col gap-2 mt-3">
-              <input
-                type="text"
-                value={q}
-                onChange={(e) => setQ(e.target.value)}
-                placeholder="Tìm app..."
-                className="px-3 py-2 rounded-lg border bg-gray-50 dark:bg-gray-700"
-              />
-              <select
-                value={activeCategory}
-                onChange={(e) => handleCategory(e.target.value)}
-                className="px-3 py-2 rounded-lg border bg-white dark:bg-gray-700"
-              >
-                <option value="all">Tất cả</option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.name}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="submit"
-                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-semibold"
-              >
-                Tìm kiếm
-              </button>
-            </form>
-          </div>
-        )}
       </header>
+
+      {/* Slide menu mobile */}
+      <div className={`fixed top-0 left-0 h-full w-64 bg-white dark:bg-gray-800 shadow-lg z-50 transform transition-transform duration-300 ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="flex justify-between items-center p-4 border-b dark:border-gray-700">
+          <span className="font-bold text-lg">Menu</span>
+          <button onClick={() => setMobileMenuOpen(false)}>
+            <FontAwesomeIcon icon={faTimes} />
+          </button>
+        </div>
+        <div className="p-4 space-y-3">
+          <Link href="/tools"><a className="block">🛠 Công cụ</a></Link>
+          <Link href="/about"><a className="block">ℹ️ Giới thiệu</a></Link>
+          <div>
+            <p className="font-semibold mb-1">Chuyên mục</p>
+            {categories.map((cat) => (
+              <Link key={cat.id} href={`/category/${cat.id}`}>
+                <a className="block text-sm pl-2 py-1">{cat.name}</a>
+              </Link>
+            ))}
+          </div>
+          <form onSubmit={handleSearch} className="flex flex-col gap-2 mt-3">
+            <input
+              type="text"
+              value={q}
+              onChange={(e) => setQ(e.target.value)}
+              placeholder="Tìm app..."
+              className="px-3 py-2 rounded-lg border bg-gray-50 dark:bg-gray-700"
+            />
+            <button
+              type="submit"
+              className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-semibold"
+            >
+              Tìm kiếm
+            </button>
+          </form>
+        </div>
+      </div>
+
+      {/* Gợi ý tìm kiếm */}
+      {q.length >= 2 && searchSuggestions.length > 0 && (
+        <div className="absolute z-50 top-[60px] left-1/2 transform -translate-x-1/2 w-full max-w-md bg-white dark:bg-gray-800 shadow rounded">
+          {searchSuggestions.map((app) => (
+            <div
+              key={app.id}
+              className="px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+              onClick={() => handleAppClick(app.slug)}
+            >
+              {app.name}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Kết quả tìm kiếm */}
       {searching ? (
-        <div className="max-w-screen-2xl mx-auto px-4 py-6 text-center text-gray-500">Đang tìm kiếm...</div>
+        <div className="w-full max-w-screen-2xl mx-auto px-4 py-6 text-center text-gray-500">
+          Đang tìm kiếm...
+        </div>
       ) : apps.length > 0 ? (
-        <div className="max-w-screen-2xl mx-auto px-4 py-6">
+        <div className="w-full max-w-screen-2xl mx-auto px-4 py-6">
           <div className="text-sm text-gray-500 mb-3">Đã tìm thấy {apps.length} ứng dụng</div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {apps.map((app) => (
@@ -150,20 +205,19 @@ export default function Layout({ children, fullWidth = false }) {
           </div>
         </div>
       ) : q || activeCategory !== 'all' ? (
-        <div className="max-w-screen-2xl mx-auto px-4 py-6 text-center text-gray-500">
+        <div className="w-full max-w-screen-2xl mx-auto px-4 py-6 text-center text-gray-500">
           Không tìm thấy ứng dụng phù hợp.
         </div>
       ) : null}
 
-      {/* Nội dung trang */}
-      <main className={`${fullWidth ? 'w-full px-0' : 'max-w-screen-2xl mx-auto px-4'} py-6 flex-1`}>
+      {/* Main content */}
+      <main className={`${fullWidth ? 'w-full px-0' : 'w-full max-w-screen-2xl mx-auto px-4'} py-6 flex-1`}>
         {children}
       </main>
 
       {/* Footer */}
-      <footer className="bg-gray-100 dark:bg-gray-900 border-t border-gray-300 dark:border-gray-700 text-sm py-10 mt-10">
-        <div className="max-w-screen-2xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-8 text-gray-600 dark:text-gray-400">
-          {/* Cột 1 */}
+      <footer className="w-full bg-gray-100 dark:bg-gray-900 border-t border-gray-300 dark:border-gray-700">
+        <div className="w-full max-w-screen-2xl mx-auto px-4 py-10 grid grid-cols-1 md:grid-cols-3 gap-8 text-sm text-gray-600 dark:text-gray-400">
           <div>
             <h3 className="font-semibold text-gray-800 dark:text-white mb-2">Về chúng tôi</h3>
             <ul className="space-y-1">
@@ -172,23 +226,17 @@ export default function Layout({ children, fullWidth = false }) {
               <li><Link href="/terms">Điều khoản</Link></li>
             </ul>
           </div>
-
-          {/* Cột 2 */}
           <div>
             <h3 className="font-semibold text-gray-800 dark:text-white mb-2">Danh mục</h3>
             <ul className="space-y-1">
               {categories.slice(0, 5).map((cat) => (
-                <li key={cat.id}>
-                  <Link href={`/category/${cat.id}`}>{cat.name}</Link>
-                </li>
+                <li key={cat.id}><Link href={`/category/${cat.id}`}>{cat.name}</Link></li>
               ))}
             </ul>
           </div>
-
-          {/* Cột 3 */}
           <div>
             <h3 className="font-semibold text-gray-800 dark:text-white mb-2">Ủng hộ dự án</h3>
-            <p className="mb-2">Nếu bạn thấy dự án hữu ích, hãy ủng hộ chúng tôi qua:</p>
+            <p className="mb-2">Nếu bạn thấy dự án hữu ích, hãy ủng hộ chúng tôi:</p>
             <a
               href="https://www.buymeacoffee.com"
               target="_blank"
@@ -199,35 +247,10 @@ export default function Layout({ children, fullWidth = false }) {
             </a>
           </div>
         </div>
-
-        <div className="text-center text-xs text-gray-500 mt-6">
+        <div className="text-center text-xs text-gray-500 mt-6 pb-4">
           © {new Date().getFullYear()} TestFlight Share. All rights reserved.
         </div>
       </footer>
     </div>
-  );
-}
-
-function MoonIcon({ className }) {
-  return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12.79A9 9 0 0112.21 3 7 7 0 0012 21a9 9 0 009-8.21z" />
-    </svg>
-  );
-}
-
-function SunIcon({ className }) {
-  return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.36 6.36l-.71-.71M6.34 6.34l-.71-.71M17.66 6.34l-.71.71M6.34 17.66l-.71.71M12 8a4 4 0 100 8 4 4 0 000-8z" />
-    </svg>
-  );
-}
-
-function MenuIcon({ className }) {
-  return (
-    <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-    </svg>
   );
 }
