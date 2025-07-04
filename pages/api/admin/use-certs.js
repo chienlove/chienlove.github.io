@@ -43,7 +43,7 @@ export default async function handler(req, res) {
         Accept: 'application/vnd.github+json'
       },
       body: JSON.stringify({
-        ref: 'main',
+        ref: 'master',
         inputs: {
           tag,
           identifier
