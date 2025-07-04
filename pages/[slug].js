@@ -148,7 +148,7 @@ export default function Detail() {
                       target="_blank" rel="noopener noreferrer"
                     >
                       <FontAwesomeIcon icon={faRocket} className="mr-2" />
-                      TestFlight
+                      Tham gia TestFlight
                     </a>
                   )}
                   {app.category === 'jailbreak' && app.download_link && (
@@ -158,7 +158,7 @@ export default function Detail() {
                       target="_blank" rel="noopener noreferrer"
                     >
                       <FontAwesomeIcon icon={faDownload} className="mr-2" />
-                      Cài đặt
+                      Cài đặt ứng dụng
                     </a>
                   )}
                 </div>
@@ -167,28 +167,28 @@ export default function Detail() {
           </div>
         </div>
 
-        {/* Nội dung bên dưới */}
+        {/* Thông tin dạng 3 cột như ảnh minh họa */}
         <div className="max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 mt-6 space-y-6">
-          {/* Thông tin */}
-          <div className="bg-white rounded-xl p-4 shadow">
-            <div className="flex justify-around text-sm font-semibold text-gray-600 border-b pb-2 mb-2">
-              <div className="flex items-center gap-1">
-                <FontAwesomeIcon icon={faCodeBranch} />
-                <span>Phiên bản</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <FontAwesomeIcon icon={faUser} />
-                <span>Tác giả</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <FontAwesomeIcon icon={faDatabase} />
-                <span>Dung lượng</span>
-              </div>
+          <div className="bg-white rounded-xl p-4 shadow flex justify-around text-center divide-x divide-gray-300">
+            {/* Tác giả */}
+            <div className="flex-1 px-2">
+              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Tác giả</p>
+              <FontAwesomeIcon icon={faUser} className="text-2xl text-gray-600 mb-1" />
+              <p className="text-sm text-gray-800">{app.author || 'Không rõ'}</p>
             </div>
-            <div className="flex justify-around text-center text-gray-800 font-medium">
-              <span>{app.version || 'Không rõ'}</span>
-              <span>{app.author || 'Không rõ'}</span>
-              <span>{app.size ? `${app.size} MB` : 'Không rõ'}</span>
+
+            {/* Phiên bản */}
+            <div className="flex-1 px-2">
+              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Phiên bản</p>
+              <FontAwesomeIcon icon={faCodeBranch} className="text-2xl text-gray-600 mb-1" />
+              <p className="text-sm text-gray-800">{app.version || 'Không rõ'}</p>
+            </div>
+
+            {/* Dung lượng */}
+            <div className="flex-1 px-2">
+              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Dung lượng</p>
+              <FontAwesomeIcon icon={faDatabase} className="text-2xl text-gray-600 mb-1" />
+              <p className="text-sm text-gray-800">{app.size ? `${app.size} MB` : 'Không rõ'}</p>
             </div>
           </div>
 
