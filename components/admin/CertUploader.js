@@ -6,7 +6,6 @@ export default function CertUploader() {
   const [mode, setMode] = useState("upload");
   const [selectedCert, setSelectedCert] = useState("");
   const [form, setForm] = useState({
-    name: "",
     tag: "",
     identifier: "",
     password: ""
@@ -41,14 +40,15 @@ export default function CertUploader() {
 
     try {
       if (mode === "upload") {
-        if (!form.name || !p12 || !provision || !form.password) {
-          setMessage("❌ Vui lòng điền đầy đủ thông tin và file");
+        if (!p12 || !provision || !form.password) {
+          setMessage("❌ Vui lòng chọn đủ file và nhập mật khẩu");
           setLoading(false);
           return;
         }
 
+        const p12Name = p12.name.replace('.p12', '');
         const formData = new FormData();
-        formData.append("name", form.name);
+        formData.append("name", p12Name);
         formData.append("p12", p12);
         formData.append("provision", provision);
         formData.append("password", form.password);
@@ -97,10 +97,6 @@ export default function CertUploader() {
       {mode === "upload" && (
         <>
           <div>
-            <label className="block font-medium">Tên chứng chỉ</label>
-            <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
-          </div>
-          <div>
             <label className="block font-medium">File .p12</label>
             <input type="file" accept=".p12" onChange={(e) => setP12(e.target.files[0])} required />
           </div>
@@ -118,12 +114,7 @@ export default function CertUploader() {
       {mode === "select" && (
         <div>
           <label className="block font-medium">Chọn chứng chỉ</label>
-          <select
-            className="border rounded w-full p-2"
-            value={selectedCert}
-            onChange={(e) => setSelectedCert(e.target.value)}
-            required
-          >
+          <select className="border rounded w-full p-2" value={selectedCert} onChange={(e) => setSelectedCert(e.target.value)} required>
             <option value="">-- Chọn --</option>
             {certs.map((cert) => (
               <option key={cert.id} value={cert.name}>
