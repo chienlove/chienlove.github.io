@@ -1,4 +1,4 @@
-// ✅ Chỉ để code API handler này
+// pages/api/admin/use-certs.js
 export const config = {
   api: { bodyParser: true }
 };

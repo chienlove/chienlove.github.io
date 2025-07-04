@@ -1,3 +1,4 @@
+// components/CertUploader.js
 import { useState, useEffect } from "react";
 import axios from "axios";
 
@@ -65,14 +66,12 @@ export default function CertUploader() {
         }
 
         await axios.post("/api/admin/use-certs", {
-  name: selectedCert,
-  tag: form.tag,
-  identifier: form.identifier
-}, {
-  headers: {
-    'Content-Type': 'application/json'
-  }
-});
+          name: selectedCert,
+          tag: form.tag,
+          identifier: form.identifier
+        }, {
+          headers: { "Content-Type": "application/json" }
+        });
 
         setMessage("✅ Đã gửi yêu cầu ký IPA với chứng chỉ đã chọn");
       }
