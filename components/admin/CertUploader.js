@@ -1,90 +1,66 @@
-import { useState } from 'react';
-import axios from 'axios';
+import { useState } from "react";
+import axios from "axios";
 
 export default function CertUploader() {
-  const [p12File, setP12File] = useState(null);
-  const [provisionFile, setProvisionFile] = useState(null);
-  const [password, setPassword] = useState('');
-  const [status, setStatus] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const [form, setForm] = useState({
+    tag: "",
+    identifier: "",
+    password: ""
+  });
+  const [p12, setP12] = useState(null);
+  const [provision, setProvision] = useState(null);
+  const [message, setMessage] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setIsLoading(true);
-    setStatus('Đang upload...');
+    setMessage("");
+
+    if (!p12 || !provision || !form.password || !form.tag || !form.identifier) {
+      setMessage("Vui lòng điền đầy đủ thông tin và file.");
+      return;
+    }
 
     const formData = new FormData();
-    formData.append('p12', p12File);
-    formData.append('provision', provisionFile);
-    formData.append('password', password);
+    formData.append("p12", p12);
+    formData.append("provision", provision);
+    formData.append("password", form.password);
+    formData.append("tag", form.tag);
+    formData.append("identifier", form.identifier);
 
     try {
-      const response = await axios.post('/api/admin/upload-certs', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      setStatus(`✅ ${response.data.message}`);
-    } catch (error) {
-      setStatus(`❌ ${error.response?.data?.message || error.message}`);
-    } finally {
-      setIsLoading(false);
+      const res = await axios.post("/api/admin/upload-certs", formData);
+      setMessage(res.data.message || "Tải lên thành công!");
+    } catch (err) {
+      setMessage("Lỗi khi tải lên: " + err.message);
     }
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-md mt-6">
-      <h3 className="text-lg font-semibold mb-4">Upload Chứng Chỉ Signing</h3>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium mb-1">File .p12:</label>
-          <input
-            type="file"
-            accept=".p12"
-            onChange={(e) => setP12File(e.target.files[0])}
-            className="w-full px-3 py-2 border rounded"
-            required
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">File .mobileprovision:</label>
-          <input
-            type="file"
-            accept=".mobileprovision"
-            onChange={(e) => setProvisionFile(e.target.files[0])}
-            className="w-full px-3 py-2 border rounded"
-            required
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">Password:</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-3 py-2 border rounded"
-            required
-          />
-        </div>
-
-        <button
-          type="submit"
-          disabled={isLoading}
-          className={`px-4 py-2 rounded text-white ${
-            isLoading ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'
-          }`}
-        >
-          {isLoading ? 'Đang upload...' : 'Lưu Chứng Chỉ'}
-        </button>
-
-        {status && (
-          <div className={`p-2 mt-2 rounded ${
-            status.includes('✅') ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-          }`}>
-            {status}
-          </div>
-        )}
-      </form>
-    </div>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <label className="block font-medium">File .p12</label>
+        <input type="file" accept=".p12" onChange={(e) => setP12(e.target.files[0])} required />
+      </div>
+      <div>
+        <label className="block font-medium">File .mobileprovision</label>
+        <input type="file" accept=".mobileprovision" onChange={(e) => setProvision(e.target.files[0])} required />
+      </div>
+      <div>
+        <label className="block font-medium">Mật khẩu file .p12</label>
+        <input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} required />
+      </div>
+      <div>
+        <label className="block font-medium">Release Tag (chứa IPA)</label>
+        <input type="text" value={form.tag} onChange={(e) => setForm({ ...form, tag: e.target.value })} required />
+      </div>
+      <div>
+        <label className="block font-medium">Bundle Identifier mới</label>
+        <input type="text" value={form.identifier} onChange={(e) => setForm({ ...form, identifier: e.target.value })} required />
+      </div>
+      <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">
+        Tải lên và ký IPA
+      </button>
+      {message && <p className="mt-2 text-sm">{message}</p>}
+    </form>
   );
 }

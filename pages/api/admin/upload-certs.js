@@ -1,4 +1,3 @@
-// pages/api/admin/upload-certs.js
 import { put } from '@vercel/blob';
 import { getSession } from 'next-auth/react';
 import { IncomingForm } from 'formidable';
@@ -7,7 +6,7 @@ import { createClient } from '@supabase/supabase-js';
 export const config = { api: { bodyParser: false } };
 
 const supabase = createClient(
-  process.env.SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
@@ -40,8 +39,23 @@ export default async function handler(req, res) {
 
     if (error) throw error;
 
+    await fetch('https://api.github.com/repos/your-username/your-repo/actions/workflows/sign-ipa.yml/dispatches', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${process.env.GH_PAT}`,
+        Accept: 'application/vnd.github+json'
+      },
+      body: JSON.stringify({
+        ref: 'main',
+        inputs: {
+          tag: fields.tag[0],
+          identifier: fields.identifier[0]
+        }
+      })
+    });
+
     res.status(200).json({
-      message: 'Chứng chỉ đã được lưu thành công',
+      message: 'Chứng chỉ đã được lưu và ký IPA thành công!',
       p12Url: p12Blob.url,
       provisionUrl: provisionBlob.url
     });
