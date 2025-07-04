@@ -1,3 +1,10 @@
+// Bật bodyParser để xử lý req.body JSON
+export const config = {
+  api: {
+    bodyParser: true,
+  },
+};
+
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
@@ -6,7 +13,12 @@ const supabase = createClient(
 );
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed' });
+  console.log("✅ API /api/admin/use-certs CALLED:", req.method);
+  console.log("📦 BODY:", req.body);
+
+  if (req.method !== 'POST') {
+    return res.status(405).json({ message: 'Method not allowed' });
+  }
 
   try {
     const { name, tag, identifier } = req.body;
@@ -45,9 +57,9 @@ export default async function handler(req, res) {
       throw new Error("Gửi GitHub Action thất bại: " + msg);
     }
 
-    res.status(200).json({ message: 'Đã gửi yêu cầu ký IPA với chứng chỉ đã chọn.' });
+    res.status(200).json({ message: '✅ Đã gửi yêu cầu ký IPA với chứng chỉ đã chọn.' });
   } catch (error) {
-    console.error('Error use-cert:', error);
+    console.error('❌ Lỗi /use-certs:', error);
     res.status(500).json({ message: error.message });
   }
 }
