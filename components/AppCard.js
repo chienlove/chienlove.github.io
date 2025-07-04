@@ -5,7 +5,6 @@ import { faDownload } from '@fortawesome/free-solid-svg-icons';
 export default function AppCard({ app, mode = 'card' }) {
   const isList = mode === 'list';
 
-  // Badge "NEW" trong vòng 24h
   function isNew(createdAt) {
     if (!createdAt) return false;
     const created = new Date(createdAt);
@@ -23,8 +22,8 @@ export default function AppCard({ app, mode = 'card' }) {
           : 'flex items-center gap-4 p-4 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition duration-200'
       }
     >
-      {/* Icon */}
-      <div className="w-14 h-14 rounded-2xl overflow-hidden border border-gray-300 dark:border-gray-600 flex-shrink-0 mt-1">
+      {/* Icon App + badge NEW */}
+      <div className="relative w-14 h-14 rounded-2xl overflow-hidden border border-gray-300 dark:border-gray-600 flex-shrink-0 mt-1">
         <img
           src={app.icon_url || '/placeholder-icon.png'}
           alt={app.name}
@@ -34,18 +33,18 @@ export default function AppCard({ app, mode = 'card' }) {
             e.target.src = '/placeholder-icon.png';
           }}
         />
+        {isNew(app.created_at) && (
+          <span className="absolute top-[-6px] left-[-6px] rotate-[-12deg] bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow">
+            NEW
+          </span>
+        )}
       </div>
 
-      {/* Nội dung */}
+      {/* Thông tin */}
       <div className="flex-1 min-w-0 border-t border-gray-200 dark:border-gray-700 pt-2">
         <div className="flex items-center justify-between">
           <h3 className="text-[16px] font-semibold text-gray-900 dark:text-white truncate">
             {app.name}
-            {isNew(app.created_at) && (
-              <span className="ml-2 text-[10px] font-bold text-red-600 bg-red-100 dark:bg-red-700 dark:text-white px-2 py-0.5 rounded-full">
-                NEW
-              </span>
-            )}
           </h3>
         </div>
         <div className="flex items-center justify-between mt-1">
@@ -60,8 +59,8 @@ export default function AppCard({ app, mode = 'card' }) {
         </div>
       </div>
 
-      {/* Icon tải */}
-      <div className="flex items-center justify-center w-10 h-full">
+      {/* Icon tải xuống */}
+      <div className="flex items-center justify-center w-10 h-14 mt-1">
         <FontAwesomeIcon icon={faDownload} className="text-blue-500 text-xl" />
       </div>
     </Link>
