@@ -22,22 +22,32 @@ export default async function handler(req, res) {
       form.parse(req, (err, fields, files) => err ? reject(err) : resolve({ fields, files }));
     });
 
-    const timestamp = Date.now();
+    const certName = fields.name?.[0]?.trim();
+    if (!certName) return res.status(400).json({ message: "Thiếu tên chứng chỉ (name)" });
+
+    // Check if file exists in storage
+    const checkP12 = await supabase.storage.from('certificates').list('', {
+      search: `${certName}.p12`
+    });
+    if (checkP12.data?.some(f => f.name === `${certName}.p12`)) {
+      return res.status(409).json({ message: `Cert tên '${certName}' đã tồn tại.` });
+    }
+
     const p12Buffer = readFile(files.p12[0]);
     const provisionBuffer = readFile(files.provision[0]);
 
     const { data: p12Data, error: p12Error } = await supabase.storage
       .from('certificates')
-      .upload(`cert-${timestamp}.p12`, p12Buffer, {
+      .upload(`${certName}.p12`, p12Buffer, {
         contentType: 'application/x-pkcs12',
-        upsert: true
+        upsert: false
       });
 
     const { data: provisionData, error: provisionError } = await supabase.storage
       .from('certificates')
-      .upload(`profile-${timestamp}.mobileprovision`, provisionBuffer, {
+      .upload(`${certName}.mobileprovision`, provisionBuffer, {
         contentType: 'application/octet-stream',
-        upsert: true
+        upsert: false
       });
 
     if (p12Error || provisionError) {
@@ -47,35 +57,18 @@ export default async function handler(req, res) {
     const p12Url = supabase.storage.from('certificates').getPublicUrl(p12Data.path).data.publicUrl;
     const provisionUrl = supabase.storage.from('certificates').getPublicUrl(provisionData.path).data.publicUrl;
 
-    const { error } = await supabase
-      .from('certificates')
-      .upsert({
-        id: 1,
-        p12_url: p12Url,
-        provision_url: provisionUrl,
-        password: fields.password[0],
-        updated_at: new Date().toISOString()
-      });
+    const { error } = await supabase.from('certificates').insert({
+      name: certName,
+      p12_url: p12Url,
+      provision_url: provisionUrl,
+      password: fields.password[0],
+      updated_at: new Date().toISOString()
+    });
 
     if (error) throw error;
 
-    await fetch('https://api.github.com/repos/chienlove/chienlove.github.io/actions/workflows/sign-ipa.yml/dispatches', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${process.env.GH_PAT}`,
-        Accept: 'application/vnd.github+json'
-      },
-      body: JSON.stringify({
-        ref: 'master',
-        inputs: {
-          tag: fields.tag[0],
-          identifier: fields.identifier[0]
-        }
-      })
-    });
-
     res.status(200).json({
-      message: 'Chứng chỉ đã được lưu và ký IPA thành công!',
+      message: 'Tải lên chứng chỉ mới thành công!',
       p12Url,
       provisionUrl
     });
