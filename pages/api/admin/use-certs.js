@@ -1,7 +1,6 @@
-// Bật bodyParser để xử lý req.body JSON
 export const config = {
   api: {
-    bodyParser: true,
+    bodyParser: true, // xử lý JSON
   },
 };
 

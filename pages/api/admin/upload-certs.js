@@ -2,7 +2,11 @@ import { IncomingForm } from 'formidable';
 import fs from 'fs';
 import { createClient } from '@supabase/supabase-js';
 
-export const config = { api: { bodyParser: false } };
+export const config = {
+  api: {
+    bodyParser: false, // vì dùng multipart/form-data
+  },
+};
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -14,6 +18,7 @@ function readFile(file) {
 }
 
 export default async function handler(req, res) {
+  console.log("📥 GỌI /upload-certs với method:", req.method);
   if (req.method !== 'POST') return res.status(405).json({ message: 'Method not allowed' });
 
   try {
@@ -25,7 +30,7 @@ export default async function handler(req, res) {
     const certName = fields.name?.[0]?.trim();
     if (!certName) return res.status(400).json({ message: "Thiếu tên chứng chỉ (name)" });
 
-    // Check if file exists in storage
+    // Kiểm tra file đã tồn tại
     const checkP12 = await supabase.storage.from('certificates').list('', {
       search: `${certName}.p12`
     });
@@ -73,7 +78,7 @@ export default async function handler(req, res) {
       provisionUrl
     });
   } catch (error) {
-    console.error('Upload error:', error);
+    console.error('❌ Upload error:', error);
     res.status(500).json({ message: error.message });
   }
 }
