@@ -1,4 +1,3 @@
-// 📁 components/Layout.js
 import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -58,46 +57,29 @@ export default function Layout({ children, fullWidth = false }) {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors">
+    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors">
       <Head>
         <title>TestFlight Share</title>
       </Head>
 
       {/* Header */}
       <header className="sticky top-0 z-50 bg-white dark:bg-gray-800 shadow">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between gap-4">
-          <Link href="/">
-            <a className="text-xl font-bold text-blue-600 dark:text-blue-400">🚀 TestFlight Share</a>
+        <div className="max-w-screen-2xl mx-auto px-4 py-3 flex items-center justify-between">
+          {/* Logo */}
+          <Link href="/" className="text-xl font-bold">
+            <span className="bg-gradient-to-r from-green-700 via-green-500 to-green-300 bg-clip-text text-transparent">
+              TestFlight Share
+            </span>
           </Link>
 
-          <form onSubmit={handleSearch} className="hidden md:flex items-center gap-2 flex-1 justify-end">
-            <input
-              type="text"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Tìm app..."
-              className="w-full max-w-xs px-4 py-2 rounded-lg border bg-gray-50 dark:bg-gray-700 text-base"
-            />
-            <select
-              value={activeCategory}
-              onChange={(e) => handleCategory(e.target.value)}
-              className="px-4 py-2 rounded-lg border bg-white dark:bg-gray-700 text-base"
-            >
-              <option value="all">Tất cả</option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.name}
-                </option>
-              ))}
-            </select>
-            <button
-              type="submit"
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold"
-            >
-              Tìm
-            </button>
-          </form>
+          {/* Desktop Menu */}
+          <nav className="hidden md:flex items-center gap-6">
+            <Link href="/tools"><a className="hover:text-green-600">Công cụ</a></Link>
+            <Link href="/categories"><a className="hover:text-green-600">Chuyên mục</a></Link>
+            <Link href="/about"><a className="hover:text-green-600">Giới thiệu</a></Link>
+          </nav>
 
+          {/* Right: Search + Theme */}
           <div className="flex items-center gap-2">
             <button
               onClick={() => setDarkMode(!darkMode)}
@@ -116,9 +98,13 @@ export default function Layout({ children, fullWidth = false }) {
           </div>
         </div>
 
+        {/* Mobile menu */}
         {mobileMenuOpen && (
           <div className="md:hidden bg-white dark:bg-gray-800 px-4 pb-4 space-y-3">
-            <form onSubmit={handleSearch} className="flex flex-col gap-2">
+            <Link href="/tools"><a className="block py-1">Công cụ</a></Link>
+            <Link href="/categories"><a className="block py-1">Chuyên mục</a></Link>
+            <Link href="/about"><a className="block py-1">Giới thiệu</a></Link>
+            <form onSubmit={handleSearch} className="flex flex-col gap-2 mt-3">
               <input
                 type="text"
                 value={q}
@@ -140,9 +126,9 @@ export default function Layout({ children, fullWidth = false }) {
               </select>
               <button
                 type="submit"
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-semibold"
+                className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg text-sm font-semibold"
               >
-                Tìm
+                Tìm kiếm
               </button>
             </form>
           </div>
@@ -151,9 +137,9 @@ export default function Layout({ children, fullWidth = false }) {
 
       {/* Kết quả tìm kiếm */}
       {searching ? (
-        <div className="container mx-auto px-4 py-6 text-center text-gray-500">Đang tìm kiếm...</div>
+        <div className="max-w-screen-2xl mx-auto px-4 py-6 text-center text-gray-500">Đang tìm kiếm...</div>
       ) : apps.length > 0 ? (
-        <div className="container mx-auto px-4 py-6">
+        <div className="max-w-screen-2xl mx-auto px-4 py-6">
           <div className="text-sm text-gray-500 mb-3">Đã tìm thấy {apps.length} ứng dụng</div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {apps.map((app) => (
@@ -164,23 +150,58 @@ export default function Layout({ children, fullWidth = false }) {
           </div>
         </div>
       ) : q || activeCategory !== 'all' ? (
-        <div className="container mx-auto px-4 py-6 text-center text-gray-500">
+        <div className="max-w-screen-2xl mx-auto px-4 py-6 text-center text-gray-500">
           Không tìm thấy ứng dụng phù hợp.
         </div>
       ) : null}
 
-      {/* Nội dung trang con */}
-      <main className={`${fullWidth ? 'w-full px-0' : 'container mx-auto px-4'} py-6 flex-1`}>
+      {/* Nội dung trang */}
+      <main className={`${fullWidth ? 'w-full px-0' : 'max-w-screen-2xl mx-auto px-4'} py-6 flex-1`}>
         {children}
       </main>
 
-      <footer className="bg-white dark:bg-gray-800 border-t py-6 text-sm text-gray-600 dark:text-gray-400">
-        <div className="container mx-auto px-4 flex justify-between items-center flex-wrap gap-3">
-          <p>&copy; {new Date().getFullYear()} TestFlight Share</p>
-          <div className="flex gap-4">
-            <Link href="/about"><a>Giới thiệu</a></Link>
-            <Link href="/contact"><a>Liên hệ</a></Link>
+      {/* Footer */}
+      <footer className="bg-gray-100 dark:bg-gray-900 border-t border-gray-300 dark:border-gray-700 text-sm py-10 mt-10">
+        <div className="max-w-screen-2xl mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-8 text-gray-600 dark:text-gray-400">
+          {/* Cột 1 */}
+          <div>
+            <h3 className="font-semibold text-gray-800 dark:text-white mb-2">Về chúng tôi</h3>
+            <ul className="space-y-1">
+              <li><Link href="/about">Giới thiệu</Link></li>
+              <li><Link href="/contact">Liên hệ</Link></li>
+              <li><Link href="/terms">Điều khoản</Link></li>
+            </ul>
           </div>
+
+          {/* Cột 2 */}
+          <div>
+            <h3 className="font-semibold text-gray-800 dark:text-white mb-2">Danh mục</h3>
+            <ul className="space-y-1">
+              {categories.slice(0, 5).map((cat) => (
+                <li key={cat.id}>
+                  <Link href={`/category/${cat.id}`}>{cat.name}</Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Cột 3 */}
+          <div>
+            <h3 className="font-semibold text-gray-800 dark:text-white mb-2">Ủng hộ dự án</h3>
+            <p className="mb-2">Nếu bạn thấy dự án hữu ích, hãy ủng hộ chúng tôi qua:</p>
+            <a
+              href="https://www.buymeacoffee.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 font-semibold text-sm"
+            >
+              ☕ Buy Me a Coffee
+            </a>
+          </div>
+        </div>
+
+        <div className="text-center text-xs text-gray-500 mt-6">
+          © {new Date().getFullYear()} TestFlight Share. All rights reserved.
         </div>
       </footer>
     </div>
