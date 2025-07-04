@@ -84,7 +84,7 @@ export default function Layout({ children, fullWidth = false }) {
           {/* Logo */}
           <Link href="/" className="text-xl font-bold">
             <span className="bg-gradient-to-r from-green-700 via-green-500 to-green-300 bg-clip-text text-transparent">
-              TestFlight Share
+              StreiOS
             </span>
           </Link>
 
