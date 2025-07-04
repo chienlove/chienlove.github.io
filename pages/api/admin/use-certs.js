@@ -1,7 +1,8 @@
+// Cấu hình Next.js xử lý JSON
 export const config = {
   api: {
-    bodyParser: true, // xử lý JSON
-  },
+    bodyParser: true
+  }
 };
 
 import { createClient } from '@supabase/supabase-js';
@@ -12,15 +13,17 @@ const supabase = createClient(
 );
 
 export default async function handler(req, res) {
-  console.log("✅ API /api/admin/use-certs CALLED:", req.method);
-  console.log("📦 BODY:", req.body);
+  console.log("📥 use-certs: called with method:", req.method);
 
+  // Chặn các method không phải POST
   if (req.method !== 'POST') {
+    console.log("❌ use-certs: wrong method:", req.method);
     return res.status(405).json({ message: 'Method not allowed' });
   }
 
   try {
     const { name, tag, identifier } = req.body;
+    console.log("📦 use-certs body:", req.body);
 
     if (!name || !tag || !identifier) {
       return res.status(400).json({ message: 'Thiếu thông tin bắt buộc.' });
@@ -58,7 +61,7 @@ export default async function handler(req, res) {
 
     res.status(200).json({ message: '✅ Đã gửi yêu cầu ký IPA với chứng chỉ đã chọn.' });
   } catch (error) {
-    console.error('❌ Lỗi /use-certs:', error);
+    console.error('❌ use-certs: error', error);
     res.status(500).json({ message: error.message });
   }
 }
