@@ -1,3 +1,4 @@
+// ✅ Chỉ để code API handler này
 export const config = {
   api: { bodyParser: true }
 };
