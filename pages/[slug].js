@@ -120,10 +120,11 @@ export default function Detail() {
             >
               {/* Breadcrumb with hover/click effect */}
               <div className="absolute top-3 left-3 z-10">
-                <Link href="/">
-                  <a className="inline-flex items-center justify-center w-9 h-9 text-blue-600 hover:text-white bg-white hover:bg-blue-600 active:scale-95 transition-all duration-150 rounded-full shadow-sm">
-                    <FontAwesomeIcon icon={faArrowLeft} className="w-4 h-4" />
-                  </a>
+                <Link
+                  href="/"
+                  className="inline-flex items-center justify-center w-9 h-9 text-blue-600 hover:text-white bg-white hover:bg-blue-600 active:scale-95 transition-all duration-150 rounded-full shadow-sm"
+                >
+                  <FontAwesomeIcon icon={faArrowLeft} className="w-4 h-4" />
                 </Link>
               </div>
 
@@ -147,7 +148,7 @@ export default function Detail() {
                       target="_blank" rel="noopener noreferrer"
                     >
                       <FontAwesomeIcon icon={faRocket} className="mr-2" />
-                      Tham gia TestFlight
+                      TestFlight
                     </a>
                   )}
                   {app.category === 'jailbreak' && app.download_link && (
@@ -157,7 +158,7 @@ export default function Detail() {
                       target="_blank" rel="noopener noreferrer"
                     >
                       <FontAwesomeIcon icon={faDownload} className="mr-2" />
-                      Cài đặt ứng dụng
+                      Cài đặt
                     </a>
                   )}
                 </div>
@@ -227,28 +228,30 @@ export default function Detail() {
               <h2 className="text-lg font-bold text-gray-800 mb-4">Ứng dụng cùng chuyên mục</h2>
               <div className="divide-y divide-gray-200">
                 {related.map((item) => (
-                  <Link href={`/${item.slug}`} key={item.id}>
-                    <a className="flex items-center justify-between py-4 hover:bg-gray-50 px-2 rounded-lg transition">
-                      <div className="flex items-center gap-4">
-                        <img
-                          src={item.icon_url || '/placeholder-icon.png'}
-                          alt={item.name}
-                          className="w-14 h-14 rounded-xl object-cover shadow-sm"
-                        />
-                        <div className="flex flex-col">
-                          <p className="text-sm font-semibold text-gray-800">{item.name}</p>
-                          <div className="flex items-center gap-2 text-xs text-gray-500">
-                            {item.author && <span>{item.author}</span>}
-                            {item.version && (
-                              <span className="bg-gray-200 text-gray-800 px-2 py-0.5 rounded text-xs font-medium">
-                                {item.version}
-                              </span>
-                            )}
-                          </div>
+                  <Link
+                    href={`/${item.slug}`}
+                    key={item.id}
+                    className="flex items-center justify-between py-4 hover:bg-gray-50 px-2 rounded-lg transition"
+                  >
+                    <div className="flex items-center gap-4">
+                      <img
+                        src={item.icon_url || '/placeholder-icon.png'}
+                        alt={item.name}
+                        className="w-14 h-14 rounded-xl object-cover shadow-sm"
+                      />
+                      <div className="flex flex-col">
+                        <p className="text-sm font-semibold text-gray-800">{item.name}</p>
+                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                          {item.author && <span>{item.author}</span>}
+                          {item.version && (
+                            <span className="bg-gray-200 text-gray-800 px-2 py-0.5 rounded text-xs font-medium">
+                              {item.version}
+                            </span>
+                          )}
                         </div>
                       </div>
-                      <FontAwesomeIcon icon={faDownload} className="text-blue-500 text-lg" />
-                    </a>
+                    </div>
+                    <FontAwesomeIcon icon={faDownload} className="text-blue-500 text-lg" />
                   </Link>
                 ))}
               </div>
