@@ -75,7 +75,7 @@ export default function Layout({ children, fullWidth = false }) {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-white transition-colors">
       <Head>
-        <title>TestFlight Share</title>
+        <title>StreiOS</title>
       </Head>
 
       {/* Header */}
