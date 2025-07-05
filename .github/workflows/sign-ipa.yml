@@ -1,4 +1,4 @@
-name: Sign IPA and Reupload
+name: Sign IPA using codesign
 
 on:
   workflow_dispatch:
@@ -27,21 +27,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Install tools and isign (PEP 668 safe)
-        run: |
-          brew install curl jq gh openssl libimobiledevice usbmuxd
-          python3 -m pip install --break-system-packages --upgrade pip setuptools wheel
-          python3 -m pip install --break-system-packages git+https://github.com/saucelabs/isign.git
-          echo "✅ Tools and isign installed"
-
-      - name: Validate environment variables
-        run: |
-          if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ] || [ -z "$GH_TOKEN" ]; then
-            echo "::error::Missing required secrets"
-            exit 1
-          fi
-          echo "✅ Environment ready"
-
       - name: Fetch cert info from Supabase
         run: |
           response=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
@@ -64,11 +49,6 @@ jobs:
           export CERT_PROVISION_URL=$(jq -r '.provision_url' cert.json)
           export CERT_PASSWORD=$(jq -r '.password' cert.json)
 
-          if [ -z "$CERT_P12_URL" ] || [ -z "$CERT_PROVISION_URL" ] || [ -z "$CERT_PASSWORD" ]; then
-            echo "::error::Missing cert fields"
-            exit 1
-          fi
-
           echo "CERT_P12_URL=$CERT_P12_URL" >> $GITHUB_ENV
           echo "CERT_PROVISION_URL=$CERT_PROVISION_URL" >> $GITHUB_ENV
           echo "CERT_PASSWORD=$CERT_PASSWORD" >> $GITHUB_ENV
@@ -76,7 +56,7 @@ jobs:
       - name: Download certificates
         run: |
           curl -L "$CERT_P12_URL" -o cert.p12
-          curl -L "$CERT_PROVISION_URL" -o profile.mobileprovision
+          curl -L "$CERT_PROVISION_URL" -o embedded.mobileprovision
 
       - name: Set variables
         run: |
@@ -100,26 +80,51 @@ jobs:
         run: |
           unzip -q "$IPA_NAME" -d unpacked
           APP_PATH=$(find unpacked/Payload -name "*.app" -print -quit)
+
           if [ -z "$APP_PATH" ]; then
-            echo "::error::App not found"
+            echo "::error::App bundle not found"
             exit 1
           fi
+
+          echo "📍 Found app: $APP_PATH"
           /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $NEW_ID" "$APP_PATH/Info.plist"
+          cp embedded.mobileprovision "$APP_PATH/embedded.mobileprovision"
 
-      - name: Convert .p12 to PEM
+      - name: Import .p12 into temporary keychain
         run: |
-          openssl pkcs12 -in cert.p12 -clcerts -nokeys -out cert.pem -passin pass:"$CERT_PASSWORD"
-          openssl pkcs12 -in cert.p12 -nocerts -nodes -out key.pem -passin pass:"$CERT_PASSWORD"
+          security create-keychain -p temppass temp.keychain
+          security unlock-keychain -p temppass temp.keychain
+          security import cert.p12 -k temp.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign
+          security list-keychains -s temp.keychain login.keychain
+          security set-keychain-settings temp.keychain
+          echo "✅ Certificate imported to temp.keychain"
 
-      - name: Sign IPA with isign
+      - name: Codesign .app
         run: |
-          IPA_NAME=$(echo "$IPA_NAME")
-          isign -c cert.pem -k key.pem -p profile.mobileprovision \
-            -i "$NEW_ID" -o signed.ipa "$IPA_NAME"
+          APP_PATH=$(find unpacked/Payload -name "*.app" -print -quit)
+          SIGN_ID=$(security find-identity -v temp.keychain | grep "iPhone" | head -n1 | awk '{print $2}')
 
-      - name: Upload signed IPA to release
+          if [ -z "$SIGN_ID" ]; then
+            echo "::error::No signing identity found"
+            exit 1
+          fi
+
+          echo "🔏 Signing with ID: $SIGN_ID"
+          codesign -f -s "$SIGN_ID" --entitlements "$APP_PATH/archived-expanded-entitlements.xcent" "$APP_PATH" || {
+            echo "::error::Codesign failed"
+            exit 1
+          }
+          echo "✅ Codesign completed"
+
+      - name: Repack IPA
+        run: |
+          cd unpacked
+          zip -qr ../signed.ipa Payload
+          cd ..
+
+      - name: Upload signed IPA
         run: |
           mv signed.ipa "$IPA_NAME"
           gh release upload "$TAG" "$IPA_NAME" \
             --repo "$REPO" --clobber
-          echo "✅ Signed IPA uploaded"
+          echo "🎉 Signed IPA uploaded"
