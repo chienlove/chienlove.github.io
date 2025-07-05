@@ -112,7 +112,7 @@ jobs:
       - name: Generate minimal entitlements
         run: |
           TEAM_ID="6VN5G6SGEQ"
-          cat > entitlements.xcent <<EOF
+          cat <<EOF > entitlements.xcent
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
@@ -146,6 +146,7 @@ EOF
           fi
 
           codesign -f -s "$SIGN_ID" --entitlements entitlements.xcent "$APP_PATH"
+          echo "✅ Signing completed"
 
       - name: Repack IPA
         run: |
@@ -158,3 +159,4 @@ EOF
           mv signed.ipa "$IPA_NAME"
           gh release upload "$TAG" "$IPA_NAME" \
             --repo "$REPO" --clobber
+          echo "🎉 Signed IPA uploaded"
