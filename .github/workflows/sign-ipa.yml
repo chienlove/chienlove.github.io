@@ -95,18 +95,16 @@ jobs:
 
           echo "✅ Using App ID: $APP_ID"
 
-          cat <<EOF > entitlements.xcent
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>application-identifier</key>
-  <string>$APP_ID</string>
-  <key>get-task-allow</key>
-  <false/>
-</dict>
-</plist>
-EOF
+          echo '<?xml version="1.0" encoding="UTF-8"?>' > entitlements.xcent
+          echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> entitlements.xcent
+          echo '<plist version="1.0">' >> entitlements.xcent
+          echo '<dict>' >> entitlements.xcent
+          echo '  <key>application-identifier</key>' >> entitlements.xcent
+          echo "  <string>$APP_ID</string>" >> entitlements.xcent
+          echo '  <key>get-task-allow</key>' >> entitlements.xcent
+          echo '  <false/>' >> entitlements.xcent
+          echo '</dict>' >> entitlements.xcent
+          echo '</plist>' >> entitlements.xcent
 
       - name: Sign all IPA files with Zsign
         run: |
