@@ -13,9 +13,12 @@ on:
 jobs:
   sign:
     runs-on: macos-latest
+    permissions:
+      contents: write  # Cần quyền ghi để upload release
+      packages: read   # Cần quyền đọc để download IPA
 
     env:
-      GH_PAT: ${{ secrets.GH_PAT }}
+      GH_TOKEN: ${{ github.token }}  # Đã thay thế GH_PAT bằng token tự động
       REPO: ${{ github.repository }}
       SUPABASE_URL: https://zkbzykamrzvvrhodiypk.supabase.co
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -36,8 +39,8 @@ jobs:
             echo "::error::❌ SUPABASE_SERVICE_ROLE_KEY is missing"
             exit 1
           fi
-          if [ -z "$GH_PAT" ]; then
-            echo "::error::❌ GH_PAT is missing"
+          if [ -z "$GH_TOKEN" ]; then
+            echo "::error::❌ GH_TOKEN is missing"
             exit 1
           fi
           echo "✅ Environment variables validated"
@@ -105,14 +108,28 @@ jobs:
           echo "NEW_ID=${{ github.event.inputs.identifier }}" >> $GITHUB_ENV
           echo "⚙️ Variables set: TAG=${{ github.event.inputs.tag }}, NEW_ID=${{ github.event.inputs.identifier }}"
 
+      - name: Verify Release Exists
+        run: |
+          echo "🔍 Checking release $TAG..."
+          gh release view "$TAG" --repo "$REPO" || {
+            echo "::error::❌ Release $TAG not found"
+            exit 1
+          }
+          echo "✅ Release $TAG exists"
+
       - name: Download IPA from release
         run: |
           set -e
           echo "⬇️ Downloading IPA from release $TAG..."
-          gh release download "$TAG" --repo "$REPO" --pattern "*.ipa" || { 
-            echo "::error::❌ Failed to download IPA from release $TAG"
-            exit 1
-          }
+          gh release download "$TAG" \
+            --repo "$REPO" \
+            --pattern "*.ipa" \
+            --clobber || {
+              echo "::error::❌ Failed to download IPA from release $TAG"
+              echo "Debug info:"
+              gh release view "$TAG" --repo "$REPO"
+              exit 1
+            }
           IPA_NAME=$(ls *.ipa)
           echo "IPA_NAME=$IPA_NAME" >> $GITHUB_ENV
           echo "✅ Downloaded IPA: $IPA_NAME"
@@ -151,8 +168,10 @@ jobs:
           set -e
           echo "⬆️ Uploading signed IPA..."
           mv signed.ipa "$IPA_NAME"
-          gh release upload "$TAG" "$IPA_NAME" --clobber --repo "$REPO" || {
-            echo "::error::❌ Failed to upload signed IPA to release $TAG"
-            exit 1
-          }
+          gh release upload "$TAG" "$IPA_NAME" \
+            --repo "$REPO" \
+            --clobber || {
+              echo "::error::❌ Failed to upload signed IPA to release $TAG"
+              exit 1
+            }
           echo "🎉 Upload completed successfully"
