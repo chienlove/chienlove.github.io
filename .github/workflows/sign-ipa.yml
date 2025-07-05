@@ -80,7 +80,23 @@ jobs:
           make clean && make
           sudo cp ../../bin/zsign /usr/local/bin/
 
-      - name: Sign all IPA files with Zsign (no entitlements)
+      - name: Clean entitlements and old signatures from IPAs
+        run: |
+          for IPA in *.ipa; do
+            echo "🧹 Cleaning $IPA..."
+            mkdir -p tmp && cd tmp
+            unzip -q "../$IPA"
+            APP_DIR=$(find Payload -type d -name "*.app")
+
+            rm -rf "$APP_DIR/_CodeSignature"
+            rm -f "$APP_DIR/embedded.mobileprovision"
+            zip -qr "../cleaned_$IPA" Payload
+            cd .. && rm -rf tmp
+
+            mv "cleaned_$IPA" "$IPA"
+          done
+
+      - name: Sign all IPA files with Zsign
         run: |
           mkdir -p signed
           IDENTIFIER="${{ github.event.inputs.identifier }}"
