@@ -1,4 +1,4 @@
-name: Sign IPA using codesign (fixed)
+name: Sign IPA using codesign (recursive fixed)
 
 on:
   workflow_dispatch:
@@ -89,7 +89,7 @@ jobs:
           echo "📍 Found app: $APP_PATH"
 
           # Xóa chữ ký cũ
-          rm -rf "$APP_PATH/_CodeSignature"
+          find "$APP_PATH" -name "_CodeSignature" -type d -exec rm -rf {} +
           rm -f "$APP_PATH/CodeResources"
 
           # Gắn profile mới
@@ -110,12 +110,7 @@ jobs:
           security set-keychain-settings temp.keychain
           echo "✅ Certificate imported and accessible by codesign"
 
-      - name: Show provisioning info
-        run: |
-          echo "🔍 Provisioning Info:"
-          security cms -D -i embedded.mobileprovision | grep -A 10 'application-identifier'
-
-      - name: Codesign .app
+      - name: Recursive codesign all components
         run: |
           APP_PATH=$(find unpacked/Payload -name "*.app" -print -quit)
           SIGN_ID=$(security find-identity -v temp.keychain | grep "iPhone" | head -n1 | awk '{print $2}')
@@ -125,12 +120,22 @@ jobs:
             exit 1
           fi
 
-          echo "🔏 Signing with ID: $SIGN_ID"
-          codesign -f -s "$SIGN_ID" --verbose "$APP_PATH" || {
-            echo "::error::Codesign failed"
-            exit 1
-          }
-          echo "✅ Codesign completed"
+          echo "🔏 Signing all components with ID: $SIGN_ID"
+
+          # Sign embedded frameworks
+          if [ -d "$APP_PATH/Frameworks" ]; then
+            find "$APP_PATH/Frameworks" -name "*.framework" -type d -exec codesign -f -s "$SIGN_ID" --preserve-metadata=entitlements,requirements {} \;
+          fi
+
+          # Sign extensions (.appex)
+          if [ -d "$APP_PATH/PlugIns" ]; then
+            find "$APP_PATH/PlugIns" -name "*.appex" -type d -exec codesign -f -s "$SIGN_ID" --preserve-metadata=entitlements,requirements {} \;
+          fi
+
+          # Sign main app last
+          codesign -f -s "$SIGN_ID" --preserve-metadata=entitlements,requirements "$APP_PATH"
+
+          echo "✅ Recursive codesign completed"
 
       - name: Repack IPA
         run: |
