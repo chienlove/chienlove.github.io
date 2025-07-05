@@ -7,7 +7,7 @@ on:
         description: "Release tag chứa IPA"
         required: true
       identifier:
-        description: "(Tùy chọn) Bundle Identifier mới (áp dụng cho tất cả IPA)"
+        description: "(Tùy chọn) Bundle Identifier mới"
         required: false
 
 jobs:
@@ -80,6 +80,25 @@ jobs:
           make clean && make
           sudo cp ../../bin/zsign /usr/local/bin/
 
+      - name: Extract Team ID and create entitlements
+        run: |
+          security cms -D -i profile.mobileprovision > provision.plist
+          TEAM_ID=$(plutil -extract TeamIdentifier.0 xml1 -o - provision.plist | xmllint --xpath 'string(//string)' -)
+          echo "✅ Extracted TEAM_ID: $TEAM_ID"
+
+          cat > entitlements.xcent <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>application-identifier</key>
+  <string>$TEAM_ID</string>
+  <key>get-task-allow</key>
+  <false/>
+</dict>
+</plist>
+EOF
+
       - name: Sign all IPA files with Zsign
         run: |
           mkdir -p signed
@@ -91,10 +110,12 @@ jobs:
 
             if [ -z "$IDENTIFIER" ]; then
               echo "⚠️ No identifier provided. Signing $IPA with original bundle ID."
-              zsign -k cert.p12 -p "$CERT_PASSWORD" -m profile.mobileprovision -o "$OUT_NAME" "$IPA"
+              zsign -k cert.p12 -p "$CERT_PASSWORD" -m profile.mobileprovision \
+                    -e entitlements.xcent -o "$OUT_NAME" "$IPA"
             else
               echo "🆔 Signing $IPA with new bundle ID: $IDENTIFIER"
-              zsign -k cert.p12 -p "$CERT_PASSWORD" -m profile.mobileprovision -o "$OUT_NAME" -b "$IDENTIFIER" "$IPA"
+              zsign -k cert.p12 -p "$CERT_PASSWORD" -m profile.mobileprovision \
+                    -e entitlements.xcent -b "$IDENTIFIER" -o "$OUT_NAME" "$IPA"
             fi
           done
 
@@ -104,4 +125,4 @@ jobs:
             echo "⬆️ Uploading $FILE..."
             gh release upload "$TAG" "$FILE" --repo "$REPO" --clobber
           done
-          echo "🎉 All signed IPA files uploaded"
+          echo "🎉 All signed IPA files uploaded successfully"
