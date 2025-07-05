@@ -8,7 +8,7 @@ on:
         required: true
       identifier:
         description: "(Tùy chọn) Bundle Identifier mới"
-        required: true
+        required: false
 
 jobs:
   sign:
@@ -46,13 +46,11 @@ jobs:
           echo "$json_data" | jq '.[0]' > cert.json
 
           echo "CERT_P12_URL=$(jq -r '.p12_url' cert.json)" >> $GITHUB_ENV
-          echo "CERT_PROVISION_URL=$(jq -r '.provision_url' cert.json)" >> $GITHUB_ENV
           echo "CERT_PASSWORD=$(jq -r '.password' cert.json)" >> $GITHUB_ENV
 
-      - name: Download certificate & provisioning profile
+      - name: Download certificate
         run: |
           curl -L "$CERT_P12_URL" -o cert.p12
-          curl -L "$CERT_PROVISION_URL" -o profile.mobileprovision
 
       - name: Set workflow inputs
         run: |
@@ -80,57 +78,35 @@ jobs:
           make clean && make
           sudo cp ../../bin/zsign /usr/local/bin/
 
-      - name: Extract Team ID and create entitlements
-        run: |
-          security cms -D -i profile.mobileprovision > provision.plist
-          TEAM_ID=$(plutil -extract TeamIdentifier.0 xml1 -o - provision.plist | xmllint --xpath 'string(//string)' -)
-          echo "✅ Extracted TEAM_ID: $TEAM_ID"
-          echo "TEAM_ID=$TEAM_ID" >> $GITHUB_ENV
-
-          echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" > entitlements.xcent
-          echo "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">" >> entitlements.xcent
-          echo "<plist version=\"1.0\">" >> entitlements.xcent
-          echo "<dict>" >> entitlements.xcent
-          echo "  <key>application-identifier</key>" >> entitlements.xcent
-          echo "  <string>$TEAM_ID.${{ github.event.inputs.identifier }}</string>" >> entitlements.xcent
-          echo "  <key>get-task-allow</key>" >> entitlements.xcent
-          echo "  <false/>" >> entitlements.xcent
-          echo "</dict>" >> entitlements.xcent
-          echo "</plist>" >> entitlements.xcent
-
-      - name: 🔍 Check for old bundle ID before signing
-        run: |
-          echo "🔎 Checking IPA content BEFORE signing..."
-          mkdir check_before
-          for IPA in *.ipa; do
-            unzip -q "$IPA" -d check_before/"$IPA"
-          done
-
-          echo "🔍 Grep result:"
-          grep -ar --binary-files=text 'net.storeios.chienlove' check_before/ || echo "✅ No net.storeios.chienlove found before signing"
-
-      - name: Sign all IPA files with Zsign
+      - name: Sign all IPA files with Zsign (Ad-Hoc, Force)
         run: |
           mkdir -p signed
+          IDENTIFIER="${{ github.event.inputs.identifier }}"
+
           for IPA in *.ipa; do
-            echo "🔧 Signing $IPA with bundle ID: $IDENTIFIER"
-            zsign -k cert.p12 -p "$CERT_PASSWORD" \
-                  -m profile.mobileprovision \
-                  -e entitlements.xcent \
-                  -b "$IDENTIFIER" \
-                  -o "signed/$IPA" "$IPA"
+            echo "🔧 Signing $IPA with Zsign (ad-hoc)..."
+            OUT_NAME="signed/$IPA"
+
+            if [ -z "$IDENTIFIER" ]; then
+              zsign -f -a \
+                -k cert.p12 -p "$CERT_PASSWORD" \
+                -o "$OUT_NAME" "$IPA"
+            else
+              zsign -f -a \
+                -k cert.p12 -p "$CERT_PASSWORD" \
+                -b "$IDENTIFIER" \
+                -o "$OUT_NAME" "$IPA"
+            fi
           done
 
-      - name: 🔍 Check for old bundle ID after signing
+      - name: Verify Bundle ID after signing
         run: |
-          echo "🔎 Checking signed IPA content AFTER signing..."
-          mkdir check_after
-          for IPA in signed/*.ipa; do
-            unzip -q "$IPA" -d check_after/"$(basename "$IPA")"
+          for FILE in signed/*.ipa; do
+            echo "🔍 Verifying $FILE..."
+            unzip -q "$FILE" -d tmp_ipa
+            plutil -p tmp_ipa/Payload/*.app/Info.plist | grep CFBundleIdentifier || echo "⚠️ Not found"
+            rm -rf tmp_ipa
           done
-
-          echo "🔍 Grep result:"
-          grep -ar --binary-files=text 'net.storeios.chienlove' check_after/ || echo "✅ No net.storeios.chienlove found after signing"
 
       - name: Upload signed IPA files to release
         run: |
@@ -138,4 +114,4 @@ jobs:
             echo "⬆️ Uploading $FILE..."
             gh release upload "$TAG" "$FILE" --repo "$REPO" --clobber
           done
-          echo "✅ All signed IPA files uploaded successfully"
+          echo "🎉 All signed IPA files uploaded successfully"
