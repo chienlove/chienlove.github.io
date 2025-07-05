@@ -1,4 +1,4 @@
-name: Sign IPA using codesign (with entitlements)
+name: Sign IPA with optional identifier
 
 on:
   workflow_dispatch:
@@ -7,8 +7,8 @@ on:
         description: "Release tag chứa IPA"
         required: true
       identifier:
-        description: "Bundle Identifier mới"
-        required: true
+        description: "(Tuỳ chọn) Bundle Identifier mới"
+        required: false
 
 jobs:
   sign:
@@ -61,7 +61,11 @@ jobs:
       - name: Set variables
         run: |
           echo "TAG=${{ github.event.inputs.tag }}" >> $GITHUB_ENV
-          echo "NEW_ID=${{ github.event.inputs.identifier }}" >> $GITHUB_ENV
+          if [ -n "${{ github.event.inputs.identifier }}" ]; then
+            echo "NEW_ID=${{ github.event.inputs.identifier }}" >> $GITHUB_ENV
+          else
+            echo "NEW_ID=" >> $GITHUB_ENV
+          fi
 
       - name: Verify release exists
         run: |
@@ -76,7 +80,7 @@ jobs:
           IPA_NAME=$(ls *.ipa)
           echo "IPA_NAME=$IPA_NAME" >> $GITHUB_ENV
 
-      - name: Unpack IPA and change Bundle ID
+      - name: Unpack IPA and (optionally) change Bundle ID
         run: |
           unzip -q "$IPA_NAME" -d unpacked
           APP_PATH=$(find unpacked/Payload -name "*.app" -print -quit)
@@ -88,17 +92,22 @@ jobs:
 
           echo "📍 Found app: $APP_PATH"
 
-          # Xóa chữ ký cũ
+          # Xoá chữ ký cũ
           find "$APP_PATH" -name "_CodeSignature" -type d -exec rm -rf {} +
           rm -f "$APP_PATH/CodeResources"
 
-          # Gắn profile mới
+          # Gắn provisioning
           cp embedded.mobileprovision "$APP_PATH/embedded.mobileprovision"
 
-          # Đổi bundle ID
-          /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $NEW_ID" "$APP_PATH/Info.plist"
+          # Đổi identifier nếu có nhập
+          if [ -n "$NEW_ID" ]; then
+            echo "🆔 Đổi CFBundleIdentifier thành: $NEW_ID"
+            /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $NEW_ID" "$APP_PATH/Info.plist"
+          else
+            echo "⚠️ Không đổi bundle ID (giữ nguyên)"
+          fi
 
-      - name: Import .p12 into temporary keychain (with access)
+      - name: Import .p12 into temporary keychain
         run: |
           security create-keychain -p temppass temp.keychain
           security unlock-keychain -p temppass temp.keychain
@@ -106,39 +115,45 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple: -s -k temppass temp.keychain
           security list-keychains -s temp.keychain login.keychain
           security set-keychain-settings temp.keychain
-          echo "✅ Certificate imported and accessible by codesign"
+          echo "✅ Certificate imported"
 
-      - name: Extract entitlements from provisioning profile
+      - name: Generate minimal entitlements (for enterprise cert)
         run: |
-          security cms -D -i embedded.mobileprovision > profile.plist
-          /usr/libexec/PlistBuddy -x -c 'Print :Entitlements' profile.plist > entitlements.xcent
+          TEAM_ID="6VN5G6SGEQ"
+          cat > entitlements.xcent <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>application-identifier</key>
+  <string>$TEAM_ID</string>
+  <key>get-task-allow</key>
+  <false/>
+</dict>
+</plist>
+EOF
           cat entitlements.xcent
 
-      - name: Recursive codesign all components
+      - name: Recursive codesign
         run: |
           APP_PATH=$(find unpacked/Payload -name "*.app" -print -quit)
           SIGN_ID=$(security find-identity -v temp.keychain | grep "iPhone" | head -n1 | awk '{print $2}')
 
-          if [ -z "$SIGN_ID" ]; then
-            echo "::error::No signing identity found"
-            exit 1
-          fi
+          echo "🔏 Signing with: $SIGN_ID"
 
-          echo "🔏 Signing all components with ID: $SIGN_ID"
-
-          # Sign embedded frameworks
+          # Sign frameworks
           if [ -d "$APP_PATH/Frameworks" ]; then
             find "$APP_PATH/Frameworks" -name "*.framework" -type d -exec codesign -f -s "$SIGN_ID" --entitlements entitlements.xcent {} \;
           fi
 
-          # Sign extensions (.appex)
+          # Sign extensions
           if [ -d "$APP_PATH/PlugIns" ]; then
             find "$APP_PATH/PlugIns" -name "*.appex" -type d -exec codesign -f -s "$SIGN_ID" --entitlements entitlements.xcent {} \;
           fi
 
-          # Sign main app last
+          # Sign main app
           codesign -f -s "$SIGN_ID" --entitlements entitlements.xcent "$APP_PATH"
-          echo "✅ Recursive codesign completed"
+          echo "✅ Signing completed"
 
       - name: Repack IPA
         run: |
