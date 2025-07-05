@@ -18,7 +18,7 @@ function readFile(file) {
   return fs.readFileSync(file.filepath);
 }
 
-async function removeOldFiles(existingCert) {
+async function cleanupOldFiles(existingCert) {
   if (!existingCert) return;
 
   try {
@@ -29,10 +29,17 @@ async function removeOldFiles(existingCert) {
       .single();
 
     if (oldCert) {
-      const extractPath = (url) => url.split('/certificates/')[1];
+      const extractFilename = (url) => {
+        try {
+          return new URL(url).pathname.split('/').pop();
+        } catch {
+          return url.split('/certificates/')[1];
+        }
+      };
+
       const filesToRemove = [
-        extractPath(oldCert.p12_url),
-        extractPath(oldCert.provision_url)
+        extractFilename(oldCert.p12_url),
+        extractFilename(oldCert.provision_url)
       ].filter(Boolean);
 
       if (filesToRemove.length > 0) {
@@ -41,14 +48,17 @@ async function removeOldFiles(existingCert) {
       }
     }
   } catch (error) {
-    console.error('❌ Lỗi khi xóa file cũ:', error.message);
+    console.error('⚠️ Lỗi khi dọn dẹp file cũ:', error.message);
   }
 }
 
 export default async function handler(req, res) {
   console.log("📥 [upload-certs] Request method:", req.method);
   if (req.method !== 'POST') {
-    return res.status(405).json({ success: false, message: 'Method not allowed' });
+    return res.status(405).json({ 
+      success: false, 
+      message: 'Chỉ hỗ trợ phương thức POST' 
+    });
   }
 
   try {
@@ -60,8 +70,12 @@ export default async function handler(req, res) {
 
     const { fields, files } = await new Promise((resolve, reject) => {
       form.parse(req, (err, fields, files) => {
-        if (err) reject(new Error(`Lỗi phân tích form: ${err.message}`));
-        else resolve({ fields, files });
+        if (err) {
+          console.error('❌ Parse form error:', err);
+          reject(new Error('Dữ liệu form không hợp lệ'));
+        } else {
+          resolve({ fields, files });
+        }
       });
     });
 
@@ -72,7 +86,7 @@ export default async function handler(req, res) {
     if (!certName || !password) {
       return res.status(400).json({ 
         success: false,
-        message: "Thiếu thông tin bắt buộc (name hoặc password)" 
+        message: "Vui lòng cung cấp đủ tên chứng chỉ và mật khẩu" 
       });
     }
 
@@ -84,60 +98,74 @@ export default async function handler(req, res) {
     }
 
     // 3. Check existing record
-    console.log("🔍 Checking existing certificate...");
+    console.log("🔍 Kiểm tra chứng chỉ tồn tại...");
     const { data: existingCert, error: checkError } = await supabase
       .from('certificates')
       .select('id, p12_url, provision_url')
       .eq('name', certName)
       .maybeSingle();
 
-    if (checkError) throw new Error(`Lỗi kiểm tra cert: ${checkError.message}`);
+    if (checkError) {
+      throw new Error(`Lỗi kiểm tra chứng chỉ: ${checkError.message}`);
+    }
 
-    // 4. Xóa file cũ nếu tồn tại
-    await removeOldFiles(existingCert);
+    // 4. Dọn dẹp file cũ nếu tồn tại
+    await cleanupOldFiles(existingCert);
 
-    // 5. Upload files to storage
-    console.log("⬆️ Uploading files to storage...");
+    // 5. Upload files với tên mới
+    console.log("⬆️ Đang tải lên storage...");
     const timestamp = Date.now();
-    const p12Filename = `${certName}-${timestamp}.p12`;
-    const provisionFilename = `${certName}-${timestamp}.mobileprovision`;
+    const filePrefix = `${certName.replace(/\s+/g, '-')}-${timestamp}`;
+    const p12Filename = `${filePrefix}.p12`;
+    const provisionFilename = `${filePrefix}.mobileprovision`;
 
-    const [p12Upload, provisionUpload] = await Promise.all([
+    const [p12Result, provisionResult] = await Promise.all([
       supabase.storage
         .from('certificates')
         .upload(p12Filename, readFile(files.p12[0]), {
           contentType: 'application/x-pkcs12',
-          upsert: true
+          upsert: false
         }),
       
       supabase.storage
         .from('certificates')
         .upload(provisionFilename, readFile(files.provision[0]), {
           contentType: 'application/octet-stream',
-          upsert: true
+          upsert: false
         })
     ]);
 
-    if (p12Upload.error || provisionUpload.error) {
+    // Xử lý lỗi upload
+    if (p12Result.error || provisionResult.error) {
+      // Rollback: Xóa file đã upload nếu có lỗi
+      const uploadedFiles = [];
+      if (p12Result.data) uploadedFiles.push(p12Filename);
+      if (provisionResult.data) uploadedFiles.push(provisionFilename);
+      
+      if (uploadedFiles.length > 0) {
+        await supabase.storage.from('certificates').remove(uploadedFiles);
+      }
+
       throw new Error(
-        `Lỗi upload: ${p12Upload.error?.message || provisionUpload.error?.message}`
+        `Lỗi tải lên: ${p12Result.error?.message || provisionResult.error?.message}`
       );
     }
 
-    // 6. Get public URLs
+    // 6. Lấy public URLs
     const p12Url = supabase.storage
       .from('certificates')
-      .getPublicUrl(p12Upload.data.path).data.publicUrl;
+      .getPublicUrl(p12Result.data.path).data.publicUrl;
     
     const provisionUrl = supabase.storage
       .from('certificates')
-      .getPublicUrl(provisionUpload.data.path).data.publicUrl;
+      .getPublicUrl(provisionResult.data.path).data.publicUrl;
 
-    // 7. Xử lý database
-    console.log("💾 Saving to database...");
+    // 7. Xử lý database (QUAN TRỌNG)
+    console.log("💾 Đang lưu vào database...");
     let certData;
+    
     if (existingCert) {
-      // Cập nhật bản ghi cũ
+      // CẬP NHẬT bản ghi hiện có
       const { data, error } = await supabase
         .from('certificates')
         .update({
@@ -149,10 +177,11 @@ export default async function handler(req, res) {
         .eq('id', existingCert.id)
         .select()
         .single();
+
       if (error) throw error;
       certData = data;
     } else {
-      // Thêm bản ghi mới
+      // THÊM MỚI (không chỉ định ID)
       const { data, error } = await supabase
         .from('certificates')
         .insert({
@@ -163,17 +192,18 @@ export default async function handler(req, res) {
         })
         .select()
         .single();
+
       if (error) throw error;
       certData = data;
     }
 
-    // 8. Response
-    console.log("✅ Upload completed");
+    // 8. Trả về kết quả
+    console.log("✅ Hoàn thành!");
     res.status(200).json({
       success: true,
       message: existingCert 
-        ? "Đã cập nhật chứng chỉ thành công!" 
-        : "Đã tạo chứng chỉ mới thành công!",
+        ? "Đã cập nhật chứng chỉ thành công" 
+        : "Đã thêm chứng chỉ mới thành công",
       data: {
         id: certData.id,
         name: certData.name,
@@ -184,14 +214,14 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error("❌ Critical error:", error);
+    console.error("❌ Lỗi nghiêm trọng:", error);
     res.status(500).json({
       success: false,
       message: process.env.NODE_ENV === 'development' 
         ? error.message 
-        : "Lỗi hệ thống, vui lòng thử lại",
-      ...(process.env.NODE_ENV === 'development' && { 
-        details: error.stack 
+        : "Đã xảy ra lỗi hệ thống",
+      ...(process.env.NODE_ENV === 'development' && {
+        stack: error.stack
       })
     });
   }
