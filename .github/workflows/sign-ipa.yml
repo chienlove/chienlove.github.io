@@ -74,11 +74,11 @@ jobs:
 
       - name: Install Zsign
         run: |
-          brew install pkg-config openssl minizip
-          git clone https://github.com/zhlynn/zsign.git
-          cd zsign/build/macos
-          make clean && make
-          sudo cp zsign /usr/local/bin/
+    brew install pkg-config openssl minizip
+    git clone https://github.com/zhlynn/zsign.git
+    cd zsign/build/macos
+    make clean && make
+    sudo cp ../../bin/zsign /usr/local/bin/
 
       - name: Sign IPA with zsign
         run: |
