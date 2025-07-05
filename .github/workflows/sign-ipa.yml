@@ -76,6 +76,7 @@ jobs:
         run: |
           unzip -q "$IPA_NAME" -d unpacked
           APP_PATH=$(find unpacked/Payload -name "*.app" -print -quit)
+
           if [ -z "$APP_PATH" ]; then
             echo "::error::App bundle not found"
             exit 1
@@ -86,6 +87,9 @@ jobs:
           find "$APP_PATH" -name "_CodeSignature" -type d -exec rm -rf {} +
           rm -f "$APP_PATH/CodeResources"
           cp embedded.mobileprovision "$APP_PATH/embedded.mobileprovision"
+
+          # ✅ Load variables
+          source $GITHUB_ENV
 
           if [ -n "$NEW_ID" ]; then
             echo "🆔 Changing bundle ID to $NEW_ID"
@@ -119,6 +123,7 @@ jobs:
 
       - name: Sign all components
         run: |
+          source $GITHUB_ENV
           APP_PATH=$(find unpacked/Payload -name "*.app" -print -quit)
           SIGN_ID=$(security find-identity -v temp.keychain | grep "iPhone" | head -n1 | awk '{print $2}')
 
