@@ -58,17 +58,15 @@ jobs:
           curl -L "$CERT_P12_URL" -o cert.p12
           curl -L "$CERT_PROVISION_URL" -o embedded.mobileprovision
 
-      - name: Set variables
-        run: |
-          echo "TAG=${{ github.event.inputs.tag }}" >> $GITHUB_ENV
-          echo "NEW_ID=${{ github.event.inputs.identifier }}" >> $GITHUB_ENV
+      - name: Set tag variable
+        run: echo "TAG=${{ github.event.inputs.tag }}" >> $GITHUB_ENV
 
       - name: Verify release exists
-        run: gh release view "$TAG" --repo "$REPO"
+        run: gh release view "${{ github.event.inputs.tag }}" --repo "$REPO"
 
       - name: Download IPA from release
         run: |
-          gh release download "$TAG" --repo "$REPO" --pattern "*.ipa" --clobber
+          gh release download "${{ github.event.inputs.tag }}" --repo "$REPO" --pattern "*.ipa" --clobber
           IPA_NAME=$(ls *.ipa)
           echo "IPA_NAME=$IPA_NAME" >> $GITHUB_ENV
 
@@ -88,14 +86,14 @@ jobs:
           rm -f "$APP_PATH/CodeResources"
           cp embedded.mobileprovision "$APP_PATH/embedded.mobileprovision"
 
-          # ✅ Load variables
-          source $GITHUB_ENV
+          # ✅ Gán trực tiếp identifier
+          NEW_ID="${{ github.event.inputs.identifier }}"
 
           if [ -n "$NEW_ID" ]; then
             echo "🆔 Changing bundle ID to $NEW_ID"
             /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $NEW_ID" "$APP_PATH/Info.plist"
           else
-            echo "⚠️ Bundle ID not changed"
+            echo "⚠️ No identifier provided. Keeping original bundle ID."
           fi
 
       - name: Import certificate
@@ -123,7 +121,6 @@ jobs:
 
       - name: Sign all components
         run: |
-          source $GITHUB_ENV
           APP_PATH=$(find unpacked/Payload -name "*.app" -print -quit)
           SIGN_ID=$(security find-identity -v temp.keychain | grep "iPhone" | head -n1 | awk '{print $2}')
 
@@ -160,6 +157,6 @@ jobs:
       - name: Upload signed IPA
         run: |
           mv signed.ipa "$IPA_NAME"
-          gh release upload "$TAG" "$IPA_NAME" \
+          gh release upload "${{ github.event.inputs.tag }}" "$IPA_NAME" \
             --repo "$REPO" --clobber
           echo "🎉 Signed IPA uploaded"
