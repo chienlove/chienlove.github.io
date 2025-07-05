@@ -14,11 +14,11 @@ jobs:
   sign:
     runs-on: macos-latest
     permissions:
-      contents: write  # Cần quyền ghi để upload release
-      packages: read   # Cần quyền đọc để download IPA
+      contents: write
+      packages: read
 
     env:
-      GH_TOKEN: ${{ github.token }}  # Đã thay thế GH_PAT bằng token tự động
+      GH_TOKEN: ${{ github.token }}
       REPO: ${{ github.repository }}
       SUPABASE_URL: https://zkbzykamrzvvrhodiypk.supabase.co
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
@@ -29,26 +29,19 @@ jobs:
 
       - name: Install tools
         run: |
-          brew install curl jq gh
-          echo "✅ Tools installed successfully"
+          brew install curl jq gh openssl isign
+          echo "✅ Tools installed"
 
       - name: Validate environment variables
         run: |
-          echo "🔍 Validating environment variables..."
-          if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
-            echo "::error::❌ SUPABASE_SERVICE_ROLE_KEY is missing"
+          if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ] || [ -z "$GH_TOKEN" ]; then
+            echo "::error::Missing required secrets"
             exit 1
           fi
-          if [ -z "$GH_TOKEN" ]; then
-            echo "::error::❌ GH_TOKEN is missing"
-            exit 1
-          fi
-          echo "✅ Environment variables validated"
+          echo "✅ Environment ready"
 
       - name: Fetch cert info from Supabase
-        id: get_certs
         run: |
-          echo "📡 Fetching certificates from Supabase..."
           response=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
             -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
             -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
@@ -59,119 +52,72 @@ jobs:
           json_data=$(echo "$response" | sed '/HTTP_STATUS/d')
 
           if [ "$http_status" -ne 200 ]; then
-            echo "::error::❌ Supabase API returned $http_status"
-            echo "Response: $json_data"
-            exit 1
-          fi
-
-          cert_count=$(echo "$json_data" | jq length)
-          if [ "$cert_count" -eq 0 ]; then
-            echo "::error::❌ No certificates found in database"
+            echo "::error::Supabase API error $http_status"
             exit 1
           fi
 
           echo "$json_data" | jq '.[0]' > cert.json
-          echo "📄 Certificate data saved"
 
-          # Validate required fields
-          p12_url=$(jq -r '.p12_url' cert.json)
-          provision_url=$(jq -r '.provision_url' cert.json)
-          password=$(jq -r '.password' cert.json)
+          export CERT_P12_URL=$(jq -r '.p12_url' cert.json)
+          export CERT_PROVISION_URL=$(jq -r '.provision_url' cert.json)
+          export CERT_PASSWORD=$(jq -r '.password' cert.json)
 
-          if [ -z "$p12_url" ] || [ -z "$provision_url" ] || [ -z "$password" ]; then
-            echo "::error::❌ Missing required certificate fields"
+          if [ -z "$CERT_P12_URL" ] || [ -z "$CERT_PROVISION_URL" ] || [ -z "$CERT_PASSWORD" ]; then
+            echo "::error::Missing cert fields"
             exit 1
           fi
 
-          echo "CERT_P12_URL=$p12_url" >> $GITHUB_ENV
-          echo "CERT_PROVISION_URL=$provision_url" >> $GITHUB_ENV
-          echo "CERT_PASSWORD=$password" >> $GITHUB_ENV
-          echo "✅ Certificate info loaded"
+          echo "CERT_P12_URL=$CERT_P12_URL" >> $GITHUB_ENV
+          echo "CERT_PROVISION_URL=$CERT_PROVISION_URL" >> $GITHUB_ENV
+          echo "CERT_PASSWORD=$CERT_PASSWORD" >> $GITHUB_ENV
 
       - name: Download certificates
         run: |
-          set -e
-          echo "⬇️ Downloading certificates..."
-          curl -L -f "$CERT_P12_URL" -o cert.p12 || { 
-            echo "::error::❌ Failed to download p12 file from $CERT_P12_URL"
-            exit 1
-          }
-          curl -L -f "$CERT_PROVISION_URL" -o profile.mobileprovision || {
-            echo "::error::❌ Failed to download provisioning profile from $CERT_PROVISION_URL"
-            exit 1
-          }
-          echo "✅ Certificates downloaded"
+          curl -L "$CERT_P12_URL" -o cert.p12
+          curl -L "$CERT_PROVISION_URL" -o profile.mobileprovision
 
-      - name: Set build variables
+      - name: Set variables
         run: |
           echo "TAG=${{ github.event.inputs.tag }}" >> $GITHUB_ENV
           echo "NEW_ID=${{ github.event.inputs.identifier }}" >> $GITHUB_ENV
-          echo "⚙️ Variables set: TAG=${{ github.event.inputs.tag }}, NEW_ID=${{ github.event.inputs.identifier }}"
 
-      - name: Verify Release Exists
+      - name: Verify release exists
         run: |
-          echo "🔍 Checking release $TAG..."
-          gh release view "$TAG" --repo "$REPO" || {
-            echo "::error::❌ Release $TAG not found"
-            exit 1
-          }
-          echo "✅ Release $TAG exists"
+          gh release view "$TAG" --repo "$REPO"
 
       - name: Download IPA from release
         run: |
-          set -e
-          echo "⬇️ Downloading IPA from release $TAG..."
           gh release download "$TAG" \
             --repo "$REPO" \
             --pattern "*.ipa" \
-            --clobber || {
-              echo "::error::❌ Failed to download IPA from release $TAG"
-              echo "Debug info:"
-              gh release view "$TAG" --repo "$REPO"
-              exit 1
-            }
+            --clobber
           IPA_NAME=$(ls *.ipa)
           echo "IPA_NAME=$IPA_NAME" >> $GITHUB_ENV
-          echo "✅ Downloaded IPA: $IPA_NAME"
 
-      - name: Sign and change bundle ID
+      - name: Unpack IPA and change Bundle ID
         run: |
-          set -e
-          echo "📦 Unpacking IPA..."
-          unzip -q "$IPA_NAME" -d unpacked || { 
-            echo "::error::❌ Failed to unzip IPA"
-            exit 1
-          }
-          
-          APP_PATH=$(find unpacked/Payload -name "*.app" -maxdepth 2 -print -quit)
+          unzip -q "$IPA_NAME" -d unpacked
+          APP_PATH=$(find unpacked/Payload -name "*.app" -print -quit)
           if [ -z "$APP_PATH" ]; then
-            echo "::error::❌ Could not find .app bundle in IPA"
+            echo "::error::App not found"
             exit 1
           fi
-          echo "📍 Found app at: $APP_PATH"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $NEW_ID" "$APP_PATH/Info.plist"
 
-          echo "🆔 Changing bundle ID to $NEW_ID"
-          /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $NEW_ID" "$APP_PATH/Info.plist" || {
-            echo "::error::❌ Failed to modify Info.plist"
-            exit 1
-          }
-
-          echo "📦 Repacking IPA..."
-          cd unpacked && zip -qr ../signed.ipa Payload || {
-            echo "::error::❌ Failed to repack IPA"
-            exit 1
-          }
-          echo "✅ IPA repacked successfully"
-
-      - name: Upload signed IPA back to release
+      - name: Convert .p12 to PEM
         run: |
-          set -e
-          echo "⬆️ Uploading signed IPA..."
+          openssl pkcs12 -in cert.p12 -clcerts -nokeys -out cert.pem -passin pass:"$CERT_PASSWORD"
+          openssl pkcs12 -in cert.p12 -nocerts -nodes -out key.pem -passin pass:"$CERT_PASSWORD"
+
+      - name: Sign IPA with isign
+        run: |
+          IPA_NAME=$(echo "$IPA_NAME")
+          isign -c cert.pem -k key.pem -p profile.mobileprovision \
+            -i "$NEW_ID" -o signed.ipa "$IPA_NAME"
+
+      - name: Upload signed IPA to release
+        run: |
           mv signed.ipa "$IPA_NAME"
           gh release upload "$TAG" "$IPA_NAME" \
-            --repo "$REPO" \
-            --clobber || {
-              echo "::error::❌ Failed to upload signed IPA to release $TAG"
-              exit 1
-            }
-          echo "🎉 Upload completed successfully"
+            --repo "$REPO" --clobber
+          echo "✅ Signed IPA uploaded"
