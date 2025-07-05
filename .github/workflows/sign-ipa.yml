@@ -1,4 +1,4 @@
-name: Sign and Resign IPA with Bundle ID Replacement
+name: Deep Resign IPA with Bundle ID Replacement
 
 on:
   workflow_dispatch:
@@ -9,6 +9,10 @@ on:
       identifier:
         description: "New Bundle Identifier"
         required: true
+      old_identifier:
+        description: "Old Bundle Identifier to replace (default: net.storeios.chienlove)"
+        required: false
+        default: "net.storeios.chienlove"
 
 jobs:
   sign:
@@ -58,6 +62,7 @@ jobs:
         run: |
           echo "TAG=${{ github.event.inputs.tag }}" >> $GITHUB_ENV
           echo "IDENTIFIER=${{ github.event.inputs.identifier }}" >> $GITHUB_ENV
+          echo "OLD_IDENTIFIER=${{ github.event.inputs.old_identifier || 'net.storeios.chienlove' }}" >> $GITHUB_ENV
 
       - name: Verify release exists
         run: gh release view "$TAG" --repo "$REPO"
@@ -77,12 +82,13 @@ jobs:
           brew install pkg-config openssl minizip libplist
           pip install biplist
 
-      - name: Install Zsign
+      - name: Install Zsign and search tools
         run: |
           git clone https://github.com/zhlynn/zsign.git
           cd zsign/build/macos
           make clean && make
           sudo cp ../../bin/zsign /usr/local/bin/
+          sudo gem install plist_lookup
 
       - name: Extract Team ID and create entitlements
         run: |
@@ -104,11 +110,11 @@ jobs:
           echo "</dict>" >> entitlements.xcent
           echo "</plist>" >> entitlements.xcent
 
-      - name: Process each IPA file
+      - name: Deep search and replace Bundle ID
         run: |
           mkdir -p signed
           for IPA in *.ipa; do
-            echo "🔧 Processing $IPA..."
+            echo "🔍 Deep searching for $OLD_IDENTIFIER in $IPA..."
             
             # Extract IPA
             unzip -q "$IPA" -d temp_ipa
@@ -116,14 +122,41 @@ jobs:
             # Find .app directory
             APP_DIR=$(find temp_ipa/Payload -name "*.app" -type d -maxdepth 1 | head -1)
             
-            # 1. Replace bundle ID in Info.plist
-            plutil -replace CFBundleIdentifier -string "$IDENTIFIER" "$APP_DIR/Info.plist"
+            # 1. Find all occurrences of old bundle ID
+            echo "🔎 Locations where $OLD_IDENTIFIER appears:"
             
-            # 2. Replace bundle ID in other plist files
-            find "$APP_DIR" -name "*.plist" -exec plutil -replace CFBundleIdentifier -string "$IDENTIFIER" {} \; 2>/dev/null || true
+            # a. In plist files
+            find "$APP_DIR" -name "*.plist" -exec grep -l "$OLD_IDENTIFIER" {} \; | while read file; do
+              echo "   • Plist file: $file"
+              plutil -replace CFBundleIdentifier -string "$IDENTIFIER" "$file" 2>/dev/null || true
+            done
             
-            # 3. Replace bundle ID in embedded binaries (if needed)
-            # This is more complex and may require binary patching
+            # b. In binary files (as string)
+            find "$APP_DIR" -type f -exec grep -l "$OLD_IDENTIFIER" {} \; | grep -v "\.plist$" | while read file; do
+              echo "   • Binary file: $file"
+              # Use sed to replace in binary files (careful!)
+              LC_ALL=C sed -i '' "s/$OLD_IDENTIFIER/$IDENTIFIER/g" "$file" 2>/dev/null || true
+            done
+            
+            # c. In embedded mobileprovision
+            if [ -f "$APP_DIR/embedded.mobileprovision" ]; then
+              echo "   • Found embedded.mobileprovision"
+              security cms -D -i "$APP_DIR/embedded.mobileprovision" > temp_prov.plist
+              if grep -q "$OLD_IDENTIFIER" temp_prov.plist; then
+                echo "⚠️ Old bundle ID found in embedded.mobileprovision - this needs special handling"
+              fi
+              rm temp_prov.plist
+            fi
+            
+            # 2. Verify all replacements
+            echo "✅ Replacement complete. Verifying..."
+            OLD_COUNT=$(grep -r "$OLD_IDENTIFIER" temp_ipa/ | wc -l || true)
+            if [ "$OLD_COUNT" -gt 0 ]; then
+              echo "⚠️ Warning: Found $OLD_COUNT remaining occurrences of $OLD_IDENTIFIER"
+              grep -r "$OLD_IDENTIFIER" temp_ipa/ || true
+            else
+              echo "✔️ Success: No remaining occurrences of $OLD_IDENTIFIER found"
+            fi
             
             # Repackage IPA
             cd temp_ipa
@@ -142,12 +175,13 @@ jobs:
             # Clean up
             rm -rf temp_ipa temp_resigned.ipa
             
-            # Verify the signed IPA
-            echo "🔍 Verifying signed $IPA..."
+            # Final verification
+            echo "🔍 Final verification for $IPA..."
             unzip -q "signed/$IPA" -d temp_signed
             SIGNED_APP_DIR=$(find temp_signed/Payload -name "*.app" -type d -maxdepth 1 | head -1)
-            echo "ℹ️ Final bundle ID in Info.plist:"
+            echo "ℹ️ Bundle IDs found after signing:"
             plutil -p "$SIGNED_APP_DIR/Info.plist" | grep CFBundleIdentifier
+            strings "$SIGNED_APP_DIR/$(basename "$SIGNED_APP_DIR" .app)" | grep "$OLD_IDENTIFIER" && echo "⚠️ Old ID still found in binary" || echo "✔️ No old ID in binary"
             rm -rf temp_signed
           done
 
