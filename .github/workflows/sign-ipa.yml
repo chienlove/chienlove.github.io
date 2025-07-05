@@ -72,7 +72,7 @@ jobs:
           fi
           echo "📦 Found $COUNT IPA files"
 
-      - name: Install Zsign and dependencies
+      - name: Install Zsign
         run: |
           brew install pkg-config openssl minizip
           git clone https://github.com/zhlynn/zsign.git
@@ -87,9 +87,9 @@ jobs:
           echo "✅ Extracted TEAM_ID: $TEAM_ID"
           echo "TEAM_ID=$TEAM_ID" >> $GITHUB_ENV
 
-          IDENTIFIER=${{ github.event.inputs.identifier }}
+          IDENTIFIER="${{ github.event.inputs.identifier }}"
           if [ -z "$IDENTIFIER" ]; then
-            echo "::error::❌ You must provide an identifier"
+            echo "::error::You must provide an identifier to change bundle ID"
             exit 1
           fi
 
@@ -104,11 +104,11 @@ jobs:
           echo "</dict>" >> entitlements.xcent
           echo "</plist>" >> entitlements.xcent
 
-      - name: Clean and rewrite all Bundle IDs in Info.plist
+      - name: Clean and patch IPA (Info.plist & binary)
         run: |
           mkdir -p cleaned
           for IPA in *.ipa; do
-            echo "📦 Processing $IPA..."
+            echo "📦 Cleaning $IPA..."
             mkdir -p tmp && cd tmp
             unzip -q "../$IPA"
 
@@ -119,16 +119,34 @@ jobs:
               continue
             fi
 
-            echo "🧹 Removing old code signature..."
+            OLD_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP_DIR/Info.plist" 2>/dev/null || echo "unknown")
+            echo "🔁 OLD_ID: $OLD_ID → NEW_ID: $IDENTIFIER"
+
+            # Patch Info.plist
+            find Payload -name Info.plist | while read plist; do
+              /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $IDENTIFIER" "$plist" || true
+            done
+
+            # Patch tên app nếu cần (tuỳ bạn có dùng không)
+            # /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName My App Name" "$APP_DIR/Info.plist"
+
+            # Xoá code sign cũ
             rm -rf "$APP_DIR/_CodeSignature"
             rm -f "$APP_DIR/embedded.mobileprovision"
 
-            echo "🔍 Scanning and rewriting Info.plist files..."
-            find Payload -name Info.plist | while read plist; do
-              OLD_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$plist" 2>/dev/null || echo "(none)")
-              echo "   🧾 $plist ➜ $OLD_ID"
-              /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier ${{ github.event.inputs.identifier }}" "$plist" || true
-            done
+            # Patch trong binary (Mach-O)
+            BIN_PATH=$(find "$APP_DIR" -type f -perm +111 -exec file {} \; | grep "Mach-O" | cut -d: -f1 | head -n 1)
+            if [ -f "$BIN_PATH" ]; then
+              echo "✏️ Patching binary $BIN_PATH..."
+              # chỉ patch khi độ dài không vượt quá
+              if [ ${#IDENTIFIER} -le ${#OLD_ID} ]; then
+                sed -i '' "s/$OLD_ID/$IDENTIFIER/g" "$BIN_PATH"
+              else
+                echo "⚠️ Cannot patch binary: New ID too long ($IDENTIFIER)"
+              fi
+            else
+              echo "⚠️ Binary file not found"
+            fi
 
             zip -qr "../cleaned/$IPA" Payload
             cd .. && rm -rf tmp
