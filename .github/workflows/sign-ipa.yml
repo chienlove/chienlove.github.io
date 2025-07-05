@@ -72,7 +72,7 @@ jobs:
           fi
           echo "📦 Found $COUNT IPA files"
 
-      - name: Install Zsign and PlistBuddy
+      - name: Install Zsign and dependencies
         run: |
           brew install pkg-config openssl minizip
           git clone https://github.com/zhlynn/zsign.git
@@ -80,12 +80,35 @@ jobs:
           make clean && make
           sudo cp ../../bin/zsign /usr/local/bin/
 
-      - name: Clean IPA, Scan & Rewrite All Bundle IDs
+      - name: Extract Team ID and create entitlements
+        run: |
+          security cms -D -i profile.mobileprovision > provision.plist
+          TEAM_ID=$(plutil -extract TeamIdentifier.0 xml1 -o - provision.plist | xmllint --xpath 'string(//string)' -)
+          echo "✅ Extracted TEAM_ID: $TEAM_ID"
+          echo "TEAM_ID=$TEAM_ID" >> $GITHUB_ENV
+
+          IDENTIFIER=${{ github.event.inputs.identifier }}
+          if [ -z "$IDENTIFIER" ]; then
+            echo "::error::❌ You must provide an identifier"
+            exit 1
+          fi
+
+          echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" > entitlements.xcent
+          echo "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">" >> entitlements.xcent
+          echo "<plist version=\"1.0\">" >> entitlements.xcent
+          echo "<dict>" >> entitlements.xcent
+          echo "  <key>application-identifier</key>" >> entitlements.xcent
+          echo "  <string>$TEAM_ID.$IDENTIFIER</string>" >> entitlements.xcent
+          echo "  <key>get-task-allow</key>" >> entitlements.xcent
+          echo "  <false/>" >> entitlements.xcent
+          echo "</dict>" >> entitlements.xcent
+          echo "</plist>" >> entitlements.xcent
+
+      - name: Clean and rewrite all Bundle IDs in Info.plist
         run: |
           mkdir -p cleaned
-
           for IPA in *.ipa; do
-            echo "🧩 Processing $IPA..."
+            echo "📦 Processing $IPA..."
             mkdir -p tmp && cd tmp
             unzip -q "../$IPA"
 
@@ -96,27 +119,20 @@ jobs:
               continue
             fi
 
-            # 🧹 Remove old codesign & provisioning
+            echo "🧹 Removing old code signature..."
             rm -rf "$APP_DIR/_CodeSignature"
             rm -f "$APP_DIR/embedded.mobileprovision"
 
-            # 🧠 Scan ALL Info.plist for bundle IDs
-            echo "🔍 Scanning all Info.plist for Bundle ID:"
+            echo "🔍 Scanning and rewriting Info.plist files..."
             find Payload -name Info.plist | while read plist; do
-              BID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$plist" 2>/dev/null || echo "(none)")
-              echo "   🧾 $plist ➜ $BID"
-
-              # 🔁 Rewrite if identifier is provided
-              if [ ! -z "${{ github.event.inputs.identifier }}" ]; then
-                echo "   ✏️ Rewriting $plist ➜ ${{ github.event.inputs.identifier }}"
-                /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier ${{ github.event.inputs.identifier }}" "$plist" || true
-              fi
+              OLD_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$plist" 2>/dev/null || echo "(none)")
+              echo "   🧾 $plist ➜ $OLD_ID"
+              /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier ${{ github.event.inputs.identifier }}" "$plist" || true
             done
 
             zip -qr "../cleaned/$IPA" Payload
             cd .. && rm -rf tmp
           done
-
           mv cleaned/* .
 
       - name: Sign all IPA files with Zsign
@@ -126,6 +142,7 @@ jobs:
             echo "🔧 Signing $IPA..."
             zsign -k cert.p12 -p "$CERT_PASSWORD" \
                   -m profile.mobileprovision \
+                  -e entitlements.xcent \
                   -o "signed/$IPA" "$IPA"
           done
 
@@ -135,4 +152,4 @@ jobs:
             echo "⬆️ Uploading $FILE..."
             gh release upload "$TAG" "$FILE" --repo "$REPO" --clobber
           done
-          echo "🎉 All signed IPA files uploaded successfully"
+          echo "✅ All signed IPA files uploaded successfully"
