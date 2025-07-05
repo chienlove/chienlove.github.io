@@ -72,7 +72,7 @@ jobs:
           fi
           echo "📦 Found $COUNT IPA files"
 
-      - name: Install Zsign
+      - name: Install Zsign and PlistBuddy
         run: |
           brew install pkg-config openssl minizip
           git clone https://github.com/zhlynn/zsign.git
@@ -80,41 +80,53 @@ jobs:
           make clean && make
           sudo cp ../../bin/zsign /usr/local/bin/
 
-      - name: Clean entitlements and old signatures from IPAs
+      - name: Clean IPA, Scan & Rewrite All Bundle IDs
         run: |
+          mkdir -p cleaned
+
           for IPA in *.ipa; do
-            echo "🧹 Cleaning $IPA..."
+            echo "🧩 Processing $IPA..."
             mkdir -p tmp && cd tmp
             unzip -q "../$IPA"
-            APP_DIR=$(find Payload -type d -name "*.app")
 
+            APP_DIR=$(find Payload -type d -name "*.app" | head -n 1)
+            if [ -z "$APP_DIR" ]; then
+              echo "⚠️ Skipped $IPA: No .app found"
+              cd .. && rm -rf tmp
+              continue
+            fi
+
+            # 🧹 Remove old codesign & provisioning
             rm -rf "$APP_DIR/_CodeSignature"
             rm -f "$APP_DIR/embedded.mobileprovision"
-            zip -qr "../cleaned_$IPA" Payload
-            cd .. && rm -rf tmp
 
-            mv "cleaned_$IPA" "$IPA"
+            # 🧠 Scan ALL Info.plist for bundle IDs
+            echo "🔍 Scanning all Info.plist for Bundle ID:"
+            find Payload -name Info.plist | while read plist; do
+              BID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$plist" 2>/dev/null || echo "(none)")
+              echo "   🧾 $plist ➜ $BID"
+
+              # 🔁 Rewrite if identifier is provided
+              if [ ! -z "${{ github.event.inputs.identifier }}" ]; then
+                echo "   ✏️ Rewriting $plist ➜ ${{ github.event.inputs.identifier }}"
+                /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier ${{ github.event.inputs.identifier }}" "$plist" || true
+              fi
+            done
+
+            zip -qr "../cleaned/$IPA" Payload
+            cd .. && rm -rf tmp
           done
+
+          mv cleaned/* .
 
       - name: Sign all IPA files with Zsign
         run: |
           mkdir -p signed
-          IDENTIFIER="${{ github.event.inputs.identifier }}"
-
           for IPA in *.ipa; do
             echo "🔧 Signing $IPA..."
-            OUT_NAME="signed/$IPA"
-
-            if [ -z "$IDENTIFIER" ]; then
-              zsign -k cert.p12 -p "$CERT_PASSWORD" \
-                    -m profile.mobileprovision \
-                    -o "$OUT_NAME" "$IPA"
-            else
-              zsign -k cert.p12 -p "$CERT_PASSWORD" \
-                    -m profile.mobileprovision \
-                    -b "$IDENTIFIER" \
-                    -o "$OUT_NAME" "$IPA"
-            fi
+            zsign -k cert.p12 -p "$CERT_PASSWORD" \
+                  -m profile.mobileprovision \
+                  -o "signed/$IPA" "$IPA"
           done
 
       - name: Upload signed IPA files to release
