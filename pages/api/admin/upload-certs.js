@@ -1,7 +1,6 @@
 import { IncomingForm } from 'formidable';
 import fs from 'fs';
 import { createClient } from '@supabase/supabase-js';
-import { v4 as uuidv4 } from 'uuid'; // Thêm thư viện tạo UUID
 
 export const config = {
   api: {
@@ -11,7 +10,7 @@ export const config = {
 };
 
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL, // Sửa thành NEXT_PUBLIC_
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
@@ -22,7 +21,10 @@ function readFile(file) {
 export default async function handler(req, res) {
   console.log("📥 [upload-certs] Request method:", req.method);
   if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Method not allowed' });
+    return res.status(405).json({ 
+      success: false,
+      message: 'Method not allowed' 
+    });
   }
 
   try {
@@ -30,12 +32,12 @@ export default async function handler(req, res) {
     const { fields, files } = await new Promise((resolve, reject) => {
       const form = new IncomingForm({ 
         keepExtensions: true,
-        maxFileSize: 10 * 1024 * 1024 // Giới hạn 10MB
+        maxFileSize: 10 * 1024 * 1024 // 10MB
       });
       form.parse(req, (err, fields, files) => {
         if (err) {
           console.error("❌ Form parse error:", err);
-          reject(err);
+          reject(new Error("Lỗi phân tích form data"));
         } else {
           resolve({ fields, files });
         }
@@ -48,12 +50,14 @@ export default async function handler(req, res) {
     
     if (!certName || !password) {
       return res.status(400).json({ 
+        success: false,
         message: "Thiếu thông tin bắt buộc (name hoặc password)" 
       });
     }
 
     if (!files.p12?.[0] || !files.provision?.[0]) {
       return res.status(400).json({ 
+        success: false,
         message: "Thiếu file chứng chỉ (.p12 hoặc .mobileprovision)" 
       });
     }
@@ -68,7 +72,7 @@ export default async function handler(req, res) {
 
     if (checkError) {
       console.error("❌ Check existing error:", checkError);
-      throw checkError;
+      throw new Error("Lỗi kiểm tra chứng chỉ tồn tại");
     }
 
     // 4. Upload files to storage
@@ -93,15 +97,20 @@ export default async function handler(req, res) {
         })
     ]);
 
+    // Handle upload errors
     if (p12Upload.error || provisionUpload.error) {
-      // Clean up if partial upload
-      if (p12Upload.data) {
-        await supabase.storage.from('certificates').remove([p12Filename]);
+      // Clean up uploaded files if any
+      const filesToRemove = [];
+      if (p12Upload.data) filesToRemove.push(p12Filename);
+      if (provisionUpload.data) filesToRemove.push(provisionFilename);
+      
+      if (filesToRemove.length > 0) {
+        await supabase.storage.from('certificates').remove(filesToRemove);
       }
-      if (provisionUpload.data) {
-        await supabase.storage.from('certificates').remove([provisionFilename]);
-      }
-      throw new Error(`Upload failed: ${p12Upload.error?.message || provisionUpload.error?.message}`);
+
+      throw new Error(
+        `Lỗi upload file: ${p12Upload.error?.message || provisionUpload.error?.message}`
+      );
     }
 
     // 5. Get public URLs
@@ -113,30 +122,32 @@ export default async function handler(req, res) {
       .from('certificates')
       .getPublicUrl(provisionUpload.data.path).data.publicUrl;
 
-    // 6. Upsert to database
+    // 6. Upsert to database (SỬA TẠI ĐÂY)
     console.log("💾 Saving to database...");
+    const upsertData = {
+      // Chỉ thêm ID khi cập nhật bản ghi đã tồn tại
+      ...(existingCert && { id: existingCert.id }),
+      name: certName,
+      p12_url: p12Url,
+      provision_url: provisionUrl,
+      password: password,
+      updated_at: new Date().toISOString()
+    };
+
     const { data: certData, error: dbError } = await supabase
       .from('certificates')
-      .upsert({
-        ...(existingCert && { id: existingCert.id }), // Keep existing ID if any
-        id: existingCert?.id || uuidv4(), // Fallback to new UUID
-        name: certName,
-        p12_url: p12Url,
-        provision_url: provisionUrl,
-        password: password,
-        updated_at: new Date().toISOString()
-      }, {
-        onConflict: 'name', // Handle conflict by name
-        returning: 'representation' // Return full record
+      .upsert(upsertData, {
+        onConflict: 'name', // Xử lý trùng name
+        returning: 'representation' // Trả về bản ghi đầy đủ
       })
       .select()
       .single();
 
     if (dbError) {
       console.error("❌ Database error:", dbError);
-      // Clean up storage if DB fails
+      // Rollback: Xóa file đã upload nếu DB lỗi
       await supabase.storage.from('certificates').remove([p12Filename, provisionFilename]);
-      throw dbError;
+      throw new Error(`Lỗi database: ${dbError.message}`);
     }
 
     // 7. Success response
@@ -151,7 +162,6 @@ export default async function handler(req, res) {
         name: certData.name,
         p12_url: certData.p12_url,
         provision_url: certData.provision_url,
-        created_at: certData.created_at,
         updated_at: certData.updated_at
       }
     });
@@ -164,10 +174,9 @@ export default async function handler(req, res) {
         ? error.message 
         : "Lỗi hệ thống, vui lòng thử lại",
       ...(process.env.NODE_ENV === 'development' && {
-        stack: error.stack,
         details: {
-          name: error.name,
-          code: error.code
+          error: error.message,
+          stack: error.stack
         }
       })
     });
