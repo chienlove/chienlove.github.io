@@ -29,8 +29,18 @@ jobs:
 
       - name: Install tools
         run: |
-          brew install curl jq gh openssl isign
+          brew install curl jq gh openssl
           echo "✅ Tools installed"
+
+      - name: Install isign from source
+        run: |
+          echo "⬇️ Cloning isign..."
+          git clone https://github.com/saucelabs/isign.git
+          cd isign
+          echo "🔧 Building isign..."
+          make
+          sudo make install
+          echo "✅ isign installed from source"
 
       - name: Validate environment variables
         run: |
