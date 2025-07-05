@@ -28,11 +28,11 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Install tools and isign (PEP 668 safe)
-  run: |
-    brew install curl jq gh openssl libimobiledevice usbmuxd
-    python3 -m pip install --break-system-packages --upgrade pip setuptools wheel
-    python3 -m pip install --break-system-packages git+https://github.com/saucelabs/isign.git
-    echo "✅ Tools and isign installed safely"
+        run: |
+          brew install curl jq gh openssl libimobiledevice usbmuxd
+          python3 -m pip install --break-system-packages --upgrade pip setuptools wheel
+          python3 -m pip install --break-system-packages git+https://github.com/saucelabs/isign.git
+          echo "✅ Tools and isign installed"
 
       - name: Validate environment variables
         run: |
