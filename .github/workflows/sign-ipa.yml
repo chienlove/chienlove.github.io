@@ -124,28 +124,30 @@ jobs:
 
             # Patch Info.plist
             find Payload -name Info.plist | while read plist; do
-              /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $IDENTIFIER" "$plist" || true
+              if /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$plist" >/dev/null 2>&1; then
+                /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $IDENTIFIER" "$plist"
+              else
+                echo "⚠️ $plist không chứa CFBundleIdentifier"
+              fi
             done
 
-            # Patch tên app nếu cần (tuỳ bạn có dùng không)
-            # /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName My App Name" "$APP_DIR/Info.plist"
-
-            # Xoá code sign cũ
+            # Remove old sign
             rm -rf "$APP_DIR/_CodeSignature"
             rm -f "$APP_DIR/embedded.mobileprovision"
 
-            # Patch trong binary (Mach-O)
-            BIN_PATH=$(find "$APP_DIR" -type f -perm +111 -exec file {} \; | grep "Mach-O" | cut -d: -f1 | head -n 1)
+            # Find binary via CFBundleExecutable
+            APP_EXEC=$(/usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$APP_DIR/Info.plist" 2>/dev/null || echo "")
+            BIN_PATH="$APP_DIR/$APP_EXEC"
+
             if [ -f "$BIN_PATH" ]; then
               echo "✏️ Patching binary $BIN_PATH..."
-              # chỉ patch khi độ dài không vượt quá
               if [ ${#IDENTIFIER} -le ${#OLD_ID} ]; then
                 sed -i '' "s/$OLD_ID/$IDENTIFIER/g" "$BIN_PATH"
               else
-                echo "⚠️ Cannot patch binary: New ID too long ($IDENTIFIER)"
+                echo "⚠️ Cannot patch binary: New ID too long ($IDENTIFIER > $OLD_ID)"
               fi
             else
-              echo "⚠️ Binary file not found"
+              echo "⚠️ Binary file not found: $BIN_PATH"
             fi
 
             zip -qr "../cleaned/$IPA" Payload
