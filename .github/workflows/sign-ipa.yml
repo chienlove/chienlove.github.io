@@ -24,7 +24,7 @@ jobs:
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v3
 
       - name: Fetch certificate info from Supabase
@@ -72,25 +72,26 @@ jobs:
           IPA_NAME=$(ls *.ipa)
           echo "IPA_NAME=$IPA_NAME" >> $GITHUB_ENV
 
-      - name: Install zsign
+      - name: Install Zsign
         run: |
+          brew install pkg-config openssl minizip
           git clone https://github.com/zhlynn/zsign.git
-          cd zsign
-          make
+          cd zsign/build/macos
+          make clean && make
           sudo cp zsign /usr/local/bin/
-          cd ..
 
       - name: Sign IPA with zsign
         run: |
           IPA_NAME=$(ls *.ipa)
           OUT_NAME="signed.ipa"
+          IDENTIFIER="${{ github.event.inputs.identifier }}"
 
-          if [ -z "${{ github.event.inputs.identifier }}" ]; then
+          if [ -z "$IDENTIFIER" ]; then
             echo "⚠️ No identifier provided. Signing with original bundle ID."
             zsign -k cert.p12 -p "$CERT_PASSWORD" -m profile.mobileprovision -o "$OUT_NAME" "$IPA_NAME"
           else
-            echo "🆔 Signing with new bundle ID: ${{ github.event.inputs.identifier }}"
-            zsign -k cert.p12 -p "$CERT_PASSWORD" -m profile.mobileprovision -o "$OUT_NAME" -b "${{ github.event.inputs.identifier }}" "$IPA_NAME"
+            echo "🆔 Signing with new bundle ID: $IDENTIFIER"
+            zsign -k cert.p12 -p "$CERT_PASSWORD" -m profile.mobileprovision -o "$OUT_NAME" -b "$IDENTIFIER" "$IPA_NAME"
           fi
 
       - name: Upload signed IPA back to release
