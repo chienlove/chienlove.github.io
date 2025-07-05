@@ -1,4 +1,4 @@
-name: Sign IPA with optional identifier
+name: Sign IPA with Zsign
 
 on:
   workflow_dispatch:
@@ -24,10 +24,10 @@ jobs:
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Fetch cert info from Supabase
+      - name: Fetch certificate info from Supabase
         run: |
           response=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
             -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
@@ -39,7 +39,7 @@ jobs:
           json_data=$(echo "$response" | sed '/HTTP_STATUS/d')
 
           if [ "$http_status" -ne 200 ]; then
-            echo "::error::Supabase API error $http_status"
+            echo "::error::Supabase API returned $http_status"
             exit 1
           fi
 
@@ -53,110 +53,47 @@ jobs:
           echo "CERT_PROVISION_URL=$CERT_PROVISION_URL" >> $GITHUB_ENV
           echo "CERT_PASSWORD=$CERT_PASSWORD" >> $GITHUB_ENV
 
-      - name: Download certificates
+      - name: Download certificate & provisioning
         run: |
           curl -L "$CERT_P12_URL" -o cert.p12
-          curl -L "$CERT_PROVISION_URL" -o embedded.mobileprovision
+          curl -L "$CERT_PROVISION_URL" -o profile.mobileprovision
 
-      - name: Set tag variable
-        run: echo "TAG=${{ github.event.inputs.tag }}" >> $GITHUB_ENV
+      - name: Set environment variables
+        run: |
+          echo "TAG=${{ github.event.inputs.tag }}" >> $GITHUB_ENV
+          echo "IDENTIFIER=${{ github.event.inputs.identifier }}" >> $GITHUB_ENV
 
       - name: Verify release exists
-        run: gh release view "${{ github.event.inputs.tag }}" --repo "$REPO"
+        run: gh release view "$TAG" --repo "$REPO"
 
       - name: Download IPA from release
         run: |
-          gh release download "${{ github.event.inputs.tag }}" --repo "$REPO" --pattern "*.ipa" --clobber
+          gh release download "$TAG" --repo "$REPO" --pattern "*.ipa" --clobber
           IPA_NAME=$(ls *.ipa)
           echo "IPA_NAME=$IPA_NAME" >> $GITHUB_ENV
 
-      - name: Unpack IPA and optionally change Bundle ID
+      - name: Install zsign
         run: |
-          unzip -q "$IPA_NAME" -d unpacked
-          APP_PATH=$(find unpacked/Payload -name "*.app" -print -quit)
-
-          if [ -z "$APP_PATH" ]; then
-            echo "::error::App bundle not found"
-            exit 1
-          fi
-
-          echo "📍 Found app: $APP_PATH"
-
-          find "$APP_PATH" -name "_CodeSignature" -type d -exec rm -rf {} +
-          rm -f "$APP_PATH/CodeResources"
-          cp embedded.mobileprovision "$APP_PATH/embedded.mobileprovision"
-
-          # ✅ Gán trực tiếp identifier
-          NEW_ID="${{ github.event.inputs.identifier }}"
-
-          if [ -n "$NEW_ID" ]; then
-            echo "🆔 Changing bundle ID to $NEW_ID"
-            /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $NEW_ID" "$APP_PATH/Info.plist"
-          else
-            echo "⚠️ No identifier provided. Keeping original bundle ID."
-          fi
-
-      - name: Import certificate
-        run: |
-          security create-keychain -p temppass temp.keychain
-          security unlock-keychain -p temppass temp.keychain
-          security import cert.p12 -k temp.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple: -s -k temppass temp.keychain
-          security list-keychains -s temp.keychain login.keychain
-          security set-keychain-settings temp.keychain
-
-      - name: Generate minimal entitlements
-        run: |
-          TEAM_ID="6VN5G6SGEQ"
-          echo '<?xml version="1.0" encoding="UTF-8"?>' > entitlements.xcent
-          echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> entitlements.xcent
-          echo '<plist version="1.0">' >> entitlements.xcent
-          echo '<dict>' >> entitlements.xcent
-          echo "  <key>application-identifier</key>" >> entitlements.xcent
-          echo "  <string>$TEAM_ID</string>" >> entitlements.xcent
-          echo "  <key>get-task-allow</key>" >> entitlements.xcent
-          echo "  <false/>" >> entitlements.xcent
-          echo '</dict>' >> entitlements.xcent
-          echo '</plist>' >> entitlements.xcent
-
-      - name: Sign all components
-        run: |
-          APP_PATH=$(find unpacked/Payload -name "*.app" -print -quit)
-          SIGN_ID=$(security find-identity -v temp.keychain | grep "iPhone" | head -n1 | awk '{print $2}')
-
-          if [ -z "$SIGN_ID" ]; then
-            echo "::error::Signing identity not found"
-            exit 1
-          fi
-
-          echo "🔏 Signing with: $SIGN_ID"
-
-          if [ -d "$APP_PATH/Frameworks" ]; then
-            find "$APP_PATH/Frameworks" -name "*.framework" -type d -exec codesign -f -s "$SIGN_ID" --timestamp=none --entitlements entitlements.xcent {} \;
-          fi
-
-          if [ -d "$APP_PATH/PlugIns" ]; then
-            find "$APP_PATH/PlugIns" -name "*.appex" -type d -exec codesign -f -s "$SIGN_ID" --timestamp=none --entitlements entitlements.xcent {} \;
-          fi
-
-          codesign -f -s "$SIGN_ID" --timestamp=none --entitlements entitlements.xcent "$APP_PATH"
-          echo "✅ Signing completed"
-
-      - name: Verify codesign
-        run: |
-          APP_PATH=$(find unpacked/Payload -name "*.app" -print -quit)
-          echo "🔍 Verifying codesign..."
-          codesign --verify --deep --strict --verbose=2 "$APP_PATH"
-
-      - name: Repack IPA
-        run: |
-          cd unpacked
-          zip -qr ../signed.ipa Payload
+          git clone https://github.com/zhlynn/zsign.git
+          cd zsign
+          make
+          sudo cp zsign /usr/local/bin/
           cd ..
 
-      - name: Upload signed IPA
+      - name: Sign IPA with zsign
         run: |
-          mv signed.ipa "$IPA_NAME"
-          gh release upload "${{ github.event.inputs.tag }}" "$IPA_NAME" \
-            --repo "$REPO" --clobber
-          echo "🎉 Signed IPA uploaded"
+          IPA_NAME=$(ls *.ipa)
+          OUT_NAME="signed.ipa"
+
+          if [ -z "${{ github.event.inputs.identifier }}" ]; then
+            echo "⚠️ No identifier provided. Signing with original bundle ID."
+            zsign -k cert.p12 -p "$CERT_PASSWORD" -m profile.mobileprovision -o "$OUT_NAME" "$IPA_NAME"
+          else
+            echo "🆔 Signing with new bundle ID: ${{ github.event.inputs.identifier }}"
+            zsign -k cert.p12 -p "$CERT_PASSWORD" -m profile.mobileprovision -o "$OUT_NAME" -b "${{ github.event.inputs.identifier }}" "$IPA_NAME"
+          fi
+
+      - name: Upload signed IPA back to release
+        run: |
+          gh release upload "$TAG" signed.ipa --repo "$REPO" --clobber
+          echo "🎉 Signed IPA uploaded successfully"
