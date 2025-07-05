@@ -1,4 +1,4 @@
-name: Sign IPA with Zsign
+name: Sign all IPAs in release with Zsign
 
 on:
   workflow_dispatch:
@@ -7,7 +7,7 @@ on:
         description: "Release tag chứa IPA"
         required: true
       identifier:
-        description: "(Tùy chọn) Bundle Identifier mới"
+        description: "(Tùy chọn) Bundle Identifier mới (áp dụng cho tất cả IPA)"
         required: false
 
 jobs:
@@ -24,7 +24,7 @@ jobs:
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v3
 
       - name: Fetch certificate info from Supabase
@@ -45,20 +45,16 @@ jobs:
 
           echo "$json_data" | jq '.[0]' > cert.json
 
-          export CERT_P12_URL=$(jq -r '.p12_url' cert.json)
-          export CERT_PROVISION_URL=$(jq -r '.provision_url' cert.json)
-          export CERT_PASSWORD=$(jq -r '.password' cert.json)
+          echo "CERT_P12_URL=$(jq -r '.p12_url' cert.json)" >> $GITHUB_ENV
+          echo "CERT_PROVISION_URL=$(jq -r '.provision_url' cert.json)" >> $GITHUB_ENV
+          echo "CERT_PASSWORD=$(jq -r '.password' cert.json)" >> $GITHUB_ENV
 
-          echo "CERT_P12_URL=$CERT_P12_URL" >> $GITHUB_ENV
-          echo "CERT_PROVISION_URL=$CERT_PROVISION_URL" >> $GITHUB_ENV
-          echo "CERT_PASSWORD=$CERT_PASSWORD" >> $GITHUB_ENV
-
-      - name: Download certificate & provisioning
+      - name: Download certificate & provisioning profile
         run: |
           curl -L "$CERT_P12_URL" -o cert.p12
           curl -L "$CERT_PROVISION_URL" -o profile.mobileprovision
 
-      - name: Set environment variables
+      - name: Set workflow inputs
         run: |
           echo "TAG=${{ github.event.inputs.tag }}" >> $GITHUB_ENV
           echo "IDENTIFIER=${{ github.event.inputs.identifier }}" >> $GITHUB_ENV
@@ -66,11 +62,15 @@ jobs:
       - name: Verify release exists
         run: gh release view "$TAG" --repo "$REPO"
 
-      - name: Download IPA from release
+      - name: Download all IPA files from release
         run: |
           gh release download "$TAG" --repo "$REPO" --pattern "*.ipa" --clobber
-          IPA_NAME=$(ls *.ipa)
-          echo "IPA_NAME=$IPA_NAME" >> $GITHUB_ENV
+          COUNT=$(ls *.ipa 2>/dev/null | wc -l)
+          if [ "$COUNT" -eq 0 ]; then
+            echo "::error::❌ No IPA files found in release"
+            exit 1
+          fi
+          echo "📦 Found $COUNT IPA files"
 
       - name: Install Zsign
         run: |
@@ -80,21 +80,28 @@ jobs:
           make clean && make
           sudo cp ../../bin/zsign /usr/local/bin/
 
-      - name: Sign IPA with Zsign
+      - name: Sign all IPA files with Zsign
         run: |
-          IPA_NAME=$(ls *.ipa)
-          OUT_NAME="signed.ipa"
+          mkdir -p signed
           IDENTIFIER="${{ github.event.inputs.identifier }}"
 
-          if [ -z "$IDENTIFIER" ]; then
-            echo "⚠️ No identifier provided. Signing with original bundle ID."
-            zsign -k cert.p12 -p "$CERT_PASSWORD" -m profile.mobileprovision -o "$OUT_NAME" "$IPA_NAME"
-          else
-            echo "🆔 Signing with new bundle ID: $IDENTIFIER"
-            zsign -k cert.p12 -p "$CERT_PASSWORD" -m profile.mobileprovision -o "$OUT_NAME" -b "$IDENTIFIER" "$IPA_NAME"
-          fi
+          for IPA in *.ipa; do
+            echo "🔧 Processing $IPA..."
+            OUT_NAME="signed/$IPA"
 
-      - name: Upload signed IPA to release
+            if [ -z "$IDENTIFIER" ]; then
+              echo "⚠️ No identifier provided. Signing $IPA with original bundle ID."
+              zsign -k cert.p12 -p "$CERT_PASSWORD" -m profile.mobileprovision -o "$OUT_NAME" "$IPA"
+            else
+              echo "🆔 Signing $IPA with new bundle ID: $IDENTIFIER"
+              zsign -k cert.p12 -p "$CERT_PASSWORD" -m profile.mobileprovision -o "$OUT_NAME" -b "$IDENTIFIER" "$IPA"
+            fi
+          done
+
+      - name: Upload signed IPAs back to release
         run: |
-          gh release upload "$TAG" signed.ipa --repo "$REPO" --clobber
-          echo "🎉 Signed IPA uploaded successfully"
+          for FILE in signed/*.ipa; do
+            echo "⬆️ Uploading $FILE..."
+            gh release upload "$TAG" "$FILE" --repo "$REPO" --clobber
+          done
+          echo "🎉 All signed IPA files uploaded"
