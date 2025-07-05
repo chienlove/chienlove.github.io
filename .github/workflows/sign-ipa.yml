@@ -110,7 +110,7 @@ jobs:
           fi
 
           echo "🔏 Signing with ID: $SIGN_ID"
-          codesign -f -s "$SIGN_ID" --entitlements "$APP_PATH/archived-expanded-entitlements.xcent" "$APP_PATH" || {
+          codesign -f -s "$SIGN_ID" "$APP_PATH" || {
             echo "::error::Codesign failed"
             exit 1
           }
