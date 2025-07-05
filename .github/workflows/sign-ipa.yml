@@ -1,13 +1,13 @@
-name: Sign all IPAs in release with Zsign
+name: Sign and Resign IPA with Bundle ID Replacement
 
 on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag chứa IPA"
+        description: "Release tag containing IPA"
         required: true
       identifier:
-        description: "(Tùy chọn) Bundle Identifier mới"
+        description: "New Bundle Identifier"
         required: true
 
 jobs:
@@ -72,9 +72,13 @@ jobs:
           fi
           echo "📦 Found $COUNT IPA files"
 
+      - name: Install dependencies
+        run: |
+          brew install pkg-config openssl minizip libplist
+          pip install biplist
+
       - name: Install Zsign
         run: |
-          brew install pkg-config openssl minizip
           git clone https://github.com/zhlynn/zsign.git
           cd zsign/build/macos
           make clean && make
@@ -92,22 +96,59 @@ jobs:
           echo "<plist version=\"1.0\">" >> entitlements.xcent
           echo "<dict>" >> entitlements.xcent
           echo "  <key>application-identifier</key>" >> entitlements.xcent
-          echo "  <string>$TEAM_ID.${{ github.event.inputs.identifier }}</string>" >> entitlements.xcent
+          echo "  <string>$TEAM_ID.$IDENTIFIER</string>" >> entitlements.xcent
           echo "  <key>get-task-allow</key>" >> entitlements.xcent
           echo "  <false/>" >> entitlements.xcent
+          echo "  <key>keychain-access-groups</key>" >> entitlements.xcent
+          echo "  <array><string>$TEAM_ID.$IDENTIFIER</string></array>" >> entitlements.xcent
           echo "</dict>" >> entitlements.xcent
           echo "</plist>" >> entitlements.xcent
 
-      - name: Sign all IPA files with Zsign
+      - name: Process each IPA file
         run: |
           mkdir -p signed
           for IPA in *.ipa; do
-            echo "🔧 Signing $IPA with bundle ID $IDENTIFIER..."
+            echo "🔧 Processing $IPA..."
+            
+            # Extract IPA
+            unzip -q "$IPA" -d temp_ipa
+            
+            # Find .app directory
+            APP_DIR=$(find temp_ipa/Payload -name "*.app" -type d -maxdepth 1 | head -1)
+            
+            # 1. Replace bundle ID in Info.plist
+            plutil -replace CFBundleIdentifier -string "$IDENTIFIER" "$APP_DIR/Info.plist"
+            
+            # 2. Replace bundle ID in other plist files
+            find "$APP_DIR" -name "*.plist" -exec plutil -replace CFBundleIdentifier -string "$IDENTIFIER" {} \; 2>/dev/null || true
+            
+            # 3. Replace bundle ID in embedded binaries (if needed)
+            # This is more complex and may require binary patching
+            
+            # Repackage IPA
+            cd temp_ipa
+            zip -qr "../temp_resigned.ipa" .
+            cd ..
+            
+            # Sign with Zsign
+            echo "⚙️ Signing $IPA with bundle ID $IDENTIFIER..."
             zsign -k cert.p12 -p "$CERT_PASSWORD" \
                   -m profile.mobileprovision \
                   -e entitlements.xcent \
                   -b "$IDENTIFIER" \
-                  -o "signed/$IPA" "$IPA"
+                  --force \
+                  -o "signed/$IPA" "temp_resigned.ipa"
+            
+            # Clean up
+            rm -rf temp_ipa temp_resigned.ipa
+            
+            # Verify the signed IPA
+            echo "🔍 Verifying signed $IPA..."
+            unzip -q "signed/$IPA" -d temp_signed
+            SIGNED_APP_DIR=$(find temp_signed/Payload -name "*.app" -type d -maxdepth 1 | head -1)
+            echo "ℹ️ Final bundle ID in Info.plist:"
+            plutil -p "$SIGNED_APP_DIR/Info.plist" | grep CFBundleIdentifier
+            rm -rf temp_signed
           done
 
       - name: Upload signed IPA files to release
