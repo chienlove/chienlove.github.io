@@ -83,19 +83,30 @@ jobs:
       - name: Extract Team ID and create entitlements
         run: |
           security cms -D -i profile.mobileprovision > provision.plist
-          TEAM_ID=$(plutil -extract TeamIdentifier.0 xml1 -o - provision.plist | xmllint --xpath 'string(//string)' -)
-          echo "✅ Extracted TEAM_ID: $TEAM_ID"
 
-          echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" > entitlements.xcent
-          echo "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">" >> entitlements.xcent
-          echo "<plist version=\"1.0\">" >> entitlements.xcent
-          echo "<dict>" >> entitlements.xcent
-          echo "  <key>application-identifier</key>" >> entitlements.xcent
-          echo "  <string>$TEAM_ID</string>" >> entitlements.xcent
-          echo "  <key>get-task-allow</key>" >> entitlements.xcent
-          echo "  <false/>" >> entitlements.xcent
-          echo "</dict>" >> entitlements.xcent
-          echo "</plist>" >> entitlements.xcent
+          IDENTIFIER="${{ github.event.inputs.identifier }}"
+          TEAM_ID=$(plutil -extract TeamIdentifier.0 xml1 -o - provision.plist | xmllint --xpath 'string(//string)' -)
+
+          if [ -z "$IDENTIFIER" ]; then
+            APP_ID=$(plutil -extract Entitlements.application-identifier xml1 -o - provision.plist | xmllint --xpath 'string(//string)' -)
+          else
+            APP_ID="${TEAM_ID}.${IDENTIFIER}"
+          fi
+
+          echo "✅ Using App ID: $APP_ID"
+
+          cat <<EOF > entitlements.xcent
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>application-identifier</key>
+  <string>$APP_ID</string>
+  <key>get-task-allow</key>
+  <false/>
+</dict>
+</plist>
+EOF
 
       - name: Sign all IPA files with Zsign
         run: |
