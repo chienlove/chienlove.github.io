@@ -1,4 +1,4 @@
-name: Sign IPA using codesign
+name: Sign IPA using codesign (fixed)
 
 on:
   workflow_dispatch:
@@ -87,8 +87,18 @@ jobs:
           fi
 
           echo "📍 Found app: $APP_PATH"
-          /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $NEW_ID" "$APP_PATH/Info.plist"
+
+          # Xóa chữ ký cũ
+          rm -rf "$APP_PATH/_CodeSignature"
+          rm -f "$APP_PATH/CodeResources"
+
+          # Gắn profile mới
           cp embedded.mobileprovision "$APP_PATH/embedded.mobileprovision"
+
+          # Đổi bundle ID
+          /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $NEW_ID" "$APP_PATH/Info.plist"
+
+          echo "✅ App cleaned and updated"
 
       - name: Import .p12 into temporary keychain (with access)
         run: |
@@ -99,6 +109,11 @@ jobs:
           security list-keychains -s temp.keychain login.keychain
           security set-keychain-settings temp.keychain
           echo "✅ Certificate imported and accessible by codesign"
+
+      - name: Show provisioning info
+        run: |
+          echo "🔍 Provisioning Info:"
+          security cms -D -i embedded.mobileprovision | grep -A 10 'application-identifier'
 
       - name: Codesign .app
         run: |
