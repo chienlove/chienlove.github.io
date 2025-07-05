@@ -19,7 +19,7 @@ const safeLog = (value, visibleChars = 4) => {
 // Khởi tạo Supabase client với kiểm tra nghiêm ngặt
 let supabase;
 try {
-  if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+  if (!process.env.SUPABASE_URL) {
     throw new Error('NEXT_PUBLIC_SUPABASE_URL is not defined');
   }
 
@@ -28,7 +28,7 @@ try {
   }
 
   supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.SUPABASE_URL,
     process.env.SUPABASE_SERVICE_ROLE_KEY
   );
 
@@ -36,7 +36,7 @@ try {
 } catch (initError) {
   console.error('❌ Supabase initialization failed:', initError.message);
   console.error('Configuration:', {
-    NEXT_PUBLIC_SUPABASE_URL: safeLog(process.env.NEXT_PUBLIC_SUPABASE_URL),
+    SUPABASE_URL: safeLog(process.env.SUPABASE_URL),
     SUPABASE_SERVICE_ROLE_KEY: safeLog(process.env.SUPABASE_SERVICE_ROLE_KEY),
   });
   throw initError; // Crash early nếu config sai
@@ -173,7 +173,7 @@ export default async function handler(req, res) {
         stack: error.stack,
         details: {
           supabase_config: {
-            url: safeLog(process.env.NEXT_PUBLIC_SUPABASE_URL),
+            url: safeLog(process.env.SUPABASE_URL),
             key_configured: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
           },
           github_pat_configured: !!process.env.GH_PAT,
