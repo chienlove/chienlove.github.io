@@ -90,14 +90,15 @@ jobs:
           /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $NEW_ID" "$APP_PATH/Info.plist"
           cp embedded.mobileprovision "$APP_PATH/embedded.mobileprovision"
 
-      - name: Import .p12 into temporary keychain
+      - name: Import .p12 into temporary keychain (with access)
         run: |
           security create-keychain -p temppass temp.keychain
           security unlock-keychain -p temppass temp.keychain
           security import cert.p12 -k temp.keychain -P "$CERT_PASSWORD" -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k temppass temp.keychain
           security list-keychains -s temp.keychain login.keychain
           security set-keychain-settings temp.keychain
-          echo "✅ Certificate imported to temp.keychain"
+          echo "✅ Certificate imported and accessible by codesign"
 
       - name: Codesign .app
         run: |
@@ -110,7 +111,7 @@ jobs:
           fi
 
           echo "🔏 Signing with ID: $SIGN_ID"
-          codesign -f -s "$SIGN_ID" "$APP_PATH" || {
+          codesign -f -s "$SIGN_ID" --verbose "$APP_PATH" || {
             echo "::error::Codesign failed"
             exit 1
           }
