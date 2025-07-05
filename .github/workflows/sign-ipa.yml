@@ -80,33 +80,7 @@ jobs:
           make clean && make
           sudo cp ../../bin/zsign /usr/local/bin/
 
-      - name: Extract Team ID and create entitlements
-        run: |
-          security cms -D -i profile.mobileprovision > provision.plist
-
-          IDENTIFIER="${{ github.event.inputs.identifier }}"
-          TEAM_ID=$(plutil -extract TeamIdentifier.0 xml1 -o - provision.plist | xmllint --xpath 'string(//string)' -)
-
-          if [ -z "$IDENTIFIER" ]; then
-            APP_ID=$(plutil -extract Entitlements.application-identifier xml1 -o - provision.plist | xmllint --xpath 'string(//string)' -)
-          else
-            APP_ID="${TEAM_ID}.${IDENTIFIER}"
-          fi
-
-          echo "✅ Using App ID: $APP_ID"
-
-          echo '<?xml version="1.0" encoding="UTF-8"?>' > entitlements.xcent
-          echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> entitlements.xcent
-          echo '<plist version="1.0">' >> entitlements.xcent
-          echo '<dict>' >> entitlements.xcent
-          echo '  <key>application-identifier</key>' >> entitlements.xcent
-          echo "  <string>$APP_ID</string>" >> entitlements.xcent
-          echo '  <key>get-task-allow</key>' >> entitlements.xcent
-          echo '  <false/>' >> entitlements.xcent
-          echo '</dict>' >> entitlements.xcent
-          echo '</plist>' >> entitlements.xcent
-
-      - name: Sign all IPA files with Zsign
+      - name: Sign all IPA files with Zsign (no entitlements)
         run: |
           mkdir -p signed
           IDENTIFIER="${{ github.event.inputs.identifier }}"
@@ -118,12 +92,10 @@ jobs:
             if [ -z "$IDENTIFIER" ]; then
               zsign -k cert.p12 -p "$CERT_PASSWORD" \
                     -m profile.mobileprovision \
-                    -e entitlements.xcent \
                     -o "$OUT_NAME" "$IPA"
             else
               zsign -k cert.p12 -p "$CERT_PASSWORD" \
                     -m profile.mobileprovision \
-                    -e entitlements.xcent \
                     -b "$IDENTIFIER" \
                     -o "$OUT_NAME" "$IPA"
             fi
