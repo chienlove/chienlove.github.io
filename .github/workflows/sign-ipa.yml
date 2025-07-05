@@ -85,14 +85,10 @@ jobs:
 
           echo "📍 Found app: $APP_PATH"
 
-          # Clean signature
           find "$APP_PATH" -name "_CodeSignature" -type d -exec rm -rf {} +
           rm -f "$APP_PATH/CodeResources"
-
-          # Add embedded profile
           cp embedded.mobileprovision "$APP_PATH/embedded.mobileprovision"
 
-          # Conditionally change bundle ID
           if [ -n "$NEW_ID" ]; then
             echo "🆔 Changing bundle ID to $NEW_ID"
             /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $NEW_ID" "$APP_PATH/Info.plist"
@@ -136,15 +132,21 @@ jobs:
           echo "🔏 Signing with: $SIGN_ID"
 
           if [ -d "$APP_PATH/Frameworks" ]; then
-            find "$APP_PATH/Frameworks" -name "*.framework" -type d -exec codesign -f -s "$SIGN_ID" --entitlements entitlements.xcent {} \;
+            find "$APP_PATH/Frameworks" -name "*.framework" -type d -exec codesign -f -s "$SIGN_ID" --timestamp=none --entitlements entitlements.xcent {} \;
           fi
 
           if [ -d "$APP_PATH/PlugIns" ]; then
-            find "$APP_PATH/PlugIns" -name "*.appex" -type d -exec codesign -f -s "$SIGN_ID" --entitlements entitlements.xcent {} \;
+            find "$APP_PATH/PlugIns" -name "*.appex" -type d -exec codesign -f -s "$SIGN_ID" --timestamp=none --entitlements entitlements.xcent {} \;
           fi
 
-          codesign -f -s "$SIGN_ID" --entitlements entitlements.xcent "$APP_PATH"
+          codesign -f -s "$SIGN_ID" --timestamp=none --entitlements entitlements.xcent "$APP_PATH"
           echo "✅ Signing completed"
+
+      - name: Verify codesign
+        run: |
+          APP_PATH=$(find unpacked/Payload -name "*.app" -print -quit)
+          echo "🔍 Verifying codesign..."
+          codesign --verify --deep --strict --verbose=2 "$APP_PATH"
 
       - name: Repack IPA
         run: |
