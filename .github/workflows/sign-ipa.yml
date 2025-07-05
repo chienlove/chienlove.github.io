@@ -1,4 +1,4 @@
-name: Sign IPA using codesign (recursive fixed)
+name: Sign IPA using codesign (with entitlements)
 
 on:
   workflow_dispatch:
@@ -98,8 +98,6 @@ jobs:
           # Đổi bundle ID
           /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $NEW_ID" "$APP_PATH/Info.plist"
 
-          echo "✅ App cleaned and updated"
-
       - name: Import .p12 into temporary keychain (with access)
         run: |
           security create-keychain -p temppass temp.keychain
@@ -109,6 +107,12 @@ jobs:
           security list-keychains -s temp.keychain login.keychain
           security set-keychain-settings temp.keychain
           echo "✅ Certificate imported and accessible by codesign"
+
+      - name: Extract entitlements from provisioning profile
+        run: |
+          security cms -D -i embedded.mobileprovision > profile.plist
+          /usr/libexec/PlistBuddy -x -c 'Print :Entitlements' profile.plist > entitlements.xcent
+          cat entitlements.xcent
 
       - name: Recursive codesign all components
         run: |
@@ -124,17 +128,16 @@ jobs:
 
           # Sign embedded frameworks
           if [ -d "$APP_PATH/Frameworks" ]; then
-            find "$APP_PATH/Frameworks" -name "*.framework" -type d -exec codesign -f -s "$SIGN_ID" --preserve-metadata=entitlements,requirements {} \;
+            find "$APP_PATH/Frameworks" -name "*.framework" -type d -exec codesign -f -s "$SIGN_ID" --entitlements entitlements.xcent {} \;
           fi
 
           # Sign extensions (.appex)
           if [ -d "$APP_PATH/PlugIns" ]; then
-            find "$APP_PATH/PlugIns" -name "*.appex" -type d -exec codesign -f -s "$SIGN_ID" --preserve-metadata=entitlements,requirements {} \;
+            find "$APP_PATH/PlugIns" -name "*.appex" -type d -exec codesign -f -s "$SIGN_ID" --entitlements entitlements.xcent {} \;
           fi
 
           # Sign main app last
-          codesign -f -s "$SIGN_ID" --preserve-metadata=entitlements,requirements "$APP_PATH"
-
+          codesign -f -s "$SIGN_ID" --entitlements entitlements.xcent "$APP_PATH"
           echo "✅ Recursive codesign completed"
 
       - name: Repack IPA
