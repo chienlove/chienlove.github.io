@@ -18,29 +18,50 @@ function readFile(file) {
   return fs.readFileSync(file.filepath);
 }
 
+async function removeOldFiles(existingCert) {
+  if (!existingCert) return;
+
+  try {
+    const { data: oldCert } = await supabase
+      .from('certificates')
+      .select('p12_url, provision_url')
+      .eq('id', existingCert.id)
+      .single();
+
+    if (oldCert) {
+      const extractPath = (url) => url.split('/certificates/')[1];
+      const filesToRemove = [
+        extractPath(oldCert.p12_url),
+        extractPath(oldCert.provision_url)
+      ].filter(Boolean);
+
+      if (filesToRemove.length > 0) {
+        await supabase.storage.from('certificates').remove(filesToRemove);
+        console.log('♻️ Đã xóa file cũ:', filesToRemove);
+      }
+    }
+  } catch (error) {
+    console.error('❌ Lỗi khi xóa file cũ:', error.message);
+  }
+}
+
 export default async function handler(req, res) {
   console.log("📥 [upload-certs] Request method:", req.method);
   if (req.method !== 'POST') {
-    return res.status(405).json({ 
-      success: false,
-      message: 'Method not allowed' 
-    });
+    return res.status(405).json({ success: false, message: 'Method not allowed' });
   }
 
   try {
     // 1. Parse form data
+    const form = new IncomingForm({ 
+      keepExtensions: true,
+      maxFileSize: 10 * 1024 * 1024 // 10MB
+    });
+
     const { fields, files } = await new Promise((resolve, reject) => {
-      const form = new IncomingForm({ 
-        keepExtensions: true,
-        maxFileSize: 10 * 1024 * 1024 // 10MB
-      });
       form.parse(req, (err, fields, files) => {
-        if (err) {
-          console.error("❌ Form parse error:", err);
-          reject(new Error("Lỗi phân tích form data"));
-        } else {
-          resolve({ fields, files });
-        }
+        if (err) reject(new Error(`Lỗi phân tích form: ${err.message}`));
+        else resolve({ fields, files });
       });
     });
 
@@ -66,16 +87,16 @@ export default async function handler(req, res) {
     console.log("🔍 Checking existing certificate...");
     const { data: existingCert, error: checkError } = await supabase
       .from('certificates')
-      .select('id')
+      .select('id, p12_url, provision_url')
       .eq('name', certName)
       .maybeSingle();
 
-    if (checkError) {
-      console.error("❌ Check existing error:", checkError);
-      throw new Error("Lỗi kiểm tra chứng chỉ tồn tại");
-    }
+    if (checkError) throw new Error(`Lỗi kiểm tra cert: ${checkError.message}`);
 
-    // 4. Upload files to storage
+    // 4. Xóa file cũ nếu tồn tại
+    await removeOldFiles(existingCert);
+
+    // 5. Upload files to storage
     console.log("⬆️ Uploading files to storage...");
     const timestamp = Date.now();
     const p12Filename = `${certName}-${timestamp}.p12`;
@@ -86,34 +107,24 @@ export default async function handler(req, res) {
         .from('certificates')
         .upload(p12Filename, readFile(files.p12[0]), {
           contentType: 'application/x-pkcs12',
-          upsert: false
+          upsert: true
         }),
       
       supabase.storage
         .from('certificates')
         .upload(provisionFilename, readFile(files.provision[0]), {
           contentType: 'application/octet-stream',
-          upsert: false
+          upsert: true
         })
     ]);
 
-    // Handle upload errors
     if (p12Upload.error || provisionUpload.error) {
-      // Clean up uploaded files if any
-      const filesToRemove = [];
-      if (p12Upload.data) filesToRemove.push(p12Filename);
-      if (provisionUpload.data) filesToRemove.push(provisionFilename);
-      
-      if (filesToRemove.length > 0) {
-        await supabase.storage.from('certificates').remove(filesToRemove);
-      }
-
       throw new Error(
-        `Lỗi upload file: ${p12Upload.error?.message || provisionUpload.error?.message}`
+        `Lỗi upload: ${p12Upload.error?.message || provisionUpload.error?.message}`
       );
     }
 
-    // 5. Get public URLs
+    // 6. Get public URLs
     const p12Url = supabase.storage
       .from('certificates')
       .getPublicUrl(p12Upload.data.path).data.publicUrl;
@@ -122,41 +133,47 @@ export default async function handler(req, res) {
       .from('certificates')
       .getPublicUrl(provisionUpload.data.path).data.publicUrl;
 
-    // 6. Upsert to database (SỬA TẠI ĐÂY)
+    // 7. Xử lý database
     console.log("💾 Saving to database...");
-    const upsertData = {
-      // Chỉ thêm ID khi cập nhật bản ghi đã tồn tại
-      ...(existingCert && { id: existingCert.id }),
-      name: certName,
-      p12_url: p12Url,
-      provision_url: provisionUrl,
-      password: password,
-      updated_at: new Date().toISOString()
-    };
-
-    const { data: certData, error: dbError } = await supabase
-      .from('certificates')
-      .upsert(upsertData, {
-        onConflict: 'name', // Xử lý trùng name
-        returning: 'representation' // Trả về bản ghi đầy đủ
-      })
-      .select()
-      .single();
-
-    if (dbError) {
-      console.error("❌ Database error:", dbError);
-      // Rollback: Xóa file đã upload nếu DB lỗi
-      await supabase.storage.from('certificates').remove([p12Filename, provisionFilename]);
-      throw new Error(`Lỗi database: ${dbError.message}`);
+    let certData;
+    if (existingCert) {
+      // Cập nhật bản ghi cũ
+      const { data, error } = await supabase
+        .from('certificates')
+        .update({
+          p12_url: p12Url,
+          provision_url: provisionUrl,
+          password: password,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', existingCert.id)
+        .select()
+        .single();
+      if (error) throw error;
+      certData = data;
+    } else {
+      // Thêm bản ghi mới
+      const { data, error } = await supabase
+        .from('certificates')
+        .insert({
+          name: certName,
+          p12_url: p12Url,
+          provision_url: provisionUrl,
+          password: password
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      certData = data;
     }
 
-    // 7. Success response
+    // 8. Response
     console.log("✅ Upload completed");
     res.status(200).json({
       success: true,
       message: existingCert 
-        ? "Cập nhật chứng chỉ thành công" 
-        : "Tạo chứng chỉ mới thành công",
+        ? "Đã cập nhật chứng chỉ thành công!" 
+        : "Đã tạo chứng chỉ mới thành công!",
       data: {
         id: certData.id,
         name: certData.name,
@@ -173,11 +190,8 @@ export default async function handler(req, res) {
       message: process.env.NODE_ENV === 'development' 
         ? error.message 
         : "Lỗi hệ thống, vui lòng thử lại",
-      ...(process.env.NODE_ENV === 'development' && {
-        details: {
-          error: error.message,
-          stack: error.stack
-        }
+      ...(process.env.NODE_ENV === 'development' && { 
+        details: error.stack 
       })
     });
   }
