@@ -8,7 +8,7 @@ on:
         required: true
       identifier:
         description: "(Tùy chọn) Bundle Identifier mới"
-        required: false
+        required: true
 
 jobs:
   sign:
@@ -87,82 +87,26 @@ jobs:
           echo "✅ Extracted TEAM_ID: $TEAM_ID"
           echo "TEAM_ID=$TEAM_ID" >> $GITHUB_ENV
 
-          IDENTIFIER="${{ github.event.inputs.identifier }}"
-          if [ -z "$IDENTIFIER" ]; then
-            echo "::error::You must provide an identifier to change bundle ID"
-            exit 1
-          fi
-
           echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" > entitlements.xcent
           echo "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">" >> entitlements.xcent
           echo "<plist version=\"1.0\">" >> entitlements.xcent
           echo "<dict>" >> entitlements.xcent
           echo "  <key>application-identifier</key>" >> entitlements.xcent
-          echo "  <string>$TEAM_ID.$IDENTIFIER</string>" >> entitlements.xcent
+          echo "  <string>$TEAM_ID.${{ github.event.inputs.identifier }}</string>" >> entitlements.xcent
           echo "  <key>get-task-allow</key>" >> entitlements.xcent
           echo "  <false/>" >> entitlements.xcent
           echo "</dict>" >> entitlements.xcent
           echo "</plist>" >> entitlements.xcent
 
-      - name: Clean and patch IPA (Info.plist & binary)
-        run: |
-          mkdir -p cleaned
-          for IPA in *.ipa; do
-            echo "📦 Cleaning $IPA..."
-            mkdir -p tmp && cd tmp
-            unzip -q "../$IPA"
-
-            APP_DIR=$(find Payload -type d -name "*.app" | head -n 1)
-            if [ -z "$APP_DIR" ]; then
-              echo "⚠️ Skipped $IPA: No .app found"
-              cd .. && rm -rf tmp
-              continue
-            fi
-
-            OLD_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$APP_DIR/Info.plist" 2>/dev/null || echo "unknown")
-            echo "🔁 OLD_ID: $OLD_ID → NEW_ID: $IDENTIFIER"
-
-            # Patch Info.plist
-            find Payload -name Info.plist | while read plist; do
-              if /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$plist" >/dev/null 2>&1; then
-                /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $IDENTIFIER" "$plist"
-              else
-                echo "⚠️ $plist không chứa CFBundleIdentifier"
-              fi
-            done
-
-            # Remove old sign
-            rm -rf "$APP_DIR/_CodeSignature"
-            rm -f "$APP_DIR/embedded.mobileprovision"
-
-            # Find binary via CFBundleExecutable
-            APP_EXEC=$(/usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$APP_DIR/Info.plist" 2>/dev/null || echo "")
-            BIN_PATH="$APP_DIR/$APP_EXEC"
-
-            if [ -f "$BIN_PATH" ]; then
-              echo "✏️ Patching binary $BIN_PATH..."
-              if [ ${#IDENTIFIER} -le ${#OLD_ID} ]; then
-                sed -i '' "s/$OLD_ID/$IDENTIFIER/g" "$BIN_PATH"
-              else
-                echo "⚠️ Cannot patch binary: New ID too long ($IDENTIFIER > $OLD_ID)"
-              fi
-            else
-              echo "⚠️ Binary file not found: $BIN_PATH"
-            fi
-
-            zip -qr "../cleaned/$IPA" Payload
-            cd .. && rm -rf tmp
-          done
-          mv cleaned/* .
-
       - name: Sign all IPA files with Zsign
         run: |
           mkdir -p signed
           for IPA in *.ipa; do
-            echo "🔧 Signing $IPA..."
+            echo "🔧 Signing $IPA with bundle ID $IDENTIFIER..."
             zsign -k cert.p12 -p "$CERT_PASSWORD" \
                   -m profile.mobileprovision \
                   -e entitlements.xcent \
+                  -b "$IDENTIFIER" \
                   -o "signed/$IPA" "$IPA"
           done
 
