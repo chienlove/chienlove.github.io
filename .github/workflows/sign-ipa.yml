@@ -36,12 +36,10 @@ jobs:
             "${SUPABASE_URL}/rest/v1/certificates?select=*")
           http_status=$(echo "$response" | grep HTTP_STATUS: | cut -d':' -f2)
           json_data=$(echo "$response" | sed '/HTTP_STATUS/d')
-
           if [ "$http_status" -ne 200 ]; then
             echo "::error::Supabase API returned $http_status"
             exit 1
           fi
-
           echo "$json_data" | jq '.[0]' > cert.json
           echo "CERT_P12_URL=$(jq -r '.p12_url' cert.json)" >> $GITHUB_ENV
           echo "CERT_PROVISION_URL=$(jq -r '.provision_url' cert.json)" >> $GITHUB_ENV
@@ -75,26 +73,46 @@ jobs:
             exit 1
           fi
 
-      - name: 🔍 Check all CFBundleIdentifier values inside IPA
-        run: |
-          for IPA in *.ipa; do
-            echo "📦 Checking $IPA..."
-            unzip -q "$IPA" -d extracted
-            echo "🔎 Found CFBundleIdentifier values:"
-            for plist in $(find extracted/Payload -name Info.plist); do
-              echo "👉 $plist"
-              BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$plist" 2>/dev/null || echo "(Not Found)")
-              echo "    CFBundleIdentifier: $BUNDLE_ID"
-            done
-            rm -rf extracted
-          done
-
       - name: Install Zsign
         run: |
           brew install pkg-config openssl minizip
           git clone https://github.com/zhlynn/zsign.git
           cd zsign/build/macos && make clean && make
           sudo cp ../../bin/zsign /usr/local/bin/
+
+      - name: Patch Info.plist & Binary if identifier is set
+        if: ${{ github.event.inputs.identifier != '' }}
+        run: |
+          for IPA in *.ipa; do
+            echo "📦 Patching $IPA..."
+            APP_NAME=$(basename "$IPA" .ipa)
+            WORKDIR="/tmp/zsign_patch_$RANDOM"
+            unzip -q "$IPA" -d "$WORKDIR"
+
+            APP_DIR=$(find "$WORKDIR/Payload" -name "*.app" -type d | head -n1)
+            PLIST_PATH="$APP_DIR/Info.plist"
+            BINARY_NAME=$(/usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$PLIST_PATH")
+            BINARY_PATH="$APP_DIR/$BINARY_NAME"
+
+            OLD_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$PLIST_PATH")
+            echo "🔍 OLD Identifier: $OLD_ID"
+            echo "✏️  Setting CFBundleIdentifier to: $IDENTIFIER"
+
+            /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $IDENTIFIER" "$PLIST_PATH"
+            /usr/bin/perl -pi -e "s/\Q$OLD_ID\E/$IDENTIFIER/" "$BINARY_PATH"
+
+            NEW_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$PLIST_PATH")
+            echo "✅ Patched Info.plist: $NEW_ID"
+
+            if [[ "$NEW_ID" != "$IDENTIFIER" ]]; then
+              echo "::error::❌ Failed to patch CFBundleIdentifier"
+              exit 1
+            fi
+
+            zip -qr "$APP_NAME-patched.ipa" -j "$WORKDIR/Payload"
+            mv "$APP_NAME-patched.ipa" "$IPA"
+            rm -rf "$WORKDIR"
+          done
 
       - name: Sign all IPA files with Zsign
         run: |
@@ -132,7 +150,7 @@ jobs:
             rm -rf temp
           done
 
-      - name: Upload signed IPA files and generate install .plist
+      - name: Upload signed IPA and plist
         run: |
           BASE_URL="https://github.com/$REPO/releases/download/$TAG"
           for FILE in signed/*.ipa; do
@@ -140,10 +158,8 @@ jobs:
             APP_NAME="${FILENAME%.ipa}"
             PLIST_NAME="${APP_NAME}.plist"
 
-            echo "📤 Uploading $FILENAME to release..."
             gh release upload "$TAG" "$FILE" --repo "$REPO" --clobber
 
-            echo "📝 Generating $PLIST_NAME..."
             echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" > "$PLIST_NAME"
             echo "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">" >> "$PLIST_NAME"
             echo "<plist version=\"1.0\"><dict>" >> "$PLIST_NAME"
@@ -161,7 +177,6 @@ jobs:
             echo "  </dict></array></dict></plist>" >> "$PLIST_NAME"
 
             gh release upload "$TAG" "$PLIST_NAME" --repo "$REPO" --clobber
-
             echo "📲 Install link:"
             echo "itms-services://?action=download-manifest&url=$BASE_URL/$PLIST_NAME"
           done
