@@ -61,17 +61,19 @@ jobs:
           echo "TAG=${{ github.event.inputs.tag }}" >> $GITHUB_ENV
           echo "IDENTIFIER=${{ github.event.inputs.identifier }}" >> $GITHUB_ENV
 
+      - name: Generate shared random suffix
+        if: ${{ github.event.inputs.identifier == '' }}
+        run: |
+          RANDOM_SUFFIX=$(cat /dev/urandom | tr -dc 'a-z0-9' | fold -w 5 | head -n 1)
+          echo "🔑 Shared random suffix: $RANDOM_SUFFIX"
+          echo "RANDOM_SUFFIX=$RANDOM_SUFFIX" >> $GITHUB_ENV
+
       - name: Verify release exists
         run: gh release view "$TAG" --repo "$REPO"
 
       - name: Download all IPA files from release
         run: |
           gh release download "$TAG" --repo "$REPO" --pattern "*.ipa" --clobber
-          COUNT=$(ls *.ipa 2>/dev/null | wc -l)
-          if [ "$COUNT" -eq 0 ]; then
-            echo "::error::❌ No IPA files found in release"
-            exit 1
-          fi
 
       - name: Install Zsign
         run: |
@@ -79,54 +81,6 @@ jobs:
           git clone https://github.com/zhlynn/zsign.git
           cd zsign/build/macos && make clean && make
           sudo cp ../../bin/zsign /usr/local/bin/
-
-      - name: Patch Info.plist & Binary (deep patch all identifiers)
-        if: ${{ github.event.inputs.identifier != '' }}
-        run: |
-          for IPA in *.ipa; do
-            echo "📦 Patching $IPA..."
-            APP_NAME=$(basename "$IPA" .ipa)
-            WORKDIR="/tmp/zsign_patch_$RANDOM"
-            unzip -q "$IPA" -d "$WORKDIR"
-
-            APP_DIR=$(find "$WORKDIR/Payload" -name "*.app" -type d | head -n1)
-            MAIN_PLIST="$APP_DIR/Info.plist"
-            BINARY_NAME=$(/usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$MAIN_PLIST")
-            BINARY_PATH="$APP_DIR/$BINARY_NAME"
-
-            OLD_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$MAIN_PLIST")
-            echo "🔍 OLD Identifier: $OLD_ID"
-            echo "✏️  Main CFBundleIdentifier -> $IDENTIFIER"
-
-            /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $IDENTIFIER" "$MAIN_PLIST"
-            /usr/bin/perl -pi -e "s/\Q$OLD_ID\E/$IDENTIFIER/" "$BINARY_PATH"
-
-            echo "🔎 Scanning for Info.plist in embedded bundles..."
-            find "$APP_DIR" -name Info.plist | while read -r PLIST; do
-              if [[ "$PLIST" != "$MAIN_PLIST" ]]; then
-                SUB_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$PLIST" 2>/dev/null || echo "")
-                if [[ "$SUB_ID" != "" ]]; then
-                  NEW_SUB_ID="$IDENTIFIER.$(echo "$SUB_ID" | tr -cd 'a-zA-Z0-9' | tail -c 8)"
-                  echo "🛠️  $PLIST: $SUB_ID -> $NEW_SUB_ID"
-                  /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $NEW_SUB_ID" "$PLIST" || true
-                fi
-              fi
-            done
-
-            NEW_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$MAIN_PLIST")
-            echo "✅ Main Info.plist Identifier: $NEW_ID"
-            if [[ "$NEW_ID" != "$IDENTIFIER" ]]; then
-              echo "::error::❌ Failed to patch CFBundleIdentifier"
-              exit 1
-            fi
-
-            OUTPUT_PATH="$RUNNER_TEMP/$APP_NAME-patched.ipa"
-            cd "$WORKDIR"
-            zip -qr "$OUTPUT_PATH" Payload
-            cd -
-            mv "$OUTPUT_PATH" "$IPA"
-            rm -rf "$WORKDIR"
-          done
 
       - name: Sign all IPA files with Zsign
         run: |
@@ -136,17 +90,32 @@ jobs:
             OUT_NAME="signed/$APP_NAME-signed.ipa"
 
             if [ -z "$IDENTIFIER" ]; then
-              echo "🔧 Signing $IPA without changing Bundle ID..."
-              zsign -f -k cert.p12 -p "$CERT_PASSWORD" -m embedded.mobileprovision -o "$OUT_NAME" "$IPA"
-            else
-              echo "🔧 Signing $IPA with new Bundle ID: $IDENTIFIER..."
-              # ⚠️ Không truyền entitlements để zsign tự tạo
+              unzip -q "$IPA" -d extracted
+              PLIST_PATH=$(find extracted/Payload -name Info.plist | head -n1)
+              ORIGINAL_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$PLIST_PATH")
+              PATCHED_ID="${ORIGINAL_ID}-storeios.net-${RANDOM_SUFFIX}"
+
+              echo "🔧 Using identifier: $PATCHED_ID"
+              BINARY_NAME=$(/usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$PLIST_PATH")
+              BINARY_PATH=$(find extracted/Payload -name "$BINARY_NAME" | head -n1)
+              /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $PATCHED_ID" "$PLIST_PATH"
+              /usr/bin/perl -pi -e "s/\Q$ORIGINAL_ID\E/$PATCHED_ID/" "$BINARY_PATH"
+              cd extracted && zip -qr "../$IPA" Payload && cd -
+              rm -rf extracted
+
               zsign -f -k cert.p12 -p "$CERT_PASSWORD" -m embedded.mobileprovision \
-                -b "$IDENTIFIER" -o "$OUT_NAME" "$IPA"
+                -b "$PATCHED_ID" -o "$OUT_NAME" "$IPA"
+            else
+              PATCHED_ID="$IDENTIFIER"
+              echo "🔧 Signing $IPA with provided Bundle ID: $PATCHED_ID"
+              zsign -f -k cert.p12 -p "$CERT_PASSWORD" -m embedded.mobileprovision \
+                -b "$PATCHED_ID" -o "$OUT_NAME" "$IPA"
             fi
+
+            echo "SIGNED_IDENTIFIER_$APP_NAME=$PATCHED_ID" >> $GITHUB_ENV
           done
 
-      - name: Upload signed IPA and plist
+      - name: Upload signed IPA files and plist
         run: |
           BASE_URL="https://github.com/$REPO/releases/download/$TAG"
           for FILE in signed/*.ipa; do
@@ -155,6 +124,9 @@ jobs:
             PLIST_NAME="${APP_NAME}.plist"
 
             gh release upload "$TAG" "$FILE" --repo "$REPO" --clobber
+
+            IDENTIFIER_VAR="SIGNED_IDENTIFIER_${APP_NAME}"
+            BUNDLE_ID=$(eval echo \$$IDENTIFIER_VAR)
 
             echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" > "$PLIST_NAME"
             echo "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">" >> "$PLIST_NAME"
@@ -165,7 +137,7 @@ jobs:
             echo "      <key>url</key><string>$BASE_URL/$FILENAME</string>" >> "$PLIST_NAME"
             echo "    </dict></array>" >> "$PLIST_NAME"
             echo "    <key>metadata</key><dict>" >> "$PLIST_NAME"
-            echo "      <key>bundle-identifier</key><string>${IDENTIFIER:-default}</string>" >> "$PLIST_NAME"
+            echo "      <key>bundle-identifier</key><string>$BUNDLE_ID</string>" >> "$PLIST_NAME"
             echo "      <key>bundle-version</key><string>1.0.0</string>" >> "$PLIST_NAME"
             echo "      <key>kind</key><string>software</string>" >> "$PLIST_NAME"
             echo "      <key>title</key><string>$APP_NAME</string>" >> "$PLIST_NAME"
