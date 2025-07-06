@@ -114,6 +114,7 @@ jobs:
             /usr/bin/perl -pi -e "s/\Q$OLD_ID\E/$IDENTIFIER/" "$BINARY_PATH"
 
             echo "✅ Main Info.plist Identifier Patched."
+            echo "IDENTIFIER=$IDENTIFIER" >> $GITHUB_ENV
 
             OUTPUT_PATH="$RUNNER_TEMP/$APP_NAME-patched.ipa"
             cd "$WORKDIR"
