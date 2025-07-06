@@ -131,7 +131,7 @@ jobs:
             TMP_OUT="$RUNNER_TEMP/$APP_NAME-signed.ipa"
 
             echo "🔧 Signing $IPA with Zsign..."
-            zsign -f -k cert.p12 -p "$CERT_PASSWORD" -m embedded.mobileprovision \
+            zsign -f -z 9 -k cert.p12 -p "$CERT_PASSWORD" -m embedded.mobileprovision \
               -b "$IDENTIFIER" -o "$TMP_OUT" "$IPA"
 
             mv "$TMP_OUT" "$IPA"
