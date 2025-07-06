@@ -119,6 +119,7 @@ jobs:
 
               zsign -f -a \
                 -m embedded.mobileprovision \
+                -i embedded.mobileprovision \
                 -k cert.p12 -p "$CERT_PASSWORD" \
                 -b "${{ github.event.inputs.identifier }}" \
                 -e entitlements.plist \
