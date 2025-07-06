@@ -120,7 +120,7 @@ jobs:
 
             OUTPUT_PATH="$RUNNER_TEMP/$APP_NAME-patched.ipa"
             cd "$WORKDIR"
-            zip -qr0 "$OUTPUT_PATH" Payload
+            zip -qr9 "$OUTPUT_PATH" Payload
             cd -
             mv "$OUTPUT_PATH" "$IPA"
             rm -rf "$WORKDIR"
@@ -128,16 +128,15 @@ jobs:
 
       - name: Sign all IPA files with Zsign (overwrite original IPA)
         run: |
-          while IFS='|' read -r IPA_FILENAME FINAL_ID; do
-            IPA="./$IPA_FILENAME"
+          while IFS='|' read -r IPA FINAL_ID; do
             APP_NAME=$(basename "$IPA" .ipa)
             TMP_OUT="$RUNNER_TEMP/$APP_NAME-signed.ipa"
 
             echo "🔧 Signing $IPA with Zsign..."
-            zsign -f -z 9 -k cert.p12 -p "$CERT_PASSWORD" -m embedded.mobileprovision \
-              -b "$FINAL_ID" -o "$TMP_OUT" "$IPA"
+  zsign -f -z 9 -k cert.p12 -p "$CERT_PASSWORD" -m embedded.mobileprovision \
+    -b "$FINAL_ID" -o "$TMP_OUT" "$IPA"
 
-            mv "$TMP_OUT" "$IPA"
+           mv "$TMP_OUT" "$IPA"
           done < id_map.txt
       - name: Upload signed IPA
         run: |
