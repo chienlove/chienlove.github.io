@@ -133,16 +133,17 @@ jobs:
             TMP_OUT="$RUNNER_TEMP/$APP_NAME-signed.ipa"
 
             echo "🔧 Signing $IPA with Zsign..."
-  zsign -f -z 9 -k cert.p12 -p "$CERT_PASSWORD" -m embedded.mobileprovision \
-    -b "$FINAL_ID" -o "$TMP_OUT" "$IPA"
+            zsign -f -z 9 -k cert.p12 -p "$CERT_PASSWORD" -m embedded.mobileprovision \
+              -b "$FINAL_ID" -o "$TMP_OUT" "$IPA"
 
-           mv "$TMP_OUT" "$IPA"
+            mv "$TMP_OUT" "$IPA"
           done < id_map.txt
+
       - name: Upload signed IPA
         run: |
           while IFS='|' read -r IPA FINAL_ID; do
-           FILENAME=$(basename "$IPA")
-           gh release upload "$TAG" "$FILENAME" --repo "$REPO" --clobber
+            FILENAME=$(basename "$IPA")
+            gh release upload "$TAG" "$FILENAME" --repo "$REPO" --clobber
           done < id_map.txt
 
       - name: Generate plist with version & icon, commit to repo
