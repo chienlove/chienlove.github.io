@@ -150,7 +150,7 @@ jobs:
 
           BASE_URL="https://github.com/$REPO/releases/download/$TAG"
 
-          while IFS=:: read -r IPA FINAL_ID; do
+          while IFS='::' read -r IPA FINAL_ID; do
             FILENAME=$(basename "$IPA")
             APP_NAME="${FILENAME%.ipa}"
             WORKDIR="/tmp/zsign_meta_$RANDOM"
