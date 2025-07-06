@@ -7,7 +7,7 @@ on:
         description: "Release tag chứa IPA"
         required: true
       identifier:
-        description: "(Tùy chọn) Bundle Identifier mới (sẽ random nếu để trống)"
+        description: "(Tùy chọn) Bundle Identifier mới"
         required: false
 
 jobs:
@@ -50,17 +50,13 @@ jobs:
           echo "TEAM_ID=$(jq -r '.team_id' cert.json)" >> $GITHUB_ENV
 
       - name: Download certificate
-        run: curl -L "$CERT_P12_URL" -o cert.p12
+        run: |
+          curl -L "$CERT_P12_URL" -o cert.p12
 
       - name: Set workflow inputs
         run: |
           echo "TAG=${{ github.event.inputs.tag }}" >> $GITHUB_ENV
-          if [ -z "${{ github.event.inputs.identifier }}" ]; then
-            RAND=$(cat /dev/urandom | tr -dc 'a-z0-9' | fold -w 6 | head -n 1)
-            echo "IDENTIFIER=com.chien.app-$RAND" >> $GITHUB_ENV
-          else
-            echo "IDENTIFIER=${{ github.event.inputs.identifier }}" >> $GITHUB_ENV
-          fi
+          echo "IDENTIFIER=${{ github.event.inputs.identifier }}" >> $GITHUB_ENV
 
       - name: Verify release exists
         run: gh release view "$TAG" --repo "$REPO"
@@ -85,30 +81,36 @@ jobs:
 
       - name: Generate entitlements.plist
         run: |
-          cat <<EOF > entitlements.plist
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>application-identifier</key>
-  <string>${TEAM_ID}.${IDENTIFIER}</string>
-  <key>com.apple.security.application-groups</key>
-  <array>
-    <string>${TEAM_ID}.${IDENTIFIER}</string>
-  </array>
-</dict>
-</plist>
-EOF
+          if [ -z "$IDENTIFIER" ]; then
+            IDENTIFIER="com.random.$(openssl rand -hex 3)"
+            echo "Using random bundle id: $IDENTIFIER"
+          fi
 
-      - name: Sign all IPA files with Zsign (Ad-Hoc, Force)
+          echo '<?xml version="1.0" encoding="UTF-8"?>' > entitlements.plist
+          echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> entitlements.plist
+          echo '<plist version="1.0">' >> entitlements.plist
+          echo '<dict>' >> entitlements.plist
+          echo '  <key>application-identifier</key>' >> entitlements.plist
+          echo "  <string>${TEAM_ID}.${IDENTIFIER}</string>" >> entitlements.plist
+          echo '  <key>com.apple.security.application-groups</key>' >> entitlements.plist
+          echo '  <array>' >> entitlements.plist
+          echo "    <string>${TEAM_ID}.${IDENTIFIER}</string>" >> entitlements.plist
+          echo '  </array>' >> entitlements.plist
+          echo '</dict>' >> entitlements.plist
+          echo '</plist>' >> entitlements.plist
+
+          echo "FINAL_IDENTIFIER=$IDENTIFIER" >> $GITHUB_ENV
+
+      - name: Sign all IPA files with Zsign
         run: |
           mkdir -p signed
           for IPA in *.ipa; do
-            echo "🔧 Signing $IPA with identifier: $IDENTIFIER"
+            echo "🔧 Signing $IPA with identifier: $FINAL_IDENTIFIER"
             OUT_NAME="signed/$IPA"
+
             zsign -f -a \
               -k cert.p12 -p "$CERT_PASSWORD" \
-              -b "$IDENTIFIER" \
+              -b "$FINAL_IDENTIFIER" \
               -e entitlements.plist \
               -o "$OUT_NAME" "$IPA"
           done
@@ -118,7 +120,6 @@ EOF
           for FILE in signed/*.ipa; do
             echo "🔍 Verifying $FILE..."
             unzip -q "$FILE" -d tmp_ipa
-            echo "➡️ CFBundleIdentifier:"
             plutil -p tmp_ipa/Payload/*.app/Info.plist | grep CFBundleIdentifier || echo "⚠️ Not found"
             rm -rf tmp_ipa
           done
@@ -128,13 +129,10 @@ EOF
           for FILE in signed/*.ipa; do
             echo "⬆️ Uploading $FILE..."
             gh release upload "$TAG" "$FILE" --repo "$REPO" --clobber
+            echo "🔗 https://github.com/$REPO/releases/download/$TAG/$(basename $FILE)" >> signed_links.txt
           done
-          echo "🎉 All signed IPA files uploaded successfully"
 
-      - name: Display download links
+      - name: Show download links
         run: |
-          echo "🔗 Signed IPA download links:"
-          for FILE in signed/*.ipa; do
-            FILENAME=$(basename "$FILE")
-            echo "https://github.com/$REPO/releases/download/$TAG/$FILENAME"
-          done
+          echo "✅ Signed IPA download links:"
+          cat signed_links.txt
