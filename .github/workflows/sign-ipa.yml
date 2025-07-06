@@ -107,9 +107,13 @@ jobs:
 
             if [ -z "${{ github.event.inputs.identifier }}" ]; then
               echo "🔧 Signing $IPA without changing Bundle ID..."
-              zsign -f -a -m embedded.mobileprovision -k cert.p12 -p "$CERT_PASSWORD" -o "$OUT_NAME" "$IPA"
+              zsign -f \
+                -k cert.p12 -p "$CERT_PASSWORD" \
+                -m embedded.mobileprovision \
+                -o "$OUT_NAME" "$IPA"
             else
               echo "🔧 Signing $IPA with new Bundle ID: ${{ github.event.inputs.identifier }}..."
+
               echo '<?xml version="1.0" encoding="UTF-8"?>' > entitlements.plist
               echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> entitlements.plist
               echo '<plist version="1.0"><dict>' >> entitlements.plist
@@ -117,14 +121,27 @@ jobs:
               echo "  <string>$TEAM_ID.${{ github.event.inputs.identifier }}</string>" >> entitlements.plist
               echo '</dict></plist>' >> entitlements.plist
 
-              zsign -f -a \
-                -m embedded.mobileprovision \
-                -i embedded.mobileprovision \
+              zsign -f \
                 -k cert.p12 -p "$CERT_PASSWORD" \
+                -m embedded.mobileprovision \
                 -b "${{ github.event.inputs.identifier }}" \
                 -e entitlements.plist \
                 -o "$OUT_NAME" "$IPA"
             fi
+          done
+
+      - name: Verify embedded.mobileprovision exists in signed IPA
+        run: |
+          for FILE in signed/*.ipa; do
+            unzip -q "$FILE" -d temp
+            PROFILE=$(find temp/Payload -name "embedded.mobileprovision" | head -n1)
+            if [ -z "$PROFILE" ]; then
+              echo "::error::❌ Missing embedded.mobileprovision in $FILE"
+              exit 1
+            else
+              echo "✅ embedded.mobileprovision found in $FILE"
+            fi
+            rm -rf temp
           done
 
       - name: Upload signed IPA files to release
