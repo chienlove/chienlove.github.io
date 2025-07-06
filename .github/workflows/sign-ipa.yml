@@ -57,14 +57,12 @@ jobs:
       - name: Extract TEAM_ID from mobileprovision
         run: |
           security cms -D -i embedded.mobileprovision > provision.plist
-
           if [ ! -s provision.plist ]; then
             echo "::error::❌ Failed to decode embedded.mobileprovision"
             exit 1
           fi
 
           TEAM_ID=$(plutil -extract TeamIdentifier.0 xml1 -o - provision.plist | xmllint --xpath 'string(//string)' -)
-
           if [ -z "$TEAM_ID" ]; then
             echo "::error::❌ Cannot extract TEAM_ID from provisioning profile"
             exit 1
@@ -102,22 +100,35 @@ jobs:
         run: |
           mkdir -p signed
 
-          # Sinh 1 chuỗi random dùng chung
-          RANDOM_SUFFIX=$(cat /dev/urandom | tr -dc 'a-z0-9' | fold -w 5 | head -n 1)
-          echo "🔑 Shared random suffix: $RANDOM_SUFFIX"
+          # Sinh chuỗi random dùng chung nếu không nhập IDENTIFIER
+          if [ -z "$IDENTIFIER" ]; then
+            RANDOM_SUFFIX=$(LC_ALL=C tr -dc 'a-z0-9' < /dev/urandom | head -c 5)
+            echo "🔑 Shared random suffix: $RANDOM_SUFFIX"
+          fi
 
           for IPA in *.ipa; do
             unzip -q "$IPA" -d temp
             PLIST_PATH=$(find temp/Payload -name Info.plist | head -n1)
-            ORIGINAL_ID=$(/usr/libexec/PlistBuddy -c "Print CFBundleIdentifier" "$PLIST_PATH")
+
+            if [ ! -f "$PLIST_PATH" ]; then
+              echo "::error::❌ Info.plist not found in $IPA"
+              exit 1
+            fi
+
+            ORIGINAL_ID=$(/usr/libexec/PlistBuddy -c "Print CFBundleIdentifier" "$PLIST_PATH" 2>/dev/null)
             rm -rf temp
 
-            if [ -z "${{ github.event.inputs.identifier }}" ]; then
+            if [ -z "$ORIGINAL_ID" ]; then
+              echo "::error::❌ CFBundleIdentifier not found in $IPA"
+              exit 1
+            fi
+
+            if [ -z "$IDENTIFIER" ]; then
               BUNDLE_ID="${ORIGINAL_ID}-storeios.net-${RANDOM_SUFFIX}"
-              echo "🔧 Signing $IPA with auto-generated Bundle ID: $BUNDLE_ID"
+              echo "🔧 Auto-generated Bundle ID: $BUNDLE_ID"
             else
-              BUNDLE_ID="${{ github.event.inputs.identifier }}"
-              echo "🔧 Signing $IPA with provided Bundle ID: $BUNDLE_ID"
+              BUNDLE_ID="$IDENTIFIER"
+              echo "🔧 Using provided Bundle ID: $BUNDLE_ID"
             fi
 
             echo '<?xml version="1.0" encoding="UTF-8"?>' > entitlements.plist
@@ -127,6 +138,7 @@ jobs:
             echo "  <string>$TEAM_ID.$BUNDLE_ID</string>" >> entitlements.plist
             echo '</dict></plist>' >> entitlements.plist
 
+            # Ký và ghi đè file gốc
             zsign -f \
               -k cert.p12 -p "$CERT_PASSWORD" \
               -m embedded.mobileprovision \
@@ -152,8 +164,8 @@ jobs:
 
       - name: Upload signed IPA files to release (overwrite original)
         run: |
-          echo "🔗 Uploading signed IPA files to release:"
+          echo "⬆️ Uploading signed IPA files (overwrite mode):"
           for FILE in *.ipa; do
             gh release upload "$TAG" "$FILE" --repo "$REPO" --clobber
-            echo "➡️ https://github.com/$REPO/releases/download/$TAG/$(basename "$FILE")"
+            echo "✅ Uploaded: $FILE"
           done
