@@ -36,10 +36,12 @@ jobs:
             "${SUPABASE_URL}/rest/v1/certificates?select=*")
           http_status=$(echo "$response" | grep HTTP_STATUS: | cut -d':' -f2)
           json_data=$(echo "$response" | sed '/HTTP_STATUS/d')
+
           if [ "$http_status" -ne 200 ]; then
             echo "::error::Supabase API returned $http_status"
             exit 1
           fi
+
           echo "$json_data" | jq '.[0]' > cert.json
           echo "CERT_P12_URL=$(jq -r '.p12_url' cert.json)" >> $GITHUB_ENV
           echo "CERT_PROVISION_URL=$(jq -r '.provision_url' cert.json)" >> $GITHUB_ENV
@@ -73,6 +75,20 @@ jobs:
             exit 1
           fi
 
+      - name: 🔍 Check all CFBundleIdentifier values inside IPA
+        run: |
+          for IPA in *.ipa; do
+            echo "📦 Checking $IPA..."
+            unzip -q "$IPA" -d extracted
+            echo "🔎 Found CFBundleIdentifier values:"
+            for plist in $(find extracted/Payload -name Info.plist); do
+              echo "👉 $plist"
+              BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$plist" 2>/dev/null || echo "(Not Found)")
+              echo "    CFBundleIdentifier: $BUNDLE_ID"
+            done
+            rm -rf extracted
+          done
+
       - name: Install Zsign
         run: |
           brew install pkg-config openssl minizip
@@ -92,95 +108,60 @@ jobs:
               zsign -f -k cert.p12 -p "$CERT_PASSWORD" -m embedded.mobileprovision -o "$OUT_NAME" "$IPA"
             else
               echo "🔧 Signing $IPA with new Bundle ID: $IDENTIFIER..."
-              zsign -f -k cert.p12 -p "$CERT_PASSWORD" -m embedded.mobileprovision \
-                -b "$IDENTIFIER" -o "$OUT_NAME" "$IPA"
-
-              echo "🛠️ Patching Info.plist to force CFBundleIdentifier = $IDENTIFIER..."
-              unzip -q "$OUT_NAME" -d temp
-              APP_DIR=$(find temp -type d -name "*.app" | head -n1)
-              if [ ! -f "$APP_DIR/Info.plist" ]; then
-                echo "::error::❌ Info.plist not found in $APP_DIR"
-                exit 1
-              fi
-              /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $IDENTIFIER" "$APP_DIR/Info.plist"
-              cd temp && zip -qry "../$OUT_NAME" Payload && cd ..
-              rm -rf temp
-
-              unzip -q "$OUT_NAME" -d temp
-              APP_DIR=$(find temp -type d -name "*.app" | head -n1)
-              PLIST="$APP_DIR/Info.plist"
-              BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$PLIST" 2>/dev/null || echo "$IDENTIFIER")
-              rm -rf temp
-
-              echo "✅ Actual Bundle ID after patch: $BUNDLE_ID"
-
               echo '<?xml version="1.0" encoding="UTF-8"?>' > entitlements.plist
               echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> entitlements.plist
               echo '<plist version="1.0"><dict>' >> entitlements.plist
               echo '  <key>application-identifier</key>' >> entitlements.plist
-              echo "  <string>$TEAM_ID.$BUNDLE_ID</string>" >> entitlements.plist
+              echo "  <string>$TEAM_ID.$IDENTIFIER</string>" >> entitlements.plist
               echo '</dict></plist>' >> entitlements.plist
 
-              echo "🔐 Re-signing IPA with entitlements..."
               zsign -f -k cert.p12 -p "$CERT_PASSWORD" -m embedded.mobileprovision \
-              -z 9 \
-                -e entitlements.plist -o "$OUT_NAME" "$OUT_NAME"
+                -b "$IDENTIFIER" -e entitlements.plist -o "$OUT_NAME" "$IPA"
             fi
           done
 
-      - name: Upload signed IPA files to release
+      - name: Verify embedded.mobileprovision exists in signed IPA
         run: |
           for FILE in signed/*.ipa; do
-            gh release upload "$TAG" "$FILE" --repo "$REPO" --clobber
+            unzip -q "$FILE" -d temp
+            PROFILE=$(find temp/Payload -name "embedded.mobileprovision" | head -n1)
+            if [ -z "$PROFILE" ]; then
+              echo "::error::❌ Missing embedded.mobileprovision in $FILE"
+              exit 1
+            fi
+            rm -rf temp
           done
 
-      - name: Generate .plist and upload to release
+      - name: Upload signed IPA files and generate install .plist
         run: |
           BASE_URL="https://github.com/$REPO/releases/download/$TAG"
           for FILE in signed/*.ipa; do
-            IPA_NAME=$(basename "$FILE")
-            APP_NAME=$(basename "$FILE" .ipa)
-
-            unzip -q "$FILE" -d temp
-            APP_DIR=$(find temp -type d -name "*.app" | head -n1)
-            PLIST="$APP_DIR/Info.plist"
-            BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$PLIST" 2>/dev/null || echo "unknown.id")
-            VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$PLIST" 2>/dev/null || echo "1.0.0")
-            DISPLAY_NAME=$(/usr/libexec/PlistBuddy -c "Print :CFBundleDisplayName" "$PLIST" 2>/dev/null || echo "$APP_NAME")
-            rm -rf temp
-
+            FILENAME=$(basename "$FILE")
+            APP_NAME="${FILENAME%.ipa}"
             PLIST_NAME="${APP_NAME}.plist"
 
-            echo '<?xml version="1.0" encoding="UTF-8"?>' > "$PLIST_NAME"
-            echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> "$PLIST_NAME"
-            echo '<plist version="1.0"><dict>' >> "$PLIST_NAME"
-            echo '  <key>items</key>' >> "$PLIST_NAME"
-            echo '  <array>' >> "$PLIST_NAME"
-            echo '    <dict>' >> "$PLIST_NAME"
-            echo '      <key>assets</key>' >> "$PLIST_NAME"
-            echo '      <array>' >> "$PLIST_NAME"
-            echo '        <dict>' >> "$PLIST_NAME"
-            echo '          <key>kind</key>' >> "$PLIST_NAME"
-            echo '          <string>software-package</string>' >> "$PLIST_NAME"
-            echo '          <key>url</key>' >> "$PLIST_NAME"
-            echo "          <string>$BASE_URL/$IPA_NAME</string>" >> "$PLIST_NAME"
-            echo '        </dict>' >> "$PLIST_NAME"
-            echo '      </array>' >> "$PLIST_NAME"
-            echo '      <key>metadata</key>' >> "$PLIST_NAME"
-            echo '      <dict>' >> "$PLIST_NAME"
-            echo '        <key>bundle-identifier</key>' >> "$PLIST_NAME"
-            echo "        <string>$BUNDLE_ID</string>" >> "$PLIST_NAME"
-            echo '        <key>bundle-version</key>' >> "$PLIST_NAME"
-            echo "        <string>$VERSION</string>" >> "$PLIST_NAME"
-            echo '        <key>kind</key>' >> "$PLIST_NAME"
-            echo '        <string>software</string>' >> "$PLIST_NAME"
-            echo '        <key>title</key>' >> "$PLIST_NAME"
-            echo "        <string>$DISPLAY_NAME</string>" >> "$PLIST_NAME"
-            echo '      </dict>' >> "$PLIST_NAME"
-            echo '    </dict>' >> "$PLIST_NAME"
-            echo '  </array>' >> "$PLIST_NAME"
-            echo '</dict></plist>' >> "$PLIST_NAME"
+            echo "📤 Uploading $FILENAME to release..."
+            gh release upload "$TAG" "$FILE" --repo "$REPO" --clobber
+
+            echo "📝 Generating $PLIST_NAME..."
+            echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" > "$PLIST_NAME"
+            echo "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">" >> "$PLIST_NAME"
+            echo "<plist version=\"1.0\"><dict>" >> "$PLIST_NAME"
+            echo "  <key>items</key><array><dict>" >> "$PLIST_NAME"
+            echo "    <key>assets</key><array><dict>" >> "$PLIST_NAME"
+            echo "      <key>kind</key><string>software-package</string>" >> "$PLIST_NAME"
+            echo "      <key>url</key><string>$BASE_URL/$FILENAME</string>" >> "$PLIST_NAME"
+            echo "    </dict></array>" >> "$PLIST_NAME"
+            echo "    <key>metadata</key><dict>" >> "$PLIST_NAME"
+            echo "      <key>bundle-identifier</key><string>${IDENTIFIER:-default}</string>" >> "$PLIST_NAME"
+            echo "      <key>bundle-version</key><string>1.0.0</string>" >> "$PLIST_NAME"
+            echo "      <key>kind</key><string>software</string>" >> "$PLIST_NAME"
+            echo "      <key>title</key><string>$APP_NAME</string>" >> "$PLIST_NAME"
+            echo "    </dict>" >> "$PLIST_NAME"
+            echo "  </dict></array></dict></plist>" >> "$PLIST_NAME"
 
             gh release upload "$TAG" "$PLIST_NAME" --repo "$REPO" --clobber
-            echo "🔗 itms-services://?action=download-manifest&url=$BASE_URL/$PLIST_NAME"
+
+            echo "📲 Install link:"
+            echo "itms-services://?action=download-manifest&url=$BASE_URL/$PLIST_NAME"
           done
