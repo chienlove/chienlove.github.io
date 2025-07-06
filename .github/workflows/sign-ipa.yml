@@ -61,6 +61,13 @@ jobs:
           echo "TAG=${{ github.event.inputs.tag }}" >> $GITHUB_ENV
           echo "IDENTIFIER=${{ github.event.inputs.identifier }}" >> $GITHUB_ENV
 
+      - name: Generate shared random (if needed)
+        if: ${{ github.event.inputs.identifier == '' }}
+        run: |
+          RAND=$(LC_ALL=C tr -dc a-z0-9 </dev/urandom | head -c6)
+          echo "🌀 Generated common random: $RAND"
+          echo "RAND=$RAND" >> $GITHUB_ENV
+
       - name: Verify release exists
         run: gh release view "$TAG" --repo "$REPO"
 
@@ -82,12 +89,6 @@ jobs:
 
       - name: Patch Info.plist & Binary (auto-generate identifier if not provided)
         run: |
-          if [ -z "${{ github.event.inputs.identifier }}" ]; then
-            RAND=$(cat /dev/urandom | LC_CTYPE=C tr -dc a-z0-9 | head -c6)
-            echo "🌀 Generated common random: $RAND"
-            echo "RAND=$RAND" >> $GITHUB_ENV
-          fi
-
           for IPA in *.ipa; do
             echo "📦 Patching $IPA..."
             APP_NAME=$(basename "$IPA" .ipa)
@@ -102,13 +103,10 @@ jobs:
             OLD_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$MAIN_PLIST")
             echo "🔍 OLD Identifier: $OLD_ID"
 
-            if [ -z "${{ github.event.inputs.identifier }}" ]; then
+            if [ -z "$IDENTIFIER" ]; then
               BASE_ID=$(echo "$OLD_ID" | sed 's/-storeios\.net.*//')
               IDENTIFIER="${BASE_ID}-storeios.net-${RAND}"
               echo "📌 Generated Identifier: $IDENTIFIER"
-            else
-              IDENTIFIER="${{ github.event.inputs.identifier }}"
-              echo "📌 Using provided Identifier: $IDENTIFIER"
             fi
 
             echo "✏️  Main CFBundleIdentifier -> $IDENTIFIER"
