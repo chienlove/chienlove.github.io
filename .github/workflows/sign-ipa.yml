@@ -57,20 +57,7 @@ jobs:
       - name: Extract TEAM_ID from mobileprovision
         run: |
           security cms -D -i embedded.mobileprovision > provision.plist
-
-          if [ ! -s provision.plist ]; then
-            echo "::error::❌ Failed to decode embedded.mobileprovision"
-            exit 1
-          fi
-
           TEAM_ID=$(plutil -extract TeamIdentifier.0 xml1 -o - provision.plist | xmllint --xpath 'string(//string)' -)
-
-          if [ -z "$TEAM_ID" ]; then
-            echo "::error::❌ Cannot extract TEAM_ID from provisioning profile"
-            exit 1
-          fi
-
-          echo "✅ TEAM_ID = $TEAM_ID"
           echo "TEAM_ID=$TEAM_ID" >> $GITHUB_ENV
 
       - name: Set workflow inputs
@@ -89,7 +76,6 @@ jobs:
             echo "::error::❌ No IPA files found in release"
             exit 1
           fi
-          echo "📦 Found $COUNT IPA files"
 
       - name: Install Zsign
         run: |
@@ -106,14 +92,8 @@ jobs:
             OUT_NAME="signed/$APP_NAME-signed.ipa"
 
             if [ -z "${{ github.event.inputs.identifier }}" ]; then
-              echo "🔧 Signing $IPA without changing Bundle ID..."
-              zsign -f \
-                -k cert.p12 -p "$CERT_PASSWORD" \
-                -m embedded.mobileprovision \
-                -o "$OUT_NAME" "$IPA"
+              zsign -f -k cert.p12 -p "$CERT_PASSWORD" -m embedded.mobileprovision -o "$OUT_NAME" "$IPA"
             else
-              echo "🔧 Signing $IPA with new Bundle ID: ${{ github.event.inputs.identifier }}..."
-
               echo '<?xml version="1.0" encoding="UTF-8"?>' > entitlements.plist
               echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> entitlements.plist
               echo '<plist version="1.0"><dict>' >> entitlements.plist
@@ -121,12 +101,9 @@ jobs:
               echo "  <string>$TEAM_ID.${{ github.event.inputs.identifier }}</string>" >> entitlements.plist
               echo '</dict></plist>' >> entitlements.plist
 
-              zsign -f \
-                -k cert.p12 -p "$CERT_PASSWORD" \
-                -m embedded.mobileprovision \
+              zsign -f -k cert.p12 -p "$CERT_PASSWORD" -m embedded.mobileprovision \
                 -b "${{ github.event.inputs.identifier }}" \
-                -e entitlements.plist \
-                -o "$OUT_NAME" "$IPA"
+                -e entitlements.plist -o "$OUT_NAME" "$IPA"
             fi
           done
 
@@ -136,27 +113,21 @@ jobs:
             unzip -q "$FILE" -d temp
             PROFILE=$(find temp/Payload -name "embedded.mobileprovision" | head -n1)
             if [ -z "$PROFILE" ]; then
-              echo "::error::❌ Missing embedded.mobileprovision in $FILE"
+              echo "::error::Missing embedded.mobileprovision in $FILE"
               exit 1
-            else
-              echo "✅ embedded.mobileprovision found in $FILE"
             fi
             rm -rf temp
           done
 
       - name: Upload signed IPA files to release
         run: |
-          echo "🔗 Signed IPA links:"
           for FILE in signed/*.ipa; do
             FILENAME=$(basename "$FILE")
             gh release upload "$TAG" "$FILE" --repo "$REPO" --clobber
-            echo "➡️ https://github.com/$REPO/releases/download/$TAG/$FILENAME"
           done
 
       - name: Generate .plist and upload to release
         run: |
-          TAG=${TAG}
-          REPO=${REPO}
           BASE_URL="https://github.com/$REPO/releases/download/$TAG"
 
           for FILE in signed/*.ipa; do
@@ -164,12 +135,20 @@ jobs:
             APP_NAME=$(basename "$FILE" .ipa)
 
             unzip -q "$FILE" -d temp
-            PLIST=$(find temp/Payload -name Info.plist | head -n1)
+            APP_DIR=$(find temp/Payload -type d -name "*.app" | head -n1)
+            PLIST="$APP_DIR/Info.plist"
+
+            echo "📄 Using Info.plist: $PLIST"
 
             BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$PLIST")
             VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$PLIST" 2>/dev/null || true)
             if [ -z "$VERSION" ]; then VERSION="1.0.0"; fi
             DISPLAY_NAME=$(/usr/libexec/PlistBuddy -c "Print :CFBundleDisplayName" "$PLIST" 2>/dev/null || echo "$APP_NAME")
+
+            echo "✅ CFBundleIdentifier = $BUNDLE_ID"
+            echo "✅ CFBundleShortVersionString = $VERSION"
+            echo "✅ CFBundleDisplayName = $DISPLAY_NAME"
+
             rm -rf temp
 
             PLIST_NAME="${APP_NAME}.plist"
