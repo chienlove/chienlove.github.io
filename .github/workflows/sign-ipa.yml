@@ -1,3 +1,5 @@
+# sign.yml
+
 name: Sign all IPAs in release with Zsign
 
 on:
@@ -117,8 +119,8 @@ jobs:
             /usr/bin/perl -pi -e "s/\Q$OLD_ID\E/$FINAL_ID/" "$BINARY_PATH"
 
             if [ -n "$IPA" ]; then
-  echo "$IPA::$FINAL_ID" >> id_map.txt
-fi
+              echo "$IPA::$FINAL_ID" >> id_map.txt
+            fi
 
             OUTPUT_PATH="$RUNNER_TEMP/$APP_NAME-patched.ipa"
             cd "$WORKDIR"
@@ -139,37 +141,6 @@ fi
               -b "$FINAL_ID" -o "$TMP_OUT" "$IPA"
 
             mv "$TMP_OUT" "$IPA"
-          done < id_map.txt
-
-      - name: Upload signed IPA and plist
-        run: |
-          BASE_URL="https://github.com/$REPO/releases/download/$TAG"
-          while IFS=:: read -r IPA FINAL_ID; do
-            FILENAME=$(basename "$IPA")
-            APP_NAME="${FILENAME%.ipa}"
-            PLIST_NAME="${APP_NAME}.plist"
-
-            gh release upload "$TAG" "$IPA" --repo "$REPO" --clobber
-
-            echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" > "$PLIST_NAME"
-            echo "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">" >> "$PLIST_NAME"
-            echo "<plist version=\"1.0\"><dict>" >> "$PLIST_NAME"
-            echo "  <key>items</key><array><dict>" >> "$PLIST_NAME"
-            echo "    <key>assets</key><array><dict>" >> "$PLIST_NAME"
-            echo "      <key>kind</key><string>software-package</string>" >> "$PLIST_NAME"
-            echo "      <key>url</key><string>$BASE_URL/$FILENAME</string>" >> "$PLIST_NAME"
-            echo "    </dict></array>" >> "$PLIST_NAME"
-            echo "    <key>metadata</key><dict>" >> "$PLIST_NAME"
-            echo "      <key>bundle-identifier</key><string>$FINAL_ID</string>" >> "$PLIST_NAME"
-            echo "      <key>bundle-version</key><string>1.0.0</string>" >> "$PLIST_NAME"
-            echo "      <key>kind</key><string>software</string>" >> "$PLIST_NAME"
-            echo "      <key>title</key><string>$APP_NAME</string>" >> "$PLIST_NAME"
-            echo "    </dict>" >> "$PLIST_NAME"
-            echo "  </dict></array></dict></plist>" >> "$PLIST_NAME"
-
-            gh release upload "$TAG" "$PLIST_NAME" --repo "$REPO" --clobber
-            echo "📲 Link cài đặt:"
-            echo "itms-services://?action=download-manifest&url=$BASE_URL/$PLIST_NAME"
           done < id_map.txt
 
       - name: Generate plist with version & icon, commit to repo
