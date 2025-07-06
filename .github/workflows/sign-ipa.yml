@@ -1,5 +1,3 @@
-# sign.yml
-
 name: Sign all IPAs in release with Zsign
 
 on:
@@ -118,7 +116,7 @@ jobs:
             /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $FINAL_ID" "$MAIN_PLIST"
             /usr/bin/perl -pi -e "s/\Q$OLD_ID\E/$FINAL_ID/" "$BINARY_PATH"
 
-              [ -n "$FINAL_ID" ] && echo "$(basename "$IPA")::$FINAL_ID" >> id_map.txt
+              [ -n "$FINAL_ID" ] && echo "$(basename "$IPA")|$FINAL_ID" >> id_map.txt
 
             OUTPUT_PATH="$RUNNER_TEMP/$APP_NAME-patched.ipa"
             cd "$WORKDIR"
@@ -130,7 +128,7 @@ jobs:
 
       - name: Sign all IPA files with Zsign (overwrite original IPA)
         run: |
-          while IFS=:: read -r IPA FINAL_ID; do
+          while IFS='|' read -r IPA FINAL_ID; do
             APP_NAME=$(basename "$IPA" .ipa)
             TMP_OUT="$RUNNER_TEMP/$APP_NAME-signed.ipa"
 
@@ -150,7 +148,7 @@ jobs:
 
           BASE_URL="https://github.com/$REPO/releases/download/$TAG"
 
-          while IFS='::' read -r IPA FINAL_ID; do
+          while IFS='|' read -r IPA FINAL_ID; do
             FILENAME=$(basename "$IPA")
             APP_NAME="${FILENAME%.ipa}"
             WORKDIR="/tmp/zsign_meta_$RANDOM"
