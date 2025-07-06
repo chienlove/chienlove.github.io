@@ -80,7 +80,7 @@ jobs:
           cd zsign/build/macos && make clean && make
           sudo cp ../../bin/zsign /usr/local/bin/
 
-      - name: Patch Info.plist & Binary if identifier is set
+      - name: Patch Info.plist & Binary (deep patch all identifiers)
         if: ${{ github.event.inputs.identifier != '' }}
         run: |
           for IPA in *.ipa; do
@@ -90,20 +90,32 @@ jobs:
             unzip -q "$IPA" -d "$WORKDIR"
 
             APP_DIR=$(find "$WORKDIR/Payload" -name "*.app" -type d | head -n1)
-            PLIST_PATH="$APP_DIR/Info.plist"
-            BINARY_NAME=$(/usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$PLIST_PATH")
+            MAIN_PLIST="$APP_DIR/Info.plist"
+            BINARY_NAME=$(/usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$MAIN_PLIST")
             BINARY_PATH="$APP_DIR/$BINARY_NAME"
 
-            OLD_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$PLIST_PATH")
+            OLD_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$MAIN_PLIST")
             echo "🔍 OLD Identifier: $OLD_ID"
-            echo "✏️  Setting CFBundleIdentifier to: $IDENTIFIER"
+            echo "✏️  Main CFBundleIdentifier -> $IDENTIFIER"
 
-            /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $IDENTIFIER" "$PLIST_PATH"
+            /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $IDENTIFIER" "$MAIN_PLIST"
             /usr/bin/perl -pi -e "s/\Q$OLD_ID\E/$IDENTIFIER/" "$BINARY_PATH"
 
-            NEW_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$PLIST_PATH")
-            echo "✅ Patched Info.plist: $NEW_ID"
+            # 🔍 Patch all Info.plist inside app bundles
+            echo "🔎 Scanning for other Info.plist..."
+            find "$APP_DIR" -name Info.plist | while read -r PLIST; do
+              if [[ "$PLIST" != "$MAIN_PLIST" ]]; then
+                SUB_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$PLIST" 2>/dev/null || echo "")
+                if [[ "$SUB_ID" != "" ]]; then
+                  NEW_SUB_ID="$IDENTIFIER.$(echo "$SUB_ID" | tr -cd 'a-zA-Z0-9' | tail -c 8)"
+                  echo "🛠️  $PLIST: $SUB_ID -> $NEW_SUB_ID"
+                  /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $NEW_SUB_ID" "$PLIST" || true
+                fi
+              fi
+            done
 
+            NEW_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$MAIN_PLIST")
+            echo "✅ Main Info.plist Identifier: $NEW_ID"
             if [[ "$NEW_ID" != "$IDENTIFIER" ]]; then
               echo "::error::❌ Failed to patch CFBundleIdentifier"
               exit 1
