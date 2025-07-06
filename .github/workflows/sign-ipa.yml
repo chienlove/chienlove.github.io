@@ -7,7 +7,7 @@ on:
         description: "Release tag chứa IPA"
         required: true
       identifier:
-        description: "(Tùy chọn) Bundle Identifier mới (nếu để trống sẽ tự sinh)"
+        description: "(Tùy chọn) Bundle Identifier mới"
         required: false
 
 jobs:
@@ -98,24 +98,27 @@ jobs:
           cd zsign/build/macos && make clean && make
           sudo cp ../../bin/zsign /usr/local/bin/
 
-      - name: Sign all IPA files with Zsign (auto ID if blank)
+      - name: Sign all IPA files with Zsign
         run: |
-          for IPA in *.ipa; do
-            APP_NAME=$(basename "$IPA" .ipa)
+          mkdir -p signed
 
+          # Sinh 1 chuỗi random dùng chung
+          RANDOM_SUFFIX=$(cat /dev/urandom | tr -dc 'a-z0-9' | fold -w 5 | head -n 1)
+          echo "🔑 Shared random suffix: $RANDOM_SUFFIX"
+
+          for IPA in *.ipa; do
             unzip -q "$IPA" -d temp
             PLIST_PATH=$(find temp/Payload -name Info.plist | head -n1)
             ORIGINAL_ID=$(/usr/libexec/PlistBuddy -c "Print CFBundleIdentifier" "$PLIST_PATH")
-
-            RANDOM_PART=$(cat /dev/urandom | tr -dc 'a-z0-9' | fold -w 5 | head -n 1)
+            rm -rf temp
 
             if [ -z "${{ github.event.inputs.identifier }}" ]; then
-              BUNDLE_ID="${ORIGINAL_ID}-storeios.net-${RANDOM_PART}"
+              BUNDLE_ID="${ORIGINAL_ID}-storeios.net-${RANDOM_SUFFIX}"
+              echo "🔧 Signing $IPA with auto-generated Bundle ID: $BUNDLE_ID"
             else
               BUNDLE_ID="${{ github.event.inputs.identifier }}"
+              echo "🔧 Signing $IPA with provided Bundle ID: $BUNDLE_ID"
             fi
-
-            echo "🔧 Signing $IPA with Bundle ID: $BUNDLE_ID"
 
             echo '<?xml version="1.0" encoding="UTF-8"?>' > entitlements.plist
             echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> entitlements.plist
@@ -131,8 +134,6 @@ jobs:
               -e entitlements.plist \
               -z 9 \
               -o "$IPA" "$IPA"
-
-            rm -rf temp
           done
 
       - name: Verify embedded.mobileprovision exists in signed IPA
