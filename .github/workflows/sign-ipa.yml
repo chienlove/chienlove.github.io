@@ -56,10 +56,19 @@ jobs:
 
       - name: Extract TEAM_ID from mobileprovision
         run: |
-          TEAM_ID=$(security cms -D -i embedded.mobileprovision \
-            | plutil -extract Entitlements xml1 -o - - \
-            | plutil -extract 'com.apple.developer.team-identifier' xml1 -o - - \
-            | xmllint --xpath "string(//string)" -)
+          security cms -D -i embedded.mobileprovision > provision.plist
+
+          if [ ! -s provision.plist ]; then
+            echo "::error::❌ Failed to decode embedded.mobileprovision"
+            exit 1
+          fi
+
+          TEAM_ID=$(plutil -extract TeamIdentifier.0 xml1 -o - provision.plist | xmllint --xpath 'string(//string)' -)
+
+          if [ -z "$TEAM_ID" ]; then
+            echo "::error::❌ Cannot extract TEAM_ID from provisioning profile"
+            exit 1
+          fi
 
           echo "✅ TEAM_ID = $TEAM_ID"
           echo "TEAM_ID=$TEAM_ID" >> $GITHUB_ENV
