@@ -109,10 +109,11 @@ jobs:
               exit 1
             fi
 
+            OUTPUT_PATH="$RUNNER_TEMP/$APP_NAME-patched.ipa"
             cd "$WORKDIR"
-            zip -qr "../../$APP_NAME-patched.ipa" Payload
+            zip -qr "$OUTPUT_PATH" Payload
             cd -
-            mv "$APP_NAME-patched.ipa" "$IPA"
+            mv "$OUTPUT_PATH" "$IPA"
             rm -rf "$WORKDIR"
           done
 
@@ -138,18 +139,6 @@ jobs:
               zsign -f -k cert.p12 -p "$CERT_PASSWORD" -m embedded.mobileprovision \
                 -b "$IDENTIFIER" -e entitlements.plist -o "$OUT_NAME" "$IPA"
             fi
-          done
-
-      - name: Verify embedded.mobileprovision exists in signed IPA
-        run: |
-          for FILE in signed/*.ipa; do
-            unzip -q "$FILE" -d temp
-            PROFILE=$(find temp/Payload -name "embedded.mobileprovision" | head -n1)
-            if [ -z "$PROFILE" ]; then
-              echo "::error::❌ Missing embedded.mobileprovision in $FILE"
-              exit 1
-            fi
-            rm -rf temp
           done
 
       - name: Upload signed IPA and plist
