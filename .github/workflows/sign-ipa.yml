@@ -97,16 +97,22 @@ jobs:
 
               echo "🛠️ Patching Info.plist to force CFBundleIdentifier = $IDENTIFIER..."
               unzip -q "$OUT_NAME" -d temp
-              APP_DIR=$(find temp/Payload -type d -name "*.app" | head -n1)
+              APP_DIR=$(find temp -type d -name "*.app" | head -n1)
+              if [ ! -f "$APP_DIR/Info.plist" ]; then
+                echo "::error::❌ Info.plist not found in $APP_DIR"
+                exit 1
+              fi
               /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $IDENTIFIER" "$APP_DIR/Info.plist"
               cd temp && zip -qry "../$OUT_NAME" Payload && cd ..
               rm -rf temp
 
               unzip -q "$OUT_NAME" -d temp
-              APP_DIR=$(find temp/Payload -type d -name "*.app" | head -n1)
+              APP_DIR=$(find temp -type d -name "*.app" | head -n1)
               PLIST="$APP_DIR/Info.plist"
-              BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$PLIST")
+              BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$PLIST" 2>/dev/null || echo "$IDENTIFIER")
               rm -rf temp
+
+              echo "✅ Actual Bundle ID after patch: $BUNDLE_ID"
 
               echo '<?xml version="1.0" encoding="UTF-8"?>' > entitlements.plist
               echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> entitlements.plist
@@ -115,7 +121,9 @@ jobs:
               echo "  <string>$TEAM_ID.$BUNDLE_ID</string>" >> entitlements.plist
               echo '</dict></plist>' >> entitlements.plist
 
-              zsign -f -k cert.p12 -p "$CERT_PASSWORD" -m embedded.mobileprovision \ 
+              echo "🔐 Re-signing IPA with entitlements..."
+              zsign -f -k cert.p12 -p "$CERT_PASSWORD" -m embedded.mobileprovision \
+              -z 9 \
                 -e entitlements.plist -o "$OUT_NAME" "$OUT_NAME"
             fi
           done
@@ -134,9 +142,9 @@ jobs:
             APP_NAME=$(basename "$FILE" .ipa)
 
             unzip -q "$FILE" -d temp
-            APP_DIR=$(find temp/Payload -type d -name "*.app" | head -n1)
+            APP_DIR=$(find temp -type d -name "*.app" | head -n1)
             PLIST="$APP_DIR/Info.plist"
-            BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$PLIST")
+            BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$PLIST" 2>/dev/null || echo "unknown.id")
             VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$PLIST" 2>/dev/null || echo "1.0.0")
             DISPLAY_NAME=$(/usr/libexec/PlistBuddy -c "Print :CFBundleDisplayName" "$PLIST" 2>/dev/null || echo "$APP_NAME")
             rm -rf temp
