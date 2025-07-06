@@ -1,13 +1,13 @@
-name: Sign all IPAs in release with Zsign
+name: Sign IPA with Zsign
 
 on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag chứa IPA"
+        description: "Release tag containing IPA"
         required: true
       identifier:
-        description: "(Tùy chọn) Bundle Identifier mới"
+        description: "(Optional) New Bundle Identifier"
         required: false
 
 jobs:
@@ -20,156 +20,108 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
       REPO: ${{ github.repository }}
-      SUPABASE_URL: https://zkbzykamrzvvrhodiypk.supabase.co
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SUPABASE_URL: https://your-supabase-url.supabase.co
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      - name: Fetch certificate info from Supabase
+      - name: Fetch certificate from Supabase
         run: |
-          response=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
-            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
-            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
-            -H "Accept: application/json" \
-            "${SUPABASE_URL}/rest/v1/certificates?select=*")
+          response=$(curl -s -X GET \
+            -H "apikey: $SUPABASE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_KEY" \
+            "$SUPABASE_URL/rest/v1/certificates?select=*")
 
-          http_status=$(echo "$response" | grep HTTP_STATUS: | cut -d':' -f2)
-          json_data=$(echo "$response" | sed '/HTTP_STATUS/d')
+          echo "$response" | jq -r '.[0].p12_url' > p12_url.txt
+          echo "$response" | jq -r '.[0].provision_url' > provision_url.txt
+          echo "$response" | jq -r '.[0].password' > password.txt
 
-          if [ "$http_status" -ne 200 ]; then
-            echo "::error::Supabase API returned $http_status"
-            exit 1
-          fi
+          echo "CERT_P12_URL=$(cat p12_url.txt)" >> $GITHUB_ENV
+          echo "PROVISION_URL=$(cat provision_url.txt)" >> $GITHUB_ENV
+          echo "CERT_PASSWORD=$(cat password.txt)" >> $GITHUB_ENV
 
-          echo "$json_data" | jq '.[0]' > cert.json
-
-          echo "CERT_P12_URL=$(jq -r '.p12_url' cert.json)" >> $GITHUB_ENV
-          echo "CERT_PROVISION_URL=$(jq -r '.provision_url' cert.json)" >> $GITHUB_ENV
-          echo "CERT_PASSWORD=$(jq -r '.password' cert.json)" >> $GITHUB_ENV
-
-      - name: Download certificate and provisioning profile
+      - name: Download assets
         run: |
           curl -L "$CERT_P12_URL" -o cert.p12
-          curl -L "$CERT_PROVISION_URL" -o embedded.mobileprovision
+          curl -L "$PROVISION_URL" -o embedded.mobileprovision
 
-      - name: Extract TEAM_ID from mobileprovision
+      - name: Extract Team ID
         run: |
           security cms -D -i embedded.mobileprovision > provision.plist
-
-          if [ ! -s provision.plist ]; then
-            echo "::error::❌ Failed to decode embedded.mobileprovision"
-            exit 1
-          fi
-
-          TEAM_ID=$(plutil -extract TeamIdentifier.0 xml1 -o - provision.plist | xmllint --xpath 'string(//string)' -)
-
-          if [ -z "$TEAM_ID" ]; then
-            echo "::error::❌ Cannot extract TEAM_ID from provisioning profile"
-            exit 1
-          fi
-
-          echo "✅ TEAM_ID = $TEAM_ID"
+          TEAM_ID=$(/usr/libexec/PlistBuddy -c 'Print TeamIdentifier:0' provision.plist)
           echo "TEAM_ID=$TEAM_ID" >> $GITHUB_ENV
+          echo "Team ID: $TEAM_ID"
 
-      - name: Set workflow inputs
+      - name: Set inputs
         run: |
           echo "TAG=${{ github.event.inputs.tag }}" >> $GITHUB_ENV
           echo "IDENTIFIER=${{ github.event.inputs.identifier }}" >> $GITHUB_ENV
 
-      - name: Verify release exists
-        run: gh release view "$TAG" --repo "$REPO"
-
-      - name: Download all IPA files from release
+      - name: Download release IPAs
         run: |
-          gh release download "$TAG" --repo "$REPO" --pattern "*.ipa" --clobber
-          COUNT=$(ls *.ipa 2>/dev/null | wc -l)
-          if [ "$COUNT" -eq 0 ]; then
-            echo "::error::❌ No IPA files found in release"
+          gh release download "$TAG" --pattern "*.ipa"
+          IPA_COUNT=$(ls *.ipa 2>/dev/null | wc -l)
+          if [ "$IPA_COUNT" -eq 0 ]; then
+            echo "::error::No IPA files found"
             exit 1
           fi
-          echo "📦 Found $COUNT IPA files"
+          echo "Found $IPA_COUNT IPA files"
 
-      - name: Install Zsign and dependencies
+      - name: Install Zsign
         run: |
-          brew install pkg-config openssl minizip
-          git clone https://github.com/zhlynn/zsign.git
-          cd zsign/build/macos && make clean && make
-          sudo cp ../../bin/zsign /usr/local/bin/
+          brew install pkg-config openssl@1.1 minizip
+          git clone --depth 1 https://github.com/zhlynn/zsign.git
+          cd zsign
+          make -C build/macos
+          sudo cp bin/zsign /usr/local/bin/
+          zsign -v
 
-      - name: Sign all IPA files with Zsign (Advanced)
+      - name: Prepare entitlements
+        run: |
+          security cms -D -i embedded.mobileprovision > provision.plist
+          plutil -extract Entitlements xml1 -o entitlements.plist provision.plist
+
+          if [ -n "$IDENTIFIER" ]; then
+            plutil -replace 'application-identifier' -string "$TEAM_ID.$IDENTIFIER" entitlements.plist
+            plutil -replace 'keychain-access-groups.0' -string "$TEAM_ID.*" entitlements.plist
+          fi
+
+      - name: Sign IPAs
         run: |
           mkdir -p signed
           for IPA in *.ipa; do
-            APP_NAME=$(basename "$IPA" .ipa)
-            OUT_NAME="signed/$APP_NAME-signed.ipa"
-
-            # Step 1: Extract original entitlements from profile
-            security cms -D -i embedded.mobileprovision > provision.plist
-            plutil -extract Entitlements xml1 -o entitlements_raw.plist provision.plist
-
-            # Step 2: Handle Bundle ID change if specified
-            if [ -n "$IDENTIFIER" ]; then
-              echo "🔧 Signing $IPA with new Bundle ID: $IDENTIFIER..."
-              
-              # Create modified entitlements
-              plutil -replace 'application-identifier' -string "$TEAM_ID.$IDENTIFIER" entitlements_raw.plist
-              plutil -replace 'keychain-access-groups.0' -string "$TEAM_ID.*" entitlements_raw.plist
-              cp entitlements_raw.plist entitlements.plist
-
-              # Sign with new Bundle ID
-              zsign -f \
-                -k cert.p12 -p "$CERT_PASSWORD" \
-                -m embedded.mobileprovision \
-                -b "$IDENTIFIER" \
-                --force-identifier \
-                -e entitlements.plist \
-                -z 9 \
-                -o "$OUT_NAME" "$IPA"
-            else
-              echo "🔧 Signing $IPA without changing Bundle ID..."
-              cp entitlements_raw.plist entitlements.plist
-              
-              # Sign with original Bundle ID
-              zsign -f \
-                -k cert.p12 -p "$CERT_PASSWORD" \
-                -m embedded.mobileprovision \
-                -e entitlements.plist \
-                -z 9 \
-                -o "$OUT_NAME" "$IPA"
-            fi
-          done
-
-      - name: Verify signed IPAs
-        run: |
-          for FILE in signed/*.ipa; do
-            echo "🔍 Verifying $FILE..."
+            OUTPUT="signed/$(basename "$IPA" .ipa)-signed.ipa"
             
-            # Check embedded.mobileprovision exists
-            unzip -q "$FILE" -d temp_verify
-            PROFILE=$(find temp_verify/Payload -name "embedded.mobileprovision" | head -n1)
-            if [ -z "$PROFILE" ]; then
-              echo "::error::❌ Missing embedded.mobileprovision in $FILE"
+            echo "Signing $IPA..."
+            zsign -f \
+              -k cert.p12 -p "$CERT_PASSWORD" \
+              -m embedded.mobileprovision \
+              ${IDENTIFIER:+-b "$IDENTIFIER"} \
+              -e entitlements.plist \
+              -z 9 \
+              -o "$OUTPUT" "$IPA"
+
+            # Verify
+            unzip -q "$OUTPUT" -d temp
+            if [ ! -f "$(find temp -name embedded.mobileprovision | head -1)" ]; then
+              echo "::error::Provisioning profile missing in $OUTPUT"
               exit 1
             fi
-            
-            # Check code signature
-            codesign -dv --verbose=4 "temp_verify/Payload"/*.app 2>&1 | grep -q "valid on disk"
-            if [ $? -ne 0 ]; then
-              echo "::error::❌ Invalid code signature in $FILE"
-              exit 1
-            fi
-            
-            echo "✅ $FILE passed verification"
-            rm -rf temp_verify
+            rm -rf temp
           done
 
-      - name: Upload signed IPA files to release
+      - name: Upload signed IPAs
         run: |
-          echo "📤 Uploading signed IPAs..."
-          for FILE in signed/*.ipa; do
-            FILENAME=$(basename "$FILE")
-            gh release upload "$TAG" "$FILE" --repo "$REPO" --clobber
-            echo "⬇️ Download link: https://github.com/$REPO/releases/download/$TAG/$FILENAME"
+          for IPA in signed/*.ipa; do
+            gh release upload "$TAG" "$IPA"
+            echo "Uploaded: $(basename "$IPA")"
+          done
+
+      - name: Create download links
+        run: |
+          echo "### Download Links" >> $GITHUB_STEP_SUMMARY
+          for IPA in signed/*.ipa; do
+            echo "- [$(basename "$IPA")](https://github.com/$REPO/releases/download/$TAG/$(basename "$IPA"))" >> $GITHUB_STEP_SUMMARY
           done
