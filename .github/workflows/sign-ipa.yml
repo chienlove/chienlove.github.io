@@ -65,7 +65,6 @@ jobs:
         if: ${{ github.event.inputs.identifier == '' }}
         run: |
           RAND=$(openssl rand -hex 3)
-          echo "🌀 Generated common random: $RAND"
           echo "RAND=$RAND" >> $GITHUB_ENV
 
       - name: Verify release exists
@@ -80,16 +79,17 @@ jobs:
             exit 1
           fi
 
-      - name: Install Zsign
+      - name: Install Zsign and dependencies
         run: |
-          brew install pkg-config openssl minizip
+          brew install pkg-config openssl minizip imagemagick
           git clone https://github.com/zhlynn/zsign.git
           cd zsign/build/macos && make clean && make
           sudo cp ../../bin/zsign /usr/local/bin/
 
-      - name: Patch Info.plist & Binary (auto-generate identifier if not provided)
+      - name: Patch Info.plist & Binary
         run: |
           > id_map.txt
+          mkdir -p public/icons public/plist
           for IPA in *.ipa; do
             echo "📦 Patching $IPA..."
             APP_NAME=$(basename "$IPA" .ipa)
@@ -110,13 +110,16 @@ jobs:
               FINAL_ID="$INPUT_IDENTIFIER"
             fi
 
-            echo "🔍 OLD Identifier: $OLD_ID"
-            echo "📌 New Identifier: $FINAL_ID"
-
             /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $FINAL_ID" "$MAIN_PLIST"
             /usr/bin/perl -pi -e "s/\Q$OLD_ID\E/$FINAL_ID/" "$BINARY_PATH"
 
             echo "$IPA|$FINAL_ID" >> id_map.txt
+
+            ICON_FILE=$(defaults read "$MAIN_PLIST" CFBundleIcons.CFBundlePrimaryIcon.CFBundleIconFiles | sed -n 2p | tr -d '", ')
+            ICON_PATH="$APP_DIR/$ICON_FILE.png"
+            if [ -f "$ICON_PATH" ]; then
+              cp "$ICON_PATH" "public/icons/${APP_NAME}.png"
+            fi
 
             OUTPUT_PATH="$RUNNER_TEMP/$APP_NAME-patched.ipa"
             cd "$WORKDIR"
@@ -126,88 +129,52 @@ jobs:
             rm -rf "$WORKDIR"
           done
 
-      - name: Sign all IPA files with Zsign (overwrite original IPA)
+      - name: Sign IPA files
         run: |
           while IFS='|' read -r IPA FINAL_ID; do
             APP_NAME=$(basename "$IPA" .ipa)
             TMP_OUT="$RUNNER_TEMP/$APP_NAME-signed.ipa"
-
-            echo "🔧 Signing $IPA with Zsign..."
             zsign -f -z 9 -k cert.p12 -p "$CERT_PASSWORD" -m embedded.mobileprovision \
               -b "$FINAL_ID" -o "$TMP_OUT" "$IPA"
-
             mv "$TMP_OUT" "$IPA"
           done < id_map.txt
 
-      - name: Upload signed IPA (remove old if exists)
+      - name: Upload signed IPA and generate .plist
         run: |
+          BASE_URL="https://github.com/$REPO/releases/download/$TAG"
+          for IPA in *.ipa; do
+            gh release upload "$TAG" "$IPA" --repo "$REPO" --clobber
+          done
+
           while IFS='|' read -r IPA FINAL_ID; do
-            FILENAME=$(basename "$IPA")
+            APP_NAME="${IPA%.ipa}"
+            PLIST_NAME="${APP_NAME}.plist"
+            ICON_NAME="${APP_NAME}.png"
 
-            echo "🗑️ Kiểm tra và xóa file cũ nếu có: $FILENAME"
-            if gh release view "$TAG" --repo "$REPO" | grep -q "$FILENAME"; then
-              echo "⚠️ File $FILENAME đã tồn tại, sẽ xóa..."
-              gh release delete-asset "$TAG" "$FILENAME" --repo "$REPO" --yes || echo "❌ Không thể xóa asset, có thể do chưa tồn tại"
+            VERSION="1.0.0"
+            echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" > "public/plist/$PLIST_NAME"
+            echo "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">" >> "public/plist/$PLIST_NAME"
+            echo "<plist version=\"1.0\"><dict>" >> "public/plist/$PLIST_NAME"
+            echo "  <key>items</key><array><dict>" >> "public/plist/$PLIST_NAME"
+            echo "    <key>assets</key><array>" >> "public/plist/$PLIST_NAME"
+            echo "      <dict><key>kind</key><string>software-package</string><key>url</key><string>$BASE_URL/$IPA</string></dict>" >> "public/plist/$PLIST_NAME"
+            if [ -f "public/icons/$ICON_NAME" ]; then
+              echo "      <dict><key>kind</key><string>display-image</string><key>needs-shine</key><false/><key>url</key><string>https://${REPO#*/}.github.io/icons/$ICON_NAME</string></dict>" >> "public/plist/$PLIST_NAME"
             fi
-
-            echo "⬆️ Upload lại file: $FILENAME"
-            gh release upload "$TAG" "$FILENAME" --repo "$REPO" --clobber
-            echo "✅ Đã upload xong: $FILENAME"
+            echo "    </array>" >> "public/plist/$PLIST_NAME"
+            echo "    <key>metadata</key><dict>" >> "public/plist/$PLIST_NAME"
+            echo "      <key>bundle-identifier</key><string>$FINAL_ID</string>" >> "public/plist/$PLIST_NAME"
+            echo "      <key>bundle-version</key><string>$VERSION</string>" >> "public/plist/$PLIST_NAME"
+            echo "      <key>kind</key><string>software</string>" >> "public/plist/$PLIST_NAME"
+            echo "      <key>title</key><string>$APP_NAME</string>" >> "public/plist/$PLIST_NAME"
+            echo "    </dict>" >> "public/plist/$PLIST_NAME"
+            echo "  </dict></array></dict></plist>" >> "public/plist/$PLIST_NAME"
           done < id_map.txt
 
-      - name: Generate plist with version & icon, commit to repo
+      - name: Commit plist & icons
         run: |
           git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-
-          mkdir -p public/plist public/icons
-
-          BASE_URL="https://github.com/$REPO/releases/download/$TAG"
-
-          while IFS='|' read -r IPA FINAL_ID; do
-            FILENAME=$(basename "$IPA")
-            APP_NAME="${FILENAME%.ipa}"
-            WORKDIR="/tmp/zsign_meta_$RANDOM"
-            unzip -q "$IPA" -d "$WORKDIR"
-
-            APP_DIR=$(find "$WORKDIR/Payload" -name "*.app" -type d | head -n1)
-            MAIN_PLIST="$APP_DIR/Info.plist"
-
-            VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$MAIN_PLIST" || echo "1.0.0")
-
-            ICON_PATH=$(find "$APP_DIR" -type f -name "*AppIcon60x60@2x*.png" | head -n1)
-            ICON_NAME="${APP_NAME}.png"
-            ICON_OUT="public/icons/$ICON_NAME"
-
-            if [ ! -f "$ICON_OUT" ] && [ -f "$ICON_PATH" ]; then
-              cp "$ICON_PATH" "$ICON_OUT"
-              echo "🖼️ Đã trích xuất icon: $ICON_OUT"
-            else
-              echo "📦 Icon đã tồn tại hoặc không tìm thấy."
-            fi
-
-            PLIST_NAME="${APP_NAME}.plist"
-            PLIST_PATH="public/plist/$PLIST_NAME"
-
-            echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" > "$PLIST_PATH"
-            echo "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">" >> "$PLIST_PATH"
-            echo "<plist version=\"1.0\"><dict>" >> "$PLIST_PATH"
-            echo "  <key>items</key><array><dict>" >> "$PLIST_PATH"
-            echo "    <key>assets</key><array><dict>" >> "$PLIST_PATH"
-            echo "      <key>kind</key><string>software-package</string>" >> "$PLIST_PATH"
-            echo "      <key>url</key><string>$BASE_URL/$FILENAME</string>" >> "$PLIST_PATH"
-            echo "    </dict></array>" >> "$PLIST_PATH"
-            echo "    <key>metadata</key><dict>" >> "$PLIST_PATH"
-            echo "      <key>bundle-identifier</key><string>$FINAL_ID</string>" >> "$PLIST_PATH"
-            echo "      <key>bundle-version</key><string>$VERSION</string>" >> "$PLIST_PATH"
-            echo "      <key>kind</key><string>software</string>" >> "$PLIST_PATH"
-            echo "      <key>title</key><string>$APP_NAME</string>" >> "$PLIST_PATH"
-            echo "    </dict>" >> "$PLIST_PATH"
-            echo "  </dict></array></dict></plist>" >> "$PLIST_PATH"
-
-            rm -rf "$WORKDIR"
-          done < id_map.txt
-
+          git config user.email "actions@github.com"
           git add public/plist/*.plist public/icons/*.png || true
-          git commit -m "🤖 Update plist & icon for tag $TAG" || echo "No changes to commit"
-          git push || echo "Nothing to push"
+          git commit -m "📦 Add plist & icons for tag $TAG" || echo "No changes"
+          git push
