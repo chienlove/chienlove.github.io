@@ -84,24 +84,22 @@ jobs:
           make clean && make
           sudo cp ../../bin/zsign /usr/local/bin/
 
-      - name: Generate minimal entitlements.plist
+      - name: Generate entitlements.plist
         run: |
           BUNDLE_ID="${{ github.event.inputs.identifier }}"
           if [ -z "$BUNDLE_ID" ]; then
-            echo "::error::Missing bundle identifier for entitlements"
+            echo "::error::Missing bundle identifier"
             exit 1
           fi
 
-          cat <<EOF > entitlements.plist
-<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0">
-<dict>
-  <key>application-identifier</key>
-  <string>${TEAM_ID}.${BUNDLE_ID}</string>
-</dict>
-</plist>
-EOF
+          echo '<?xml version="1.0" encoding="UTF-8"?>' > entitlements.plist
+          echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> entitlements.plist
+          echo '<plist version="1.0">' >> entitlements.plist
+          echo '<dict>' >> entitlements.plist
+          echo '  <key>application-identifier</key>' >> entitlements.plist
+          echo "  <string>${TEAM_ID}.${BUNDLE_ID}</string>" >> entitlements.plist
+          echo '</dict>' >> entitlements.plist
+          echo '</plist>' >> entitlements.plist
 
       - name: Sign all IPA files with Zsign
         run: |
@@ -117,26 +115,26 @@ EOF
               -o "$OUT_NAME" "$IPA"
           done
 
-      - name: Verify Bundle ID after signing
+      - name: Verify signed apps
         run: |
           for FILE in signed/*.ipa; do
             unzip -q "$FILE" -d tmp_ipa
-            echo "$FILE:"
+            echo "🔍 $FILE"
             plutil -p tmp_ipa/Payload/*.app/Info.plist | grep CFBundleIdentifier
             rm -rf tmp_ipa
           done
 
-      - name: Upload signed IPA files to release
+      - name: Upload signed IPAs to release
         run: |
           for FILE in signed/*.ipa; do
             echo "⬆️ Uploading $FILE..."
             gh release upload "$TAG" "$FILE" --repo "$REPO" --clobber
           done
 
-      - name: Output download links
+      - name: Show download links
         run: |
-          echo "📥 Download links:"
+          echo "📥 Signed IPA download links:"
           for FILE in signed/*.ipa; do
-            FILE_NAME=$(basename "$FILE")
-            echo "🔗 https://github.com/$REPO/releases/download/$TAG/$FILE_NAME"
+            NAME=$(basename "$FILE")
+            echo "🔗 https://github.com/$REPO/releases/download/$TAG/$NAME"
           done
