@@ -62,11 +62,11 @@ jobs:
           echo "IDENTIFIER=${{ github.event.inputs.identifier }}" >> $GITHUB_ENV
 
       - name: Generate shared random (if needed)
-  if: ${{ github.event.inputs.identifier == '' }}
+        if: ${{ github.event.inputs.identifier == '' }}
         run: |
-    RAND=$(openssl rand -hex 3)
-    echo "🌀 Generated common random: $RAND"
-    echo "RAND=$RAND" >> $GITHUB_ENV
+          RAND=$(openssl rand -hex 3)
+          echo "🌀 Generated common random: $RAND"
+          echo "RAND=$RAND" >> $GITHUB_ENV
 
       - name: Verify release exists
         run: gh release view "$TAG" --repo "$REPO"
