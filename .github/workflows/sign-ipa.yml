@@ -101,8 +101,7 @@ jobs:
             /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $IDENTIFIER" "$MAIN_PLIST"
             /usr/bin/perl -pi -e "s/\Q$OLD_ID\E/$IDENTIFIER/" "$BINARY_PATH"
 
-            # 🔍 Patch all Info.plist inside app bundles
-            echo "🔎 Scanning for other Info.plist..."
+            echo "🔎 Scanning for Info.plist in embedded bundles..."
             find "$APP_DIR" -name Info.plist | while read -r PLIST; do
               if [[ "$PLIST" != "$MAIN_PLIST" ]]; then
                 SUB_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$PLIST" 2>/dev/null || echo "")
@@ -141,15 +140,9 @@ jobs:
               zsign -f -k cert.p12 -p "$CERT_PASSWORD" -m embedded.mobileprovision -o "$OUT_NAME" "$IPA"
             else
               echo "🔧 Signing $IPA with new Bundle ID: $IDENTIFIER..."
-              echo '<?xml version="1.0" encoding="UTF-8"?>' > entitlements.plist
-              echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> entitlements.plist
-              echo '<plist version="1.0"><dict>' >> entitlements.plist
-              echo '  <key>application-identifier</key>' >> entitlements.plist
-              echo "  <string>$TEAM_ID.$IDENTIFIER</string>" >> entitlements.plist
-              echo '</dict></plist>' >> entitlements.plist
-
+              # ⚠️ Không truyền entitlements để zsign tự tạo
               zsign -f -k cert.p12 -p "$CERT_PASSWORD" -m embedded.mobileprovision \
-                -b "$IDENTIFIER" -e entitlements.plist -o "$OUT_NAME" "$IPA"
+                -b "$IDENTIFIER" -o "$OUT_NAME" "$IPA"
             fi
           done
 
@@ -180,6 +173,6 @@ jobs:
             echo "  </dict></array></dict></plist>" >> "$PLIST_NAME"
 
             gh release upload "$TAG" "$PLIST_NAME" --repo "$REPO" --clobber
-            echo "📲 Install link:"
+            echo "📲 Link cài đặt:"
             echo "itms-services://?action=download-manifest&url=$BASE_URL/$PLIST_NAME"
           done
