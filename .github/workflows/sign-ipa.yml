@@ -32,7 +32,7 @@ jobs:
           response=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
             -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
             -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
-            "${SUPABASE_URL}/rest/v1/cert?select=*")
+            "${SUPABASE_URL}/rest/v1/certificates?select=*")
 
           http_status=$(echo "$response" | grep HTTP_STATUS: | cut -d':' -f2)
           json_data=$(echo "$response" | sed '/HTTP_STATUS/d')
