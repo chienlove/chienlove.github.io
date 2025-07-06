@@ -109,7 +109,9 @@ jobs:
               exit 1
             fi
 
-            zip -qr "$APP_NAME-patched.ipa" -j "$WORKDIR/Payload"
+            cd "$WORKDIR"
+            zip -qr "../../$APP_NAME-patched.ipa" Payload
+            cd -
             mv "$APP_NAME-patched.ipa" "$IPA"
             rm -rf "$WORKDIR"
           done
