@@ -32,7 +32,6 @@ jobs:
           response=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
             -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
             -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
-            -H "Accept: application/json" \
             "${SUPABASE_URL}/rest/v1/certificates?select=*")
           http_status=$(echo "$response" | grep HTTP_STATUS: | cut -d':' -f2)
           json_data=$(echo "$response" | sed '/HTTP_STATUS/d')
@@ -60,9 +59,10 @@ jobs:
         run: |
           echo "TAG=${{ github.event.inputs.tag }}" >> $GITHUB_ENV
           echo "IDENTIFIER=${{ github.event.inputs.identifier }}" >> $GITHUB_ENV
+
           if [ -z "${{ github.event.inputs.identifier }}" ]; then
-            RANDOM_SUFFIX=$(cat /dev/urandom | tr -dc 'a-z0-9' | fold -w 5 | head -n1)
-            echo "🔑 Shared random suffix: $RANDOM_SUFFIX"
+            RANDOM_SUFFIX=$(cat /dev/urandom | tr -dc 'a-z0-9' | fold -w 5 | head -n 1)
+            echo "🌀 Generated random suffix: $RANDOM_SUFFIX"
             echo "RANDOM_SUFFIX=$RANDOM_SUFFIX" >> $GITHUB_ENV
           fi
 
@@ -85,48 +85,54 @@ jobs:
           cd zsign/build/macos && make clean && make
           sudo cp ../../bin/zsign /usr/local/bin/
 
-      - name: Sign all IPA files
+      - name: Sign all IPA files with Zsign
         run: |
           mkdir -p signed
+
           for IPA in *.ipa; do
-            echo "📦 Processing $IPA..."
             APP_NAME=$(basename "$IPA" .ipa)
             OUT_NAME="signed/$APP_NAME.ipa"
 
-            unzip -q "$IPA" -d extracted
-            APP_DIR=$(find extracted/Payload -type d -name "*.app" | head -n1)
-            PLIST_PATH="$APP_DIR/Info.plist"
-            ORIGINAL_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$PLIST_PATH")
-
             if [ -z "$IDENTIFIER" ]; then
-              PATCHED_ID="${ORIGINAL_ID}-storeios.net-${RANDOM_SUFFIX}"
+              echo "📦 Processing $IPA..."
+              unzip -q "$IPA" -d extracted
+              PLIST_PATH=$(find extracted/Payload -name Info.plist | head -n1)
+              ORIGINAL_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$PLIST_PATH")
+
+              # Loại bỏ hậu tố nếu có
+              BASE_ID=$(echo "$ORIGINAL_ID" | sed 's/-storeios\.net.*$//')
+              PATCHED_ID="${BASE_ID}-storeios.net-${RANDOM_SUFFIX}"
+
               echo "🔧 Using identifier: $PATCHED_ID"
+
               BINARY_NAME=$(/usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$PLIST_PATH")
-              BINARY_PATH="$APP_DIR/$BINARY_NAME"
+              BINARY_PATH=$(find extracted/Payload -name "$BINARY_NAME" | head -n1)
+
               /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $PATCHED_ID" "$PLIST_PATH"
               /usr/bin/perl -pi -e "s/\Q$ORIGINAL_ID\E/$PATCHED_ID/" "$BINARY_PATH"
+
               cd extracted && zip -qr "../$IPA" Payload && cd -
               rm -rf extracted
+
+              zsign -f -k cert.p12 -p "$CERT_PASSWORD" -m embedded.mobileprovision -b "$PATCHED_ID" -o "$OUT_NAME" "$IPA"
             else
               PATCHED_ID="$IDENTIFIER"
               echo "🔧 Signing $IPA with provided Bundle ID: $PATCHED_ID"
-              /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $PATCHED_ID" "$PLIST_PATH" || true
+              zsign -f -k cert.p12 -p "$CERT_PASSWORD" -m embedded.mobileprovision -b "$PATCHED_ID" -o "$OUT_NAME" "$IPA"
             fi
-
-            zsign -f -k cert.p12 -p "$CERT_PASSWORD" -m embedded.mobileprovision \
-              -b "$PATCHED_ID" -o "$OUT_NAME" "$IPA"
 
             echo "SIGNED_IDENTIFIER_$APP_NAME=$PATCHED_ID" >> $GITHUB_ENV
           done
 
-      - name: Upload signed IPA and .plist
+      - name: Upload signed IPA and plist
         run: |
           BASE_URL="https://github.com/$REPO/releases/download/$TAG"
+
           for FILE in signed/*.ipa; do
             FILENAME=$(basename "$FILE")
             APP_NAME="${FILENAME%.ipa}"
-            IDENTIFIER_VAR="SIGNED_IDENTIFIER_$APP_NAME"
-            FINAL_ID=${!IDENTIFIER_VAR}
+            IDENT_VAR="SIGNED_IDENTIFIER_${APP_NAME}"
+            FINAL_ID="${!IDENT_VAR}"
 
             PLIST_NAME="${APP_NAME}.plist"
 
@@ -149,6 +155,7 @@ jobs:
             echo "  </dict></array></dict></plist>" >> "$PLIST_NAME"
 
             gh release upload "$TAG" "$PLIST_NAME" --repo "$REPO" --clobber
+
             echo "📲 Link cài đặt:"
             echo "itms-services://?action=download-manifest&url=$BASE_URL/$PLIST_NAME"
           done
