@@ -24,7 +24,7 @@ jobs:
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
 
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v3
 
       - name: Fetch certificate info from Supabase
@@ -32,8 +32,7 @@ jobs:
           response=$(curl -s -w "\nHTTP_STATUS:%{http_code}" \
             -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
             -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
-            -H "Accept: application/json" \
-            "${SUPABASE_URL}/rest/v1/certificates?select=*")
+            "${SUPABASE_URL}/rest/v1/cert?select=*")
 
           http_status=$(echo "$response" | grep HTTP_STATUS: | cut -d':' -f2)
           json_data=$(echo "$response" | sed '/HTTP_STATUS/d')
@@ -44,14 +43,20 @@ jobs:
           fi
 
           echo "$json_data" | jq '.[0]' > cert.json
-
           echo "CERT_P12_URL=$(jq -r '.p12_url' cert.json)" >> $GITHUB_ENV
+          echo "CERT_PROVISION_URL=$(jq -r '.provision_url' cert.json)" >> $GITHUB_ENV
           echo "CERT_PASSWORD=$(jq -r '.password' cert.json)" >> $GITHUB_ENV
-          echo "TEAM_ID=$(jq -r '.team_id' cert.json)" >> $GITHUB_ENV
 
-      - name: Download certificate
+      - name: Download certificates
         run: |
           curl -L "$CERT_P12_URL" -o cert.p12
+          curl -L "$CERT_PROVISION_URL" -o embedded.mobileprovision
+
+      - name: Extract TEAM_ID from mobileprovision
+        run: |
+          TEAM_ID=$(security cms -D -i embedded.mobileprovision | plutil -extract Entitlements xml1 -o - - | plutil -extract 'com.apple.developer.team-identifier' xml1 -o - - | xmllint --xpath "string(//string)" -)
+          echo "✅ TEAM_ID = $TEAM_ID"
+          echo "TEAM_ID=$TEAM_ID" >> $GITHUB_ENV
 
       - name: Set workflow inputs
         run: |
@@ -79,48 +84,45 @@ jobs:
           make clean && make
           sudo cp ../../bin/zsign /usr/local/bin/
 
-      - name: Generate entitlements.plist
+      - name: Generate minimal entitlements.plist
         run: |
-          if [ -z "$IDENTIFIER" ]; then
-            IDENTIFIER="com.random.$(openssl rand -hex 3)"
-            echo "Using random bundle id: $IDENTIFIER"
+          BUNDLE_ID="${{ github.event.inputs.identifier }}"
+          if [ -z "$BUNDLE_ID" ]; then
+            echo "::error::Missing bundle identifier for entitlements"
+            exit 1
           fi
 
-          echo '<?xml version="1.0" encoding="UTF-8"?>' > entitlements.plist
-          echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> entitlements.plist
-          echo '<plist version="1.0">' >> entitlements.plist
-          echo '<dict>' >> entitlements.plist
-          echo '  <key>application-identifier</key>' >> entitlements.plist
-          echo "  <string>${TEAM_ID}.${IDENTIFIER}</string>" >> entitlements.plist
-          echo '  <key>com.apple.security.application-groups</key>' >> entitlements.plist
-          echo '  <array>' >> entitlements.plist
-          echo "    <string>${TEAM_ID}.${IDENTIFIER}</string>" >> entitlements.plist
-          echo '  </array>' >> entitlements.plist
-          echo '</dict>' >> entitlements.plist
-          echo '</plist>' >> entitlements.plist
-
-          echo "FINAL_IDENTIFIER=$IDENTIFIER" >> $GITHUB_ENV
+          cat <<EOF > entitlements.plist
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>application-identifier</key>
+  <string>${TEAM_ID}.${BUNDLE_ID}</string>
+</dict>
+</plist>
+EOF
 
       - name: Sign all IPA files with Zsign
         run: |
           mkdir -p signed
           for IPA in *.ipa; do
-            echo "🔧 Signing $IPA with identifier: $FINAL_IDENTIFIER"
             OUT_NAME="signed/$IPA"
-
+            echo "🔧 Signing $IPA..."
             zsign -f -a \
               -k cert.p12 -p "$CERT_PASSWORD" \
-              -b "$FINAL_IDENTIFIER" \
+              -m embedded.mobileprovision \
               -e entitlements.plist \
+              -b "$IDENTIFIER" \
               -o "$OUT_NAME" "$IPA"
           done
 
       - name: Verify Bundle ID after signing
         run: |
           for FILE in signed/*.ipa; do
-            echo "🔍 Verifying $FILE..."
             unzip -q "$FILE" -d tmp_ipa
-            plutil -p tmp_ipa/Payload/*.app/Info.plist | grep CFBundleIdentifier || echo "⚠️ Not found"
+            echo "$FILE:"
+            plutil -p tmp_ipa/Payload/*.app/Info.plist | grep CFBundleIdentifier
             rm -rf tmp_ipa
           done
 
@@ -129,10 +131,12 @@ jobs:
           for FILE in signed/*.ipa; do
             echo "⬆️ Uploading $FILE..."
             gh release upload "$TAG" "$FILE" --repo "$REPO" --clobber
-            echo "🔗 https://github.com/$REPO/releases/download/$TAG/$(basename $FILE)" >> signed_links.txt
           done
 
-      - name: Show download links
+      - name: Output download links
         run: |
-          echo "✅ Signed IPA download links:"
-          cat signed_links.txt
+          echo "📥 Download links:"
+          for FILE in signed/*.ipa; do
+            FILE_NAME=$(basename "$FILE")
+            echo "🔗 https://github.com/$REPO/releases/download/$TAG/$FILE_NAME"
+          done
