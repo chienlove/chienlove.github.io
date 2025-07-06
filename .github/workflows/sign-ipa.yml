@@ -7,7 +7,7 @@ on:
         description: "Release tag chứa IPA"
         required: true
       identifier:
-        description: "(Tùy chọn) Bundle Identifier mới"
+        description: "(Tùy chọn) Bundle Identifier mới (sẽ thêm hậu tố -storeios.net-random)"
         required: false
 
 jobs:
@@ -98,41 +98,53 @@ jobs:
           cd zsign/build/macos && make clean && make
           sudo cp ../../bin/zsign /usr/local/bin/
 
-      - name: Sign all IPA files with Zsign
+      - name: Sign all IPA files with Zsign (dynamic bundle ID & overwrite original)
         run: |
-          mkdir -p signed
           for IPA in *.ipa; do
             APP_NAME=$(basename "$IPA" .ipa)
-            OUT_NAME="signed/$APP_NAME-signed.ipa"
 
+            # Giải nén IPA để đọc Info.plist
+            unzip -q "$IPA" -d temp
+            PLIST_PATH=$(find temp/Payload -name Info.plist | head -n1)
+
+            # Đọc bundle id gốc từ Info.plist
+            ORIGINAL_ID=$(/usr/libexec/PlistBuddy -c "Print CFBundleIdentifier" "$PLIST_PATH")
+
+            # Sinh đoạn random (5 ký tự ngẫu nhiên)
+            RANDOM_PART=$(cat /dev/urandom | tr -dc 'a-z0-9' | fold -w 5 | head -n 1)
+
+            # Nếu không nhập identifier thì dùng ID gốc + hậu tố
             if [ -z "${{ github.event.inputs.identifier }}" ]; then
-              echo "🔧 Signing $IPA without changing Bundle ID..."
-              zsign -f \
-                -k cert.p12 -p "$CERT_PASSWORD" \
-                -m embedded.mobileprovision \
-                -o "$OUT_NAME" "$IPA"
+              BUNDLE_ID="${ORIGINAL_ID}-storeios.net-${RANDOM_PART}"
             else
-              echo "🔧 Signing $IPA with new Bundle ID: ${{ github.event.inputs.identifier }}..."
-
-              echo '<?xml version="1.0" encoding="UTF-8"?>' > entitlements.plist
-              echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> entitlements.plist
-              echo '<plist version="1.0"><dict>' >> entitlements.plist
-              echo '  <key>application-identifier</key>' >> entitlements.plist
-              echo "  <string>$TEAM_ID.${{ github.event.inputs.identifier }}</string>" >> entitlements.plist
-              echo '</dict></plist>' >> entitlements.plist
-
-              zsign -f \
-                -k cert.p12 -p "$CERT_PASSWORD" \
-                -m embedded.mobileprovision \
-                -b "${{ github.event.inputs.identifier }}" \
-                -e entitlements.plist \
-                -o "$OUT_NAME" "$IPA"
+              BUNDLE_ID="${{ github.event.inputs.identifier }}-${RANDOM_PART}"
             fi
+
+            echo "🔧 Signing $IPA with Bundle ID: $BUNDLE_ID"
+
+            # Tạo entitlements.plist
+            echo '<?xml version="1.0" encoding="UTF-8"?>' > entitlements.plist
+            echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> entitlements.plist
+            echo '<plist version="1.0"><dict>' >> entitlements.plist
+            echo '  <key>application-identifier</key>' >> entitlements.plist
+            echo "  <string>$TEAM_ID.$BUNDLE_ID</string>" >> entitlements.plist
+            echo '</dict></plist>' >> entitlements.plist
+
+            # Ghi đè file gốc và nén lại tốt nhất
+            zsign -f \
+              -k cert.p12 -p "$CERT_PASSWORD" \
+              -m embedded.mobileprovision \
+              -b "$BUNDLE_ID" \
+              -e entitlements.plist \
+              -z 9 \
+              -o "$IPA" "$IPA"
+
+            rm -rf temp
           done
 
       - name: Verify embedded.mobileprovision exists in signed IPA
         run: |
-          for FILE in signed/*.ipa; do
+          for FILE in *.ipa; do
             unzip -q "$FILE" -d temp
             PROFILE=$(find temp/Payload -name "embedded.mobileprovision" | head -n1)
             if [ -z "$PROFILE" ]; then
@@ -144,11 +156,10 @@ jobs:
             rm -rf temp
           done
 
-      - name: Upload signed IPA files to release
+      - name: Upload signed IPA files to release (overwrite original)
         run: |
-          echo "🔗 Signed IPA links:"
-          for FILE in signed/*.ipa; do
-            FILENAME=$(basename "$FILE")
+          echo "🔗 Uploading signed IPA files to release:"
+          for FILE in *.ipa; do
             gh release upload "$TAG" "$FILE" --repo "$REPO" --clobber
-            echo "➡️ https://github.com/$REPO/releases/download/$TAG/$FILENAME"
+            echo "➡️ https://github.com/$REPO/releases/download/$TAG/$(basename "$FILE")"
           done
