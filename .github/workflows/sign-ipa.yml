@@ -102,7 +102,7 @@ jobs:
             BINARY_PATH="$APP_DIR/$BINARY_NAME"
 
             OLD_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$MAIN_PLIST")
-            BASE_ID=$(echo "$OLD_ID" | sed 's/-storeios\.net.*//')
+            BASE_ID=$(echo "$OLD_ID" | sed -E 's/-storeios\.net(-[a-f0-9]+)?$//')
 
             if [ -z "$INPUT_IDENTIFIER" ]; then
               FINAL_ID="${BASE_ID}-storeios.net-${RAND}"
