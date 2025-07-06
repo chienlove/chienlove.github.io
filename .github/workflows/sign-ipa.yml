@@ -155,6 +155,8 @@ jobs:
 
       - name: Generate .plist and upload to release
         run: |
+          TAG=${TAG}
+          REPO=${REPO}
           BASE_URL="https://github.com/$REPO/releases/download/$TAG"
 
           for FILE in signed/*.ipa; do
@@ -165,7 +167,8 @@ jobs:
             PLIST=$(find temp/Payload -name Info.plist | head -n1)
 
             BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$PLIST")
-            VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$PLIST")
+            VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$PLIST" 2>/dev/null || true)
+            if [ -z "$VERSION" ]; then VERSION="1.0.0"; fi
             DISPLAY_NAME=$(/usr/libexec/PlistBuddy -c "Print :CFBundleDisplayName" "$PLIST" 2>/dev/null || echo "$APP_NAME")
             rm -rf temp
 
