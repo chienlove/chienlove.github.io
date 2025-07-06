@@ -7,7 +7,7 @@ on:
         description: "Release tag chứa IPA"
         required: true
       identifier:
-        description: "(Tùy chọn) Bundle Identifier mới (sẽ thêm hậu tố -storeios.net-random)"
+        description: "(Tùy chọn) Bundle Identifier mới (nếu để trống sẽ tự sinh)"
         required: false
 
 jobs:
@@ -98,31 +98,25 @@ jobs:
           cd zsign/build/macos && make clean && make
           sudo cp ../../bin/zsign /usr/local/bin/
 
-      - name: Sign all IPA files with Zsign (dynamic bundle ID & overwrite original)
+      - name: Sign all IPA files with Zsign (auto ID if blank)
         run: |
           for IPA in *.ipa; do
             APP_NAME=$(basename "$IPA" .ipa)
 
-            # Giải nén IPA để đọc Info.plist
             unzip -q "$IPA" -d temp
             PLIST_PATH=$(find temp/Payload -name Info.plist | head -n1)
-
-            # Đọc bundle id gốc từ Info.plist
             ORIGINAL_ID=$(/usr/libexec/PlistBuddy -c "Print CFBundleIdentifier" "$PLIST_PATH")
 
-            # Sinh đoạn random (5 ký tự ngẫu nhiên)
             RANDOM_PART=$(cat /dev/urandom | tr -dc 'a-z0-9' | fold -w 5 | head -n 1)
 
-            # Nếu không nhập identifier thì dùng ID gốc + hậu tố
             if [ -z "${{ github.event.inputs.identifier }}" ]; then
               BUNDLE_ID="${ORIGINAL_ID}-storeios.net-${RANDOM_PART}"
             else
-              BUNDLE_ID="${{ github.event.inputs.identifier }}-${RANDOM_PART}"
+              BUNDLE_ID="${{ github.event.inputs.identifier }}"
             fi
 
             echo "🔧 Signing $IPA with Bundle ID: $BUNDLE_ID"
 
-            # Tạo entitlements.plist
             echo '<?xml version="1.0" encoding="UTF-8"?>' > entitlements.plist
             echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> entitlements.plist
             echo '<plist version="1.0"><dict>' >> entitlements.plist
@@ -130,7 +124,6 @@ jobs:
             echo "  <string>$TEAM_ID.$BUNDLE_ID</string>" >> entitlements.plist
             echo '</dict></plist>' >> entitlements.plist
 
-            # Ghi đè file gốc và nén lại tốt nhất
             zsign -f \
               -k cert.p12 -p "$CERT_PASSWORD" \
               -m embedded.mobileprovision \
