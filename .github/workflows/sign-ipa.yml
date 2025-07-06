@@ -65,7 +65,6 @@ jobs:
         if: ${{ github.event.inputs.identifier == '' }}
         run: |
           RAND=$(openssl rand -hex 3)
-          echo "🌀 Generated common random: $RAND"
           echo "RAND=$RAND" >> $GITHUB_ENV
 
       - name: Verify release exists
@@ -87,8 +86,9 @@ jobs:
           cd zsign/build/macos && make clean && make
           sudo cp ../../bin/zsign /usr/local/bin/
 
-      - name: Patch Info.plist & Binary (auto-generate identifier if not provided)
+      - name: Patch Info.plist & Binary (auto-generate identifier per IPA if not provided)
         run: |
+          i=1
           for IPA in *.ipa; do
             echo "📦 Patching $IPA..."
             APP_NAME=$(basename "$IPA" .ipa)
@@ -105,16 +105,16 @@ jobs:
 
             if [ -z "$IDENTIFIER" ]; then
               BASE_ID=$(echo "$OLD_ID" | sed 's/-storeios\.net.*//')
-              IDENTIFIER="${BASE_ID}-storeios.net-${RAND}"
-              echo "📌 Generated Identifier: $IDENTIFIER"
+              FINAL_ID="${BASE_ID}-storeios.net-${RAND}-${i}"
+            else
+              FINAL_ID="$IDENTIFIER"
             fi
 
-            echo "✏️  Main CFBundleIdentifier -> $IDENTIFIER"
-            /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $IDENTIFIER" "$MAIN_PLIST"
-            /usr/bin/perl -pi -e "s/\Q$OLD_ID\E/$IDENTIFIER/" "$BINARY_PATH"
+            echo "✏️  New CFBundleIdentifier -> $FINAL_ID"
+            /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $FINAL_ID" "$MAIN_PLIST"
+            /usr/bin/perl -pi -e "s/\Q$OLD_ID\E/$FINAL_ID/" "$BINARY_PATH"
 
             echo "✅ Main Info.plist Identifier Patched."
-            echo "IDENTIFIER=$IDENTIFIER" >> $GITHUB_ENV
 
             OUTPUT_PATH="$RUNNER_TEMP/$APP_NAME-patched.ipa"
             cd "$WORKDIR"
@@ -122,30 +122,33 @@ jobs:
             cd -
             mv "$OUTPUT_PATH" "$IPA"
             rm -rf "$WORKDIR"
+
+            echo "$IPA::$FINAL_ID" >> id_map.txt
+            i=$((i+1))
           done
 
       - name: Sign all IPA files with Zsign (overwrite original IPA)
         run: |
-          for IPA in *.ipa; do
+          while IFS=:: read -r IPA FINAL_ID; do
             APP_NAME=$(basename "$IPA" .ipa)
             TMP_OUT="$RUNNER_TEMP/$APP_NAME-signed.ipa"
 
             echo "🔧 Signing $IPA with Zsign..."
             zsign -f -z 9 -k cert.p12 -p "$CERT_PASSWORD" -m embedded.mobileprovision \
-              -b "$IDENTIFIER" -o "$TMP_OUT" "$IPA"
+              -b "$FINAL_ID" -o "$TMP_OUT" "$IPA"
 
             mv "$TMP_OUT" "$IPA"
-          done
+          done < id_map.txt
 
       - name: Upload signed IPA and plist
         run: |
           BASE_URL="https://github.com/$REPO/releases/download/$TAG"
-          for FILE in *.ipa; do
-            FILENAME=$(basename "$FILE")
+          while IFS=:: read -r IPA FINAL_ID; do
+            FILENAME=$(basename "$IPA")
             APP_NAME="${FILENAME%.ipa}"
             PLIST_NAME="${APP_NAME}.plist"
 
-            gh release upload "$TAG" "$FILE" --repo "$REPO" --clobber
+            gh release upload "$TAG" "$IPA" --repo "$REPO" --clobber
 
             echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" > "$PLIST_NAME"
             echo "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">" >> "$PLIST_NAME"
@@ -156,7 +159,7 @@ jobs:
             echo "      <key>url</key><string>$BASE_URL/$FILENAME</string>" >> "$PLIST_NAME"
             echo "    </dict></array>" >> "$PLIST_NAME"
             echo "    <key>metadata</key><dict>" >> "$PLIST_NAME"
-            echo "      <key>bundle-identifier</key><string>${IDENTIFIER:-default}</string>" >> "$PLIST_NAME"
+            echo "      <key>bundle-identifier</key><string>$FINAL_ID</string>" >> "$PLIST_NAME"
             echo "      <key>bundle-version</key><string>1.0.0</string>" >> "$PLIST_NAME"
             echo "      <key>kind</key><string>software</string>" >> "$PLIST_NAME"
             echo "      <key>title</key><string>$APP_NAME</string>" >> "$PLIST_NAME"
@@ -166,4 +169,4 @@ jobs:
             gh release upload "$TAG" "$PLIST_NAME" --repo "$REPO" --clobber
             echo "📲 Link cài đặt:"
             echo "itms-services://?action=download-manifest&url=$BASE_URL/$PLIST_NAME"
-          done
+          done < id_map.txt
