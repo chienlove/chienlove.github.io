@@ -115,7 +115,7 @@ jobs:
               echo "  <string>$TEAM_ID.$BUNDLE_ID</string>" >> entitlements.plist
               echo '</dict></plist>' >> entitlements.plist
 
-              zsign -f -k cert.p12 -p "$CERT_PASSWORD" -m embedded.mobileprovision \
+              zsign -f -k cert.p12 -p "$CERT_PASSWORD" -m embedded.mobileprovision \ 
                 -e entitlements.plist -o "$OUT_NAME" "$OUT_NAME"
             fi
           done
