@@ -59,12 +59,13 @@ jobs:
       - name: Set workflow inputs
         run: |
           echo "TAG=${{ github.event.inputs.tag }}" >> $GITHUB_ENV
-          echo "IDENTIFIER=${{ github.event.inputs.identifier }}" >> $GITHUB_ENV
+          echo "INPUT_IDENTIFIER=${{ github.event.inputs.identifier }}" >> $GITHUB_ENV
 
       - name: Generate shared random (if needed)
         if: ${{ github.event.inputs.identifier == '' }}
         run: |
           RAND=$(openssl rand -hex 3)
+          echo "🌀 Generated common random: $RAND"
           echo "RAND=$RAND" >> $GITHUB_ENV
 
       - name: Verify release exists
@@ -86,9 +87,9 @@ jobs:
           cd zsign/build/macos && make clean && make
           sudo cp ../../bin/zsign /usr/local/bin/
 
-      - name: Patch Info.plist & Binary (auto-generate identifier per IPA if not provided)
+      - name: Patch Info.plist & Binary (auto-generate identifier if not provided)
         run: |
-          i=1
+          > id_map.txt
           for IPA in *.ipa; do
             echo "📦 Patching $IPA..."
             APP_NAME=$(basename "$IPA" .ipa)
@@ -101,20 +102,21 @@ jobs:
             BINARY_PATH="$APP_DIR/$BINARY_NAME"
 
             OLD_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$MAIN_PLIST")
-            echo "🔍 OLD Identifier: $OLD_ID"
+            BASE_ID=$(echo "$OLD_ID" | sed 's/-storeios\.net.*//')
 
-            if [ -z "$IDENTIFIER" ]; then
-              BASE_ID=$(echo "$OLD_ID" | sed 's/-storeios\.net.*//')
-              FINAL_ID="${BASE_ID}-storeios.net-${RAND}-${i}"
+            if [ -z "$INPUT_IDENTIFIER" ]; then
+              FINAL_ID="${BASE_ID}-storeios.net-${RAND}"
             else
-              FINAL_ID="$IDENTIFIER"
+              FINAL_ID="$INPUT_IDENTIFIER"
             fi
 
-            echo "✏️  New CFBundleIdentifier -> $FINAL_ID"
+            echo "🔍 OLD Identifier: $OLD_ID"
+            echo "📌 New Identifier: $FINAL_ID"
+
             /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $FINAL_ID" "$MAIN_PLIST"
             /usr/bin/perl -pi -e "s/\Q$OLD_ID\E/$FINAL_ID/" "$BINARY_PATH"
 
-            echo "✅ Main Info.plist Identifier Patched."
+            echo "$IPA::$FINAL_ID" >> id_map.txt
 
             OUTPUT_PATH="$RUNNER_TEMP/$APP_NAME-patched.ipa"
             cd "$WORKDIR"
@@ -122,9 +124,6 @@ jobs:
             cd -
             mv "$OUTPUT_PATH" "$IPA"
             rm -rf "$WORKDIR"
-
-            echo "$IPA::$FINAL_ID" >> id_map.txt
-            i=$((i+1))
           done
 
       - name: Sign all IPA files with Zsign (overwrite original IPA)
