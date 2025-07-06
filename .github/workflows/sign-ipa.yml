@@ -128,7 +128,7 @@ jobs:
 
       - name: Sign all IPA files with Zsign (overwrite original IPA)
         run: |
-          while IFS=| read -r IPA FINAL_ID; do
+          while IFS='|' read -r IPA FINAL_ID; do
             APP_NAME=$(basename "$IPA" .ipa)
             TMP_OUT="$RUNNER_TEMP/$APP_NAME-signed.ipa"
 
@@ -142,7 +142,7 @@ jobs:
       - name: Upload signed IPA and plist
         run: |
           BASE_URL="https://github.com/$REPO/releases/download/$TAG"
-          while IFS=| read -r IPA FINAL_ID; do
+          while IFS='|' read -r IPA FINAL_ID; do
             FILENAME=$(basename "$IPA")
             APP_NAME="${FILENAME%.ipa}"
             PLIST_NAME="${APP_NAME}.plist"
