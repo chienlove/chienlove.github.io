@@ -118,7 +118,7 @@ jobs:
             /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $FINAL_ID" "$MAIN_PLIST"
             /usr/bin/perl -pi -e "s/\Q$OLD_ID\E/$FINAL_ID/" "$BINARY_PATH"
 
-              [ -n "$FINAL_ID" ] && echo "$IPA::$FINAL_ID" >> id_map.txt
+              [ -n "$FINAL_ID" ] && echo "$(basename "$IPA")::$FINAL_ID" >> id_map.txt
 
             OUTPUT_PATH="$RUNNER_TEMP/$APP_NAME-patched.ipa"
             cd "$WORKDIR"
