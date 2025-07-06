@@ -7,7 +7,7 @@ on:
         description: "Release tag chứa IPA"
         required: true
       identifier:
-        description: "(Tùy chọn) Bundle Identifier mới"
+        description: "(Tùy chọn) Bundle Identifier mới (sẽ random nếu để trống)"
         required: false
 
 jobs:
@@ -47,15 +47,20 @@ jobs:
 
           echo "CERT_P12_URL=$(jq -r '.p12_url' cert.json)" >> $GITHUB_ENV
           echo "CERT_PASSWORD=$(jq -r '.password' cert.json)" >> $GITHUB_ENV
+          echo "TEAM_ID=$(jq -r '.team_id' cert.json)" >> $GITHUB_ENV
 
       - name: Download certificate
-        run: |
-          curl -L "$CERT_P12_URL" -o cert.p12
+        run: curl -L "$CERT_P12_URL" -o cert.p12
 
       - name: Set workflow inputs
         run: |
           echo "TAG=${{ github.event.inputs.tag }}" >> $GITHUB_ENV
-          echo "IDENTIFIER=${{ github.event.inputs.identifier }}" >> $GITHUB_ENV
+          if [ -z "${{ github.event.inputs.identifier }}" ]; then
+            RAND=$(cat /dev/urandom | tr -dc 'a-z0-9' | fold -w 6 | head -n 1)
+            echo "IDENTIFIER=com.chien.app-$RAND" >> $GITHUB_ENV
+          else
+            echo "IDENTIFIER=${{ github.event.inputs.identifier }}" >> $GITHUB_ENV
+          fi
 
       - name: Verify release exists
         run: gh release view "$TAG" --repo "$REPO"
@@ -78,25 +83,34 @@ jobs:
           make clean && make
           sudo cp ../../bin/zsign /usr/local/bin/
 
+      - name: Generate entitlements.plist
+        run: |
+          cat <<EOF > entitlements.plist
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>application-identifier</key>
+  <string>${TEAM_ID}.${IDENTIFIER}</string>
+  <key>com.apple.security.application-groups</key>
+  <array>
+    <string>${TEAM_ID}.${IDENTIFIER}</string>
+  </array>
+</dict>
+</plist>
+EOF
+
       - name: Sign all IPA files with Zsign (Ad-Hoc, Force)
         run: |
           mkdir -p signed
-          IDENTIFIER="${{ github.event.inputs.identifier }}"
-
           for IPA in *.ipa; do
-            echo "🔧 Signing $IPA with Zsign (ad-hoc)..."
+            echo "🔧 Signing $IPA with identifier: $IDENTIFIER"
             OUT_NAME="signed/$IPA"
-
-            if [ -z "$IDENTIFIER" ]; then
-              zsign -f -a \
-                -k cert.p12 -p "$CERT_PASSWORD" \
-                -o "$OUT_NAME" "$IPA"
-            else
-              zsign -f -a \
-                -k cert.p12 -p "$CERT_PASSWORD" \
-                -b "$IDENTIFIER" \
-                -o "$OUT_NAME" "$IPA"
-            fi
+            zsign -f -a \
+              -k cert.p12 -p "$CERT_PASSWORD" \
+              -b "$IDENTIFIER" \
+              -e entitlements.plist \
+              -o "$OUT_NAME" "$IPA"
           done
 
       - name: Verify Bundle ID after signing
@@ -104,6 +118,7 @@ jobs:
           for FILE in signed/*.ipa; do
             echo "🔍 Verifying $FILE..."
             unzip -q "$FILE" -d tmp_ipa
+            echo "➡️ CFBundleIdentifier:"
             plutil -p tmp_ipa/Payload/*.app/Info.plist | grep CFBundleIdentifier || echo "⚠️ Not found"
             rm -rf tmp_ipa
           done
@@ -115,3 +130,11 @@ jobs:
             gh release upload "$TAG" "$FILE" --repo "$REPO" --clobber
           done
           echo "🎉 All signed IPA files uploaded successfully"
+
+      - name: Display download links
+        run: |
+          echo "🔗 Signed IPA download links:"
+          for FILE in signed/*.ipa; do
+            FILENAME=$(basename "$FILE")
+            echo "https://github.com/$REPO/releases/download/$TAG/$FILENAME"
+          done
