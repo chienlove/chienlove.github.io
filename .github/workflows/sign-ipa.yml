@@ -93,7 +93,7 @@ jobs:
         run: |
           brew install pkg-config openssl minizip
           git clone https://github.com/zhlynn/zsign.git
-          cd zsign/build/macos && make clean && make
+          cd zsign/build/macos && make clean && make && STATIC=1 make
 
       - name: Copy zsign binary to /usr/local/bin
         run: |
