@@ -1,4 +1,4 @@
-name: "Sign IPA for ${{ github.event.inputs.tag || github.ref_name }}"
+name: "Sign IPA for ${{ github.event.inputs.tag }}"
 
 on:
   workflow_dispatch:
