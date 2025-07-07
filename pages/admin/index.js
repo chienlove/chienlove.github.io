@@ -3,6 +3,7 @@ import { useRouter } from "next/router";
 import { supabase } from "../../lib/supabase";
 import { v4 as uuidv4 } from 'uuid';
 import CertUploader from '../../components/admin/CertUploader';
+import CertManagerAndSigner from "../../components/admin/CertManagerAndSigner";
 
 export default function Admin() {
   const router = useRouter();
