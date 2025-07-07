@@ -82,9 +82,11 @@ export default function Layout({ children, fullWidth = false }) {
       <header className="sticky top-0 z-50 w-full bg-white dark:bg-gray-800 shadow">
         <div className="w-full max-w-screen-2xl mx-auto px-4 py-3 flex items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="text-2xl md:text-4xl lg:text-5xl font-bold">
-  <span className="bg-gradient-to-r from-green-700 via-green-500 to-green-300 bg-clip-text text-transparent animate-gradient-x
-                  drop-shadow-[0_0_8px_rgba(74,222,128,0.6)] hover:drop-shadow-[0_0_12px_rgba(74,222,128,0.8)] transition-all duration-300">
+          <Link href="/" className="text-2xl md:text-4xl lg:text-5xl font-bold group">
+  <span className="bg-gradient-to-r from-black via-red-900 via-45% to-red-600 bg-[length:200%_auto] 
+                  bg-clip-text text-transparent bg-left
+                  group-hover:bg-right transition-all duration-1000 ease-in-out
+                  drop-shadow-[0_0_10px_rgba(153,27,27,0.3)] group-hover:drop-shadow-[0_0_15px_rgba(239,68,68,0.6)]">
     ꗟ𝕥𝕣ⅇ𝕚⌾𝕊
   </span>
 </Link>
