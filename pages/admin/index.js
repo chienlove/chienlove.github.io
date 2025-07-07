@@ -721,7 +721,7 @@ export default function Admin() {
           )}
         {activeTab === "certs" && (
           <section className="max-w-xl mx-auto">
-            <CertUploader />
+            <CertManagerAndSigner />
           </section>
 )}
       </main>

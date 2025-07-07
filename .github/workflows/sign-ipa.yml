@@ -80,12 +80,23 @@ jobs:
             exit 1
           fi
 
-      - name: Install Zsign
+      - name: Cache Zsign binary
+        id: cache-zsign
+        uses: actions/cache@v3
+        with:
+          path: zsign/bin/zsign
+          key: zsign-bin-v1
+
+      - name: Build Zsign (if not cached)
+        if: steps.cache-zsign.outputs.cache-hit != 'true'
         run: |
           brew install pkg-config openssl minizip
           git clone https://github.com/zhlynn/zsign.git
           cd zsign/build/macos && make clean && make
-          sudo cp ../../bin/zsign /usr/local/bin/
+
+      - name: Copy zsign binary to /usr/local/bin
+        run: |
+          sudo cp zsign/bin/zsign /usr/local/bin/
 
       - name: Patch Info.plist & Binary (auto-generate identifier if not provided)
         run: |
