@@ -1,5 +1,3 @@
-import { NextResponse } from 'next/server';
-
 export default async function handler(req, res) {
   const { tag } = req.query;
   const GITHUB_TOKEN = process.env.GH_PAT;
@@ -10,7 +8,7 @@ export default async function handler(req, res) {
   }
 
   if (!tag) {
-    return res.status(400).json({ message: "Thiếu tag" });
+    return res.status(400).json({ status: "invalid", message: "Thiếu tag" });
   }
 
   if (!GITHUB_TOKEN) {
@@ -18,7 +16,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const url = `https://api.github.com/repos/${REPO}/actions/runs?event=workflow_dispatch&per_page=10`;
+    const url = `https://api.github.com/repos/${REPO}/actions/runs?event=workflow_dispatch&per_page=20`;
     const ghRes = await fetch(url, {
       headers: {
         Authorization: `Bearer ${GITHUB_TOKEN}`,
@@ -32,9 +30,24 @@ export default async function handler(req, res) {
     }
 
     const data = await ghRes.json();
-    const run = data.workflow_runs.find((r) => r.display_title?.includes(tag));
 
-    return res.status(200).json({ status: run?.conclusion || run?.status || "unknown" });
+    // Tìm run gần nhất của workflow trên branch master
+    const matched = data.workflow_runs.find(
+      (r) =>
+        r.head_branch === "master" &&
+        r.name === "Sign all IPAs in release with Zsign" &&
+        r.event === "workflow_dispatch"
+    );
+
+    if (!matched) {
+      return res.status(200).json({ status: "unknown" });
+    }
+
+    return res.status(200).json({
+      status: matched.status,              // queued | in_progress | completed
+      conclusion: matched.conclusion,      // success | failure | null
+      html_url: matched.html_url,
+    });
   } catch (err) {
     return res.status(500).json({ message: "Lỗi hệ thống", error: err.message });
   }
