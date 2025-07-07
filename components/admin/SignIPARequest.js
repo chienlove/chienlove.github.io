@@ -10,16 +10,13 @@ export default function SignIPARequest() {
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    axios.get("/api/admin/list-certs")
-      .then(res => setCerts(res.data.certs || []));
-    axios.get("/api/admin/github-tags")
-      .then(res => setTags(res.data.tags || []));
+    axios.get("/api/admin/list-certs").then((res) => setCerts(res.data.certs || []));
+    axios.get("/api/admin/github-tags").then((res) => setTags(res.data.tags || []));
   }, []);
 
   useEffect(() => {
     if (!form.tag) return;
-    axios.get(`/api/admin/ipas-in-tag?tag=${form.tag}`)
-      .then(res => setIpas(res.data.ipas || []));
+    axios.get(`/api/admin/ipas-in-tag?tag=${form.tag}`).then((res) => setIpas(res.data.ipas || []));
   }, [form.tag]);
 
   const handleSubmit = async (e) => {
@@ -63,7 +60,9 @@ export default function SignIPARequest() {
           >
             <option value="">-- Chọn chứng chỉ --</option>
             {certs.map((cert) => (
-              <option key={cert.id} value={cert.name}>{cert.name}</option>
+              <option key={cert.id} value={cert.name}>
+                {cert.name}
+              </option>
             ))}
           </select>
         </div>
@@ -78,7 +77,9 @@ export default function SignIPARequest() {
           >
             <option value="">-- Chọn tag --</option>
             {tags.map((tag) => (
-              <option key={tag} value={tag}>{tag}</option>
+              <option key={tag} value={tag}>
+                {tag}
+              </option>
             ))}
           </select>
         </div>
@@ -141,9 +142,10 @@ function ProgressTracker() {
         const status = await fetchStatusFromServer(req.tag);
         setStatuses((prev) => ({ ...prev, [req.id]: status }));
 
-        if (["success", "failure"].includes(status)) {
-          await axios.delete(`/api/admin/sign-requests/${req.id}`);
-        }
+        // ❌ Không xóa ngay sau khi thành công/thất bại
+        // if (["success", "failure"].includes(status)) {
+        //   await axios.delete(`/api/admin/sign-requests/${req.id}`);
+        // }
       }
     } catch (err) {
       console.error("Lỗi khi theo dõi tiến trình:", err.message);
@@ -166,21 +168,29 @@ function ProgressTracker() {
       <h3 className="text-md font-semibold mb-2">📊 Tiến trình đang theo dõi:</h3>
       <ul className="space-y-2">
         {requests.map((r) => (
-          <li key={r.id} className="p-3 bg-gray-100 rounded text-sm flex flex-col md:flex-row md:justify-between">
+          <li
+            key={r.id}
+            className="p-3 bg-gray-100 rounded text-sm flex flex-col md:flex-row md:justify-between"
+          >
             <div>
-              <strong>{r.tag}</strong> -- <span className="text-gray-700">{r.identifier || "(auto identifier)"}</span>
+              <strong>{r.tag}</strong> --{" "}
+              <span className="text-gray-700">
+                {r.identifier || "(auto identifier)"}
+              </span>
             </div>
             <div>
               Trạng thái:{" "}
-              <span className={
-                statuses[r.id] === "success"
-                  ? "text-green-600 font-semibold"
-                  : statuses[r.id] === "failure"
-                  ? "text-red-600 font-semibold"
-                  : statuses[r.id] === "in_progress"
-                  ? "text-yellow-600 font-semibold"
-                  : "text-gray-600"
-              }>
+              <span
+                className={
+                  statuses[r.id] === "success"
+                    ? "text-green-600 font-semibold"
+                    : statuses[r.id] === "failure"
+                    ? "text-red-600 font-semibold"
+                    : statuses[r.id] === "in_progress"
+                    ? "text-yellow-600 font-semibold"
+                    : "text-gray-600"
+                }
+              >
                 {statuses[r.id] === "success"
                   ? "✅ Hoàn tất"
                   : statuses[r.id] === "failure"
