@@ -1,4 +1,4 @@
-name: "Sign IPA for ${{ github.event.inputs.tag }}"
+name: Sign all IPAs in release with Zsign
 
 on:
   workflow_dispatch:
@@ -12,6 +12,7 @@ on:
 
 jobs:
   sign:
+    name: Sign IPA for ${{ github.event.inputs.tag }}
     runs-on: macos-latest
     permissions:
       contents: write
