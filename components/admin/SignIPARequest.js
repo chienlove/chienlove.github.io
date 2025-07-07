@@ -11,21 +11,15 @@ export default function SignIPARequest() {
 
   useEffect(() => {
     axios.get("/api/admin/list-certs")
-      .then(res => setCerts(res.data.certs || []))
-      .catch(() => setMessage("❌ Lỗi lấy danh sách chứng chỉ"));
-  }, []);
-
-  useEffect(() => {
+      .then(res => setCerts(res.data.certs || []));
     axios.get("/api/admin/github-tags")
-      .then(res => setTags(res.data.tags || []))
-      .catch(() => setMessage("❌ Lỗi lấy danh sách release tag"));
+      .then(res => setTags(res.data.tags || []));
   }, []);
 
   useEffect(() => {
     if (!form.tag) return;
     axios.get(`/api/admin/ipas-in-tag?tag=${form.tag}`)
-      .then(res => setIpas(res.data.ipas || []))
-      .catch(() => setMessage("❌ Lỗi lấy danh sách IPA trong tag"));
+      .then(res => setIpas(res.data.ipas || []));
   }, [form.tag]);
 
   const handleSubmit = async (e) => {
@@ -127,7 +121,6 @@ export default function SignIPARequest() {
   );
 }
 
-// 🔄 Theo dõi tiến trình ký IPA real-time (gọi qua API server)
 function ProgressTracker() {
   const [requests, setRequests] = useState([]);
   const [statuses, setStatuses] = useState({});
@@ -160,7 +153,7 @@ function ProgressTracker() {
   async function fetchStatusFromServer(tag) {
     try {
       const res = await axios.get(`/api/admin/check-status?tag=${tag}`);
-      return res.data.status || "unknown";
+      return res.data.conclusion || res.data.status || "unknown";
     } catch (e) {
       return "unknown";
     }
@@ -179,16 +172,22 @@ function ProgressTracker() {
             </div>
             <div>
               Trạng thái:{" "}
-              <span
-                className={
-                  statuses[r.id] === "success"
-                    ? "text-green-600 font-semibold"
-                    : statuses[r.id] === "failure"
-                    ? "text-red-600 font-semibold"
-                    : "text-yellow-600 font-semibold"
-                }
-              >
-                {statuses[r.id] || "Đang kiểm tra..."}
+              <span className={
+                statuses[r.id] === "success"
+                  ? "text-green-600 font-semibold"
+                  : statuses[r.id] === "failure"
+                  ? "text-red-600 font-semibold"
+                  : statuses[r.id] === "in_progress"
+                  ? "text-yellow-600 font-semibold"
+                  : "text-gray-600"
+              }>
+                {statuses[r.id] === "success"
+                  ? "✅ Hoàn tất"
+                  : statuses[r.id] === "failure"
+                  ? "❌ Thất bại"
+                  : statuses[r.id] === "in_progress"
+                  ? "⏳ Đang xử lý"
+                  : "Đang kiểm tra..."}
               </span>
             </div>
           </li>

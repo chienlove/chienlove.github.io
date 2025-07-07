@@ -31,7 +31,6 @@ export default async function handler(req, res) {
 
     const data = await ghRes.json();
 
-    // Tìm run gần nhất của workflow trên branch master
     const matched = data.workflow_runs.find(
       (r) =>
         r.head_branch === "master" &&
@@ -44,8 +43,8 @@ export default async function handler(req, res) {
     }
 
     return res.status(200).json({
-      status: matched.status,              // queued | in_progress | completed
-      conclusion: matched.conclusion,      // success | failure | null
+      status: matched.status,
+      conclusion: matched.conclusion,
       html_url: matched.html_url,
     });
   } catch (err) {
