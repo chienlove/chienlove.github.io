@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import RunStepsViewer from "./RunStepsViewer";
 
 export default function SignIPARequest() {
   const [certs, setCerts] = useState([]);
@@ -125,6 +126,7 @@ export default function SignIPARequest() {
 function ProgressTracker() {
   const [requests, setRequests] = useState([]);
   const [statuses, setStatuses] = useState({});
+  const [runIds, setRunIds] = useState({});
 
   useEffect(() => {
     fetchRequests();
@@ -139,25 +141,15 @@ function ProgressTracker() {
       setRequests(reqs);
 
       for (let req of reqs) {
-        const status = await fetchStatusFromServer(req.tag);
-        setStatuses((prev) => ({ ...prev, [req.id]: status }));
+        const statusRes = await axios.get(`/api/admin/check-status?tag=${req.tag}`);
+        const status = statusRes.data.conclusion || statusRes.data.status || "unknown";
+        const runId = statusRes.data.run_id || null;
 
-        // ❌ Không xóa ngay sau khi thành công/thất bại
-        // if (["success", "failure"].includes(status)) {
-        //   await axios.delete(`/api/admin/sign-requests/${req.id}`);
-        // }
+        setStatuses((prev) => ({ ...prev, [req.id]: status }));
+        if (runId) setRunIds((prev) => ({ ...prev, [req.id]: runId }));
       }
     } catch (err) {
       console.error("Lỗi khi theo dõi tiến trình:", err.message);
-    }
-  }
-
-  async function fetchStatusFromServer(tag) {
-    try {
-      const res = await axios.get(`/api/admin/check-status?tag=${tag}`);
-      return res.data.conclusion || res.data.status || "unknown";
-    } catch (e) {
-      return "unknown";
     }
   }
 
@@ -166,40 +158,42 @@ function ProgressTracker() {
   return (
     <div className="mt-8">
       <h3 className="text-md font-semibold mb-2">📊 Tiến trình đang theo dõi:</h3>
-      <ul className="space-y-2">
+      <ul className="space-y-4">
         {requests.map((r) => (
-          <li
-            key={r.id}
-            className="p-3 bg-gray-100 rounded text-sm flex flex-col md:flex-row md:justify-between"
-          >
-            <div>
-              <strong>{r.tag}</strong> --{" "}
-              <span className="text-gray-700">
-                {r.identifier || "(auto identifier)"}
-              </span>
-            </div>
-            <div>
-              Trạng thái:{" "}
-              <span
-                className={
-                  statuses[r.id] === "success"
-                    ? "text-green-600 font-semibold"
+          <li key={r.id} className="p-3 bg-gray-100 rounded text-sm">
+            <div className="flex justify-between items-center">
+              <div>
+                <strong>{r.tag}</strong> --{" "}
+                <span className="text-gray-700">
+                  {r.identifier || "(auto identifier)"}
+                </span>
+              </div>
+              <div>
+                Trạng thái:{" "}
+                <span
+                  className={
+                    statuses[r.id] === "success"
+                      ? "text-green-600 font-semibold"
+                      : statuses[r.id] === "failure"
+                      ? "text-red-600 font-semibold"
+                      : statuses[r.id] === "in_progress"
+                      ? "text-yellow-600 font-semibold"
+                      : "text-gray-600"
+                  }
+                >
+                  {statuses[r.id] === "success"
+                    ? "✅ Hoàn tất"
                     : statuses[r.id] === "failure"
-                    ? "text-red-600 font-semibold"
+                    ? "❌ Thất bại"
                     : statuses[r.id] === "in_progress"
-                    ? "text-yellow-600 font-semibold"
-                    : "text-gray-600"
-                }
-              >
-                {statuses[r.id] === "success"
-                  ? "✅ Hoàn tất"
-                  : statuses[r.id] === "failure"
-                  ? "❌ Thất bại"
-                  : statuses[r.id] === "in_progress"
-                  ? "⏳ Đang xử lý"
-                  : "Đang kiểm tra..."}
-              </span>
+                    ? "⏳ Đang xử lý"
+                    : "Đang kiểm tra..."}
+                </span>
+              </div>
             </div>
+
+            {/* ✅ Hiển thị danh sách các bước GitHub Actions */}
+            {runIds[r.id] && <RunStepsViewer runId={runIds[r.id]} />}
           </li>
         ))}
       </ul>

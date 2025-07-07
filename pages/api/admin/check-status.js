@@ -34,7 +34,7 @@ export default async function handler(req, res) {
     const matched = data.workflow_runs.find(
       (r) =>
         r.head_branch === "master" &&
-        r.name === "Sign all IPAs in release with Zsign" &&
+        r.name === `Sign IPA for ${tag}` &&
         r.event === "workflow_dispatch"
     );
 
@@ -46,6 +46,7 @@ export default async function handler(req, res) {
       status: matched.status,
       conclusion: matched.conclusion,
       html_url: matched.html_url,
+      run_id: matched.id,
     });
   } catch (err) {
     return res.status(500).json({ message: "Lỗi hệ thống", error: err.message });
