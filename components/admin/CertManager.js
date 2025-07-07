@@ -30,15 +30,17 @@ export default function CertManager() {
     setLoading(true);
     setMessage("");
 
-    if (!p12 || !provision || !name || !password) {
-      setMessage("❌ Vui lòng điền đầy đủ thông tin và file");
+    if (!p12 || !provision || !password) {
+      setMessage("❌ Vui lòng chọn đủ file và nhập mật khẩu");
       setLoading(false);
       return;
     }
 
     try {
       const formData = new FormData();
-      formData.append("name", name);
+      const finalName = name.trim() || p12.name.replace(".p12", "") + "-" + Date.now();
+
+      formData.append("name", finalName);
       formData.append("p12", p12);
       formData.append("provision", provision);
       formData.append("password", password);
@@ -88,13 +90,13 @@ export default function CertManager() {
       <h2 className="text-lg font-semibold">📥 Tải lên chứng chỉ mới</h2>
       <form onSubmit={handleUpload} className="space-y-4">
         <div>
-          <label className="block font-medium">Tên chứng chỉ</label>
+          <label className="block font-medium">Tên chứng chỉ (tuỳ chọn)</label>
           <input
             type="text"
             className="w-full p-2 border rounded"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            required
+            placeholder="(Không bắt buộc)"
           />
         </div>
 

@@ -36,17 +36,17 @@ export default function SignIPARequest() {
     setMessage("");
     setLoading(true);
 
-    if (!form.certName || !form.tag || !form.identifier) {
-      setMessage("❌ Vui lòng điền đầy đủ thông tin");
+    if (!form.certName || !form.tag) {
+      setMessage("❌ Vui lòng chọn chứng chỉ và tag");
       setLoading(false);
       return;
     }
 
     try {
-      const res = await axios.post("/api/admin/use-certs", {
+      await axios.post("/api/admin/use-certs", {
         name: form.certName,
         tag: form.tag,
-        identifier: form.identifier
+        identifier: form.identifier,
       });
 
       setMessage("✅ Đã gửi yêu cầu ký IPA thành công!");
@@ -58,71 +58,155 @@ export default function SignIPARequest() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <h2 className="text-lg font-semibold">🚀 Gửi yêu cầu ký IPA</h2>
+    <>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <h2 className="text-lg font-semibold">🚀 Gửi yêu cầu ký IPA</h2>
 
-      <div>
-        <label className="block font-medium">🔐 Chọn chứng chỉ</label>
-        <select
-          className="w-full p-2 border rounded"
-          value={form.certName}
-          onChange={(e) => setForm({ ...form, certName: e.target.value })}
-          required
-        >
-          <option value="">-- Chọn chứng chỉ --</option>
-          {certs.map((cert) => (
-            <option key={cert.id} value={cert.name}>{cert.name}</option>
-          ))}
-        </select>
-      </div>
-
-      <div>
-        <label className="block font-medium">🏷 Chọn release tag</label>
-        <select
-          className="w-full p-2 border rounded"
-          value={form.tag}
-          onChange={(e) => setForm({ ...form, tag: e.target.value })}
-          required
-        >
-          <option value="">-- Chọn tag --</option>
-          {tags.map((tag) => (
-            <option key={tag} value={tag}>{tag}</option>
-          ))}
-        </select>
-      </div>
-
-      {ipas.length > 0 && (
         <div>
-          <p className="font-medium">📦 File IPA trong tag:</p>
-          <ul className="list-disc ml-5 text-sm text-gray-700 dark:text-gray-300">
-            {ipas.map((file, i) => (
-              <li key={i}>{file}</li>
+          <label className="block font-medium">🔐 Chọn chứng chỉ</label>
+          <select
+            className="w-full p-2 border rounded"
+            value={form.certName}
+            onChange={(e) => setForm({ ...form, certName: e.target.value })}
+            required
+          >
+            <option value="">-- Chọn chứng chỉ --</option>
+            {certs.map((cert) => (
+              <option key={cert.id} value={cert.name}>{cert.name}</option>
             ))}
-          </ul>
+          </select>
         </div>
-      )}
 
-      <div>
-        <label className="block font-medium">🆔 Bundle Identifier mới</label>
-        <input
-          type="text"
-          className="w-full p-2 border rounded"
-          placeholder="com.example.app"
-          value={form.identifier}
-          onChange={(e) => setForm({ ...form, identifier: e.target.value })}
-          required
-        />
-      </div>
+        <div>
+          <label className="block font-medium">🏷 Chọn release tag</label>
+          <select
+            className="w-full p-2 border rounded"
+            value={form.tag}
+            onChange={(e) => setForm({ ...form, tag: e.target.value })}
+            required
+          >
+            <option value="">-- Chọn tag --</option>
+            {tags.map((tag) => (
+              <option key={tag} value={tag}>{tag}</option>
+            ))}
+          </select>
+        </div>
 
-      <button
-        type="submit"
-        disabled={loading}
-        className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-      >
-        {loading ? "⏳ Đang gửi..." : "🚀 Gửi yêu cầu ký IPA"}
-      </button>
+        {ipas.length > 0 && (
+          <div>
+            <p className="font-medium">📦 File IPA trong tag:</p>
+            <ul className="list-disc ml-5 text-sm text-gray-700 dark:text-gray-300">
+              {ipas.map((file, i) => (
+                <li key={i}>{file}</li>
+              ))}
+            </ul>
+          </div>
+        )}
 
-      {message && <p className="text-sm mt-2">{message}</p>}
-    </form>
+        <div>
+          <label className="block font-medium">🆔 Bundle Identifier mới</label>
+          <input
+            type="text"
+            className="w-full p-2 border rounded"
+            placeholder="(Không bắt buộc) Nếu để trống sẽ tự sinh"
+            value={form.identifier}
+            onChange={(e) => setForm({ ...form, identifier: e.target.value })}
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+        >
+          {loading ? "⏳ Đang gửi..." : "🚀 Gửi yêu cầu ký IPA"}
+        </button>
+
+        {message && <p className="text-sm mt-2">{message}</p>}
+      </form>
+
+      <ProgressTracker />
+    </>
+  );
+}
+
+// ✅ Component theo dõi tiến trình real-time
+function ProgressTracker() {
+  const [requests, setRequests] = useState([]);
+  const [statuses, setStatuses] = useState({});
+
+  useEffect(() => {
+    fetchRequests();
+    const interval = setInterval(fetchRequests, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
+  async function fetchRequests() {
+    try {
+      const res = await axios.get("/api/admin/sign-requests");
+      const reqs = res.data.requests || [];
+      setRequests(reqs);
+
+      for (let req of reqs) {
+        const status = await fetchGitHubStatus(req.tag);
+        setStatuses((prev) => ({ ...prev, [req.id]: status }));
+
+        if (["success", "failure"].includes(status)) {
+          await axios.delete(`/api/admin/sign-requests/${req.id}`);
+        }
+      }
+    } catch (err) {
+      console.error("Lỗi khi theo dõi tiến trình:", err.message);
+    }
+  }
+
+  async function fetchGitHubStatus(tag) {
+    try {
+      const res = await fetch(
+        `https://api.github.com/repos/chienlove/chienlove.github.io/actions/runs?event=workflow_dispatch&per_page=10`,
+        {
+          headers: {
+            Authorization: `Bearer ${process.env.GH_PAT}`,
+            Accept: "application/vnd.github+json",
+          },
+        }
+      );
+      const json = await res.json();
+      const run = json.workflow_runs.find((r) => r.display_title.includes(tag));
+      return run?.conclusion || run?.status || "pending";
+    } catch (e) {
+      return "unknown";
+    }
+  }
+
+  if (requests.length === 0) return null;
+
+  return (
+    <div className="mt-8">
+      <h3 className="text-md font-semibold mb-2">📊 Tiến trình đang theo dõi:</h3>
+      <ul className="space-y-2">
+        {requests.map((r) => (
+          <li key={r.id} className="p-3 bg-gray-100 rounded text-sm flex flex-col md:flex-row md:justify-between">
+            <div>
+              <strong>{r.tag}</strong> -- <span className="text-gray-700">{r.identifier || "(auto identifier)"}</span>
+            </div>
+            <div>
+              Trạng thái:{" "}
+              <span
+                className={
+                  statuses[r.id] === "success"
+                    ? "text-green-600 font-semibold"
+                    : statuses[r.id] === "failure"
+                    ? "text-red-600 font-semibold"
+                    : "text-yellow-600 font-semibold"
+                }
+              >
+                {statuses[r.id] || "Đang kiểm tra..."}
+              </span>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
