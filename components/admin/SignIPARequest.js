@@ -9,21 +9,18 @@ export default function SignIPARequest() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
 
-  // Fetch certs
   useEffect(() => {
     axios.get("/api/admin/list-certs")
       .then(res => setCerts(res.data.certs || []))
       .catch(() => setMessage("❌ Lỗi lấy danh sách chứng chỉ"));
   }, []);
 
-  // Fetch GitHub release tags
   useEffect(() => {
     axios.get("/api/admin/github-tags")
       .then(res => setTags(res.data.tags || []))
       .catch(() => setMessage("❌ Lỗi lấy danh sách release tag"));
   }, []);
 
-  // Fetch IPA files in selected tag
   useEffect(() => {
     if (!form.tag) return;
     axios.get(`/api/admin/ipas-in-tag?tag=${form.tag}`)
@@ -130,7 +127,7 @@ export default function SignIPARequest() {
   );
 }
 
-// ✅ Component theo dõi tiến trình real-time
+// 🔄 Theo dõi tiến trình ký IPA real-time (gọi qua API server)
 function ProgressTracker() {
   const [requests, setRequests] = useState([]);
   const [statuses, setStatuses] = useState({});
@@ -148,7 +145,7 @@ function ProgressTracker() {
       setRequests(reqs);
 
       for (let req of reqs) {
-        const status = await fetchGitHubStatus(req.tag);
+        const status = await fetchStatusFromServer(req.tag);
         setStatuses((prev) => ({ ...prev, [req.id]: status }));
 
         if (["success", "failure"].includes(status)) {
@@ -160,20 +157,10 @@ function ProgressTracker() {
     }
   }
 
-  async function fetchGitHubStatus(tag) {
+  async function fetchStatusFromServer(tag) {
     try {
-      const res = await fetch(
-        `https://api.github.com/repos/chienlove/chienlove.github.io/actions/runs?event=workflow_dispatch&per_page=10`,
-        {
-          headers: {
-            Authorization: `Bearer ${process.env.GH_PAT}`,
-            Accept: "application/vnd.github+json",
-          },
-        }
-      );
-      const json = await res.json();
-      const run = json.workflow_runs.find((r) => r.display_title.includes(tag));
-      return run?.conclusion || run?.status || "pending";
+      const res = await axios.get(`/api/admin/check-status?tag=${tag}`);
+      return res.data.status || "unknown";
     } catch (e) {
       return "unknown";
     }
