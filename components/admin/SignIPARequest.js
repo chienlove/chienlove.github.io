@@ -9,6 +9,7 @@ export default function SignIPARequest() {
   const [form, setForm] = useState({ certName: "", tag: "", identifier: "" });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [showProgress, setShowProgress] = useState(false);
 
   useEffect(() => {
     axios.get("/api/admin/list-certs").then((res) => setCerts(res.data.certs || []));
@@ -39,6 +40,7 @@ export default function SignIPARequest() {
       });
 
       setMessage("✅ Đã gửi yêu cầu ký IPA thành công!");
+      setShowProgress(true); // ✅ Chỉ lúc này mới bật theo dõi tiến trình
     } catch (err) {
       setMessage("❌ " + (err.response?.data?.message || "Lỗi gửi yêu cầu ký"));
     } finally {
@@ -118,7 +120,7 @@ export default function SignIPARequest() {
         {message && <p className="text-sm mt-2">{message}</p>}
       </form>
 
-      <ProgressTracker />
+      {showProgress && <ProgressTracker />}
     </>
   );
 }
@@ -140,10 +142,9 @@ function ProgressTracker() {
       const res = await axios.get("/api/admin/sign-requests");
       const reqs = res.data.requests || [];
 
-      // Nếu chưa có request nào → không gọi check-status
       if (reqs.length === 0) {
         setRequests([]);
-        setReady(true); // để giao diện không bị delay
+        setReady(true);
         return;
       }
 
@@ -167,14 +168,12 @@ function ProgressTracker() {
       setRequests(updated);
       setReady(true);
     } catch (err) {
-      console.error("Lỗi theo dõi tiến trình:", err.message);
+      console.error("Lỗi khi theo dõi tiến trình:", err.message);
       setReady(true);
     }
   }
 
-  if (!ready) return null; // chờ fetch xong
-
-  if (requests.length === 0) return null;
+  if (!ready || requests.length === 0) return null;
 
   return (
     <div className="mt-8">
