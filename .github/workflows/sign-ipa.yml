@@ -1,4 +1,4 @@
-name: Sign all IPAs in release with Zsign
+name: Sign IPA for ${{ github.event.inputs.tag }}
 
 on:
   workflow_dispatch:
