@@ -34,7 +34,7 @@ export default async function handler(req, res) {
     const matched = data.workflow_runs.find(
       (r) =>
         r.head_branch === "master" &&
-        r.display_title?.includes(tag) &&
+        r.name?.includes(tag) &&
         r.event === "workflow_dispatch"
     );
 
