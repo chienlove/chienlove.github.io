@@ -7,8 +7,9 @@ export default async function handler(req, res) {
   if (!GITHUB_TOKEN) return res.status(500).json({ message: "Thiếu biến môi trường GH_PAT" });
 
   try {
+    // Lấy danh sách các workflow gần đây
     const runsRes = await fetch(
-      `https://api.github.com/repos/${REPO}/actions/runs?event=workflow_dispatch&per_page=20`,
+      `https://api.github.com/repos/${REPO}/actions/runs?event=workflow_dispatch&per_page=15`,
       {
         headers: {
           Authorization: `Bearer ${GITHUB_TOKEN}`,
@@ -24,11 +25,8 @@ export default async function handler(req, res) {
 
     const runs = (await runsRes.json()).workflow_runs;
 
+    // Duyệt từng run để tìm job có tên chứa tag
     for (const run of runs) {
-      // Bỏ qua run không có id
-      if (!run.id) continue;
-
-      // Lấy danh sách jobs trong mỗi run
       const jobsRes = await fetch(run.jobs_url, {
         headers: {
           Authorization: `Bearer ${GITHUB_TOKEN}`,
@@ -39,7 +37,7 @@ export default async function handler(req, res) {
       if (!jobsRes.ok) continue;
 
       const jobsData = await jobsRes.json();
-      const matchedJob = jobsData.jobs?.find((j) => j.name?.includes(`Sign IPA for ${tag}`));
+      const matchedJob = jobsData.jobs?.find((j) => j.name.includes(tag));
 
       if (matchedJob) {
         return res.status(200).json({
@@ -52,6 +50,7 @@ export default async function handler(req, res) {
       }
     }
 
+    // Không tìm thấy job nào khớp
     return res.status(200).json({
       status: "unknown",
       note: "Không tìm thấy job nào chứa tag trong tên",
