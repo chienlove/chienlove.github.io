@@ -13,7 +13,9 @@ export default function RunStepsViewer({ runId }) {
       try {
         const res = await axios.get(`/api/admin/run-steps?run_id=${runId}`);
         setSteps(res.data.steps || []);
+        setError("");
       } catch (err) {
+        console.warn("⚠️ Lỗi khi lấy danh sách bước:", err.message);
         setError("Không thể lấy danh sách bước");
       } finally {
         setLoading(false);
@@ -23,25 +25,33 @@ export default function RunStepsViewer({ runId }) {
     fetchSteps();
   }, [runId]);
 
-  if (!runId) return null;
-  if (loading) return <p className="text-sm text-gray-600">⏳ Đang tải tiến trình...</p>;
-  if (error) return <p className="text-sm text-red-500">{error}</p>;
+  if (loading) return null;
 
   return (
-    <div className="mt-4">
-      <h4 className="font-semibold text-sm mb-2">📋 Các bước đã thực hiện:</h4>
-      <ul className="space-y-1 text-sm">
-        {steps.map((step, i) => (
-          <li key={i} className="flex items-center space-x-2">
-            <span>
-              {step.conclusion === "success" ? "✅" :
-               step.conclusion === "failure" ? "❌" :
-               step.status === "in_progress" ? "⏳" : "🔄"}
-            </span>
-            <span>{step.name}</span>
-          </li>
-        ))}
-      </ul>
+    <div className="mt-2 ml-4 text-sm">
+      {error ? (
+        <p className="text-red-600">{error}</p>
+      ) : (
+        <>
+          <p className="font-medium mb-1">📋 Các bước đã thực hiện:</p>
+          <ul className="space-y-1 list-disc ml-4">
+            {steps.map((step, idx) => (
+              <li key={idx} className="flex items-center gap-1">
+                {step.conclusion === "success" ? (
+                  <span>✅</span>
+                ) : step.conclusion === "failure" ? (
+                  <span>❌</span>
+                ) : step.status === "in_progress" ? (
+                  <span>⏳</span>
+                ) : (
+                  <span>🔄</span>
+                )}
+                <span>{step.name}</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
     </div>
   );
 }
