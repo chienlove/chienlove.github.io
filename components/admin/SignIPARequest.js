@@ -53,12 +53,27 @@ export default function SignIPARequest() {
     }
   };
 
-  // Theo dõi tiến trình
+  // Theo dõi tiến trình (Polling có điều kiện)
   useEffect(() => {
-    fetchRequests();
-    const interval = setInterval(fetchRequests, 5000);
-    return () => clearInterval(interval);
-  }, []);
+    let interval;
+
+    const startPolling = () => {
+      const hasPendingRequests = requests.some(
+        (r) => !["success", "failure", "completed"].includes(statuses[r.id])
+      );
+
+      if (hasPendingRequests) {
+        fetchRequests();
+        interval = setInterval(fetchRequests, 5000);
+      }
+    };
+
+    startPolling();
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [requests, statuses]);
 
   async function fetchRequests() {
     try {
@@ -74,7 +89,6 @@ export default function SignIPARequest() {
 
           setStatuses((prev) => ({ ...prev, [r.id]: status }));
 
-          // Nếu đã completed, xoá request khỏi Supabase
           if (["success", "failure", "completed"].includes(status)) {
             await axios.post("/api/admin/delete-request", { id: r.id });
           }
@@ -193,7 +207,6 @@ export default function SignIPARequest() {
                   </div>
                 </div>
 
-                {/* Chỉ hiển thị RunStepsViewer khi có run_id và đang in_progress */}
                 {statuses[r.id] === "in_progress" && (
                   <RunStepsViewer runId={r.run_id} />
                 )}

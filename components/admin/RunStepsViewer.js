@@ -12,19 +12,40 @@ export default function RunStepsViewer({ runId }) {
     const fetchSteps = async () => {
       try {
         const res = await axios.get(`/api/admin/run-steps?run_id=${runId}`);
-        setSteps(res.data.steps || []);
+        const newSteps = res.data.steps || [];
+        setSteps(newSteps);
         setError("");
+
+        // Tự động dừng polling nếu tất cả steps đã hoàn thành
+        const allStepsCompleted = newSteps.every(
+          (step) => ["success", "failure", "skipped"].includes(step.conclusion)
+        );
+        if (allStepsCompleted) return true;
       } catch (err) {
-        console.error("⚠️ Lỗi khi lấy danh sách bước:", err.message);
+        console.error("⚠️ Lỗi khi lấy steps:", err.message);
         setError("Không thể lấy danh sách bước");
       } finally {
         setLoading(false);
       }
+      return false;
     };
 
-    fetchSteps();
-    const interval = setInterval(fetchSteps, 5000); // Polling mỗi 5s
-    return () => clearInterval(interval);
+    let interval;
+    const startPolling = async () => {
+      const shouldStop = await fetchSteps();
+      if (!shouldStop) {
+        interval = setInterval(async () => {
+          const shouldStop = await fetchSteps();
+          if (shouldStop && interval) clearInterval(interval);
+        }, 5000);
+      }
+    };
+
+    startPolling();
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
   }, [runId]);
 
   if (loading) return <div className="text-sm text-gray-500 mt-2">Đang tải bước thực hiện...</div>;
