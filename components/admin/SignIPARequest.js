@@ -138,7 +138,8 @@ function ProgressTracker() {
     try {
       const res = await axios.get("/api/admin/sign-requests");
       const reqs = res.data.requests || [];
-      setRequests(reqs);
+
+      const updated = [];
 
       for (let req of reqs) {
         const statusRes = await axios.get(`/api/admin/check-status?tag=${req.tag}`);
@@ -147,7 +148,16 @@ function ProgressTracker() {
 
         setStatuses((prev) => ({ ...prev, [req.id]: status }));
         if (runId) setRunIds((prev) => ({ ...prev, [req.id]: runId }));
+
+        // 🔥 Nếu đã xong => xoá khỏi Supabase
+        if (["success", "failure"].includes(status)) {
+          await axios.delete(`/api/admin/sign-requests?id=${req.id}`);
+        } else {
+          updated.push(req); // giữ lại nếu chưa hoàn tất
+        }
       }
+
+      setRequests(updated);
     } catch (err) {
       console.error("Lỗi khi theo dõi tiến trình:", err.message);
     }
@@ -192,7 +202,6 @@ function ProgressTracker() {
               </div>
             </div>
 
-            {/* ✅ Hiển thị danh sách các bước GitHub Actions */}
             {runIds[r.id] && <RunStepsViewer runId={runIds[r.id]} />}
           </li>
         ))}
