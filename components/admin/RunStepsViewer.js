@@ -1,5 +1,3 @@
-Tôi thấy fiel cũ có như này 
-
 import { useEffect, useState } from "react";
 import axios from "axios";
 
