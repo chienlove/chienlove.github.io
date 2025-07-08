@@ -88,7 +88,73 @@ export default function SignIPARequest() {
   return (
     <>
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* ... (giữ nguyên phần form UI) ... */}
+        <h2 className="text-lg font-semibold">🚀 Gửi yêu cầu ký IPA</h2>
+
+        <div>
+          <label className="block font-medium">🔐 Chọn chứng chỉ</label>
+          <select
+            className="w-full p-2 border rounded"
+            value={form.certName}
+            onChange={(e) => setForm({ ...form, certName: e.target.value })}
+            required
+          >
+            <option value="">-- Chọn chứng chỉ --</option>
+            {certs.map((cert) => (
+              <option key={cert.id} value={cert.name}>
+                {cert.name}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label className="block font-medium">🏷 Chọn release tag</label>
+          <select
+            className="w-full p-2 border rounded"
+            value={form.tag}
+            onChange={(e) => setForm({ ...form, tag: e.target.value })}
+            required
+          >
+            <option value="">-- Chọn tag --</option>
+            {tags.map((tag) => (
+              <option key={tag} value={tag}>
+                {tag}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {ipas.length > 0 && (
+          <div>
+            <p className="font-medium">📦 File IPA trong tag:</p>
+            <ul className="list-disc ml-5 text-sm text-gray-700 dark:text-gray-300">
+              {ipas.map((file, i) => (
+                <li key={i}>{file}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        <div>
+          <label className="block font-medium">🆔 Bundle Identifier mới</label>
+          <input
+            type="text"
+            className="w-full p-2 border rounded"
+            placeholder="(Không bắt buộc) Nếu để trống sẽ tự sinh"
+            value={form.identifier}
+            onChange={(e) => setForm({ ...form, identifier: e.target.value })}
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={loading}
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+        >
+          {loading ? "⏳ Đang gửi..." : "🚀 Gửi yêu cầu ký IPA"}
+        </button>
+
+        {message && <p className="text-sm mt-2">{message}</p>}
       </form>
 
       {/* Danh sách tiến trình */}
