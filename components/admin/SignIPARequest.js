@@ -127,10 +127,11 @@ function ProgressTracker() {
   const [requests, setRequests] = useState([]);
   const [statuses, setStatuses] = useState({});
   const [runIds, setRunIds] = useState({});
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     fetchRequests();
-    const interval = setInterval(fetchRequests, 5000);
+    const interval = setInterval(fetchRequests, 7000);
     return () => clearInterval(interval);
   }, []);
 
@@ -138,6 +139,13 @@ function ProgressTracker() {
     try {
       const res = await axios.get("/api/admin/sign-requests");
       const reqs = res.data.requests || [];
+
+      // Nếu chưa có request nào → không gọi check-status
+      if (reqs.length === 0) {
+        setRequests([]);
+        setReady(true); // để giao diện không bị delay
+        return;
+      }
 
       const updated = [];
 
@@ -149,19 +157,22 @@ function ProgressTracker() {
         setStatuses((prev) => ({ ...prev, [req.id]: status }));
         if (runId) setRunIds((prev) => ({ ...prev, [req.id]: runId }));
 
-        // 🔥 Nếu đã xong => xoá khỏi Supabase
         if (["success", "failure"].includes(status)) {
           await axios.delete(`/api/admin/sign-requests?id=${req.id}`);
         } else {
-          updated.push(req); // giữ lại nếu chưa hoàn tất
+          updated.push(req);
         }
       }
 
       setRequests(updated);
+      setReady(true);
     } catch (err) {
-      console.error("Lỗi khi theo dõi tiến trình:", err.message);
+      console.error("Lỗi theo dõi tiến trình:", err.message);
+      setReady(true);
     }
   }
+
+  if (!ready) return null; // chờ fetch xong
 
   if (requests.length === 0) return null;
 
