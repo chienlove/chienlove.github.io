@@ -1,26 +1,26 @@
-// pages/api/admin/sign-requests.js
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+import { supabase } from "../../../lib/supabase";
 
 export default async function handler(req, res) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ message: 'Method not allowed' });
-  }
-
-  try {
+  if (req.method === "GET") {
+    // 🔍 Lấy danh sách tiến trình từ bảng sign_requests
     const { data, error } = await supabase
-      .from('sign_requests')
-      .select('*')
-      .order('created_at', { ascending: false });
+      .from("sign_requests")
+      .select("*")
+      .order("created_at", { ascending: false });
 
-    if (error) throw error;
-
+    if (error) return res.status(500).json({ message: "Lỗi lấy danh sách", error });
     return res.status(200).json({ requests: data });
-  } catch (err) {
-    return res.status(500).json({ message: err.message });
   }
+
+  if (req.method === "DELETE") {
+    const { id } = req.query;
+    if (!id) return res.status(400).json({ message: "Thiếu ID cần xoá" });
+
+    const { error } = await supabase.from("sign_requests").delete().eq("id", id);
+    if (error) return res.status(500).json({ message: "Xoá thất bại", error });
+
+    return res.status(200).json({ message: "Đã xoá tiến trình" });
+  }
+
+  return res.status(405).json({ message: "Phương thức không được hỗ trợ" });
 }
