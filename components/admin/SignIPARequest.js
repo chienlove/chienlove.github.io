@@ -129,11 +129,10 @@ function ProgressTracker() {
   const [requests, setRequests] = useState([]);
   const [statuses, setStatuses] = useState({});
   const [runIds, setRunIds] = useState({});
-  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     fetchRequests();
-    const interval = setInterval(fetchRequests, 7000);
+    const interval = setInterval(fetchRequests, 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -141,14 +140,7 @@ function ProgressTracker() {
     try {
       const res = await axios.get("/api/admin/sign-requests");
       const reqs = res.data.requests || [];
-
-      if (reqs.length === 0) {
-        setRequests([]);
-        setReady(true);
-        return;
-      }
-
-      const updated = [];
+      setRequests(reqs);
 
       for (let req of reqs) {
         const statusRes = await axios.get(`/api/admin/check-status?tag=${req.tag}`);
@@ -157,23 +149,33 @@ function ProgressTracker() {
 
         setStatuses((prev) => ({ ...prev, [req.id]: status }));
         if (runId) setRunIds((prev) => ({ ...prev, [req.id]: runId }));
-
-        if (["success", "failure"].includes(status)) {
-          await axios.delete(`/api/admin/sign-requests?id=${req.id}`);
-        } else {
-          updated.push(req);
-        }
       }
-
-      setRequests(updated);
-      setReady(true);
     } catch (err) {
       console.error("Lỗi khi theo dõi tiến trình:", err.message);
-      setReady(true);
     }
   }
 
-  if (!ready || requests.length === 0) return null;
+  // 🔥 Tự xoá sau 3 phút nếu tiến trình đã hoàn tất
+  useEffect(() => {
+    requests.forEach((r) => {
+      const created = new Date(r.created_at);
+      const now = new Date();
+      const elapsed = now - created;
+
+      if (elapsed > 3 * 60 * 1000 && ["success", "failure"].includes(statuses[r.id])) {
+        axios.delete(`/api/admin/delete-request?id=${r.id}`)
+          .then(() => {
+            console.log("🗑 Đã xoá tiến trình hết hạn:", r.tag);
+            setRequests((prev) => prev.filter((item) => item.id !== r.id));
+          })
+          .catch((err) => {
+            console.warn("⚠️ Lỗi khi xoá tiến trình:", err.message);
+          });
+      }
+    });
+  }, [requests, statuses]);
+
+  if (requests.length === 0) return null;
 
   return (
     <div className="mt-8">
@@ -212,6 +214,7 @@ function ProgressTracker() {
               </div>
             </div>
 
+            {/* ✅ Hiển thị danh sách bước nếu có runId */}
             {runIds[r.id] && <RunStepsViewer runId={runIds[r.id]} />}
           </li>
         ))}
