@@ -1,3 +1,5 @@
+Tôi thấy fiel cũ có như này 
+
 import { useEffect, useState } from "react";
 import axios from "axios";
 
@@ -9,46 +11,23 @@ export default function RunStepsViewer({ runId }) {
   useEffect(() => {
     if (!runId) return;
 
-    const fetchSteps = async () => {
+    async function fetchSteps() {
       try {
         const res = await axios.get(`/api/admin/run-steps?run_id=${runId}`);
-        const newSteps = res.data.steps || [];
-        setSteps(newSteps);
+        setSteps(res.data.steps || []);
         setError("");
-
-        // Tự động dừng polling nếu tất cả steps đã hoàn thành
-        const allStepsCompleted = newSteps.every(
-          (step) => ["success", "failure", "skipped"].includes(step.conclusion)
-        );
-        if (allStepsCompleted) return true;
       } catch (err) {
-        console.error("⚠️ Lỗi khi lấy steps:", err.message);
+        console.warn("⚠️ Lỗi khi lấy danh sách bước:", err.message);
         setError("Không thể lấy danh sách bước");
       } finally {
         setLoading(false);
       }
-      return false;
-    };
+    }
 
-    let interval;
-    const startPolling = async () => {
-      const shouldStop = await fetchSteps();
-      if (!shouldStop) {
-        interval = setInterval(async () => {
-          const shouldStop = await fetchSteps();
-          if (shouldStop && interval) clearInterval(interval);
-        }, 5000);
-      }
-    };
-
-    startPolling();
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
+    fetchSteps();
   }, [runId]);
 
-  if (loading) return <div className="text-sm text-gray-500 mt-2">Đang tải bước thực hiện...</div>;
+  if (loading) return null;
 
   return (
     <div className="mt-2 ml-4 text-sm">

@@ -11,6 +11,7 @@ export default function SignIPARequest() {
   const [message, setMessage] = useState("");
   const [requests, setRequests] = useState([]);
   const [statuses, setStatuses] = useState({});
+  const [runSteps, setRunSteps] = useState({});
 
   // Lấy certs và tags
   useEffect(() => {
@@ -45,7 +46,7 @@ export default function SignIPARequest() {
 
       setMessage("✅ Đã gửi yêu cầu ký IPA thành công!");
       setForm({ certName: "", tag: "", identifier: "" });
-      setTimeout(fetchRequests, 1000);
+      setTimeout(fetchRequests, 1000); // Gọi fetch lại sau 1s để load request mới
     } catch (err) {
       setMessage("❌ " + (err.response?.data?.message || "Lỗi gửi yêu cầu ký"));
     } finally {
@@ -53,27 +54,12 @@ export default function SignIPARequest() {
     }
   };
 
-  // Theo dõi tiến trình (Polling có điều kiện)
+  // Theo dõi tiến trình
   useEffect(() => {
-    let interval;
-
-    const startPolling = () => {
-      const hasPendingRequests = requests.some(
-        (r) => !["success", "failure", "completed"].includes(statuses[r.id])
-      );
-
-      if (hasPendingRequests) {
-        fetchRequests();
-        interval = setInterval(fetchRequests, 5000);
-      }
-    };
-
-    startPolling();
-
-    return () => {
-      if (interval) clearInterval(interval);
-    };
-  }, [requests, statuses]);
+    fetchRequests(); // lần đầu
+    const interval = setInterval(fetchRequests, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   async function fetchRequests() {
     try {
@@ -82,6 +68,7 @@ export default function SignIPARequest() {
       setRequests(reqs);
 
       for (let r of reqs) {
+        // Chỉ theo dõi nếu chưa "success" hay "failure"
         if (!statuses[r.id] || ["pending", "in_progress", "unknown"].includes(statuses[r.id])) {
           const statusRes = await axios.get(`/api/admin/check-status?tag=${r.tag}`);
           const status = statusRes.data.conclusion || statusRes.data.status || "unknown";
@@ -89,6 +76,12 @@ export default function SignIPARequest() {
 
           setStatuses((prev) => ({ ...prev, [r.id]: status }));
 
+          if (runId && status !== "pending") {
+            const stepsRes = await axios.get(`/api/admin/run-steps?run_id=${runId}`);
+            setRunSteps((prev) => ({ ...prev, [r.id]: stepsRes.data.steps || [] }));
+          }
+
+          // Nếu đã completed, xoá request khỏi Supabase
           if (["success", "failure", "completed"].includes(status)) {
             await axios.post("/api/admin/delete-request", { id: r.id });
           }
@@ -207,8 +200,8 @@ export default function SignIPARequest() {
                   </div>
                 </div>
 
-                {statuses[r.id] === "in_progress" && (
-                  <RunStepsViewer runId={r.run_id} />
+                {runSteps[r.id]?.length > 0 && (
+                  <RunStepsViewer steps={runSteps[r.id]} />
                 )}
               </li>
             ))}
