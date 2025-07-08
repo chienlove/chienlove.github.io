@@ -16,7 +16,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const url = `https://api.github.com/repos/${REPO}/actions/runs?event=workflow_dispatch&per_page=30`;
+    const url = `https://api.github.com/repos/${REPO}/actions/runs?event=workflow_dispatch&per_page=20`;
     const ghRes = await fetch(url, {
       headers: {
         Authorization: `Bearer ${GITHUB_TOKEN}`,
@@ -31,20 +31,18 @@ export default async function handler(req, res) {
 
     const data = await ghRes.json();
 
-    // Ghi lại tất cả tên job có trong danh sách
-    const names = data.workflow_runs.map((r) => r.name);
-
+    // ✅ Tìm run có tên chứa tag
     const matched = data.workflow_runs.find(
       (r) =>
-        r.name?.includes(tag) && 
+        r.name?.includes(tag) &&
         r.event === "workflow_dispatch"
     );
 
     if (!matched) {
       return res.status(200).json({
         status: "unknown",
-        note: "Không tìm thấy tiến trình có chứa tag trong tên job",
-        all_names: names,
+        note: "Không tìm thấy tiến trình có tên chứa tag",
+        searched_names: data.workflow_runs.map((r) => r.name),
       });
     }
 
