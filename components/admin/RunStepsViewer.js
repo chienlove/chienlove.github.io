@@ -9,23 +9,25 @@ export default function RunStepsViewer({ runId }) {
   useEffect(() => {
     if (!runId) return;
 
-    async function fetchSteps() {
+    const fetchSteps = async () => {
       try {
         const res = await axios.get(`/api/admin/run-steps?run_id=${runId}`);
         setSteps(res.data.steps || []);
         setError("");
       } catch (err) {
-        console.warn("⚠️ Lỗi khi lấy danh sách bước:", err.message);
+        console.error("⚠️ Lỗi khi lấy danh sách bước:", err.message);
         setError("Không thể lấy danh sách bước");
       } finally {
         setLoading(false);
       }
-    }
+    };
 
     fetchSteps();
+    const interval = setInterval(fetchSteps, 5000); // Polling mỗi 5s
+    return () => clearInterval(interval);
   }, [runId]);
 
-  if (loading) return null;
+  if (loading) return <div className="text-sm text-gray-500 mt-2">Đang tải bước thực hiện...</div>;
 
   return (
     <div className="mt-2 ml-4 text-sm">
