@@ -129,6 +129,7 @@ function ProgressTracker() {
   const [requests, setRequests] = useState([]);
   const [statuses, setStatuses] = useState({});
   const [runIds, setRunIds] = useState({});
+  const [stepCache, setStepCache] = useState({});
 
   useEffect(() => {
     fetchRequests();
@@ -143,9 +144,20 @@ function ProgressTracker() {
       setRequests(reqs);
 
       for (let req of reqs) {
+        if (!req.tag) continue;
+
         const statusRes = await axios.get(`/api/admin/check-status?tag=${req.tag}`);
         const status = statusRes.data.conclusion || statusRes.data.status || "unknown";
         const runId = statusRes.data.run_id || null;
+
+        // Nếu run_id thay đổi, xoá cache step cũ
+        if (runIds[req.id] && runIds[req.id] !== runId) {
+          setStepCache((prev) => {
+            const updated = { ...prev };
+            delete updated[req.id];
+            return updated;
+          });
+        }
 
         setStatuses((prev) => ({ ...prev, [req.id]: status }));
         if (runId) setRunIds((prev) => ({ ...prev, [req.id]: runId }));
@@ -155,7 +167,7 @@ function ProgressTracker() {
     }
   }
 
-  // 🔥 Tự xoá sau 3 phút nếu tiến trình đã hoàn tất
+  // 🧹 Tự xoá nếu quá 3 phút và đã completed
   useEffect(() => {
     requests.forEach((r) => {
       const created = new Date(r.created_at);
@@ -165,12 +177,10 @@ function ProgressTracker() {
       if (elapsed > 3 * 60 * 1000 && ["success", "failure"].includes(statuses[r.id])) {
         axios.delete(`/api/admin/delete-request?id=${r.id}`)
           .then(() => {
-            console.log("🗑 Đã xoá tiến trình hết hạn:", r.tag);
-            setRequests((prev) => prev.filter((item) => item.id !== r.id));
+            console.log("🗑 Đã xoá tiến trình:", r.tag);
+            setRequests((prev) => prev.filter((x) => x.id !== r.id));
           })
-          .catch((err) => {
-            console.warn("⚠️ Lỗi khi xoá tiến trình:", err.message);
-          });
+          .catch(console.warn);
       }
     });
   }, [requests, statuses]);
@@ -183,7 +193,7 @@ function ProgressTracker() {
       <ul className="space-y-4">
         {requests.map((r) => (
           <li key={r.id} className="p-3 bg-gray-100 rounded text-sm">
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center mb-1">
               <div>
                 <strong>{r.tag}</strong> --{" "}
                 <span className="text-gray-700">
@@ -214,8 +224,29 @@ function ProgressTracker() {
               </div>
             </div>
 
-            {/* ✅ Hiển thị danh sách bước nếu có runId */}
-            {runIds[r.id] && <RunStepsViewer runId={runIds[r.id]} />}
+            {/* 👉 Nếu đã có runId và chưa cache step → fetch 1 lần */}
+            {runIds[r.id] && !stepCache[r.id] && (
+              <RunStepsViewer runId={runIds[r.id]} onLoaded={(steps) => {
+                setStepCache((prev) => ({ ...prev, [r.id]: steps }));
+              }} />
+            )}
+
+            {/* 👉 Nếu đã có cache step thì render lại (tránh gọi lại API) */}
+            {stepCache[r.id] && (
+              <div className="mt-2 ml-2 text-xs text-gray-700">
+                <p className="font-medium mb-1">📋 Các bước đã thực hiện:</p>
+                <ul className="space-y-1">
+                  {stepCache[r.id].map((step, idx) => (
+                    <li key={idx}>
+                      {step.conclusion === "success" ? "✅" :
+                       step.conclusion === "failure" ? "❌" :
+                       step.status === "in_progress" ? "⏳" : "🔄"}{" "}
+                      {step.name}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </li>
         ))}
       </ul>
