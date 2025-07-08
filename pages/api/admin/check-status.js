@@ -34,7 +34,7 @@ export default async function handler(req, res) {
     const matched = data.workflow_runs.find(
       (r) =>
         r.head_branch === "master" &&
-        r.name === `Sign IPA for ${tag}` &&
+        r.display_title?.includes(tag) &&
         r.event === "workflow_dispatch"
     );
 
