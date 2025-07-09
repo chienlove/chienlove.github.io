@@ -61,11 +61,14 @@ export default function CertManager() {
   }
 
   async function handleDelete(id) {
-    if (!confirm("Bạn có chắc muốn xoá chứng chỉ này?")) return;
+    const cert = certs.find((c) => c.id === id);
+    if (!cert) return;
+
+    if (!confirm(`Bạn có chắc muốn xoá chứng chỉ "${cert.name}" không?`)) return;
 
     try {
-      await axios.delete(`/api/admin/cert/${id}`);
-      setMessage("🗑️ Đã xoá chứng chỉ");
+      await axios.delete(`/api/admin/delete-cert?name=${cert.name}`);
+      setMessage("🗑️ Đã xoá chứng chỉ và file thành công");
       fetchCerts();
     } catch (err) {
       setMessage("❌ Lỗi khi xoá chứng chỉ");
