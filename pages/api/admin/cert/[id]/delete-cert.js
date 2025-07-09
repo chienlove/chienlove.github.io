@@ -10,42 +10,61 @@ export default async function handler(req, res) {
     return res.status(405).json({ message: "Method not allowed" });
   }
 
-  const { id } = req.query;
+  const {
+    query: { id },
+  } = req;
 
-  // Lấy cert trước để biết URL file
-  const { data: cert, error: fetchError } = await supabase
-    .from("certificates")
-    .select("*")
-    .eq("id", id)
-    .single();
+  if (!id) return res.status(400).json({ message: "Thiếu ID chứng chỉ" });
 
-  if (fetchError || !cert) {
-    return res.status(404).json({ message: "Không tìm thấy cert" });
-  }
-
-  // Xoá file trên Supabase Storage
-  const p12Path = cert.p12_url?.split("/certificates/")[1];
-  const provisionPath = cert.provision_url?.split("/certificates/")[1];
-
-  if (p12Path || provisionPath) {
-    const deleteRes = await supabase.storage
+  try {
+    // Lấy thông tin cert theo id
+    const { data: cert, error: getError } = await supabase
       .from("certificates")
-      .remove([p12Path, provisionPath].filter(Boolean));
+      .select("p12_url, provision_url")
+      .eq("id", id)
+      .single();
 
-    if (deleteRes.error) {
-      console.warn("⚠️ Không thể xoá file storage:", deleteRes.error.message);
+    if (getError || !cert) {
+      return res.status(404).json({ message: "Không tìm thấy chứng chỉ" });
     }
+
+    const extractFilename = (url) => {
+      const parts = url.split("/");
+      return parts[parts.length - 1];
+    };
+
+    const filesToDelete = [];
+
+    if (cert.p12_url) {
+      filesToDelete.push(extractFilename(cert.p12_url));
+    }
+
+    if (cert.provision_url) {
+      filesToDelete.push(extractFilename(cert.provision_url));
+    }
+
+    if (filesToDelete.length > 0) {
+      const { error: deleteError } = await supabase.storage
+        .from("certificates")
+        .remove(filesToDelete);
+
+      if (deleteError) {
+        console.warn("⚠️ Không thể xoá file storage:", deleteError.message);
+      }
+    }
+
+    // Xoá record trong bảng
+    const { error: deleteDbError } = await supabase
+      .from("certificates")
+      .delete()
+      .eq("id", id);
+
+    if (deleteDbError) {
+      return res.status(500).json({ message: "Lỗi xoá khỏi database" });
+    }
+
+    return res.status(200).json({ message: "Đã xoá chứng chỉ thành công" });
+  } catch (err) {
+    return res.status(500).json({ message: "Lỗi hệ thống", error: err.message });
   }
-
-  // Xoá bản ghi trong table
-  const { error: deleteError } = await supabase
-    .from("certificates")
-    .delete()
-    .eq("id", id);
-
-  if (deleteError) {
-    return res.status(500).json({ message: "Lỗi khi xoá chứng chỉ" });
-  }
-
-  return res.status(200).json({ message: "Đã xoá chứng chỉ thành công" });
 }
