@@ -5,50 +5,56 @@ const cache = require('memory-cache');
 
 // Cấu hình
 const CACHE_DURATION = 60 * 60 * 1000; // 1 giờ cache
-const RATE_LIMIT_DELAY = 500; // 500ms giữa các request
+const REQUEST_TIMEOUT = 10000; // 10s timeout
 
-module.exports = async (req, res) => {
-  // Xử lý CORS
+const enableCORS = fn => async (req, res) => {
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Access-Control-Allow-Methods', 'GET');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  return await fn(req, res);
+};
+
+module.exports = enableCORS(async (req, res) => {
+  console.log('Incoming request for TestFlight ID:', req.query.id);
 
   const { id } = req.query;
   
   if (!id) {
+    console.warn('Missing ID parameter');
     return res.status(400).json({ 
       error: 'Missing TestFlight ID parameter',
       usage: '/api/testflight?id=TESTFLIGHT_ID' 
     });
   }
 
-  // Kiểm tra cache trước
+  // Kiểm tra cache
   const cached = cache.get(id);
   if (cached) {
+    console.log(`Returning cached data for ${id}`);
     return res.json({ ...cached, cached: true });
   }
 
   try {
-    // Thêm delay để tránh rate limiting
-    await new Promise(resolve => setTimeout(resolve, RATE_LIMIT_DELAY));
-
     const { data, headers } = await axios.get(`https://testflight.apple.com/join/${id}`, {
       headers: { 
         'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1',
         'Accept-Language': 'en-US,en;q=0.9'
       },
-      timeout: 5000
+      timeout: REQUEST_TIMEOUT,
+      validateStatus: (status) => status < 500 // Chấp nhận cả 404
     });
 
+    console.log(`Fetched data for ${id}, length: ${data.length}`);
+
     const $ = cheerio.load(data);
-    
-    // Xử lý tên ứng dụng tốt hơn
     let appName = $('title').text()
       .replace(' - TestFlight - Apple', '')
       .replace('Join the ', '')
       .replace('加入 Beta 版', '')
       .trim();
 
-    // Phát hiện ngôn ngữ (Trung/Anh)
+    // Phát hiện ngôn ngữ
     const isChinese = data.includes('版本的测试员已满') || 
                       data.includes('版本目前不接受任何新测试员');
 
@@ -62,47 +68,41 @@ module.exports = async (req, res) => {
       if (data.includes("isn't accepting any new testers")) status = 'N';
     }
 
-    // Cố gắng lấy phiên bản (nếu có)
-    const versionMatch = data.match(/Version\s*([\d.]+)/i);
-    const version = versionMatch?.[1] || null;
-
-    // Cố gắng lấy ngày cập nhật
-    const lastModified = headers['last-modified'] || null;
-
-    // Chuẩn bị kết quả
     const result = {
       id,
-      appName,
+      appName: appName || 'Unknown App',
       status,
-      version,
-      lastModified,
-      language: isChinese ? 'zh' : 'en',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      language: isChinese ? 'zh' : 'en'
     };
 
-    // Lưu vào cache
     cache.put(id, result, CACHE_DURATION);
-
-    res.json(result);
+    console.log(`Success response for ${id}`, result);
+    return res.json(result);
 
   } catch (error) {
-    console.error(`Error checking TestFlight ${id}:`, error.message);
-    
+    console.error(`Error for ${id}:`, {
+      message: error.message,
+      code: error.code,
+      stack: error.stack
+    });
+
     if (error.response?.status === 404) {
       const notFoundResult = { 
         id, 
         status: 'D', 
         appName: null,
-        error: 'TestFlight not found or removed'
+        error: 'Not found'
       };
       cache.put(id, notFoundResult, CACHE_DURATION);
       return res.status(404).json(notFoundResult);
     }
 
-    res.status(500).json({ 
-      error: 'Internal server error',
+    return res.status(500).json({
+      error: 'Internal Server Error',
       message: error.message,
-      id
+      id,
+      timestamp: new Date().toISOString()
     });
   }
-};
+});
