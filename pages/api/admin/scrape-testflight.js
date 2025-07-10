@@ -1,7 +1,7 @@
-import cheerio from "cheerio";
-import fetch from "node-fetch";
+const cheerio = require("cheerio");
+const fetch = require("node-fetch");
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   const { url } = req.query;
 
   if (!url || !url.startsWith("https://testflight.apple.com/join/")) {
@@ -14,7 +14,6 @@ export default async function handler(req, res) {
   };
 
   try {
-    // 1. Fetch TestFlight page
     const tfRes = await fetch(url, { headers });
     if (!tfRes.ok) throw new Error(`Không thể truy cập TestFlight (${tfRes.status})`);
 
@@ -27,11 +26,9 @@ export default async function handler(req, res) {
     const icon = $('meta[property="og:image"]').attr("content") || "";
     const link = $('meta[property="og:url"]').attr("content") || url;
 
-    // 2. Tìm link App Store (nếu có) trong mô tả
     const appStoreMatch = description.match(/https:\/\/apps\.apple\.com\/[^\s"']+/);
     let appStoreUrl = appStoreMatch ? appStoreMatch[0].split('?')[0] : null;
 
-    // Dữ liệu thêm từ App Store
     let version = "", released = "", size = "", screenshots = [], category = "";
 
     if (appStoreUrl) {
