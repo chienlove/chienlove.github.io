@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import axios from "axios";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -22,6 +22,9 @@ export default function CertManager() {
   const [newName, setNewName] = useState("");
   const [deletingId, setDeletingId] = useState(null);
   const [renamingId, setRenamingId] = useState(null);
+
+  const p12Ref = useRef();
+  const provisionRef = useRef();
 
   async function fetchCerts() {
     try {
@@ -62,6 +65,8 @@ export default function CertManager() {
       setPassword("");
       setP12(null);
       setProvision(null);
+      p12Ref.current.value = "";
+      provisionRef.current.value = "";
       fetchCerts();
     } catch (err) {
       console.error(err);
@@ -106,28 +111,51 @@ export default function CertManager() {
     <div className="space-y-6">
       <h2 className="text-lg font-semibold">📥 Tải lên chứng chỉ mới</h2>
       <form onSubmit={handleUpload} className="space-y-4">
-        <input
-          type="text"
-          className="w-full p-2 border rounded"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Tên chứng chỉ (không bắt buộc)"
-        />
-        <input
-          type="password"
-          className="w-full p-2 border rounded"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Mật khẩu file .p12"
-          required
-        />
-        <input type="file" accept=".p12" onChange={(e) => setP12(e.target.files[0])} required />
-        <input
-          type="file"
-          accept=".mobileprovision"
-          onChange={(e) => setProvision(e.target.files[0])}
-          required
-        />
+        <div>
+          <label className="block font-medium">📝 Tên chứng chỉ (tùy chọn)</label>
+          <input
+            type="text"
+            className="w-full p-2 border rounded"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="VD: MyCert-2025"
+          />
+        </div>
+
+        <div>
+          <label className="block font-medium">🔑 Mật khẩu file .p12</label>
+          <input
+            type="password"
+            className="w-full p-2 border rounded"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Nhập mật khẩu file .p12"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block font-medium">📁 File .p12</label>
+          <input
+            type="file"
+            accept=".p12"
+            onChange={(e) => setP12(e.target.files[0])}
+            ref={p12Ref}
+            required
+          />
+        </div>
+
+        <div>
+          <label className="block font-medium">📄 File .mobileprovision</label>
+          <input
+            type="file"
+            accept=".mobileprovision"
+            onChange={(e) => setProvision(e.target.files[0])}
+            ref={provisionRef}
+            required
+          />
+        </div>
+
         <button
           type="submit"
           disabled={loading}
@@ -137,7 +165,13 @@ export default function CertManager() {
           {loading ? "Đang tải lên..." : "Tải lên"}
         </button>
         {message && (
-          <p className={`text-sm mt-2 ${message.startsWith("✅") ? "text-green-700" : "text-red-600"}`}>
+          <p
+            className={`text-sm mt-2 px-3 py-2 rounded ${
+              message.startsWith("✅")
+                ? "bg-green-100 text-green-700"
+                : "bg-red-100 text-red-600"
+            }`}
+          >
             {message}
           </p>
         )}
@@ -196,7 +230,7 @@ export default function CertManager() {
                         setEditingId(cert.id);
                         setNewName(cert.name);
                       }}
-                      className="bg-blue-600 text-white px-2 py-1 text-sm rounded font-bold hover:bg-blue-700 flex items-center gap-1"
+                      className="bg-green-600 text-white px-2 py-1 text-sm rounded font-bold hover:bg-green-700 flex items-center gap-1"
                     >
                       <FontAwesomeIcon icon={faPen} />
                       Đổi tên
