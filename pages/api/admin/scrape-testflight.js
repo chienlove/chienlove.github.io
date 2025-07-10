@@ -8,12 +8,15 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "URL TestFlight không hợp lệ" });
   }
 
-  try {
-    const tfRes = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0' }
-    });
+  const headers = {
+    'User-Agent':
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.5993.110 Safari/537.36'
+  };
 
-    if (!tfRes.ok) throw new Error("Không thể truy cập trang TestFlight");
+  try {
+    // 1. Fetch TestFlight page
+    const tfRes = await fetch(url, { headers });
+    if (!tfRes.ok) throw new Error(`Không thể truy cập TestFlight (${tfRes.status})`);
 
     const html = await tfRes.text();
     const $ = cheerio.load(html);
@@ -24,31 +27,38 @@ export default async function handler(req, res) {
     const icon = $('meta[property="og:image"]').attr("content") || "";
     const link = $('meta[property="og:url"]').attr("content") || url;
 
-    // 🔍 Tìm link App Store trong mô tả (nếu có)
-    const appStoreMatch = description.match(/https:\/\/apps\.apple\.com\/[^\s]+/);
+    // 2. Tìm link App Store (nếu có) trong mô tả
+    const appStoreMatch = description.match(/https:\/\/apps\.apple\.com\/[^\s"']+/);
     let appStoreUrl = appStoreMatch ? appStoreMatch[0].split('?')[0] : null;
 
+    // Dữ liệu thêm từ App Store
     let version = "", released = "", size = "", screenshots = [], category = "";
 
     if (appStoreUrl) {
-      const appRes = await fetch(appStoreUrl, {
-        headers: { 'User-Agent': 'Mozilla/5.0' }
-      });
-      const appHtml = await appRes.text();
-      const $$ = cheerio.load(appHtml);
+      try {
+        const appRes = await fetch(appStoreUrl, { headers });
+        if (!appRes.ok) throw new Error(`Không thể truy cập App Store (${appRes.status})`);
 
-      version = $$('p.l-column.small-6.medium-12.whats-new__latest__version').text().trim();
-      released = $$('time').first().attr('datetime') || "";
-      size = $$('li:contains("Size")').text().replace('Size', '').trim();
-      category = $$('li:contains("Category")').text().replace('Category', '').trim();
+        const appHtml = await appRes.text();
+        const $$ = cheerio.load(appHtml);
 
-      $$('picture.product-hero__screenshot source').each((i, el) => {
-        const srcset = $$(el).attr('srcset');
-        if (srcset) {
-          const img = srcset.split(' ')[0]; // Lấy ảnh đầu tiên trong srcset
-          screenshots.push(img);
-        }
-      });
+        version = $$('p.l-column.small-6.medium-12.whats-new__latest__version').text().trim();
+        released = $$('time').first().attr('datetime') || "";
+        size = $$('li:contains("Size")').text().replace('Size', '').trim();
+        category = $$('li:contains("Category")').text().replace('Category', '').trim();
+
+        $$('picture.product-hero__screenshot source').each((i, el) => {
+          const srcset = $$(el).attr('srcset');
+          if (srcset) {
+            const img = srcset.split(' ')[0];
+            if (img.startsWith('https://')) screenshots.push(img);
+          }
+        });
+      } catch (appError) {
+        console.error("Lỗi khi fetch App Store:", appError);
+      }
+    } else {
+      console.warn("⚠️ Không tìm thấy link App Store trong TestFlight mô tả.");
     }
 
     return res.status(200).json({
@@ -62,11 +72,14 @@ export default async function handler(req, res) {
       released,
       category,
       screenshots,
-      appStoreUrl: appStoreUrl || null,
+      appStoreUrl,
       source: url
     });
   } catch (error) {
-    console.error("Scraping error:", error);
-    return res.status(500).json({ error: "Lỗi khi scraping dữ liệu" });
+    console.error("🔥 Scraping error:", error);
+    return res.status(500).json({
+      error: "Lỗi khi scraping dữ liệu",
+      detail: error.message || String(error)
+    });
   }
 }
