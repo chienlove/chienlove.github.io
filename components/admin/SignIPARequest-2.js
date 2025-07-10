@@ -9,9 +9,10 @@ export default function SignIPARequest() {
   const [form, setForm] = useState({ certName: "", tag: "", identifier: "" });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
-  const [request, setRequest] = useState(null);
-  const [status, setStatus] = useState(null);
-  const [runId, setRunId] = useState(null);
+  const [requests, setRequests] = useState([]);
+  const [statuses, setStatuses] = useState({});
+  const [runIds, setRunIds] = useState({});
+  const [stepsMap, setStepsMap] = useState({});
 
   useEffect(() => {
     axios.get("/api/admin/list-certs").then((res) => setCerts(res.data.certs || []));
@@ -23,13 +24,43 @@ export default function SignIPARequest() {
     axios.get(`/api/admin/ipas-in-tag?tag=${form.tag}`).then((res) => setIpas(res.data.ipas || []));
   }, [form.tag]);
 
+  useEffect(() => {
+    const fetchRequests = async () => {
+      const res = await axios.get("/api/admin/sign-requests");
+      const reqs = res.data.requests || [];
+      setRequests(reqs);
+
+      for (let req of reqs) {
+        try {
+          const statusRes = await axios.get(`/api/admin/check-status?tag=${req.tag}`);
+          const status = statusRes.data.conclusion || statusRes.data.status || "unknown";
+          const runId = statusRes.data.run_id;
+
+          setStatuses((prev) => ({ ...prev, [req.id]: status }));
+          if (runId) {
+            setRunIds((prev) => ({ ...prev, [req.id]: runId }));
+
+            // Nếu completed hoặc success thì load steps 1 lần
+            if (status === "in_progress" || status === "completed" || status === "success") {
+              const stepsRes = await axios.get(`/api/admin/run-steps?run_id=${runId}`);
+              setStepsMap((prev) => ({ ...prev, [req.id]: stepsRes.data.steps || [] }));
+            }
+          }
+        } catch (e) {
+          console.error("Lỗi khi theo dõi tiến trình:", e);
+        }
+      }
+    };
+
+    fetchRequests();
+    const interval = setInterval(fetchRequests, 5000);
+    return () => clearInterval(interval);
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage("");
     setLoading(true);
-    setRequest(null);
-    setStatus(null);
-    setRunId(null);
 
     if (!form.certName || !form.tag) {
       setMessage("❌ Vui lòng chọn chứng chỉ và tag");
@@ -38,16 +69,10 @@ export default function SignIPARequest() {
     }
 
     try {
-      const res = await axios.post("/api/admin/use-certs", {
+      await axios.post("/api/admin/use-certs", {
         name: form.certName,
         tag: form.tag,
         identifier: form.identifier,
-      });
-
-      setRequest({
-        tag: form.tag,
-        identifier: form.identifier,
-        id: Date.now().toString(),
       });
 
       setMessage("✅ Đã gửi yêu cầu ký IPA thành công!");
@@ -57,33 +82,6 @@ export default function SignIPARequest() {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    if (!request) return;
-
-    const interval = setInterval(async () => {
-      try {
-        const res = await axios.get(`/api/admin/check-status?tag=${request.tag}`);
-        const status = res.data.conclusion || res.data.status || "unknown";
-        setStatus(status);
-        if (res.data.run_id) setRunId(res.data.run_id);
-
-        // Tự động xoá sau 3 phút nếu đã completed
-        if (["success", "failure", "completed"].includes(status)) {
-          setTimeout(async () => {
-            await axios.delete("/api/admin/sign-requests", {
-              data: { tag: request.tag },
-            });
-            setRequest(null);
-          }, 3 * 60 * 1000);
-        }
-      } catch (err) {
-        console.error("⚠️ Lỗi khi check tiến trình:", err.message);
-      }
-    }, 5000);
-
-    return () => clearInterval(interval);
-  }, [request]);
 
   return (
     <>
@@ -157,43 +155,64 @@ export default function SignIPARequest() {
         {message && <p className="text-sm mt-2">{message}</p>}
       </form>
 
-      {request && (
+      {/* Theo dõi tiến trình */}
+      {requests.length > 0 && (
         <div className="mt-8">
           <h3 className="text-md font-semibold mb-2">📊 Tiến trình đang theo dõi:</h3>
-          <div className="p-3 bg-gray-100 rounded text-sm">
-            <div className="flex justify-between items-center">
-              <div>
-                <strong>{request.tag}</strong> --{" "}
-                <span className="text-gray-700">
-                  {request.identifier || "(auto identifier)"}
-                </span>
-              </div>
-              <div>
-                Trạng thái:{" "}
-                <span
-                  className={
-                    status === "success"
-                      ? "text-green-600 font-semibold"
-                      : status === "failure"
-                      ? "text-red-600 font-semibold"
-                      : status === "in_progress"
-                      ? "text-yellow-600 font-semibold"
-                      : "text-gray-600"
-                  }
-                >
-                  {status === "success"
-                    ? "✅ Hoàn tất"
-                    : status === "failure"
-                    ? "❌ Thất bại"
-                    : status === "in_progress"
-                    ? "⏳ Đang xử lý"
-                    : "Đang kiểm tra..."}
-                </span>
-              </div>
-            </div>
+          <ul className="space-y-4">
+            {requests.map((r) => (
+              <li key={r.id} className="p-4 bg-gray-100 rounded text-sm shadow">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <strong>{r.tag}</strong> --{" "}
+                    <span className="text-gray-700">{r.identifier || "(auto identifier)"}</span>
+                  </div>
+                  <div>
+                    Trạng thái:{" "}
+                    <span
+                      className={
+                        statuses[r.id] === "success"
+                          ? "text-green-600 font-semibold"
+                          : statuses[r.id] === "failure"
+                          ? "text-red-600 font-semibold"
+                          : statuses[r.id] === "in_progress"
+                          ? "text-yellow-600 font-semibold"
+                          : "text-gray-600"
+                      }
+                    >
+                      {statuses[r.id] === "success"
+                        ? "✅ Hoàn tất"
+                        : statuses[r.id] === "failure"
+                        ? "❌ Thất bại"
+                        : statuses[r.id] === "in_progress"
+                        ? "⏳ Đang xử lý"
+                        : "Đang kiểm tra..."}
+                    </span>
+                  </div>
+                </div>
 
-            {runId && <RunStepsViewer runId={runId} />}
-          </div>
+                {stepsMap[r.id] && stepsMap[r.id].length > 0 && (
+                  <div className="mt-2">
+                    <p className="font-medium mb-1">📋 Các bước đã thực hiện:</p>
+                    <ul className="ml-4 list-disc">
+                      {stepsMap[r.id].map((step, idx) => (
+                        <li key={idx}>
+                          <span className="mr-2">
+                            {step.conclusion === "success"
+                              ? "✅"
+                              : step.conclusion === "failure"
+                              ? "❌"
+                              : "⏳"}
+                          </span>
+                          {step.name}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </>
