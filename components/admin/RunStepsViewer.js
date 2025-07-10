@@ -84,7 +84,7 @@ export default function RunStepsViewer({ runId }) {
 
   if (loading && steps.length === 0) {
     return (
-      <div className="flex items-center gap-2 text-white">
+      <div className="flex items-center gap-2 text-white pl-1">
         <FontAwesomeIcon icon={faSpinner} spin />
         <span>Đang tải các bước...</span>
       </div>
@@ -92,26 +92,40 @@ export default function RunStepsViewer({ runId }) {
   }
 
   return (
-    <div className="mt-2 ml-0 bg-black text-white rounded p-3 text-sm space-y-2 text-left">
+    <div className="mt-2 pl-1 text-sm space-y-2 text-left">
       {error ? (
         <p className="text-red-500">{error}</p>
       ) : (
         <>
-          <p className="font-medium mb-1">📋 Các bước:</p>
-          <ul className="list-disc pl-5 space-y-1">
+          <p className="font-medium mb-1 text-white">📋 Các bước:</p>
+          <ul className="space-y-1">
             {steps.map((step, idx) => {
-              let icon;
-              if (step.conclusion === "success") icon = faCheckCircle;
-              else if (step.conclusion === "failure") icon = faTimesCircle;
-              else if (step.status === "in_progress") icon = faHourglassHalf;
-              else icon = faSpinner;
+              let icon = faSpinner;
+              let spin = true;
+              let iconColor = "text-white";
 
-              const spin = icon === faSpinner || icon === faHourglassHalf;
+              if (step.conclusion === "success") {
+                icon = faCheckCircle;
+                spin = false;
+                iconColor = "text-green-400";
+              } else if (step.conclusion === "failure") {
+                icon = faTimesCircle;
+                spin = false;
+                iconColor = "text-red-400";
+              } else if (step.status === "in_progress") {
+                icon = faHourglassHalf;
+                spin = true;
+                iconColor = "text-yellow-400";
+              }
 
               return (
-                <li key={idx} className="flex items-center gap-2">
-                  <FontAwesomeIcon icon={icon} spin={spin} />
-                  <span>{customLabel(step.name)}</span>
+                <li key={idx} className="flex items-center gap-2 text-white">
+                  <FontAwesomeIcon
+                    icon={icon}
+                    spin={spin}
+                    className={`${iconColor} w-4 h-4`}
+                  />
+                  <span className="text-white">{customLabel(step.name)}</span>
                 </li>
               );
             })}
