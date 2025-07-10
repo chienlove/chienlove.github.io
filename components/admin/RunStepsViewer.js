@@ -1,4 +1,3 @@
-// RunStepsViewer.js
 import { useEffect, useState } from "react";
 import axios from "axios";
 import {
@@ -13,30 +12,47 @@ export default function RunStepsViewer({ runId }) {
   const [steps, setSteps] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isDone, setIsDone] = useState(false);
 
   useEffect(() => {
     if (!runId) return;
 
     let isMounted = true;
+    let interval;
 
-    async function fetchSteps() {
-      setLoading(true);
+    const fetchSteps = async () => {
       try {
         const res = await axios.get(`/api/admin/run-steps?run_id=${runId}`);
         if (!isMounted) return;
-        setSteps(res.data.steps || []);
+
+        const newSteps = res.data.steps || [];
+        setSteps(newSteps);
         setError("");
+
+        const allDone = newSteps.every(
+          (s) =>
+            s.conclusion === "success" ||
+            s.conclusion === "failure" ||
+            s.status === "completed"
+        );
+
+        if (allDone) {
+          setIsDone(true);
+          clearInterval(interval);
+        }
       } catch (err) {
         if (!isMounted) return;
         console.warn("⚠️ Lỗi khi lấy danh sách bước:", err.message);
         setError("Không thể lấy danh sách bước");
+        clearInterval(interval);
       } finally {
         if (isMounted) setLoading(false);
       }
-    }
+    };
 
     fetchSteps();
-    const interval = setInterval(fetchSteps, 3000);
+    interval = setInterval(fetchSteps, 3000);
+
     return () => {
       isMounted = false;
       clearInterval(interval);
@@ -55,7 +71,8 @@ export default function RunStepsViewer({ runId }) {
       "Verify release exists": "🔎 Kiểm tra tag release",
       "Download all IPA files from release": "📦 Tải IPA từ release",
       "Install Zsign": "🔧 Cài Zsign",
-      "Patch Info.plist & Binary (auto-generate identifier if not provided)": "🛠 Sửa Info.plist & binary",
+      "Patch Info.plist & Binary (auto-generate identifier if not provided)":
+        "🛠 Sửa Info.plist & binary",
       "Sign all IPA files with Zsign (overwrite original IPA)": "✍️ Ký IPA bằng Zsign",
       "Upload signed IPA": "☁️ Tải IPA đã ký",
       "Generate plist with version & icon, commit to repo": "📋 Tạo plist và icon",
@@ -65,7 +82,7 @@ export default function RunStepsViewer({ runId }) {
     return map[name] || name;
   }
 
-  if (loading) {
+  if (loading && steps.length === 0) {
     return (
       <div className="flex items-center gap-2 text-white">
         <FontAwesomeIcon icon={faSpinner} spin />
@@ -75,7 +92,7 @@ export default function RunStepsViewer({ runId }) {
   }
 
   return (
-    <div className="mt-2 ml-0 bg-black text-white rounded p-3 text-sm space-y-2">
+    <div className="mt-2 ml-0 bg-black text-white rounded p-3 text-sm space-y-2 text-left">
       {error ? (
         <p className="text-red-500">{error}</p>
       ) : (
