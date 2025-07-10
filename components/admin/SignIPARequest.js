@@ -30,7 +30,6 @@ export default function SignIPARequest() {
     axios.get(`/api/admin/ipas-in-tag?tag=${form.tag}`).then((res) => setIpas(res.data.ipas || []));
   }, [form.tag]);
 
-  // Theo dõi tiến trình sau khi gửi
   useEffect(() => {
     if (!currentRequest) return;
     const interval = setInterval(async () => {
@@ -40,7 +39,6 @@ export default function SignIPARequest() {
         setStatus(newStatus);
         if (res.data.run_id) setRunId(res.data.run_id);
 
-        // Nếu hoàn tất thì xóa request khỏi Supabase sau 3 phút
         if (["completed", "success", "failure"].includes(newStatus)) {
           setTimeout(async () => {
             await axios.delete(`/api/admin/delete-request?id=${currentRequest.id}`);
@@ -75,8 +73,6 @@ export default function SignIPARequest() {
       });
 
       setMessage("✅ Đã gửi yêu cầu ký IPA thành công!");
-
-      // Lấy tiến trình vừa tạo
       const req = await axios.get("/api/admin/sign-requests");
       setCurrentRequest(req.data.requests?.[0] || null);
       setStatus("pending");
@@ -159,12 +155,11 @@ export default function SignIPARequest() {
         {message && <p className="text-sm mt-2">{message}</p>}
       </form>
 
-      {/* Hiển thị tiến trình mới nhất */}
+      {/* ✅ Toàn bộ phần tiến trình nằm TRONG nền đen */}
       {currentRequest && (
         <div className="mt-8">
-  <div className="p-4 bg-black text-white rounded text-sm shadow text-left border border-gray-700">
-    <h3 className="text-md font-semibold mb-2">📊 Tiến trình đang theo dõi:</h3>
           <div className="p-4 bg-black text-white rounded text-sm shadow text-left border border-gray-700">
+            <h3 className="text-md font-semibold mb-2">📊 Tiến trình đang theo dõi:</h3>
             <div className="flex justify-between items-center">
               <div>
                 <strong>{currentRequest.tag}</strong> --{" "}
@@ -185,22 +180,22 @@ export default function SignIPARequest() {
                 >
                   {status === "success" ? (
                     <>
-                      <FontAwesomeIcon icon={faCheckCircle} className="mr-1 text-green-400" />
+                      <FontAwesomeIcon icon={faCheckCircle} className="mr-1" />
                       Hoàn tất
                     </>
                   ) : status === "failure" ? (
                     <>
-                      <FontAwesomeIcon icon={faTimesCircle} className="mr-1 text-red-400" />
+                      <FontAwesomeIcon icon={faTimesCircle} className="mr-1" />
                       Thất bại
                     </>
                   ) : status === "in_progress" ? (
                     <>
-                      <FontAwesomeIcon icon={faHourglassHalf} className="mr-1 text-yellow-400" />
+                      <FontAwesomeIcon icon={faHourglassHalf} className="mr-1" />
                       Đang xử lý
                     </>
                   ) : (
                     <>
-                      <FontAwesomeIcon icon={faSpinner} spin className="mr-1 text-gray-400" />
+                      <FontAwesomeIcon icon={faSpinner} spin className="mr-1" />
                       Đang kiểm tra...
                     </>
                   )}
@@ -209,7 +204,7 @@ export default function SignIPARequest() {
             </div>
 
             {runId && (
-              <div className="mt-2 pl-1">
+              <div className="mt-2">
                 <RunStepsViewer runId={runId} />
               </div>
             )}
