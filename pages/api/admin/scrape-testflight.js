@@ -1,49 +1,54 @@
-import * as cheerio from 'cheerio';
-import fetch from 'node-fetch';
+import axios from 'axios';
+import { parse } from 'node-html-parser';
 
-export default async function handler(req, res) {
-  const { url } = req.query;
-
-  if (!url || !url.startsWith('https://testflight.apple.com/join/')) {
-    return res.status(400).json({ error: 'URL TestFlight không hợp lệ' });
-  }
-
+export default async (req, res) => {
   try {
-    const headers = {
-      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'
-    };
+    // Lấy URL từ query parameter
+    const { url } = req.query;
 
-    const tfRes = await fetch(url, { headers });
-    if (!tfRes.ok) throw new Error(`Không thể truy cập TestFlight (${tfRes.status})`);
+    if (!url) {
+      return res.status(400).json({ error: 'Thiếu tham số URL' });
+    }
 
-    const html = await tfRes.text();
-    const $ = cheerio.load(html);
+    // Kiểm tra xem URL có phải là TestFlight không
+    if (!url.includes('testflight.apple.com')) {
+      return res.status(400).json({ error: 'URL không hợp lệ, phải là link TestFlight' });
+    }
 
-    const name = $('h1').first().text().trim();
-    const author = $('h2').first().text().trim();
-    const description = $('meta[name="description"]').attr('content') || '';
-    const icon = $('meta[property="og:image"]').attr('content') || '';
-    const link = $('meta[property="og:url"]').attr('content') || url;
+    // Fetch HTML từ TestFlight
+    const { data } = await axios.get(url);
+    const root = parse(data);
 
-    return res.status(200).json({
-      name,
-      author,
-      description,
-      icon,
-      link,
-      version: null,
-      size: null,
-      released: null,
-      category: null,
-      screenshots: [],
-      appStoreUrl: null,
-      source: url
+    // Trích xuất thông tin
+    const appName = root.querySelector('h1').text.trim();
+    const developer = root.querySelector('.name').text.trim();
+    const version = root.querySelector('.version').text.trim();
+    const whatsNew = root.querySelector('.change-log')?.text.trim() || 'Không có thông tin';
+    const buildNumber = root.querySelector('.build')?.text.trim() || 'Không rõ';
+    const releaseDate = root.querySelector('.release-date')?.text.trim() || 'Không rõ';
+    const appIcon = root.querySelector('.app-icon').getAttribute('src');
+
+    // Trả về kết quả
+    res.status(200).json({
+      success: true,
+      data: {
+        appName,
+        developer,
+        version,
+        buildNumber,
+        whatsNew,
+        releaseDate,
+        appIcon,
+        testFlightLink: url
+      }
     });
+
   } catch (error) {
-    console.error("🔥 Scraping error:", error);
-    return res.status(500).json({
-      error: "Lỗi khi scraping dữ liệu",
-      detail: error.message || String(error)
+    console.error('Error:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Không thể lấy thông tin ứng dụng',
+      details: error.message 
     });
   }
-}
+};
