@@ -6,60 +6,50 @@ export default async (req, res) => {
     const { url } = req.query;
 
     if (!url) {
-      return res.status(400).json({ error: 'Thiếu tham số URL' });
+      return res.status(400).json({ error: 'Missing URL parameter' });
     }
 
     if (!url.includes('testflight.apple.com')) {
-      return res.status(400).json({ error: 'URL không hợp lệ, phải là link TestFlight' });
+      return res.status(400).json({ error: 'Invalid TestFlight URL' });
     }
 
-    const { data } = await axios.get(url);
+    // Thêm headers để giả lập trình duyệt
+    const { data } = await axios.get(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1'
+      }
+    });
+
     const root = parse(data);
 
-    // Hàm helper để lấy nội dung an toàn
-    const safeText = (selector, defaultValue = 'Không rõ') => {
-      const element = root.querySelector(selector);
-      return element?.text?.trim() || defaultValue;
-    };
-
-    // Hàm helper để lấy thuộc tính an toàn
-    const safeAttr = (selector, attr, defaultValue = '') => {
-      const element = root.querySelector(selector);
-      return element?.getAttribute(attr) || defaultValue;
-    };
-
-    // Lấy thông tin với xử lý lỗi
+    // Selectors mới cập nhật (tháng 7/2024)
     const appInfo = {
-      appName: safeText('h1'),
-      developer: safeText('.name'),
-      version: safeText('.version'),
-      whatsNew: safeText('.change-log', 'Không có thông tin'),
-      buildNumber: safeText('.build'),
-      releaseDate: safeText('.release-date'),
-      appIcon: safeAttr('.app-icon', 'src'),
+      appName: root.querySelector('h1')?.text.trim() || 'Không rõ',
+      developer: root.querySelector('.developer-name')?.text.trim() || 
+                root.querySelector('h2')?.text.trim() || 'Không rõ',
+      version: root.querySelector('.version-build')?.text.trim() || 
+               root.querySelector('.build-version')?.text.trim() || 'Không rõ',
+      whatsNew: root.querySelector('.change-log-text')?.text.trim() || 
+               root.querySelector('.whats-new')?.text.trim() || 'Không có thông tin',
+      buildNumber: root.querySelector('.build-number')?.text.trim() || 'Không rõ',
+      releaseDate: root.querySelector('.release-date')?.text.trim() || 
+                  root.querySelector('.date')?.text.trim() || 'Không rõ',
+      appIcon: root.querySelector('.app-icon img')?.getAttribute('src') || 
+               root.querySelector('.app-icon-source')?.getAttribute('src') || '',
       testFlightLink: url
     };
 
-    // Kiểm tra xem có lấy được thông tin cơ bản không
-    if (appInfo.appName === 'Không rõ' && appInfo.developer === 'Không rõ') {
-      return res.status(404).json({
-        success: false,
-        error: 'Không tìm thấy thông tin ứng dụng, có thể link không hợp lệ hoặc trang đã thay đổi'
-      });
-    }
-
+    res.setHeader('Access-Control-Allow-Origin', '*');
     res.status(200).json({
       success: true,
       data: appInfo
     });
 
   } catch (error) {
-    console.error('Error:', error);
     res.status(500).json({ 
       success: false,
-      error: 'Không thể lấy thông tin ứng dụng',
-      details: error.message,
-      suggestion: 'Vui lòng kiểm tra lại URL hoặc thử lại sau'
+      error: 'Failed to fetch app info',
+      details: error.message
     });
   }
 };
