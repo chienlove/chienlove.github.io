@@ -67,7 +67,7 @@ export default function RunStepsViewer({ runId }) {
       ) : (
         <>
           <p className="font-medium mb-1">📋 Các bước đã thực hiện:</p>
-          <ul className="space-y-1 ml-2">
+          <ul className="space-y-1 ml-2 text-left">
             {steps.map((step, idx) => {
               let icon = <FontAwesomeIcon icon={faSpinner} spin className="text-gray-300" />;
               if (step.conclusion === "success")
