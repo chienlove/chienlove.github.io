@@ -1,5 +1,12 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faTrash,
+  faPen,
+  faSave,
+  faTimes,
+} from "@fortawesome/free-solid-svg-icons";
 
 export default function CertManager() {
   const [certs, setCerts] = useState([]);
@@ -21,7 +28,7 @@ export default function CertManager() {
     try {
       const res = await axios.get("/api/admin/list-certs");
       setCerts(res.data.certs || []);
-    } catch (err) {
+    } catch {
       showToast("❌ Lỗi khi lấy danh sách chứng chỉ", "error");
     }
   }
@@ -65,7 +72,7 @@ export default function CertManager() {
       await axios.delete(`/api/admin/cert/${id}/delete-cert`);
       showToast("🗑️ Đã xoá chứng chỉ", "success");
       fetchCerts();
-    } catch (err) {
+    } catch {
       showToast("❌ Lỗi khi xoá chứng chỉ", "error");
     }
   }
@@ -78,7 +85,7 @@ export default function CertManager() {
       setEditingId(null);
       setNewName("");
       fetchCerts();
-    } catch (err) {
+    } catch {
       showToast("❌ Lỗi khi đổi tên", "error");
     }
   }
@@ -89,15 +96,26 @@ export default function CertManager() {
 
       <form onSubmit={handleUpload} className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white dark:bg-gray-800 p-4 rounded shadow">
         <div>
-          <label className="block font-semibold">Tên chứng chỉ (tuỳ chọn)</label>
-          <input type="text" value={name} onChange={(e) => setName(e.target.value)}
-            className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white" />
+          <label className="block font-semibold">Tên chứng chỉ</label>
+          <input
+            type="text"
+            placeholder="VD: AppCert2025 (có thể để trống)"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white"
+          />
         </div>
 
         <div>
           <label className="block font-semibold">Mật khẩu file .p12</label>
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required
-            className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white" />
+          <input
+            type="password"
+            placeholder="Nhập mật khẩu để giải mã file"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white"
+          />
         </div>
 
         <div>
@@ -111,8 +129,11 @@ export default function CertManager() {
         </div>
 
         <div className="md:col-span-2">
-          <button type="submit" disabled={loading}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+          <button
+            type="submit"
+            disabled={loading}
+            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+          >
             {loading ? "⏳ Đang tải lên..." : "Tải lên"}
           </button>
         </div>
@@ -138,13 +159,13 @@ export default function CertManager() {
                       onClick={() => handleRename(cert.id)}
                       className="ml-2 px-2 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700"
                     >
-                      Lưu
+                      <FontAwesomeIcon icon={faSave} className="mr-1" /> Lưu
                     </button>
                     <button
                       onClick={() => { setEditingId(null); setNewName(""); }}
                       className="ml-2 px-2 py-1 text-sm text-gray-600 hover:underline"
                     >
-                      Hủy
+                      <FontAwesomeIcon icon={faTimes} className="mr-1" /> Hủy
                     </button>
                   </>
                 ) : (
@@ -158,15 +179,15 @@ export default function CertManager() {
               <div className="flex gap-2">
                 <button
                   onClick={() => { setEditingId(cert.id); setNewName(cert.name); }}
-                  className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+                  className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700"
                 >
-                  ✏️ Đổi tên
+                  <FontAwesomeIcon icon={faPen} className="mr-1" /> Đổi tên
                 </button>
                 <button
                   onClick={() => setDeleteConfirmId(cert.id)}
                   className="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700"
                 >
-                  🗑️ Xoá
+                  <FontAwesomeIcon icon={faTrash} className="mr-1" /> Xoá
                 </button>
               </div>
 
@@ -195,7 +216,6 @@ export default function CertManager() {
         </div>
       )}
 
-      {/* Toast */}
       {toast.message && (
         <div
           className={`fixed bottom-4 right-4 px-4 py-2 rounded shadow z-50 text-sm text-white transition
