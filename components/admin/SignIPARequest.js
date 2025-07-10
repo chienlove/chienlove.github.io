@@ -156,7 +156,7 @@ export default function SignIPARequest() {
       {currentRequest && (
         <div className="mt-8">
           <h3 className="text-md font-semibold mb-2">📊 Tiến trình đang theo dõi:</h3>
-          <div className="p-4 bg-gray-100 rounded text-sm shadow">
+          <div className="p-4 bg-black text-white rounded text-sm shadow text-left border border-gray-700">
             <div className="flex justify-between items-center">
               <div>
                 <strong>{currentRequest.tag}</strong> --{" "}
