@@ -1,65 +1,41 @@
 import axios from 'axios';
-import * as cheerio from 'cheerio';
 
-export default async function handler(req, res) {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-
-  const appId = req.query.appId || req.query.appid;
-  
-  if (!appId) {
-    return res.status(400).json({ error: 'appId is required' });
-  }
-
-  if (!/^[a-zA-Z0-9]{8}$/.test(appId)) {
-    return res.status(400).json({ error: 'Invalid appId format' });
-  }
-
+export default async (req, res) => {
   try {
-    const url = `https://testflight.apple.com/join/${appId}`;
-    const response = await axios.get(url, {
+    const { url, debug } = req.query;
+
+    if (!url) {
+      return res.status(400).json({ error: 'Thiếu tham số URL' });
+    }
+
+    if (!url.includes('testflight.apple.com')) {
+      return res.status(400).json({ error: 'URL không hợp lệ, phải là link TestFlight' });
+    }
+
+    const { data } = await axios.get(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-      },
-      timeout: 5000
+        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1'
+      }
     });
 
-    if (!response.data || typeof response.data !== 'string') {
-      throw new Error('Invalid HTML response from TestFlight');
+    // Nếu có tham số debug thì trả về toàn bộ HTML
+    if (debug === 'true') {
+      res.setHeader('Content-Type', 'text/html');
+      return res.send(data);
     }
 
-    const $ = cheerio.load(response.data);
-
-    // Cập nhật selector dựa trên HTML thực tế
-    const appInfo = {
-      name: $('.app-title')?.text()?.trim() || 'N/A', // Thay .app-name bằng selector thực
-      description: $('.app-description')?.text()?.trim() || 'N/A', // Thay .description
-      developer: $('.developer-name')?.text()?.trim() || 'N/A', // Thay .developer
-      status: $('.status-text')?.text()?.trim() || 'N/A', // Thay .status
-      icon: $('.app-icon img')?.attr('src') || 'N/A'
-    };
-
-    // Log HTML để debug
-    console.log('Extracted appInfo:', appInfo);
-
-    if (appInfo.name === 'N/A' && appInfo.description === 'N/A') {
-      return res.status(404).json({ error: 'App not found or invalid appId' });
-    }
-
+    // Nếu không thì trả về JSON như bình thường
+    res.setHeader('Access-Control-Allow-Origin', '*');
     res.status(200).json({
       success: true,
-      data: appInfo
+      html: data // Trả về HTML trong JSON (có thể bị cắt ngắn nếu quá dài)
     });
+
   } catch (error) {
-    console.error('Error details:', {
-      message: error.message,
-      stack: error.stack,
-      response: error.response ? { status: error.response.status, data: error.response.data } : null
-    });
-    res.status(500).json({
-      error: 'Failed to fetch app information',
+    res.status(500).json({ 
+      success: false,
+      error: 'Không thể lấy thông tin ứng dụng',
       details: error.message
     });
   }
-}
+};
