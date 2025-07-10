@@ -1,7 +1,7 @@
-const axios = require('axios');
-const cheerio = require('cheerio');
+import axios from 'axios';
+import cheerio from 'cheerio';
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   // Enable CORS
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET');
@@ -23,7 +23,6 @@ module.exports = async (req, res) => {
 
     const $ = cheerio.load(response.data);
 
-    // Extract app information
     const appInfo = {
       name: $('.app-name')?.text()?.trim() || 'N/A',
       description: $('.description')?.text()?.trim() || 'N/A',
@@ -32,7 +31,6 @@ module.exports = async (req, res) => {
       icon: $('.app-icon img')?.attr('src') || 'N/A'
     };
 
-    // Check if app exists
     if (appInfo.name === 'N/A' && appInfo.description === 'N/A') {
       return res.status(404).json({ error: 'App not found or invalid appId' });
     }
@@ -48,4 +46,4 @@ module.exports = async (req, res) => {
       details: error.message
     });
   }
-};
+}
