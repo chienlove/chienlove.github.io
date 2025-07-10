@@ -3,44 +3,54 @@ import { parse } from 'node-html-parser';
 
 export default async (req, res) => {
   try {
-    // Lấy URL từ query parameter
     const { url } = req.query;
 
     if (!url) {
       return res.status(400).json({ error: 'Thiếu tham số URL' });
     }
 
-    // Kiểm tra xem URL có phải là TestFlight không
     if (!url.includes('testflight.apple.com')) {
       return res.status(400).json({ error: 'URL không hợp lệ, phải là link TestFlight' });
     }
 
-    // Fetch HTML từ TestFlight
     const { data } = await axios.get(url);
     const root = parse(data);
 
-    // Trích xuất thông tin
-    const appName = root.querySelector('h1').text.trim();
-    const developer = root.querySelector('.name').text.trim();
-    const version = root.querySelector('.version').text.trim();
-    const whatsNew = root.querySelector('.change-log')?.text.trim() || 'Không có thông tin';
-    const buildNumber = root.querySelector('.build')?.text.trim() || 'Không rõ';
-    const releaseDate = root.querySelector('.release-date')?.text.trim() || 'Không rõ';
-    const appIcon = root.querySelector('.app-icon').getAttribute('src');
+    // Hàm helper để lấy nội dung an toàn
+    const safeText = (selector, defaultValue = 'Không rõ') => {
+      const element = root.querySelector(selector);
+      return element?.text?.trim() || defaultValue;
+    };
 
-    // Trả về kết quả
+    // Hàm helper để lấy thuộc tính an toàn
+    const safeAttr = (selector, attr, defaultValue = '') => {
+      const element = root.querySelector(selector);
+      return element?.getAttribute(attr) || defaultValue;
+    };
+
+    // Lấy thông tin với xử lý lỗi
+    const appInfo = {
+      appName: safeText('h1'),
+      developer: safeText('.name'),
+      version: safeText('.version'),
+      whatsNew: safeText('.change-log', 'Không có thông tin'),
+      buildNumber: safeText('.build'),
+      releaseDate: safeText('.release-date'),
+      appIcon: safeAttr('.app-icon', 'src'),
+      testFlightLink: url
+    };
+
+    // Kiểm tra xem có lấy được thông tin cơ bản không
+    if (appInfo.appName === 'Không rõ' && appInfo.developer === 'Không rõ') {
+      return res.status(404).json({
+        success: false,
+        error: 'Không tìm thấy thông tin ứng dụng, có thể link không hợp lệ hoặc trang đã thay đổi'
+      });
+    }
+
     res.status(200).json({
       success: true,
-      data: {
-        appName,
-        developer,
-        version,
-        buildNumber,
-        whatsNew,
-        releaseDate,
-        appIcon,
-        testFlightLink: url
-      }
+      data: appInfo
     });
 
   } catch (error) {
@@ -48,7 +58,8 @@ export default async (req, res) => {
     res.status(500).json({ 
       success: false,
       error: 'Không thể lấy thông tin ứng dụng',
-      details: error.message 
+      details: error.message,
+      suggestion: 'Vui lòng kiểm tra lại URL hoặc thử lại sau'
     });
   }
 };
