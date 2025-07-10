@@ -1,7 +1,7 @@
-const cheerio = require("cheerio");
-const fetch = require("node-fetch");
+import cheerio from "cheerio";
+import fetch from "node-fetch";
 
-module.exports = async function handler(req, res) {
+export default async function handler(req, res) {
   const { url } = req.query;
 
   if (!url || !url.startsWith("https://testflight.apple.com/join/")) {
