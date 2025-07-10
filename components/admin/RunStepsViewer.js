@@ -1,11 +1,11 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import axios from "axios";
 import {
+  faSpinner,
   faCheckCircle,
   faTimesCircle,
   faHourglassHalf,
-  faSpinner,
-  faRedoAlt,
+  faCircleNotch,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
@@ -13,68 +13,63 @@ export default function RunStepsViewer({ runId }) {
   const [steps, setSteps] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [polling, setPolling] = useState(true);
 
   useEffect(() => {
     if (!runId) return;
 
-    const fetchSteps = async () => {
+    async function fetchSteps() {
       try {
         const res = await axios.get(`/api/admin/run-steps?run_id=${runId}`);
-        const allSteps = res.data.steps || [];
-        setSteps(allSteps);
+        setSteps(res.data.steps || []);
         setError("");
-
-        const isFinished = allSteps.every(
-          (s) => s.status === "completed" || s.status === "skipped"
-        );
-        if (isFinished) setPolling(false);
       } catch (err) {
+        console.warn("⚠️ Lỗi khi lấy danh sách bước:", err.message);
         setError("Không thể lấy danh sách bước");
       } finally {
         setLoading(false);
       }
-    };
+    }
 
     fetchSteps();
-    const interval = setInterval(() => {
-      if (polling) fetchSteps();
-    }, 3000);
+    const interval = setInterval(fetchSteps, 5000);
     return () => clearInterval(interval);
-  }, [runId, polling]);
+  }, [runId]);
 
-  if (loading) return <p className="ml-4 text-white text-sm">⏳ Đang tải bước...</p>;
-  if (error) return <p className="ml-4 text-red-500 text-sm">{error}</p>;
+  if (loading) {
+    return (
+      <p className="text-sm text-gray-300 flex items-center gap-2">
+        <FontAwesomeIcon icon={faSpinner} spin /> Đang tải bước...
+      </p>
+    );
+  }
 
   return (
-    <div className="mt-2 ml-4 text-sm text-white">
-      <p className="font-medium mb-1">📋 Các bước đã thực hiện:</p>
-      <ul className="space-y-1 ml-0 text-left">
-        {steps.map((step, idx) => (
-          <li key={idx} className="flex items-center gap-1">
-            <FontAwesomeIcon
-              icon={
-                step.conclusion === "success"
-                  ? faCheckCircle
-                  : step.conclusion === "failure"
-                  ? faTimesCircle
-                  : step.status === "in_progress"
-                  ? faHourglassHalf
-                  : faRedoAlt
-              }
-              spin={step.status === "in_progress"}
-              className={
-                step.conclusion === "success"
-                  ? "text-green-400"
-                  : step.conclusion === "failure"
-                  ? "text-red-400"
-                  : "text-yellow-300"
-              }
-            />
-            <span>{step.name}</span>
-          </li>
-        ))}
-      </ul>
+    <div className="mt-2 text-sm">
+      {error ? (
+        <p className="text-red-400">{error}</p>
+      ) : (
+        <>
+          <p className="font-semibold mb-1 text-white">📋 Các bước đã thực hiện:</p>
+          <ul className="space-y-1 text-left ml-0">
+            {steps.map((step, idx) => (
+              <li key={idx} className="flex items-center gap-2">
+                <span className="text-white">
+                  {step.conclusion === "success" ? (
+                    <FontAwesomeIcon icon={faCheckCircle} className="text-green-400" />
+                  ) : step.conclusion === "failure" ? (
+                    <FontAwesomeIcon icon={faTimesCircle} className="text-red-400" />
+                  ) : step.status === "in_progress" ? (
+                    <FontAwesomeIcon icon={faHourglassHalf} className="text-yellow-400" />
+                  ) : (
+                    <FontAwesomeIcon icon={faCircleNotch} spin className="text-gray-400" />
+                  )}
+                </span>
+                <span className="text-white">{step.name}</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
     </div>
   );
 }
