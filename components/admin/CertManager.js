@@ -112,7 +112,7 @@ export default function CertManager() {
       <h2 className="text-lg font-semibold">📥 Tải lên chứng chỉ mới</h2>
       <form onSubmit={handleUpload} className="space-y-4">
         <div>
-          <label className="block font-medium">📝 Tên chứng chỉ (tùy chọn)</label>
+          <label className="block font-semibold">📝 Tên chứng chỉ (tùy chọn)</label>
           <input
             type="text"
             className="w-full p-2 border rounded"
@@ -123,7 +123,7 @@ export default function CertManager() {
         </div>
 
         <div>
-          <label className="block font-medium">🔑 Mật khẩu file .p12</label>
+          <label className="block font-semibold">🔑 Mật khẩu file .p12</label>
           <input
             type="password"
             className="w-full p-2 border rounded"
