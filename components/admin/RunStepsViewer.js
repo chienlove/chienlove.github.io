@@ -3,9 +3,9 @@ import axios from "axios";
 import {
   faCheckCircle,
   faTimesCircle,
-  faSpinner,
   faHourglassHalf,
-  faCircleNotch,
+  faSpinner,
+  faRedoAlt,
 } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
@@ -13,80 +13,68 @@ export default function RunStepsViewer({ runId }) {
   const [steps, setSteps] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [polling, setPolling] = useState(true);
 
   useEffect(() => {
     if (!runId) return;
 
-    let interval;
-    let stopped = false;
-
-    async function fetchSteps() {
+    const fetchSteps = async () => {
       try {
         const res = await axios.get(`/api/admin/run-steps?run_id=${runId}`);
-        const fetched = res.data.steps || [];
-        setSteps(fetched);
-        setLoading(false);
+        const allSteps = res.data.steps || [];
+        setSteps(allSteps);
         setError("");
 
-        const allDone = fetched.every(
-          (s) => s.conclusion || s.status === "completed"
+        const isFinished = allSteps.every(
+          (s) => s.status === "completed" || s.status === "skipped"
         );
-
-        if (allDone && interval) {
-          clearInterval(interval);
-          stopped = true;
-        }
+        if (isFinished) setPolling(false);
       } catch (err) {
-        console.warn("⚠️ Lỗi khi lấy danh sách bước:", err.message);
         setError("Không thể lấy danh sách bước");
+      } finally {
         setLoading(false);
       }
-    }
+    };
 
     fetchSteps();
-    interval = setInterval(() => {
-      if (!stopped) fetchSteps();
-    }, 5000);
-
+    const interval = setInterval(() => {
+      if (polling) fetchSteps();
+    }, 3000);
     return () => clearInterval(interval);
-  }, [runId]);
+  }, [runId, polling]);
 
-  if (loading) {
-    return (
-      <p className="text-yellow-300 mt-2">
-        <FontAwesomeIcon icon={faCircleNotch} spin className="mr-1" />
-        Đang tải bước...
-      </p>
-    );
-  }
+  if (loading) return <p className="ml-4 text-white text-sm">⏳ Đang tải bước...</p>;
+  if (error) return <p className="ml-4 text-red-500 text-sm">{error}</p>;
 
   return (
-    <div className="mt-3 text-sm text-left">
-      {error ? (
-        <p className="text-red-500">{error}</p>
-      ) : (
-        <>
-          <p className="font-medium mb-1">📋 Các bước đã thực hiện:</p>
-          <ul className="space-y-1 ml-2 text-left">
-            {steps.map((step, idx) => {
-              let icon = <FontAwesomeIcon icon={faSpinner} spin className="text-gray-300" />;
-              if (step.conclusion === "success")
-                icon = <FontAwesomeIcon icon={faCheckCircle} className="text-green-400" />;
-              else if (step.conclusion === "failure")
-                icon = <FontAwesomeIcon icon={faTimesCircle} className="text-red-400" />;
-              else if (step.status === "in_progress")
-                icon = <FontAwesomeIcon icon={faHourglassHalf} className="text-yellow-300" />;
-
-              return (
-                <li key={idx} className="flex items-center gap-2">
-                  {icon}
-                  <span>{step.name}</span>
-                </li>
-              );
-            })}
-          </ul>
-        </>
-      )}
+    <div className="mt-2 ml-4 text-sm text-white">
+      <p className="font-medium mb-1">📋 Các bước đã thực hiện:</p>
+      <ul className="space-y-1 ml-0 text-left">
+        {steps.map((step, idx) => (
+          <li key={idx} className="flex items-center gap-1">
+            <FontAwesomeIcon
+              icon={
+                step.conclusion === "success"
+                  ? faCheckCircle
+                  : step.conclusion === "failure"
+                  ? faTimesCircle
+                  : step.status === "in_progress"
+                  ? faHourglassHalf
+                  : faRedoAlt
+              }
+              spin={step.status === "in_progress"}
+              className={
+                step.conclusion === "success"
+                  ? "text-green-400"
+                  : step.conclusion === "failure"
+                  ? "text-red-400"
+                  : "text-yellow-300"
+              }
+            />
+            <span>{step.name}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

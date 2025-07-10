@@ -1,8 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
 import RunStepsViewer from "./RunStepsViewer";
-import { faSpinner, faCheckCircle, faTimesCircle, faHourglassHalf } from "@fortawesome/free-solid-svg-icons";
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 export default function SignIPARequest() {
   const [certs, setCerts] = useState([]);
@@ -11,9 +9,10 @@ export default function SignIPARequest() {
   const [form, setForm] = useState({ certName: "", tag: "", identifier: "" });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
-  const [currentRequest, setCurrentRequest] = useState(null);
-  const [status, setStatus] = useState("unknown");
-  const [runId, setRunId] = useState(null);
+  const [requests, setRequests] = useState([]);
+  const [statuses, setStatuses] = useState({});
+  const [runIds, setRunIds] = useState({});
+  const [stepsMap, setStepsMap] = useState({});
 
   useEffect(() => {
     axios.get("/api/admin/list-certs").then((res) => setCerts(res.data.certs || []));
@@ -25,31 +24,38 @@ export default function SignIPARequest() {
     axios.get(`/api/admin/ipas-in-tag?tag=${form.tag}`).then((res) => setIpas(res.data.ipas || []));
   }, [form.tag]);
 
-  // Theo dõi tiến trình sau khi gửi
   useEffect(() => {
-    if (!currentRequest) return;
-    const interval = setInterval(async () => {
-      try {
-        const res = await axios.get(`/api/admin/check-status?tag=${currentRequest.tag}`);
-        const newStatus = res.data.conclusion || res.data.status || "unknown";
-        setStatus(newStatus);
-        if (res.data.run_id) setRunId(res.data.run_id);
+    const fetchRequests = async () => {
+      const res = await axios.get("/api/admin/sign-requests");
+      const reqs = res.data.requests || [];
+      setRequests(reqs);
 
-        // Nếu hoàn tất thì xóa request khỏi Supabase sau 3 phút
-        if (["completed", "success", "failure"].includes(newStatus)) {
-          setTimeout(async () => {
-            await axios.delete(`/api/admin/delete-request?id=${currentRequest.id}`);
-            setCurrentRequest(null);
-          }, 180000); // 3 phút
-          clearInterval(interval);
+      for (let req of reqs) {
+        try {
+          const statusRes = await axios.get(`/api/admin/check-status?tag=${req.tag}`);
+          const status = statusRes.data.conclusion || statusRes.data.status || "unknown";
+          const runId = statusRes.data.run_id;
+
+          setStatuses((prev) => ({ ...prev, [req.id]: status }));
+          if (runId) {
+            setRunIds((prev) => ({ ...prev, [req.id]: runId }));
+
+            // Nếu completed hoặc success thì load steps 1 lần
+            if (status === "in_progress" || status === "completed" || status === "success") {
+              const stepsRes = await axios.get(`/api/admin/run-steps?run_id=${runId}`);
+              setStepsMap((prev) => ({ ...prev, [req.id]: stepsRes.data.steps || [] }));
+            }
+          }
+        } catch (e) {
+          console.error("Lỗi khi theo dõi tiến trình:", e);
         }
-      } catch (err) {
-        console.error("❌ Lỗi theo dõi tiến trình:", err);
       }
-    }, 5000);
+    };
 
+    fetchRequests();
+    const interval = setInterval(fetchRequests, 5000);
     return () => clearInterval(interval);
-  }, [currentRequest]);
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -63,18 +69,15 @@ export default function SignIPARequest() {
     }
 
     try {
-      const res = await axios.post("/api/admin/use-certs", {
+      await axios.post("/api/admin/use-certs", {
         name: form.certName,
         tag: form.tag,
         identifier: form.identifier,
       });
 
       setMessage("✅ Đã gửi yêu cầu ký IPA thành công!");
-      const req = await axios.get("/api/admin/sign-requests");
-      setCurrentRequest(req.data.requests?.[0] || null);
-      setStatus("pending");
     } catch (err) {
-      setMessage("❌ " + (err.response?.data?.message || "Lỗi gửi yêu cầu"));
+      setMessage("❌ " + (err.response?.data?.message || "Lỗi gửi yêu cầu ký"));
     } finally {
       setLoading(false);
     }
@@ -144,7 +147,7 @@ export default function SignIPARequest() {
         <button
           type="submit"
           disabled={loading}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 font-bold"
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
         >
           {loading ? "⏳ Đang gửi..." : "🚀 Gửi yêu cầu ký IPA"}
         </button>
@@ -152,62 +155,64 @@ export default function SignIPARequest() {
         {message && <p className="text-sm mt-2">{message}</p>}
       </form>
 
-      {/* Theo dõi tiến trình mới nhất */}
-      {currentRequest && (
+      {/* Theo dõi tiến trình */}
+      {requests.length > 0 && (
         <div className="mt-8">
           <h3 className="text-md font-semibold mb-2">📊 Tiến trình đang theo dõi:</h3>
-          <div className="p-4 bg-black text-white rounded text-sm shadow text-left border border-gray-700">
-            <div className="flex flex-col items-start space-y-2">
-              <div>
-                <strong>{currentRequest.tag}</strong> --{" "}
-                <span className="text-gray-700">
-                  {currentRequest.identifier || "(auto identifier)"}
-                </span>
-              </div>
-              <div>
-                Trạng thái:{" "}
-                <span
-                  className={
-                    status === "success"
-                      ? "text-green-600 font-semibold"
-                      : status === "failure"
-                      ? "text-red-600 font-semibold"
-                      : status === "in_progress"
-                      ? "text-yellow-600 font-semibold"
-                      : "text-gray-600"
-                  }
-                >
-                  {status === "success" ? (
-                    <>
-                      <FontAwesomeIcon icon={faCheckCircle} className="mr-1" />
-                      Hoàn tất
-                    </>
-                  ) : status === "failure" ? (
-                    <>
-                      <FontAwesomeIcon icon={faTimesCircle} className="mr-1" />
-                      Thất bại
-                    </>
-                  ) : status === "in_progress" ? (
-                    <>
-                      <FontAwesomeIcon icon={faHourglassHalf} className="mr-1" />
-                      Đang xử lý
-                    </>
-                  ) : (
-                    <>
-                      <FontAwesomeIcon icon={faSpinner} spin className="mr-1" />
-                      Đang kiểm tra...
-                    </>
-                  )}
-                </span>
-              </div>
-            </div>
+          <ul className="space-y-4">
+            {requests.map((r) => (
+              <li key={r.id} className="p-4 bg-gray-100 rounded text-sm shadow">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <strong>{r.tag}</strong> --{" "}
+                    <span className="text-gray-700">{r.identifier || "(auto identifier)"}</span>
+                  </div>
+                  <div>
+                    Trạng thái:{" "}
+                    <span
+                      className={
+                        statuses[r.id] === "success"
+                          ? "text-green-600 font-semibold"
+                          : statuses[r.id] === "failure"
+                          ? "text-red-600 font-semibold"
+                          : statuses[r.id] === "in_progress"
+                          ? "text-yellow-600 font-semibold"
+                          : "text-gray-600"
+                      }
+                    >
+                      {statuses[r.id] === "success"
+                        ? "✅ Hoàn tất"
+                        : statuses[r.id] === "failure"
+                        ? "❌ Thất bại"
+                        : statuses[r.id] === "in_progress"
+                        ? "⏳ Đang xử lý"
+                        : "Đang kiểm tra..."}
+                    </span>
+                  </div>
+                </div>
 
-            {runId && (
-              <div className="mt-2 ml-4">
-                <RunStepsViewer runId={runId} />
-              </div>
-            )}
-          </div>
+                {stepsMap[r.id] && stepsMap[r.id].length > 0 && (
+                  <div className="mt-2">
+                    <p className="font-medium mb-1">📋 Các bước đã thực hiện:</p>
+                    <ul className="ml-4 list-disc">
+                      {stepsMap[r.id].map((step, idx) => (
+                        <li key={idx}>
+                          <span className="mr-2">
+                            {step.conclusion === "success"
+                              ? "✅"
+                              : step.conclusion === "failure"
+                              ? "❌"
+                              : "⏳"}
+                          </span>
+                          {step.name}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </>
