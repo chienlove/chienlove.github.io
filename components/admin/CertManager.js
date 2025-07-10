@@ -6,6 +6,8 @@ import {
   faPen,
   faSave,
   faTimes,
+  faUpload,
+  faSpinner,
 } from "@fortawesome/free-solid-svg-icons";
 
 export default function CertManager() {
@@ -15,35 +17,32 @@ export default function CertManager() {
   const [p12, setP12] = useState(null);
   const [provision, setProvision] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [toast, setToast] = useState({ message: "", type: "info" });
+  const [message, setMessage] = useState("");
   const [editingId, setEditingId] = useState(null);
   const [newName, setNewName] = useState("");
-  const [deleteConfirmId, setDeleteConfirmId] = useState(null);
-
-  useEffect(() => {
-    fetchCerts();
-  }, []);
+  const [deletingId, setDeletingId] = useState(null);
+  const [renamingId, setRenamingId] = useState(null);
 
   async function fetchCerts() {
     try {
       const res = await axios.get("/api/admin/list-certs");
       setCerts(res.data.certs || []);
-    } catch {
-      showToast("❌ Lỗi khi lấy danh sách chứng chỉ", "error");
+    } catch (err) {
+      console.error("Lỗi lấy danh sách cert:", err);
     }
   }
 
-  function showToast(message, type = "info") {
-    setToast({ message, type });
-    setTimeout(() => setToast({ message: "", type: "info" }), 3000);
-  }
+  useEffect(() => {
+    fetchCerts();
+  }, []);
 
   async function handleUpload(e) {
     e.preventDefault();
     setLoading(true);
+    setMessage("");
 
     if (!p12 || !provision || !password) {
-      showToast("❌ Vui lòng chọn đủ file và nhập mật khẩu", "error");
+      setMessage("❌ Vui lòng chọn đủ file và nhập mật khẩu");
       setLoading(false);
       return;
     }
@@ -51,178 +50,175 @@ export default function CertManager() {
     try {
       const formData = new FormData();
       const finalName = name.trim() || p12.name.replace(".p12", "") + "-" + Date.now();
+
       formData.append("name", finalName);
       formData.append("p12", p12);
       formData.append("provision", provision);
       formData.append("password", password);
 
-      await axios.post("/api/admin/upload-certs", formData);
-      showToast("✅ Đã tải lên thành công", "success");
-      setName(""); setPassword(""); setP12(null); setProvision(null);
+      const res = await axios.post("/api/admin/upload-certs", formData);
+      setMessage("✅ " + res.data.message);
+      setName("");
+      setPassword("");
+      setP12(null);
+      setProvision(null);
       fetchCerts();
     } catch (err) {
-      showToast("❌ " + (err.response?.data?.message || "Lỗi không xác định"), "error");
+      console.error(err);
+      setMessage("❌ " + (err.response?.data?.message || "Lỗi không xác định"));
     } finally {
       setLoading(false);
     }
   }
 
   async function handleDelete(id) {
+    if (!confirm("Bạn có chắc muốn xoá chứng chỉ này?")) return;
+
+    setDeletingId(id);
     try {
       await axios.delete(`/api/admin/cert/${id}/delete-cert`);
-      showToast("🗑️ Đã xoá chứng chỉ", "success");
+      setMessage("🗑️ Đã xoá chứng chỉ");
       fetchCerts();
-    } catch {
-      showToast("❌ Lỗi khi xoá chứng chỉ", "error");
+    } catch (err) {
+      setMessage("❌ Lỗi khi xoá chứng chỉ");
+    } finally {
+      setDeletingId(null);
     }
   }
 
   async function handleRename(id) {
     if (!newName.trim()) return;
+    setRenamingId(id);
     try {
       await axios.patch(`/api/admin/cert/${id}`, { name: newName });
-      showToast("✅ Đã đổi tên", "success");
+      setMessage("✅ Đã đổi tên chứng chỉ");
       setEditingId(null);
       setNewName("");
       fetchCerts();
-    } catch {
-      showToast("❌ Lỗi khi đổi tên", "error");
+    } catch (err) {
+      setMessage("❌ Lỗi khi đổi tên");
+    } finally {
+      setRenamingId(null);
     }
   }
 
   return (
-    <div className="space-y-8">
-      <h2 className="text-xl font-semibold">📥 Tải lên chứng chỉ mới</h2>
-
-      <form onSubmit={handleUpload} className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white dark:bg-gray-800 p-4 rounded shadow">
-        <div>
-          <label className="block font-semibold">Tên chứng chỉ</label>
-          <input
-            type="text"
-            placeholder="VD: AppCert2025 (có thể để trống)"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white"
-          />
-        </div>
-
-        <div>
-          <label className="block font-semibold">Mật khẩu file .p12</label>
-          <input
-            type="password"
-            placeholder="Nhập mật khẩu để giải mã file"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white"
-          />
-        </div>
-
-        <div>
-          <label className="block font-semibold">File .p12</label>
-          <input type="file" accept=".p12" onChange={(e) => setP12(e.target.files[0])} required />
-        </div>
-
-        <div>
-          <label className="block font-semibold">File .mobileprovision</label>
-          <input type="file" accept=".mobileprovision" onChange={(e) => setProvision(e.target.files[0])} required />
-        </div>
-
-        <div className="md:col-span-2">
-          <button
-            type="submit"
-            disabled={loading}
-            className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
-          >
-            {loading ? "⏳ Đang tải lên..." : "Tải lên"}
-          </button>
-        </div>
+    <div className="space-y-6">
+      <h2 className="text-lg font-semibold">📥 Tải lên chứng chỉ mới</h2>
+      <form onSubmit={handleUpload} className="space-y-4">
+        <input
+          type="text"
+          className="w-full p-2 border rounded"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Tên chứng chỉ (không bắt buộc)"
+        />
+        <input
+          type="password"
+          className="w-full p-2 border rounded"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Mật khẩu file .p12"
+          required
+        />
+        <input type="file" accept=".p12" onChange={(e) => setP12(e.target.files[0])} required />
+        <input
+          type="file"
+          accept=".mobileprovision"
+          onChange={(e) => setProvision(e.target.files[0])}
+          required
+        />
+        <button
+          type="submit"
+          disabled={loading}
+          className="bg-blue-600 text-white px-4 py-2 rounded font-bold hover:bg-blue-700 flex items-center gap-2"
+        >
+          {loading ? <FontAwesomeIcon icon={faSpinner} spin /> : <FontAwesomeIcon icon={faUpload} />}
+          {loading ? "Đang tải lên..." : "Tải lên"}
+        </button>
+        {message && (
+          <p className={`text-sm mt-2 ${message.startsWith("✅") ? "text-green-700" : "text-red-600"}`}>
+            {message}
+          </p>
+        )}
       </form>
 
-      <h2 className="text-xl font-semibold">📄 Danh sách chứng chỉ</h2>
+      <hr className="my-6" />
+
+      <h2 className="text-lg font-semibold">📄 Danh sách chứng chỉ</h2>
       {certs.length === 0 ? (
         <p className="text-gray-500">Chưa có chứng chỉ nào.</p>
       ) : (
-        <div className="grid md:grid-cols-2 gap-4">
+        <ul className="space-y-3">
           {certs.map((cert) => (
-            <div key={cert.id} className="p-4 bg-white dark:bg-gray-800 rounded shadow">
-              <div className="mb-3">
+            <li
+              key={cert.id}
+              className="p-3 border rounded flex items-center justify-between flex-wrap gap-3"
+            >
+              <div>
+                <strong className="block text-md">{cert.name}</strong>
+                <small className="text-gray-500">
+                  Cập nhật: {new Date(cert.updated_at).toLocaleString()}
+                </small>
+              </div>
+              <div className="flex items-center gap-2">
                 {editingId === cert.id ? (
                   <>
                     <input
                       type="text"
+                      className="border p-1 rounded"
                       value={newName}
                       onChange={(e) => setNewName(e.target.value)}
-                      className="border p-1 rounded dark:bg-gray-700 dark:text-white"
                     />
                     <button
                       onClick={() => handleRename(cert.id)}
-                      className="ml-2 px-2 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700"
+                      disabled={renamingId === cert.id}
+                      className="bg-green-600 text-white px-2 py-1 text-sm rounded font-bold hover:bg-green-700 flex items-center gap-1"
                     >
-                      <FontAwesomeIcon icon={faSave} className="mr-1" /> Lưu
+                      <FontAwesomeIcon icon={faSave} />
+                      Lưu
                     </button>
                     <button
-                      onClick={() => { setEditingId(null); setNewName(""); }}
-                      className="ml-2 px-2 py-1 text-sm text-gray-600 hover:underline"
+                      onClick={() => {
+                        setEditingId(null);
+                        setNewName("");
+                      }}
+                      className="text-gray-600 hover:underline text-sm font-bold flex items-center gap-1"
                     >
-                      <FontAwesomeIcon icon={faTimes} className="mr-1" /> Hủy
+                      <FontAwesomeIcon icon={faTimes} />
+                      Huỷ
                     </button>
                   </>
                 ) : (
                   <>
-                    <strong className="text-lg font-bold">{cert.name}</strong>
-                    <small className="block text-sm text-gray-500">🕒 {new Date(cert.updated_at).toLocaleString()}</small>
+                    <button
+                      onClick={() => {
+                        setEditingId(cert.id);
+                        setNewName(cert.name);
+                      }}
+                      className="bg-blue-600 text-white px-2 py-1 text-sm rounded font-bold hover:bg-blue-700 flex items-center gap-1"
+                    >
+                      <FontAwesomeIcon icon={faPen} />
+                      Đổi tên
+                    </button>
+                    <button
+                      onClick={() => handleDelete(cert.id)}
+                      disabled={deletingId === cert.id}
+                      className="bg-red-600 text-white px-2 py-1 text-sm rounded font-bold hover:bg-red-700 flex items-center gap-1"
+                    >
+                      {deletingId === cert.id ? (
+                        <FontAwesomeIcon icon={faSpinner} spin />
+                      ) : (
+                        <FontAwesomeIcon icon={faTrash} />
+                      )}
+                      Xoá
+                    </button>
                   </>
                 )}
               </div>
-
-              <div className="flex gap-2">
-                <button
-                  onClick={() => { setEditingId(cert.id); setNewName(cert.name); }}
-                  className="px-3 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700"
-                >
-                  <FontAwesomeIcon icon={faPen} className="mr-1" /> Đổi tên
-                </button>
-                <button
-                  onClick={() => setDeleteConfirmId(cert.id)}
-                  className="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700"
-                >
-                  <FontAwesomeIcon icon={faTrash} className="mr-1" /> Xoá
-                </button>
-              </div>
-
-              {deleteConfirmId === cert.id && (
-                <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
-                  <div className="bg-white dark:bg-gray-900 p-6 rounded shadow max-w-sm w-full">
-                    <h3 className="text-lg font-semibold mb-2">Bạn chắc chắn muốn xoá?</h3>
-                    <p className="text-sm mb-4 text-gray-500">Chứng chỉ sẽ bị xoá khỏi hệ thống và storage.</p>
-                    <div className="flex justify-end gap-2">
-                      <button
-                        onClick={() => setDeleteConfirmId(null)}
-                        className="px-3 py-1 text-sm bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:text-white rounded">
-                        Hủy
-                      </button>
-                      <button
-                        onClick={() => { handleDelete(cert.id); setDeleteConfirmId(null); }}
-                        className="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700">
-                        Xoá
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
+            </li>
           ))}
-        </div>
-      )}
-
-      {toast.message && (
-        <div
-          className={`fixed bottom-4 right-4 px-4 py-2 rounded shadow z-50 text-sm text-white transition
-            ${toast.type === "success" ? "bg-green-500" : toast.type === "error" ? "bg-red-600" : "bg-gray-800"}`}
-        >
-          {toast.message}
-        </div>
+        </ul>
       )}
     </div>
   );
