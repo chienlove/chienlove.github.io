@@ -8,7 +8,7 @@ export default function CertManager() {
   const [p12, setP12] = useState(null);
   const [provision, setProvision] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [toast, setToast] = useState("");
+  const [toast, setToast] = useState({ message: "", type: "info" });
   const [editingId, setEditingId] = useState(null);
   const [newName, setNewName] = useState("");
   const [deleteConfirmId, setDeleteConfirmId] = useState(null);
@@ -22,13 +22,13 @@ export default function CertManager() {
       const res = await axios.get("/api/admin/list-certs");
       setCerts(res.data.certs || []);
     } catch (err) {
-      showToast("❌ Lỗi khi lấy danh sách chứng chỉ");
+      showToast("❌ Lỗi khi lấy danh sách chứng chỉ", "error");
     }
   }
 
-  function showToast(msg) {
-    setToast(msg);
-    setTimeout(() => setToast(""), 3000);
+  function showToast(message, type = "info") {
+    setToast({ message, type });
+    setTimeout(() => setToast({ message: "", type: "info" }), 3000);
   }
 
   async function handleUpload(e) {
@@ -36,7 +36,7 @@ export default function CertManager() {
     setLoading(true);
 
     if (!p12 || !provision || !password) {
-      showToast("❌ Vui lòng chọn đủ file và nhập mật khẩu");
+      showToast("❌ Vui lòng chọn đủ file và nhập mật khẩu", "error");
       setLoading(false);
       return;
     }
@@ -50,11 +50,11 @@ export default function CertManager() {
       formData.append("password", password);
 
       await axios.post("/api/admin/upload-certs", formData);
-      showToast("✅ Đã tải lên thành công");
+      showToast("✅ Đã tải lên thành công", "success");
       setName(""); setPassword(""); setP12(null); setProvision(null);
       fetchCerts();
     } catch (err) {
-      showToast("❌ " + (err.response?.data?.message || "Lỗi không xác định"));
+      showToast("❌ " + (err.response?.data?.message || "Lỗi không xác định"), "error");
     } finally {
       setLoading(false);
     }
@@ -63,10 +63,10 @@ export default function CertManager() {
   async function handleDelete(id) {
     try {
       await axios.delete(`/api/admin/cert/${id}/delete-cert`);
-      showToast("🗑️ Đã xoá chứng chỉ");
+      showToast("🗑️ Đã xoá chứng chỉ", "success");
       fetchCerts();
     } catch (err) {
-      showToast("❌ Lỗi khi xoá chứng chỉ");
+      showToast("❌ Lỗi khi xoá chứng chỉ", "error");
     }
   }
 
@@ -74,12 +74,12 @@ export default function CertManager() {
     if (!newName.trim()) return;
     try {
       await axios.patch(`/api/admin/cert/${id}`, { name: newName });
-      showToast("✅ Đã đổi tên");
+      showToast("✅ Đã đổi tên", "success");
       setEditingId(null);
       setNewName("");
       fetchCerts();
     } catch (err) {
-      showToast("❌ Lỗi khi đổi tên");
+      showToast("❌ Lỗi khi đổi tên", "error");
     }
   }
 
@@ -89,24 +89,24 @@ export default function CertManager() {
 
       <form onSubmit={handleUpload} className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white dark:bg-gray-800 p-4 rounded shadow">
         <div>
-          <label className="block font-medium">Tên chứng chỉ (tuỳ chọn)</label>
+          <label className="block font-semibold">Tên chứng chỉ (tuỳ chọn)</label>
           <input type="text" value={name} onChange={(e) => setName(e.target.value)}
             className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white" />
         </div>
 
         <div>
-          <label className="block font-medium">Mật khẩu file .p12</label>
+          <label className="block font-semibold">Mật khẩu file .p12</label>
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required
             className="w-full p-2 border rounded dark:bg-gray-700 dark:text-white" />
         </div>
 
         <div>
-          <label className="block font-medium">File .p12</label>
+          <label className="block font-semibold">File .p12</label>
           <input type="file" accept=".p12" onChange={(e) => setP12(e.target.files[0])} required />
         </div>
 
         <div>
-          <label className="block font-medium">File .mobileprovision</label>
+          <label className="block font-semibold">File .mobileprovision</label>
           <input type="file" accept=".mobileprovision" onChange={(e) => setProvision(e.target.files[0])} required />
         </div>
 
@@ -125,7 +125,7 @@ export default function CertManager() {
         <div className="grid md:grid-cols-2 gap-4">
           {certs.map((cert) => (
             <div key={cert.id} className="p-4 bg-white dark:bg-gray-800 rounded shadow">
-              <div className="mb-2">
+              <div className="mb-3">
                 {editingId === cert.id ? (
                   <>
                     <input
@@ -134,26 +134,42 @@ export default function CertManager() {
                       onChange={(e) => setNewName(e.target.value)}
                       className="border p-1 rounded dark:bg-gray-700 dark:text-white"
                     />
-                    <button onClick={() => handleRename(cert.id)} className="ml-2 text-green-600 text-sm">Lưu</button>
-                    <button onClick={() => { setEditingId(null); setNewName(""); }} className="ml-2 text-gray-500 text-sm">Hủy</button>
+                    <button
+                      onClick={() => handleRename(cert.id)}
+                      className="ml-2 px-2 py-1 text-sm bg-green-600 text-white rounded hover:bg-green-700"
+                    >
+                      Lưu
+                    </button>
+                    <button
+                      onClick={() => { setEditingId(null); setNewName(""); }}
+                      className="ml-2 px-2 py-1 text-sm text-gray-600 hover:underline"
+                    >
+                      Hủy
+                    </button>
                   </>
                 ) : (
                   <>
-                    <strong className="text-lg">{cert.name}</strong>
+                    <strong className="text-lg font-bold">{cert.name}</strong>
                     <small className="block text-sm text-gray-500">🕒 {new Date(cert.updated_at).toLocaleString()}</small>
                   </>
                 )}
               </div>
 
-              <div className="flex gap-3">
-                <button onClick={() => { setEditingId(cert.id); setNewName(cert.name); }}
-                  className="text-blue-600 text-sm hover:underline">✏️ Đổi tên</button>
-
-                <button onClick={() => setDeleteConfirmId(cert.id)}
-                  className="text-red-600 text-sm hover:underline">🗑️ Xoá</button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => { setEditingId(cert.id); setNewName(cert.name); }}
+                  className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+                >
+                  ✏️ Đổi tên
+                </button>
+                <button
+                  onClick={() => setDeleteConfirmId(cert.id)}
+                  className="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700"
+                >
+                  🗑️ Xoá
+                </button>
               </div>
 
-              {/* Modal xác nhận xoá */}
               {deleteConfirmId === cert.id && (
                 <div className="fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center z-50">
                   <div className="bg-white dark:bg-gray-900 p-6 rounded shadow max-w-sm w-full">
@@ -179,10 +195,13 @@ export default function CertManager() {
         </div>
       )}
 
-      {/* Toast Notification */}
-      {toast && (
-        <div className="fixed bottom-4 right-4 bg-black text-white px-4 py-2 rounded shadow z-50">
-          {toast}
+      {/* Toast */}
+      {toast.message && (
+        <div
+          className={`fixed bottom-4 right-4 px-4 py-2 rounded shadow z-50 text-sm text-white transition
+            ${toast.type === "success" ? "bg-green-500" : toast.type === "error" ? "bg-red-600" : "bg-gray-800"}`}
+        >
+          {toast.message}
         </div>
       )}
     </div>
