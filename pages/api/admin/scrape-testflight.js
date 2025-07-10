@@ -1,54 +1,50 @@
-import axios from 'axios';
-import { parse } from 'node-html-parser';
+const axios = require('axios');
+const cheerio = require('cheerio');
 
-export default async (req, res) => {
+module.exports = async (req, res) => {
+  // Enable CORS
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
+  const { appId } = req.query;
+
+  if (!appId) {
+    return res.status(400).json({ error: 'appId is required' });
+  }
+
   try {
-    const { url } = req.query;
-
-    if (!url) {
-      return res.status(400).json({ error: 'Missing URL parameter' });
-    }
-
-    if (!url.includes('testflight.apple.com')) {
-      return res.status(400).json({ error: 'Invalid TestFlight URL' });
-    }
-
-    // Thêm headers để giả lập trình duyệt
-    const { data } = await axios.get(url, {
+    const url = `https://testflight.apple.com/join/${appId}`;
+    const response = await axios.get(url, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1'
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
       }
     });
 
-    const root = parse(data);
+    const $ = cheerio.load(response.data);
 
-    // Selectors mới cập nhật (tháng 7/2024)
+    // Extract app information
     const appInfo = {
-      appName: root.querySelector('h1')?.text.trim() || 'Không rõ',
-      developer: root.querySelector('.developer-name')?.text.trim() || 
-                root.querySelector('h2')?.text.trim() || 'Không rõ',
-      version: root.querySelector('.version-build')?.text.trim() || 
-               root.querySelector('.build-version')?.text.trim() || 'Không rõ',
-      whatsNew: root.querySelector('.change-log-text')?.text.trim() || 
-               root.querySelector('.whats-new')?.text.trim() || 'Không có thông tin',
-      buildNumber: root.querySelector('.build-number')?.text.trim() || 'Không rõ',
-      releaseDate: root.querySelector('.release-date')?.text.trim() || 
-                  root.querySelector('.date')?.text.trim() || 'Không rõ',
-      appIcon: root.querySelector('.app-icon img')?.getAttribute('src') || 
-               root.querySelector('.app-icon-source')?.getAttribute('src') || '',
-      testFlightLink: url
+      name: $('.app-name')?.text()?.trim() || 'N/A',
+      description: $('.description')?.text()?.trim() || 'N/A',
+      developer: $('.developer')?.text()?.trim() || 'N/A',
+      status: $('.status')?.text()?.trim() || 'N/A',
+      icon: $('.app-icon img')?.attr('src') || 'N/A'
     };
 
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    // Check if app exists
+    if (appInfo.name === 'N/A' && appInfo.description === 'N/A') {
+      return res.status(404).json({ error: 'App not found or invalid appId' });
+    }
+
     res.status(200).json({
       success: true,
       data: appInfo
     });
-
   } catch (error) {
-    res.status(500).json({ 
-      success: false,
-      error: 'Failed to fetch app info',
+    console.error('Error:', error.message);
+    res.status(500).json({
+      error: 'Failed to fetch app information',
       details: error.message
     });
   }
