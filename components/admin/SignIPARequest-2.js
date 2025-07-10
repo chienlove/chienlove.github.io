@@ -184,22 +184,22 @@ export default function SignIPARequest() {
                 >
                   {status === "success" ? (
                     <>
-                      <FontAwesomeIcon icon={faCheckCircle} className="mr-1 text-green-400" />
+                      <FontAwesomeIcon icon={faCheckCircle} className="mr-1" />
                       Hoàn tất
                     </>
                   ) : status === "failure" ? (
                     <>
-                      <FontAwesomeIcon icon={faTimesCircle} className="mr-1 text-red-400" />
+                      <FontAwesomeIcon icon={faTimesCircle} className="mr-1" />
                       Thất bại
                     </>
                   ) : status === "in_progress" ? (
                     <>
-                      <FontAwesomeIcon icon={faHourglassHalf} className="mr-1 text-yellow-400" />
+                      <FontAwesomeIcon icon={faHourglassHalf} className="mr-1" />
                       Đang xử lý
                     </>
                   ) : (
                     <>
-                      <FontAwesomeIcon icon={faSpinner} spin className="mr-1 text-gray-400" />
+                      <FontAwesomeIcon icon={faSpinner} spin className="mr-1" />
                       Đang kiểm tra...
                     </>
                   )}
@@ -208,7 +208,7 @@ export default function SignIPARequest() {
             </div>
 
             {runId && (
-              <div className="mt-2 pl-1">
+              <div className="mt-2">
                 <RunStepsViewer runId={runId} />
               </div>
             )}
