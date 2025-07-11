@@ -72,17 +72,18 @@ export default function Admin() {
       const ipaUrl = ipaUrlMatch[1];
 console.log("Tìm thấy IPA URL:", ipaUrl);
 
-const encodedUrl = encodeURIComponent(ipaUrl);
-const proxyResp = await fetch(`/api/get-size-ipa?url=${encodedUrl}`);
-      const result = await proxyResp.json();
+// ✅ Dùng domain đầy đủ để tránh lỗi fetch
+const apiURL = `https://testflight-app.vercel.app/api/admin/get-size-ipa?url=${encodeURIComponent(ipaUrl)}`;
+const proxyResp = await fetch(apiURL);
+const result = await proxyResp.json();
 
-      if (result.size) {
-        const sizeMB = (parseInt(result.size) / (1024 * 1024)).toFixed(2);
-        console.log("Kích thước IPA:", sizeMB, "MB");
-        setForm(prev => ({ ...prev, size: sizeMB }));
-      } else {
-        console.warn("Không lấy được size từ API:", result.error || result);
-      }
+if (result.size) {
+  const sizeMB = (parseInt(result.size) / (1024 * 1024)).toFixed(2);
+  console.log("Kích thước IPA:", sizeMB, "MB");
+  setForm(prev => ({ ...prev, size: sizeMB }));
+} else {
+  console.warn("Không lấy được size từ API:", result.error || result);
+}
     } catch (err) {
       console.warn("Không lấy được size IPA:", err);
     }
