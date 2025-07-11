@@ -163,7 +163,7 @@ export default function Detail() {
                 )}
                 <div className="mt-4 space-x-2">
                   {app.category === 'testflight' && app.testflight_url && (
-  <div className="flex flex-wrap items-center gap-2">
+  <div className="flex flex-wrap justify-center gap-2">
     <a
       href={app.testflight_url}
       className="inline-block border border-blue-500 text-blue-700 hover:bg-blue-100 transition px-4 py-2 rounded-full text-sm font-semibold"
