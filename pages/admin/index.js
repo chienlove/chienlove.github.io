@@ -70,11 +70,10 @@ export default function Admin() {
       }
 
       const ipaUrl = ipaUrlMatch[1];
-      console.log("Tìm thấy IPA URL:", ipaUrl);
+console.log("Tìm thấy IPA URL:", ipaUrl);
 
-      // ✅ Dùng URLSearchParams thay vì encodeURIComponent
-      const params = new URLSearchParams({ url: ipaUrl });
-      const proxyResp = await fetch(`/api/get-size?${params.toString()}`);
+const encodedUrl = encodeURIComponent(ipaUrl);
+const proxyResp = await fetch(`/api/get-size-ipa?url=${encodedUrl}`);
       const result = await proxyResp.json();
 
       if (result.size) {
