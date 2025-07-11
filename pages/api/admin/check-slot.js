@@ -54,7 +54,7 @@ export default async function handler(req, res) {
       htmlLength: response.data.length
     };
 
-    cache.put(cacheKey, result, 30 * 1000); // Cache 30 giây
+    cache.put(cacheKey, result, 60 * 60 * 1000); // Cache 30 giây
 
     return res.status(200).json({ ...result, cached: false });
 

@@ -59,7 +59,7 @@ export default function Detail() {
         if (appData.category === 'testflight' && appData.testflight_url) {
           setStatusLoading(true);
           const id = appData.testflight_url.split('/').pop();
-          fetch(`/api/admin/scrape-testflight?id=${id}`)
+          fetch(`/api/admin/check-slot?id=${id}`)
             .then((res) => res.json())
             .then((data) => {
               if (data.success) {
