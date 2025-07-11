@@ -175,7 +175,7 @@ export default function Detail() {
 
     {statusLoading || status === null ? (
       <span className="inline-block border border-gray-300 text-gray-500 bg-gray-50 px-4 py-2 rounded-full text-sm font-semibold">
-        Đang kiểm tra trạng thái...
+        Loading...
       </span>
     ) : (
       <>
