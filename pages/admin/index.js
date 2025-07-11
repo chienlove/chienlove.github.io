@@ -62,12 +62,30 @@ export default function Admin() {
         const parser = new DOMParser();
         const xml = parser.parseFromString(text, "application/xml");
 
-        const stringNodes = xml.querySelectorAll("string");
-        const ipaUrlNode = [...stringNodes].find(n => n.textContent.endsWith(".ipa"));
+        const dicts = xml.getElementsByTagName("dict");
+        let ipaUrl = null;
 
-        if (!ipaUrlNode) return;
+        for (let i = 0; i < dicts.length; i++) {
+          const keys = dicts[i].getElementsByTagName("key");
+          const strings = dicts[i].getElementsByTagName("string");
 
-        const ipaResponse = await fetch(ipaUrlNode.textContent, { method: "HEAD" });
+          for (let j = 0; j < keys.length; j++) {
+            const keyName = keys[j].textContent;
+            if (keyName === "url" && strings[j]) {
+              const urlValue = strings[j].textContent;
+              if (urlValue.endsWith(".ipa")) {
+                ipaUrl = urlValue;
+                break;
+              }
+            }
+          }
+
+          if (ipaUrl) break;
+        }
+
+        if (!ipaUrl) return;
+
+        const ipaResponse = await fetch(ipaUrl, { method: "HEAD" });
         const size = ipaResponse.headers.get("Content-Length");
 
         if (size) {
@@ -334,7 +352,7 @@ export default function Admin() {
 
         <nav className="p-4 space-y-2">
           <button
-            onClick={() => setActiveTab("apps")}
+            onClick={() => { setActiveTab("apps"); setSidebarOpen(false); }}
             className={`w-full text-left flex items-center gap-3 px-4 py-2 rounded ${
               activeTab === "apps" 
                 ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200" 
@@ -344,7 +362,7 @@ export default function Admin() {
             📦 Ứng dụng
           </button>
           <button
-            onClick={() => setActiveTab("categories")}
+            onClick={() => { setActiveTab("categories"); setSidebarOpen(false); }}
             className={`w-full text-left flex items-center gap-3 px-4 py-2 rounded ${
               activeTab === "categories" 
                 ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200" 
