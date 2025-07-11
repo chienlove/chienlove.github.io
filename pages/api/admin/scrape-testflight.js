@@ -3,58 +3,71 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 
 export default async function handler(req, res) {
-  // Xử lý CORS
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET');
-
   const { id } = req.query;
-
-  if (!id) {
-    return res.status(400).json({ 
-      error: 'Missing TestFlight ID parameter',
-      usage: '/api/admin/scrape-testflight?id=TESTFLIGHT_ID' 
-    });
-  }
 
   try {
     const { data } = await axios.get(`https://testflight.apple.com/join/${id}`, {
-      headers: { 
-        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15'
-      },
-      timeout: 10000
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
+      }
     });
 
     const $ = cheerio.load(data);
+    
+    // 1. Thông tin cơ bản
     const appName = $('title').text()
       .replace(' - TestFlight - Apple', '')
       .replace('Join the ', '')
       .trim();
 
+    // 2. Phát hiện phiên bản (nếu có)
+    const versionText = $('.version-info').text() || '';
+    const versionMatch = versionText.match(/(\d+\.\d+\.\d+)/);
+    const version = versionMatch ? versionMatch[1] : null;
+
+    // 3. Lấy screenshot (nếu có)
+    const screenshots = [];
+    $('.screenshot-container img').each((i, el) => {
+      const src = $(el).attr('src');
+      if (src) screenshots.push(src.startsWith('http') ? src : `https://testflight.apple.com${src}`);
+    });
+
+    // 4. Trạng thái chi tiết
     let status = 'Y';
-    if (data.includes('This beta is full')) status = 'F';
-    if (data.includes("isn't accepting any new testers")) status = 'N';
+    let statusMessage = 'Available';
+    if (data.includes('This beta is full')) {
+      status = 'F';
+      statusMessage = 'Full';
+    } else if (data.includes("isn't accepting any new testers")) {
+      status = 'N';
+      statusMessage = 'Not Accepting';
+    }
+
+    // 5. Metadata khác
+    const metadata = {
+      lastUpdated: $('.build-info time').attr('datetime'),
+      buildNumber: $('.build-number').text().trim(),
+      rating: $('.rating').text().trim()
+    };
 
     return res.status(200).json({
       success: true,
       id,
       appName,
-      status
+      status,
+      statusMessage,
+      version,
+      screenshots,
+      metadata,
+      timestamp: new Date().toISOString()
     });
 
   } catch (error) {
     console.error('Scrape Error:', error);
-    
-    if (error.response?.status === 404) {
-      return res.status(404).json({ 
-        success: false,
-        error: 'TestFlight not found' 
-      });
-    }
-
     return res.status(500).json({
       success: false,
-      error: 'Internal server error',
-      message: error.message
+      error: error.message,
+      id
     });
   }
 }
