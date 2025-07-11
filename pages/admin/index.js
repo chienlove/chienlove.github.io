@@ -49,7 +49,7 @@ export default function Admin() {
   }, [darkMode]);
 
   
-    useEffect(() => {
+      useEffect(() => {
     async function fetchIpaSizeFromPlist() {
       const link = form["download_link"];
       if (!link || !link.startsWith("itms-services://")) {
@@ -72,15 +72,16 @@ export default function Admin() {
         const ipaUrl = ipaUrlMatch[1];
         console.log("Tìm thấy IPA URL:", ipaUrl);
 
-        const ipaResponse = await fetch(ipaUrl, { method: "HEAD" });
-        const size = ipaResponse.headers.get("Content-Length");
+        // ✅ Gọi API proxy get-size thay vì HEAD trực tiếp
+        const proxyResp = await fetch(`/api/get-size-ipa?url=${encodeURIComponent(ipaUrl)}`);
+        const result = await proxyResp.json();
 
-        if (size) {
-          const sizeMB = (parseInt(size) / (1024 * 1024)).toFixed(2);
+        if (result.size) {
+          const sizeMB = (parseInt(result.size) / (1024 * 1024)).toFixed(2);
           console.log("Kích thước IPA:", sizeMB, "MB");
           setForm(prev => ({ ...prev, size: sizeMB }));
         } else {
-          console.warn("Không lấy được Content-Length từ IPA:", ipaUrl);
+          console.warn("Không lấy được size từ API:", result.error || result);
         }
       } catch (err) {
         console.warn("Không lấy được size IPA:", err);
