@@ -59,14 +59,31 @@ export default function Admin() {
         const response = await fetch(url);
         const text = await response.text();
 
-        // Tìm chuỗi chứa URL .ipa
-        const ipaUrlMatch = text.match(/<key>url<\/key>\s*<string>([^<]+\.ipa)<\/string>/);
-        if (!ipaUrlMatch) {
-          console.warn("Không tìm thấy đường dẫn IPA trong plist");
-          return;
+        const parser = new DOMParser();
+        const xml = parser.parseFromString(text, "application/xml");
+
+        const dicts = xml.getElementsByTagName("dict");
+        let ipaUrl = null;
+
+        for (let i = 0; i < dicts.length; i++) {
+          const keys = dicts[i].getElementsByTagName("key");
+          const strings = dicts[i].getElementsByTagName("string");
+
+          for (let j = 0; j < keys.length; j++) {
+            const keyName = keys[j].textContent;
+            if (keyName === "url" && strings[j]) {
+              const urlValue = strings[j].textContent;
+              if (urlValue.endsWith(".ipa")) {
+                ipaUrl = urlValue;
+                break;
+              }
+            }
+          }
+
+          if (ipaUrl) break;
         }
 
-        const ipaUrl = ipaUrlMatch[1];
+        if (!ipaUrl) return;
 
         const ipaResponse = await fetch(ipaUrl, { method: "HEAD" });
         const size = ipaResponse.headers.get("Content-Length");
@@ -420,7 +437,7 @@ export default function Admin() {
           </div>
         )}
 
-        {activeTab === "apps" && activeTab !== "certs" ? (
+        {activeTab === "apps" ? (
           <>
             {/* Add App Form */}
             <section className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-md mb-6">
