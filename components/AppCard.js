@@ -34,10 +34,12 @@ export default function AppCard({ app, mode = 'card' }) {
           }}
         />
         {isNew(app.created_at) && (
-          <span className="absolute top-[-8px] left-[-12px] rotate-[-25deg] bg-red-600 text-white text-[10px] font-bold px-3 py-0.5 shadow-md z-10">
-            NEW
-          </span>
-        )}
+  <div className="absolute -top-2 -left-2 z-10 overflow-hidden w-20 h-20">
+    <div className="absolute bg-red-600 text-white text-[10px] font-bold rotate-45 w-[100px] text-center shadow-md top-6 left-[-25px] py-0.5">
+      NEW
+    </div>
+  </div>
+)}
       </div>
 
       {/* Nội dung */}
