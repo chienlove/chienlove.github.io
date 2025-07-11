@@ -48,6 +48,41 @@ export default function Admin() {
     document.documentElement.classList.toggle("dark", darkMode);
   }, [darkMode]);
 
+  
+  useEffect(() => {
+    async function fetchIpaSizeFromPlist() {
+      const link = form["download_link"];
+      if (!link || !link.startsWith("itms-services://")) return;
+
+      try {
+        const url = decodeURIComponent(link.split("url=")[1]);
+        const response = await fetch(url);
+        const text = await response.text();
+
+        const parser = new DOMParser();
+        const xml = parser.parseFromString(text, "application/xml");
+
+        const stringNodes = xml.querySelectorAll("string");
+        const ipaUrlNode = [...stringNodes].find(n => n.textContent.endsWith(".ipa"));
+
+        if (!ipaUrlNode) return;
+
+        const ipaResponse = await fetch(ipaUrlNode.textContent, { method: "HEAD" });
+        const size = ipaResponse.headers.get("Content-Length");
+
+        if (size) {
+          const sizeMB = (parseInt(size) / (1024 * 1024)).toFixed(2);
+          setForm(prev => ({ ...prev, size: sizeMB }));
+        }
+      } catch (err) {
+        console.warn("Không lấy được size IPA:", err);
+      }
+    }
+
+    fetchIpaSizeFromPlist();
+  }, [form["download_link"]]);
+
+
   useEffect(() => {
     if (form.screenshots) {
       setScreenshotInput(form.screenshots.join("\n"));
@@ -318,7 +353,7 @@ export default function Admin() {
           >
             📁 Chuyên mục</button>
           <button
-            onClick={() => setActiveTab("certs")}
+            onClick={() => { setActiveTab("certs"); setSidebarOpen(false); }}
             className={`w-full text-left flex items-center gap-3 px-4 py-2 rounded ${activeTab === "certs" ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200" : "hover:bg-gray-200 dark:hover:bg-gray-700"}`}
           >
             🛡️ Chứng chỉ
@@ -344,7 +379,7 @@ export default function Admin() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-4 md:p-6 overflow-auto">
+      <main className="flex-1 p-4 md:p-6 overflow-auto pb-32">
         {/* Header */}
         <header className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-4">
