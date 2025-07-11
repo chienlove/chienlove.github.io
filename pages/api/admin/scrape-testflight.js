@@ -1,73 +1,77 @@
-// pages/api/admin/scrape-testflight.js
 import axios from 'axios';
 import * as cheerio from 'cheerio';
+import cache from 'memory-cache'; // Add this line
 
 export default async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET');
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+
   const { id } = req.query;
 
+  if (!id) {
+    return res.status(400).json({
+      success: false,
+      error: 'Missing TestFlight ID parameter',
+      usage: '/api/admin/scrape-testflight?id=TESTFLIGHT_ID'
+    });
+  }
+
+  const cacheKey = `testflight-status-${id}`;
+  const cached = cache.get(cacheKey);
+
+  if (cached) {
+    return res.status(200).json({ ...cached, cached: true }); // Add cached flag
+  }
+
   try {
-    const { data } = await axios.get(`https://testflight.apple.com/join/${id}`, {
+    const response = await axios.get(`https://testflight.apple.com/join/${id}`, {
       headers: {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
-      }
+        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15'
+      },
+      timeout: 10000
     });
 
-    const $ = cheerio.load(data);
-    
-    // 1. Thông tin cơ bản
-    const appName = $('title').text()
+    const $ = cheerio.load(response.data);
+    const title = $('title').text();
+    const appName = title
       .replace(' - TestFlight - Apple', '')
       .replace('Join the ', '')
       .trim();
 
-    // 2. Phát hiện phiên bản (nếu có)
-    const versionText = $('.version-info').text() || '';
-    const versionMatch = versionText.match(/(\d+\.\d+\.\d+)/);
-    const version = versionMatch ? versionMatch[1] : null;
-
-    // 3. Lấy screenshot (nếu có)
-    const screenshots = [];
-    $('.screenshot-container img').each((i, el) => {
-      const src = $(el).attr('src');
-      if (src) screenshots.push(src.startsWith('http') ? src : `https://testflight.apple.com${src}`);
-    });
-
-    // 4. Trạng thái chi tiết
     let status = 'Y';
-    let statusMessage = 'Available';
-    if (data.includes('This beta is full')) {
-      status = 'F';
-      statusMessage = 'Full';
-    } else if (data.includes("isn't accepting any new testers")) {
-      status = 'N';
-      statusMessage = 'Not Accepting';
-    }
+    if (response.data.includes('This beta is full')) status = 'F';
+    if (response.data.includes("isn't accepting any new testers")) status = 'N';
 
-    // 5. Metadata khác
-    const metadata = {
-      lastUpdated: $('.build-info time').attr('datetime'),
-      buildNumber: $('.build-number').text().trim(),
-      rating: $('.rating').text().trim()
-    };
-
-    return res.status(200).json({
+    const result = {
       success: true,
       id,
       appName,
       status,
-      statusMessage,
-      version,
-      screenshots,
-      metadata,
-      timestamp: new Date().toISOString()
-    });
+      htmlLength: response.data.length
+    };
+
+    cache.put(cacheKey, result, 30 * 1000); // Cache 30 giây
+
+    return res.status(200).json({ ...result, cached: false });
 
   } catch (error) {
-    console.error('Scrape Error:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      response: error.response?.data
+    });
+
     return res.status(500).json({
       success: false,
-      error: error.message,
-      id
+      error: 'Internal server error',
+      message: error.message,
+      ...(process.env.NODE_ENV === 'development' && {
+        stack: error.stack
+      })
     });
   }
 }

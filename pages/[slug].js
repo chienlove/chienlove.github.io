@@ -12,6 +12,9 @@ import {
   faCodeBranch,
   faDatabase,
   faUser,
+  faCheckCircle,
+  faTimesCircle,
+  faExclamationTriangle,
 } from '@fortawesome/free-solid-svg-icons';
 
 export default function Detail() {
@@ -22,6 +25,7 @@ export default function Detail() {
   const [loading, setLoading] = useState(true);
   const [dominantColor, setDominantColor] = useState('#f0f2f5');
   const [showFullDescription, setShowFullDescription] = useState(false);
+  const [status, setStatus] = useState(null);
 
   useEffect(() => {
     if (!slug) return;
@@ -49,6 +53,22 @@ export default function Detail() {
         }
 
         setApp(appData);
+
+        // Gọi API lấy trạng thái TestFlight
+        if (appData.category === 'testflight' && appData.testflight_url) {
+          const id = appData.testflight_url.split('/').pop();
+          fetch(`/api/admin/scrape-testflight?id=${id}`)
+            .then((res) => res.json())
+            .then((data) => {
+              if (data.success) {
+                setStatus(data.status);
+              }
+            })
+            .catch((err) => {
+              console.error('Lỗi khi gọi API TestFlight:', err);
+            });
+        }
+
 
         const { data: relatedApps } = await supabase
           .from('apps')
@@ -150,6 +170,25 @@ export default function Detail() {
                       <FontAwesomeIcon icon={faRocket} className="mr-2" />
                       Tham gia TestFlight
                     </a>
+                    {status === 'Y' && (
+                      <span className="inline-block border border-green-500 text-green-700 bg-green-50 px-4 py-2 rounded-full text-sm font-semibold">
+                        <FontAwesomeIcon icon={faCheckCircle} className="mr-1" />
+                        Còn slot
+                      </span>
+                    )}
+                    {status === 'F' && (
+                      <span className="inline-block border border-yellow-500 text-yellow-700 bg-yellow-50 px-4 py-2 rounded-full text-sm font-semibold">
+                        <FontAwesomeIcon icon={faExclamationTriangle} className="mr-1" />
+                        Đã đầy
+                      </span>
+                    )}
+                    {status === 'N' && (
+                      <span className="inline-block border border-red-500 text-red-700 bg-red-50 px-4 py-2 rounded-full text-sm font-semibold">
+                        <FontAwesomeIcon icon={faTimesCircle} className="mr-1" />
+                        Ngừng nhận
+                      </span>
+                    )}
+
                   )}
                   {app.category === 'jailbreak' && app.download_link && (
                     <a
