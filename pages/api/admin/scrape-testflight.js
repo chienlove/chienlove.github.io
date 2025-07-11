@@ -1,6 +1,6 @@
 // pages/api/admin/scrape-testflight.js
 import axios from 'axios';
-import cheerio from 'cheerio';
+import * as cheerio from 'cheerio';
 
 export default async function handler(req, res) {
   // Xử lý CORS
