@@ -50,46 +50,47 @@ export default function Admin() {
 
   
       useEffect(() => {
-    async function fetchIpaSizeFromPlist() {
-      const link = form["download_link"];
-      if (!link || !link.startsWith("itms-services://")) {
-        console.log("Không phải link itms-services, bỏ qua.");
+  async function fetchIpaSizeFromPlist() {
+    const link = form["download_link"];
+    if (!link || !link.startsWith("itms-services://")) {
+      console.log("Không phải link itms-services, bỏ qua.");
+      return;
+    }
+
+    try {
+      const url = decodeURIComponent(link.split("url=")[1]);
+      console.log("Đang tải plist từ:", url);
+      const response = await fetch(url);
+      const text = await response.text();
+
+      const ipaUrlMatch = text.match(/<key>url<\/key>\s*<string>([^<]+\.ipa)<\/string>/);
+      if (!ipaUrlMatch) {
+        console.warn("Không tìm thấy đường dẫn IPA trong plist:\n", text);
         return;
       }
 
-      try {
-        const url = decodeURIComponent(link.split("url=")[1]);
-        console.log("Đang tải plist từ:", url);
-        const response = await fetch(url);
-        const text = await response.text();
+      const ipaUrl = ipaUrlMatch[1];
+      console.log("Tìm thấy IPA URL:", ipaUrl);
 
-        const ipaUrlMatch = text.match(/<key>url<\/key>\s*<string>([^<]+\.ipa)<\/string>/);
-        if (!ipaUrlMatch) {
-          console.warn("Không tìm thấy đường dẫn IPA trong plist:\n", text);
-          return;
-        }
+      // ✅ Dùng URLSearchParams thay vì encodeURIComponent
+      const params = new URLSearchParams({ url: ipaUrl });
+      const proxyResp = await fetch(`/api/get-size?${params.toString()}`);
+      const result = await proxyResp.json();
 
-        const ipaUrl = ipaUrlMatch[1];
-        console.log("Tìm thấy IPA URL:", ipaUrl);
-
-        // ✅ Gọi API proxy get-size thay vì HEAD trực tiếp
-        const proxyResp = await fetch(`/api/get-size-ipa?url=${encodeURIComponent(ipaUrl)}`);
-        const result = await proxyResp.json();
-
-        if (result.size) {
-          const sizeMB = (parseInt(result.size) / (1024 * 1024)).toFixed(2);
-          console.log("Kích thước IPA:", sizeMB, "MB");
-          setForm(prev => ({ ...prev, size: sizeMB }));
-        } else {
-          console.warn("Không lấy được size từ API:", result.error || result);
-        }
-      } catch (err) {
-        console.warn("Không lấy được size IPA:", err);
+      if (result.size) {
+        const sizeMB = (parseInt(result.size) / (1024 * 1024)).toFixed(2);
+        console.log("Kích thước IPA:", sizeMB, "MB");
+        setForm(prev => ({ ...prev, size: sizeMB }));
+      } else {
+        console.warn("Không lấy được size từ API:", result.error || result);
       }
+    } catch (err) {
+      console.warn("Không lấy được size IPA:", err);
     }
+  }
 
-    fetchIpaSizeFromPlist();
-  }, [form["download_link"]]);
+  fetchIpaSizeFromPlist();
+}, [form["download_link"]]);
 
 
   useEffect(() => {
