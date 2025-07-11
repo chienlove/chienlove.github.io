@@ -1,19 +1,19 @@
-// pages/api/get-size.js
 export default async function handler(req, res) {
   const { url } = req.query;
 
-  if (!url || !url.startsWith('http')) {
+  if (!url || !url.startsWith("http")) {
     return res.status(400).json({ error: "Thiếu hoặc sai URL" });
   }
 
   try {
-    const response = await fetch(url, { method: 'HEAD' });
+    const decodedUrl = decodeURIComponent(url); // ✅ Quan trọng
+    const response = await fetch(decodedUrl, { method: "HEAD" });
 
     if (!response.ok) {
-      return res.status(500).json({ error: "Không thể kết nối tới file IPA" });
+      return res.status(500).json({ error: "Không thể kết nối tới IPA" });
     }
 
-    const size = response.headers.get('content-length');
+    const size = response.headers.get("content-length");
 
     if (!size) {
       return res.status(404).json({ error: "Không tìm thấy Content-Length" });
