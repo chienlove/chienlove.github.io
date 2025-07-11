@@ -162,34 +162,36 @@ export default function Detail() {
                 )}
                 <div className="mt-4 space-x-2">
                   {app.category === 'testflight' && app.testflight_url && (
-                    <a
-                      href={app.testflight_url}
-                      className="inline-block border border-blue-500 text-blue-700 hover:bg-blue-100 transition px-4 py-2 rounded-full text-sm font-semibold"
-                      target="_blank" rel="noopener noreferrer"
-                    >
-                      <FontAwesomeIcon icon={faRocket} className="mr-2" />
-                      Tham gia TestFlight
-                    </a>
-                    {status === 'Y' && (
-                      <span className="inline-block border border-green-500 text-green-700 bg-green-50 px-4 py-2 rounded-full text-sm font-semibold">
-                        <FontAwesomeIcon icon={faCheckCircle} className="mr-1" />
-                        Còn slot
-                      </span>
-                    )}
-                    {status === 'F' && (
-                      <span className="inline-block border border-yellow-500 text-yellow-700 bg-yellow-50 px-4 py-2 rounded-full text-sm font-semibold">
-                        <FontAwesomeIcon icon={faExclamationTriangle} className="mr-1" />
-                        Đã đầy
-                      </span>
-                    )}
-                    {status === 'N' && (
-                      <span className="inline-block border border-red-500 text-red-700 bg-red-50 px-4 py-2 rounded-full text-sm font-semibold">
-                        <FontAwesomeIcon icon={faTimesCircle} className="mr-1" />
-                        Ngừng nhận
-                      </span>
-                    )}
+  <div className="flex flex-wrap items-center gap-2">
+    <a
+      href={app.testflight_url}
+      className="inline-block border border-blue-500 text-blue-700 hover:bg-blue-100 transition px-4 py-2 rounded-full text-sm font-semibold"
+      target="_blank" rel="noopener noreferrer"
+    >
+      <FontAwesomeIcon icon={faRocket} className="mr-2" />
+      Tham gia TestFlight
+    </a>
 
-                  )}
+    {status === 'Y' && (
+      <span className="inline-block border border-green-500 text-green-700 bg-green-50 px-4 py-2 rounded-full text-sm font-semibold">
+        <FontAwesomeIcon icon={faCheckCircle} className="mr-1" />
+        Còn slot
+      </span>
+    )}
+    {status === 'F' && (
+      <span className="inline-block border border-yellow-500 text-yellow-700 bg-yellow-50 px-4 py-2 rounded-full text-sm font-semibold">
+        <FontAwesomeIcon icon={faExclamationTriangle} className="mr-1" />
+        Đã đầy
+      </span>
+    )}
+    {status === 'N' && (
+      <span className="inline-block border border-red-500 text-red-700 bg-red-50 px-4 py-2 rounded-full text-sm font-semibold">
+        <FontAwesomeIcon icon={faTimesCircle} className="mr-1" />
+        Ngừng nhận
+      </span>
+    )}
+  </div>
+)}
                   {app.category === 'jailbreak' && app.download_link && (
                     <a
                       href={app.download_link}
