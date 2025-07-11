@@ -49,31 +49,38 @@ export default function Admin() {
   }, [darkMode]);
 
   
-  useEffect(() => {
+    useEffect(() => {
     async function fetchIpaSizeFromPlist() {
       const link = form["download_link"];
-      if (!link || !link.startsWith("itms-services://")) return;
+      if (!link || !link.startsWith("itms-services://")) {
+        console.log("Không phải link itms-services, bỏ qua.");
+        return;
+      }
 
       try {
         const url = decodeURIComponent(link.split("url=")[1]);
+        console.log("Đang tải plist từ:", url);
         const response = await fetch(url);
         const text = await response.text();
 
-        // Tìm chuỗi chứa URL .ipa
         const ipaUrlMatch = text.match(/<key>url<\/key>\s*<string>([^<]+\.ipa)<\/string>/);
         if (!ipaUrlMatch) {
-          console.warn("Không tìm thấy đường dẫn IPA trong plist");
+          console.warn("Không tìm thấy đường dẫn IPA trong plist:\n", text);
           return;
         }
 
         const ipaUrl = ipaUrlMatch[1];
+        console.log("Tìm thấy IPA URL:", ipaUrl);
 
         const ipaResponse = await fetch(ipaUrl, { method: "HEAD" });
         const size = ipaResponse.headers.get("Content-Length");
 
         if (size) {
           const sizeMB = (parseInt(size) / (1024 * 1024)).toFixed(2);
+          console.log("Kích thước IPA:", sizeMB, "MB");
           setForm(prev => ({ ...prev, size: sizeMB }));
+        } else {
+          console.warn("Không lấy được Content-Length từ IPA:", ipaUrl);
         }
       } catch (err) {
         console.warn("Không lấy được size IPA:", err);
