@@ -34,8 +34,8 @@ export default function AppCard({ app, mode = 'card' }) {
           }}
         />
         {isNew(app.created_at) && (
-  <div className="absolute -top-2 -left-2 z-10 overflow-hidden w-20 h-20">
-    <div className="absolute bg-red-600 text-white text-[10px] font-bold rotate-45 w-[100px] text-center shadow-md top-6 left-[-25px] py-0.5">
+  <div className="absolute top-0 left-0 w-20 h-20 overflow-hidden z-10 pointer-events-none">
+    <div className="absolute -bottom-3 -left-10 w-[100px] rotate-[45deg] bg-red-600 text-white text-[10px] font-bold text-center py-0.5 shadow-md">
       NEW
     </div>
   </div>
