@@ -16,7 +16,7 @@ export default async function handler(req, res) {
     return res.status(400).json({
       success: false,
       error: 'Missing TestFlight ID parameter',
-      usage: '/api/admin/scrape-testflight?id=TESTFLIGHT_ID'
+      usage: '/api/admin/check-slot?id=TESTFLIGHT_ID'
     });
   }
 
