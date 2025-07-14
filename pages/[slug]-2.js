@@ -26,6 +26,7 @@ export default function Detail() {
   const [dominantColor, setDominantColor] = useState('#f0f2f5');
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [status, setStatus] = useState(null);
+  const [statusLoading, setStatusLoading] = useState(false);
 
   useEffect(() => {
     if (!slug) return;
@@ -56,8 +57,9 @@ export default function Detail() {
 
         // Gọi API lấy trạng thái TestFlight
         if (appData.category === 'testflight' && appData.testflight_url) {
+          setStatusLoading(true);
           const id = appData.testflight_url.split('/').pop();
-          fetch(`/api/admin/scrape-testflight?id=${id}`)
+          fetch(`/api/admin/check-slot?id=${id}`)
             .then((res) => res.json())
             .then((data) => {
               if (data.success) {
@@ -66,9 +68,9 @@ export default function Detail() {
             })
             .catch((err) => {
               console.error('Lỗi khi gọi API TestFlight:', err);
-            });
+            })
+            .finally(() => setStatusLoading(false));
         }
-
 
         const { data: relatedApps } = await supabase
           .from('apps')
@@ -128,7 +130,6 @@ export default function Detail() {
   return (
     <Layout fullWidth>
       <div className="bg-gray-100 min-h-screen pb-12">
-
         {/* Header */}
         <div className="w-full flex justify-center mt-10 bg-gray-100">
           <div className="relative w-full max-w-screen-2xl px-2 sm:px-4 md:px-6 pb-8 bg-white rounded-none">
@@ -162,7 +163,7 @@ export default function Detail() {
                 )}
                 <div className="mt-4 space-x-2">
                   {app.category === 'testflight' && app.testflight_url && (
-  <div className="flex flex-wrap items-center gap-2">
+  <div className="flex flex-wrap justify-center gap-2">
     <a
       href={app.testflight_url}
       className="inline-block border border-blue-500 text-blue-700 hover:bg-blue-100 transition px-4 py-2 rounded-full text-sm font-semibold"
@@ -172,23 +173,31 @@ export default function Detail() {
       Tham gia TestFlight
     </a>
 
-    {status === 'Y' && (
-      <span className="inline-block border border-green-500 text-green-700 bg-green-50 px-4 py-2 rounded-full text-sm font-semibold">
-        <FontAwesomeIcon icon={faCheckCircle} className="mr-1" />
-        Còn slot
+    {statusLoading || status === null ? (
+      <span className="inline-block border border-gray-300 text-gray-500 bg-gray-50 px-4 py-2 rounded-full text-sm font-semibold">
+        Loading...
       </span>
-    )}
-    {status === 'F' && (
-      <span className="inline-block border border-red-500 text-red-700 bg-red-50 px-4 py-2 rounded-full text-sm font-semibold">
-        <FontAwesomeIcon icon={faExclamationTriangle} className="mr-1" />
-        Đã đầy
-      </span>
-    )}
-    {status === 'N' && (
-      <span className="inline-block border border-yellow-500 text-yellow-700 bg-yellow-50 px-4 py-2 rounded-full text-sm font-semibold">
-        <FontAwesomeIcon icon={faTimesCircle} className="mr-1" />
-        Ngừng nhận
-      </span>
+    ) : (
+      <>
+        {status === 'Y' && (
+          <span className="inline-block border border-green-500 text-green-700 bg-green-50 px-4 py-2 rounded-full text-sm font-semibold">
+            <FontAwesomeIcon icon={faCheckCircle} className="mr-1" />
+            Còn slot
+          </span>
+        )}
+        {status === 'F' && (
+          <span className="inline-block border border-red-500 text-red-700 bg-red-50 px-4 py-2 rounded-full text-sm font-semibold">
+            <FontAwesomeIcon icon={faExclamationTriangle} className="mr-1" />
+            Đã đầy
+          </span>
+        )}
+        {status === 'N' && (
+          <span className="inline-block border border-yellow-500 text-yellow-700 bg-yellow-50 px-4 py-2 rounded-full text-sm font-semibold">
+            <FontAwesomeIcon icon={faTimesCircle} className="mr-1" />
+            Ngừng nhận
+          </span>
+        )}
+      </>
     )}
   </div>
 )}
