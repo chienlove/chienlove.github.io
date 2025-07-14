@@ -30,19 +30,20 @@ export default function Detail() {
 
   useEffect(() => {
     if (!slug) return;
+
     const fetchApp = async () => {
       try {
         setLoading(true);
         const { data: appData, error } = await supabase
           .from('apps')
-          .select('*, downloads') // Đã thêm downloads vào select
+          .select('*, downloads')
           .ilike('slug', slug)
           .single();
 
         if (!appData || error) {
           const { data: fallback } = await supabase
             .from('apps')
-            .select('*, downloads') // Đã thêm downloads vào select
+            .select('*, downloads')
             .eq('id', slug)
             .single();
           if (fallback) {
@@ -54,20 +55,16 @@ export default function Detail() {
         }
 
         setApp(appData);
-        
+
         if (appData.category === 'testflight' && appData.testflight_url) {
           setStatusLoading(true);
           const id = appData.testflight_url.split('/').pop();
           fetch(`/api/admin/check-slot?id=${id}`)
             .then((res) => res.json())
             .then((data) => {
-              if (data.success) {
-                setStatus(data.status);
-              }
+              if (data.success) setStatus(data.status);
             })
-            .catch((err) => {
-              console.error('Lỗi khi gọi API TestFlight:', err);
-            })
+            .catch(console.error)
             .finally(() => setStatusLoading(false));
         }
 
@@ -77,7 +74,6 @@ export default function Detail() {
           .eq('category', appData.category)
           .neq('id', appData.id)
           .limit(10);
-
         setRelated(relatedApps || []);
 
         if (appData.icon_url && typeof window !== 'undefined') {
@@ -85,9 +81,13 @@ export default function Detail() {
           try {
             const color = await fac.getColorAsync(appData.icon_url);
             setDominantColor(color.hex);
-          } catch {}
+          } catch (e) {
+            console.error('Lỗi lấy màu:', e);
+          }
           fac.destroy();
         }
+      } catch (error) {
+        console.error('Lỗi fetch app:', error);
       } finally {
         setLoading(false);
       }
@@ -100,18 +100,26 @@ export default function Detail() {
     text?.length > limit ? text.slice(0, limit) + '...' : text;
 
   const handleDownload = async () => {
+    if (!app?.id) return;
+
     try {
-      const response = await fetch(`/api/admin/add-download?id=${app.id}`);
+      const response = await fetch(`/api/admin/add-download?id=${app.id}`, {
+        cache: 'no-store',
+      });
       const data = await response.json();
-      
+
       if (data.success) {
         setApp(prev => ({
           ...prev,
-          downloads: data.downloads
+          downloads: data.downloads,
         }));
       }
+
+      if (app.download_link) {
+        window.open(app.download_link, '_blank');
+      }
     } catch (err) {
-      console.error('Lỗi khi tăng lượt tải:', err);
+      console.error('Lỗi tăng lượt tải:', err);
     }
   };
 
@@ -171,46 +179,38 @@ export default function Detail() {
                   />
                 </div>
                 <h1 className="mt-4 text-2xl font-bold text-gray-900 drop-shadow">{app.name}</h1>
-                {app.author && (
-                  <p className="text-gray-700 text-sm">{app.author}</p>
-                )}
+                {app.author && <p className="text-gray-700 text-sm">{app.author}</p>}
                 <div className="mt-4 space-x-2">
                   {app.category === 'testflight' && app.testflight_url && (
                     <div className="flex flex-wrap justify-center gap-2">
                       <a
                         href={app.testflight_url}
                         className="inline-block border border-blue-500 text-blue-700 hover:bg-blue-100 transition px-4 py-2 rounded-full text-sm font-semibold"
-                        target="_blank" rel="noopener noreferrer"
+                        target="_blank"
+                        rel="noopener noreferrer"
                       >
                         <FontAwesomeIcon icon={faRocket} className="mr-2" />
                         Tham gia TestFlight
                       </a>
-
                       {statusLoading || status === null ? (
                         <span className="inline-block border border-gray-300 text-gray-500 bg-gray-50 px-4 py-2 rounded-full text-sm font-semibold">
                           Loading...
                         </span>
+                      ) : status === 'Y' ? (
+                        <span className="inline-block border border-green-500 text-green-700 bg-green-50 px-4 py-2 rounded-full text-sm font-semibold">
+                          <FontAwesomeIcon icon={faCheckCircle} className="mr-1" />
+                          Còn slot
+                        </span>
+                      ) : status === 'F' ? (
+                        <span className="inline-block border border-red-500 text-red-700 bg-red-50 px-4 py-2 rounded-full text-sm font-semibold">
+                          <FontAwesomeIcon icon={faExclamationTriangle} className="mr-1" />
+                          Đã đầy
+                        </span>
                       ) : (
-                        <>
-                          {status === 'Y' && (
-                            <span className="inline-block border border-green-500 text-green-700 bg-green-50 px-4 py-2 rounded-full text-sm font-semibold">
-                              <FontAwesomeIcon icon={faCheckCircle} className="mr-1" />
-                              Còn slot
-                            </span>
-                          )}
-                          {status === 'F' && (
-                            <span className="inline-block border border-red-500 text-red-700 bg-red-50 px-4 py-2 rounded-full text-sm font-semibold">
-                              <FontAwesomeIcon icon={faExclamationTriangle} className="mr-1" />
-                              Đã đầy
-                            </span>
-                          )}
-                          {status === 'N' && (
-                            <span className="inline-block border border-yellow-500 text-yellow-700 bg-yellow-50 px-4 py-2 rounded-full text-sm font-semibold">
-                              <FontAwesomeIcon icon={faTimesCircle} className="mr-1" />
-                              Ngừng nhận
-                            </span>
-                          )}
-                        </>
+                        <span className="inline-block border border-yellow-500 text-yellow-700 bg-yellow-50 px-4 py-2 rounded-full text-sm font-semibold">
+                          <FontAwesomeIcon icon={faTimesCircle} className="mr-1" />
+                          Ngừng nhận
+                        </span>
                       )}
                     </div>
                   )}
@@ -219,7 +219,8 @@ export default function Detail() {
                       href={app.download_link}
                       onClick={handleDownload}
                       className="inline-block border border-green-500 text-green-700 hover:bg-green-100 transition px-4 py-2 rounded-full text-sm font-semibold"
-                      target="_blank" rel="noopener noreferrer"
+                      target="_blank"
+                      rel="noopener noreferrer"
                     >
                       <FontAwesomeIcon icon={faDownload} className="mr-2" />
                       Cài đặt ứng dụng
@@ -231,36 +232,30 @@ export default function Detail() {
           </div>
         </div>
 
-        {/* Thông tin ứng dụng */}
         <div className="max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 mt-6 space-y-6">
-          <div className="bg-white rounded-xl p-4 shadow flex justify-around text-center divide-x divide-gray-300 overflow-x-auto">
-            {/* Tác giả */}
-            <div className="flex-1 px-2">
+          <div className="bg-white rounded-xl p-4 shadow flex overflow-x-auto scrollbar-hide">
+            <div className="flex-1 min-w-[120px] px-2 text-center">
               <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Tác giả</p>
               <FontAwesomeIcon icon={faUser} className="text-2xl text-gray-600 mb-1" />
               <p className="text-sm text-gray-800">{app.author || 'Không rõ'}</p>
             </div>
-            {/* Phiên bản */}
-            <div className="flex-1 px-2">
+            <div className="flex-1 min-w-[120px] px-2 text-center">
               <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Phiên bản</p>
               <FontAwesomeIcon icon={faCodeBranch} className="text-2xl text-gray-600 mb-1" />
               <p className="text-sm text-gray-800">{app.version || 'Không rõ'}</p>
             </div>
-            {/* Dung lượng */}
-            <div className="flex-1 px-2">
+            <div className="flex-1 min-w-[120px] px-2 text-center">
               <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Dung lượng</p>
               <FontAwesomeIcon icon={faDatabase} className="text-2xl text-gray-600 mb-1" />
               <p className="text-sm text-gray-800">{app.size ? `${app.size} MB` : 'Không rõ'}</p>
             </div>
-            {/* Lượt tải */}
-            <div className="flex-1 px-2">
+            <div className="flex-1 min-w-[120px] px-2 text-center">
               <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Lượt tải</p>
               <FontAwesomeIcon icon={faDownload} className="text-2xl text-gray-600 mb-1" />
               <p className="text-sm text-gray-800">{app.downloads ?? 0}</p>
             </div>
           </div>
 
-          {/* Mô tả */}
           <div className="bg-white rounded-xl p-4 shadow">
             <h2 className="text-lg font-bold text-gray-800 mb-2">Mô tả</h2>
             <p className="text-gray-700 whitespace-pre-line">
@@ -276,7 +271,6 @@ export default function Detail() {
             )}
           </div>
 
-          {/* Ảnh màn hình */}
           {Array.isArray(app.screenshots) && app.screenshots.length > 0 && (
             <div className="bg-white rounded-xl p-4 shadow">
               <h2 className="text-lg font-bold text-gray-800 mb-3">Ảnh màn hình</h2>
@@ -290,7 +284,6 @@ export default function Detail() {
             </div>
           )}
 
-          {/* Ứng dụng cùng chuyên mục */}
           {related.length > 0 && (
             <div className="bg-white rounded-xl p-4 shadow">
               <h2 className="text-lg font-bold text-gray-800 mb-4">Ứng dụng cùng chuyên mục</h2>
