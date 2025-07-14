@@ -35,14 +35,14 @@ export default function Detail() {
         setLoading(true);
         const { data: appData, error } = await supabase
           .from('apps')
-          .select('*')
+          .select('*, downloads') // Đã thêm downloads vào select
           .ilike('slug', slug)
           .single();
 
         if (!appData || error) {
           const { data: fallback } = await supabase
             .from('apps')
-            .select('*')
+            .select('*, downloads') // Đã thêm downloads vào select
             .eq('id', slug)
             .single();
           if (fallback) {
@@ -54,7 +54,8 @@ export default function Detail() {
         }
 
         setApp(appData);
-                if (appData.category === 'testflight' && appData.testflight_url) {
+        
+        if (appData.category === 'testflight' && appData.testflight_url) {
           setStatusLoading(true);
           const id = appData.testflight_url.split('/').pop();
           fetch(`/api/admin/check-slot?id=${id}`)
@@ -100,12 +101,21 @@ export default function Detail() {
 
   const handleDownload = async () => {
     try {
-      await fetch(`/api/admin/add-download?id=${app.id}`);
+      const response = await fetch(`/api/admin/add-download?id=${app.id}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setApp(prev => ({
+          ...prev,
+          downloads: data.downloads
+        }));
+      }
     } catch (err) {
       console.error('Lỗi khi tăng lượt tải:', err);
     }
   };
-    if (loading) {
+
+  if (loading) {
     return (
       <Layout fullWidth>
         <div className="min-h-screen flex items-center justify-center">Đang tải...</div>
@@ -165,7 +175,7 @@ export default function Detail() {
                   <p className="text-gray-700 text-sm">{app.author}</p>
                 )}
                 <div className="mt-4 space-x-2">
-                                  {app.category === 'testflight' && app.testflight_url && (
+                  {app.category === 'testflight' && app.testflight_url && (
                     <div className="flex flex-wrap justify-center gap-2">
                       <a
                         href={app.testflight_url}
