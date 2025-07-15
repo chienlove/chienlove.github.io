@@ -251,42 +251,42 @@ export default function Detail() {
         </div>
 
         <div className="max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 mt-6 space-y-6">
-          <div className="bg-white rounded-xl p-4 shadow flex justify-around text-center divide-x divide-gray-300 overflow-x-auto">
-            {/* Tác giả */}
-            <div className="flex-1 px-2">
-              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Tác giả</p>
-              <FontAwesomeIcon icon={faUser} className="text-2xl text-gray-600 mb-1" />
-              <p className="text-sm text-gray-800">{app.author || 'Không rõ'}</p>
-            </div>
-            
-            {/* Phiên bản */}
-            <div className="flex-1 px-2">
-              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Phiên bản</p>
-              <FontAwesomeIcon icon={faCodeBranch} className="text-2xl text-gray-600 mb-1" />
-              <p className="text-sm text-gray-800">{app.version || 'Không rõ'}</p>
-            </div>
-            
-            {/* Dung lượng */}
-            <div className="flex-1 px-2">
-              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Dung lượng</p>
-              <FontAwesomeIcon icon={faDatabase} className="text-2xl text-gray-600 mb-1" />
-              <p className="text-sm text-gray-800">{app.size ? `${app.size} MB` : 'Không rõ'}</p>
-            </div>
-            
-            {/* Thống kê */}
-            <div className="flex-1 px-2">
-              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">
-                {app.category === 'testflight' ? 'Lượt xem' : 'Lượt tải'}
-              </p>
-              <FontAwesomeIcon 
-                icon={app.category === 'testflight' ? faEye : faDownload} 
-                className="text-2xl text-gray-600 mb-1" 
-              />
-              <p className="text-sm text-gray-800">
-                {app.category === 'testflight' ? (app.views ?? 0) : (app.downloads ?? 0)}
-              </p>
-            </div>
-          </div>
+          <div className="bg-white rounded-xl p-4 shadow flex justify-between text-center overflow-x-auto">
+  {/* Cột 1 - Sát lề trái */}
+  <div className="px-1 sm:px-2">
+    <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Tác giả</p>
+    <FontAwesomeIcon icon={faUser} className="text-xl text-gray-600 mb-1" /> {/* Giảm size icon */}
+    <p className="text-sm text-gray-800">{app.author || 'Không rõ'}</p>
+  </div>
+  
+  {/* Cột 2 - Giữ nguyên */}
+  <div className="px-2">
+    <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Phiên bản</p>
+    <FontAwesomeIcon icon={faCodeBranch} className="text-xl text-gray-600 mb-1" /> {/* Giảm size icon */}
+    <p className="text-sm text-gray-800">{app.version || 'Không rõ'}</p>
+  </div>
+  
+  {/* Cột 3 - Giữ nguyên */}
+  <div className="px-2">
+    <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Dung lượng</p>
+    <FontAwesomeIcon icon={faDatabase} className="text-xl text-gray-600 mb-1" /> {/* Giảm size icon */}
+    <p className="text-sm text-gray-800">{app.size ? `${app.size} MB` : 'Không rõ'}</p>
+  </div>
+  
+  {/* Cột 4 - Sát lề phải */}
+  <div className="px-1 sm:px-2">
+    <p className="text-xs font-semibold text-gray-500 uppercase mb-1">
+      {app.category === 'testflight' ? 'Lượt xem' : 'Lượt tải'}
+    </p>
+    <FontAwesomeIcon 
+      icon={app.category === 'testflight' ? faEye : faDownload} 
+      className="text-xl text-gray-600 mb-1" {/* Giảm size icon */}
+    />
+    <p className="text-sm text-gray-800">
+      {app.category === 'testflight' ? (app.views ?? 0) : (app.downloads ?? 0)}
+    </p>
+  </div>
+</div>
 
           <div className="bg-white rounded-xl p-4 shadow">
             <h2 className="text-lg font-bold text-gray-800 mb-2">Mô tả</h2>
