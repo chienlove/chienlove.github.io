@@ -276,8 +276,7 @@ export default function Detail() {
     </p>
     <FontAwesomeIcon 
       icon={app.category === 'testflight' ? faEye : faDownload} 
-      className="text-xl text-gray-600 mb-1" {/* Giảm size icon */}
-    />
+      className="text-xl text-gray-600 mb-1" />
     <p className="text-sm text-gray-800">
       {app.category === 'testflight' ? (app.views ?? 0) : (app.downloads ?? 0)}
     </p>
