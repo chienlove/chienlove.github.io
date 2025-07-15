@@ -115,6 +115,8 @@ export default function Detail() {
     text?.length > limit ? text.slice(0, limit) + '...' : text;
 
   const handleDownload = async (e) => {
+  e.preventDefault(); // Ngăn chặn hành vi mặc định của thẻ <a>
+  
   if (!app?.id) return;
   if (app.category === 'testflight') return;
 
@@ -239,17 +241,14 @@ export default function Detail() {
                     </div>
                   )}
                   {app.category === 'jailbreak' && app.download_link && (
-                    <a
-                      href={app.download_link}
-                      onClick={handleDownload}
-                      className="inline-block border border-green-500 text-green-700 hover:bg-green-100 transition px-4 py-2 rounded-full text-sm font-semibold"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <FontAwesomeIcon icon={faDownload} className="mr-2" />
-                      Cài đặt ứng dụng
-                    </a>
-                  )}
+  <button
+    onClick={handleDownload}
+    className="inline-block border border-green-500 text-green-700 hover:bg-green-100 transition px-4 py-2 rounded-full text-sm font-semibold"
+  >
+    <FontAwesomeIcon icon={faDownload} className="mr-2" />
+    Cài đặt ứng dụng
+  </button>
+)}
                 </div>
               </div>
             </div>
