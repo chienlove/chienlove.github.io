@@ -10,13 +10,15 @@ export default function RedirectPage() {
   const [redirecting, setRedirecting] = useState(false);
   const [decodedUrl, setDecodedUrl] = useState('');
 
+  // Tính strokeDashoffset dựa trên countdown
+  const strokeDashoffset = 283 * (countdown / 15);
+
   useEffect(() => {
     if (!url) {
       router.push('/');
       return;
     }
 
-    // Giải mã URL ngay khi component mount
     try {
       setDecodedUrl(decodeURIComponent(url));
     } catch (e) {
@@ -36,8 +38,9 @@ export default function RedirectPage() {
         }
         return newCount;
       });
-
-      setProgress((prev) => (countdown - 1) * (100 / 15));
+      
+      // Cập nhật progress dựa trên countdown mới
+      setProgress((countdown - 1) * (100 / 15));
     }, 1000);
 
     return () => clearInterval(timer);
@@ -73,7 +76,7 @@ export default function RedirectPage() {
                 strokeWidth="8"
                 strokeLinecap="round"
                 strokeDasharray="283"
-                strokeDashoffset={283 - (283 * progress) / 100}
+                strokeDashoffset={strokeDashoffset}
                 transform="rotate(-90 50 50)"
                 className="transition-all duration-1000 ease-linear"
               />
