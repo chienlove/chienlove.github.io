@@ -251,32 +251,33 @@ export default function Detail() {
         </div>
 
         <div className="max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 mt-6 space-y-6">
-          <div className="bg-white rounded-xl p-4 shadow flex justify-between text-center overflow-x-auto">
-  <div className="px-1 sm:px-2">
+          <div className="bg-white rounded-xl p-4 shadow flex justify-between text-center overflow-x-auto divide-x divide-gray-200">
+  <div className="px-1.5 sm:px-2.5 w-full">
     <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Tác giả</p>
     <FontAwesomeIcon icon={faUser} className="text-xl text-gray-600 mb-1" />
     <p className="text-sm text-gray-800">{app.author || 'Không rõ'}</p>
   </div>
   
-  <div className="px-2">
+  <div className="px-2 w-full">
     <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Phiên bản</p>
     <FontAwesomeIcon icon={faCodeBranch} className="text-xl text-gray-600 mb-1" />
     <p className="text-sm text-gray-800">{app.version || 'Không rõ'}</p>
   </div>
   
-  <div className="px-2">
+  <div className="px-2 w-full">
     <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Dung lượng</p>
     <FontAwesomeIcon icon={faDatabase} className="text-xl text-gray-600 mb-1" />
     <p className="text-sm text-gray-800">{app.size ? `${app.size} MB` : 'Không rõ'}</p>
   </div>
   
-  <div className="px-1 sm:px-2">
+  <div className="px-1.5 sm:px-2.5 w-full">
     <p className="text-xs font-semibold text-gray-500 uppercase mb-1">
       {app.category === 'testflight' ? 'Lượt xem' : 'Lượt tải'}
     </p>
     <FontAwesomeIcon 
       icon={app.category === 'testflight' ? faEye : faDownload} 
-      className="text-xl text-gray-600 mb-1" />
+      className="text-xl text-gray-600 mb-1" 
+    />
     <p className="text-sm text-gray-800">
       {app.category === 'testflight' ? (app.views ?? 0) : (app.downloads ?? 0)}
     </p>
