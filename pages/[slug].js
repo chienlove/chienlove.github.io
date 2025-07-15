@@ -115,31 +115,37 @@ export default function Detail() {
     text?.length > limit ? text.slice(0, limit) + '...' : text;
 
   const handleDownload = async (e) => {
-    if (!app?.id) return;
-    if (app.category === 'testflight') return; // Không xử lý download cho TestFlight
+  if (!app?.id) return;
+  if (app.category === 'testflight') return;
 
-    try {
-      const response = await fetch(`/api/admin/add-download?id=${app.id}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        cache: 'no-store',
-      });
-      const data = await response.json();
+  try {
+    const response = await fetch(`/api/admin/add-download?id=${app.id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+    });
+    const data = await response.json();
 
-      if (data.success) {
-        setApp(prev => ({
-          ...prev,
-          downloads: data.downloads,
-        }));
-      }
-
-      if (app.download_link) {
-        window.open(app.download_link, '_blank');
-      }
-    } catch (err) {
-      console.error('Lỗi tăng lượt tải:', err);
+    if (data.success) {
+      setApp(prev => ({
+        ...prev,
+        downloads: data.downloads,
+      }));
     }
-  };
+
+    if (app.download_link) {
+      router.push({
+        pathname: '/redirect',
+        query: {
+          url: encodeURIComponent(app.download_link),
+          name: encodeURIComponent(app.name)
+        }
+      });
+    }
+  } catch (err) {
+    console.error('Lỗi tăng lượt tải:', err);
+  }
+};
 
   if (loading) {
     return (
