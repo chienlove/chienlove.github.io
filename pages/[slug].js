@@ -252,35 +252,45 @@ export default function Detail() {
 
         <div className="max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 mt-6 space-y-6">
           <div className="bg-white rounded-xl p-4 shadow flex justify-between text-center overflow-x-auto divide-x divide-gray-200">
+  {/* Cột 1 - Tác giả */}
   <div className="px-0.5 sm:px-1.5">
     <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Tác giả</p>
     <FontAwesomeIcon icon={faUser} className="text-xl text-gray-600 mb-1" />
     <p className="text-sm text-gray-800">{app.author || 'Không rõ'}</p>
   </div>
   
+  {/* Cột 2 - Phiên bản */}
   <div className="px-1 sm:px-2">
     <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Phiên bản</p>
     <FontAwesomeIcon icon={faCodeBranch} className="text-xl text-gray-600 mb-1" />
     <p className="text-sm text-gray-800">{app.version || 'Không rõ'}</p>
   </div>
   
+  {/* Cột 3 - Dung lượng */}
   <div className="px-1 sm:px-2">
     <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Dung lượng</p>
     <FontAwesomeIcon icon={faDatabase} className="text-xl text-gray-600 mb-1" />
     <p className="text-sm text-gray-800">{app.size ? `${app.size} MB` : 'Không rõ'}</p>
   </div>
   
+  {/* Cột 4 - Lượt xem/tải */}
   <div className="px-0.5 sm:px-1.5">
     <p className="text-xs font-semibold text-gray-500 uppercase mb-1">
-      {app.category === 'testflight' ? 'Lượt xem' : 'Lượt tải'}
+      {app.category === 'testflight' ? 'LƯỢT XEM' : 'Lượt tải'}
     </p>
-    <FontAwesomeIcon 
-      icon={app.category === 'testflight' ? faEye : faDownload} 
-      className="text-xl text-gray-600 mb-1" 
-    />
-    <p className="text-sm text-gray-800">
-      {app.category === 'testflight' ? (app.views ?? 0) : (app.downloads ?? 0)}
-    </p>
+    {app.category === 'testflight' ? (
+      <div className="flex flex-col items-center">
+        <span className="text-xl font-medium text-gray-600 mb-1">
+          {app.views ?? 0}
+        </span>
+        <span className="text-xs text-gray-500">Lượt</span>
+      </div>
+    ) : (
+      <>
+        <FontAwesomeIcon icon={faDownload} className="text-xl text-gray-600 mb-1" />
+        <p className="text-sm text-gray-800">{app.downloads ?? 0}</p>
+      </>
+    )}
   </div>
 </div>
 
