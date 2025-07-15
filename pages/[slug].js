@@ -15,6 +15,7 @@ import {
   faCheckCircle,
   faTimesCircle,
   faExclamationTriangle,
+  faEye
 } from '@fortawesome/free-solid-svg-icons';
 
 export default function Detail() {
@@ -28,6 +29,20 @@ export default function Detail() {
   const [status, setStatus] = useState(null);
   const [statusLoading, setStatusLoading] = useState(false);
 
+  // Tăng lượt xem khi vào trang
+  useEffect(() => {
+    if (!app?.id) return;
+
+    // Chỉ tăng view cho TestFlight
+    if (app.category === 'testflight') {
+      fetch('/api/admin/add-view', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: app.id })
+      }).catch(console.error);
+    }
+  }, [app?.id]);
+
   useEffect(() => {
     if (!slug) return;
 
@@ -36,14 +51,14 @@ export default function Detail() {
         setLoading(true);
         const { data: appData, error } = await supabase
           .from('apps')
-          .select('*, downloads')
+          .select('*, downloads, views')
           .ilike('slug', slug)
           .single();
 
         if (!appData || error) {
           const { data: fallback } = await supabase
             .from('apps')
-            .select('*, downloads')
+            .select('*, downloads, views')
             .eq('id', slug)
             .single();
           if (fallback) {
@@ -99,11 +114,14 @@ export default function Detail() {
   const truncate = (text, limit) =>
     text?.length > limit ? text.slice(0, limit) + '...' : text;
 
-  const handleDownload = async () => {
+  const handleDownload = async (e) => {
     if (!app?.id) return;
+    if (app.category === 'testflight') return; // Không xử lý download cho TestFlight
 
     try {
       const response = await fetch(`/api/admin/add-download?id=${app.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         cache: 'no-store',
       });
       const data = await response.json();
@@ -232,37 +250,43 @@ export default function Detail() {
           </div>
         </div>
 
-        {/* Thông tin ứng dụng */}
-<div className="max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 mt-6 space-y-6">
-  <div className="bg-white rounded-xl p-4 shadow flex justify-around text-center divide-x divide-gray-300 overflow-x-auto">
-    {/* Tác giả */}
-    <div className="flex-1 px-2">
-      <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Tác giả</p>
-      <FontAwesomeIcon icon={faUser} className="text-2xl text-gray-600 mb-1" />
-      <p className="text-sm text-gray-800">{app.author || 'Không rõ'}</p>
-    </div>
-    
-    {/* Phiên bản */}
-    <div className="flex-1 px-2">
-      <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Phiên bản</p>
-      <FontAwesomeIcon icon={faCodeBranch} className="text-2xl text-gray-600 mb-1" />
-      <p className="text-sm text-gray-800">{app.version || 'Không rõ'}</p>
-    </div>
-    
-    {/* Dung lượng */}
-    <div className="flex-1 px-2">
-      <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Dung lượng</p>
-      <FontAwesomeIcon icon={faDatabase} className="text-2xl text-gray-600 mb-1" />
-      <p className="text-sm text-gray-800">{app.size ? `${app.size} MB` : 'Không rõ'}</p>
-    </div>
-    
-    {/* Lượt tải */}
-    <div className="flex-1 px-2">
-      <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Lượt tải</p>
-      <FontAwesomeIcon icon={faDownload} className="text-2xl text-gray-600 mb-1" />
-      <p className="text-sm text-gray-800">{app.downloads ?? 0}</p>
-    </div>
-  </div>
+        <div className="max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 mt-6 space-y-6">
+          <div className="bg-white rounded-xl p-4 shadow flex justify-around text-center divide-x divide-gray-300 overflow-x-auto">
+            {/* Tác giả */}
+            <div className="flex-1 px-2">
+              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Tác giả</p>
+              <FontAwesomeIcon icon={faUser} className="text-2xl text-gray-600 mb-1" />
+              <p className="text-sm text-gray-800">{app.author || 'Không rõ'}</p>
+            </div>
+            
+            {/* Phiên bản */}
+            <div className="flex-1 px-2">
+              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Phiên bản</p>
+              <FontAwesomeIcon icon={faCodeBranch} className="text-2xl text-gray-600 mb-1" />
+              <p className="text-sm text-gray-800">{app.version || 'Không rõ'}</p>
+            </div>
+            
+            {/* Dung lượng */}
+            <div className="flex-1 px-2">
+              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Dung lượng</p>
+              <FontAwesomeIcon icon={faDatabase} className="text-2xl text-gray-600 mb-1" />
+              <p className="text-sm text-gray-800">{app.size ? `${app.size} MB` : 'Không rõ'}</p>
+            </div>
+            
+            {/* Thống kê */}
+            <div className="flex-1 px-2">
+              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">
+                {app.category === 'testflight' ? 'Lượt xem' : 'Lượt tải'}
+              </p>
+              <FontAwesomeIcon 
+                icon={app.category === 'testflight' ? faEye : faDownload} 
+                className="text-2xl text-gray-600 mb-1" 
+              />
+              <p className="text-sm text-gray-800">
+                {app.category === 'testflight' ? (app.views ?? 0) : (app.downloads ?? 0)}
+              </p>
+            </div>
+          </div>
 
           <div className="bg-white rounded-xl p-4 shadow">
             <h2 className="text-lg font-bold text-gray-800 mb-2">Mô tả</h2>
