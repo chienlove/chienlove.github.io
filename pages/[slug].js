@@ -232,29 +232,37 @@ export default function Detail() {
           </div>
         </div>
 
-        <div className="max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 mt-6 space-y-6">
-          <div className="bg-white rounded-xl p-4 shadow flex overflow-x-auto scrollbar-hide">
-            <div className="flex-1 min-w-[120px] px-2 text-center">
-              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Tác giả</p>
-              <FontAwesomeIcon icon={faUser} className="text-2xl text-gray-600 mb-1" />
-              <p className="text-sm text-gray-800">{app.author || 'Không rõ'}</p>
-            </div>
-            <div className="flex-1 min-w-[120px] px-2 text-center">
-              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Phiên bản</p>
-              <FontAwesomeIcon icon={faCodeBranch} className="text-2xl text-gray-600 mb-1" />
-              <p className="text-sm text-gray-800">{app.version || 'Không rõ'}</p>
-            </div>
-            <div className="flex-1 min-w-[120px] px-2 text-center">
-              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Dung lượng</p>
-              <FontAwesomeIcon icon={faDatabase} className="text-2xl text-gray-600 mb-1" />
-              <p className="text-sm text-gray-800">{app.size ? `${app.size} MB` : 'Không rõ'}</p>
-            </div>
-            <div className="flex-1 min-w-[120px] px-2 text-center">
-              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Lượt tải</p>
-              <FontAwesomeIcon icon={faDownload} className="text-2xl text-gray-600 mb-1" />
-              <p className="text-sm text-gray-800">{app.downloads ?? 0}</p>
-            </div>
-          </div>
+        {/* Thông tin ứng dụng */}
+<div className="max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 mt-6 space-y-6">
+  <div className="bg-white rounded-xl p-4 shadow flex justify-around text-center divide-x divide-gray-300 overflow-x-auto">
+    {/* Tác giả */}
+    <div className="flex-1 px-2">
+      <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Tác giả</p>
+      <FontAwesomeIcon icon={faUser} className="text-2xl text-gray-600 mb-1" />
+      <p className="text-sm text-gray-800">{app.author || 'Không rõ'}</p>
+    </div>
+    
+    {/* Phiên bản */}
+    <div className="flex-1 px-2">
+      <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Phiên bản</p>
+      <FontAwesomeIcon icon={faCodeBranch} className="text-2xl text-gray-600 mb-1" />
+      <p className="text-sm text-gray-800">{app.version || 'Không rõ'}</p>
+    </div>
+    
+    {/* Dung lượng */}
+    <div className="flex-1 px-2">
+      <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Dung lượng</p>
+      <FontAwesomeIcon icon={faDatabase} className="text-2xl text-gray-600 mb-1" />
+      <p className="text-sm text-gray-800">{app.size ? `${app.size} MB` : 'Không rõ'}</p>
+    </div>
+    
+    {/* Lượt tải */}
+    <div className="flex-1 px-2">
+      <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Lượt tải</p>
+      <FontAwesomeIcon icon={faDownload} className="text-2xl text-gray-600 mb-1" />
+      <p className="text-sm text-gray-800">{app.downloads ?? 0}</p>
+    </div>
+  </div>
 
           <div className="bg-white rounded-xl p-4 shadow">
             <h2 className="text-lg font-bold text-gray-800 mb-2">Mô tả</h2>
