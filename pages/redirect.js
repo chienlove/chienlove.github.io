@@ -7,9 +7,20 @@ export default function RedirectPage() {
   const { url, name } = router.query;
   const [countdown, setCountdown] = useState(15);
   const [progress, setProgress] = useState(100);
+  const [redirecting, setRedirecting] = useState(false);
+  const [decodedUrl, setDecodedUrl] = useState('');
 
   useEffect(() => {
     if (!url) {
+      router.push('/');
+      return;
+    }
+
+    // Giải mã URL ngay khi component mount
+    try {
+      setDecodedUrl(decodeURIComponent(url));
+    } catch (e) {
+      console.error('Lỗi giải mã URL:', e);
       router.push('/');
       return;
     }
@@ -19,17 +30,18 @@ export default function RedirectPage() {
         const newCount = prev - 1;
         if (newCount <= 0) {
           clearInterval(timer);
-          window.location.href = url;
+          setRedirecting(true);
+          window.location.href = decodedUrl;
           return 0;
         }
         return newCount;
       });
 
-      setProgress((countdown - 1) * (100 / 15));
+      setProgress((prev) => (countdown - 1) * (100 / 15));
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [url]);
+  }, [url, decodedUrl]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-gray-100 flex items-center justify-center p-4">
@@ -72,19 +84,21 @@ export default function RedirectPage() {
           </div>
 
           <h1 className="text-2xl font-bold text-gray-800 mb-2">
-            Đang chuyển hướng...
+            {redirecting ? 'Đang chuyển hướng...' : 'Đang chuẩn bị tải xuống'}
           </h1>
           <p className="text-gray-600 mb-6">
-            Ứng dụng <span className="font-semibold">{name || 'này'}</span> sẽ được tải xuống tự động sau {countdown} giây
+            Ứng dụng <span className="font-semibold">{name ? decodeURIComponent(name) : 'này'}</span> sẽ được tải xuống {redirecting ? 'ngay bây giờ' : `sau ${countdown} giây`}
           </p>
 
           <div className="space-y-3">
-            <a
-              href={url}
-              className="block w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200"
-            >
-              Tải xuống ngay
-            </a>
+            {redirecting && (
+              <a
+                href={decodedUrl}
+                className="block w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200"
+              >
+                Tải xuống ngay
+              </a>
+            )}
             <button
               onClick={() => router.push('/')}
               className="block w-full text-gray-600 hover:text-gray-800 font-medium py-2 px-4 rounded-lg transition duration-200"
