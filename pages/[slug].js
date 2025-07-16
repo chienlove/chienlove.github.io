@@ -159,7 +159,7 @@ export default function Detail({ serverApp, serverRelated }) {
             </button>
           </div>
         </div>
-      </Layout
+      </Layout>
     );
   }
 
