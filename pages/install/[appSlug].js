@@ -3,6 +3,8 @@ import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Layout from '../../components/Layout';
 import { supabase } from '../../lib/supabase';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faDownload, faHome } from '@fortawesome/free-solid-svg-icons';
 
 export async function getServerSideProps(context) {
   const { appSlug } = context.params;
@@ -52,7 +54,7 @@ export default function InstallPage({ app }) {
                 strokeDashoffset={strokeDashoffset}
                 strokeLinecap="round"
                 transform="rotate(-90 50 50)"
-                className="transition-all duration-1000 ease-linear"
+                className={countdown > 0 ? 'transition-all duration-1000 ease-linear' : ''}
               />
             </svg>
             <span className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-3xl font-bold text-gray-800">
@@ -74,16 +76,18 @@ export default function InstallPage({ app }) {
             {countdown === 0 && (
               <button
                 onClick={() => window.location.href = app.download_link}
-                className="bg-gradient-to-r from-green-400 to-blue-500 hover:from-green-500 hover:to-blue-600 text-white font-bold py-3 px-6 rounded-lg transition-all hover:scale-105 active:scale-95 shadow-md"
+                className="bg-gradient-to-r from-green-400 to-blue-500 hover:from-green-500 hover:to-blue-600 text-white font-bold py-3 px-6 rounded-lg transition-all hover:scale-105 active:scale-95 shadow-md flex items-center justify-center gap-2"
               >
-                🚀 <span className="ml-1">Tải xuống ngay</span>
+                <FontAwesomeIcon icon={faDownload} />
+                <span>Tải xuống ngay</span>
               </button>
             )}
             <button
               onClick={() => router.push('/')}
-              className="border border-gray-300 bg-white text-gray-700 font-medium py-2 px-4 rounded-lg hover:bg-gray-100 transition-all"
+              className="border border-gray-300 bg-white text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-100 transition-all flex justify-center items-center gap-2"
             >
-              Quay lại trang chủ
+              <FontAwesomeIcon icon={faHome} />
+              <span>Quay lại trang chủ</span>
             </button>
           </div>
         </div>
