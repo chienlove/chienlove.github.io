@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabase';
 import Layout from '../components/Layout';
-import { useRouter } from 'next/router';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { useEffect, useState } from 'react';
 import { FastAverageColor } from 'fast-average-color';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -14,170 +14,119 @@ import {
   faUser,
   faCheckCircle,
   faTimesCircle,
-  faExclamationTriangle,
-  faEye
+  faExclamationTriangle
 } from '@fortawesome/free-solid-svg-icons';
 
-export default function Detail() {
-  const router = useRouter();
-  const [slug, setSlug] = useState('');
-useEffect(() => {
-  if (router.isReady && router.query.slug) {
-    setSlug(router.query.slug.toLowerCase());
+export async function getServerSideProps(context) {
+  const slug = context.params.slug?.toLowerCase();
+
+  const { data: appData, error } = await supabase
+    .from('apps')
+    .select('*, downloads, views')
+    .ilike('slug', slug)
+    .single();
+
+  if (!appData || error) {
+    const { data: fallback } = await supabase
+      .from('apps')
+      .select('*, downloads, views')
+      .eq('id', slug)
+      .single();
+    if (fallback) {
+      return {
+        redirect: {
+          destination: `/${fallback.slug}`,
+          permanent: false,
+        },
+      };
+    }
+    return { notFound: true };
   }
-}, [router.isReady, router.query.slug]);
-  const [app, setApp] = useState(null);
-  const [related, setRelated] = useState([]);
-  const [loading, setLoading] = useState(true);
+
+  const { data: relatedApps } = await supabase
+    .from('apps')
+    .select('id, name, slug, icon_url, author, version')
+    .eq('category', appData.category)
+    .neq('id', appData.id)
+    .limit(10);
+
+  return {
+    props: {
+      appData,
+      relatedApps: relatedApps || [],
+    },
+  };
+}
+
+export default function Detail({ appData, relatedApps }) {
+  const router = useRouter();
   const [dominantColor, setDominantColor] = useState('#f0f2f5');
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [status, setStatus] = useState(null);
   const [statusLoading, setStatusLoading] = useState(false);
+  const [app, setApp] = useState(appData);
 
-  // Tăng lượt xem khi vào trang
   useEffect(() => {
-    if (!app?.id) return;
-
-    // Chỉ tăng view cho TestFlight
     if (app.category === 'testflight') {
       fetch('/api/admin/add-view', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: app.id })
+        body: JSON.stringify({ id: app.id }),
       }).catch(console.error);
     }
-  }, [app?.id]);
 
-  useEffect(() => {
-    if (!slug) return;
+    if (app.category === 'testflight' && app.testflight_url) {
+      setStatusLoading(true);
+      const id = app.testflight_url.split('/').pop();
+      fetch(`/api/admin/check-slot?id=${id}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) setStatus(data.status);
+        })
+        .catch(console.error)
+        .finally(() => setStatusLoading(false));
+    }
 
-    const fetchApp = async () => {
-      try {
-        setLoading(true);
-        const { data: appData, error } = await supabase
-          .from('apps')
-          .select('*, downloads, views')
-          .ilike('slug', slug)
-          .single();
-
-        if (!appData || error) {
-          const { data: fallback } = await supabase
-            .from('apps')
-            .select('*, downloads, views')
-            .eq('id', slug)
-            .single();
-          if (fallback) {
-            router.replace(`/${fallback.slug}`);
-            return;
-          }
-          router.replace('/404');
-          return;
-        }
-
-        setApp(appData);
-
-        if (appData.category === 'testflight' && appData.testflight_url) {
-          setStatusLoading(true);
-          const id = appData.testflight_url.split('/').pop();
-          fetch(`/api/admin/check-slot?id=${id}`)
-            .then((res) => res.json())
-            .then((data) => {
-              if (data.success) setStatus(data.status);
-            })
-            .catch(console.error)
-            .finally(() => setStatusLoading(false));
-        }
-
-        const { data: relatedApps } = await supabase
-          .from('apps')
-          .select('id, name, slug, icon_url, author, version')
-          .eq('category', appData.category)
-          .neq('id', appData.id)
-          .limit(10);
-        setRelated(relatedApps || []);
-
-        if (appData.icon_url && typeof window !== 'undefined') {
-          const fac = new FastAverageColor();
-          try {
-            const color = await fac.getColorAsync(appData.icon_url);
-            setDominantColor(color.hex);
-          } catch (e) {
-            console.error('Lỗi lấy màu:', e);
-          }
-          fac.destroy();
-        }
-      } catch (error) {
-        console.error('Lỗi fetch app:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchApp();
-  }, [slug]);
+    if (app.icon_url && typeof window !== 'undefined') {
+      const fac = new FastAverageColor();
+      fac.getColorAsync(app.icon_url)
+        .then((color) => setDominantColor(color.hex))
+        .catch(console.error)
+        .finally(() => fac.destroy());
+    }
+  }, [app]);
 
   const truncate = (text, limit) =>
     text?.length > limit ? text.slice(0, limit) + '...' : text;
 
   const handleDownload = async (e) => {
-  e.preventDefault(); // Ngăn chặn hành vi mặc định của thẻ <a>
+    e.preventDefault();
+    if (!app?.id) return;
+    if (app.category === 'testflight') return;
 
-  if (!app?.id) return;
-  if (app.category === 'testflight') return;
+    try {
+      const response = await fetch(`/api/admin/add-download?id=${app.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+      });
+      const data = await response.json();
 
-  try {
-    const response = await fetch(`/api/admin/add-download?id=${app.id}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      cache: 'no-store',
-    });
-    const data = await response.json();
+      if (data.success) {
+        setApp((prev) => ({
+          ...prev,
+          downloads: data.downloads,
+        }));
+      }
 
-    if (data.success) {
-      setApp(prev => ({
-        ...prev,
-        downloads: data.downloads,
-      }));
+      router.push(`/install/${app.slug}`);
+    } catch (err) {
+      console.error('Lỗi tăng lượt tải:', err);
+      if (app.download_link) {
+        window.open(app.download_link, '_blank');
+      }
     }
-
-    // Thay vì redirect, chuyển sang trang /install/[slug] để ẩn link thật
-    router.push(`/install/${app.slug}`);
-  } catch (err) {
-    console.error('Lỗi tăng lượt tải:', err);
-
-    // Nếu lỗi, fallback: mở link thật nếu có (đề phòng)
-    if (app.download_link) {
-      window.open(app.download_link, '_blank');
-    }
-  }
-};
-
-  if (loading) {
-    return (
-      <Layout fullWidth>
-        <div className="min-h-screen flex items-center justify-center">Đang tải...</div>
-      </Layout>
-    );
-  }
-
-  if (!app) {
-    return (
-      <Layout fullWidth>
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">Không tìm thấy ứng dụng</h1>
-            <button
-              onClick={() => router.push('/')}
-              className="px-4 py-2 bg-blue-600 text-white rounded font-bold"
-            >
-              <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
-              Về trang chủ
-            </button>
-          </div>
-        </div>
-      </Layout>
-    );
-  }
+  };
 
   return (
     <Layout fullWidth>
@@ -207,8 +156,12 @@ useEffect(() => {
                     className="w-full h-full object-cover"
                   />
                 </div>
-                <h1 className="mt-4 text-2xl font-bold text-gray-900 drop-shadow">{app.name}</h1>
-                {app.author && <p className="text-gray-700 text-sm">{app.author}</p>}
+                <h1 className="mt-4 text-2xl font-bold text-gray-900 drop-shadow">
+                  {app.name}
+                </h1>
+                {app.author && (
+                  <p className="text-gray-700 text-sm">{app.author}</p>
+                )}
                 <div className="mt-4 space-x-2">
                   {app.category === 'testflight' && app.testflight_url && (
                     <div className="flex flex-wrap justify-center gap-2">
@@ -244,14 +197,14 @@ useEffect(() => {
                     </div>
                   )}
                   {app.category === 'jailbreak' && app.download_link && (
-  <button
-    onClick={handleDownload}
-    className="inline-block border border-green-500 text-green-700 hover:bg-green-100 transition px-4 py-2 rounded-full text-sm font-semibold"
-  >
-    <FontAwesomeIcon icon={faDownload} className="mr-2" />
-    Cài đặt ứng dụng
-  </button>
-)}
+                    <button
+                      onClick={handleDownload}
+                      className="inline-block border border-green-500 text-green-700 hover:bg-green-100 transition px-4 py-2 rounded-full text-sm font-semibold"
+                    >
+                      <FontAwesomeIcon icon={faDownload} className="mr-2" />
+                      Cài đặt ứng dụng
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
