@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
-import Layout from '../components/Layout';
-import { supabase } from '../lib/supabase';
+import Layout from '../../components/Layout';
+import { supabase } from '../../lib/supabase';
 
 export async function getServerSideProps(context) {
   const { appSlug } = context.params;
