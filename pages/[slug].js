@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabase';
 import Layout from '../components/Layout';
-import Link from 'next/link';
 import { useRouter } from 'next/router';
+import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { FastAverageColor } from 'fast-average-color';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -14,9 +14,11 @@ import {
   faUser,
   faCheckCircle,
   faTimesCircle,
-  faExclamationTriangle
+  faExclamationTriangle,
+  faEye
 } from '@fortawesome/free-solid-svg-icons';
 
+// ✅ SSR: Lấy dữ liệu từ server
 export async function getServerSideProps(context) {
   const slug = context.params.slug?.toLowerCase();
 
@@ -32,6 +34,7 @@ export async function getServerSideProps(context) {
       .select('*, downloads, views')
       .eq('id', slug)
       .single();
+
     if (fallback) {
       return {
         redirect: {
@@ -40,6 +43,7 @@ export async function getServerSideProps(context) {
         },
       };
     }
+
     return { notFound: true };
   }
 
@@ -52,26 +56,32 @@ export async function getServerSideProps(context) {
 
   return {
     props: {
-      appData,
-      relatedApps: relatedApps || [],
+      serverApp: appData,
+      serverRelated: relatedApps ?? [],
     },
   };
 }
 
-export default function Detail({ appData, relatedApps }) {
+// ✅ Component chính
+export default function Detail({ serverApp, serverRelated }) {
   const router = useRouter();
+  const [app, setApp] = useState(serverApp);
+  const [related, setRelated] = useState(serverRelated);
+  const [loading, setLoading] = useState(false);
   const [dominantColor, setDominantColor] = useState('#f0f2f5');
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [status, setStatus] = useState(null);
   const [statusLoading, setStatusLoading] = useState(false);
-  const [app, setApp] = useState(appData);
 
+  // ✅ Gọi API tăng view và lấy màu ảnh
   useEffect(() => {
+    if (!app?.id) return;
+
     if (app.category === 'testflight') {
       fetch('/api/admin/add-view', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: app.id }),
+        body: JSON.stringify({ id: app.id })
       }).catch(console.error);
     }
 
@@ -101,6 +111,7 @@ export default function Detail({ appData, relatedApps }) {
 
   const handleDownload = async (e) => {
     e.preventDefault();
+
     if (!app?.id) return;
     if (app.category === 'testflight') return;
 
@@ -113,7 +124,7 @@ export default function Detail({ appData, relatedApps }) {
       const data = await response.json();
 
       if (data.success) {
-        setApp((prev) => ({
+        setApp(prev => ({
           ...prev,
           downloads: data.downloads,
         }));
@@ -127,6 +138,33 @@ export default function Detail({ appData, relatedApps }) {
       }
     }
   };
+
+  if (loading) {
+    return (
+      <Layout fullWidth>
+        <div className="min-h-screen flex items-center justify-center">Đang tải...</div>
+      </Layout>
+    );
+  }
+
+  if (!app) {
+    return (
+      <Layout fullWidth>
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold mb-4">Không tìm thấy ứng dụng</h1>
+            <button
+              onClick={() => router.push('/')}
+              className="px-4 py-2 bg-blue-600 text-white rounded font-bold"
+            >
+              <FontAwesomeIcon icon={faArrowLeft} className="mr-2" />
+              Về trang chủ
+            </button>
+          </div>
+        </div>
+      </Layout
+    );
+  }
 
   return (
     <Layout fullWidth>
@@ -156,12 +194,8 @@ export default function Detail({ appData, relatedApps }) {
                     className="w-full h-full object-cover"
                   />
                 </div>
-                <h1 className="mt-4 text-2xl font-bold text-gray-900 drop-shadow">
-                  {app.name}
-                </h1>
-                {app.author && (
-                  <p className="text-gray-700 text-sm">{app.author}</p>
-                )}
+                <h1 className="mt-4 text-2xl font-bold text-gray-900 drop-shadow">{app.name}</h1>
+                {app.author && <p className="text-gray-700 text-sm">{app.author}</p>}
                 <div className="mt-4 space-x-2">
                   {app.category === 'testflight' && app.testflight_url && (
                     <div className="flex flex-wrap justify-center gap-2">
@@ -197,14 +231,14 @@ export default function Detail({ appData, relatedApps }) {
                     </div>
                   )}
                   {app.category === 'jailbreak' && app.download_link && (
-                    <button
-                      onClick={handleDownload}
-                      className="inline-block border border-green-500 text-green-700 hover:bg-green-100 transition px-4 py-2 rounded-full text-sm font-semibold"
-                    >
-                      <FontAwesomeIcon icon={faDownload} className="mr-2" />
-                      Cài đặt ứng dụng
-                    </button>
-                  )}
+  <button
+    onClick={handleDownload}
+    className="inline-block border border-green-500 text-green-700 hover:bg-green-100 transition px-4 py-2 rounded-full text-sm font-semibold"
+  >
+    <FontAwesomeIcon icon={faDownload} className="mr-2" />
+    Cài đặt ứng dụng
+  </button>
+)}
                 </div>
               </div>
             </div>
@@ -283,7 +317,7 @@ export default function Detail({ appData, relatedApps }) {
             </div>
           )}
 
-          {relatedApps.length > 0 && (
+          {related.length > 0 && (
             <div className="bg-white rounded-xl p-4 shadow">
               <h2 className="text-lg font-bold text-gray-800 mb-4">Ứng dụng cùng chuyên mục</h2>
               <div className="divide-y divide-gray-200">
