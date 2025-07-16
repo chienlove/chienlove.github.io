@@ -1,31 +1,40 @@
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/router';
+import { useEffect, useState, useMemo } from 'react';
 import Head from 'next/head';
 
-export default function RedirectPage() {
-  const router = useRouter();
-  const { url, name } = router.query;
+export default function RedirectPage({ url: initialUrl = '', name: initialName = '' }) {
   const [countdown, setCountdown] = useState(15);
   const [redirecting, setRedirecting] = useState(false);
   const [decodedUrl, setDecodedUrl] = useState('');
+  const [decodedName, setDecodedName] = useState('');
 
-  // Tính toán strokeDashoffset
-  const circumference = 2 * Math.PI * 45;
-  const strokeDashoffset = circumference * (1 - countdown / 15);
-
+  // Giải mã URL và tên từ props
   useEffect(() => {
-    if (!url) {
-      router.push('/');
-      return;
+    if (!initialUrl) return;
+
+    try {
+      setDecodedUrl(decodeURIComponent(initialUrl));
+    } catch (e) {
+      console.error('Lỗi giải mã URL:', e);
+      window.location.href = '/';
     }
 
     try {
-      setDecodedUrl(decodeURIComponent(url));
+      setDecodedName(initialName ? decodeURIComponent(initialName) : '');
     } catch (e) {
-      console.error('Lỗi giải mã URL:', e);
-      router.push('/');
-      return;
+      setDecodedName('');
     }
+  }, [initialUrl, initialName]);
+
+  // Tính toán strokeDashoffset mỗi lần countdown thay đổi
+  const circumference = useMemo(() => 2 * Math.PI * 45, []);
+  const strokeDashoffset = useMemo(
+    () => circumference * (1 - countdown / 15),
+    [countdown, circumference]
+  );
+
+  // Đếm ngược và chuyển hướng
+  useEffect(() => {
+    if (!decodedUrl || redirecting) return;
 
     const timer = setInterval(() => {
       setCountdown((prev) => {
@@ -40,7 +49,7 @@ export default function RedirectPage() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [url, decodedUrl]);
+  }, [decodedUrl, redirecting]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-gray-100 flex items-center justify-center p-4">
@@ -72,21 +81,23 @@ export default function RedirectPage() {
                 strokeDasharray={circumference}
                 strokeDashoffset={strokeDashoffset}
                 transform="rotate(-90 50 50)"
-                className="transition-all duration-1000 ease-[cubic-bezier(0.65,0,0.35,1)]"
+                style={{ transition: 'stroke-dashoffset 1s ease-in-out' }}
               />
             </svg>
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-3xl font-bold text-gray-800 transition-all duration-300">
-                {countdown}
-              </span>
+              <span className="text-3xl font-bold text-gray-800">{countdown}</span>
             </div>
           </div>
 
-          <h1 className="text-2xl font-bold text-gray-800 mb-2 transition-all duration-300">
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">
             {redirecting ? 'Đang chuyển hướng...' : 'Đang chuẩn bị tải xuống'}
           </h1>
-          <p className="text-gray-600 mb-6 transition-all duration-300">
-            Ứng dụng <span className="font-semibold text-blue-600">{name ? decodeURIComponent(name) : 'này'}</span> sẽ được tải xuống {redirecting ? 'ngay bây giờ' : `sau ${countdown} giây`}
+          <p className="text-gray-600 mb-6">
+            Ứng dụng{' '}
+            <span className="font-semibold text-blue-600">
+              {decodedName || 'này'}
+            </span>{' '}
+            sẽ được tải xuống {redirecting ? 'ngay bây giờ' : `sau ${countdown} giây`}
           </p>
 
           <div className="space-y-3">
@@ -99,7 +110,7 @@ export default function RedirectPage() {
               </a>
             )}
             <button
-              onClick={() => router.push('/')}
+              onClick={() => (window.location.href = '/')}
               className="block w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-3 px-4 rounded-lg transition-all duration-300 transform hover:scale-105 active:scale-95 border border-gray-300"
             >
               Quay lại trang chủ
@@ -108,11 +119,22 @@ export default function RedirectPage() {
         </div>
 
         <div className="bg-gray-50 px-6 py-4 text-center border-t border-gray-200">
-          <p className="text-xs text-gray-500 transition-all duration-300">
+          <p className="text-xs text-gray-500">
             Đảm bảo bạn tin tưởng nguồn tải xuống này
           </p>
         </div>
       </div>
     </div>
   );
+}
+
+// Simulate getServerSideProps để có thể truyền query params vào
+export async function getServerSideProps(context) {
+  const { url, name } = context.query;
+  return {
+    props: {
+      url: url || '',
+      name: name || '',
+    },
+  };
 }
