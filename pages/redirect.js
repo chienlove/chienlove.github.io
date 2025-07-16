@@ -6,12 +6,12 @@ export default function RedirectPage() {
   const router = useRouter();
   const { url, name } = router.query;
   const [countdown, setCountdown] = useState(15);
-  const [progress, setProgress] = useState(100);
   const [redirecting, setRedirecting] = useState(false);
   const [decodedUrl, setDecodedUrl] = useState('');
 
-  // Tính strokeDashoffset dựa trên countdown
-  const strokeDashoffset = 283 * (countdown / 15);
+  // Tính toán strokeDashoffset
+  const circumference = 2 * Math.PI * 45;
+  const strokeDashoffset = circumference * (1 - countdown / 15);
 
   useEffect(() => {
     if (!url) {
@@ -29,18 +29,14 @@ export default function RedirectPage() {
 
     const timer = setInterval(() => {
       setCountdown((prev) => {
-        const newCount = prev - 1;
-        if (newCount <= 0) {
+        if (prev <= 1) {
           clearInterval(timer);
           setRedirecting(true);
           window.location.href = decodedUrl;
           return 0;
         }
-        return newCount;
+        return prev - 1;
       });
-      
-      // Cập nhật progress dựa trên countdown mới
-      setProgress((countdown - 1) * (100 / 15));
     }, 1000);
 
     return () => clearInterval(timer);
@@ -53,11 +49,10 @@ export default function RedirectPage() {
         <meta name="robots" content="noindex,nofollow" />
       </Head>
 
-      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden">
+      <div className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden transition-all duration-300 hover:shadow-2xl">
         <div className="p-6 sm:p-8 text-center">
           <div className="relative w-32 h-32 mx-auto mb-6">
             <svg className="w-full h-full" viewBox="0 0 100 100">
-              {/* Background circle */}
               <circle
                 cx="50"
                 cy="50"
@@ -66,7 +61,6 @@ export default function RedirectPage() {
                 stroke="#e5e7eb"
                 strokeWidth="8"
               />
-              {/* Progress circle */}
               <circle
                 cx="50"
                 cy="50"
@@ -75,44 +69,46 @@ export default function RedirectPage() {
                 stroke="#3b82f6"
                 strokeWidth="8"
                 strokeLinecap="round"
-                strokeDasharray="283"
+                strokeDasharray={circumference}
                 strokeDashoffset={strokeDashoffset}
                 transform="rotate(-90 50 50)"
-                className="transition-all duration-1000 ease-linear"
+                className="transition-all duration-1000 ease-[cubic-bezier(0.65,0,0.35,1)]"
               />
             </svg>
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-3xl font-bold text-gray-800">{countdown}</span>
+              <span className="text-3xl font-bold text-gray-800 transition-all duration-300">
+                {countdown}
+              </span>
             </div>
           </div>
 
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">
+          <h1 className="text-2xl font-bold text-gray-800 mb-2 transition-all duration-300">
             {redirecting ? 'Đang chuyển hướng...' : 'Đang chuẩn bị tải xuống'}
           </h1>
-          <p className="text-gray-600 mb-6">
-            Ứng dụng <span className="font-semibold">{name ? decodeURIComponent(name) : 'này'}</span> sẽ được tải xuống {redirecting ? 'ngay bây giờ' : `sau ${countdown} giây`}
+          <p className="text-gray-600 mb-6 transition-all duration-300">
+            Ứng dụng <span className="font-semibold text-blue-600">{name ? decodeURIComponent(name) : 'này'}</span> sẽ được tải xuống {redirecting ? 'ngay bây giờ' : `sau ${countdown} giây`}
           </p>
 
           <div className="space-y-3">
             {redirecting && (
               <a
                 href={decodedUrl}
-                className="block w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition duration-200"
+                className="block w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg"
               >
                 Tải xuống ngay
               </a>
             )}
             <button
               onClick={() => router.push('/')}
-              className="block w-full text-gray-600 hover:text-gray-800 font-medium py-2 px-4 rounded-lg transition duration-200"
+              className="block w-full bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium py-3 px-4 rounded-lg transition-all duration-300 transform hover:scale-105 active:scale-95 border border-gray-300"
             >
               Quay lại trang chủ
             </button>
           </div>
         </div>
 
-        <div className="bg-gray-50 px-6 py-4 text-center">
-          <p className="text-xs text-gray-500">
+        <div className="bg-gray-50 px-6 py-4 text-center border-t border-gray-200">
+          <p className="text-xs text-gray-500 transition-all duration-300">
             Đảm bảo bạn tin tưởng nguồn tải xuống này
           </p>
         </div>
