@@ -1,5 +1,5 @@
 import { createServerClient } from '@supabase/ssr';
-import { parseCookies, serialize } from 'cookie';
+import { parse, serialize } from 'cookie';
 import Layout from '../components/Layout';
 import AppCard from '../components/AppCard';
 
@@ -30,7 +30,7 @@ export default function Home({ categoriesWithApps }) {
 }
 
 export async function getServerSideProps(ctx) {
-  const cookies = parseCookies(ctx.req.headers.cookie || '');
+  const cookies = parse(ctx.req.headers.cookie || '');
 
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -42,7 +42,10 @@ export async function getServerSideProps(ctx) {
           ctx.res.setHeader('Set-Cookie', serialize(name, value, options));
         },
         remove: (name, options) => {
-          ctx.res.setHeader('Set-Cookie', serialize(name, '', { ...options, maxAge: -1 }));
+          ctx.res.setHeader(
+            'Set-Cookie',
+            serialize(name, '', { ...options, maxAge: -1 })
+          );
         },
       },
       headers: ctx.req.headers,
