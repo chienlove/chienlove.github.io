@@ -20,7 +20,12 @@ import {
 
 export default function Detail() {
   const router = useRouter();
-  const slug = (router.query.slug || '').toLowerCase();
+  const [slug, setSlug] = useState('');
+useEffect(() => {
+  if (router.isReady && router.query.slug) {
+    setSlug(router.query.slug.toLowerCase());
+  }
+}, [router.isReady, router.query.slug]);
   const [app, setApp] = useState(null);
   const [related, setRelated] = useState([]);
   const [loading, setLoading] = useState(true);
