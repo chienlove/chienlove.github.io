@@ -63,6 +63,7 @@ export async function getServerSideProps(context) {
 
 export default function Detail({ serverApp, serverRelated }) {
   const router = useRouter();
+
   const [app, setApp] = useState(serverApp);
   const [related, setRelated] = useState(serverRelated);
   const [loading, setLoading] = useState(false);
@@ -70,6 +71,13 @@ export default function Detail({ serverApp, serverRelated }) {
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [status, setStatus] = useState(null);
   const [statusLoading, setStatusLoading] = useState(false);
+
+  useEffect(() => {
+    setApp(serverApp);
+    setRelated(serverRelated);
+    setShowFullDescription(false);
+    setDominantColor('#f0f2f5');
+  }, [router.query.slug]);
 
   useEffect(() => {
     if (!app?.id) return;
