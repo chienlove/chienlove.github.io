@@ -1,5 +1,4 @@
 import { supabase } from '../lib/supabase';
-import { createServerSupabaseClient } from '@supabase/auth-helpers-nextjs';
 import Layout from '../components/Layout';
 import AppCard from '../components/AppCard';
 
@@ -18,6 +17,7 @@ export default function Home({ categoriesWithApps }) {
                 {category.name}
               </h2>
 
+              {/* Hiển thị danh sách ứng dụng */}
               <div>
                 {category.apps.map((app) => (
                   <AppCard key={app.id} app={app} mode="list" />
@@ -30,25 +30,8 @@ export default function Home({ categoriesWithApps }) {
   );
 }
 
-export async function getServerSideProps(ctx) {
-  const supabaseServer = createServerSupabaseClient(ctx);
-  const {
-    data: { user },
-  } = await supabaseServer.auth.getUser();
-
-  // ✅ Chặn nếu không đăng nhập hoặc không đúng email admin
-  if (!user || user.email !== 'admin@storeios.net') {
-    return {
-      redirect: {
-        destination: '/under-construction',
-        permanent: false,
-      },
-    };
-  }
-
-  const { data: categories } = await supabase
-    .from('categories')
-    .select('id, name');
+export async function getServerSideProps() {
+  const { data: categories } = await supabase.from('categories').select('id, name');
 
   const categoriesWithApps = await Promise.all(
     (categories || []).map(async (category) => {
@@ -60,14 +43,14 @@ export async function getServerSideProps(ctx) {
 
       return {
         ...category,
-        apps: apps || [],
+        apps: apps || []
       };
     })
   );
 
   return {
     props: {
-      categoriesWithApps,
-    },
+      categoriesWithApps
+    }
   };
 }
