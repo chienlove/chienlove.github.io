@@ -1,13 +1,14 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import Head from 'next/head';
 
 export default function RedirectPage({ url: initialUrl = '', name: initialName = '' }) {
-  const [countdown, setCountdown] = useState(15);
+  const [countdown, setCountdown] = useState(5);
   const [redirecting, setRedirecting] = useState(false);
   const [decodedUrl, setDecodedUrl] = useState('');
   const [decodedName, setDecodedName] = useState('');
+  const [progress, setProgress] = useState(100); // % of progress
 
-  // Giải mã URL và tên từ props
+  // Giải mã URL và tên
   useEffect(() => {
     if (!initialUrl) return;
 
@@ -25,14 +26,34 @@ export default function RedirectPage({ url: initialUrl = '', name: initialName =
     }
   }, [initialUrl, initialName]);
 
-  // Tính toán strokeDashoffset mỗi lần countdown thay đổi
-  const circumference = useMemo(() => 2 * Math.PI * 45, []);
-  const strokeDashoffset = useMemo(
-    () => circumference * (1 - countdown / 15),
-    [countdown, circumference]
-  );
+  // Tính toán hiệu ứng đếm ngược mượt mà theo thời gian thực
+  useEffect(() => {
+    if (!decodedUrl || redirecting) return;
 
-  // Đếm ngược và chuyển hướng
+    const startTime = Date.now();
+    const duration = countdown * 1000;
+
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      const remainingTime = Math.max(duration - elapsed, 0);
+      const newProgress = (remainingTime / duration) * 100;
+
+      setProgress(newProgress);
+
+      if (remainingTime <= 0) {
+        setRedirecting(true);
+        window.location.href = decodedUrl;
+      } else {
+        requestAnimationFrame(animate);
+      }
+    };
+
+    const animationFrame = requestAnimationFrame(animate);
+
+    return () => cancelAnimationFrame(animationFrame);
+  }, [decodedUrl, redirecting]);
+
+  // Cập nhật trạng thái countdown (chỉ để hiển thị số)
   useEffect(() => {
     if (!decodedUrl || redirecting) return;
 
@@ -40,8 +61,6 @@ export default function RedirectPage({ url: initialUrl = '', name: initialName =
       setCountdown((prev) => {
         if (prev <= 1) {
           clearInterval(timer);
-          setRedirecting(true);
-          window.location.href = decodedUrl;
           return 0;
         }
         return prev - 1;
@@ -50,6 +69,10 @@ export default function RedirectPage({ url: initialUrl = '', name: initialName =
 
     return () => clearInterval(timer);
   }, [decodedUrl, redirecting]);
+
+  // Tính toán đường tròn SVG
+  const circumference = 2 * Math.PI * 45;
+  const strokeDashoffset = circumference * (progress / 100);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-gray-100 flex items-center justify-center p-4">
@@ -81,11 +104,11 @@ export default function RedirectPage({ url: initialUrl = '', name: initialName =
                 strokeDasharray={circumference}
                 strokeDashoffset={strokeDashoffset}
                 transform="rotate(-90 50 50)"
-                style={{ transition: 'stroke-dashoffset 1s ease-in-out' }}
+                style={{ transition: 'stroke-dashoffset 0.1s linear' }}
               />
             </svg>
             <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-3xl font-bold text-gray-800">{countdown}</span>
+              <span className="text-3xl font-bold text-gray-800">{Math.ceil(progress / 20)}</span>
             </div>
           </div>
 
@@ -128,7 +151,7 @@ export default function RedirectPage({ url: initialUrl = '', name: initialName =
   );
 }
 
-// Simulate getServerSideProps để có thể truyền query params vào
+// Simulate getServerSideProps
 export async function getServerSideProps(context) {
   const { url, name } = context.query;
   return {
