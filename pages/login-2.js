@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabase';
 import { toast, ToastContainer } from 'react-toastify';
-import Layout from '../components/Layout';
+import Layout from '../components/Layout'; // 👈 Đã thêm dòng này
 import 'react-toastify/dist/ReactToastify.css';
 
 export default function Login() {
@@ -29,17 +29,10 @@ export default function Login() {
     }
 
     setLoading(false);
-
-    // ✅ Cho cookie có thời gian lưu trước khi redirect
     toast.success('Đăng nhập thành công!', {
-      autoClose: 1000,
+      autoClose: 2000,
+      onClose: () => router.push('/admin'),
     });
-
-    // ✅ Đợi cookie ổn định rồi mới chuyển trang
-    setTimeout(() => {
-      // window.location.href đảm bảo SSR đọc được cookie
-      window.location.href = '/';
-    }, 1200);
   }
 
   return (
