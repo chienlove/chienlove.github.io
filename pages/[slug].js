@@ -116,7 +116,7 @@ export default function Detail() {
 
   const handleDownload = async (e) => {
   e.preventDefault(); // Ngăn chặn hành vi mặc định của thẻ <a>
-  
+
   if (!app?.id) return;
   if (app.category === 'testflight') return;
 
@@ -135,17 +135,15 @@ export default function Detail() {
       }));
     }
 
-    if (app.download_link) {
-      router.push({
-        pathname: '/redirect',
-        query: {
-          url: encodeURIComponent(app.download_link),
-          name: encodeURIComponent(app.name)
-        }
-      });
-    }
+    // Thay vì redirect, chuyển sang trang /install/[slug] để ẩn link thật
+    router.push(`/install/${app.slug}`);
   } catch (err) {
     console.error('Lỗi tăng lượt tải:', err);
+
+    // Nếu lỗi, fallback: mở link thật nếu có (đề phòng)
+    if (app.download_link) {
+      window.open(app.download_link, '_blank');
+    }
   }
 };
 
