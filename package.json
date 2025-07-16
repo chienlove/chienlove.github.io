@@ -30,7 +30,8 @@
     "puppeteer-extra-plugin-stealth": "2.11.2",
     "@sparticuz/chromium": "^110.0.0",
     "puppeteer-core": "^19.7.0",
-    "memory-cache": "0.2.0"
+    "memory-cache": "0.2.0",
+    "@supabase/ssr": "0.6.1"
   },
   "devDependencies": {
     "eslint": "8.55.0",

@@ -1,5 +1,4 @@
-import { supabase } from '../lib/supabase';
-import { createServerSupabaseClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 import Layout from '../components/Layout';
 import AppCard from '../components/AppCard';
 
@@ -17,7 +16,6 @@ export default function Home({ categoriesWithApps }) {
               <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">
                 {category.name}
               </h2>
-
               <div>
                 {category.apps.map((app) => (
                   <AppCard key={app.id} app={app} mode="list" />
@@ -31,12 +29,19 @@ export default function Home({ categoriesWithApps }) {
 }
 
 export async function getServerSideProps(ctx) {
-  const supabaseServer = createServerSupabaseClient(ctx);
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    {
+      headers: ctx.req.headers,
+      cookies: ctx.req.cookies,
+    }
+  );
+
   const {
     data: { user },
-  } = await supabaseServer.auth.getUser();
+  } = await supabase.auth.getUser();
 
-  // ✅ Chặn nếu không đăng nhập hoặc không đúng email admin
   if (!user || user.email !== 'admin@storeios.net') {
     return {
       redirect: {
@@ -46,9 +51,7 @@ export async function getServerSideProps(ctx) {
     };
   }
 
-  const { data: categories } = await supabase
-    .from('categories')
-    .select('id, name');
+  const { data: categories } = await supabase.from('categories').select('id, name');
 
   const categoriesWithApps = await Promise.all(
     (categories || []).map(async (category) => {
