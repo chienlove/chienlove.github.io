@@ -283,7 +283,7 @@ export default function Detail({ appData, relatedApps }) {
             </div>
           )}
 
-          {related.length > 0 && (
+          {relatedApps.length > 0 && (
             <div className="bg-white rounded-xl p-4 shadow">
               <h2 className="text-lg font-bold text-gray-800 mb-4">Ứng dụng cùng chuyên mục</h2>
               <div className="divide-y divide-gray-200">
