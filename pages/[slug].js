@@ -18,7 +18,6 @@ import {
   faEye
 } from '@fortawesome/free-solid-svg-icons';
 
-// ✅ SSR: Lấy dữ liệu từ server
 export async function getServerSideProps(context) {
   const slug = context.params.slug?.toLowerCase();
 
@@ -62,7 +61,6 @@ export async function getServerSideProps(context) {
   };
 }
 
-// ✅ Component chính
 export default function Detail({ serverApp, serverRelated }) {
   const router = useRouter();
   const [app, setApp] = useState(serverApp);
@@ -73,7 +71,6 @@ export default function Detail({ serverApp, serverRelated }) {
   const [status, setStatus] = useState(null);
   const [statusLoading, setStatusLoading] = useState(false);
 
-  // ✅ Gọi API tăng view và lấy màu ảnh
   useEffect(() => {
     if (!app?.id) return;
 
