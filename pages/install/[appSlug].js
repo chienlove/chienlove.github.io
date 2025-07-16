@@ -28,18 +28,15 @@ export default function InstallPage({ app }) {
   const strokeDashoffset = circumference * (1 - countdown / 5);
 
   useEffect(() => {
-    if (countdown <= 0) {
-      window.location.href = app.download_link;
-      return;
-    }
+    if (countdown <= 0) return;
     const timer = setInterval(() => setCountdown(prev => prev - 1), 1000);
     return () => clearInterval(timer);
-  }, [countdown, app.download_link]);
+  }, [countdown]);
 
   return (
     <Layout fullWidth>
       <Head>
-        <title>{`Tải ${app.name} | Tự động cài đặt sau ${countdown}s`}</title>
+        <title>{`Tải ${app.name} | Cài đặt ứng dụng`}</title>
         <meta name="description" content={`Tải xuống ${app.name} phiên bản ${app.version}`} />
       </Head>
 
@@ -50,7 +47,7 @@ export default function InstallPage({ app }) {
               <circle cx="50" cy="50" r={radius} fill="none" stroke="#e5e7eb" strokeWidth="8" />
               <circle
                 cx="50" cy="50" r={radius}
-                fill="none" stroke="#3b82f6" strokeWidth="8"
+                fill="none" stroke="#22c55e" strokeWidth="8"
                 strokeDasharray={circumference}
                 strokeDashoffset={strokeDashoffset}
                 strokeLinecap="round"
@@ -59,7 +56,7 @@ export default function InstallPage({ app }) {
               />
             </svg>
             <span className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-3xl font-bold text-gray-800">
-              {countdown}
+              {countdown > 0 ? countdown : '0'}
             </span>
           </div>
 
@@ -67,19 +64,24 @@ export default function InstallPage({ app }) {
           <p className="text-gray-600 mb-4">Phiên bản: {app.version}</p>
           
           <p className="mb-6 text-gray-700">
-            Ứng dụng sẽ tự động tải sau <span className="font-bold">{countdown}</span> giây...
+            {countdown > 0
+              ? <>Vui lòng chờ <span className="font-bold">{countdown}</span> giây trước khi tải...</>
+              : <>Nhấn nút bên dưới để tải ứng dụng.</>
+            }
           </p>
 
           <div className="flex flex-col space-y-3">
-            <button
-              onClick={() => window.location.href = app.download_link}
-              className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-all hover:scale-105 active:scale-95"
-            >
-              Tải xuống ngay
-            </button>
+            {countdown === 0 && (
+              <button
+                onClick={() => window.location.href = app.download_link}
+                className="bg-gradient-to-r from-green-400 to-blue-500 hover:from-green-500 hover:to-blue-600 text-white font-bold py-3 px-6 rounded-lg transition-all hover:scale-105 active:scale-95 shadow-md"
+              >
+                🚀 <span className="ml-1">Tải xuống ngay</span>
+              </button>
+            )}
             <button
               onClick={() => router.push('/')}
-              className="border border-gray-300 bg-white text-gray-700 font-medium py-2 px-4 rounded-lg hover:bg-gray-50 transition-all"
+              className="border border-gray-300 bg-white text-gray-700 font-medium py-2 px-4 rounded-lg hover:bg-gray-100 transition-all"
             >
               Quay lại trang chủ
             </button>
