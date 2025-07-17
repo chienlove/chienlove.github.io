@@ -1,7 +1,7 @@
 import { createSupabaseServer } from '../lib/supabase';
 import Layout from '../components/Layout';
 import AppCard from '../components/AppCard';
-import AdBanner from '../components/AdBanner'; // ✅ Thêm quảng cáo
+import AdBanner from '../components/AdBanner';
 
 export default function Home({ categoriesWithApps }) {
   return (
