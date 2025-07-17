@@ -3,14 +3,15 @@
 import { createSupabaseServer } from '../lib/supabase';
 import Layout from '../components/Layout';
 import AppCard from '../components/AppCard';
-import AdBanner from '../components/AdBanner';
+import AdBanner from '../components/AdBanner'; // ✅ Banner ngang thủ công
 
 export default function Home({ categoriesWithApps }) {
   return (
     <Layout>
       <div className="container mx-auto px-1 md:px-2 py-6 space-y-10">
-        {/* ✅ Quảng cáo đầu trang - tăng hiển thị */}
-        <AdBanner slot="5160182988" />
+
+        {/* ✅ Quảng cáo đầu trang (728x90) */}
+        <Adbanner />
 
         {categoriesWithApps.map((category, index) => (
           <div
@@ -28,7 +29,7 @@ export default function Home({ categoriesWithApps }) {
               ))}
             </div>
 
-            {/* ✅ Quảng cáo sau mỗi category thứ 2 để tránh spam */}
+            {/* ✅ Quảng cáo sau mỗi category thứ 2 */}
             {(index + 1) % 2 === 0 && <AdBanner />}
           </div>
         ))}
@@ -42,8 +43,6 @@ export default function Home({ categoriesWithApps }) {
 
 export async function getServerSideProps(ctx) {
   const supabase = createSupabaseServer(ctx);
-
-  // 👇 Kiểm tra User-Agent để cho phép Googlebot truy cập
   const userAgent = ctx.req.headers['user-agent'] || '';
   const isGoogleBot = userAgent.toLowerCase().includes('googlebot');
 
@@ -51,7 +50,6 @@ export async function getServerSideProps(ctx) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // ✅ Chỉ redirect nếu không phải admin và không phải Googlebot
   if (!user && !isGoogleBot) {
     return {
       redirect: {
