@@ -10,8 +10,6 @@ export default function AdBanner() {
   }, []);
 
   return (
-    <div className="w-full px-4 py-4 flex justify-center">
-  <div className="w-full">
     <ins
       className="adsbygoogle block"
       style={{ display: 'block' }}
@@ -20,7 +18,5 @@ export default function AdBanner() {
       data-ad-format="auto"
       data-full-width-responsive="true"
     ></ins>
-  </div>
-</div>
   );
 }
