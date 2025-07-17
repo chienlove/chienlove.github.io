@@ -1,18 +1,13 @@
-import { useEffect } from 'react';
+import Script from 'next/script';
 
 export default function AdBanner() {
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      try {
-        (window.adsbygoogle = window.adsbygoogle || []).push({});
-      } catch (e) {
-        console.error('AdSense error:', e);
-      }
-    }
-  }, []);
-
   return (
-    <div className="min-h-[90px] md:min-h-[250px]">
+    <div className="my-6 min-h-[90px] w-full">
+      <Script 
+        strategy="afterInteractive"
+        src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797"
+        crossOrigin="anonymous"
+      />
       <ins
         className="adsbygoogle block"
         style={{ display: 'block' }}
@@ -21,6 +16,9 @@ export default function AdBanner() {
         data-ad-format="auto"
         data-full-width-responsive="true"
       ></ins>
+      <Script strategy="afterInteractive" id="adsbygoogle-init">
+        {`(adsbygoogle = window.adsbygoogle || []).push({});`}
+      </Script>
     </div>
   );
 }
