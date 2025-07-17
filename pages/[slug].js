@@ -1,3 +1,5 @@
+'use client';
+
 import { supabase } from '../lib/supabase';
 import Layout from '../components/Layout';
 import { useRouter } from 'next/router';
