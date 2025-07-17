@@ -11,7 +11,7 @@ export default function Home({ categoriesWithApps }) {
       <div className="container mx-auto px-1 md:px-2 py-6 space-y-10">
 
         {/* ✅ Quảng cáo đầu trang (728x90) */}
-        <Adbanner />
+        <AdBanner />
 
         {categoriesWithApps.map((category, index) => (
           <div
