@@ -8,7 +8,7 @@ export default function Home({ categoriesWithApps }) {
     <Layout>
       <div className="container mx-auto px-1 md:px-2 py-6 space-y-10">
         {/* ✅ Quảng cáo đầu trang - tăng hiển thị */}
-        <AdBanner />
+        <AdBanner className="my-8" />
 
         {categoriesWithApps.map((category, index) => (
           <div
