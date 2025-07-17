@@ -1,12 +1,16 @@
 import { createSupabaseServer } from '../lib/supabase';
 import Layout from '../components/Layout';
 import AppCard from '../components/AppCard';
+import AdBanner from '../components/AdBanner'; // ✅ Thêm quảng cáo
 
 export default function Home({ categoriesWithApps }) {
   return (
     <Layout>
       <div className="container mx-auto px-1 md:px-2 py-6 space-y-10">
-        {categoriesWithApps.map((category) => (
+        {/* ✅ Quảng cáo đầu trang - tăng hiển thị */}
+        <AdBanner />
+
+        {categoriesWithApps.map((category, index) => (
           <div
             key={category.id}
             className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 pt-6 pb-2"
@@ -14,13 +18,21 @@ export default function Home({ categoriesWithApps }) {
             <h2 className="text-xl font-bold mb-4 text-gray-800 dark:text-white">
               {category.name}
             </h2>
+
+            {/* Hiển thị danh sách ứng dụng */}
             <div>
               {category.apps.map((app) => (
                 <AppCard key={app.id} app={app} mode="list" />
               ))}
             </div>
+
+            {/* ✅ Quảng cáo sau mỗi category thứ 2 để tránh spam */}
+            {(index + 1) % 2 === 0 && <AdBanner />}
           </div>
         ))}
+
+        {/* ✅ Quảng cáo cuối trang */}
+        <AdBanner />
       </div>
     </Layout>
   );
@@ -33,7 +45,6 @@ export async function getServerSideProps(ctx) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // ✅ Kiểm tra quyền admin
   if (!user || user.email !== 'admin@storeios.net') {
     return {
       redirect: {
