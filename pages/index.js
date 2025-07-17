@@ -41,11 +41,16 @@ export default function Home({ categoriesWithApps }) {
 export async function getServerSideProps(ctx) {
   const supabase = createSupabaseServer(ctx);
 
+  // 👇 Kiểm tra User-Agent để cho phép Googlebot truy cập
+  const userAgent = ctx.req.headers['user-agent'] || '';
+  const isGoogleBot = userAgent.toLowerCase().includes('googlebot');
+
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user || user.email !== 'admin@storeios.net') {
+  // ✅ Chỉ redirect nếu không phải admin và không phải Googlebot
+  if (!user && !isGoogleBot) {
     return {
       redirect: {
         destination: '/under-construction',
