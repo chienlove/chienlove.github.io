@@ -1,3 +1,5 @@
+'use client';
+
 import { createSupabaseServer } from '../lib/supabase';
 import Layout from '../components/Layout';
 import AppCard from '../components/AppCard';
