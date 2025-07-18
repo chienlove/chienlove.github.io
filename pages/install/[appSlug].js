@@ -6,21 +6,23 @@ import { supabase } from '../../lib/supabase';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faDownload, faHome } from '@fortawesome/free-solid-svg-icons';
 
-export async function getServerSideProps(context) {
-  const { slug } = context.params;
-
-  const { data: app, error } = await supabase
+export async function getServerSideProps({ params }) {
+  const { data: app } = await supabase
     .from('apps')
-    .select('id, name, version, icon_url, description, category')
-    .eq('slug', slug)
+    .select('*')
+    .eq('slug', params.appSlug)
     .single();
 
-  if (!app || error) {
-    return { notFound: true };
+  if (!app) {
+    return {
+      notFound: true,
+    };
   }
 
-  return { props: { app } };
-}
+  return {
+    props: { app },
+  };
+}}
 
 export default function InstallPage({ app }) {
   const [countdown, setCountdown] = useState(5);
