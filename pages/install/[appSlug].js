@@ -26,7 +26,6 @@ export async function getServerSideProps({ params }) {
 
 export default function InstallPage({ app }) {
   const [countdown, setCountdown] = useState(5);
-  const [installUrl, setInstallUrl] = useState(null);
   const router = useRouter();
 
   const radius = 45;
@@ -38,19 +37,6 @@ export default function InstallPage({ app }) {
     const timer = setInterval(() => setCountdown(prev => prev - 1), 1000);
     return () => clearInterval(timer);
   }, [countdown]);
-
-  useEffect(() => {
-    // Gọi API sinh token sau khi đếm ngược xong
-    if (countdown === 0) {
-      fetch(`/api/generate-token?id=${app.id}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.installUrl) {
-            setInstallUrl(data.installUrl);
-          }
-        });
-    }
-  }, [countdown, app.id]);
 
   return (
     <Layout fullWidth>
@@ -90,9 +76,37 @@ export default function InstallPage({ app }) {
           </p>
 
           <div className="flex flex-col space-y-3">
-            {countdown === 0 && installUrl && (
+            {countdown === 0 && (
               <a
-                href={installUrl}
+                href="#"
+                onClick={async (e) => {
+                  e.preventDefault();
+
+                  let url = app.download_link;
+                  if (!url) {
+                    try {
+                      const res = await fetch(`/api/generate-token?id=${app.id}`);
+                      const data = await res.json();
+                      if (data.installUrl) {
+                        url = data.installUrl;
+                      } else {
+                        alert('Không thể tạo liên kết cài đặt.');
+                        return;
+                      }
+                    } catch (err) {
+                      console.error(err);
+                      alert('Đã có lỗi xảy ra khi tạo liên kết.');
+                      return;
+                    }
+                  }
+
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.style.display = 'none';
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                }}
                 className="bg-gradient-to-r from-green-400 to-blue-500 hover:from-green-500 hover:to-blue-600 text-white font-bold py-3 px-6 rounded-lg transition-all hover:scale-105 active:scale-95 shadow-md flex items-center justify-center gap-2"
               >
                 <FontAwesomeIcon icon={faDownload} />
