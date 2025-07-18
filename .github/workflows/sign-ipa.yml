@@ -152,7 +152,7 @@ jobs:
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
 
-          mkdir -p public/plist public/icons
+          mkdir -p secure/plist public/icons
 
           BASE_URL="https://github.com/$REPO/releases/download/$TAG"
           ICON_BASE_URL="https://storeios.net/icons"
