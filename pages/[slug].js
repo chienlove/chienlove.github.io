@@ -237,7 +237,7 @@ export default function Detail({ serverApp, serverRelated }) {
                       )}
                     </div>
                   )}
-                  {app.category === 'jailbreak' && app.download_link && (
+                  {app.category === 'jailbreak' && (
   <button
     onClick={handleDownload}
     className="inline-block border border-green-500 text-green-700 hover:bg-green-100 transition px-4 py-2 rounded-full text-sm font-semibold"
