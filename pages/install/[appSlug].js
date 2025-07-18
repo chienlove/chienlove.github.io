@@ -22,7 +22,7 @@ export async function getServerSideProps({ params }) {
   return {
     props: { app },
   };
-}}
+}
 
 export default function InstallPage({ app }) {
   const [countdown, setCountdown] = useState(5);
