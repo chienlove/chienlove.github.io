@@ -9,7 +9,7 @@ export default function handler(req, res) {
     return res.status(400).json({ error: 'Missing or invalid ID' });
   }
 
-  const token = jwt.sign({ id }, secret, { expiresIn: '60s' });
+  const token = jwt.sign({ id }, secret, { expiresIn: '2m' });
   const plistUrl = `https://storeios.net/api/plist?id=${id}&token=${encodeURIComponent(token)}`;
   const installUrl = `itms-services://?action=download-manifest&url=${encodeURIComponent(plistUrl)}`;
 
