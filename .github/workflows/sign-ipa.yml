@@ -155,6 +155,7 @@ jobs:
           mkdir -p public/plist public/icons
 
           BASE_URL="https://github.com/$REPO/releases/download/$TAG"
+          ICON_BASE_URL="https://storeios.net/icons"
 
           while IFS='|' read -r IPA FINAL_ID; do
             FILENAME=$(basename "$IPA")
@@ -171,24 +172,36 @@ jobs:
             ICON_NAME="${APP_NAME}.png"
             ICON_OUT="public/icons/$ICON_NAME"
 
-            if [ ! -f "$ICON_OUT" ] && [ -f "$ICON_PATH" ]; then
+            if [ -f "$ICON_PATH" ]; then
               cp "$ICON_PATH" "$ICON_OUT"
               echo "🖼️ Đã trích xuất icon: $ICON_OUT"
             else
-              echo "📦 Icon đã tồn tại hoặc không tìm thấy."
+              echo "📦 Không tìm thấy icon phù hợp."
             fi
 
             PLIST_NAME="${APP_NAME}.plist"
-            PLIST_PATH="public/plist/$PLIST_NAME"
+            PLIST_PATH="secure/plist/$PLIST_NAME"
 
             echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" > "$PLIST_PATH"
             echo "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">" >> "$PLIST_PATH"
             echo "<plist version=\"1.0\"><dict>" >> "$PLIST_PATH"
             echo "  <key>items</key><array><dict>" >> "$PLIST_PATH"
-            echo "    <key>assets</key><array><dict>" >> "$PLIST_PATH"
-            echo "      <key>kind</key><string>software-package</string>" >> "$PLIST_PATH"
-            echo "      <key>url</key><string>$BASE_URL/$FILENAME</string>" >> "$PLIST_PATH"
-            echo "    </dict></array>" >> "$PLIST_PATH"
+            echo "    <key>assets</key><array>" >> "$PLIST_PATH"
+
+            echo "      <dict>" >> "$PLIST_PATH"
+            echo "        <key>kind</key><string>software-package</string>" >> "$PLIST_PATH"
+            echo "        <key>url</key><string>$BASE_URL/$FILENAME</string>" >> "$PLIST_PATH"
+            echo "      </dict>" >> "$PLIST_PATH"
+
+            if [ -f "$ICON_OUT" ]; then
+              echo "      <dict>" >> "$PLIST_PATH"
+              echo "        <key>kind</key><string>display-image</string>" >> "$PLIST_PATH"
+              echo "        <key>needs-shine</key><false/>" >> "$PLIST_PATH"
+              echo "        <key>url</key><string>$ICON_BASE_URL/$ICON_NAME</string>" >> "$PLIST_PATH"
+              echo "      </dict>" >> "$PLIST_PATH"
+            fi
+
+            echo "    </array>" >> "$PLIST_PATH"
             echo "    <key>metadata</key><dict>" >> "$PLIST_PATH"
             echo "      <key>bundle-identifier</key><string>$FINAL_ID</string>" >> "$PLIST_PATH"
             echo "      <key>bundle-version</key><string>$VERSION</string>" >> "$PLIST_PATH"
@@ -200,6 +213,6 @@ jobs:
             rm -rf "$WORKDIR"
           done < id_map.txt
 
-          git add public/plist/*.plist public/icons/*.png || true
+          git add secure/plist/*.plist public/icons/*.png || true
           git commit -m "🤖 Update plist & icon for tag $TAG" || echo "No changes to commit"
           git push || echo "Nothing to push"
