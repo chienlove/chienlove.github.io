@@ -15,33 +15,45 @@ export default function AdBanner({ className = '', slot = '5160182988' }) {
 
   return (
     <div className={`my-6 w-full flex flex-col items-center ${className}`}>
-      {/* Nhãn bắt buộc theo chính sách Google */}
       <span className="text-sm text-gray-500 font-semibold mb-1">Quảng cáo</span>
 
-      {/* Tải script AdSense nếu chưa có */}
       <Script
         strategy="afterInteractive"
         src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797"
         crossOrigin="anonymous"
       />
 
-      {/* Banner quảng cáo responsive */}
-      <ins
-        className="adsbygoogle"
-        style={{
-          display: 'block',
-          width: '100%',
-          maxWidth: '300px',
-          height: '250px',
-          '@media (min-width: 768px)': {
-        maxWidth: '300px',  }
-        }}
-        data-ad-client="ca-pub-3905625903416797"
-        data-ad-slot={slot}
-        data-ad-format="rectangle"
-        data-auto-format="rsp"
-        data-full-width-responsive="false"
-      />
+      {/* Quảng cáo cho mobile */}
+      <div className="block md:hidden">
+        <ins
+          className="adsbygoogle"
+          style={{
+            display: 'block',
+            width: '300px',
+            height: '250px'
+          }}
+          data-ad-client="ca-pub-3905625903416797"
+          data-ad-slot={slot}
+          data-ad-format="rectangle"
+          data-full-width-responsive="false"
+        />
+      </div>
+
+      {/* Quảng cáo cho desktop */}
+      <div className="hidden md:block">
+        <ins
+          className="adsbygoogle"
+          style={{
+            display: 'block',
+            width: '300px',
+            height: '250px'
+          }}
+          data-ad-client="ca-pub-3905625903416797"
+          data-ad-slot={slot}
+          data-ad-format="rectangle"
+          data-full-width-responsive="false"
+        />
+      </div>
     </div>
   );
 }
