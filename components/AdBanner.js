@@ -33,6 +33,8 @@ export default function AdBanner({ className = '', slot = '5160182988' }) {
           width: '100%',
           maxWidth: '300px',
           height: '250px',
+          '@media (min-width: 768px)': {
+        maxWidth: '300px',  }
         }}
         data-ad-client="ca-pub-3905625903416797"
         data-ad-slot={slot}
