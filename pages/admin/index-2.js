@@ -48,6 +48,51 @@ export default function Admin() {
     document.documentElement.classList.toggle("dark", darkMode);
   }, [darkMode]);
 
+  
+      useEffect(() => {
+  async function fetchIpaSizeFromPlist() {
+    const link = form["download_link"];
+    if (!link || !link.startsWith("itms-services://")) {
+      console.log("Không phải link itms-services, bỏ qua.");
+      return;
+    }
+
+    try {
+      const url = decodeURIComponent(link.split("url=")[1]);
+      console.log("Đang tải plist từ:", url);
+      const response = await fetch(url);
+      const text = await response.text();
+
+      const ipaUrlMatch = text.match(/<key>url<\/key>\s*<string>([^<]+\.ipa)<\/string>/);
+      if (!ipaUrlMatch) {
+        console.warn("Không tìm thấy đường dẫn IPA trong plist:\n", text);
+        return;
+      }
+
+      const ipaUrl = ipaUrlMatch[1];
+console.log("Tìm thấy IPA URL:", ipaUrl);
+
+// ✅ Dùng domain đầy đủ để tránh lỗi fetch
+const apiURL = `https://testflight-app.vercel.app/api/admin/get-size-ipa?url=${encodeURIComponent(ipaUrl)}`;
+const proxyResp = await fetch(apiURL);
+const result = await proxyResp.json();
+
+if (result.size) {
+  const sizeMB = (parseInt(result.size) / (1024 * 1024)).toFixed(2);
+  console.log("Kích thước IPA:", sizeMB, "MB");
+  setForm(prev => ({ ...prev, size: sizeMB }));
+} else {
+  console.warn("Không lấy được size từ API:", result.error || result);
+}
+    } catch (err) {
+      console.warn("Không lấy được size IPA:", err);
+    }
+  }
+
+  fetchIpaSizeFromPlist();
+}, [form["download_link"]]);
+
+
   useEffect(() => {
     if (form.screenshots) {
       setScreenshotInput(form.screenshots.join("\n"));
@@ -299,7 +344,7 @@ export default function Admin() {
 
         <nav className="p-4 space-y-2">
           <button
-            onClick={() => setActiveTab("apps")}
+            onClick={() => { setActiveTab("apps"); setSidebarOpen(false); }}
             className={`w-full text-left flex items-center gap-3 px-4 py-2 rounded ${
               activeTab === "apps" 
                 ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200" 
@@ -309,7 +354,7 @@ export default function Admin() {
             📦 Ứng dụng
           </button>
           <button
-            onClick={() => setActiveTab("categories")}
+            onClick={() => { setActiveTab("categories"); setSidebarOpen(false); }}
             className={`w-full text-left flex items-center gap-3 px-4 py-2 rounded ${
               activeTab === "categories" 
                 ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200" 
@@ -318,7 +363,7 @@ export default function Admin() {
           >
             📁 Chuyên mục</button>
           <button
-            onClick={() => setActiveTab("certs")}
+            onClick={() => { setActiveTab("certs"); setSidebarOpen(false); }}
             className={`w-full text-left flex items-center gap-3 px-4 py-2 rounded ${activeTab === "certs" ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200" : "hover:bg-gray-200 dark:hover:bg-gray-700"}`}
           >
             🛡️ Chứng chỉ
@@ -344,7 +389,7 @@ export default function Admin() {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-4 md:p-6 overflow-auto">
+      <main className="flex-1 p-4 md:p-6 overflow-auto pb-32">
         {/* Header */}
         <header className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-4">
@@ -384,7 +429,7 @@ export default function Admin() {
           </div>
         )}
 
-        {activeTab === "apps" ? (
+        {activeTab === "apps" && activeTab !== "certs" ? (
           <>
             {/* Add App Form */}
             <section className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-md mb-6">
@@ -432,7 +477,7 @@ export default function Admin() {
                         onChange={(e) => setForm(f => ({ ...f, [field]: e.target.value }))}
                         placeholder={`Nhập ${field}`}
                         className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        required
+                        
                       />
                     )}
                   </div>
