@@ -45,8 +45,8 @@ export default function AdBanner({ className = '', slot = '5160182988' }) {
           className="adsbygoogle"
           style={{
             display: 'block',
-            width: '300px',
-            height: '250px'
+            width: '728px',
+            height: '120px'
           }}
           data-ad-client="ca-pub-3905625903416797"
           data-ad-slot={slot}
