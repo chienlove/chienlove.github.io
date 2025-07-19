@@ -39,6 +39,7 @@ export default function AdBanner({ className = '', slot = '5160182988' }) {
         data-ad-client="ca-pub-3905625903416797"
         data-ad-slot={slot}
         data-ad-format="rectangle"
+        data-auto-format="rsp"
         data-full-width-responsive="false"
       />
     </div>
