@@ -31,14 +31,13 @@ export default function AdBanner({ className = '', slot = '5160182988' }) {
         style={{
           display: 'block',
           width: '100%',
-          maxWidth: '468px',
-          height: '60px',
+          maxWidth: '300px',
+          height: '250px',
         }}
         data-ad-client="ca-pub-3905625903416797"
         data-ad-slot={slot}
         data-ad-format="rectangle"
-        data-auto-format="auto"
-        data-full-width-responsive="false"
+        data-full-width-responsive="true"
       />
     </div>
   );
