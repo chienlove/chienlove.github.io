@@ -23,7 +23,7 @@ export default function AdBanner({ className = '', slot = '5160182988' }) {
         crossOrigin="anonymous"
       />
 
-      {/* Quảng cáo cho mobile */}
+      {/* Mobile: Cố định hình vuông */}
       <div className="block md:hidden">
         <ins
           className="adsbygoogle"
@@ -39,20 +39,19 @@ export default function AdBanner({ className = '', slot = '5160182988' }) {
         />
       </div>
 
-      {/* Quảng cáo cho desktop */}
+      {/* PC: Tự động điều chỉnh */}
       <div className="hidden md:block">
         <ins
           className="adsbygoogle"
           style={{
             display: 'block',
-            width: '728px',
-            height: '120px'
+            width: '100%',
+            minHeight: '90px' // Chiều cao tối thiểu
           }}
           data-ad-client="ca-pub-3905625903416797"
           data-ad-slot={slot}
-          data-ad-format="horizontal"
-          data-auto-format="auto"
-          data-full-width-responsive="true"
+          data-ad-format="auto" // Tự động chọn định dạng
+          data-full-width-responsive="true" // Bật responsive
         />
       </div>
     </div>
