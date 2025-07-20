@@ -4,13 +4,19 @@ import Script from 'next/script';
 
 export default function AdBanner({ className = '', slot = '5160182988' }) {
   useEffect(() => {
-    try {
-      if (typeof window !== 'undefined' && window.adsbygoogle) {
-        (window.adsbygoogle = window.adsbygoogle || []).push({});
+    const tryPushAd = () => {
+      try {
+        if (window.adsbygoogle && window.adsbygoogle.push) {
+          window.adsbygoogle.push({});
+        } else {
+          setTimeout(tryPushAd, 100);
+        }
+      } catch (e) {
+        console.error('AdSense push error:', e);
       }
-    } catch (e) {
-      console.error('AdSense push error:', e);
-    }
+    };
+    
+    tryPushAd();
   }, []);
 
   return (
@@ -21,6 +27,10 @@ export default function AdBanner({ className = '', slot = '5160182988' }) {
         strategy="afterInteractive"
         src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797"
         crossOrigin="anonymous"
+        onLoad={() => {
+          // Kích hoạt lại quảng cáo sau khi script tải
+          (window.adsbygoogle = window.adsbygoogle || []).push({});
+        }}
       />
 
       {/* Mobile: Cố định hình vuông */}
@@ -30,7 +40,8 @@ export default function AdBanner({ className = '', slot = '5160182988' }) {
           style={{
             display: 'block',
             width: '300px',
-            height: '250px'
+            height: '250px',
+            margin: '0 auto'
           }}
           data-ad-client="ca-pub-3905625903416797"
           data-ad-slot={slot}
@@ -40,18 +51,19 @@ export default function AdBanner({ className = '', slot = '5160182988' }) {
       </div>
 
       {/* PC: Tự động điều chỉnh */}
-      <div className="hidden md:block">
+      <div className="hidden md:block w-full" style={{ maxWidth: '1200px' }}>
         <ins
           className="adsbygoogle"
           style={{
             display: 'block',
             width: '100%',
-            minHeight: '90px' // Chiều cao tối thiểu
+            minHeight: '250px',
+            margin: '0 auto'
           }}
           data-ad-client="ca-pub-3905625903416797"
           data-ad-slot={slot}
-          data-ad-format="auto" // Tự động chọn định dạng
-          data-full-width-responsive="true" // Bật responsive
+          data-ad-format="auto"
+          data-full-width-responsive="true"
         />
       </div>
     </div>
