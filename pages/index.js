@@ -10,7 +10,7 @@ export default function Home({ categoriesWithApps }) {
   const [revoked, setRevoked] = useState(null); // null: loading
 
   useEffect(() => {
-    fetch('https://ipadl.storeios.net/check-revocation')
+    fetch('https://ipadl.storeios.net/api/check-revocation')
       .then(res => res.json())
       .then(data => {
         if (data.success) {
