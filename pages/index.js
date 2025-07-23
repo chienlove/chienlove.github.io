@@ -45,9 +45,10 @@ export default function Home({ categoriesWithApps }) {
                 {category.name}
               </h2>
 
+              {/* Hiện trạng thái nếu là chuyên mục Jailbreak */}
               {category.name.toLowerCase().includes('jailbreak') && (
                 <div
-                  className="text-sm text-gray-600 dark:text-gray-300 cursor-pointer"
+                  className="flex items-center gap-1 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer"
                   title={
                     revoked === null
                       ? 'Đang kiểm tra chứng chỉ...'
@@ -59,13 +60,25 @@ export default function Home({ categoriesWithApps }) {
                   }
                 >
                   {revoked === null ? (
-                    <FontAwesomeIcon icon={faSpinner} spin className="text-yellow-500" />
+                    <>
+                      <span>Checking</span>
+                      <FontAwesomeIcon icon={faSpinner} spin className="text-yellow-500" />
+                    </>
                   ) : revoked === true ? (
-                    <FontAwesomeIcon icon={faTimesCircle} className="text-red-500" />
+                    <>
+                      <span className="text-red-600">Revoked</span>
+                      <FontAwesomeIcon icon={faTimesCircle} className="text-red-500" />
+                    </>
                   ) : revoked === false ? (
-                    <FontAwesomeIcon icon={faCheckCircle} className="text-green-500" />
+                    <>
+                      <span className="text-green-600">Signed</span>
+                      <FontAwesomeIcon icon={faCheckCircle} className="text-green-500" />
+                    </>
                   ) : (
-                    <FontAwesomeIcon icon={faExclamationCircle} className="text-gray-400" />
+                    <>
+                      <span className="text-gray-500">Error</span>
+                      <FontAwesomeIcon icon={faExclamationCircle} className="text-gray-400" />
+                    </>
                   )}
                 </div>
               )}
