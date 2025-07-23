@@ -47,8 +47,8 @@ export default function Home({ categoriesWithApps }) {
 
               {/* Hiện trạng thái nếu là chuyên mục Jailbreak */}
               {category.name.toLowerCase().includes('jailbreak') && (
-                <div
-                  className="flex items-center gap-1 text-sm font-medium text-gray-700 dark:text-gray-300 cursor-pointer"
+                <span
+                  className="flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300 cursor-pointer"
                   title={
                     revoked === null
                       ? 'Đang kiểm tra chứng chỉ...'
@@ -61,26 +61,26 @@ export default function Home({ categoriesWithApps }) {
                 >
                   {revoked === null ? (
                     <>
-                      <span>Checking</span>
+                      <span className="font-bold text-yellow-600">Checking</span>
                       <FontAwesomeIcon icon={faSpinner} spin className="text-yellow-500" />
                     </>
                   ) : revoked === true ? (
                     <>
-                      <span className="text-red-600">Revoked</span>
+                      <span className="font-bold text-red-600">Revoked</span>
                       <FontAwesomeIcon icon={faTimesCircle} className="text-red-500" />
                     </>
                   ) : revoked === false ? (
                     <>
-                      <span className="text-green-600">Signed</span>
+                      <span className="font-bold text-green-600">Signed</span>
                       <FontAwesomeIcon icon={faCheckCircle} className="text-green-500" />
                     </>
                   ) : (
                     <>
-                      <span className="text-gray-500">Error</span>
+                      <span className="font-bold text-gray-500">Error</span>
                       <FontAwesomeIcon icon={faExclamationCircle} className="text-gray-400" />
                     </>
                   )}
-                </div>
+                </span>
               )}
             </div>
 
