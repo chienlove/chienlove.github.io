@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 import Layout from '../components/Layout';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { // useEffect removed in SSR version, useState } from 'react';
 import { FastAverageColor } from 'fast-average-color';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -74,14 +74,14 @@ export default function Detail({ serverApp, serverRelated }) {
   const [status, setStatus] = useState(null);
   const [statusLoading, setStatusLoading] = useState(false);
 
-  useEffect(() => {
+  // useEffect removed in SSR version(() => {
     setApp(serverApp);
     setRelated(serverRelated);
     setShowFullDescription(false);
     setDominantColor('#f0f2f5');
   }, [router.query.slug]);
 
-  useEffect(() => {
+  // useEffect removed in SSR version(() => {
     if (!app?.id) return;
 
     if (app.category === 'testflight') {
