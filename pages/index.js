@@ -1,10 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { createSupabaseServer } from '../lib/supabase';
 import Layout from '../components/Layout';
 import AppCard from '../components/AppCard';
 import AdBanner from '../components/AdBanner';
+import { createSupabaseServer } from '../lib/supabase';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -14,22 +13,7 @@ import {
   faExclamationCircle,
 } from '@fortawesome/free-solid-svg-icons';
 
-export default function Home({ categoriesWithApps }) {
-  const [revoked, setRevoked] = useState(null); // null = đang kiểm tra
-
-  useEffect(() => {
-    fetch('https://ipadl.storeios.net/api/check-revocation')
-      .then(res => res.json())
-      .then(data => {
-        if (data.success) {
-          setRevoked(data.isRevoked);
-        } else {
-          setRevoked('error');
-        }
-      })
-      .catch(() => setRevoked('error'));
-  }, []);
-
+export default function Home({ categoriesWithApps, certStatus }) {
   return (
     <Layout>
       <div className="container mx-auto px-1 md:px-2 py-6 space-y-10">
@@ -45,35 +29,29 @@ export default function Home({ categoriesWithApps }) {
                 {category.name}
               </h2>
 
-              {/* Hiện trạng thái nếu là chuyên mục Jailbreak */}
               {category.name.toLowerCase().includes('jailbreak') && (
                 <span
                   className="flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300 cursor-pointer"
                   title={
-                    revoked === null
-                      ? 'Đang kiểm tra chứng chỉ...'
-                      : revoked === true
-                      ? 'Chứng chỉ đã bị thu hồi'
-                      : revoked === false
-                      ? 'Chứng chỉ hợp lệ'
+                    certStatus?.ocspStatus === 'successful'
+                      ? certStatus.isRevoked
+                        ? 'Chứng chỉ đã bị thu hồi'
+                        : 'Chứng chỉ hợp lệ'
                       : 'Không thể kiểm tra'
                   }
                 >
-                  {revoked === null ? (
-                    <>
-                      <span className="font-bold text-yellow-600">Checking</span>
-                      <FontAwesomeIcon icon={faSpinner} spin className="text-yellow-500" />
-                    </>
-                  ) : revoked === true ? (
-                    <>
-                      <span className="font-bold text-red-600">Revoked</span>
-                      <FontAwesomeIcon icon={faTimesCircle} className="text-red-500" />
-                    </>
-                  ) : revoked === false ? (
-                    <>
-                      <span className="font-bold text-green-600">Signed</span>
-                      <FontAwesomeIcon icon={faCheckCircle} className="text-green-500" />
-                    </>
+                  {certStatus?.ocspStatus === 'successful' ? (
+                    certStatus.isRevoked ? (
+                      <>
+                        <span className="font-bold text-red-600">Revoked</span>
+                        <FontAwesomeIcon icon={faTimesCircle} className="text-red-500" />
+                      </>
+                    ) : (
+                      <>
+                        <span className="font-bold text-green-600">Signed</span>
+                        <FontAwesomeIcon icon={faCheckCircle} className="text-green-500" />
+                      </>
+                    )
                   ) : (
                     <>
                       <span className="font-bold text-gray-500">Error</span>
@@ -135,9 +113,19 @@ export async function getServerSideProps(ctx) {
     })
   );
 
+  // ✅ Gọi API check chứng chỉ ở đây (ẩn hoàn toàn khỏi client)
+  let certStatus = null;
+  try {
+    const res = await fetch('https://ipadl.storeios.net/api/check-revocation');
+    certStatus = await res.json();
+  } catch (err) {
+    certStatus = { ocspStatus: 'error' };
+  }
+
   return {
     props: {
       categoriesWithApps,
+      certStatus,
     },
   };
 }
