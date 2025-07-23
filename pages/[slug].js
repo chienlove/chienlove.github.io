@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 import Layout from '../components/Layout';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { // useEffect removed in SSR version, useState } from 'react';
+import { useState } from 'react';
 import { FastAverageColor } from 'fast-average-color';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
