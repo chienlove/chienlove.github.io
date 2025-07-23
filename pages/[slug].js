@@ -96,7 +96,6 @@ export default function Detail({ serverApp, serverRelated }) {
         .catch(console.error)
         .finally(() => fac.destroy());
     }
-  }, [app]);
 
   const truncate = (text, limit) =>
     text?.length > limit ? text.slice(0, limit) + '...' : text;
