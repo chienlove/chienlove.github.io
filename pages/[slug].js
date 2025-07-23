@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 import Layout from '../components/Layout';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState } from 'react';  // useEffect removed in SSR version
 import { FastAverageColor } from 'fast-average-color';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -74,22 +74,7 @@ export default function Detail({ serverApp, serverRelated }) {
   const [status, setStatus] = useState(null);
   const [statusLoading, setStatusLoading] = useState(false);
 
-  // useEffect removed in SSR version(() => {
-    setApp(serverApp);
-    setRelated(serverRelated);
-    setShowFullDescription(false);
-    setDominantColor('#f0f2f5');
-  }, [router.query.slug]);
 
-  // useEffect removed in SSR version(() => {
-    if (!app?.id) return;
-
-    if (app.category === 'testflight') {
-      fetch('/api/admin/add-view', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: app.id })
-      }).catch(console.error);
     }
 
     if (app.category === 'testflight' && app.testflight_url) {
