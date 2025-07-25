@@ -16,13 +16,13 @@ export default function AppCard({ app, mode = 'card' }) {
   return (
     <Link
       href={`/${app.slug}`}
+      prefetch={false} // ✅ Ngăn prefetch file JSON
       className={
         isList
           ? 'flex items-start justify-between gap-3 px-2 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition rounded-lg'
           : 'flex items-center gap-4 p-4 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition duration-200'
       }
     >
-      {/* Icon App */}
       <div className="relative w-14 h-14 rounded-2xl overflow-hidden border border-gray-300 dark:border-gray-600 flex-shrink-0 mt-1">
         <img
           src={app.icon_url || '/placeholder-icon.png'}
@@ -34,15 +34,14 @@ export default function AppCard({ app, mode = 'card' }) {
           }}
         />
         {isNew(app.created_at) && (
-  <div className="absolute top-0 left-0 w-16 h-16 overflow-hidden z-10 pointer-events-none">
-    <div className="absolute top-[6px] left-[-25px] w-[80px] rotate-[-45deg] bg-red-600 text-white text-[10px] font-bold text-center py-[0.5px] shadow-md">
-      NEW
-    </div>
-  </div>
-)}
+          <div className="absolute top-0 left-0 w-16 h-16 overflow-hidden z-10 pointer-events-none">
+            <div className="absolute top-[6px] left-[-25px] w-[80px] rotate-[-45deg] bg-red-600 text-white text-[10px] font-bold text-center py-[0.5px] shadow-md">
+              NEW
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Nội dung */}
       <div className="flex-1 min-w-0 border-t border-gray-200 dark:border-gray-700 pt-2">
         <div className="flex items-center justify-between">
           <h3 className="text-[16px] font-semibold text-gray-900 dark:text-white truncate">
@@ -61,7 +60,6 @@ export default function AppCard({ app, mode = 'card' }) {
         </div>
       </div>
 
-      {/* Icon tải */}
       <div className="flex items-center justify-center w-10 h-14 mt-1">
         <FontAwesomeIcon icon={faDownload} className="text-blue-500 text-xl" />
       </div>
