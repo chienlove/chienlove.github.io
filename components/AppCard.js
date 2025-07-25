@@ -14,7 +14,7 @@ export default function AppCard({ app, mode = 'card' }) {
   }
 
   return (
-    <a
+    <Link
       href={`/${app.slug}`}
       prefetch={false} // ✅ Ngăn prefetch file JSON
       className={
@@ -63,6 +63,6 @@ export default function AppCard({ app, mode = 'card' }) {
       <div className="flex items-center justify-center w-10 h-14 mt-1">
         <FontAwesomeIcon icon={faDownload} className="text-blue-500 text-xl" />
       </div>
-    </a>
+    </Link>
   );
 }
