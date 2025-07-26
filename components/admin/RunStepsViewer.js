@@ -63,20 +63,20 @@ export default function RunStepsViewer({ runId }) {
     const map = {
       "Set up job": "🚀 Bắt đầu tiến trình",
       "Checkout code": "📥 Lấy mã nguồn",
-      "Fetch certificate info from Supabase": "🔐 Tải thông tin cert từ Supabase",
+      "Fetch certificate info from Supabase": "🔐 Tải thông tin cert",
       "Download certificate and provisioning profile": "📄 Tải .p12 & mobileprovision",
       "Extract TEAM_ID from mobileprovision": "🔍 Trích xuất TEAM_ID",
       "Set workflow inputs": "⚙️ Thiết lập biến đầu vào",
       "Generate shared random (if needed)": "🎲 Sinh mã ngẫu nhiên",
-      "Verify release exists": "🔎 Kiểm tra tag release",
-      "Download all IPA files from release": "📦 Tải IPA từ release",
-      "Install Zsign": "🔧 Cài Zsign",
+      "Verify release exists": "🔎 Kiểm tra danh sách file",
+      "Download all IPA files from release": "📦 Tải IPA từ danh sách",
+      "Install Zsign": "🔧 Cài Tool ký",
       "Patch Info.plist & Binary (auto-generate identifier if not provided)":
         "🛠 Sửa Info.plist & binary",
-      "Sign all IPA files with Zsign (overwrite original IPA)": "✍️ Ký IPA bằng Zsign",
-      "Upload signed IPA": "☁️ Tải IPA đã ký",
+      "Sign all IPA files with Zsign (overwrite original IPA)": "✍️Đang Ký IPA",
+      "Upload signed IPA": "☁️ Tải lên IPA đã ký",
       "Generate plist with version & icon, commit to repo": "📋 Tạo plist và icon",
-      "Post Checkout code": "✅ Hoàn tất sao chép mã nguồn",
+      "Post Checkout code": "✅ Hoàn tất tải lên IPA & plist",
       "Complete job": "🎉 Hoàn tất toàn bộ tiến trình",
     };
     return map[name] || name;
