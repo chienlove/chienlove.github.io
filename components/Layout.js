@@ -91,7 +91,7 @@ export default function Layout({ children, fullWidth = false }) {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors">
       <Head>
-        <title>StreiOS – TestFlight & Jailbreak</title>
+        <title>StoreIOS – TestFlight & Jailbreak</title>
         <meta name="description" content="Kho ứng dụng TestFlight beta & công cụ jailbreak cho iOS" />
       </Head>
 
@@ -105,7 +105,7 @@ export default function Layout({ children, fullWidth = false }) {
 
           {/* Logo */}
           <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-red-600 via-black to-red-600 dark:from-red-400 dark:via-white dark:to-red-400 bg-clip-text text-transparent">
-            StreiOS
+            StoreiOS
           </Link>
 
           {/* Right Icons */}
@@ -160,8 +160,8 @@ export default function Layout({ children, fullWidth = false }) {
               </button>
               {accordionOpen.categories && (
                 <ul className="mt-2 ml-4 text-sm space-y-2">
-                  <li><Link href="/categories/a" onClick={() => setMobileMenuOpen(false)} className="hover:text-red-600">A</Link></li>
-                  <li><Link href="/categories/b" onClick={() => setMobileMenuOpen(false)} className="hover:text-red-600">B</Link></li>
+                  <li><Link href="/categories/jailbreak" onClick={() => setMobileMenuOpen(false)} className="hover:text-red-600">Jailbreak</Link></li>
+                  <li><Link href="/categories/testflight" onClick={() => setMobileMenuOpen(false)} className="hover:text-red-600">TestFlight App</Link></li>
                 </ul>
               )}
             </div>
@@ -218,7 +218,7 @@ export default function Layout({ children, fullWidth = false }) {
           </div>
         </div>
         <div className="text-center text-xs text-gray-500 border-t border-gray-800 py-6">
-          © {new Date().getFullYear()} StreiOS – Made with ❤️ for the iOS community.
+          © {new Date().getFullYear()} StoreiOS – Made with ❤️ for the iOS community.
         </div>
       </footer>
     </div>
