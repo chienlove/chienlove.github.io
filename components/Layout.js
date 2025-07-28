@@ -1,47 +1,46 @@
-// components/Layout.js
+// components/Layout.js  (FIXED)
 import { useEffect, useState, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabase';
 
-// FontAwesome
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faBars, faTimes, faSun, faMoon, faSearch,
   faLayerGroup, faTools, faInfoCircle,
-  faChevronDown, faFilter, faSortAmountDown,
-  faSortAlphaDown
+  faFilter, faSortAmountDown, faSortAlphaDown
 } from '@fortawesome/free-solid-svg-icons';
 
-// ------------------------------------------------------------------
+/* -------------------------------------------------- */
 export default function Layout({ children, fullWidth = false }) {
   const router = useRouter();
   const [darkMode, setDarkMode] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  /* -------- Search State -------- */
+  /* Search states */
   const [searchOpen, setSearchOpen]   = useState(false);
   const [q, setQ]                     = useState('');
   const [activeCategory, setCategory] = useState('all');
-  const [sortBy, setSortBy]           = useState('created_at'); // created_at | name
+  const [sortBy, setSortBy]           = useState('created_at');
   const [apps, setApps]               = useState([]);
   const [categories, setCategories]   = useState([]);
   const [loading, setLoading]         = useState(false);
 
-  const overlayRef = useRef(null);
-
-  /* -------- Dark Mode Sync -------- */
+  /* ---------- 1. Dark-mode: gán class sớm để không flash ---------- */
   useEffect(() => {
-    const stored = localStorage.getItem('darkMode') === 'true';
-    setDarkMode(stored);
+    // đọc từ localStorage hoặc OS
+    const stored = localStorage.getItem('darkMode');
+    const prefers = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    setDarkMode(stored ? stored === 'true' : prefers);
   }, []);
+
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
     localStorage.setItem('darkMode', darkMode);
   }, [darkMode]);
 
-  /* -------- Categories -------- */
+  /* ---------- 2. Lấy danh mục ---------- */
   useEffect(() => {
     (async () => {
       const { data } = await supabase
@@ -52,17 +51,15 @@ export default function Layout({ children, fullWidth = false }) {
     })();
   }, []);
 
-  /* -------- Search Logic -------- */
-  const performSearch = async () => {
-    if (!q.trim() && activeCategory === 'all') return;
+  /* ---------- 3. Tìm kiếm + lọc + sắp xếp ---------- */
+  const runSearch = async () => {
     setLoading(true);
-
     let query = supabase
       .from('apps')
       .select('*')
       .order(sortBy, { ascending: sortBy === 'name' });
 
-    if (q.trim())      query = query.ilike('name', `%${q.trim()}%`);
+    if (q.trim()) query = query.ilike('name', `%${q.trim()}%`);
     if (activeCategory !== 'all') query = query.eq('category_id', activeCategory);
 
     const { data } = await query;
@@ -70,9 +67,7 @@ export default function Layout({ children, fullWidth = false }) {
     setLoading(false);
   };
 
-  useEffect(() => {
-    if (searchOpen) performSearch();
-  }, [q, activeCategory, sortBy]);
+  useEffect(() => { if (searchOpen) runSearch(); }, [q, activeCategory, sortBy, searchOpen]);
 
   const handleAppClick = (slug) => {
     setSearchOpen(false);
@@ -81,25 +76,22 @@ export default function Layout({ children, fullWidth = false }) {
     router.push(`/${slug}`);
   };
 
-  /* -------- Render -------- */
+  /* ---------- 4. Render ---------- */
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors">
 
       <Head>
         <title>StreiOS – TestFlight & Jailbreak</title>
         <meta name="description" content="Kho ứng dụng TestFlight beta & công cụ jailbreak cho iOS" />
-        <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      {/* ================= HEADER ================= */}
-      <header className="sticky top-0 z-40 w-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700">
+      {/* ---------------- HEADER ---------------- */}
+      <header className="sticky top-0 z-40 w-full bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-screen-2xl mx-auto px-4 py-3 flex items-center justify-between">
 
           {/* Logo */}
-          <Link href="/" className="flex items-center">
-            <span className="text-2xl font-bold bg-gradient-to-r from-red-600 via-black to-red-600 dark:from-red-400 dark:via-white dark:to-red-400 bg-clip-text text-transparent">
-              StreiOS
-            </span>
+          <Link href="/" className="text-xl font-bold bg-gradient-to-r from-red-600 via-black to-red-600 dark:from-red-400 dark:via-white dark:to-red-400 bg-clip-text text-transparent">
+            StreiOS
           </Link>
 
           {/* Desktop Nav */}
@@ -111,22 +103,22 @@ export default function Layout({ children, fullWidth = false }) {
 
           {/* Actions */}
           <div className="flex items-center gap-3">
-            <button onClick={() => setSearchOpen(true)} aria-label="Search" className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
-              <FontAwesomeIcon icon={faSearch} />
+            <button onClick={() => setSearchOpen(true)} className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
+              <FontAwesomeIcon icon={faSearch} className="w-5 h-5" />
             </button>
-            <button onClick={() => setDarkMode(!darkMode)} aria-label="Toggle theme" className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
-              <FontAwesomeIcon icon={darkMode ? faSun : faMoon} />
+            <button onClick={() => setDarkMode(!darkMode)} className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
+              <FontAwesomeIcon icon={darkMode ? faSun : faMoon} className="w-5 h-5" />
             </button>
             <button onClick={() => setMobileMenuOpen(true)} className="md:hidden p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
-              <FontAwesomeIcon icon={faBars} />
+              <FontAwesomeIcon icon={faBars} className="w-5 h-5" />
             </button>
           </div>
         </div>
       </header>
 
-      {/* ================= MOBILE MENU ================= */}
+      {/* ---------------- MOBILE MENU ---------------- */}
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm md:hidden" onClick={() => setMobileMenuOpen(false)}>
+        <div className="fixed inset-0 z-50 bg-black/60 md:hidden" onClick={() => setMobileMenuOpen(false)}>
           <div className="absolute top-0 right-0 h-full w-72 bg-white dark:bg-gray-800 shadow-xl p-6 space-y-6">
             <button onClick={() => setMobileMenuOpen(false)} className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
               <FontAwesomeIcon icon={faTimes} />
@@ -144,20 +136,20 @@ export default function Layout({ children, fullWidth = false }) {
         </div>
       )}
 
-      {/* ================= SEARCH MODAL ================= */}
+      {/* ---------------- SEARCH MODAL ---------------- */}
       {searchOpen && (
-        <div ref={overlayRef} className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-start justify-center pt-20 px-4" onClick={(e) => e.target === overlayRef.current && setSearchOpen(false)}>
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-start justify-center pt-20 px-4">
           <div className="w-full max-w-3xl bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 max-h-[90vh] flex flex-col">
             {/* Header */}
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold">Tìm kiếm & lọc ứng dụng</h2>
+              <h2 className="text-xl font-bold">Tìm kiếm & lọc</h2>
               <button onClick={() => setSearchOpen(false)} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
                 <FontAwesomeIcon icon={faTimes} />
               </button>
             </div>
 
-            {/* Search bar */}
-            <div className="relative mb-4">
+            {/* Search */}
+            <div className="relative mb-3">
               <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
                 autoFocus
@@ -173,16 +165,15 @@ export default function Layout({ children, fullWidth = false }) {
             <div className="flex flex-wrap items-center gap-4 mb-4 text-sm">
               <div className="flex items-center gap-1">
                 <FontAwesomeIcon icon={faFilter} />
-                <span className="font-medium">Danh mục:</span>
+                <span>Danh mục:</span>
                 <select value={activeCategory} onChange={(e) => setCategory(e.target.value)} className="bg-gray-100 dark:bg-gray-700 rounded px-2 py-1">
                   <option value="all">Tất cả</option>
                   {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
-
               <div className="flex items-center gap-1">
                 <FontAwesomeIcon icon={faSortAmountDown} />
-                <span className="font-medium">Sắp xếp:</span>
+                <span>Sắp xếp:</span>
                 <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="bg-gray-100 dark:bg-gray-700 rounded px-2 py-1">
                   <option value="created_at">Mới nhất</option>
                   <option value="name">Tên A-Z</option>
@@ -210,12 +201,12 @@ export default function Layout({ children, fullWidth = false }) {
         </div>
       )}
 
-      {/* ================= MAIN ================= */}
+      {/* ---------------- MAIN ---------------- */}
       <main className={`flex-1 ${fullWidth ? '' : 'max-w-screen-2xl mx-auto px-4 py-6'}`}>
         {children}
       </main>
 
-      {/* ================= FOOTER ================= */}
+      {/* ---------------- FOOTER ---------------- */}
       <footer className="bg-gray-100 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
         <div className="max-w-screen-2xl mx-auto px-4 py-12 grid grid-cols-1 md:grid-cols-4 gap-8 text-sm">
           <div>
@@ -225,13 +216,10 @@ export default function Layout({ children, fullWidth = false }) {
             <p className="mt-2 text-gray-600 dark:text-gray-400">
               Kho ứng dụng TestFlight beta & công cụ jailbreak cho iOS.
             </p>
-            <div className="flex items-center space-x-2 mt-4">
-              <button onClick={() => setDarkMode(!darkMode)} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
-                <FontAwesomeIcon icon={darkMode ? faSun : faMoon} />
-              </button>
-            </div>
+            <button onClick={() => setDarkMode(!darkMode)} className="mt-4 p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+              <FontAwesomeIcon icon={darkMode ? faSun : faMoon} />
+            </button>
           </div>
-
           <div>
             <h3 className="font-semibold mb-3">Khám phá</h3>
             <ul className="space-y-2 text-gray-600 dark:text-gray-400">
@@ -240,7 +228,6 @@ export default function Layout({ children, fullWidth = false }) {
               <li><Link href="/about"><span className="hover:text-red-600 cursor-pointer">Giới thiệu</span></Link></li>
             </ul>
           </div>
-
           <div>
             <h3 className="font-semibold mb-3">Chuyên mục</h3>
             <ul className="space-y-2 text-gray-600 dark:text-gray-400">
@@ -249,7 +236,6 @@ export default function Layout({ children, fullWidth = false }) {
               ))}
             </ul>
           </div>
-
           <div>
             <h3 className="font-semibold mb-3">Hỗ trợ</h3>
             <ul className="space-y-2 text-gray-600 dark:text-gray-400">
@@ -262,9 +248,8 @@ export default function Layout({ children, fullWidth = false }) {
             </button>
           </div>
         </div>
-
         <div className="border-t border-gray-200 dark:border-gray-700 py-6 text-center text-xs text-gray-500">
-          © {new Date().getFullYear()} StreiOS. Made with ❤️ for the iOS community.
+          © {new Date().getFullYear()} StreiOS – Made with ❤️ for the iOS community.
         </div>
       </footer>
     </div>
