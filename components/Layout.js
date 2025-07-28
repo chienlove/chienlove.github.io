@@ -7,15 +7,15 @@ import SearchModal from './SearchModal';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faBars, faSun, faMoon, faSearch,
-  faTools, faLayerGroup, faInfoCircle, faTimes
+  faSun, faMoon, faSearch
 } from '@fortawesome/free-solid-svg-icons';
+import {
+  faGithub, faTwitter, faDiscord, faTelegram
+} from '@fortawesome/free-brands-svg-icons';
 
 export default function Layout({ children, fullWidth = false }) {
   const router = useRouter();
   const [darkMode, setDarkMode] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
   const [searchOpen, setSearchOpen] = useState(false);
   const [q, setQ] = useState('');
   const [activeCategory, setCategory] = useState('all');
@@ -71,52 +71,34 @@ export default function Layout({ children, fullWidth = false }) {
         <meta name="description" content="Kho ứng dụng TestFlight beta & công cụ jailbreak cho iOS" />
       </Head>
 
-      {/* Header */}
-      <header className="sticky top-0 z-40 w-full bg-white/90 dark:bg-gray-800/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-700">
-        <div className="max-w-screen-2xl mx-auto px-4 py-3 flex items-center justify-between">
-          <Link href="/" className="text-xl font-bold bg-gradient-to-r from-red-600 via-black to-red-600 dark:from-red-400 dark:via-white dark:to-red-400 bg-clip-text text-transparent">
+      {/* HEADER mới */}
+      <header className="sticky top-0 z-40 w-full bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
+        <div className="max-w-screen-2xl mx-auto px-4 py-4 flex items-center justify-between">
+          {/* LEFT: Menu */}
+          <nav className="flex items-center gap-6 text-sm font-medium text-gray-700 dark:text-gray-300">
+            <Link href="/tools" className="hover:text-red-600 transition">Công cụ</Link>
+            <Link href="/categories" className="hover:text-red-600 transition">Chuyên mục</Link>
+            <Link href="/about" className="hover:text-red-600 transition">Giới thiệu</Link>
+          </nav>
+
+          {/* CENTER: Logo */}
+          <Link href="/" className="text-2xl font-bold tracking-tight bg-gradient-to-r from-red-600 via-black to-red-600 dark:from-red-400 dark:via-white dark:to-red-400 bg-clip-text text-transparent">
             StreiOS
           </Link>
-          <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
-            <Link href="/tools" className="hover:text-red-600 flex items-center gap-1"><FontAwesomeIcon icon={faTools} />Công cụ</Link>
-            <Link href="/categories" className="hover:text-red-600 flex items-center gap-1"><FontAwesomeIcon icon={faLayerGroup} />Chuyên mục</Link>
-            <Link href="/about" className="hover:text-red-600 flex items-center gap-1"><FontAwesomeIcon icon={faInfoCircle} />Giới thiệu</Link>
-          </nav>
+
+          {/* RIGHT: Search & Dark mode */}
           <div className="flex items-center gap-3">
-            <button onClick={() => setSearchOpen(true)} className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
+            <button onClick={() => setSearchOpen(true)} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
               <FontAwesomeIcon icon={faSearch} className="w-5 h-5" />
             </button>
-            <button onClick={() => setDarkMode(!darkMode)} className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
+            <button onClick={() => setDarkMode(!darkMode)} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
               <FontAwesomeIcon icon={darkMode ? faSun : faMoon} className="w-5 h-5" />
-            </button>
-            <button onClick={() => setMobileMenuOpen(true)} className="md:hidden p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
-              <FontAwesomeIcon icon={faBars} className="w-5 h-5" />
             </button>
           </div>
         </div>
       </header>
 
-      {/* Mobile Menu */}
-      {mobileMenuOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 md:hidden" onClick={() => setMobileMenuOpen(false)}>
-          <div className="absolute top-0 right-0 h-full w-64 bg-white dark:bg-gray-800 shadow-xl p-6">
-            <button onClick={() => setMobileMenuOpen(false)} className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
-              <FontAwesomeIcon icon={faTimes} />
-            </button>
-            <h2 className="text-xl font-bold mb-4">Menu</h2>
-            <nav className="space-y-4 text-sm font-medium">
-              <Link href="/tools" onClick={() => setMobileMenuOpen(false)}>Công cụ</Link>
-              <Link href="/categories" onClick={() => setMobileMenuOpen(false)}>Chuyên mục</Link>
-              <Link href="/about" onClick={() => setMobileMenuOpen(false)}>Giới thiệu</Link>
-              <button onClick={() => { setMobileMenuOpen(false); setSearchOpen(true); }} className="mt-4 w-full bg-red-600 text-white py-2 rounded-lg font-semibold">
-                <FontAwesomeIcon icon={faSearch} className="mr-2" />Tìm kiếm
-              </button>
-            </nav>
-          </div>
-        </div>
-      )}
-
-      {/* Search Modal */}
+      {/* SEARCH MODAL */}
       <SearchModal
         q={q} setQ={setQ}
         activeCategory={activeCategory} setCategory={setCategory}
@@ -126,39 +108,64 @@ export default function Layout({ children, fullWidth = false }) {
         categories={categories}
       />
 
-      {/* Main */}
+      {/* MAIN */}
       <main className={`flex-1 ${fullWidth ? '' : 'w-full max-w-screen-2xl mx-auto px-4 py-6'}`}>
         {children}
       </main>
 
-      {/* Footer mới */}
-      <footer className="bg-gray-900 text-gray-200 mt-12">
-        <div className="max-w-screen-2xl mx-auto px-4 py-12 grid grid-cols-1 md:grid-cols-3 gap-8">
+      {/* FOOTER mới */}
+      <footer className="bg-gray-900 text-gray-300 mt-16 border-t border-gray-800">
+        <div className="max-w-screen-2xl mx-auto px-4 py-12 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
+
+          {/* Về StreiOS */}
           <div>
-            <h2 className="text-2xl font-bold text-white">StreiOS</h2>
-            <p className="mt-2 text-gray-400">Kho ứng dụng TestFlight beta và công cụ jailbreak dành cho iOS.</p>
-            <button onClick={() => setDarkMode(!darkMode)} className="mt-4 p-2 rounded-full hover:bg-gray-800 border border-gray-700">
-              <FontAwesomeIcon icon={darkMode ? faSun : faMoon} />
-            </button>
+            <h3 className="text-white font-bold text-lg mb-3">StreiOS</h3>
+            <p className="text-gray-400 text-sm">
+              Kho ứng dụng TestFlight beta & công cụ jailbreak cho cộng đồng iOS.
+            </p>
           </div>
+
+          {/* Điều hướng */}
           <div>
-            <h3 className="font-semibold mb-3 text-white">Khám phá</h3>
-            <ul className="space-y-2">
-              <li><Link href="/tools" className="hover:text-red-400">Công cụ</Link></li>
-              <li><Link href="/categories" className="hover:text-red-400">Chuyên mục</Link></li>
-              <li><Link href="/about" className="hover:text-red-400">Giới thiệu</Link></li>
-              <li><Link href="/privacy" className="hover:text-red-400">Bảo mật</Link></li>
+            <h4 className="font-semibold text-white mb-3">Điều hướng</h4>
+            <ul className="space-y-2 text-sm">
+              <li><Link href="/tools" className="hover:text-white">Công cụ</Link></li>
+              <li><Link href="/categories" className="hover:text-white">Chuyên mục</Link></li>
+              <li><Link href="/about" className="hover:text-white">Giới thiệu</Link></li>
+              <li><Link href="/privacy" className="hover:text-white">Bảo mật</Link></li>
             </ul>
           </div>
+
+          {/* Liên hệ */}
           <div>
-            <h3 className="font-semibold mb-3 text-white">Ủng hộ</h3>
-            <p className="text-gray-400 mb-4">Nếu bạn thấy hữu ích, hãy ủng hộ chúng tôi một ly cà phê!</p>
-            <button onClick={() => window.open('https://www.buymeacoffee.com', '_blank')} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg font-semibold">
-              ☕ Ủng hộ qua BuyMeACoffee
-            </button>
+            <h4 className="font-semibold text-white mb-3">Liên hệ</h4>
+            <ul className="space-y-2 text-sm">
+              <li><Link href="/contact" className="hover:text-white">Liên hệ trực tiếp</Link></li>
+              <li><a href="mailto:support@storeios.net" className="hover:text-white">Email hỗ trợ</a></li>
+            </ul>
+          </div>
+
+          {/* Mạng xã hội */}
+          <div>
+            <h4 className="font-semibold text-white mb-3">Kết nối</h4>
+            <div className="flex gap-4 text-xl">
+              <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="hover:text-white">
+                <FontAwesomeIcon icon={faGithub} />
+              </a>
+              <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="hover:text-white">
+                <FontAwesomeIcon icon={faTwitter} />
+              </a>
+              <a href="https://discord.gg" target="_blank" rel="noopener noreferrer" className="hover:text-white">
+                <FontAwesomeIcon icon={faDiscord} />
+              </a>
+              <a href="https://t.me" target="_blank" rel="noopener noreferrer" className="hover:text-white">
+                <FontAwesomeIcon icon={faTelegram} />
+              </a>
+            </div>
           </div>
         </div>
-        <div className="text-center text-sm text-gray-500 border-t border-gray-800 py-6">
+
+        <div className="text-center text-xs text-gray-500 border-t border-gray-800 py-6">
           © {new Date().getFullYear()} StreiOS – Made with ❤️ for the iOS community.
         </div>
       </footer>
