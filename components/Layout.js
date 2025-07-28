@@ -1,373 +1,270 @@
-import { useEffect, useState } from 'react';
+// components/Layout.js
+import { useEffect, useState, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabase';
-import AppCard from './AppCard';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBars, faMoon, faSun, faTools, faThList, faInfoCircle, faTimes, faSearch } from '@fortawesome/free-solid-svg-icons';
 
+// FontAwesome
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {
+  faBars, faTimes, faSun, faMoon, faSearch,
+  faLayerGroup, faTools, faInfoCircle,
+  faChevronDown, faFilter, faSortAmountDown,
+  faSortAlphaDown
+} from '@fortawesome/free-solid-svg-icons';
+
+// ------------------------------------------------------------------
 export default function Layout({ children, fullWidth = false }) {
   const router = useRouter();
   const [darkMode, setDarkMode] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [searchOpen, setSearchOpen] = useState(false);
-  const [q, setQ] = useState('');
-  const [apps, setApps] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [activeCategory, setActiveCategory] = useState('all');
-  const [searching, setSearching] = useState(false);
-  const [searchSuggestions, setSearchSuggestions] = useState([]);
 
+  /* -------- Search State -------- */
+  const [searchOpen, setSearchOpen]   = useState(false);
+  const [q, setQ]                     = useState('');
+  const [activeCategory, setCategory] = useState('all');
+  const [sortBy, setSortBy]           = useState('created_at'); // created_at | name
+  const [apps, setApps]               = useState([]);
+  const [categories, setCategories]   = useState([]);
+  const [loading, setLoading]         = useState(false);
+
+  const overlayRef = useRef(null);
+
+  /* -------- Dark Mode Sync -------- */
+  useEffect(() => {
+    const stored = localStorage.getItem('darkMode') === 'true';
+    setDarkMode(stored);
+  }, []);
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
     localStorage.setItem('darkMode', darkMode);
   }, [darkMode]);
 
+  /* -------- Categories -------- */
   useEffect(() => {
-    setDarkMode(localStorage.getItem('darkMode') === 'true');
-  }, []);
-
-  useEffect(() => {
-    async function fetchCategories() {
-      const { data, error } = await supabase
+    (async () => {
+      const { data } = await supabase
         .from('categories')
         .select('*, apps:apps(count)')
         .order('name', { ascending: true });
-      if (!error) setCategories(data || []);
-    }
-    fetchCategories();
+      setCategories(data || []);
+    })();
   }, []);
 
-  const handleSearch = async (e) => {
-    e.preventDefault();
-    setSearching(true);
-    let query = supabase.from('apps').select('*').order('created_at', { ascending: false });
-    if (q) query = query.ilike('name', `%${q}%`);
+  /* -------- Search Logic -------- */
+  const performSearch = async () => {
+    if (!q.trim() && activeCategory === 'all') return;
+    setLoading(true);
+
+    let query = supabase
+      .from('apps')
+      .select('*')
+      .order(sortBy, { ascending: sortBy === 'name' });
+
+    if (q.trim())      query = query.ilike('name', `%${q.trim()}%`);
     if (activeCategory !== 'all') query = query.eq('category_id', activeCategory);
+
     const { data } = await query;
     setApps(data || []);
-    setSearching(false);
-    setSearchOpen(false);
+    setLoading(false);
   };
 
+  useEffect(() => {
+    if (searchOpen) performSearch();
+  }, [q, activeCategory, sortBy]);
+
   const handleAppClick = (slug) => {
-    setApps([]);
+    setSearchOpen(false);
     setQ('');
-    setActiveCategory('all');
-    setSearchSuggestions([]);
+    setCategory('all');
     router.push(`/${slug}`);
   };
 
+  /* -------- Render -------- */
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors">
+
       <Head>
-        <title>StreiOS - Chia sẻ ứng dụng testflight beta và tool jailbreak cho iOS</title>
-        <meta name="description" content="Nền tảng chia sẻ ứng dụng TestFlight beta và công cụ jailbreak cho iOS" />
+        <title>StreiOS – TestFlight & Jailbreak</title>
+        <meta name="description" content="Kho ứng dụng TestFlight beta & công cụ jailbreak cho iOS" />
+        <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      {/* Header */}
-      <header className="sticky top-0 z-50 w-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 shadow-sm">
-        <div className="w-full max-w-screen-2xl mx-auto px-4 py-3 flex items-center justify-between">
-          {/* Left Navigation */}
-          <nav className="hidden md:flex items-center gap-6">
-            <Link href="/tools">
-              <a className="hover:text-red-600 dark:hover:text-red-400 transition-colors flex items-center gap-2 text-sm font-medium">
-                <FontAwesomeIcon icon={faTools} className="w-4 h-4" />
-                <span>Công cụ</span>
-              </a>
-            </Link>
-            <Link href="/categories">
-              <a className="hover:text-red-600 dark:hover:text-red-400 transition-colors flex items-center gap-2 text-sm font-medium">
-                <FontAwesomeIcon icon={faThList} className="w-4 h-4" />
-                <span>Chuyên mục</span>
-              </a>
-            </Link>
-            <Link href="/about">
-              <a className="hover:text-red-600 dark:hover:text-red-400 transition-colors flex items-center gap-2 text-sm font-medium">
-                <FontAwesomeIcon icon={faInfoCircle} className="w-4 h-4" />
-                <span>Giới thiệu</span>
-              </a>
-            </Link>
+      {/* ================= HEADER ================= */}
+      <header className="sticky top-0 z-40 w-full bg-white/80 dark:bg-gray-800/80 backdrop-blur-md border-b border-gray-200 dark:border-gray-700">
+        <div className="max-w-screen-2xl mx-auto px-4 py-3 flex items-center justify-between">
+
+          {/* Logo */}
+          <Link href="/" className="flex items-center">
+            <span className="text-2xl font-bold bg-gradient-to-r from-red-600 via-black to-red-600 dark:from-red-400 dark:via-white dark:to-red-400 bg-clip-text text-transparent">
+              StreiOS
+            </span>
+          </Link>
+
+          {/* Desktop Nav */}
+          <nav className="hidden md:flex items-center gap-6 text-sm font-medium">
+            <Link href="/tools"><span className="hover:text-red-600 cursor-pointer flex items-center gap-1"><FontAwesomeIcon icon={faTools} />Công cụ</span></Link>
+            <Link href="/categories"><span className="hover:text-red-600 cursor-pointer flex items-center gap-1"><FontAwesomeIcon icon={faLayerGroup} />Chuyên mục</span></Link>
+            <Link href="/about"><span className="hover:text-red-600 cursor-pointer flex items-center gap-1"><FontAwesomeIcon icon={faInfoCircle} />Giới thiệu</span></Link>
           </nav>
 
-          {/* Mobile menu button */}
-          <button
-            className="md:hidden p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700"
-            onClick={() => setMobileMenuOpen(true)}
-          >
-            <FontAwesomeIcon icon={faBars} className="w-5 h-5" />
-          </button>
-
-          {/* Center Logo */}
-          <div className="absolute left-1/2 transform -translate-x-1/2">
-            <Link href="/" className="text-3xl font-bold group">
-              <span className="bg-gradient-to-r from-black via-red-900 to-red-600 bg-clip-text text-transparent 
-                            bg-[length:200%_auto] bg-left group-hover:bg-right transition-all duration-1000 
-                            drop-shadow-[0_0_10px_rgba(153,27,27,0.3)] group-hover:drop-shadow-[0_0_15px_rgba(239,68,68,0.6)]">
-                ꗟ𝕥𝕣ⅇ𝕚⌾𝕊
-              </span>
-            </Link>
-          </div>
-
-          {/* Right Actions */}
-          <div className="flex items-center gap-4">
-            <button
-              onClick={() => setSearchOpen(true)}
-              className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-              aria-label="Search"
-            >
-              <FontAwesomeIcon icon={faSearch} className="w-5 h-5" />
+          {/* Actions */}
+          <div className="flex items-center gap-3">
+            <button onClick={() => setSearchOpen(true)} aria-label="Search" className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
+              <FontAwesomeIcon icon={faSearch} />
             </button>
-            
-            <button
-              onClick={() => setDarkMode(!darkMode)}
-              className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-              aria-label="Toggle dark mode"
-            >
-              <FontAwesomeIcon icon={darkMode ? faSun : faMoon} className="w-5 h-5" />
+            <button onClick={() => setDarkMode(!darkMode)} aria-label="Toggle theme" className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
+              <FontAwesomeIcon icon={darkMode ? faSun : faMoon} />
+            </button>
+            <button onClick={() => setMobileMenuOpen(true)} className="md:hidden p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700">
+              <FontAwesomeIcon icon={faBars} />
             </button>
           </div>
         </div>
       </header>
 
-      {/* Mobile Menu */}
-      <div className={`fixed inset-0 z-50 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${mobileMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-        <div className={`absolute top-0 left-0 h-full w-80 bg-white dark:bg-gray-800 shadow-xl transition-transform duration-300 ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-          <div className="flex justify-between items-center p-6 border-b dark:border-gray-700">
-            <span className="font-bold text-xl">Menu</span>
-            <button 
-              onClick={() => setMobileMenuOpen(false)}
-              className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
-            >
-              <FontAwesomeIcon icon={faTimes} className="w-5 h-5" />
+      {/* ================= MOBILE MENU ================= */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm md:hidden" onClick={() => setMobileMenuOpen(false)}>
+          <div className="absolute top-0 right-0 h-full w-72 bg-white dark:bg-gray-800 shadow-xl p-6 space-y-6">
+            <button onClick={() => setMobileMenuOpen(false)} className="absolute top-4 right-4 p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+              <FontAwesomeIcon icon={faTimes} />
             </button>
-          </div>
-          <div className="p-6 space-y-6">
-            <div className="space-y-4">
-              <Link href="/tools">
-                <a className="block text-lg font-medium hover:text-red-600 dark:hover:text-red-400 transition-colors">
-                  <FontAwesomeIcon icon={faTools} className="w-5 h-5 mr-3" />
-                  Công cụ
-                </a>
-              </Link>
-              <Link href="/categories">
-                <a className="block text-lg font-medium hover:text-red-600 dark:hover:text-red-400 transition-colors">
-                  <FontAwesomeIcon icon={faThList} className="w-5 h-5 mr-3" />
-                  Chuyên mục
-                </a>
-              </Link>
-              <Link href="/about">
-                <a className="block text-lg font-medium hover:text-red-600 dark:hover:text-red-400 transition-colors">
-                  <FontAwesomeIcon icon={faInfoCircle} className="w-5 h-5 mr-3" />
-                  Giới thiệu
-                </a>
-              </Link>
-            </div>
-            
-            <button
-              onClick={() => {
-                setMobileMenuOpen(false);
-                setSearchOpen(true);
-              }}
-              className="w-full flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-3 rounded-lg font-medium transition-colors"
-            >
-              <FontAwesomeIcon icon={faSearch} />
-              Tìm kiếm ứng dụng
+            <h2 className="text-xl font-bold">Menu</h2>
+            <nav className="space-y-4 text-sm font-medium">
+              <Link href="/tools"><span onClick={() => setMobileMenuOpen(false)} className="block hover:text-red-600 cursor-pointer">Công cụ</span></Link>
+              <Link href="/categories"><span onClick={() => setMobileMenuOpen(false)} className="block hover:text-red-600 cursor-pointer">Chuyên mục</span></Link>
+              <Link href="/about"><span onClick={() => setMobileMenuOpen(false)} className="block hover:text-red-600 cursor-pointer">Giới thiệu</span></Link>
+            </nav>
+            <button onClick={() => { setMobileMenuOpen(false); setSearchOpen(true); }} className="w-full bg-red-600 text-white py-2 rounded-lg font-semibold">
+              <FontAwesomeIcon icon={faSearch} className="mr-2" />Tìm kiếm
             </button>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Search Modal */}
-      <div className={`fixed inset-0 z-50 bg-black/50 backdrop-blur-sm transition-opacity duration-300 ${searchOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-        <div className={`absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl bg-white dark:bg-gray-800 rounded-xl shadow-2xl transition-all duration-300 ${searchOpen ? 'scale-100' : 'scale-95'}`}>
-          <div className="p-6">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold">Tìm kiếm ứng dụng</h2>
-              <button 
-                onClick={() => setSearchOpen(false)}
-                className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
-              >
-                <FontAwesomeIcon icon={faTimes} className="w-5 h-5" />
+      {/* ================= SEARCH MODAL ================= */}
+      {searchOpen && (
+        <div ref={overlayRef} className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-start justify-center pt-20 px-4" onClick={(e) => e.target === overlayRef.current && setSearchOpen(false)}>
+          <div className="w-full max-w-3xl bg-white dark:bg-gray-800 rounded-xl shadow-2xl p-6 max-h-[90vh] flex flex-col">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold">Tìm kiếm & lọc ứng dụng</h2>
+              <button onClick={() => setSearchOpen(false)} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                <FontAwesomeIcon icon={faTimes} />
               </button>
             </div>
-            
-            <form onSubmit={handleSearch} className="mb-6">
-              <div className="relative">
-                <input
-                  type="text"
-                  value={q}
-                  onChange={(e) => setQ(e.target.value)}
-                  placeholder="Nhập tên ứng dụng..."
-                  className="w-full px-4 py-3 pl-12 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                  autoFocus
-                />
-                <FontAwesomeIcon 
-                  icon={faSearch} 
-                  className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400" 
-                />
-              </div>
-            </form>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-              {categories.map((category) => (
-                <button
-                  key={category.id}
-                  onClick={() => {
-                    setActiveCategory(category.id);
-                    handleSearch({ preventDefault: () => {} });
-                  }}
-                  className={`p-4 rounded-lg border transition-all ${activeCategory === category.id ? 'border-red-500 bg-red-50 dark:bg-red-900/20' : 'border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700'}`}
-                >
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium">{category.name}</span>
-                    <span className="text-sm bg-gray-200 dark:bg-gray-700 px-2 py-1 rounded-full">
-                      {category.apps?.count || 0} apps
-                    </span>
-                  </div>
-                </button>
-              ))}
+
+            {/* Search bar */}
+            <div className="relative mb-4">
+              <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                autoFocus
+                type="text"
+                value={q}
+                onChange={(e) => setQ(e.target.value)}
+                placeholder="Nhập tên ứng dụng..."
+                className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 focus:ring-2 focus:ring-red-500"
+              />
             </div>
-            
-            {searching && (
-              <div className="text-center py-4 text-gray-500">
-                Đang tìm kiếm...
+
+            {/* Filters */}
+            <div className="flex flex-wrap items-center gap-4 mb-4 text-sm">
+              <div className="flex items-center gap-1">
+                <FontAwesomeIcon icon={faFilter} />
+                <span className="font-medium">Danh mục:</span>
+                <select value={activeCategory} onChange={(e) => setCategory(e.target.value)} className="bg-gray-100 dark:bg-gray-700 rounded px-2 py-1">
+                  <option value="all">Tất cả</option>
+                  {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
               </div>
-            )}
-            
-            {apps.length > 0 && (
-              <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-                <h3 className="font-medium mb-3">Kết quả tìm kiếm ({apps.length})</h3>
-                <div className="space-y-2 max-h-96 overflow-y-auto">
-                  {apps.map((app) => (
-                    <div
-                      key={app.id}
-                      onClick={() => handleAppClick(app.slug)}
-                      className="p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors"
-                    >
-                      <div className="font-medium">{app.name}</div>
-                      <div className="text-sm text-gray-500 dark:text-gray-400">{app.description}</div>
+
+              <div className="flex items-center gap-1">
+                <FontAwesomeIcon icon={faSortAmountDown} />
+                <span className="font-medium">Sắp xếp:</span>
+                <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="bg-gray-100 dark:bg-gray-700 rounded px-2 py-1">
+                  <option value="created_at">Mới nhất</option>
+                  <option value="name">Tên A-Z</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Results */}
+            <div className="flex-1 overflow-y-auto">
+              {loading && <p className="text-center py-4 text-gray-500">Đang tìm...</p>}
+              {!loading && !apps.length && <p className="text-center py-4 text-gray-500">Không có kết quả.</p>}
+              <ul className="space-y-2">
+                {apps.map(app => (
+                  <li key={app.id} onClick={() => handleAppClick(app.slug)} className="flex items-center gap-3 p-3 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
+                    <img src={app.icon_url || '/placeholder-icon.png'} alt={app.name} className="w-10 h-10 rounded-lg object-cover" />
+                    <div className="flex-1">
+                      <p className="font-semibold">{app.name}</p>
+                      <p className="text-xs text-gray-500">{app.author}</p>
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Main content */}
-      <main className={`${fullWidth ? 'w-full' : 'w-full max-w-screen-2xl mx-auto px-4'} py-6 flex-1`}>
+      {/* ================= MAIN ================= */}
+      <main className={`flex-1 ${fullWidth ? '' : 'max-w-screen-2xl mx-auto px-4 py-6'}`}>
         {children}
       </main>
 
-      {/* Footer */}
-      <footer className="w-full bg-gray-100 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
-        <div className="w-full max-w-screen-2xl mx-auto px-4 py-12 grid grid-cols-1 md:grid-cols-4 gap-8">
-          <div className="space-y-4">
-            <Link href="/">
-              <a className="text-2xl font-bold bg-gradient-to-r from-black via-red-900 to-red-600 bg-clip-text text-transparent">
-                ꗟ𝕥𝕣ⅇ𝕚⌾𝕊
-              </a>
+      {/* ================= FOOTER ================= */}
+      <footer className="bg-gray-100 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+        <div className="max-w-screen-2xl mx-auto px-4 py-12 grid grid-cols-1 md:grid-cols-4 gap-8 text-sm">
+          <div>
+            <Link href="/" className="text-xl font-bold bg-gradient-to-r from-red-600 via-black to-red-600 dark:from-red-400 dark:via-white dark:to-red-400 bg-clip-text text-transparent">
+              StreiOS
             </Link>
-            <p className="text-gray-600 dark:text-gray-400 text-sm">
-              Nền tảng chia sẻ ứng dụng TestFlight beta và công cụ jailbreak cho iOS.
+            <p className="mt-2 text-gray-600 dark:text-gray-400">
+              Kho ứng dụng TestFlight beta & công cụ jailbreak cho iOS.
             </p>
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => setDarkMode(!darkMode)}
-                className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-                aria-label="Toggle dark mode"
-              >
-                <FontAwesomeIcon icon={darkMode ? faSun : faMoon} className="w-5 h-5" />
+            <div className="flex items-center space-x-2 mt-4">
+              <button onClick={() => setDarkMode(!darkMode)} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                <FontAwesomeIcon icon={darkMode ? faSun : faMoon} />
               </button>
             </div>
           </div>
-          
-          <div className="space-y-4">
-            <h3 className="font-semibold text-lg text-gray-800 dark:text-white">Liên kết</h3>
-            <ul className="space-y-2">
-              <li>
-                <Link href="/tools">
-                  <a className="text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors">
-                    Công cụ
-                  </a>
-                </Link>
-              </li>
-              <li>
-                <Link href="/categories">
-                  <a className="text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors">
-                    Chuyên mục
-                  </a>
-                </Link>
-              </li>
-              <li>
-                <Link href="/about">
-                  <a className="text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors">
-                    Giới thiệu
-                  </a>
-                </Link>
-              </li>
+
+          <div>
+            <h3 className="font-semibold mb-3">Khám phá</h3>
+            <ul className="space-y-2 text-gray-600 dark:text-gray-400">
+              <li><Link href="/tools"><span className="hover:text-red-600 cursor-pointer">Công cụ</span></Link></li>
+              <li><Link href="/categories"><span className="hover:text-red-600 cursor-pointer">Chuyên mục</span></Link></li>
+              <li><Link href="/about"><span className="hover:text-red-600 cursor-pointer">Giới thiệu</span></Link></li>
             </ul>
           </div>
-          
-          <div className="space-y-4">
-            <h3 className="font-semibold text-lg text-gray-800 dark:text-white">Chuyên mục</h3>
-            <ul className="space-y-2">
-              {categories.slice(0, 5).map((category) => (
-                <li key={category.id}>
-                  <Link href={`/category/${category.id}`}>
-                    <a className="text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors">
-                      {category.name} ({category.apps?.count || 0})
-                    </a>
-                  </Link>
-                </li>
+
+          <div>
+            <h3 className="font-semibold mb-3">Chuyên mục</h3>
+            <ul className="space-y-2 text-gray-600 dark:text-gray-400">
+              {categories.slice(0, 5).map(c => (
+                <li key={c.id}><Link href={`/category/${c.id}`}><span className="hover:text-red-600 cursor-pointer">{c.name} ({c.apps?.count || 0})</span></Link></li>
               ))}
             </ul>
           </div>
-          
-          <div className="space-y-4">
-            <h3 className="font-semibold text-lg text-gray-800 dark:text-white">Hỗ trợ</h3>
-            <ul className="space-y-2">
-              <li>
-                <Link href="/contact">
-                  <a className="text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors">
-                    Liên hệ
-                  </a>
-                </Link>
-              </li>
-              <li>
-                <Link href="/terms">
-                  <a className="text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors">
-                    Điều khoản
-                  </a>
-                </Link>
-              </li>
-              <li>
-                <Link href="/privacy">
-                  <a className="text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors">
-                    Chính sách bảo mật
-                  </a>
-                </Link>
-              </li>
+
+          <div>
+            <h3 className="font-semibold mb-3">Hỗ trợ</h3>
+            <ul className="space-y-2 text-gray-600 dark:text-gray-400">
+              <li><Link href="/contact"><span className="hover:text-red-600 cursor-pointer">Liên hệ</span></Link></li>
+              <li><Link href="/terms"><span className="hover:text-red-600 cursor-pointer">Điều khoản</span></Link></li>
+              <li><Link href="/privacy"><span className="hover:text-red-600 cursor-pointer">Bảo mật</span></Link></li>
             </ul>
-            <button
-              onClick={() => window.open('https://www.buymeacoffee.com', '_blank')}
-              className="mt-4 flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-            >
-              ☕ Ủng hộ chúng tôi
+            <button onClick={() => window.open('https://www.buymeacoffee.com', '_blank')} className="mt-4 bg-red-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-red-700">
+              ☕ Ủng hộ
             </button>
           </div>
         </div>
-        
-        <div className="border-t border-gray-200 dark:border-gray-700 py-6">
-          <div className="w-full max-w-screen-2xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center text-sm text-gray-500">
-            <div>© {new Date().getFullYear()} StreiOS. All rights reserved.</div>
-            <div className="mt-2 md:mt-0">
-              Made with ❤️ for iOS community
-            </div>
-          </div>
+
+        <div className="border-t border-gray-200 dark:border-gray-700 py-6 text-center text-xs text-gray-500">
+          © {new Date().getFullYear()} StreiOS. Made with ❤️ for the iOS community.
         </div>
       </footer>
     </div>
