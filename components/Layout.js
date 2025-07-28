@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -7,7 +7,9 @@ import SearchModal from './SearchModal';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faSun, faMoon, faSearch
+  faSun, faMoon, faSearch, faBars, faTimes,
+  faTools, faLayerGroup, faChevronDown, faChevronUp,
+  faCode, faLock, faRocket
 } from '@fortawesome/free-solid-svg-icons';
 import {
   faGithub, faTwitter, faDiscord, faTelegram
@@ -17,12 +19,19 @@ export default function Layout({ children, fullWidth = false }) {
   const router = useRouter();
   const [darkMode, setDarkMode] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [q, setQ] = useState('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeCategory, setCategory] = useState('all');
   const [sortBy, setSortBy] = useState('created_at');
+  const [q, setQ] = useState('');
   const [apps, setApps] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
+  const menuRef = useRef();
+
+  const [accordionOpen, setAccordionOpen] = useState({
+    tools: true,
+    categories: true,
+  });
 
   useEffect(() => {
     const stored = localStorage.getItem('darkMode');
@@ -64,6 +73,21 @@ export default function Layout({ children, fullWidth = false }) {
     if (searchOpen) runSearch();
   }, [q, activeCategory, sortBy, searchOpen]);
 
+  // Auto-close menu when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMobileMenuOpen(false);
+      }
+    }
+    if (mobileMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    } else {
+      document.removeEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [mobileMenuOpen]);
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors">
       <Head>
@@ -71,22 +95,20 @@ export default function Layout({ children, fullWidth = false }) {
         <meta name="description" content="Kho ứng dụng TestFlight beta & công cụ jailbreak cho iOS" />
       </Head>
 
-      {/* HEADER mới */}
-      <header className="sticky top-0 z-40 w-full bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
+      {/* HEADER */}
+      <header className="sticky top-0 z-50 w-full bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
         <div className="max-w-screen-2xl mx-auto px-4 py-4 flex items-center justify-between">
-          {/* LEFT: Menu */}
-          <nav className="flex items-center gap-6 text-sm font-medium text-gray-700 dark:text-gray-300">
-            <Link href="/tools" className="hover:text-red-600 transition">Công cụ</Link>
-            <Link href="/categories" className="hover:text-red-600 transition">Chuyên mục</Link>
-            <Link href="/about" className="hover:text-red-600 transition">Giới thiệu</Link>
-          </nav>
+          {/* Hamburger */}
+          <button onClick={() => setMobileMenuOpen(true)} className="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 md:hidden">
+            <FontAwesomeIcon icon={faBars} className="w-5 h-5" />
+          </button>
 
-          {/* CENTER: Logo */}
-          <Link href="/" className="text-2xl font-bold tracking-tight bg-gradient-to-r from-red-600 via-black to-red-600 dark:from-red-400 dark:via-white dark:to-red-400 bg-clip-text text-transparent">
+          {/* Logo */}
+          <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-red-600 via-black to-red-600 dark:from-red-400 dark:via-white dark:to-red-400 bg-clip-text text-transparent">
             StreiOS
           </Link>
 
-          {/* RIGHT: Search & Dark mode */}
+          {/* Right Icons */}
           <div className="flex items-center gap-3">
             <button onClick={() => setSearchOpen(true)} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
               <FontAwesomeIcon icon={faSearch} className="w-5 h-5" />
@@ -98,6 +120,55 @@ export default function Layout({ children, fullWidth = false }) {
         </div>
       </header>
 
+      {/* MOBILE MENU SIDEBAR */}
+      {mobileMenuOpen && (
+        <div className="fixed inset-0 z-50 bg-black/50 flex">
+          <div ref={menuRef} className="w-72 bg-white dark:bg-gray-900 p-6 space-y-6 shadow-2xl">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-bold">Menu</h2>
+              <button onClick={() => setMobileMenuOpen(false)} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+                <FontAwesomeIcon icon={faTimes} />
+              </button>
+            </div>
+
+            {/* TOOLS ACCORDION */}
+            <div>
+              <button
+                onClick={() => setAccordionOpen({ ...accordionOpen, tools: !accordionOpen.tools })}
+                className="flex items-center justify-between w-full text-left font-medium hover:text-red-600"
+              >
+                <span><FontAwesomeIcon icon={faTools} className="mr-2" />Công cụ</span>
+                <FontAwesomeIcon icon={accordionOpen.tools ? faChevronUp : faChevronDown} />
+              </button>
+              {accordionOpen.tools && (
+                <ul className="mt-2 ml-4 text-sm space-y-2">
+                  <li><Link href="/tools/a" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 hover:text-red-600"><FontAwesomeIcon icon={faCode} />A</Link></li>
+                  <li><Link href="/tools/b" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 hover:text-red-600"><FontAwesomeIcon icon={faLock} />B</Link></li>
+                  <li><Link href="/tools/c" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-2 hover:text-red-600"><FontAwesomeIcon icon={faRocket} />C</Link></li>
+                </ul>
+              )}
+            </div>
+
+            {/* CATEGORIES ACCORDION */}
+            <div>
+              <button
+                onClick={() => setAccordionOpen({ ...accordionOpen, categories: !accordionOpen.categories })}
+                className="flex items-center justify-between w-full text-left font-medium hover:text-red-600"
+              >
+                <span><FontAwesomeIcon icon={faLayerGroup} className="mr-2" />Chuyên mục</span>
+                <FontAwesomeIcon icon={accordionOpen.categories ? faChevronUp : faChevronDown} />
+              </button>
+              {accordionOpen.categories && (
+                <ul className="mt-2 ml-4 text-sm space-y-2">
+                  <li><Link href="/categories/a" onClick={() => setMobileMenuOpen(false)} className="hover:text-red-600">A</Link></li>
+                  <li><Link href="/categories/b" onClick={() => setMobileMenuOpen(false)} className="hover:text-red-600">B</Link></li>
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* SEARCH MODAL */}
       <SearchModal
         q={q} setQ={setQ}
@@ -108,24 +179,18 @@ export default function Layout({ children, fullWidth = false }) {
         categories={categories}
       />
 
-      {/* MAIN */}
+      {/* MAIN CONTENT */}
       <main className={`flex-1 ${fullWidth ? '' : 'w-full max-w-screen-2xl mx-auto px-4 py-6'}`}>
         {children}
       </main>
 
-      {/* FOOTER mới */}
+      {/* FOOTER (chuyên nghiệp – giữ như bản trước) */}
       <footer className="bg-gray-900 text-gray-300 mt-16 border-t border-gray-800">
         <div className="max-w-screen-2xl mx-auto px-4 py-12 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
-
-          {/* Về StreiOS */}
           <div>
             <h3 className="text-white font-bold text-lg mb-3">StreiOS</h3>
-            <p className="text-gray-400 text-sm">
-              Kho ứng dụng TestFlight beta & công cụ jailbreak cho cộng đồng iOS.
-            </p>
+            <p className="text-gray-400 text-sm">Kho ứng dụng TestFlight beta & công cụ jailbreak cho cộng đồng iOS.</p>
           </div>
-
-          {/* Điều hướng */}
           <div>
             <h4 className="font-semibold text-white mb-3">Điều hướng</h4>
             <ul className="space-y-2 text-sm">
@@ -135,8 +200,6 @@ export default function Layout({ children, fullWidth = false }) {
               <li><Link href="/privacy" className="hover:text-white">Bảo mật</Link></li>
             </ul>
           </div>
-
-          {/* Liên hệ */}
           <div>
             <h4 className="font-semibold text-white mb-3">Liên hệ</h4>
             <ul className="space-y-2 text-sm">
@@ -144,27 +207,16 @@ export default function Layout({ children, fullWidth = false }) {
               <li><a href="mailto:support@storeios.net" className="hover:text-white">Email hỗ trợ</a></li>
             </ul>
           </div>
-
-          {/* Mạng xã hội */}
           <div>
             <h4 className="font-semibold text-white mb-3">Kết nối</h4>
             <div className="flex gap-4 text-xl">
-              <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="hover:text-white">
-                <FontAwesomeIcon icon={faGithub} />
-              </a>
-              <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="hover:text-white">
-                <FontAwesomeIcon icon={faTwitter} />
-              </a>
-              <a href="https://discord.gg" target="_blank" rel="noopener noreferrer" className="hover:text-white">
-                <FontAwesomeIcon icon={faDiscord} />
-              </a>
-              <a href="https://t.me" target="_blank" rel="noopener noreferrer" className="hover:text-white">
-                <FontAwesomeIcon icon={faTelegram} />
-              </a>
+              <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="hover:text-white"><FontAwesomeIcon icon={faGithub} /></a>
+              <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="hover:text-white"><FontAwesomeIcon icon={faTwitter} /></a>
+              <a href="https://discord.gg" target="_blank" rel="noopener noreferrer" className="hover:text-white"><FontAwesomeIcon icon={faDiscord} /></a>
+              <a href="https://t.me" target="_blank" rel="noopener noreferrer" className="hover:text-white"><FontAwesomeIcon icon={faTelegram} /></a>
             </div>
           </div>
         </div>
-
         <div className="text-center text-xs text-gray-500 border-t border-gray-800 py-6">
           © {new Date().getFullYear()} StreiOS – Made with ❤️ for the iOS community.
         </div>
