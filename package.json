@@ -33,6 +33,7 @@
     "memory-cache": "0.2.0",
     "@supabase/ssr": "0.6.1",
     "cookie": "1.0.2",
+    "@fortawesome/free-brands-svg-icons": "^6.5.0",
     "jsonwebtoken": "9.0.2"
   },
   "devDependencies": {
