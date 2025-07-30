@@ -13,7 +13,6 @@ export default function RunStepsViewer({ runId }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [isDone, setIsDone] = useState(false);
-  const [progress, setProgress] = useState({}); // Thêm state theo dõi tiến trình
 
   useEffect(() => {
     if (!runId) return;
@@ -27,31 +26,14 @@ export default function RunStepsViewer({ runId }) {
         if (!isMounted) return;
 
         const newSteps = res.data.steps || [];
-        
-        // Thêm logic xử lý tiến trình cho từng bước
-        const processedSteps = newSteps.map(step => {
-          // Bỏ qua các bước không cần thiết khi chỉ ký 1 IPA
-          if (step.name.includes("Skipping") && progress[step.name] !== 'skipped') {
-            setProgress(prev => ({ ...prev, [step.name]: 'skipped' }));
-            return { ...step, status: 'skipped' };
-          }
-          
-          // Đánh dấu các bước đã hoàn thành nhanh
-          if (step.status === 'completed' && !progress[step.name]) {
-            setProgress(prev => ({ ...prev, [step.name]: 'completed' }));
-          }
-          
-          return step;
-        });
-
-        setSteps(processedSteps);
+        setSteps(newSteps);
         setError("");
 
-        const allDone = processedSteps.every(
-          (s) => s.conclusion === "success" || 
-                 s.conclusion === "failure" || 
-                 s.status === "completed" ||
-                 s.status === "skipped" // Thêm trạng thái skipped
+        const allDone = newSteps.every(
+          (s) =>
+            s.conclusion === "success" ||
+            s.conclusion === "failure" ||
+            s.status === "completed"
         );
 
         if (allDone) {
@@ -75,7 +57,7 @@ export default function RunStepsViewer({ runId }) {
       isMounted = false;
       clearInterval(interval);
     };
-  }, [runId, progress]); // Thêm progress vào dependencies
+  }, [runId]);
 
   function customLabel(name) {
     const map = {
@@ -89,15 +71,13 @@ export default function RunStepsViewer({ runId }) {
       "Verify release exists": "🔎 Kiểm tra danh sách file",
       "Download all IPA files from release": "📦 Tải IPA từ danh sách",
       "Install Zsign": "🔧 Cài Tool ký",
-      "Patch Info.plist & Binary (auto-generate identifier if not provided)": "🛠 Sửa Info.plist & binary",
-      "Sign all IPA files with Zsign (overwrite original IPA)": "✍️ Đang Ký IPA",
+      "Patch Info.plist & Binary (auto-generate identifier if not provided)":
+        "🛠 Sửa Info.plist & binary",
+      "Sign all IPA files with Zsign (overwrite original IPA)": "✍️Đang Ký IPA",
       "Upload signed IPA": "☁️ Tải lên IPA đã ký",
       "Generate plist with version & icon, commit to repo": "📋 Tạo plist và icon",
       "Post Checkout code": "✅ Hoàn tất tải lên IPA & plist",
       "Complete job": "🎉 Hoàn tất toàn bộ tiến trình",
-      // Thêm mapping cho các bước mới
-      "Downloading selected IPA": "📥 Đang tải IPA được chọn",
-      "Skipping IPA": "⏩ Bỏ qua IPA không chọn"
     };
     return map[name] || name;
   }
@@ -120,9 +100,6 @@ export default function RunStepsViewer({ runId }) {
           <p className="font-medium mb-1 text-white">📋 Các bước:</p>
           <ul className="space-y-1">
             {steps.map((step, idx) => {
-              // Bỏ qua các bước đã skipped
-              if (step.status === 'skipped') return null;
-
               let icon = faSpinner;
               let spin = true;
               let iconColor = "text-white";
