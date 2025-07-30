@@ -1,4 +1,4 @@
-name: Sign all IPAs in release with Zsign
+name: Sign IPA(s) in release with Zsign
 
 on:
   workflow_dispatch:
@@ -8,6 +8,12 @@ on:
         required: true
       identifier:
         description: "(Tùy chọn) Bundle Identifier mới"
+        required: false
+      selectedIpa:
+        description: "(Tùy chọn) Tên file IPA cụ thể cần ký"
+        required: false
+      displayName:
+        description: "(Tùy chọn) Tên hiển thị mới cho ứng dụng"
         required: false
 
 jobs:
@@ -23,6 +29,8 @@ jobs:
       REPO: ${{ github.repository }}
       SUPABASE_URL: https://zkbzykamrzvvrhodiypk.supabase.co
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      SELECTED_IPA: ${{ github.event.inputs.selectedIpa }}
+      DISPLAY_NAME: ${{ github.event.inputs.displayName }}
 
     steps:
       - name: Checkout code
@@ -61,6 +69,8 @@ jobs:
         run: |
           echo "TAG=${{ github.event.inputs.tag }}" >> $GITHUB_ENV
           echo "INPUT_IDENTIFIER=${{ github.event.inputs.identifier }}" >> $GITHUB_ENV
+          echo "SELECTED_IPA=$SELECTED_IPA" >> $GITHUB_ENV
+          echo "DISPLAY_NAME=$DISPLAY_NAME" >> $GITHUB_ENV
 
       - name: Generate shared random (if needed)
         if: ${{ github.event.inputs.identifier == '' }}
@@ -72,9 +82,16 @@ jobs:
       - name: Verify release exists
         run: gh release view "$TAG" --repo "$REPO"
 
-      - name: Download all IPA files from release
+      - name: Download IPA file(s)
         run: |
-          gh release download "$TAG" --repo "$REPO" --pattern "*.ipa" --clobber
+          if [ -n "$SELECTED_IPA" ]; then
+            echo "⬇️ Downloading selected IPA: $SELECTED_IPA"
+            gh release download "$TAG" --repo "$REPO" --pattern "$SELECTED_IPA" --clobber
+          else
+            echo "⬇️ Downloading all IPA files"
+            gh release download "$TAG" --repo "$REPO" --pattern "*.ipa" --clobber
+          fi
+          
           COUNT=$(ls *.ipa 2>/dev/null | wc -l)
           if [ "$COUNT" -eq 0 ]; then
             echo "::error::❌ No IPA files found in release"
@@ -88,10 +105,16 @@ jobs:
           cd zsign/build/macos && make clean && make
           sudo cp ../../bin/zsign /usr/local/bin/
 
-      - name: Patch Info.plist & Binary (auto-generate identifier if not provided)
+      - name: Patch Info.plist & Binary
         run: |
           > id_map.txt
           for IPA in *.ipa; do
+            # Skip if this is not the selected IPA (when SELECTED_IPA is specified)
+            if [ -n "$SELECTED_IPA" ] && [ "$IPA" != "$SELECTED_IPA" ]; then
+              echo "⏩ Skipping $IPA (not selected)"
+              continue
+            fi
+
             echo "📦 Patching $IPA..."
             APP_NAME=$(basename "$IPA" .ipa)
             WORKDIR="/tmp/zsign_patch_$RANDOM"
@@ -111,6 +134,17 @@ jobs:
               FINAL_ID="$INPUT_IDENTIFIER"
             fi
 
+            # Apply display name if provided
+            if [ -n "$DISPLAY_NAME" ]; then
+              CURRENT_NAME=$(/usr/libexec/PlistBuddy -c "Print :CFBundleDisplayName" "$MAIN_PLIST" 2>/dev/null || echo "")
+              if [ -z "$CURRENT_NAME" ]; then
+                /usr/libexec/PlistBuddy -c "Add :CFBundleDisplayName string $DISPLAY_NAME" "$MAIN_PLIST"
+              else
+                /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName $DISPLAY_NAME" "$MAIN_PLIST"
+              fi
+              echo "🆕 Set display name to: $DISPLAY_NAME"
+            fi
+
             echo "🔍 OLD Identifier: $OLD_ID"
             echo "📌 New Identifier: $FINAL_ID"
 
@@ -127,7 +161,7 @@ jobs:
             rm -rf "$WORKDIR"
           done
 
-      - name: Sign all IPA files with Zsign (overwrite original IPA)
+      - name: Sign IPA files
         run: |
           while IFS='|' read -r IPA FINAL_ID; do
             APP_NAME=$(basename "$IPA" .ipa)
@@ -147,7 +181,7 @@ jobs:
             gh release upload "$TAG" "$FILENAME" --repo "$REPO" --clobber
           done < id_map.txt
 
-      - name: Generate plist with version & icon, commit to repo
+      - name: Generate plist with version & icon
         run: |
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"

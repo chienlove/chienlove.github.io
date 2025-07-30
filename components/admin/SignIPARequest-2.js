@@ -13,13 +13,7 @@ export default function SignIPARequest() {
   const [certs, setCerts] = useState([]);
   const [tags, setTags] = useState([]);
   const [ipas, setIpas] = useState([]);
-  const [form, setForm] = useState({ 
-    certName: "", 
-    tag: "", 
-    identifier: "",
-    selectedIpa: "", // Thêm trường chọn IPA
-    displayName: "" // Thêm trường display name
-  });
+  const [form, setForm] = useState({ certName: "", tag: "", identifier: "" });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [currentRequest, setCurrentRequest] = useState(null);
@@ -33,11 +27,7 @@ export default function SignIPARequest() {
 
   useEffect(() => {
     if (!form.tag) return;
-    axios.get(`/api/admin/ipas-in-tag?tag=${form.tag}`).then((res) => {
-      setIpas(res.data.ipas || []);
-      // Reset selected IPA khi tag thay đổi
-      setForm(prev => ({ ...prev, selectedIpa: "" }));
-    });
+    axios.get(`/api/admin/ipas-in-tag?tag=${form.tag}`).then((res) => setIpas(res.data.ipas || []));
   }, [form.tag]);
 
   useEffect(() => {
@@ -80,8 +70,6 @@ export default function SignIPARequest() {
         name: form.certName,
         tag: form.tag,
         identifier: form.identifier,
-        selectedIpa: form.selectedIpa, // Thêm thông tin IPA được chọn
-        displayName: form.displayName // Thêm display name
       });
 
       setMessage("✅ Đã gửi yêu cầu ký IPA thành công!");
@@ -135,47 +123,14 @@ export default function SignIPARequest() {
         </div>
 
         {ipas.length > 0 && (
-          <>
-            <div>
-              <label className="block font-medium">📦 Chọn file IPA:</label>
-              <div className="space-y-2">
-                <label className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    name="ipaSelection"
-                    checked={form.selectedIpa === ""}
-                    onChange={() => setForm({ ...form, selectedIpa: "" })}
-                  />
-                  <span>Ký tất cả ({ipas.length} file)</span>
-                </label>
-                
-                {ipas.map((file, i) => (
-                  <label key={i} className="flex items-center gap-2">
-                    <input
-                      type="radio"
-                      name="ipaSelection"
-                      checked={form.selectedIpa === file}
-                      onChange={() => setForm({ ...form, selectedIpa: file })}
-                    />
-                    <span>{file}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {form.selectedIpa && (
-              <div>
-                <label className="block font-medium">🆔 Tên hiển thị (Display Name)</label>
-                <input
-                  type="text"
-                  className="w-full p-2 border rounded"
-                  placeholder="(Tùy chọn) Để trống sẽ giữ nguyên tên gốc"
-                  value={form.displayName}
-                  onChange={(e) => setForm({ ...form, displayName: e.target.value })}
-                />
-              </div>
-            )}
-          </>
+          <div>
+            <p className="font-medium">📦 File IPA trong tag:</p>
+            <ul className="list-disc ml-5 text-sm text-gray-700 dark:text-gray-300">
+              {ipas.map((file, i) => (
+                <li key={i}>{file}</li>
+              ))}
+            </ul>
+          </div>
         )}
 
         <div>
@@ -200,7 +155,7 @@ export default function SignIPARequest() {
         {message && <p className="text-sm mt-2">{message}</p>}
       </form>
 
-      {/* Phần tiến trình */}
+      {/* ✅ Toàn bộ phần tiến trình nằm TRONG nền đen */}
       {currentRequest && (
         <div className="mt-8">
           <div className="p-4 bg-black text-white rounded text-sm shadow text-left border border-gray-700">
