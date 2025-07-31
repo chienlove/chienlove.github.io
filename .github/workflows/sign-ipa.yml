@@ -1,4 +1,4 @@
-name: Sign IPA(s) in release with Zsign
+name: Sign IPA in release with Zsign
 
 on:
   workflow_dispatch:
@@ -109,6 +109,7 @@ jobs:
         run: |
           > id_map.txt
           for IPA in *.ipa; do
+            # Skip if this is not the selected IPA (when SELECTED_IPA is specified)
             if [ -n "$SELECTED_IPA" ] && [ "$IPA" != "$SELECTED_IPA" ]; then
               echo "⏩ Skipping $IPA (not selected)"
               continue
@@ -133,6 +134,7 @@ jobs:
               FINAL_ID="$INPUT_IDENTIFIER"
             fi
 
+            # Apply display name if provided
             if [ -n "$DISPLAY_NAME" ]; then
               CURRENT_NAME=$(/usr/libexec/PlistBuddy -c "Print :CFBundleDisplayName" "$MAIN_PLIST" 2>/dev/null || echo "")
               if [ -z "$CURRENT_NAME" ]; then
@@ -211,7 +213,7 @@ jobs:
               echo "📦 Không tìm thấy icon phù hợp."
             fi
 
-            PLIST_NAME="${APP_NAME}.plist"
+            PLIST_NAME="$(echo "${APP_NAME}" | tr '[:upper:]' '[:lower:]').plist"
             PLIST_PATH="secure/plist/$PLIST_NAME"
 
             echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" > "$PLIST_PATH"
@@ -219,6 +221,7 @@ jobs:
             echo "<plist version=\"1.0\"><dict>" >> "$PLIST_PATH"
             echo "  <key>items</key><array><dict>" >> "$PLIST_PATH"
             echo "    <key>assets</key><array>" >> "$PLIST_PATH"
+
             echo "      <dict>" >> "$PLIST_PATH"
             echo "        <key>kind</key><string>software-package</string>" >> "$PLIST_PATH"
             echo "        <key>url</key><string>$BASE_URL/$FILENAME</string>" >> "$PLIST_PATH"
@@ -240,14 +243,6 @@ jobs:
             echo "      <key>title</key><string>$APP_NAME</string>" >> "$PLIST_PATH"
             echo "    </dict>" >> "$PLIST_PATH"
             echo "  </dict></array></dict></plist>" >> "$PLIST_PATH"
-
-            # Cập nhật plist_name vào Supabase
-            curl -X PATCH \
-              -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
-              -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
-              -H "Content-Type: application/json" \
-              -d "{\"plist_name\": \"$PLIST_NAME\"}" \
-              "$SUPABASE_URL/rest/v1/apps?name=eq.$APP_NAME"
 
             rm -rf "$WORKDIR"
           done < id_map.txt
