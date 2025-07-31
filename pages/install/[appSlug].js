@@ -25,18 +25,37 @@ export async function getServerSideProps({ params }) {
 }
 
 export default function InstallPage({ app }) {
-  const [countdown, setCountdown] = useState(5);
+  const [countdown, setCountdown] = useState(10); // Đã tăng lên 10s
   const router = useRouter();
 
   const radius = 45;
   const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference * (1 - countdown / 5);
+  const strokeDashoffset = circumference * (1 - countdown / 10); // Cập nhật theo 10s
 
   useEffect(() => {
     if (countdown <= 0) return;
     const timer = setInterval(() => setCountdown(prev => prev - 1), 1000);
     return () => clearInterval(timer);
   }, [countdown]);
+
+  const handleDownload = async () => {
+    try {
+      const res = await fetch(`/api/generate-token?id=${app.id}&ipa_name=${encodeURIComponent(app.name)}`);
+      const data = await res.json();
+      
+      if (data.installUrl) {
+        // Sử dụng window.location thay vì tạo thẻ a
+        setTimeout(() => {
+          window.location.href = data.installUrl;
+        }, 300);
+      } else {
+        alert('Không thể tạo liên kết cài đặt.');
+      }
+    } catch (err) {
+      console.error('Lỗi khi tạo liên kết:', err);
+      alert('Đã có lỗi xảy ra khi tạo liên kết cài đặt.');
+    }
+  };
 
   return (
     <Layout fullWidth>
@@ -77,41 +96,13 @@ export default function InstallPage({ app }) {
 
           <div className="flex flex-col space-y-3">
             {countdown === 0 && (
-              <a
-                href="#"
-                onClick={async (e) => {
-                  e.preventDefault();
-
-                  let url = app.download_link;
-                  if (!url) {
-                    try {
-                      const res = await fetch(`/api/generate-token?id=${app.id}`);
-                      const data = await res.json();
-                      if (data.installUrl) {
-                        url = data.installUrl;
-                      } else {
-                        alert('Không thể tạo liên kết cài đặt.');
-                        return;
-                      }
-                    } catch (err) {
-                      console.error(err);
-                      alert('Đã có lỗi xảy ra khi tạo liên kết.');
-                      return;
-                    }
-                  }
-
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.style.display = 'none';
-                  document.body.appendChild(a);
-                  a.click();
-                  document.body.removeChild(a);
-                }}
+              <button
+                onClick={handleDownload}
                 className="bg-gradient-to-r from-green-400 to-blue-500 hover:from-green-500 hover:to-blue-600 text-white font-bold py-3 px-6 rounded-lg transition-all hover:scale-105 active:scale-95 shadow-md flex items-center justify-center gap-2"
               >
                 <FontAwesomeIcon icon={faDownload} />
                 <span>Tải xuống ngay</span>
-              </a>
+              </button>
             )}
 
             <button
