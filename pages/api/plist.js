@@ -1,14 +1,12 @@
 import jwt from 'jsonwebtoken';
 import fs from 'fs';
 import path from 'path';
-import { createClient } from '@supabase/supabase-js';
+import fetch from 'node-fetch';
 
 const secret = process.env.JWT_SECRET;
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+const REPO_OWNER = 'chienlove';
+const REPO_NAME = 'chienlove.github.io';
 
 export default async function handler(req, res) {
   const { id, token } = req.query;
@@ -18,29 +16,43 @@ export default async function handler(req, res) {
   }
 
   try {
+    // Xác thực JWT
     const decoded = jwt.verify(token, secret);
     if (decoded.id !== id) return res.status(403).send('Invalid token');
 
-    // 🔍 Truy vấn Supabase để lấy slug từ id
-    const { data: app, error } = await supabase
-      .from('apps')
-      .select('slug')
-      .eq('id', id)
-      .single();
+    // Lấy thông tin release từ GitHub API
+    const releaseUrl = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/releases/tags/${id}`;
+    const releaseResponse = await fetch(releaseUrl, {
+      headers: {
+        Authorization: `Bearer ${GITHUB_TOKEN}`,
+        Accept: "application/vnd.github.v3+json",
+      },
+    });
 
-    if (error || !app?.slug) {
-      return res.status(404).send('App not found');
+    if (!releaseResponse.ok) {
+      return res.status(404).send('Release not found');
     }
 
-    const filePath = path.join(process.cwd(), 'secure/plist', `${app.slug}.plist`);
-    if (!fs.existsSync(filePath)) {
+    const releaseData = await releaseResponse.json();
+    const ipaAsset = releaseData.assets.find((asset) => asset.name.endsWith('.ipa'));
+
+    if (!ipaAsset) {
+      return res.status(404).send('No IPA file found in release');
+    }
+
+    // Lấy tên IPA (bỏ đuôi .ipa)
+    const ipaName = ipaAsset.name.replace('.ipa', '');
+    const plistPath = path.join(process.cwd(), 'secure/plist', `${ipaName}.plist`);
+
+    if (!fs.existsSync(plistPath)) {
       return res.status(404).send('Plist not found');
     }
 
+    // Trả về plist
     res.setHeader('Content-Type', 'application/xml');
-    fs.createReadStream(filePath).pipe(res);
+    fs.createReadStream(plistPath).pipe(res);
   } catch (err) {
     console.error(err);
-    return res.status(403).send('Expired or invalid token');
+    return res.status(500).send('Internal Server Error');
   }
 }
