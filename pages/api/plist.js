@@ -21,18 +21,18 @@ export default async function handler(req, res) {
     const decoded = jwt.verify(token, secret);
     if (decoded.id !== id) return res.status(403).send('Invalid token');
 
-    // Truy vấn Supabase để lấy plist_name từ id
+    // 🔍 Truy vấn Supabase để lấy slug từ id
     const { data: app, error } = await supabase
       .from('apps')
-      .select('plist_name')
+      .select('slug')
       .eq('id', id)
       .single();
 
-    if (error || !app?.plist_name) {
-      return res.status(404).send('App plist information not found');
+    if (error || !app?.slug) {
+      return res.status(404).send('App not found');
     }
 
-    const filePath = path.join(process.cwd(), 'secure/plist', app.plist_name);
+    const filePath = path.join(process.cwd(), 'secure/plist', `${app.slug}.plist`);
     if (!fs.existsSync(filePath)) {
       return res.status(404).send('Plist not found');
     }
