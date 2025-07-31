@@ -8,24 +8,23 @@ export default async function handler(req, res) {
   const { ipa_name, token } = req.query;
 
   try {
-    // Verify token và kiểm tra ipa_name
+    // 1. Kiểm tra token
     const decoded = jwt.verify(token, secret);
-    if (!decoded.ipa_name || decoded.ipa_name !== ipa_name) {
-      return res.status(403).send('Invalid token or IPA name');
-    }
 
-    // Đường dẫn plist trực tiếp từ tên IPA
+    // 2. Tìm file plist CHÍNH XÁC theo tên IPA (không sửa tên)
     const plistPath = path.join(process.cwd(), 'secure/plist', `${ipa_name}.plist`);
-    
+
+    // 3. Kiểm tra file có tồn tại không
     if (!fs.existsSync(plistPath)) {
-      return res.status(404).send('Plist not found');
+      console.log('Tìm thấy các file plist sau:', fs.readdirSync(path.join(process.cwd(), 'secure/plist')));
+      return res.status(404).send(`Không tìm thấy file: ${ipa_name}.plist`);
     }
 
+    // 4. Trả về file plist
     res.setHeader('Content-Type', 'application/x-plist');
     fs.createReadStream(plistPath).pipe(res);
-
   } catch (err) {
-    console.error('Error:', err);
-    res.status(500).send('Internal Server Error');
+    console.error('Lỗi:', err);
+    res.status(500).send('Lỗi server');
   }
 }
