@@ -1,5 +1,3 @@
-'use client';
-
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "../../lib/supabase";
@@ -26,8 +24,6 @@ export default function Admin() {
   const [newField, setNewField] = useState("");
   const [screenshotInput, setScreenshotInput] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-  const [plistFiles, setPlistFiles] = useState([]);
-  const [plistLoading, setPlistLoading] = useState(false);
 
   // Kiểm tra UUID hợp lệ
   const isValidUUID = (id) => {
@@ -44,70 +40,58 @@ export default function Admin() {
       .trim();
   };
 
-  // Lấy danh sách file PLIST
-  const fetchPlistFiles = async () => {
-    setPlistLoading(true);
-    try {
-      const res = await fetch('/api/admin/list-plist');
-      const data = await res.json();
-      setPlistFiles(data.files || []);
-    } catch (error) {
-      console.error('Error fetching plist files:', error);
-    } finally {
-      setPlistLoading(false);
-    }
-  };
-
   useEffect(() => {
     checkAdmin();
-    fetchPlistFiles();
   }, []);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
   }, [darkMode]);
 
-  useEffect(() => {
-    async function fetchIpaSizeFromPlist() {
-      const link = form["download_link"];
-      if (!link || !link.startsWith("itms-services://")) {
-        console.log("Không phải link itms-services, bỏ qua.");
+  
+      useEffect(() => {
+  async function fetchIpaSizeFromPlist() {
+    const link = form["download_link"];
+    if (!link || !link.startsWith("itms-services://")) {
+      console.log("Không phải link itms-services, bỏ qua.");
+      return;
+    }
+
+    try {
+      const url = decodeURIComponent(link.split("url=")[1]);
+      console.log("Đang tải plist từ:", url);
+      const response = await fetch(url);
+      const text = await response.text();
+
+      const ipaUrlMatch = text.match(/<key>url<\/key>\s*<string>([^<]+\.ipa)<\/string>/);
+      if (!ipaUrlMatch) {
+        console.warn("Không tìm thấy đường dẫn IPA trong plist:\n", text);
         return;
       }
 
-      try {
-        const url = decodeURIComponent(link.split("url=")[1]);
-        console.log("Đang tải plist từ:", url);
-        const response = await fetch(url);
-        const text = await response.text();
+      const ipaUrl = ipaUrlMatch[1];
+console.log("Tìm thấy IPA URL:", ipaUrl);
 
-        const ipaUrlMatch = text.match(/<key>url<\/key>\s*<string>([^<]+\.ipa)<\/string>/);
-        if (!ipaUrlMatch) {
-          console.warn("Không tìm thấy đường dẫn IPA trong plist:\n", text);
-          return;
-        }
+// ✅ Dùng domain đầy đủ để tránh lỗi fetch
+const apiURL = `https://testflight-app.vercel.app/api/admin/get-size-ipa?url=${encodeURIComponent(ipaUrl)}`;
+const proxyResp = await fetch(apiURL);
+const result = await proxyResp.json();
 
-        const ipaUrl = ipaUrlMatch[1];
-        console.log("Tìm thấy IPA URL:", ipaUrl);
-
-        const apiURL = `https://storeios.net/api/admin/get-size-ipa?url=${encodeURIComponent(ipaUrl)}`;
-        const proxyResp = await fetch(apiURL);
-        const result = await proxyResp.json();
-
-        if (result.size) {
-          const sizeMB = (parseInt(result.size) / (1024 * 1024)).toFixed(2);
-          console.log("Kích thước IPA:", sizeMB, "MB");
-          setForm(prev => ({ ...prev, size: sizeMB }));
-        } else {
-          console.warn("Không lấy được size từ API:", result.error || result);
-        }
-      } catch (err) {
-        console.warn("Không lấy được size IPA:", err);
-      }
+if (result.size) {
+  const sizeMB = (parseInt(result.size) / (1024 * 1024)).toFixed(2);
+  console.log("Kích thước IPA:", sizeMB, "MB");
+  setForm(prev => ({ ...prev, size: sizeMB }));
+} else {
+  console.warn("Không lấy được size từ API:", result.error || result);
+}
+    } catch (err) {
+      console.warn("Không lấy được size IPA:", err);
     }
+  }
 
-    fetchIpaSizeFromPlist();
-  }, [form["download_link"]]);
+  fetchIpaSizeFromPlist();
+}, [form["download_link"]]);
+
 
   useEffect(() => {
     if (form.screenshots) {
@@ -171,10 +155,7 @@ export default function Admin() {
     
     setEditingId(app.id);
     setSelectedCategory(app.category_id);
-    setForm({
-      ...app,
-      plistFile: app.plist_file || '' // Thêm trường plistFile khi edit
-    });
+    setForm(app);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -208,12 +189,6 @@ export default function Admin() {
       return;
     }
 
-    if (!form.plistFile) {
-      setErrorMessage("Vui lòng chọn file PLIST");
-      setSubmitting(false);
-      return;
-    }
-
     try {
       const screenshots = screenshotInput
         .split(/[\n,]+/)
@@ -225,12 +200,8 @@ export default function Admin() {
         category_id: selectedCategory,
         screenshots,
         updated_at: new Date().toISOString(),
-        slug: form.name ? createSlug(form.name) : uuidv4(),
-        plist_file: form.plistFile // Lưu tên file plist
+        slug: form.name ? createSlug(form.name) : uuidv4() // Thêm slug vào payload
       };
-
-      // Xóa các trường không cần thiết trước khi lưu
-      delete payload.plistFile;
 
       if (editingId) {
         const { error } = await supabase
@@ -365,7 +336,7 @@ export default function Admin() {
           <h2 className="text-xl font-bold">Admin Panel</h2>
           <button 
             onClick={() => setSidebarOpen(false)} 
-            className="md:hidden text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+            className="md:hidden text-gray-500 hover:text-gray-700"
           >
             ✕
           </button>
@@ -390,15 +361,10 @@ export default function Admin() {
                 : "hover:bg-gray-200 dark:hover:bg-gray-700"
             }`}
           >
-            📁 Chuyên mục
-          </button>
+            📁 Chuyên mục</button>
           <button
             onClick={() => { setActiveTab("certs"); setSidebarOpen(false); }}
-            className={`w-full text-left flex items-center gap-3 px-4 py-2 rounded ${
-              activeTab === "certs" 
-                ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200" 
-                : "hover:bg-gray-200 dark:hover:bg-gray-700"
-            }`}
+            className={`w-full text-left flex items-center gap-3 px-4 py-2 rounded ${activeTab === "certs" ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200" : "hover:bg-gray-200 dark:hover:bg-gray-700"}`}
           >
             🛡️ Chứng chỉ
           </button>
@@ -434,9 +400,7 @@ export default function Admin() {
               ☰
             </button>
             <h1 className="text-xl md:text-2xl font-bold">
-              {activeTab === "apps" ? "Quản lý Ứng dụng" : 
-               activeTab === "categories" ? "Quản lý Chuyên mục" : 
-               "Quản lý Chứng chỉ"}
+              {activeTab === "apps" ? "Quản lý Ứng dụng" : "Quản lý Chuyên mục"}
             </h1>
           </div>
           <div className="flex items-center gap-4">
@@ -465,7 +429,7 @@ export default function Admin() {
           </div>
         )}
 
-        {activeTab === "apps" && (
+        {activeTab === "apps" && activeTab !== "certs" ? (
           <>
             {/* Add App Form */}
             <section className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-md mb-6">
@@ -481,6 +445,7 @@ export default function Admin() {
                       const newCategory = e.target.value;
                       setSelectedCategory(newCategory);
                       setForm((prev) => ({ ...prev, category_id: newCategory }));
+                      setEditingId(null);
                     }}
                     className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required
@@ -492,49 +457,6 @@ export default function Admin() {
                       </option>
                     ))}
                   </select>
-                </div>
-
-                {/* PLIST File Selector */}
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    File PLIST
-                    <span className="text-xs text-gray-500 ml-1">(Tự động cập nhật)</span>
-                  </label>
-                  <div className="flex gap-2 items-center">
-                    <select
-                      value={form.plistFile || ''}
-                      onChange={(e) => setForm({...form, plistFile: e.target.value})}
-                      className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
-                      disabled={plistLoading}
-                      required
-                    >
-                      <option value="">-- Chọn file PLIST --</option>
-                      {plistFiles.map((file) => (
-                        <option key={file.name} value={file.name}>
-                          {file.name} ({new Date(file.mtime).toLocaleDateString()})
-                        </option>
-                      ))}
-                    </select>
-                    <button
-                      type="button"
-                      onClick={fetchPlistFiles}
-                      className="p-2 bg-gray-200 dark:bg-gray-600 rounded hover:bg-gray-300 dark:hover:bg-gray-500"
-                      title="Làm mới danh sách"
-                      disabled={plistLoading}
-                    >
-                      {plistLoading ? '⌛' : '🔄'}
-                    </button>
-                  </div>
-                  {form.plistFile && (
-                    <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900 rounded text-sm">
-                      <p className="font-medium">Đường dẫn cài đặt:</p>
-                      <code className="block mt-1 break-all text-xs">
-                        {`itms-services://?action=download-manifest&url=${encodeURIComponent(
-                          `${process.env.NEXT_PUBLIC_SITE_URL}/api/plist?file=${form.plistFile}`
-                        )}`}
-                      </code>
-                    </div>
-                  )}
                 </div>
 
                 {selectedCategory && currentFields.map((field) => (
@@ -555,6 +477,7 @@ export default function Admin() {
                         onChange={(e) => setForm(f => ({ ...f, [field]: e.target.value }))}
                         placeholder={`Nhập ${field}`}
                         className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        
                       />
                     )}
                   </div>
@@ -613,7 +536,7 @@ export default function Admin() {
                   )}
                   <button
                     type="submit"
-                    disabled={submitting || !selectedCategory || !form.plistFile}
+                    disabled={submitting || !selectedCategory}
                     className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-blue-400 dark:bg-blue-700 dark:hover:bg-blue-800"
                   >
                     {submitting ? (
@@ -667,11 +590,6 @@ export default function Admin() {
                               </span>
                             )}
                             {app.version && <span>Phiên bản: {app.version}</span>}
-                            {app.plist_file && (
-                              <span className="ml-2 text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full dark:bg-green-900 dark:text-green-200">
-                                PLIST: {app.plist_file}
-                              </span>
-                            )}
                           </div>
                         </div>
                         <div className="flex space-x-2">
@@ -701,9 +619,7 @@ export default function Admin() {
               </div>
             </section>
           </>
-        )}
-
-        {activeTab === "categories" && (
+        ) : (
           <>
             {/* Category Management */}
             <section className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-md mb-6">
@@ -848,13 +764,12 @@ export default function Admin() {
               </div>
             </section>
           </>
-        )}
-
+          )}
         {activeTab === "certs" && (
           <section className="max-w-xl mx-auto">
             <CertManagerAndSigner />
           </section>
-        )}
+)}
       </main>
     </div>
   );
