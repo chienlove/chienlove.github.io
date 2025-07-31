@@ -1,9 +1,6 @@
-import jwt from 'jsonwebtoken';
 import fs from 'fs';
 import path from 'path';
 import { createClient } from '@supabase/supabase-js';
-
-const secret = process.env.JWT_SECRET;
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -11,36 +8,37 @@ const supabase = createClient(
 );
 
 export default async function handler(req, res) {
-  const { id, token } = req.query;
+  const { file } = req.query;
 
-  if (!id || !token) {
-    return res.status(400).send('Missing id or token');
+  // Validate input
+  if (!file || !/^[\w-]+\.plist$/.test(file)) {
+    return res.status(400).send('Invalid plist filename');
   }
 
-  try {
-    const decoded = jwt.verify(token, secret);
-    if (decoded.id !== id) return res.status(403).send('Invalid token');
-
-    // 🔍 Truy vấn Supabase để lấy slug từ id
-    const { data: app, error } = await supabase
-      .from('apps')
-      .select('slug')
-      .eq('id', id)
-      .single();
-
-    if (error || !app?.slug) {
-      return res.status(404).send('App not found');
+  // Optional: Verify admin token if needed
+  const token = req.headers['authorization']?.split(' ')[1];
+  if (token) {
+    try {
+      const { data: { user } } = await supabase.auth.getUser(token);
+      if (!user) return res.status(403).send('Invalid token');
+    } catch (e) {
+      return res.status(403).send('Invalid token');
     }
+  }
 
-    const filePath = path.join(process.cwd(), 'secure/plist', `${app.slug}.plist`);
-    if (!fs.existsSync(filePath)) {
-      return res.status(404).send('Plist not found');
+  // Serve plist file
+  const plistPath = path.join(process.cwd(), 'secure/plist', file);
+  
+  try {
+    if (!fs.existsSync(plistPath)) {
+      return res.status(404).send('Plist file not found');
     }
 
     res.setHeader('Content-Type', 'application/xml');
-    fs.createReadStream(filePath).pipe(res);
-  } catch (err) {
-    console.error(err);
-    return res.status(403).send('Expired or invalid token');
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    fs.createReadStream(plistPath).pipe(res);
+  } catch (error) {
+    console.error('Error serving plist:', error);
+    res.status(500).send('Internal server error');
   }
 }
