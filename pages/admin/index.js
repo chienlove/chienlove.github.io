@@ -25,6 +25,7 @@ export default function Admin() {
   const [newField, setNewField] = useState("");
   const [screenshotInput, setScreenshotInput] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const secret = process.env.JWT_SECRET;
 
   // Kiểm tra UUID hợp lệ
   const isValidUUID = (id) => {
