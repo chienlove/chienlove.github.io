@@ -25,6 +25,7 @@ export default function Admin() {
   const [newField, setNewField] = useState("");
   const [screenshotInput, setScreenshotInput] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const secret = process.env.JWT_SECRET;
 
   // Kiểm tra UUID hợp lệ
   const isValidUUID = (id) => {
@@ -51,9 +52,6 @@ export default function Admin() {
 
   
    useEffect(() => {
-  // Khai báo biến JWT_SECRET ngay trong component
-  const JWT_SECRET = process.env.JWT_SECRET;
-
   async function fetchIpaSizeFromPlist() {
     const plistName = form["download_link"]?.trim();
     if (!plistName) return;
