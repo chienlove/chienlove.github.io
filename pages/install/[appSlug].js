@@ -9,7 +9,7 @@ import { faDownload, faHome } from '@fortawesome/free-solid-svg-icons';
 export async function getServerSideProps({ params }) {
   const { data: app } = await supabase
     .from('apps')
-    .select('*')
+    .select('*, downloads:downloads(count), views:views(count)')
     .eq('slug', params.appSlug)
     .single();
 
@@ -20,20 +20,25 @@ export async function getServerSideProps({ params }) {
   }
 
   return {
-    props: { app },
+    props: { 
+      app: {
+        ...app,
+        downloads: app.downloads?.[0]?.count || 0,
+        views: app.views?.[0]?.count || 0
+      }
+    },
   };
 }
 
-// Hàm trích xuất tên IPA từ download_link hoặc slug
-function getIpaFilename(app) {
+// Hàm lấy chính xác tên IPA từ release (bỏ qua Supabase)
+function getExactIpaName(app) {
+  // Nếu có download_link, lấy tên từ URL
   if (app.download_link) {
-    // Lấy phần cuối cùng của URL (tên file)
-    const parts = app.download_link.split('/');
-    const filename = parts[parts.length - 1];
-    // Loại bỏ .ipa nếu có
-    return filename.replace('.ipa', '');
+    const url = new URL(app.download_link);
+    const ipaName = url.pathname.split('/').pop().replace('.ipa', '');
+    return ipaName; // Giữ nguyên case và ký tự đặc biệt
   }
-  // Fallback: dùng slug nếu không có download_link
+  // Fallback: dùng slug thay thế
   return app.slug;
 }
 
@@ -53,9 +58,8 @@ export default function InstallPage({ app }) {
 
   const handleDownload = async () => {
     try {
-      // Sử dụng hàm getIpaFilename thay vì app.name
-      const ipa_name = getIpaFilename(app);
-      const res = await fetch(`/api/generate-token?id=${app.id}&ipa_name=${encodeURIComponent(ipa_name)}`);
+      const ipaName = getExactIpaName(app); // Lấy tên chính xác
+      const res = await fetch(`/api/generate-token?id=${app.id}&ipa_name=${encodeURIComponent(ipaName)}`);
       const data = await res.json();
       
       if (data.installUrl) {
