@@ -39,23 +39,22 @@ export default function InstallPage({ app }) {
   }, [countdown]);
 
   const handleDownload = async () => {
-    try {
-      const res = await fetch(`/api/generate-token?id=${app.id}&ipa_name=${encodeURIComponent(app.name)}`);
-      const data = await res.json();
-      
-      if (data.installUrl) {
-        // Sử dụng window.location thay vì tạo thẻ a
-        setTimeout(() => {
-          window.location.href = data.installUrl;
-        }, 300);
-      } else {
-        alert('Không thể tạo liên kết cài đặt.');
-      }
-    } catch (err) {
-      console.error('Lỗi khi tạo liên kết:', err);
-      alert('Đã có lỗi xảy ra khi tạo liên kết cài đặt.');
+  try {
+    const res = await fetch(`/api/generate-token?id=${app.id}&ipa_name=${encodeURIComponent(app.name)}`);
+    const data = await res.json();
+    
+    if (data.installUrl) {
+      setTimeout(() => {
+        window.location.href = data.installUrl;
+      }, 300);
+    } else {
+      alert('Không thể tạo liên kết cài đặt.');
     }
-  };
+  } catch (err) {
+    console.error('Lỗi khi tạo liên kết:', err);
+    alert('Đã có lỗi xảy ra khi tạo liên kết cài đặt.');
+  }
+};
 
   return (
     <Layout fullWidth>
