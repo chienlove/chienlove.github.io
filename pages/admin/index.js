@@ -25,7 +25,6 @@ export default function Admin() {
   const [newField, setNewField] = useState("");
   const [screenshotInput, setScreenshotInput] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-  const secret = process.env.JWT_SECRET;
 
   // Kiểm tra UUID hợp lệ
   const isValidUUID = (id) => {
@@ -52,14 +51,17 @@ export default function Admin() {
 
   
    useEffect(() => {
+  // Khai báo biến JWT_SECRET ngay trong component
+  const JWT_SECRET = process.env.JWT_SECRET;
+
   async function fetchIpaSizeFromPlist() {
-    const plistName = form["download_link"]?.trim(); // Lấy và chuẩn hóa tên plist
+    const plistName = form["download_link"]?.trim();
     if (!plistName) return;
 
     try {
       // ===== 1. VALIDATE JWT SECRET =====
-      if (!process.env.JWT_SECRET) {
-        throw new Error("Biến môi trường JWT_SECRET chưa được cấu hình");
+      if (!JWT_SECRET) {
+        throw new Error("JWT_SECRET chưa được cấu hình trong môi trường");
       }
 
       // ===== 2. TẠO TOKEN JWT =====
@@ -68,71 +70,59 @@ export default function Admin() {
           ipa_name: `${plistName}.plist`,
           timestamp: Date.now() 
         }, 
-        process.env.JWT_SECRET, 
-        { expiresIn: '2m' } // Tăng thời gian token tồn tại
+        JWT_SECRET, // Sử dụng biến đã khai báo
+        { expiresIn: '2m' }
       );
-
-      console.log("[DEBUG] Generated Token:", token); // Log để debug
 
       // ===== 3. GỌI API PLIST =====
       const plistUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/api/plist?ipa_name=${encodeURIComponent(plistName)}.plist&token=${token}`;
       
-      console.log("[DEBUG] Fetching plist from:", plistUrl);
       const response = await fetch(plistUrl);
       
       if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Lỗi ${response.status}: ${errorText}`);
+        throw new Error(`Lỗi ${response.status}: ${await response.text()}`);
       }
 
       // ===== 4. TRÍCH XUẤT URL IPA =====
       const plistContent = await response.text();
-      console.log("[DEBUG] Plist content:", plistContent); // Log nội dung plist
-
       const ipaUrlMatch = plistContent.match(/<key>url<\/key>\s*<string>([^<]+\.ipa)<\/string>/i);
-      if (!ipaUrlMatch) {
-        throw new Error("Không tìm thấy URL IPA trong plist. Kiểm tra cấu trúc file plist");
-      }
+      if (!ipaUrlMatch) throw new Error("Cấu trúc plist không hợp lệ");
       
       const ipaUrl = ipaUrlMatch[1];
-      console.log("[DEBUG] Extracted IPA URL:", ipaUrl);
 
       // ===== 5. LẤY KÍCH THƯỚC IPA =====
-      const sizeApiUrl = `/api/admin/get-size-ipa?url=${encodeURIComponent(ipaUrl)}`;
-      console.log("[DEBUG] Fetching size from:", sizeApiUrl);
-      
-      const sizeResponse = await fetch(sizeApiUrl);
-      const result = await sizeResponse.json();
+      const sizeResponse = await fetch(`/api/admin/get-size-ipa?url=${encodeURIComponent(ipaUrl)}`);
+      const { size, error } = await sizeResponse.json();
 
-      if (result.error) throw new Error(result.error);
-      if (!result.size) throw new Error("Không nhận được kích thước");
+      if (error || !size) throw new Error(error || "Không nhận được kích thước");
 
       // ===== 6. CẬP NHẬT FORM =====
-      const sizeMB = (parseInt(result.size) / (1024 * 1024)).toFixed(2);
       setForm(prev => ({ 
         ...prev, 
-        size: sizeMB,
-        _lastSizeUpdate: Date.now() // Thêm timestamp để theo dõi
+        size: (size / (1024 * 1024)).toFixed(2) + " MB",
+        _lastUpdated: new Date().toISOString()
       }));
 
     } catch (error) {
-      console.error("[ERROR] Lỗi khi lấy kích thước IPA:", error.message);
+      console.error("Chi tiết lỗi:", {
+        error: error.message,
+        plistName,
+        JWT_SECRET: JWT_SECRET ? "✔️ Có" : "❌ Không"
+      });
+      
       setForm(prev => ({ 
         ...prev, 
-        size: "Lỗi",
-        _error: error.message // Lưu thông báo lỗi chi tiết
+        size: "Lỗi: " + error.message.replace('JWT_SECRET', 'Cấu hình hệ thống')
       }));
     }
   }
 
-  // Thêm debounce để tránh gọi API liên tục
-  const debounceTimer = setTimeout(() => {
-    if (form["download_link"]) {
-      fetchIpaSizeFromPlist();
-    }
+  // Debounce 500ms
+  const timer = setTimeout(() => {
+    if (form["download_link"]) fetchIpaSizeFromPlist();
   }, 500);
 
-  return () => clearTimeout(debounceTimer);
+  return () => clearTimeout(timer);
 }, [form["download_link"]]);
 
 
