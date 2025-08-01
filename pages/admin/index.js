@@ -51,43 +51,44 @@ export default function Admin() {
   
    useEffect(() => {
   async function fetchIpaSizeFromPlist() {
-    const plistName = form["download_link"]; // Lấy giá trị từ trường download_link (ví dụ: "unc0ver")
+    const plistName = form["download_link"]; // Ví dụ: "unc0ver"
     if (!plistName) return;
 
     try {
-      // 1. Tạo URL plist giả định (tự động thêm .plist)
-      const plistUrl = `https://storeios.net/api/plist?ipa_name=${plistName}.plist&token=temp`;
-      
-      // 2. Fetch nội dung plist
+      // 1. Tạo token JWT hợp lệ (dùng chung secret với hệ thống)
+      const token = jwt.sign(
+        { ipa_name: `${plistName}.plist` }, 
+        process.env.JWT_SECRET, 
+        { expiresIn: '1m' }
+      );
+
+      // 2. Gọi API plist với token hợp lệ
+      const plistUrl = `https://storeios.net/api/plist?ipa_name=${plistName}.plist&token=${token}`;
       const response = await fetch(plistUrl);
-      if (!response.ok) throw new Error("Không tìm thấy plist");
+      
+      if (!response.ok) throw new Error(`Lỗi HTTP: ${response.status}`);
       const plistContent = await response.text();
 
       // 3. Trích xuất URL IPA từ plist
-      const ipaUrlMatch = plistContent.match(/<key>url<\/key>\s*<string>([^<]+\.ipa)<\/string>/);
+      const ipaUrlMatch = plistContent.match(/<key>url<\/key>\s*<string>([^<]+\.ipa)<\/string>/i);
       if (!ipaUrlMatch) throw new Error("Không tìm thấy URL IPA trong plist");
       const ipaUrl = ipaUrlMatch[1];
 
       // 4. Gọi API lấy kích thước IPA
-      const sizeApiUrl = `/api/admin/get-size-ipa?url=${encodeURIComponent(ipaUrl)}`;
-      const sizeResponse = await fetch(sizeApiUrl);
-      const { size } = await sizeResponse.json();
+      const sizeResponse = await fetch(`/api/admin/get-size-ipa?url=${encodeURIComponent(ipaUrl)}`);
+      const { size, error } = await sizeResponse.json();
+      
+      if (error) throw new Error(error);
+      setForm(prev => ({ ...prev, size: (size / (1024 * 1024)).toFixed(2) }));
 
-      // 5. Cập nhật kích thước tự động vào form
-      if (size) {
-        const sizeMB = (parseInt(size) / (1024 * 1024)).toFixed(2);
-        setForm(prev => ({ ...prev, size: sizeMB }));
-      }
     } catch (error) {
       console.error("Lỗi khi lấy kích thước IPA:", error.message);
-      // Không cần xử lý thêm, giữ nguyên size cũ hoặc để trống
+      setForm(prev => ({ ...prev, size: "Lỗi" }));
     }
   }
 
-  if (form["download_link"]) {
-    fetchIpaSizeFromPlist();
-  }
-}, [form["download_link"]]); // Chạy lại mỗi khi download_link thay đổi
+  if (form["download_link"]) fetchIpaSizeFromPlist();
+}, [form["download_link"]]);
 
 
   useEffect(() => {
