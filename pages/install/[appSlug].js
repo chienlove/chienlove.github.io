@@ -24,13 +24,26 @@ export async function getServerSideProps({ params }) {
   };
 }
 
+// Hàm trích xuất tên IPA từ download_link hoặc slug
+function getIpaFilename(app) {
+  if (app.download_link) {
+    // Lấy phần cuối cùng của URL (tên file)
+    const parts = app.download_link.split('/');
+    const filename = parts[parts.length - 1];
+    // Loại bỏ .ipa nếu có
+    return filename.replace('.ipa', '');
+  }
+  // Fallback: dùng slug nếu không có download_link
+  return app.slug;
+}
+
 export default function InstallPage({ app }) {
-  const [countdown, setCountdown] = useState(10); // Đã tăng lên 10s
+  const [countdown, setCountdown] = useState(10);
   const router = useRouter();
 
   const radius = 45;
   const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference * (1 - countdown / 10); // Cập nhật theo 10s
+  const strokeDashoffset = circumference * (1 - countdown / 10);
 
   useEffect(() => {
     if (countdown <= 0) return;
@@ -40,11 +53,12 @@ export default function InstallPage({ app }) {
 
   const handleDownload = async () => {
     try {
-      const res = await fetch(`/api/generate-token?id=${app.id}&ipa_name=${encodeURIComponent(app.name)}`);
+      // Sử dụng hàm getIpaFilename thay vì app.name
+      const ipa_name = getIpaFilename(app);
+      const res = await fetch(`/api/generate-token?id=${app.id}&ipa_name=${encodeURIComponent(ipa_name)}`);
       const data = await res.json();
       
       if (data.installUrl) {
-        // Sử dụng window.location thay vì tạo thẻ a
         setTimeout(() => {
           window.location.href = data.installUrl;
         }, 300);
@@ -57,6 +71,7 @@ export default function InstallPage({ app }) {
     }
   };
 
+  // Phần JSX giữ nguyên hoàn toàn
   return (
     <Layout fullWidth>
       <Head>
