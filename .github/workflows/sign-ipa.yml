@@ -213,7 +213,7 @@ jobs:
               echo "📦 Không tìm thấy icon phù hợp."
             fi
 
-            PLIST_NAME="$(echo "${APP_NAME}" | tr '[:upper:]' '[:lower:]').plist"
+            PLIST_NAME="${APP_NAME}.plist"
             PLIST_PATH="secure/plist/$PLIST_NAME"
 
             echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" > "$PLIST_PATH"
