@@ -53,8 +53,6 @@ const JWT_SECRET = serverRuntimeConfig.JWT_SECRET;
 
   
    useEffect(() => {
-  const JWT_SECRET = process.env.JWT_SECRET;
-
   async function fetchIpaSizeFromPlist() {
     const plistName = form["download_link"]?.trim();
     if (!plistName) return;
