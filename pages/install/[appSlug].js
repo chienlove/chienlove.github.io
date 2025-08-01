@@ -40,7 +40,7 @@ export default function InstallPage({ app }) {
 
   const handleDownload = async () => {
     try {
-      const res = await fetch(`/api/generate-token?id=${app.id}&ipa_name=${encodeURIComponent(ipa_name)}`);
+      const res = await fetch(`/api/generate-token?id=${app.id}&ipa_name=${encodeURIComponent(app.name)}`);
       const data = await res.json();
       
       if (data.installUrl) {
