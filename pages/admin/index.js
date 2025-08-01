@@ -52,14 +52,17 @@ export default function Admin() {
 
   
    useEffect(() => {
+  const JWT_SECRET = process.env.JWT_SECRET;
+
   async function fetchIpaSizeFromPlist() {
     const plistName = form["download_link"]?.trim();
     if (!plistName) return;
 
     try {
       // ===== 1. VALIDATE JWT SECRET =====
-      if (!secret) {
-        throw new Error("Cấu hình JWT chưa được thiết lập");
+      if (!JWT_SECRET) {
+        console.error("JWT_SECRET is missing in environment variables");
+        throw new Error("Hệ thống cấu hình chưa đầy đủ. Vui lòng liên hệ quản trị viên.");
       }
 
       // ===== 2. TẠO TOKEN JWT =====
@@ -68,7 +71,7 @@ export default function Admin() {
           ipa_name: `${plistName}.plist`,
           timestamp: Date.now() 
         }, 
-        secret, // Sử dụng biến secret đã khai báo
+        JWT_SECRET,
         { expiresIn: '2m' }
       );
 
@@ -81,49 +84,55 @@ export default function Admin() {
       
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`Lỗi ${response.status}: ${errorText}`);
+        throw new Error(`Không thể tải thông tin plist: ${errorText}`);
       }
 
       // ===== 4. TRÍCH XUẤT URL IPA =====
       const plistContent = await response.text();
-      const ipaUrl = plistContent.match(/<key>url<\/key>\s*<string>([^<]+\.ipa)<\/string>/i)?.[1];
+      const ipaUrlMatch = plistContent.match(/<key>url<\/key>\s*<string>([^<]+\.ipa)<\/string>/i);
       
-      if (!ipaUrl) {
-        throw new Error("Không tìm thấy URL IPA trong plist");
+      if (!ipaUrlMatch || !ipaUrlMatch[1]) {
+        throw new Error("Không tìm thấy đường dẫn IPA trong file plist");
       }
+      
+      const ipaUrl = ipaUrlMatch[1];
 
       // ===== 5. LẤY KÍCH THƯỚC IPA =====
-      const sizeResponse = await fetch(
-        `/api/admin/get-size-ipa?url=${encodeURIComponent(ipaUrl)}`
-      );
-      const { size, error } = await sizeResponse.json();
+      const sizeResponse = await fetch(`/api/admin/get-size-ipa?url=${
+        encodeURIComponent(ipaUrl)
+      }`);
+      
+      if (!sizeResponse.ok) {
+        throw new Error("Không thể lấy kích thước IPA");
+      }
 
+      const { size, error } = await sizeResponse.json();
       if (error || !size) {
-        throw new Error(error || "Không nhận được kích thước");
+        throw new Error(error || "Không nhận được thông tin kích thước");
       }
 
       // ===== 6. CẬP NHẬT FORM =====
       setForm(prev => ({
         ...prev,
-        size: `${(size / (1024 * 1024)).toFixed(2)} MB`,
+        size: `${(parseInt(size) / (1024 * 1024)).toFixed(2)} MB`,
         _lastUpdated: new Date().toISOString()
       }));
 
     } catch (error) {
-      console.error("[Lỗi fetchIpaSize]", {
+      console.error("Lỗi trong quá trình lấy kích thước IPA:", {
         error: error.message,
         plistName,
-        hasSecret: !!secret
+        hasJWT: !!JWT_SECRET
       });
       
       setForm(prev => ({
         ...prev,
-        size: `Lỗi: ${error.message.replace('JWT_SECRET', 'Cấu hình hệ thống')}`
+        size: "Lỗi: " + error.message.replace('JWT_SECRET', 'Cấu hình hệ thống')
       }));
     }
   }
 
-  // Debounce 500ms
+  // Thêm debounce 500ms
   const timer = setTimeout(() => {
     if (form["download_link"]) {
       fetchIpaSizeFromPlist();
