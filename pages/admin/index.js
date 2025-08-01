@@ -56,61 +56,78 @@ export default function Admin() {
     if (!plistName) return;
 
     try {
-      // ===== 1. GỌI API ĐỂ LẤY TOKEN (server-side) =====
-      const tokenRes = await fetch('/api/generate-token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ipa_name: `${plistName}.plist` }),
-      });
+      // ===== 1. TẠO TOKEN TỪ API =====
+      const tokenResponse = await fetch(
+        `/api/generate-token?id=${app.id}&ipa_name=${encodeURIComponent(plistName)}`
+      );
 
-      if (!tokenRes.ok) {
-        const err = await tokenRes.json();
-        throw new Error(err.error || 'Không thể tạo token');
+      if (!tokenResponse.ok) {
+        const errorData = await tokenResponse.json();
+        throw new Error(errorData.error || "Lỗi khi tạo token");
       }
 
-      const { token } = await tokenRes.json();
+      const { installUrl } = await tokenResponse.json();
+      const token = new URLSearchParams(installUrl.split('?')[1]).get('token');
+
+      if (!token) {
+        throw new Error("Không trích xuất được token từ URL");
+      }
 
       // ===== 2. GỌI API PLIST VỚI TOKEN =====
-      const plistUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/api/plist?ipa_name=${encodeURIComponent(plistName)}.plist&token=${token}`;
-      const response = await fetch(plistUrl);
+      const plistUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/api/plist?ipa_name=${
+        encodeURIComponent(plistName)
+      }.plist&token=${token}`;
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Không thể tải plist: ${errorText}`);
+      const plistResponse = await fetch(plistUrl);
+      if (!plistResponse.ok) {
+        throw new Error(`Lỗi plist: ${plistResponse.statusText}`);
       }
 
-      const plistContent = await response.text();
+      // ===== 3. TRÍCH XUẤT URL IPA =====
+      const plistContent = await plistResponse.text();
       const ipaUrlMatch = plistContent.match(/<key>url<\/key>\s*<string>([^<]+\.ipa)<\/string>/i);
-
-      if (!ipaUrlMatch || !ipaUrlMatch[1]) {
+      
+      if (!ipaUrlMatch) {
         throw new Error("Không tìm thấy URL IPA trong plist");
       }
-
       const ipaUrl = ipaUrlMatch[1];
 
-      // ===== 3. LẤY KÍCH THƯỚC IPA QUA API (server-side) =====
-      const sizeResponse = await fetch(`/api/admin/get-size-ipa?url=${encodeURIComponent(ipaUrl)}`);
-      const { size, error } = await sizeResponse.json();
-
-      if (error || !size) {
-        throw new Error(error || "Không lấy được kích thước");
+      // ===== 4. LẤY KÍCH THƯỚC IPA =====
+      const sizeResponse = await fetch(
+        `/api/admin/get-size-ipa?url=${encodeURIComponent(ipaUrl)}`
+      );
+      
+      if (!sizeResponse.ok) {
+        throw new Error("Lỗi khi lấy kích thước IPA");
       }
 
-      // ===== 4. CẬP NHẬT FORM =====
-      setForm((prev) => ({
+      const { size, error: sizeError } = await sizeResponse.json();
+      if (sizeError || !size) {
+        throw new Error(sizeError || "Không nhận được kích thước");
+      }
+
+      // ===== 5. CẬP NHẬT FORM =====
+      setForm(prev => ({
         ...prev,
-        size: `${(parseInt(size) / (1024 * 1024)).toFixed(2)} MB`,
-        _lastUpdated: new Date().toISOString(),
+        size: `${(size / (1024 * 1024)).toFixed(2)} MB`,
+        _lastUpdated: new Date().toISOString()
       }));
+
     } catch (error) {
-      console.error("Lỗi lấy kích thước IPA:", error.message);
-      setForm((prev) => ({
+      console.error("Chi tiết lỗi:", {
+        error: error.message,
+        step: error.step || "unknown",
+        plistName
+      });
+
+      setForm(prev => ({
         ...prev,
-        size: "Lỗi: " + error.message,
+        size: `Lỗi: ${error.message.replace('JWT_SECRET', 'Hệ thống')}`
       }));
     }
   }
 
+  // Debounce 500ms
   const timer = setTimeout(() => {
     if (form["download_link"]) {
       fetchIpaSizeFromPlist();
@@ -118,7 +135,7 @@ export default function Admin() {
   }, 500);
 
   return () => clearTimeout(timer);
-}, [form["download_link"]]);
+}, [form["download_link"], app.id]); // Thêm app.id vào dependencies
 
 
   useEffect(() => {
