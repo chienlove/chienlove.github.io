@@ -9,7 +9,7 @@ import { faDownload, faHome } from '@fortawesome/free-solid-svg-icons';
 export async function getServerSideProps({ params }) {
   const { data: app } = await supabase
     .from('apps')
-    .select('*, downloads:downloads(count), views:views(count)')
+    .select('*')
     .eq('slug', params.appSlug)
     .single();
 
@@ -20,47 +20,17 @@ export async function getServerSideProps({ params }) {
   }
 
   return {
-    props: { 
-      app: {
-        ...app,
-        downloads: app.downloads?.[0]?.count || 0,
-        views: app.views?.[0]?.count || 0
-      }
-    },
+    props: { app },
   };
 }
 
-function getExactIpaName(app) {
-  // Ưu tiên lấy từ URL download nếu có
-  if (app.download_link) {
-    try {
-      const url = new URL(app.download_link.includes('://') ? app.download_link : `https://${app.download_link}`);
-      const filename = url.pathname.split('/').pop();
-      if (filename.endsWith('.ipa')) {
-        return filename.replace('.ipa', '');
-      }
-    } catch (e) {
-      console.error('Lỗi phân tích URL:', e);
-    }
-  }
-  
-  // Fallback 1: Lấy từ tên hiển thị (loại bỏ ký tự đặc biệt)
-  const cleanName = app.name.replace(/[^a-zA-Z0-9._-]/g, '');
-  if (cleanName) return cleanName;
-  
-  // Fallback cuối: Dùng slug
-  return app.slug;
-}
-
 export default function InstallPage({ app }) {
-  const [countdown, setCountdown] = useState(10);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
+  const [countdown, setCountdown] = useState(10); // Đã tăng lên 10s
   const router = useRouter();
 
   const radius = 45;
   const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference * (1 - countdown / 10);
+  const strokeDashoffset = circumference * (1 - countdown / 10); // Cập nhật theo 10s
 
   useEffect(() => {
     if (countdown <= 0) return;
@@ -69,34 +39,21 @@ export default function InstallPage({ app }) {
   }, [countdown]);
 
   const handleDownload = async () => {
-    setLoading(true);
-    setError(null);
-    
     try {
-      const ipaName = getExactIpaName(app);
-      console.log('Đang tạo link cho IPA:', ipaName); // Debug log
-      
-      const res = await fetch(`/api/generate-token?id=${app.id}&ipa_name=${encodeURIComponent(ipaName)}`);
-      
-      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-      
+      const res = await fetch(`/api/generate-token?id=${app.id}&ipa_name=${encodeURIComponent(ipa_name)}`);
       const data = await res.json();
       
-      if (!data?.installUrl) throw new Error('Không nhận được link cài đặt');
-      
-      console.log('Mở link cài đặt:', data.installUrl); // Debug log
-      window.location.assign(data.installUrl);
-      
+      if (data.installUrl) {
+        // Sử dụng window.location thay vì tạo thẻ a
+        setTimeout(() => {
+          window.location.href = data.installUrl;
+        }, 300);
+      } else {
+        alert('Không thể tạo liên kết cài đặt.');
+      }
     } catch (err) {
-      console.error('Lỗi khi tải xuống:', {
-        error: err,
-        appId: app.id,
-        appName: app.name,
-        downloadLink: app.download_link
-      });
-      setError('Lỗi khi tạo liên kết. Vui lòng thử lại.');
-    } finally {
-      setLoading(false);
+      console.error('Lỗi khi tạo liên kết:', err);
+      alert('Đã có lỗi xảy ra khi tạo liên kết cài đặt.');
     }
   };
 
@@ -130,12 +87,6 @@ export default function InstallPage({ app }) {
           <h1 className="text-2xl font-bold text-gray-800 mb-2">{app.name}</h1>
           <p className="text-gray-600 mb-4">Phiên bản: {app.version}</p>
 
-          {error && (
-            <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
-              {error}
-            </div>
-          )}
-
           <p className="mb-6 text-gray-700">
             {countdown > 0
               ? <>Vui lòng chờ <span className="font-bold">{countdown}</span> giây trước khi tải...</>
@@ -147,19 +98,10 @@ export default function InstallPage({ app }) {
             {countdown === 0 && (
               <button
                 onClick={handleDownload}
-                disabled={loading}
-                className={`bg-gradient-to-r from-green-400 to-blue-500 hover:from-green-500 hover:to-blue-600 text-white font-bold py-3 px-6 rounded-lg transition-all hover:scale-105 active:scale-95 shadow-md flex items-center justify-center gap-2 ${
-                  loading ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
+                className="bg-gradient-to-r from-green-400 to-blue-500 hover:from-green-500 hover:to-blue-600 text-white font-bold py-3 px-6 rounded-lg transition-all hover:scale-105 active:scale-95 shadow-md flex items-center justify-center gap-2"
               >
-                {loading ? (
-                  'Đang xử lý...'
-                ) : (
-                  <>
-                    <FontAwesomeIcon icon={faDownload} />
-                    <span>Tải xuống ngay</span>
-                  </>
-                )}
+                <FontAwesomeIcon icon={faDownload} />
+                <span>Tải xuống ngay</span>
               </button>
             )}
 
