@@ -56,49 +56,54 @@ export default function Admin() {
     if (!plistName) return;
 
     try {
-      // ===== 1. TẠO TOKEN TỪ API =====
+      // 1. Gọi API để lấy cả installUrl và token
       const tokenResponse = await fetch(
-        `/api/generate-token?id=${app.id}&ipa_name=${encodeURIComponent(plistName)}`
+        `/api/generate-token?ipa_name=${encodeURIComponent(plistName)}`
       );
 
       if (!tokenResponse.ok) {
-        const errorData = await tokenResponse.json();
-        throw new Error(errorData.error || "Lỗi khi tạo token");
+        throw new Error(`Lỗi API: ${tokenResponse.status}`);
       }
 
-      const { installUrl } = await tokenResponse.json();
-      const token = new URLSearchParams(installUrl.split('?')[1]).get('token');
-
-      if (!token) {
-        throw new Error("Không trích xuất được token từ URL");
+      const { installUrl, token } = await tokenResponse.json();
+      
+      if (!installUrl || !token) {
+        throw new Error("Dữ liệu trả về không hợp lệ");
       }
 
-      // ===== 2. GỌI API PLIST VỚI TOKEN =====
+      // 2. Lưu installUrl vào state để dùng sau này
+      setForm(prev => ({ 
+        ...prev, 
+        _installUrl: installUrl,
+        _lastToken: token
+      }));
+
+      // 3. Gọi API plist để lấy thông tin IPA
       const plistUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/api/plist?ipa_name=${
         encodeURIComponent(plistName)
       }.plist&token=${token}`;
 
       const plistResponse = await fetch(plistUrl);
       if (!plistResponse.ok) {
-        throw new Error(`Lỗi plist: ${plistResponse.statusText}`);
+        throw new Error(`Lỗi plist: ${plistResponse.status}`);
       }
 
-      // ===== 3. TRÍCH XUẤT URL IPA =====
+      // 4. Trích xuất URL IPA từ plist
       const plistContent = await plistResponse.text();
       const ipaUrlMatch = plistContent.match(/<key>url<\/key>\s*<string>([^<]+\.ipa)<\/string>/i);
       
-      if (!ipaUrlMatch) {
-        throw new Error("Không tìm thấy URL IPA trong plist");
+      if (!ipaUrlMatch || !ipaUrlMatch[1]) {
+        throw new Error("Không tìm thấy URL IPA trong file plist");
       }
       const ipaUrl = ipaUrlMatch[1];
 
-      // ===== 4. LẤY KÍCH THƯỚC IPA =====
+      // 5. Lấy kích thước IPA
       const sizeResponse = await fetch(
         `/api/admin/get-size-ipa?url=${encodeURIComponent(ipaUrl)}`
       );
       
       if (!sizeResponse.ok) {
-        throw new Error("Lỗi khi lấy kích thước IPA");
+        throw new Error(`Lỗi kích thước: ${sizeResponse.status}`);
       }
 
       const { size, error: sizeError } = await sizeResponse.json();
@@ -106,7 +111,7 @@ export default function Admin() {
         throw new Error(sizeError || "Không nhận được kích thước");
       }
 
-      // ===== 5. CẬP NHẬT FORM =====
+      // 6. Cập nhật UI
       setForm(prev => ({
         ...prev,
         size: `${(size / (1024 * 1024)).toFixed(2)} MB`,
@@ -116,8 +121,8 @@ export default function Admin() {
     } catch (error) {
       console.error("Chi tiết lỗi:", {
         error: error.message,
-        step: error.step || "unknown",
-        plistName
+        plistName,
+        time: new Date().toISOString()
       });
 
       setForm(prev => ({
@@ -127,7 +132,7 @@ export default function Admin() {
     }
   }
 
-  // Debounce 500ms
+  // Thêm debounce 500ms
   const timer = setTimeout(() => {
     if (form["download_link"]) {
       fetchIpaSizeFromPlist();
@@ -135,7 +140,7 @@ export default function Admin() {
   }, 500);
 
   return () => clearTimeout(timer);
-}, [form["download_link"], app.id]); // Thêm app.id vào dependencies
+}, [form["download_link"]]);
 
 
   useEffect(() => {
