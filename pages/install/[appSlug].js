@@ -40,7 +40,15 @@ export default function InstallPage({ app }) {
 
   const handleDownload = async () => {
   try {
-    const res = await fetch(`/api/generate-token?id=${app.id}&ipa_name=${encodeURIComponent(app.name)}`);
+    // Lấy tên plist từ trường download_link (ví dụ: "unc0ver.plist")
+    const plistName = app.download_link;
+    
+    if (!plistName) {
+      throw new Error('Tên file plist không được để trống');
+    }
+
+    // Gọi API generate token với tên plist (không cần encodeURIComponent ở đây)
+    const res = await fetch(`/api/generate-token?id=${app.id}&ipa_name=${plistName}`);
     const data = await res.json();
     
     if (data.installUrl) {
@@ -52,7 +60,7 @@ export default function InstallPage({ app }) {
     }
   } catch (err) {
     console.error('Lỗi khi tạo liên kết:', err);
-    alert('Đã có lỗi xảy ra khi tạo liên kết cài đặt.');
+    alert('Đã có lỗi xảy ra khi tạo liên kết cài đặt: ' + err.message);
   }
 };
 
