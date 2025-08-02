@@ -71,9 +71,9 @@ export default function Admin() {
       }
 
       // Gọi API plist với token vừa nhận được
-      const plistUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/api/plist?ipa_name=${
-        encodeURIComponent(plistName)
-      }&token=${token}`;
+      const installUrl = `itms-services://?action=download-manifest&url=${
+    encodeURIComponent(`https://storeios.net/api/plist?ipa_name=${encodeURIComponent(ipa_name)}&token=${token}`)
+  }`;
 
       const plistResponse = await fetch(plistUrl);
       if (!plistResponse.ok) {

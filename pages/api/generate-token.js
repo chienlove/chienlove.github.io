@@ -20,7 +20,7 @@ export default function handler(req, res) {
   const token = jwt.sign(payload, secret, { expiresIn: '2m' });
 
   const installUrl = `itms-services://?action=download-manifest&url=${
-    encodeURIComponent(`${process.env.NEXT_PUBLIC_SITE_URL}/api/plist?ipa_name=${encodeURIComponent(ipa_name)}&token=${token}`)
+    encodeURIComponent(`https://storeios.net/api/plist?ipa_name=${encodeURIComponent(ipa_name)}&token=${token}`)
   }`;
 
   res.status(200).json({ installUrl, token });
