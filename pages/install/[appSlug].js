@@ -39,7 +39,7 @@ export async function getServerSideProps({ params }) {
       app,
       installUrl,
       rawPlistUrl: `https://storeios.net/api/plist?ipa_name=${encodeURIComponent(app.download_link)}&token=${token}`,
-      tokenExpiresIn: 30,
+      tokenExpiresIn: 40,
     },
   };
 }
