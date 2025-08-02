@@ -5,6 +5,8 @@ import Layout from '../../components/Layout';
 import { supabase } from '../../lib/supabase';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faDownload, faHome } from '@fortawesome/free-solid-svg-icons';
+import jwt from 'jsonwebtoken';
+import { toast } from 'react-toastify';
 
 export async function getServerSideProps({ params }) {
   const { data: app } = await supabase
@@ -19,18 +21,51 @@ export async function getServerSideProps({ params }) {
     };
   }
 
+  const secret = process.env.JWT_SECRET;
+
+  const token = jwt.sign(
+    { ipa_name: encodeURIComponent(app.download_link) },
+    secret,
+    { expiresIn: '30s' }
+  );
+
+  const installUrl = `itms-services://?action=download-manifest&url=${
+    encodeURIComponent(`https://storeios.net/api/plist?ipa_name=${encodeURIComponent(app.download_link)}&token=${token}`)
+  }`;
+
   return {
-    props: { app },
+    props: {
+      app,
+      installUrl,
+      rawPlistUrl: `https://storeios.net/api/plist?ipa_name=${encodeURIComponent(app.download_link)}&token=${token}`,
+      tokenExpiresIn: 30, // giây
+    },
   };
 }
 
-export default function InstallPage({ app }) {
-  const [countdown, setCountdown] = useState(10); // Đã tăng lên 10s
+export default function InstallPage({ app, installUrl, rawPlistUrl, tokenExpiresIn }) {
+  const [countdown, setCountdown] = useState(10);
+  const [tokenTimer, setTokenTimer] = useState(tokenExpiresIn);
   const router = useRouter();
 
   const radius = 45;
   const circumference = 2 * Math.PI * radius;
-  const strokeDashoffset = circumference * (1 - countdown / 10); // Cập nhật theo 10s
+  const strokeDashoffset = circumference * (1 - countdown / 10);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTokenTimer(prev => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          toast.warning('Liên kết sẽ hết hạn ngay bây giờ');
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     if (countdown <= 0) return;
@@ -39,30 +74,31 @@ export default function InstallPage({ app }) {
   }, [countdown]);
 
   const handleDownload = async () => {
-  try {
-    const plistName = app.download_link;
-    if (!plistName) throw new Error('Tên file plist không được để trống');
-
-    const res = await fetch(`/api/generate-token`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: app.id, ipa_name: plistName })
-    });
-
-    const data = await res.json();
-
-    if (data.installUrl) {
-      setTimeout(() => {
-        window.location.href = data.installUrl;
-      }, 300);
-    } else {
-      alert('Không thể tạo liên kết cài đặt.');
+    if (tokenTimer <= 0) {
+      toast.error('Liên kết đã hết hạn. Vui lòng tải lại trang.');
+      return;
     }
-  } catch (err) {
-    console.error('Lỗi khi tạo liên kết:', err);
-    alert('Đã có lỗi xảy ra khi tạo liên kết cài đặt: ' + err.message);
-  }
-};
+
+    try {
+      const verify = await fetch(rawPlistUrl, { method: 'HEAD' });
+
+      if (!verify.ok) {
+        if (verify.status === 403) {
+          toast.error('Liên kết đã hết hạn. Vui lòng tải lại trang.');
+        } else if (verify.status === 404) {
+          toast.error('Không tìm thấy file cài đặt.');
+        } else {
+          toast.error('Không thể xác minh liên kết cài đặt.');
+        }
+        return;
+      }
+
+      window.location.href = installUrl;
+    } catch (err) {
+      console.error('Lỗi khi kiểm tra liên kết:', err);
+      toast.error('Lỗi khi tải ứng dụng. Vui lòng thử lại.');
+    }
+  };
 
   return (
     <Layout fullWidth>
@@ -94,11 +130,15 @@ export default function InstallPage({ app }) {
           <h1 className="text-2xl font-bold text-gray-800 mb-2">{app.name}</h1>
           <p className="text-gray-600 mb-4">Phiên bản: {app.version}</p>
 
-          <p className="mb-6 text-gray-700">
+          <p className="mb-2 text-gray-700">
             {countdown > 0
               ? <>Vui lòng chờ <span className="font-bold">{countdown}</span> giây trước khi tải...</>
               : <>Nhấn nút bên dưới để tải ứng dụng.</>
             }
+          </p>
+
+          <p className="text-sm text-gray-500 mb-4">
+            Liên kết sẽ hết hạn sau: <span className="font-semibold">{tokenTimer}s</span>
           </p>
 
           <div className="flex flex-col space-y-3">
