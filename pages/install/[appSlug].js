@@ -147,6 +147,8 @@ export default function InstallPage({ app, installUrl, rawPlistUrl, tokenExpires
               ? <>Vui lòng chờ <span className="font-bold">{countdown}</span> giây trước khi tải...</>
               : <>Nhấn nút bên dưới để tải ứng dụng.</>
             }
+          </p>
+
           <div
   className={`text-sm text-gray-500 mb-4 transition-all duration-500 ease-out transform ${
     countdown === 0 ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'
@@ -157,7 +159,7 @@ export default function InstallPage({ app, installUrl, rawPlistUrl, tokenExpires
   ) : (
     <span className="text-red-500 font-medium">Liên kết đã hết hạn. Vui lòng tải lại trang.</span>
   )}
-          </div>
+         </div>
 
           <div className="flex flex-col space-y-3">
             {countdown === 0 && tokenTimer > 0 && (
