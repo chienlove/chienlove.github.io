@@ -15,6 +15,7 @@ function MyApp({ Component, pageProps }) {
 
   return (
     <>
+      <Component {...pageProps} />
       <ToastContainer
         position="top-center"
         autoClose={4000}
@@ -24,7 +25,7 @@ function MyApp({ Component, pageProps }) {
         draggable
         style={{ top: '25%' }}
         toastClassName={({ type }) =>
-          `!rounded-lg !p-4 !shadow-xl !text-base text-center ${
+          `!w-[90%] sm:!w-[360px] !mx-auto !rounded-xl !p-4 !shadow-lg !text-base text-center ${
             type === 'error'
               ? 'bg-red-100 text-red-800 border border-red-300'
               : type === 'warning'
@@ -32,8 +33,8 @@ function MyApp({ Component, pageProps }) {
               : 'bg-white text-gray-800 border border-gray-200'
           }`
         }
+        bodyClassName="!p-0"
       />
-      <Component {...pageProps} />
     </>
   );
 }
