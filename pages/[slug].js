@@ -116,34 +116,31 @@ export default function Detail({ serverApp, serverRelated }) {
   const truncate = (text, limit) =>
     text?.length > limit ? text.slice(0, limit) + '...' : text;
 
-  const handleDownload = async (e) => {
+  const handleDownload = (e) => {
     e.preventDefault();
 
     if (!app?.id) return;
     if (app.category === 'testflight') return;
 
-    try {
-      const response = await fetch(`/api/admin/add-download?id=${app.id}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        cache: 'no-store',
-      });
-      const data = await response.json();
+    router.push(`/install/${app.slug}`);
 
+    fetch(`/api/admin/add-download?id=${app.id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+    })
+    .then(res => res.json())
+    .then(data => {
       if (data.success) {
         setApp(prev => ({
           ...prev,
           downloads: data.downloads,
         }));
       }
-
-      router.push(`/install/${app.slug}`);
-    } catch (err) {
-      console.error('Lỗi tăng lượt tải:', err);
-      if (app.download_link) {
-        window.open(app.download_link, '_blank');
-      }
-    }
+    })
+    .catch(err => {
+      console.error('Lỗi ngầm khi tăng lượt tải:', err);
+    });
   };
 
   if (loading) {
