@@ -1,4 +1,3 @@
-// pages/install/[appSlug].js
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
@@ -24,10 +23,11 @@ export async function getServerSideProps({ params }) {
 
   const secret = process.env.JWT_SECRET;
 
+  // Token sống 40s thực tế
   const token = jwt.sign(
     { ipa_name: encodeURIComponent(app.download_link) },
     secret,
-    { expiresIn: '30s' }
+    { expiresIn: '40s' }
   );
 
   const installUrl = `itms-services://?action=download-manifest&url=${
@@ -39,7 +39,7 @@ export async function getServerSideProps({ params }) {
       app,
       installUrl,
       rawPlistUrl: `https://storeios.net/api/plist?ipa_name=${encodeURIComponent(app.download_link)}&token=${token}`,
-      tokenExpiresIn: 40,
+      tokenExpiresIn: 30, // chỉ hiển thị 30s sử dụng sau countdown
     },
   };
 }
@@ -54,21 +54,20 @@ export default function InstallPage({ app, installUrl, rawPlistUrl, tokenExpires
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference * (1 - countdown / 10);
 
-  // Đếm ngược countdown 10s
+  // Countdown 10s
   useEffect(() => {
     if (countdown <= 0) return;
     const timer = setInterval(() => setCountdown(prev => prev - 1), 1000);
     return () => clearInterval(timer);
   }, [countdown]);
 
-  // Khi countdown xong => bật cờ để bắt đầu tokenTimer
+  // Bắt đầu đếm tokenTimer sau countdown
   useEffect(() => {
     if (countdown === 0 && !hasStartedTokenTimer) {
       setHasStartedTokenTimer(true);
     }
   }, [countdown, hasStartedTokenTimer]);
 
-  // Đếm tokenTimer sau khi countdown xong
   useEffect(() => {
     if (!hasStartedTokenTimer) return;
 
