@@ -40,17 +40,17 @@ export default function InstallPage({ app }) {
 
   const handleDownload = async () => {
   try {
-    // Lấy tên plist từ trường download_link (ví dụ: "unc0ver.plist")
     const plistName = app.download_link;
-    
-    if (!plistName) {
-      throw new Error('Tên file plist không được để trống');
-    }
+    if (!plistName) throw new Error('Tên file plist không được để trống');
 
-    // Gọi API generate token với tên plist (không cần encodeURIComponent ở đây)
-    const res = await fetch(`/api/generate-token?id=${app.id}&ipa_name=${plistName}`);
+    const res = await fetch(`/api/generate-token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: app.id, ipa_name: plistName })
+    });
+
     const data = await res.json();
-    
+
     if (data.installUrl) {
       setTimeout(() => {
         window.location.href = data.installUrl;
