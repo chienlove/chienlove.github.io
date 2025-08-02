@@ -1,3 +1,4 @@
+// pages/_app.js
 import { useEffect, useState } from 'react';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -17,16 +18,20 @@ function MyApp({ Component, pageProps }) {
       <ToastContainer
         position="top-center"
         autoClose={4000}
-        hideProgressBar={false}
-        newestOnTop
+        hideProgressBar
         closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
         pauseOnHover
-        toastClassName="!text-base !rounded-md !px-4 !py-3 !shadow-lg bg-white text-gray-800 border border-gray-200 text-center"
-        bodyClassName="text-center"
-        style={{ top: '25%' }} // ✅ toast xuất hiện dưới header
+        draggable
+        style={{ top: '25%' }}
+        toastClassName={({ type }) =>
+          `!rounded-lg !p-4 !shadow-xl !text-base text-center ${
+            type === 'error'
+              ? 'bg-red-100 text-red-800 border border-red-300'
+              : type === 'warning'
+              ? 'bg-yellow-100 text-yellow-800 border border-yellow-300'
+              : 'bg-white text-gray-800 border border-gray-200'
+          }`
+        }
       />
       <Component {...pageProps} />
     </>

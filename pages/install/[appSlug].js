@@ -1,3 +1,4 @@
+// pages/install/[appSlug].js
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
@@ -46,14 +47,28 @@ export async function getServerSideProps({ params }) {
 export default function InstallPage({ app, installUrl, rawPlistUrl, tokenExpiresIn }) {
   const [countdown, setCountdown] = useState(10);
   const [tokenTimer, setTokenTimer] = useState(tokenExpiresIn);
+  const [hasStartedTokenTimer, setHasStartedTokenTimer] = useState(false);
   const router = useRouter();
 
   const radius = 45;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference * (1 - countdown / 10);
 
-  // Đếm ngược token sống (30s)
+  // Đếm ngược hiển thị nút tải (10s)
   useEffect(() => {
+    if (countdown <= 0) return;
+    const timer = setInterval(() => {
+      setCountdown(prev => prev - 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [countdown]);
+
+  // Bắt đầu đếm tokenTimer chỉ khi countdown = 0
+  useEffect(() => {
+    if (countdown > 0 || hasStartedTokenTimer) return;
+
+    setHasStartedTokenTimer(true);
+
     const timer = setInterval(() => {
       setTokenTimer(prev => {
         if (prev <= 1) {
@@ -64,15 +79,9 @@ export default function InstallPage({ app, installUrl, rawPlistUrl, tokenExpires
         return prev - 1;
       });
     }, 1000);
-    return () => clearInterval(timer);
-  }, []);
 
-  // Đếm ngược chờ trước khi hiện nút tải (10s)
-  useEffect(() => {
-    if (countdown <= 0) return;
-    const timer = setInterval(() => setCountdown(prev => prev - 1), 1000);
     return () => clearInterval(timer);
-  }, [countdown]);
+  }, [countdown, hasStartedTokenTimer]);
 
   const handleDownload = async () => {
     if (tokenTimer <= 0) {
