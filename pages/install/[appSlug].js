@@ -38,7 +38,7 @@ export async function getServerSideProps({ params }) {
       app,
       installUrl,
       rawPlistUrl: `https://storeios.net/api/plist?ipa_name=${encodeURIComponent(app.download_link)}&token=${token}`,
-      tokenExpiresIn: 30, // giây
+      tokenExpiresIn: 30,
     },
   };
 }
@@ -52,21 +52,22 @@ export default function InstallPage({ app, installUrl, rawPlistUrl, tokenExpires
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference * (1 - countdown / 10);
 
+  // Đếm ngược token sống (30s)
   useEffect(() => {
     const timer = setInterval(() => {
       setTokenTimer(prev => {
         if (prev <= 1) {
           clearInterval(timer);
-          toast.warning('Liên kết sẽ hết hạn ngay bây giờ');
+          toast.warning('Liên kết đã hết hạn. Vui lòng tải lại trang.');
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
-
     return () => clearInterval(timer);
   }, []);
 
+  // Đếm ngược chờ trước khi hiện nút tải (10s)
   useEffect(() => {
     if (countdown <= 0) return;
     const timer = setInterval(() => setCountdown(prev => prev - 1), 1000);
@@ -138,11 +139,15 @@ export default function InstallPage({ app, installUrl, rawPlistUrl, tokenExpires
           </p>
 
           <p className="text-sm text-gray-500 mb-4">
-            Liên kết sẽ hết hạn sau: <span className="font-semibold">{tokenTimer}s</span>
+            {tokenTimer > 0 ? (
+              <>Liên kết sẽ hết hạn sau: <span className="font-semibold">{tokenTimer}s</span></>
+            ) : (
+              <span className="text-red-500 font-medium">Liên kết đã hết hạn. Vui lòng tải lại trang.</span>
+            )}
           </p>
 
           <div className="flex flex-col space-y-3">
-            {countdown === 0 && (
+            {countdown === 0 && tokenTimer > 0 && (
               <button
                 onClick={handleDownload}
                 className="bg-gradient-to-r from-green-400 to-blue-500 hover:from-green-500 hover:to-blue-600 text-white font-bold py-3 px-6 rounded-lg transition-all hover:scale-105 active:scale-95 shadow-md flex items-center justify-center gap-2"
