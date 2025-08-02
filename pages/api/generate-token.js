@@ -23,5 +23,5 @@ export default function handler(req, res) {
     encodeURIComponent(`https://storeios.net/api/plist?ipa_name=${encodeURIComponent(ipa_name)}&token=${token}`)
   }`;
 
-  res.status(200).json({ installUrl });
+  res.status(200).json({ installUrl, token });
 }
