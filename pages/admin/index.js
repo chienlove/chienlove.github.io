@@ -81,7 +81,7 @@ export default function Admin() {
       // 3. Gọi API plist để lấy thông tin IPA
       const plistUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/api/plist?ipa_name=${
         encodeURIComponent(plistName)
-      }.plist&token=${token}`;
+      }&token=${token}`;
 
       const plistResponse = await fetch(plistUrl);
       if (!plistResponse.ok) {
