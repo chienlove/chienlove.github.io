@@ -56,39 +56,30 @@ export default function Admin() {
     if (!plistName) return;
 
     try {
-      // 1. Gọi API để lấy cả installUrl và token
+      // Gọi API generate-token (không cần gửi id)
       const tokenResponse = await fetch(
         `/api/generate-token?ipa_name=${encodeURIComponent(plistName)}`
       );
 
       if (!tokenResponse.ok) {
-        throw new Error(`Lỗi API: ${tokenResponse.status}`);
+        throw new Error(`Lỗi lấy token: ${tokenResponse.status}`);
       }
 
       const { installUrl, token } = await tokenResponse.json();
-      
-      if (!installUrl || !token) {
-        throw new Error("Dữ liệu trả về không hợp lệ");
+      if (!token) { // Chỉ cần token để tiếp tục
+        throw new Error("Không nhận được token từ API");
       }
 
-      // 2. Lưu installUrl vào state để dùng sau này
-      setForm(prev => ({ 
-        ...prev, 
-        _installUrl: installUrl,
-        _lastToken: token
-      }));
-
-      // 3. Gọi API plist để lấy thông tin IPA
+      // Gọi API plist với token vừa nhận được
       const plistUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/api/plist?ipa_name=${
         encodeURIComponent(plistName)
       }&token=${token}`;
 
       const plistResponse = await fetch(plistUrl);
       if (!plistResponse.ok) {
-        throw new Error(`Lỗi plist: ${plistResponse.status}`);
+        throw new Error(`Lỗi tải plist: ${plistResponse.status}`);
       }
 
-      // 4. Trích xuất URL IPA từ plist
       const plistContent = await plistResponse.text();
       const ipaUrlMatch = plistContent.match(/<key>url<\/key>\s*<string>([^<]+\.ipa)<\/string>/i);
       
@@ -97,13 +88,12 @@ export default function Admin() {
       }
       const ipaUrl = ipaUrlMatch[1];
 
-      // 5. Lấy kích thước IPA
       const sizeResponse = await fetch(
         `/api/admin/get-size-ipa?url=${encodeURIComponent(ipaUrl)}`
       );
       
       if (!sizeResponse.ok) {
-        throw new Error(`Lỗi kích thước: ${sizeResponse.status}`);
+        throw new Error(`Lỗi lấy kích thước: ${sizeResponse.status}`);
       }
 
       const { size, error: sizeError } = await sizeResponse.json();
@@ -111,28 +101,17 @@ export default function Admin() {
         throw new Error(sizeError || "Không nhận được kích thước");
       }
 
-      // 6. Cập nhật UI
       setForm(prev => ({
         ...prev,
         size: `${(size / (1024 * 1024)).toFixed(2)} MB`,
-        _lastUpdated: new Date().toISOString()
       }));
 
     } catch (error) {
-      console.error("Chi tiết lỗi:", {
-        error: error.message,
-        plistName,
-        time: new Date().toISOString()
-      });
-
-      setForm(prev => ({
-        ...prev,
-        size: `Lỗi: ${error.message.replace('JWT_SECRET', 'Hệ thống')}`
-      }));
+      console.error("Chi tiết lỗi:", { error: error.message, plistName });
+      setForm(prev => ({ ...prev, size: `Lỗi: ${error.message}` }));
     }
   }
 
-  // Thêm debounce 500ms
   const timer = setTimeout(() => {
     if (form["download_link"]) {
       fetchIpaSizeFromPlist();

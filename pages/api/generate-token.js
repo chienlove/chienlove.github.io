@@ -5,19 +5,23 @@ const secret = process.env.JWT_SECRET;
 export default function handler(req, res) {
   const { id, ipa_name } = req.query;
 
-  if (!id || !ipa_name) {
-    return res.status(400).json({ error: 'Missing parameters' });
+  if (!ipa_name) {
+    return res.status(400).json({ error: 'Missing ipa_name parameter' });
   }
 
-  // Giữ nguyên tên IPA (không chuẩn hóa) nhưng encode URI component
-  const token = jwt.sign({ 
-    id,
-    ipa_name: encodeURIComponent(ipa_name) // Thêm encodeURIComponent ở đây
-  }, secret, { expiresIn: '2m' });
+  const payload = {
+    ipa_name: encodeURIComponent(ipa_name),
+  };
+
+  if (id) {
+    payload.id = id;
+  }
+
+  const token = jwt.sign(payload, secret, { expiresIn: '2m' });
 
   const installUrl = `itms-services://?action=download-manifest&url=${
-    encodeURIComponent(`https://storeios.net/api/plist?ipa_name=${encodeURIComponent(ipa_name)}&token=${token}`)
+    encodeURIComponent(`${process.env.NEXT_PUBLIC_SITE_URL}/api/plist?ipa_name=${encodeURIComponent(ipa_name)}&token=${token}`)
   }`;
 
-  res.status(200).json({ installUrl });
+  res.status(200).json({ installUrl, token });
 }
