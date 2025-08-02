@@ -14,7 +14,20 @@ function MyApp({ Component, pageProps }) {
 
   return (
     <>
-      <ToastContainer position="top-center" autoClose={4000} />
+      <ToastContainer
+        position="top-center"
+        autoClose={4000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        toastClassName="!text-base !rounded-md !px-4 !py-3 !shadow-lg bg-white text-gray-800 border border-gray-200 text-center"
+        bodyClassName="text-center"
+        style={{ top: '25%' }} // ✅ toast xuất hiện dưới header
+      />
       <Component {...pageProps} />
     </>
   );
