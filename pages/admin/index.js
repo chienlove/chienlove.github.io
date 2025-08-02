@@ -57,9 +57,11 @@ export default function Admin() {
 
     try {
       // Gọi API generate-token (không cần gửi id)
-      const tokenResponse = await fetch(
-        `/api/generate-token?ipa_name=${encodeURIComponent(plistName)}`
-      );
+      const tokenResponse = await fetch(`/api/generate-token`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ ipa_name: plistName }),
+});
 
       if (!tokenResponse.ok) {
         throw new Error(`Lỗi lấy token: ${tokenResponse.status}`);
