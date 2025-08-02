@@ -65,15 +65,13 @@ export default function Admin() {
         throw new Error(`Lỗi lấy token: ${tokenResponse.status}`);
       }
 
-      const { installUrl, token } = await tokenResponse.json();
-      if (!token) { // Chỉ cần token để tiếp tục
+      const { token } = await tokenResponse.json();
+      if (!token) {
         throw new Error("Không nhận được token từ API");
       }
 
-      // Gọi API plist với token vừa nhận được
-      const installUrl = `itms-services://?action=download-manifest&url=${
-    encodeURIComponent(`https://storeios.net/api/plist?ipa_name=${encodeURIComponent(ipa_name)}&token=${token}`)
-  }`;
+      // Tạo URL gọi plist (không cần installUrl nữa vì đã sai logic)
+      const plistUrl = `https://storeios.net/api/plist?ipa_name=${encodeURIComponent(plistName)}&token=${token}`;
 
       const plistResponse = await fetch(plistUrl);
       if (!plistResponse.ok) {
