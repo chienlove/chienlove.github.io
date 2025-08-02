@@ -54,20 +54,23 @@ export default function InstallPage({ app, installUrl, rawPlistUrl, tokenExpires
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference * (1 - countdown / 10);
 
-  // Đếm ngược hiển thị nút tải (10s)
+  // Đếm ngược countdown 10s
   useEffect(() => {
     if (countdown <= 0) return;
-    const timer = setInterval(() => {
-      setCountdown(prev => prev - 1);
-    }, 1000);
+    const timer = setInterval(() => setCountdown(prev => prev - 1), 1000);
     return () => clearInterval(timer);
   }, [countdown]);
 
-  // Bắt đầu đếm tokenTimer chỉ khi countdown = 0
+  // Khi countdown xong => bật cờ để bắt đầu tokenTimer
   useEffect(() => {
-    if (countdown > 0 || hasStartedTokenTimer) return;
+    if (countdown === 0 && !hasStartedTokenTimer) {
+      setHasStartedTokenTimer(true);
+    }
+  }, [countdown, hasStartedTokenTimer]);
 
-    setHasStartedTokenTimer(true);
+  // Đếm tokenTimer sau khi countdown xong
+  useEffect(() => {
+    if (!hasStartedTokenTimer) return;
 
     const timer = setInterval(() => {
       setTokenTimer(prev => {
@@ -81,7 +84,7 @@ export default function InstallPage({ app, installUrl, rawPlistUrl, tokenExpires
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [countdown, hasStartedTokenTimer]);
+  }, [hasStartedTokenTimer]);
 
   const handleDownload = async () => {
     if (tokenTimer <= 0) {
