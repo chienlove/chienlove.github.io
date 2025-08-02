@@ -17,7 +17,7 @@ export default function handler(req, res) {
   const payload = { ipa_name: encodeURIComponent(ipa_name) };
   if (id) payload.id = id;
 
-  const token = jwt.sign(payload, secret, { expiresIn: '2m' });
+  const token = jwt.sign(payload, secret, { expiresIn: '30s' });
 
   const installUrl = `itms-services://?action=download-manifest&url=${
     encodeURIComponent(`https://storeios.net/api/plist?ipa_name=${encodeURIComponent(ipa_name)}&token=${token}`)
