@@ -1,3 +1,4 @@
+// pages/install/[appSlug].js
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
@@ -23,7 +24,6 @@ export async function getServerSideProps({ params }) {
 
   const secret = process.env.JWT_SECRET;
 
-  // Token sống 40s thực tế
   const token = jwt.sign(
     { ipa_name: encodeURIComponent(app.download_link) },
     secret,
@@ -39,7 +39,7 @@ export async function getServerSideProps({ params }) {
       app,
       installUrl,
       rawPlistUrl: `https://storeios.net/api/plist?ipa_name=${encodeURIComponent(app.download_link)}&token=${token}`,
-      tokenExpiresIn: 30, // chỉ hiển thị 30s sử dụng sau countdown
+      tokenExpiresIn: 30,
     },
   };
 }
@@ -54,14 +54,12 @@ export default function InstallPage({ app, installUrl, rawPlistUrl, tokenExpires
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference * (1 - countdown / 10);
 
-  // Countdown 10s
   useEffect(() => {
     if (countdown <= 0) return;
     const timer = setInterval(() => setCountdown(prev => prev - 1), 1000);
     return () => clearInterval(timer);
   }, [countdown]);
 
-  // Bắt đầu đếm tokenTimer sau countdown
   useEffect(() => {
     if (countdown === 0 && !hasStartedTokenTimer) {
       setHasStartedTokenTimer(true);
@@ -119,8 +117,8 @@ export default function InstallPage({ app, installUrl, rawPlistUrl, tokenExpires
         <meta name="description" content={`Tải xuống ${app.name} phiên bản ${app.version}`} />
       </Head>
 
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-        <div className="bg-white p-8 rounded-xl shadow-lg max-w-md w-full text-center">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
+        <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg max-w-md w-full text-center">
           <div className="relative w-32 h-32 mx-auto mb-6">
             <svg className="w-full h-full" viewBox="0 0 100 100">
               <circle cx="50" cy="50" r={radius} fill="none" stroke="#e5e7eb" strokeWidth="8" />
@@ -134,15 +132,15 @@ export default function InstallPage({ app, installUrl, rawPlistUrl, tokenExpires
                 className={countdown > 0 ? 'transition-all duration-1000 ease-linear' : ''}
               />
             </svg>
-            <span className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-3xl font-bold text-gray-800">
+            <span className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-3xl font-bold text-gray-800 dark:text-white">
               {countdown > 0 ? countdown : '0'}
             </span>
           </div>
 
-          <h1 className="text-2xl font-bold text-gray-800 mb-2">{app.name}</h1>
-          <p className="text-gray-600 mb-4">Phiên bản: {app.version}</p>
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">{app.name}</h1>
+          <p className="text-gray-600 dark:text-gray-300 mb-4">Phiên bản: {app.version}</p>
 
-          <p className="mb-2 text-gray-700">
+          <p className="mb-2 text-gray-700 dark:text-gray-300">
             {countdown > 0
               ? <>Vui lòng chờ <span className="font-bold">{countdown}</span> giây trước khi tải...</>
               : <>Nhấn nút bên dưới để tải ứng dụng.</>
@@ -150,16 +148,16 @@ export default function InstallPage({ app, installUrl, rawPlistUrl, tokenExpires
           </p>
 
           <div
-  className={`text-sm text-gray-500 mb-4 transition-all duration-500 ease-out transform ${
-    countdown === 0 ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'
-  }`}
->
-  {tokenTimer > 0 ? (
-    <>Liên kết sẽ hết hạn sau: <span className="font-semibold">{tokenTimer}s</span></>
-  ) : (
-    <span className="text-red-500 font-medium">Liên kết đã hết hạn. Vui lòng tải lại trang.</span>
-  )}
-         </div>
+            className={`text-sm text-gray-500 dark:text-gray-300 mb-4 transition-all duration-500 ease-out transform ${
+              countdown === 0 ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'
+            }`}
+          >
+            {tokenTimer > 0 ? (
+              <>Liên kết sẽ hết hạn sau: <span className="font-semibold">{tokenTimer}s</span></>
+            ) : (
+              <span className="text-red-500 dark:text-red-400 font-medium">Liên kết đã hết hạn. Vui lòng tải lại trang.</span>
+            )}
+          </div>
 
           <div className="flex flex-col space-y-3">
             {countdown === 0 && tokenTimer > 0 && (
@@ -174,7 +172,7 @@ export default function InstallPage({ app, installUrl, rawPlistUrl, tokenExpires
 
             <button
               onClick={() => router.push('/')}
-              className="border border-gray-300 bg-white text-gray-700 font-semibold py-2 px-4 rounded-lg hover:bg-gray-100 transition-all flex justify-center items-center gap-2"
+              className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-semibold py-2 px-4 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-all flex justify-center items-center gap-2"
             >
               <FontAwesomeIcon icon={faHome} />
               <span>Quay lại trang chủ</span>
