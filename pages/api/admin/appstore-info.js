@@ -1,47 +1,50 @@
 import axios from 'axios';
 
 export default async function handler(req, res) {
+  console.log(`[API] Request received: Method=${req.method}, URL=${req.url}`);
+
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
+    console.log(`[API] Method Not Allowed: ${req.method}`);
+    return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
   }
 
   const { url } = req.body;
+  console.log(`[API] Processing URL: ${url}`);
 
   try {
-    // Kiểm tra URL hợp lệ với nhiều pattern khác nhau
     if (!url || typeof url !== 'string') {
+      console.log('[API] Invalid URL: URL is empty or not a string');
       return res.status(400).json({ error: 'URL không hợp lệ' });
     }
 
-    // Kiểm tra xem có phải URL App Store không
     if (!/apps\.apple\.com/i.test(url)) {
+      console.log('[API] Invalid App Store URL: Does not contain apps.apple.com');
       return res.status(400).json({ error: 'URL phải là từ App Store (apps.apple.com)' });
     }
 
-    // Loại bỏ query string và fragment
     const cleanUrl = url.split('?')[0].split('#')[0];
-    console.log('Clean URL:', cleanUrl);
+    console.log('[API] Clean URL:', cleanUrl);
 
-    // Trích xuất app ID từ URL với nhiều pattern khác nhau
     let appIdMatch = null;
     const patterns = [
-      /\/id(\d+)/i,                    // /id123456789
-      /\/app\/[^\/]+\/id(\d+)/i,       // /app/app-name/id123456789
-      /\/us\/app\/[^\/]+\/id(\d+)/i,   // /us/app/app-name/id123456789
-      /\/[a-z]{2}\/app\/[^\/]+\/id(\d+)/i, // /country/app/app-name/id123456789
-      /app\/id(\d+)/i,                 // app/id123456789
-      /id(\d+)/i                       // id123456789
+      /\/id(\d+)/i,
+      /\/app\/[^\/]+\/id(\d+)/i,
+      /\/us\/app\/[^\/]+\/id(\d+)/i,
+      /\/[a-z]{2}\/app\/[^\/]+\/id(\d+)/i,
+      /app\/id(\d+)/i,
+      /id(\d+)/i
     ];
 
     for (const pattern of patterns) {
       appIdMatch = cleanUrl.match(pattern);
       if (appIdMatch) {
-        console.log('Matched pattern:', pattern, 'App ID:', appIdMatch[1]);
+        console.log('[API] Matched pattern:', pattern, 'App ID:', appIdMatch[1]);
         break;
       }
     }
 
     if (!appIdMatch || !appIdMatch[1]) {
+      console.log('[API] App ID not found in URL');
       return res.status(400).json({
         error: 'Không tìm thấy ID ứng dụng trong URL',
         details: `URL được cung cấp: ${url}`,
@@ -50,16 +53,13 @@ export default async function handler(req, res) {
     }
 
     const appId = appIdMatch[1];
-    
-    // Trích xuất country code từ URL
     const countryMatch = cleanUrl.match(/apple\.com\/([a-z]{2})\//i);
     const country = countryMatch ? countryMatch[1] : 'us';
     
-    console.log('App ID:', appId, 'Country:', country);
+    console.log('[API] Extracted App ID:', appId, 'Country:', country);
 
-    // Gọi iTunes API với timeout dài hơn và retry logic
     const itunesUrl = `https://itunes.apple.com/lookup?id=${appId}&country=${country}`;
-    console.log('iTunes URL:', itunesUrl);
+    console.log('[API] iTunes URL:', itunesUrl);
     
     let response;
     let retryCount = 0;
@@ -70,24 +70,23 @@ export default async function handler(req, res) {
         response = await axios.get(itunesUrl, { 
           timeout: 15000,
           headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
           }
         });
+        console.log(`[API] iTunes API Response status: ${response.status}`);
         break;
       } catch (error) {
         retryCount++;
-        console.log(`Retry ${retryCount}/${maxRetries} for iTunes API`);
+        console.error(`[API] Retry ${retryCount}/${maxRetries} for iTunes API. Error: ${error.message}`);
         if (retryCount >= maxRetries) {
           throw error;
         }
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second before retry
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
 
-    console.log('iTunes API Response status:', response.status);
-    console.log('iTunes API Response data:', JSON.stringify(response.data, null, 2));
-
     if (!response.data || !response.data.results || !Array.isArray(response.data.results)) {
+      console.log('[API] Invalid iTunes API response data structure');
       return res.status(404).json({
         error: 'Phản hồi từ iTunes API không hợp lệ',
         itunesUrl,
@@ -96,6 +95,7 @@ export default async function handler(req, res) {
     }
 
     if (response.data.results.length === 0) {
+      console.log('[API] App not found with this ID');
       return res.status(404).json({
         error: 'Không tìm thấy ứng dụng với ID này',
         appId,
@@ -104,17 +104,16 @@ export default async function handler(req, res) {
     }
 
     const result = response.data.results[0];
-    console.log('App result:', JSON.stringify(result, null, 2));
+    console.log('[API] App result:', JSON.stringify(result, null, 2));
 
-    // Validate required fields
     if (!result.trackName) {
+      console.log('[API] Incomplete app data: Missing trackName');
       return res.status(404).json({
-        error: 'Dữ liệu ứng dụng không đầy đủ',
+        error: 'Dữ liệu ứng dụng không đầy đủ (thiếu tên ứng dụng)',
         result
       });
     }
 
-    // Format kết quả trả về với safe access
     const appInfo = {
       name: result.trackName || '',
       version: result.version || '',
@@ -144,13 +143,12 @@ export default async function handler(req, res) {
       features: Array.isArray(result.features) ? result.features : [],
     };
 
-    console.log('Final app info:', JSON.stringify(appInfo, null, 2));
+    console.log('[API] Final app info:', JSON.stringify(appInfo, null, 2));
     return res.status(200).json(appInfo);
 
   } catch (error) {
-    console.error('AppStore API Error:', error);
+    console.error('[API] AppStore API Error caught:', error);
     
-    // Detailed error logging
     const errorDetails = {
       message: error.message,
       code: error.code,
@@ -162,7 +160,7 @@ export default async function handler(req, res) {
       stack: error.stack
     };
     
-    console.error('Error details:', JSON.stringify(errorDetails, null, 2));
+    console.error('[API] Detailed error details:', JSON.stringify(errorDetails, null, 2));
     
     return res.status(500).json({
       error: 'Lỗi khi lấy thông tin từ AppStore',

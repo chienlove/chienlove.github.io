@@ -62,7 +62,7 @@ export default function Admin() {
     setErrorMessage("");
 
     try {
-      console.log('Fetching AppStore info for URL:', appStoreUrl);
+      console.log('[Frontend] Fetching AppStore info for URL:', appStoreUrl);
       
       const response = await fetch('/api/appstore-info', {
         method: 'POST',
@@ -72,27 +72,40 @@ export default function Admin() {
         body: JSON.stringify({ url: appStoreUrl.trim() }),
       });
 
-      console.log('Response status:', response.status);
+      console.log('[Frontend] Response status:', response.status);
+      console.log('[Frontend] Response headers:', response.headers);
       
-      const responseText = await response.text();
-      console.log('Response text:', responseText);
-
+      // Kiểm tra content-type trước khi parse JSON
+      const contentType = response.headers.get('content-type');
+      console.log('[Frontend] Content-Type:', contentType);
+      
       let responseData;
-      try {
-        responseData = JSON.parse(responseText);
-      } catch (parseError) {
-        console.error('JSON parse error:', parseError);
-        throw new Error('Phản hồi từ server không phải JSON hợp lệ');
+      const responseText = await response.text();
+      console.log('[Frontend] Response text:', responseText);
+
+      // Chỉ parse JSON nếu response text không rỗng
+      if (responseText.trim()) {
+        try {
+          responseData = JSON.parse(responseText);
+        } catch (parseError) {
+          console.error('[Frontend] JSON parse error:', parseError);
+          throw new Error(`Phản hồi từ server không phải JSON hợp lệ: ${responseText.substring(0, 100)}...`);
+        }
+      } else {
+        console.error('[Frontend] Empty response from server');
+        throw new Error('Server trả về phản hồi rỗng');
       }
 
       if (!response.ok) {
-        throw new Error(responseData.error || `HTTP ${response.status}: ${response.statusText}`);
+        const errorMsg = responseData?.error || `HTTP ${response.status}: ${response.statusText}`;
+        console.error('[Frontend] API Error:', errorMsg);
+        throw new Error(errorMsg);
       }
 
-      console.log('AppStore API response:', responseData);
+      console.log('[Frontend] AppStore API response:', responseData);
 
       // Validate response data
-      if (!responseData.name) {
+      if (!responseData || !responseData.name) {
         throw new Error('Dữ liệu ứng dụng không đầy đủ (thiếu tên ứng dụng)');
       }
 
@@ -114,7 +127,7 @@ export default function Admin() {
           responseData.languages.join(', ') : '',
       };
 
-      console.log('Mapped data:', mappedData);
+      console.log('[Frontend] Mapped data:', mappedData);
 
       // Cập nhật form với thông tin đã lấy được
       setForm(prev => ({
@@ -131,7 +144,7 @@ export default function Admin() {
       alert("Đã lấy thông tin thành công từ AppStore!");
 
     } catch (error) {
-      console.error("Error fetching AppStore info:", error);
+      console.error("[Frontend] Error fetching AppStore info:", error);
       
       // Detailed error handling
       let errorMsg = "Lỗi khi lấy thông tin từ AppStore";
@@ -140,6 +153,8 @@ export default function Admin() {
         errorMsg = "Lỗi kết nối mạng. Vui lòng kiểm tra kết nối internet.";
       } else if (error.message.includes('JSON')) {
         errorMsg = "Lỗi xử lý dữ liệu từ server.";
+      } else if (error.message.includes('405')) {
+        errorMsg = "Lỗi cấu hình API. Vui lòng kiểm tra file API route.";
       } else if (error.message) {
         errorMsg = error.message;
       }
