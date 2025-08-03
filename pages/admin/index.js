@@ -45,10 +45,16 @@ export default function Admin() {
       .trim();
   };
 
-  // Hàm lấy thông tin từ AppStore
+  // Hàm lấy thông tin từ AppStore với xử lý lỗi tốt hơn
   const fetchAppStoreInfo = async () => {
     if (!appStoreUrl.trim()) {
       setErrorMessage("Vui lòng nhập URL AppStore");
+      return;
+    }
+
+    // Validate URL format
+    if (!appStoreUrl.includes('apps.apple.com')) {
+      setErrorMessage("URL phải là từ App Store (apps.apple.com)");
       return;
     }
 
@@ -56,6 +62,8 @@ export default function Admin() {
     setErrorMessage("");
 
     try {
+      console.log('Fetching AppStore info for URL:', appStoreUrl);
+      
       const response = await fetch('/api/appstore-info', {
         method: 'POST',
         headers: {
@@ -64,27 +72,49 @@ export default function Admin() {
         body: JSON.stringify({ url: appStoreUrl.trim() }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Lỗi khi lấy thông tin từ AppStore');
+      console.log('Response status:', response.status);
+      
+      const responseText = await response.text();
+      console.log('Response text:', responseText);
+
+      let responseData;
+      try {
+        responseData = JSON.parse(responseText);
+      } catch (parseError) {
+        console.error('JSON parse error:', parseError);
+        throw new Error('Phản hồi từ server không phải JSON hợp lệ');
       }
 
-      const appInfo = await response.json();
+      if (!response.ok) {
+        throw new Error(responseData.error || `HTTP ${response.status}: ${response.statusText}`);
+      }
 
-      // Mapping thông tin từ API vào form
+      console.log('AppStore API response:', responseData);
+
+      // Validate response data
+      if (!responseData.name) {
+        throw new Error('Dữ liệu ứng dụng không đầy đủ (thiếu tên ứng dụng)');
+      }
+
+      // Mapping thông tin từ API vào form với safe access
       const mappedData = {
-        name: appInfo.name || '',
-        author: appInfo.author || '',
-        size: appInfo.size || '',
-        description: appInfo.description || '',
-        version: appInfo.version || '',
-        icon_url: appInfo.icon || '',
-        minimum_os_version: appInfo.minimumOsVersion || '',
-        age_rating: appInfo.ageRating || '',
-        release_date: appInfo.releaseDate ? new Date(appInfo.releaseDate).toISOString().split('T')[0] : '',
-        supported_devices: Array.isArray(appInfo.supportedDevices) ? appInfo.supportedDevices.join(', ') : '',
-        languages: Array.isArray(appInfo.languages) ? appInfo.languages.join(', ') : '',
+        name: responseData.name || '',
+        author: responseData.author || '',
+        size: responseData.size || '',
+        description: responseData.description || '',
+        version: responseData.version || '',
+        icon_url: responseData.icon || '',
+        minimum_os_version: responseData.minimumOsVersion || '',
+        age_rating: responseData.ageRating || '',
+        release_date: responseData.releaseDate ? 
+          new Date(responseData.releaseDate).toISOString().split('T')[0] : '',
+        supported_devices: Array.isArray(responseData.supportedDevices) ? 
+          responseData.supportedDevices.join(', ') : '',
+        languages: Array.isArray(responseData.languages) ? 
+          responseData.languages.join(', ') : '',
       };
+
+      console.log('Mapped data:', mappedData);
 
       // Cập nhật form với thông tin đã lấy được
       setForm(prev => ({
@@ -93,8 +123,8 @@ export default function Admin() {
       }));
 
       // Cập nhật screenshots nếu có
-      if (appInfo.screenshots && appInfo.screenshots.length > 0) {
-        setScreenshotInput(appInfo.screenshots.join('\n'));
+      if (responseData.screenshots && Array.isArray(responseData.screenshots) && responseData.screenshots.length > 0) {
+        setScreenshotInput(responseData.screenshots.join('\n'));
       }
 
       setAppStoreUrl(""); // Clear URL sau khi thành công
@@ -102,7 +132,19 @@ export default function Admin() {
 
     } catch (error) {
       console.error("Error fetching AppStore info:", error);
-      setErrorMessage(error.message || "Lỗi khi lấy thông tin từ AppStore");
+      
+      // Detailed error handling
+      let errorMsg = "Lỗi khi lấy thông tin từ AppStore";
+      
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        errorMsg = "Lỗi kết nối mạng. Vui lòng kiểm tra kết nối internet.";
+      } else if (error.message.includes('JSON')) {
+        errorMsg = "Lỗi xử lý dữ liệu từ server.";
+      } else if (error.message) {
+        errorMsg = error.message;
+      }
+      
+      setErrorMessage(errorMsg);
     } finally {
       setLoadingAppStoreInfo(false);
     }
