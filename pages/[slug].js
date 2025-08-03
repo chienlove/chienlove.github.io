@@ -71,30 +71,30 @@ export default function Detail({ serverApp, serverRelated }) {
   const [loading, setLoading] = useState(false);
   const [dominantColor, setDominantColor] = useState('#f0f2f5');
   const [showFullDescription, setShowFullDescription] = useState(false);
-  const [status, setStatus] = useState(null);
-  const [statusLoading, setStatusLoading] = useState(false);
+  const [status, setStat  const [statusLoading, setStatusLoading] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
     setApp(serverApp);
     setRelated(serverRelated);
     setShowFullDescription(false);
-    setDominantColor('#f0f2f5');
+    setDominantColor("#f0f2f5");
   }, [router.query.slug]);
 
   useEffect(() => {
     if (!app?.id) return;
 
-    if (app.category === 'testflight') {
-      fetch('/api/admin/add-view', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: app.id })
+    if (app.category === "testflight") {
+      fetch("/api/admin/add-view", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: app.id }),
       }).catch(console.error);
     }
 
-    if (app.category === 'testflight' && app.testflight_url) {
+    if (app.category === "testflight" && app.testflight_url) {
       setStatusLoading(true);
-      const id = app.testflight_url.split('/').pop();
+      const id = app.testflight_url.split("/").pop();
       fetch(`/api/admin/check-slot?id=${id}`)
         .then((res) => res.json())
         .then((data) => {
@@ -104,9 +104,10 @@ export default function Detail({ serverApp, serverRelated }) {
         .finally(() => setStatusLoading(false));
     }
 
-    if (app.icon_url && typeof window !== 'undefined') {
+    if (app.icon_url && typeof window !== "undefined") {
       const fac = new FastAverageColor();
-      fac.getColorAsync(app.icon_url)
+      fac
+        .getColorAsync(app.icon_url)
         .then((color) => setDominantColor(color.hex))
         .catch(console.error)
         .finally(() => fac.destroy());
@@ -114,37 +115,38 @@ export default function Detail({ serverApp, serverRelated }) {
   }, [app]);
 
   const truncate = (text, limit) =>
-    text?.length > limit ? text.slice(0, limit) + '...' : text;
+    text?.length > limit ? text.slice(0, limit) + "..." : text;
 
   const handleDownload = (e) => {
     e.preventDefault();
 
     if (!app?.id) return;
-    if (app.category === 'testflight') return;
+    if (app.category === "testflight") return;
 
+    setIsDownloading(true);
     router.push(`/install/${app.slug}`);
 
     fetch(`/api/admin/add-download?id=${app.id}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      cache: 'no-store',
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      cache: "no-store",
     })
-    .then(res => res.json())
-    .then(data => {
-      if (data.success) {
-        setApp(prev => ({
-          ...prev,
-          downloads: data.downloads,
-        }));
-      }
-    })
-    .catch(err => {
-      console.error('Lỗi ngầm khi tăng lượt tải:', err);
-    });
-  };
-
-  if (loading) {
-    return (
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          setApp((prev) => ({
+            ...prev,
+            downloads: data.downloads,
+          }));
+        }
+      })
+      .catch((err) => {
+        console.error("Lỗi ngầm khi tăng lượt tải:", err);
+      })
+      .finally(() => {
+        setIsDownloading(false);
+      });
+  };   return (
       <Layout fullWidth>
         <div className="min-h-screen flex items-center justify-center">Đang tải...</div>
       </Layout>
@@ -237,10 +239,23 @@ export default function Detail({ serverApp, serverRelated }) {
                   {app.category === 'jailbreak' && (
   <button
     onClick={handleDownload}
-    className="inline-block border border-green-500 text-green-700 hover:bg-green-100 transition px-4 py-2 rounded-full text-sm font-semibold"
+    disabled={isDownloading}
+    className={`inline-block border border-green-500 text-green-700 transition px-4 py-2 rounded-full text-sm font-semibold ${isDownloading ? 'opacity-50 cursor-not-allowed bg-green-100' : 'hover:bg-green-100'}`}
   >
-    <FontAwesomeIcon icon={faDownload} className="mr-2" />
-    Cài đặt ứng dụng
+    {isDownloading ? (
+      <span className="flex items-center">
+        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-green-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        Đang tải...
+      </span>
+    ) : (
+      <>
+        <FontAwesomeIcon icon={faDownload} className="mr-2" />
+        Cài đặt ứng dụng
+      </>
+    )}
   </button>
 )}
                 </div>
