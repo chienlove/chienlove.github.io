@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import jwt from 'jsonwebtoken';
 import { useRouter } from "next/router";
 import { supabase } from "../../lib/supabase";
 import { v4 as uuidv4 } from 'uuid';
@@ -49,47 +50,75 @@ export default function Admin() {
   }, [darkMode]);
 
   
-      useEffect(() => {
+   useEffect(() => {
   async function fetchIpaSizeFromPlist() {
-    const link = form["download_link"];
-    if (!link || !link.startsWith("itms-services://")) {
-      console.log("Không phải link itms-services, bỏ qua.");
-      return;
-    }
+    const plistName = form["download_link"]?.trim();
+    if (!plistName) return;
 
     try {
-      const url = decodeURIComponent(link.split("url=")[1]);
-      console.log("Đang tải plist từ:", url);
-      const response = await fetch(url);
-      const text = await response.text();
+      // Gọi API generate-token (không cần gửi id)
+      const tokenResponse = await fetch(`/api/generate-token`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ ipa_name: plistName }),
+});
 
-      const ipaUrlMatch = text.match(/<key>url<\/key>\s*<string>([^<]+\.ipa)<\/string>/);
-      if (!ipaUrlMatch) {
-        console.warn("Không tìm thấy đường dẫn IPA trong plist:\n", text);
-        return;
+      if (!tokenResponse.ok) {
+        throw new Error(`Lỗi lấy token: ${tokenResponse.status}`);
       }
 
+      const { token } = await tokenResponse.json();
+      if (!token) {
+        throw new Error("Không nhận được token từ API");
+      }
+
+      // Tạo URL gọi plist (không cần installUrl nữa vì đã sai logic)
+      const plistUrl = `https://storeios.net/api/plist?ipa_name=${encodeURIComponent(plistName)}&token=${token}`;
+
+      const plistResponse = await fetch(plistUrl);
+      if (!plistResponse.ok) {
+        throw new Error(`Lỗi tải plist: ${plistResponse.status}`);
+      }
+
+      const plistContent = await plistResponse.text();
+      const ipaUrlMatch = plistContent.match(/<key>url<\/key>\s*<string>([^<]+\.ipa)<\/string>/i);
+      
+      if (!ipaUrlMatch || !ipaUrlMatch[1]) {
+        throw new Error("Không tìm thấy URL IPA trong file plist");
+      }
       const ipaUrl = ipaUrlMatch[1];
-console.log("Tìm thấy IPA URL:", ipaUrl);
 
-// ✅ Dùng domain đầy đủ để tránh lỗi fetch
-const apiURL = `https://testflight-app.vercel.app/api/admin/get-size-ipa?url=${encodeURIComponent(ipaUrl)}`;
-const proxyResp = await fetch(apiURL);
-const result = await proxyResp.json();
+      const sizeResponse = await fetch(
+        `/api/admin/get-size-ipa?url=${encodeURIComponent(ipaUrl)}`
+      );
+      
+      if (!sizeResponse.ok) {
+        throw new Error(`Lỗi lấy kích thước: ${sizeResponse.status}`);
+      }
 
-if (result.size) {
-  const sizeMB = (parseInt(result.size) / (1024 * 1024)).toFixed(2);
-  console.log("Kích thước IPA:", sizeMB, "MB");
-  setForm(prev => ({ ...prev, size: sizeMB }));
-} else {
-  console.warn("Không lấy được size từ API:", result.error || result);
-}
-    } catch (err) {
-      console.warn("Không lấy được size IPA:", err);
+      const { size, error: sizeError } = await sizeResponse.json();
+      if (sizeError || !size) {
+        throw new Error(sizeError || "Không nhận được kích thước");
+      }
+
+      setForm(prev => ({
+        ...prev,
+        size: `${(size / (1024 * 1024)).toFixed(2)} MB`,
+      }));
+
+    } catch (error) {
+      console.error("Chi tiết lỗi:", { error: error.message, plistName });
+      setForm(prev => ({ ...prev, size: `Lỗi: ${error.message}` }));
     }
   }
 
-  fetchIpaSizeFromPlist();
+  const timer = setTimeout(() => {
+    if (form["download_link"]) {
+      fetchIpaSizeFromPlist();
+    }
+  }, 500);
+
+  return () => clearTimeout(timer);
 }, [form["download_link"]]);
 
 
