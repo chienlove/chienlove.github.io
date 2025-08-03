@@ -1,6 +1,3 @@
-// File: pages/api/admin/appstore-info.js
-const puppeteer = require('puppeteer');
-
 export default async function handler(req, res) {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -41,12 +38,12 @@ export default async function handler(req, res) {
     // Extract App ID using multiple patterns
     let appIdMatch = null;
     const patterns = [
-      /\/id(\d+)/i,
-      /\/app\/[^\/]+\/id(\d+)/i,
-      /\/us\/app\/[^\/]+\/id(\d+)/i,
-      /\/[a-z]{2}\/app\/[^\/]+\/id(\d+)/i,
-      /app\/id(\d+)/i,
-      /id(\d+)/i
+      /\/id(\d+)/i,                    // /id123456789
+      /\/app\/[^\/]+\/id(\d+)/i,       // /app/app-name/id123456789
+      /\/us\/app\/[^\/]+\/id(\d+)/i,   // /us/app/app-name/id123456789
+      /\/[a-z]{2}\/app\/[^\/]+\/id(\d+)/i, // /country/app/app-name/id123456789
+      /app\/id(\d+)/i,                 // app/id123456789
+      /id(\d+)/i                       // id123456789
     ];
 
     for (const pattern of patterns) {
@@ -76,7 +73,7 @@ export default async function handler(req, res) {
 
     // Try multiple countries if app not found in primary country
     const countriesToTry = [primaryCountry, 'us', 'vn', 'gb', 'au', 'ca'];
-    const uniqueCountries = [...new Set(countriesToTry)];
+    const uniqueCountries = [...new Set(countriesToTry)]; // Remove duplicates
     
     let result = null;
     let lastError = null;
@@ -86,6 +83,7 @@ export default async function handler(req, res) {
       try {
         console.log(`[API] Trying country: ${country}`);
         
+        // Call iTunes API without entity parameter to be more flexible
         const itunesUrl = `https://itunes.apple.com/lookup?id=${appId}&country=${country}`;
         console.log('[API] iTunes API URL:', itunesUrl);
         
@@ -93,6 +91,7 @@ export default async function handler(req, res) {
         let retryCount = 0;
         const maxRetries = 3;
         
+        // Retry logic for each country
         while (retryCount < maxRetries) {
           try {
             apiResponse = await fetch(itunesUrl, {
@@ -118,6 +117,7 @@ export default async function handler(req, res) {
             if (retryCount >= maxRetries) {
               throw error;
             }
+            // Wait 1 second before retry
             await new Promise(resolve => setTimeout(resolve, 1000));
           }
         }
@@ -160,61 +160,6 @@ export default async function handler(req, res) {
       });
     }
 
-    // Hàm scrape screenshots từ App Store
-    async function scrapeScreenshots(appId, country) {
-      const appStoreUrl = `https://apps.apple.com/${country}/app/id${appId}`;
-      console.log(`[Scrape] Attempting to scrape screenshots from: ${appStoreUrl}`);
-      
-      try {
-        const browser = await puppeteer.launch({
-          headless: true,
-          args: [
-            '--no-sandbox',
-            '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--single-process'
-          ]
-        });
-        
-        const page = await browser.newPage();
-        await page.setUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1');
-        
-        await page.goto(appStoreUrl, { waitUntil: 'networkidle2', timeout: 15000 });
-        
-        const screenshots = await page.evaluate(() => {
-          const images = Array.from(document.querySelectorAll('.we-screenshot-viewer__screenshot img, .shelf .l-row img'));
-          return images.map(img => {
-            // Lấy URL ảnh chất lượng cao bằng cách xử lý URL
-            let src = img.src || img.getAttribute('srcset')?.split(',')[0]?.trim().split(' ')[0];
-            if (src) {
-              // Xử lý URL để lấy ảnh chất lượng cao
-              src = src.replace(/\/[0-9]{1,2}x[0-9]{1,2}\.[a-z]{3,4}$/, '/1000x1000bb.jpg');
-              src = src.split('?')[0];
-            }
-            return src;
-          }).filter(Boolean);
-        });
-        
-        await browser.close();
-        console.log(`[Scrape] Found ${screenshots.length} screenshots`);
-        return screenshots;
-      } catch (error) {
-        console.error('[Scrape Error]', error);
-        return [];
-      }
-    }
-
-    // Thêm screenshots nếu iTunes API không trả về
-    if ((!result.screenshotUrls || result.screenshotUrls.length === 0) && successfulCountry) {
-      console.log('[API] No screenshots from iTunes API, attempting to scrape...');
-      const scrapedScreenshots = await scrapeScreenshots(appId, successfulCountry);
-      
-      if (scrapedScreenshots.length > 0) {
-        result.screenshotUrls = scrapedScreenshots;
-        console.log(`[API] Added ${scrapedScreenshots.length} screenshots from scraping`);
-      }
-    }
-
     // Format response data
     const appInfo = {
       name: result.trackName || '',
@@ -243,9 +188,9 @@ export default async function handler(req, res) {
       ageRating: result.contentAdvisoryRating || result.trackContentRating || '',
       gameCenter: result.isGameCenterEnabled || false,
       features: Array.isArray(result.features) ? result.features : [],
+      // Add metadata about the search
       foundInCountry: successfulCountry,
-      searchedCountries: uniqueCountries,
-      isScreenshotsScraped: result.screenshotUrls && result.screenshotUrls.length > 0 && !Array.isArray(result.screenshotUrls) // Flag xác định ảnh được scrape
+      searchedCountries: uniqueCountries
     };
 
     console.log('[API] Final app info prepared for:', appInfo.name, 'found in country:', successfulCountry);
@@ -253,6 +198,7 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('[API] Error caught:', error);
+    
     return res.status(500).json({
       error: 'Lỗi khi lấy thông tin từ AppStore',
       details: error.message,
