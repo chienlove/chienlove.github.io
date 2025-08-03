@@ -121,12 +121,17 @@ export default function Admin() {
         age_rating: responseData.ageRating || '',
         release_date: responseData.releaseDate ? 
           new Date(responseData.releaseDate).toISOString().split('T')[0] : '',
-        supported_devices: Array.isArray(responseData.supportedDevices) ? 
-          responseData.supportedDevices.join(", ") : 
-          (typeof responseData.supportedDevices === 'string' ? responseData.supportedDevices : ''),
-        languages: Array.isArray(responseData.languages) ? 
-          responseData.languages.join(", ") : 
-          (typeof responseData.languages === 'string' ? responseData.languages : ''),
+      let supportedDevicesArray = [];
+      if (form.supported_devices) {
+        if (typeof form.supported_devices === 'string') {
+          supportedDevicesArray = form.supported_devices
+            .split(/[,\n]+/)
+            .map(device => device.trim())
+            .filter(device => device.length > 0);
+        } else if (Array.isArray(form.supported_devices)) {
+          supportedDevicesArray = form.supported_devices;
+        }
+      }
       };
 
       console.log('[Frontend] Mapped data:', mappedData);
@@ -529,6 +534,12 @@ export default function Admin() {
       >
         <div className="p-4 flex justify-between items-center">
           <h2 className="text-xl font-bold">Admin Panel</h2>
+          <button 
+            onClick={() => setSidebarOpen(false)} 
+            className="md:hidden text-gray-500 hover:text-gray-700"
+          >
+            ✕
+          </button>
         </div>
 
         <nav className="p-4 space-y-2">
@@ -572,7 +583,7 @@ export default function Admin() {
             className="ml-auto text-sm text-red-500 hover:underline"
             title="Đăng xuất"
           >
-            <i className="fa-solid fa-arrow-right-from-bracket"></i>
+            ↪
           </button>
         </div>
       </aside>
@@ -582,6 +593,12 @@ export default function Admin() {
         {/* Header */}
         <header className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-4">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="md:hidden p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
+            >
+              ☰
+            </button>
             <h1 className="text-xl md:text-2xl font-bold">
               {activeTab === "apps" ? "Quản lý Ứng dụng" : activeTab === "categories" ? "Quản lý Chuyên mục" : "Quản lý Chứng chỉ"}
             </h1>
@@ -590,8 +607,9 @@ export default function Admin() {
             <button
               onClick={() => setDarkMode(!darkMode)}
               className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
+              title={darkMode ? "Chế độ sáng" : "Chế độ tối"}
             >
-              {darkMode ? <i className="fa-solid fa-sun"></i> : <i className="fa-solid fa-moon"></i>}
+              {darkMode ? "<i className="fa-solid fa-sun"></i>" : "<i className="fa-solid fa-moon"></i>"}
             </button>
           </div>
         </header>
@@ -605,7 +623,7 @@ export default function Admin() {
                 onClick={() => setErrorMessage("")}
                 className="text-red-700 dark:text-red-300 hover:text-red-900 dark:hover:text-red-100"
               >
-                <i className="fa-solid fa-xmark"></i>
+                ✕
               </button>
             </div>
           </div>
@@ -615,9 +633,7 @@ export default function Admin() {
           <>
             {/* Add App Form */}
             <section className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-md mb-6">
-              <h2 className="text-lg md:text-xl font-semibold mb-4">
-                {editingId ? <><i className="fa-solid fa-pen-to-square"></i> Sửa ứng dụng</> : <><i className="fa-solid fa-plus"></i> Thêm ứng dụng mới</>}
-              </h2>
+              <h2 className="text-lg md:text-xl font-semibold                {editingId ? "<i className=\"fa-solid fa-pen-to-square\"></i> Sửa ứng dụng" : "<i className=\"fa-solid fa-plus\"></i> Thêm ứng dụng mới"}</h2>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">Chuyên mục:</label>
@@ -662,7 +678,7 @@ export default function Admin() {
                         disabled={loadingAppStoreInfo || !appStoreUrl.trim()}
                         className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm font-medium"
                       >
-                        {loadingAppStoreInfo ? <><i className="fa-solid fa-hourglass-half"></i> Đang lấy...</> : <><i className="fa-solid fa-arrows-rotate"></i> Get Info</>}
+                        {loadingAppStoreInfo ? "<i className="fa-solid fa-hourglass-half"></i> Đang lấy..." : "<i className="fa-solid fa-arrows-rotate"></i> Get Info"}
                       </button>
                     </div>
                     <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
@@ -709,7 +725,7 @@ export default function Admin() {
                     disabled={submitting || !selectedCategory}
                     className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium"
                   >
-                    {submitting ? <><i className="fa-solid fa-hourglass-half"></i> Đang lưu...</> : editingId ? <><i className="fa-solid fa-floppy-disk"></i> Cập nhật</> : <><i className="fa-solid fa-plus"></i> Thêm mới</>}
+                    {submitting ? "<i className="fa-solid fa-hourglass-half"></i> Đang lưu..." : editingId ? "<i className="fa-solid fa-floppy-disk"></i> Cập nhật" : "<i className="fa-solid fa-plus"></i> Thêm mới"}
                   </button>
                   {editingId && (
                     <button
@@ -730,7 +746,7 @@ export default function Admin() {
                 <h2 className="text-lg md:text-xl font-semibold"><i className="fa-solid fa-clipboard-list"></i> Danh sách ứng dụng</h2>
                 <input
                   type="text"
-                  placeholder="<i className=\"fa-solid fa-magnifying-glass\"></i> Tìm kiếm ứng dụng..."
+                  placeholder="<i className="fa-solid fa-magnifying-glass"></i> Tìm kiếm ứng dụng..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="w-full md:w-64 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -798,7 +814,7 @@ export default function Admin() {
             {/* Add Category Form */}
             <section className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-md mb-6">
               <h2 className="text-lg md:text-xl font-semibold mb-4">
-                {editingCategoryId ? <><i className="fa-solid fa-pen-to-square"></i> Sửa chuyên mục</> : <><i className="fa-solid fa-plus"></i> Thêm chuyên mục mới</>}
+                <i className="fa-solid fa-pen-to-square"></i> Sửa chuyên mục
               </h2>
               <form onSubmit={handleCategorySubmit} className="space-y-4">
                 <div>
@@ -827,7 +843,7 @@ export default function Admin() {
                       onClick={addField}
                       className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
                     >
-                      <i className="fa-solid fa-plus"></i> Thêm
+                      ➕ Thêm
                     </button>
                   </div>
                   <div className="space-y-2">
@@ -839,7 +855,7 @@ export default function Admin() {
                           onClick={() => removeField(index)}
                           className="px-2 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
                         >
-                          <i className="fa-solid fa-xmark"></i>
+                          ❌
                         </button>
                       </div>
                     ))}
@@ -852,7 +868,7 @@ export default function Admin() {
                     disabled={submitting || !categoryForm.name.trim()}
                     className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium"
                   >
-                    {submitting ? <><i className="fa-solid fa-hourglass-half"></i> Đang lưu...</> : editingCategoryId ? <><i className="fa-solid fa-floppy-disk"></i> Cập nhật</> : <><i className="fa-solid fa-plus"></i> Thêm mới</>}
+                    {submitting ? "<i className="fa-solid fa-hourglass-half"></i> Đang lưu..." : editingCategoryId ? "<i className="fa-solid fa-floppy-disk"></i> Cập nhật" : "<i className="fa-solid fa-plus"></i> Thêm mới"}
                   </button>
                   {editingCategoryId && (
                     <button
@@ -872,7 +888,7 @@ export default function Admin() {
 
             {/* Categories List */}
             <section className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-md">
-              <h2 className="text-lg md:text-xl font-semibold mb-4"><i className="fa-solid fa-clipboard-list"></i> Danh sách chuyên mục</h2>
+              <h2 className="text-lg md:text-xl font-semibold mb-4">📋 Danh sách chuyên mục</h2>
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse">
                   <thead>
@@ -910,17 +926,22 @@ export default function Admin() {
 
                 {categories.length === 0 && (
                   <div className="text-center py-8 text-gray-500">
-                    Chưa có chuyên mục nào. Vui lòng thêm mới.
+                    Chưa có chuyên mục nào
                   </div>
                 )}
               </div>
             </section>
           </>
-        ) : (
-          <CertManagerAndSigner />
-        )}
+        ) : activeTab === "certs" ? (
+          <>
+            {/* Certificate Management */}
+            <section className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-md">
+              <h2 className="text-lg md:text-xl font-semibold mb-4">🛡️ Quản lý và ký chứng chỉ</h2>
+              <CertManagerAndSigner />
+            </section>
+          </>
+        ) : null}
       </main>
     </div>
   );
 }
-
