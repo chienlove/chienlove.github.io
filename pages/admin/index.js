@@ -363,25 +363,11 @@ export default function Admin() {
         }
       }
 
-      // Xử lý trường supported_devices: chuyển từ chuỗi thành mảng
-      let supportedDevicesArray = [];
-      if (form.supported_devices) {
-        if (typeof form.supported_devices === 'string') {
-          supportedDevicesArray = form.supported_devices
-            .split(/[,\n]+/)
-            .map(device => device.trim())
-            .filter(device => device.length > 0);
-        } else if (Array.isArray(form.supported_devices)) {
-          supportedDevicesArray = form.supported_devices;
-        }
-      }
-
       const payload = {
         ...form,
         category_id: selectedCategory,
         screenshots,
         languages: languagesArray, // Sử dụng mảng thay vì chuỗi
-        supported_devices: supportedDevicesArray, // Sử dụng mảng thay vì chuỗi
         updated_at: new Date().toISOString(),
         slug: form.name ? createSlug(form.name) : uuidv4() // Thêm slug vào payload
       };
@@ -532,201 +518,213 @@ export default function Admin() {
         <nav className="p-4 space-y-2">
           <button
             onClick={() => { setActiveTab("apps"); setSidebarOpen(false); }}
-            className={`w-full text-left p-3 rounded-lg transition-colors ${
+            className={`w-full text-left flex items-center gap-3 px-4 py-2 rounded ${
               activeTab === "apps" 
-                ? "bg-blue-500 text-white" 
+                ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200" 
                 : "hover:bg-gray-200 dark:hover:bg-gray-700"
             }`}
           >
-            📱 Ứng dụng
+            📦 Ứng dụng
           </button>
           <button
             onClick={() => { setActiveTab("categories"); setSidebarOpen(false); }}
-            className={`w-full text-left p-3 rounded-lg transition-colors ${
+            className={`w-full text-left flex items-center gap-3 px-4 py-2 rounded ${
               activeTab === "categories" 
-                ? "bg-blue-500 text-white" 
+                ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200" 
                 : "hover:bg-gray-200 dark:hover:bg-gray-700"
             }`}
           >
-            📂 Chuyên mục
-          </button>
+            📁 Chuyên mục</button>
           <button
-            onClick={() => { setActiveTab("certificates"); setSidebarOpen(false); }}
-            className={`w-full text-left p-3 rounded-lg transition-colors ${
-              activeTab === "certificates" 
-                ? "bg-blue-500 text-white" 
-                : "hover:bg-gray-200 dark:hover:bg-gray-700"
-            }`}
+            onClick={() => { setActiveTab("certs"); setSidebarOpen(false); }}
+            className={`w-full text-left flex items-center gap-3 px-4 py-2 rounded ${activeTab === "certs" ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200" : "hover:bg-gray-200 dark:hover:bg-gray-700"}`}
           >
-            🔐 Chứng chỉ
+            🛡️ Chứng chỉ
           </button>
         </nav>
 
-        <div className="absolute bottom-4 left-4 right-4">
-          <button
-            onClick={() => setDarkMode(!darkMode)}
-            className="w-full p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+        <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-gray-700 flex items-center">
+          <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-600 flex items-center justify-center">
+            {user?.email?.charAt(0).toUpperCase()}
+          </div>
+          <span className="ml-2 truncate">{user?.email}</span>
+          <button 
+            onClick={async () => {
+              await supabase.auth.signOut();
+              router.push("/login");
+            }}
+            className="ml-auto text-sm text-red-500 hover:underline"
+            title="Đăng xuất"
           >
-            {darkMode ? "☀️ Sáng" : "🌙 Tối"}
+            ↪
           </button>
         </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-6">
+      <main className="flex-1 p-4 md:p-6 overflow-auto pb-32">
         {/* Header */}
         <header className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-4">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="md:hidden p-2 rounded-lg bg-white dark:bg-gray-800 shadow"
+              className="md:hidden p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
             >
               ☰
             </button>
-            <h1 className="text-2xl font-bold">
-              {activeTab === "apps" && "Quản lý Ứng dụng"}
-              {activeTab === "categories" && "Quản lý Chuyên mục"}
-              {activeTab === "certificates" && "Quản lý Chứng chỉ"}
+            <h1 className="text-xl md:text-2xl font-bold">
+              {activeTab === "apps" ? "Quản lý Ứng dụng" : activeTab === "categories" ? "Quản lý Chuyên mục" : "Quản lý Chứng chỉ"}
             </h1>
           </div>
-          <button
-            onClick={() => router.push("/")}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-          >
-            🏠 Trang chủ
-          </button>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setDarkMode(!darkMode)}
+              className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
+              title={darkMode ? "Chế độ sáng" : "Chế độ tối"}
+            >
+              {darkMode ? "☀️" : "🌙"}
+            </button>
+          </div>
         </header>
 
         {/* Error Message */}
         {errorMessage && (
-          <div className="mb-4 p-4 bg-red-100 dark:bg-red-900 border border-red-400 text-red-700 dark:text-red-300 rounded-lg">
-            {errorMessage}
+          <div className="mb-4 p-3 bg-red-100 border-l-4 border-red-500 text-red-700 dark:bg-red-900 dark:text-red-100">
+            <div className="flex justify-between items-center">
+              <p>{errorMessage}</p>
+              <button 
+                onClick={() => setErrorMessage("")}
+                className="text-red-700 dark:text-red-300 hover:text-red-900 dark:hover:text-red-100"
+              >
+                ✕
+              </button>
+            </div>
           </div>
         )}
 
-        {/* Apps Tab */}
-        {activeTab === "apps" && (
-          <div className="space-y-6">
-            {/* App Form */}
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-              <h2 className="text-xl font-semibold mb-4">
-                {editingId ? "Chỉnh sửa ứng dụng" : "Thêm ứng dụng mới"}
+        {activeTab === "apps" && activeTab !== "certs" ? (
+          <>
+            {/* Add App Form */}
+            <section className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-md mb-6">
+              <h2 className="text-lg md:text-xl font-semibold mb-4">
+                {editingId ? "✏️ Sửa ứng dụng" : "➕ Thêm ứng dụng mới"}
               </h2>
-
-              {/* AppStore Info Section - Chỉ hiển thị cho TestFlight */}
-              {isTestFlightCategory && (
-                <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-                  <h3 className="text-lg font-medium mb-3 text-blue-800 dark:text-blue-200">
-                    🍎 Lấy thông tin từ App Store
-                  </h3>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={appStoreUrl}
-                      onChange={(e) => setAppStoreUrl(e.target.value)}
-                      placeholder="Nhập URL App Store (ví dụ: https://apps.apple.com/app/id123456789)"
-                      className="flex-1 p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-sm"
-                      style={{ fontSize: '16px' }} // Ngăn zoom trên iOS
-                    />
-                    <button
-                      onClick={fetchAppStoreInfo}
-                      disabled={loadingAppStoreInfo}
-                      className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                    >
-                      {loadingAppStoreInfo ? "⏳ Đang lấy..." : "🔄 Lấy thông tin"}
-                    </button>
-                  </div>
-                </div>
-              )}
-
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Chuyên mục</label>
+                  <label className="block text-sm font-medium mb-1">Chuyên mục:</label>
                   <select
                     value={selectedCategory}
-                    onChange={(e) => setSelectedCategory(e.target.value)}
-                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+                    onChange={(e) => {
+                      const newCategory = e.target.value;
+                      setSelectedCategory(newCategory);
+                      setForm((prev) => ({ ...prev, category_id: newCategory }));
+                      setEditingId(null);
+                    }}
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required
                   >
-                    <option value="">Chọn chuyên mục</option>
-                    {categories.map(cat => (
-                      <option key={cat.id} value={cat.id}>{cat.name}</option>
+                    <option value="">-- Chọn chuyên mục --</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </option>
                     ))}
                   </select>
                 </div>
 
-                {currentFields.map(field => (
+                {/* Thêm phần lấy thông tin từ AppStore cho chuyên mục TestFlight */}
+                {selectedCategory && isTestFlightCategory && (
+                  <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <h3 className="text-md font-semibold mb-3 text-blue-800 dark:text-blue-200">
+                      🍎 Lấy thông tin từ App Store
+                    </h3>
+                    <div className="flex gap-2">
+                      <input
+                        type="url"
+                        value={appStoreUrl}
+                        onChange={(e) => setAppStoreUrl(e.target.value)}
+                        placeholder="Nhập URL App Store (ví dụ: https://apps.apple.com/us/app/...)"
+                        className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        disabled={loadingAppStoreInfo}
+                      />
+                      <button
+                        type="button"
+                        onClick={fetchAppStoreInfo}
+                        disabled={loadingAppStoreInfo || !appStoreUrl.trim()}
+                        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm font-medium"
+                      >
+                        {loadingAppStoreInfo ? "⏳ Đang lấy..." : "🔄 Get Info"}
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
+                      Nhập URL App Store để tự động điền thông tin ứng dụng vào các trường bên dưới
+                    </p>
+                  </div>
+                )}
+
+                {selectedCategory && currentFields.map((field) => (
                   <div key={field}>
-                    <label className="block text-sm font-medium mb-2 capitalize">
-                      {field.replace(/_/g, ' ')}
-                    </label>
-                    {field === "description" ? (
+                    <label className="block text-sm font-medium mb-1">{field}</label>
+                    {field.toLowerCase().includes("mô tả") || field.toLowerCase().includes("description") ? (
                       <textarea
                         value={form[field] || ""}
-                        onChange={(e) => setForm(prev => ({ ...prev, [field]: e.target.value }))}
-                        className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+                        onChange={(e) => setForm((prev) => ({ ...prev, [field]: e.target.value }))}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         rows={4}
                       />
-                    ) : field === "release_date" ? (
-                      <input
-                        type="date"
-                        value={form[field] || ""}
-                        onChange={(e) => setForm(prev => ({ ...prev, [field]: e.target.value }))}
-                        className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
-                      />
+                    ) : field.toLowerCase().includes("screenshots") ? (
+                      <div>
+                        <textarea
+                          value={screenshotInput}
+                          onChange={(e) => setScreenshotInput(e.target.value)}
+                          placeholder="Nhập URL ảnh chụp màn hình, mỗi URL một dòng"
+                          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          rows={4}
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Mỗi URL một dòng</p>
+                      </div>
                     ) : (
                       <input
-                        type="text"
+                        type={field.toLowerCase().includes("date") ? "date" : "text"}
                         value={form[field] || ""}
-                        onChange={(e) => setForm(prev => ({ ...prev, [field]: e.target.value }))}
-                        className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+                        onChange={(e) => setForm((prev) => ({ ...prev, [field]: e.target.value }))}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       />
                     )}
                   </div>
                 ))}
 
-                <div>
-                  <label className="block text-sm font-medium mb-2">Screenshots (mỗi URL một dòng)</label>
-                  <textarea
-                    value={screenshotInput}
-                    onChange={(e) => setScreenshotInput(e.target.value)}
-                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
-                    rows={4}
-                    placeholder="https://example.com/screenshot1.jpg&#10;https://example.com/screenshot2.jpg"
-                  />
-                </div>
-
-                <div className="flex gap-4">
+                <div className="flex gap-4 pt-4">
                   <button
                     type="submit"
-                    disabled={submitting}
-                    className="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    disabled={submitting || !selectedCategory}
+                    className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium"
                   >
-                    {submitting ? "⏳ Đang lưu..." : (editingId ? "💾 Cập nhật" : "➕ Thêm mới")}
+                    {submitting ? "⏳ Đang lưu..." : editingId ? "💾 Cập nhật" : "➕ Thêm mới"}
                   </button>
                   {editingId && (
                     <button
                       type="button"
                       onClick={resetForm}
-                      className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                      className="px-6 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 font-medium"
                     >
                       ❌ Hủy
                     </button>
                   )}
                 </div>
               </form>
-            </div>
+            </section>
 
             {/* Apps List */}
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold">Danh sách ứng dụng ({filteredApps.length})</h2>
+            <section className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-md">
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+                <h2 className="text-lg md:text-xl font-semibold">📋 Danh sách ứng dụng</h2>
                 <input
                   type="text"
+                  placeholder="🔍 Tìm kiếm ứng dụng..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  placeholder="🔍 Tìm kiếm ứng dụng..."
-                  className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+                  className="w-full md:w-64 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
 
@@ -734,43 +732,40 @@ export default function Admin() {
                 <table className="w-full border-collapse">
                   <thead>
                     <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <th className="text-left p-3">Tên</th>
-                      <th className="text-left p-3">Chuyên mục</th>
-                      <th className="text-left p-3">Ngày tạo</th>
-                      <th className="text-left p-3">Thao tác</th>
+                      <th className="text-left p-3 font-medium">Tên</th>
+                      <th className="text-left p-3 font-medium">Chuyên mục</th>
+                      <th className="text-left p-3 font-medium">Ngày tạo</th>
+                      <th className="text-left p-3 font-medium">Thao tác</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredApps.map(app => (
+                    {filteredApps.map((app) => (
                       <tr key={app.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
                         <td className="p-3">
                           <div className="flex items-center gap-3">
                             {app.icon_url && (
-                              <img src={app.icon_url} alt="" className="w-10 h-10 rounded-lg object-cover" />
+                              <img src={app.icon_url} alt="" className="w-8 h-8 rounded" />
                             )}
-                            <div>
-                              <div className="font-medium">{app.name}</div>
-                              <div className="text-sm text-gray-500">{app.author}</div>
-                            </div>
+                            <span className="font-medium">{app.name || "Không có tên"}</span>
                           </div>
                         </td>
                         <td className="p-3">
                           {categories.find(c => c.id === app.category_id)?.name || "Không xác định"}
                         </td>
                         <td className="p-3">
-                          {new Date(app.created_at).toLocaleDateString("vi-VN")}
+                          {app.created_at ? new Date(app.created_at).toLocaleDateString("vi-VN") : "N/A"}
                         </td>
                         <td className="p-3">
                           <div className="flex gap-2">
                             <button
                               onClick={() => handleEdit(app)}
-                              className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                              className="px-3 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600"
                             >
                               ✏️ Sửa
                             </button>
                             <button
                               onClick={() => handleDelete(app.id)}
-                              className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+                              className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
                             >
                               🗑️ Xoá
                             </button>
@@ -780,58 +775,60 @@ export default function Admin() {
                     ))}
                   </tbody>
                 </table>
+
+                {filteredApps.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    {search ? "Không tìm thấy ứng dụng nào" : "Chưa có ứng dụng nào"}
+                  </div>
+                )}
               </div>
-            </div>
-          </div>
-        )}
-
-        {/* Categories Tab */}
-        {activeTab === "categories" && (
-          <div className="space-y-6">
-            {/* Category Form */}
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-              <h2 className="text-xl font-semibold mb-4">
-                {editingCategoryId ? "Chỉnh sửa chuyên mục" : "Thêm chuyên mục mới"}
+            </section>
+          </>
+        ) : activeTab === "categories" ? (
+          <>
+            {/* Add Category Form */}
+            <section className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-md mb-6">
+              <h2 className="text-lg md:text-xl font-semibold mb-4">
+                {editingCategoryId ? "✏️ Sửa chuyên mục" : "➕ Thêm chuyên mục mới"}
               </h2>
-
               <form onSubmit={handleCategorySubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-2">Tên chuyên mục</label>
+                  <label className="block text-sm font-medium mb-1">Tên chuyên mục:</label>
                   <input
                     type="text"
                     value={categoryForm.name}
                     onChange={(e) => setCategoryForm(prev => ({ ...prev, name: e.target.value }))}
-                    className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-2">Trường dữ liệu</label>
+                  <label className="block text-sm font-medium mb-1">Trường dữ liệu:</label>
                   <div className="flex gap-2 mb-2">
                     <input
                       type="text"
                       value={newField}
                       onChange={(e) => setNewField(e.target.value)}
-                      placeholder="Tên trường (ví dụ: name, description)"
-                      className="flex-1 p-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700"
+                      placeholder="Nhập tên trường mới"
+                      className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
                     <button
                       type="button"
                       onClick={addField}
-                      className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                      className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
                     >
                       ➕ Thêm
                     </button>
                   </div>
                   <div className="space-y-2">
                     {categoryForm.fields.map((field, index) => (
-                      <div key={index} className="flex items-center gap-2 p-2 bg-gray-100 dark:bg-gray-700 rounded">
+                      <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-700 rounded">
                         <span className="flex-1">{field}</span>
                         <button
                           type="button"
                           onClick={() => removeField(index)}
-                          className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+                          className="px-2 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
                         >
                           ❌
                         </button>
@@ -840,13 +837,13 @@ export default function Admin() {
                   </div>
                 </div>
 
-                <div className="flex gap-4">
+                <div className="flex gap-4 pt-4">
                   <button
                     type="submit"
-                    disabled={submitting}
-                    className="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    disabled={submitting || !categoryForm.name.trim()}
+                    className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium"
                   >
-                    {submitting ? "⏳ Đang lưu..." : (editingCategoryId ? "💾 Cập nhật" : "➕ Thêm mới")}
+                    {submitting ? "⏳ Đang lưu..." : editingCategoryId ? "💾 Cập nhật" : "➕ Thêm mới"}
                   </button>
                   {editingCategoryId && (
                     <button
@@ -855,56 +852,43 @@ export default function Admin() {
                         setEditingCategoryId(null);
                         setCategoryForm({ name: "", fields: [] });
                       }}
-                      className="px-6 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+                      className="px-6 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 font-medium"
                     >
                       ❌ Hủy
                     </button>
                   )}
                 </div>
               </form>
-            </div>
+            </section>
 
             {/* Categories List */}
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-              <h2 className="text-xl font-semibold mb-4">Danh sách chuyên mục ({categories.length})</h2>
-
+            <section className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-md">
+              <h2 className="text-lg md:text-xl font-semibold mb-4">📋 Danh sách chuyên mục</h2>
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse">
                   <thead>
                     <tr className="border-b border-gray-200 dark:border-gray-700">
-                      <th className="text-left p-3">Tên</th>
-                      <th className="text-left p-3">Trường dữ liệu</th>
-                      <th className="text-left p-3">Số ứng dụng</th>
-                      <th className="text-left p-3">Thao tác</th>
+                      <th className="text-left p-3 font-medium">Tên</th>
+                      <th className="text-left p-3 font-medium">Số trường</th>
+                      <th className="text-left p-3 font-medium">Thao tác</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {categories.map(category => (
+                    {categories.map((category) => (
                       <tr key={category.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
                         <td className="p-3 font-medium">{category.name}</td>
-                        <td className="p-3">
-                          <div className="flex flex-wrap gap-1">
-                            {category.fields.map((field, index) => (
-                              <span key={index} className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded text-xs">
-                                {field}
-                              </span>
-                            ))}
-                          </div>
-                        </td>
-                        <td className="p-3">
-                          {apps.filter(app => app.category_id === category.id).length}
-                        </td>
+                        <td className="p-3">{category.fields?.length || 0} trường</td>
                         <td className="p-3">
                           <div className="flex gap-2">
                             <button
                               onClick={() => handleEditCategory(category)}
-                              className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors"
+                              className="px-3 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600"
                             >
                               ✏️ Sửa
                             </button>
                             <button
                               onClick={() => handleDeleteCategory(category.id)}
-                              className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 transition-colors"
+                              className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
                             >
                               🗑️ Xoá
                             </button>
@@ -914,22 +898,25 @@ export default function Admin() {
                     ))}
                   </tbody>
                 </table>
-              </div>
-            </div>
-          </div>
-        )}
 
-        {/* Certificates Tab */}
-        {activeTab === "certificates" && (
-          <div className="space-y-6">
-            {/* Certificate Manager and Signer */}
-            <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+                {categories.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    Chưa có chuyên mục nào
+                  </div>
+                )}
+              </div>
+            </section>
+          </>
+        ) : activeTab === "certs" ? (
+          <>
+            {/* Certificate Management */}
+            <section className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-md">
+              <h2 className="text-lg md:text-xl font-semibold mb-4">🛡️ Quản lý và ký chứng chỉ</h2>
               <CertManagerAndSigner />
-            </div>
-          </div>
-        )}
+            </section>
+          </>
+        ) : null}
       </main>
     </div>
   );
 }
-
