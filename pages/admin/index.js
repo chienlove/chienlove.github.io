@@ -637,7 +637,7 @@ export default function Admin() {
                         disabled={loadingAppStoreInfo || !appStoreUrl.trim()}
                         className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm font-medium"
                       >
-                        {loadingAppStoreInfo ? "⏳ Đang lấy..." : "🔄 Lấy thông tin"}
+                        {loadingAppStoreInfo ? "⏳ Đang lấy..." : "🔄 Get Info"}
                       </button>
                     </div>
                     <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
