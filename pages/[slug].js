@@ -240,7 +240,7 @@ export default function Detail({ serverApp, serverRelated }) {
   <button
     onClick={handleDownload}
     disabled={isDownloading}
-    className={`inline-block border border-green-500 text-green-700 transition px-4 py-2 rounded-full text-sm font-semibold ${isDownloading ? 'opacity-50 cursor-not-allowed bg-green-100' : 'hover:bg-green-100'}`}
+    className={`inline-block border border-green-500 text-green-700 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-green-200 active:shadow-inner active:ring-2 active:ring-green-500 ${isDownloading ? 'opacity-50 cursor-not-allowed bg-green-100' : 'hover:bg-green-100'}`}
   >
     {isDownloading ? (
       <span className="flex items-center">
