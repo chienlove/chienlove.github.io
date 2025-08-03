@@ -135,20 +135,9 @@ setForm(prev => ({
 
 if (Array.isArray(responseData.screenshots) && responseData.screenshots.length > 0) {
   setScreenshotInput(responseData.screenshots.join('\n'));
-      };
+      }
 
       console.log('[Frontend] Mapped data:', mappedData);
-
-      // Cập nhật form với thông tin đã lấy được
-      setForm(prev => ({
-        ...prev,
-        ...mappedData
-      }));
-
-      // Cập nhật screenshots nếu có
-      if (responseData.screenshots && Array.isArray(responseData.screenshots) && responseData.screenshots.length > 0) {
-  setScreenshotInput(responseData.screenshots.join('\n'));
-}
 
       setAppStoreUrl(""); // Clear URL sau khi thành công
       alert("Đã lấy thông tin thành công từ AppStore!");
