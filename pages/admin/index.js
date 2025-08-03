@@ -348,10 +348,26 @@ export default function Admin() {
         .map(url => url.trim())
         .filter(url => url.length > 0 && url.startsWith("http"));
 
+      // Xử lý trường languages: chuyển từ chuỗi thành mảng
+      let languagesArray = [];
+      if (form.languages) {
+        if (typeof form.languages === 'string') {
+          // Nếu là chuỗi, tách thành mảng
+          languagesArray = form.languages
+            .split(/[,\n]+/)
+            .map(lang => lang.trim())
+            .filter(lang => lang.length > 0);
+        } else if (Array.isArray(form.languages)) {
+          // Nếu đã là mảng, sử dụng trực tiếp
+          languagesArray = form.languages;
+        }
+      }
+
       const payload = {
         ...form,
         category_id: selectedCategory,
         screenshots,
+        languages: languagesArray, // Sử dụng mảng thay vì chuỗi
         updated_at: new Date().toISOString(),
         slug: form.name ? createSlug(form.name) : uuidv4() // Thêm slug vào payload
       };
@@ -904,4 +920,3 @@ export default function Admin() {
     </div>
   );
 }
-
