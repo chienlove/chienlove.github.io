@@ -137,8 +137,12 @@ export default function Admin() {
 
       // Cập nhật screenshots nếu có
       if (responseData.screenshots && Array.isArray(responseData.screenshots) && responseData.screenshots.length > 0) {
-        setScreenshotInput(responseData.screenshots.join('\n'));
-      }
+  setScreenshotInput(responseData.screenshots.join('\n'));
+  setForm(prev => ({
+    ...prev,
+    screenshots: responseData.screenshots
+  }));
+}}
 
       setAppStoreUrl(""); // Clear URL sau khi thành công
       alert("Đã lấy thông tin thành công từ AppStore!");
