@@ -593,6 +593,7 @@ export default function Admin() {
             >
               {darkMode ? <i className="fa-solid fa-sun"></i> : <i className="fa-solid fa-moon"></i>}
             </button>
+          </div>
         </header>
 
         {/* Error Message */}
@@ -922,3 +923,4 @@ export default function Admin() {
     </div>
   );
 }
+
