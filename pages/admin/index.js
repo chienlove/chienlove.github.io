@@ -363,11 +363,25 @@ export default function Admin() {
         }
       }
 
+      // Xử lý trường supported_devices: chuyển từ chuỗi thành mảng
+      let supportedDevicesArray = [];
+      if (form.supported_devices) {
+        if (typeof form.supported_devices === 'string') {
+          supportedDevicesArray = form.supported_devices
+            .split(/[,\n]+/)
+            .map(device => device.trim())
+            .filter(device => device.length > 0);
+        } else if (Array.isArray(form.supported_devices)) {
+          supportedDevicesArray = form.supported_devices;
+        }
+      }
+
       const payload = {
         ...form,
         category_id: selectedCategory,
         screenshots,
-        languages: languagesArray, // Sử dụng mảng thay vì chuỗi
+        languages: languagesArray,
+      supported_devices: supportedDevicesArray, // Sử dụng mảng thay vì chuỗi
         updated_at: new Date().toISOString(),
         slug: form.name ? createSlug(form.name) : uuidv4() // Thêm slug vào payload
       };
