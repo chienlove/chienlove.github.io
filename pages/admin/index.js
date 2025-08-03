@@ -64,7 +64,7 @@ export default function Admin() {
     try {
       console.log('[Frontend] Fetching AppStore info for URL:', appStoreUrl);
       
-      const response = await fetch('/api/admin/appstore-info', {
+      const response = await fetch('/api/appstore-info', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -894,11 +894,6 @@ export default function Admin() {
         ) : activeTab === "certs" ? (
           <>
             {/* Certificate Management */}
-            <section className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-md mb-6">
-              <h2 className="text-lg md:text-xl font-semibold mb-4">📤 Tải lên chứng chỉ</h2>
-              <CertUploader />
-            </section>
-
             <section className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-md">
               <h2 className="text-lg md:text-xl font-semibold mb-4">🛡️ Quản lý và ký chứng chỉ</h2>
               <CertManagerAndSigner />
