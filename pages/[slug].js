@@ -71,7 +71,8 @@ export default function Detail({ serverApp, serverRelated }) {
   const [loading, setLoading] = useState(false);
   const [dominantColor, setDominantColor] = useState('#f0f2f5');
   const [showFullDescription, setShowFullDescription] = useState(false);
-  const [status, setStat  const [statusLoading, setStatusLoading] = useState(false);
+  const [status, setStatus] = useState(null);
+  const [statusLoading, setStatusLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
@@ -146,7 +147,10 @@ export default function Detail({ serverApp, serverRelated }) {
       .finally(() => {
         setIsDownloading(false);
       });
-  };   return (
+  };
+
+  if (loading) {
+    return (
       <Layout fullWidth>
         <div className="min-h-screen flex items-center justify-center">Đang tải...</div>
       </Layout>
