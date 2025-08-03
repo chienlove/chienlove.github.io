@@ -125,6 +125,16 @@ export default function Admin() {
           responseData.supportedDevices.join(', ') : '',
         languages: Array.isArray(responseData.languages) ? 
           responseData.languages.join(', ') : '',
+        screenshots: Array.isArray(responseData.screenshots) ? responseData.screenshots : []
+};
+
+setForm(prev => ({
+  ...prev,
+  ...mappedData
+}));
+
+if (Array.isArray(responseData.screenshots) && responseData.screenshots.length > 0) {
+  setScreenshotInput(responseData.screenshots.join('\n'));
       };
 
       console.log('[Frontend] Mapped data:', mappedData);
@@ -138,10 +148,6 @@ export default function Admin() {
       // Cập nhật screenshots nếu có
       if (responseData.screenshots && Array.isArray(responseData.screenshots) && responseData.screenshots.length > 0) {
   setScreenshotInput(responseData.screenshots.join('\n'));
-  setForm(prev => ({
-    ...prev,
-    screenshots: responseData.screenshots
-  }));
 }
 
       setAppStoreUrl(""); // Clear URL sau khi thành công
