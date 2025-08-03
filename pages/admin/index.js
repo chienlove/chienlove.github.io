@@ -64,7 +64,7 @@ export default function Admin() {
     try {
       console.log('[Frontend] Fetching AppStore info for URL:', appStoreUrl);
       
-      const response = await fetch('/api/appstore-info', {
+      const response = await fetch('/api/admin/appstore-info', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
