@@ -529,12 +529,6 @@ export default function Admin() {
       >
         <div className="p-4 flex justify-between items-center">
           <h2 className="text-xl font-bold">Admin Panel</h2>
-          <button 
-            onClick={() => setSidebarOpen(false)} 
-            className="md:hidden text-gray-500 hover:text-gray-700"
-          >
-            <i className="fa-solid fa-xmark"></i>
-          </button>
         </div>
 
         <nav className="p-4 space-y-2">
@@ -588,10 +582,6 @@ export default function Admin() {
         {/* Header */}
         <header className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => setSidebarOpen(true)}
-<i className="fa-solid fa-bars"></i>
-            </button>
             <h1 className="text-xl md:text-2xl font-bold">
               {activeTab === "apps" ? "Quản lý Ứng dụng" : activeTab === "categories" ? "Quản lý Chuyên mục" : "Quản lý Chứng chỉ"}
             </h1>
@@ -599,11 +589,10 @@ export default function Admin() {
           <div className="flex items-center gap-4">
             <button
               onClick={() => setDarkMode(!darkMode)}
- <i className="fa-solid fa-bars"></i>sáng" : "Chế độ tối"}
+              className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
             >
               {darkMode ? <i className="fa-solid fa-sun"></i> : <i className="fa-solid fa-moon"></i>}
             </button>
-          </div>
         </header>
 
         {/* Error Message */}
@@ -933,4 +922,3 @@ export default function Admin() {
     </div>
   );
 }
-
