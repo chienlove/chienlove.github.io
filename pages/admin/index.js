@@ -122,9 +122,11 @@ export default function Admin() {
         release_date: responseData.releaseDate ? 
           new Date(responseData.releaseDate).toISOString().split('T')[0] : '',
         supported_devices: Array.isArray(responseData.supportedDevices) ? 
-          responseData.supportedDevices.join(', ') : '',
+          responseData.supportedDevices.join(", ") : 
+          (typeof responseData.supportedDevices === 'string' ? responseData.supportedDevices : ''),
         languages: Array.isArray(responseData.languages) ? 
-          responseData.languages.join(', ') : '',
+          responseData.languages.join(", ") : 
+          (typeof responseData.languages === 'string' ? responseData.languages : ''),
       };
 
       console.log('[Frontend] Mapped data:', mappedData);
@@ -309,6 +311,12 @@ export default function Admin() {
     setEditingId(app.id);
     setSelectedCategory(app.category_id);
     setForm(app);
+    // Ensure screenshots are correctly populated when editing
+    if (app.screenshots && Array.isArray(app.screenshots)) {
+      setScreenshotInput(app.screenshots.join("\n"));
+    } else {
+      setScreenshotInput("");
+    }
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -363,11 +371,25 @@ export default function Admin() {
         }
       }
 
+      // Xử lý trường supported_devices: chuyển từ chuỗi thành mảng
+      let supportedDevicesArray = [];
+      if (form.supported_devices) {
+        if (typeof form.supported_devices === 'string') {
+          supportedDevicesArray = form.supported_devices
+            .split(/[,\n]+/)
+            .map(device => device.trim())
+            .filter(device => device.length > 0);
+        } else if (Array.isArray(form.supported_devices)) {
+          supportedDevicesArray = form.supported_devices;
+        }
+      }
+
       const payload = {
         ...form,
         category_id: selectedCategory,
         screenshots,
         languages: languagesArray, // Sử dụng mảng thay vì chuỗi
+        supported_devices: supportedDevicesArray, // Sử dụng mảng thay vì chuỗi
         updated_at: new Date().toISOString(),
         slug: form.name ? createSlug(form.name) : uuidv4() // Thêm slug vào payload
       };
@@ -494,7 +516,7 @@ export default function Admin() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
-        <p>⏳ Đang tải dữ liệu quản trị...</p>
+        <p><i className="fa-solid fa-hourglass-half"></i> Đang tải dữ liệu quản trị...</p>
       </div>
     );
   }
@@ -511,7 +533,7 @@ export default function Admin() {
             onClick={() => setSidebarOpen(false)} 
             className="md:hidden text-gray-500 hover:text-gray-700"
           >
-            ✕
+            <i className="fa-solid fa-xmark"></i>
           </button>
         </div>
 
@@ -524,7 +546,7 @@ export default function Admin() {
                 : "hover:bg-gray-200 dark:hover:bg-gray-700"
             }`}
           >
-            📦 Ứng dụng
+            <i className="fa-solid fa-box"></i> Ứng dụng
           </button>
           <button
             onClick={() => { setActiveTab("categories"); setSidebarOpen(false); }}
@@ -534,12 +556,12 @@ export default function Admin() {
                 : "hover:bg-gray-200 dark:hover:bg-gray-700"
             }`}
           >
-            📁 Chuyên mục</button>
+            <i className="fa-solid fa-folder"></i> Chuyên mục</button>
           <button
             onClick={() => { setActiveTab("certs"); setSidebarOpen(false); }}
             className={`w-full text-left flex items-center gap-3 px-4 py-2 rounded ${activeTab === "certs" ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200" : "hover:bg-gray-200 dark:hover:bg-gray-700"}`}
           >
-            🛡️ Chứng chỉ
+            <i className="fa-solid fa-shield-alt"></i> Chứng chỉ
           </button>
         </nav>
 
@@ -556,7 +578,7 @@ export default function Admin() {
             className="ml-auto text-sm text-red-500 hover:underline"
             title="Đăng xuất"
           >
-            ↪
+            <i className="fa-solid fa-arrow-right-from-bracket"></i>
           </button>
         </div>
       </aside>
@@ -568,9 +590,7 @@ export default function Admin() {
           <div className="flex items-center gap-4">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="md:hidden p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
-            >
-              ☰
+<i className="fa-solid fa-bars"></i>
             </button>
             <h1 className="text-xl md:text-2xl font-bold">
               {activeTab === "apps" ? "Quản lý Ứng dụng" : activeTab === "categories" ? "Quản lý Chuyên mục" : "Quản lý Chứng chỉ"}
@@ -579,10 +599,9 @@ export default function Admin() {
           <div className="flex items-center gap-4">
             <button
               onClick={() => setDarkMode(!darkMode)}
-              className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
-              title={darkMode ? "Chế độ sáng" : "Chế độ tối"}
+ <i className="fa-solid fa-bars"></i>sáng" : "Chế độ tối"}
             >
-              {darkMode ? "☀️" : "🌙"}
+              {darkMode ? <i className="fa-solid fa-sun"></i> : <i className="fa-solid fa-moon"></i>}
             </button>
           </div>
         </header>
@@ -596,7 +615,7 @@ export default function Admin() {
                 onClick={() => setErrorMessage("")}
                 className="text-red-700 dark:text-red-300 hover:text-red-900 dark:hover:text-red-100"
               >
-                ✕
+                <i className="fa-solid fa-xmark"></i>
               </button>
             </div>
           </div>
@@ -607,7 +626,7 @@ export default function Admin() {
             {/* Add App Form */}
             <section className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-md mb-6">
               <h2 className="text-lg md:text-xl font-semibold mb-4">
-                {editingId ? "✏️ Sửa ứng dụng" : "➕ Thêm ứng dụng mới"}
+                {editingId ? <><i className="fa-solid fa-pen-to-square"></i> Sửa ứng dụng</> : <><i className="fa-solid fa-plus"></i> Thêm ứng dụng mới</>}
               </h2>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
@@ -636,7 +655,7 @@ export default function Admin() {
                 {selectedCategory && isTestFlightCategory && (
                   <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
                     <h3 className="text-md font-semibold mb-3 text-blue-800 dark:text-blue-200">
-                      🍎 Lấy thông tin từ App Store
+                      <i className="fa-brands fa-apple"></i> Lấy thông tin từ App Store
                     </h3>
                     <div className="flex gap-2">
                       <input
@@ -653,7 +672,7 @@ export default function Admin() {
                         disabled={loadingAppStoreInfo || !appStoreUrl.trim()}
                         className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm font-medium"
                       >
-                        {loadingAppStoreInfo ? "⏳ Đang lấy..." : "🔄 Get Info"}
+                        {loadingAppStoreInfo ? <><i className="fa-solid fa-hourglass-half"></i> Đang lấy...</> : <><i className="fa-solid fa-arrows-rotate"></i> Get Info</>}
                       </button>
                     </div>
                     <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
@@ -700,7 +719,7 @@ export default function Admin() {
                     disabled={submitting || !selectedCategory}
                     className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium"
                   >
-                    {submitting ? "⏳ Đang lưu..." : editingId ? "💾 Cập nhật" : "➕ Thêm mới"}
+                    {submitting ? <><i className="fa-solid fa-hourglass-half"></i> Đang lưu...</> : editingId ? <><i className="fa-solid fa-floppy-disk"></i> Cập nhật</> : <><i className="fa-solid fa-plus"></i> Thêm mới</>}
                   </button>
                   {editingId && (
                     <button
@@ -708,7 +727,7 @@ export default function Admin() {
                       onClick={resetForm}
                       className="px-6 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 font-medium"
                     >
-                      ❌ Hủy
+                      <i className="fa-solid fa-xmark"></i> Hủy
                     </button>
                   )}
                 </div>
@@ -718,10 +737,10 @@ export default function Admin() {
             {/* Apps List */}
             <section className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-md">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
-                <h2 className="text-lg md:text-xl font-semibold">📋 Danh sách ứng dụng</h2>
+                <h2 className="text-lg md:text-xl font-semibold"><i className="fa-solid fa-clipboard-list"></i> Danh sách ứng dụng</h2>
                 <input
                   type="text"
-                  placeholder="🔍 Tìm kiếm ứng dụng..."
+                  placeholder="<i className=\"fa-solid fa-magnifying-glass\"></i> Tìm kiếm ứng dụng..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="w-full md:w-64 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -761,13 +780,13 @@ export default function Admin() {
                               onClick={() => handleEdit(app)}
                               className="px-3 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600"
                             >
-                              ✏️ Sửa
+                              <i className="fa-solid fa-pen-to-square"></i> Sửa
                             </button>
                             <button
                               onClick={() => handleDelete(app.id)}
                               className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
                             >
-                              🗑️ Xoá
+                              <i className="fa-solid fa-trash"></i> Xoá
                             </button>
                           </div>
                         </td>
@@ -789,7 +808,7 @@ export default function Admin() {
             {/* Add Category Form */}
             <section className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-md mb-6">
               <h2 className="text-lg md:text-xl font-semibold mb-4">
-                {editingCategoryId ? "✏️ Sửa chuyên mục" : "➕ Thêm chuyên mục mới"}
+                {editingCategoryId ? <><i className="fa-solid fa-pen-to-square"></i> Sửa chuyên mục</> : <><i className="fa-solid fa-plus"></i> Thêm chuyên mục mới</>}
               </h2>
               <form onSubmit={handleCategorySubmit} className="space-y-4">
                 <div>
@@ -818,7 +837,7 @@ export default function Admin() {
                       onClick={addField}
                       className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
                     >
-                      ➕ Thêm
+                      <i className="fa-solid fa-plus"></i> Thêm
                     </button>
                   </div>
                   <div className="space-y-2">
@@ -830,7 +849,7 @@ export default function Admin() {
                           onClick={() => removeField(index)}
                           className="px-2 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
                         >
-                          ❌
+                          <i className="fa-solid fa-xmark"></i>
                         </button>
                       </div>
                     ))}
@@ -843,7 +862,7 @@ export default function Admin() {
                     disabled={submitting || !categoryForm.name.trim()}
                     className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium"
                   >
-                    {submitting ? "⏳ Đang lưu..." : editingCategoryId ? "💾 Cập nhật" : "➕ Thêm mới"}
+                    {submitting ? <><i className="fa-solid fa-hourglass-half"></i> Đang lưu...</> : editingCategoryId ? <><i className="fa-solid fa-floppy-disk"></i> Cập nhật</> : <><i className="fa-solid fa-plus"></i> Thêm mới</>}
                   </button>
                   {editingCategoryId && (
                     <button
@@ -854,7 +873,7 @@ export default function Admin() {
                       }}
                       className="px-6 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 font-medium"
                     >
-                      ❌ Hủy
+                      <i className="fa-solid fa-xmark"></i> Hủy
                     </button>
                   )}
                 </div>
@@ -863,7 +882,7 @@ export default function Admin() {
 
             {/* Categories List */}
             <section className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-md">
-              <h2 className="text-lg md:text-xl font-semibold mb-4">📋 Danh sách chuyên mục</h2>
+              <h2 className="text-lg md:text-xl font-semibold mb-4"><i className="fa-solid fa-clipboard-list"></i> Danh sách chuyên mục</h2>
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse">
                   <thead>
@@ -884,13 +903,13 @@ export default function Admin() {
                               onClick={() => handleEditCategory(category)}
                               className="px-3 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600"
                             >
-                              ✏️ Sửa
+                              <i className="fa-solid fa-pen-to-square"></i> Sửa
                             </button>
                             <button
                               onClick={() => handleDeleteCategory(category.id)}
                               className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
                             >
-                              🗑️ Xoá
+                              <i className="fa-solid fa-trash"></i> Xoá
                             </button>
                           </div>
                         </td>
@@ -901,22 +920,17 @@ export default function Admin() {
 
                 {categories.length === 0 && (
                   <div className="text-center py-8 text-gray-500">
-                    Chưa có chuyên mục nào
+                    Chưa có chuyên mục nào. Vui lòng thêm mới.
                   </div>
                 )}
               </div>
             </section>
           </>
-        ) : activeTab === "certs" ? (
-          <>
-            {/* Certificate Management */}
-            <section className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-md">
-              <h2 className="text-lg md:text-xl font-semibold mb-4">🛡️ Quản lý và ký chứng chỉ</h2>
-              <CertManagerAndSigner />
-            </section>
-          </>
-        ) : null}
+        ) : (
+          <CertManagerAndSigner />
+        )}
       </main>
     </div>
   );
 }
+
