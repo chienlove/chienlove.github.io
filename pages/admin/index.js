@@ -142,7 +142,7 @@ export default function Admin() {
     ...prev,
     screenshots: responseData.screenshots
   }));
-}}
+}
 
       setAppStoreUrl(""); // Clear URL sau khi thành công
       alert("Đã lấy thông tin thành công từ AppStore!");
