@@ -13,14 +13,22 @@ jobs:
 
       - name: Set up Theos (Fixed SDK)
         run: |
+          # Cài đặt Theos từ bản release 2.4
           export THEOS=/opt/theos
-          sudo git clone --recursive https://github.com/theos/theos.git $THEOS
+          wget https://github.com/theos/theos/archive/refs/tags/2.4.zip -O /tmp/theos.zip
+          sudo unzip -q /tmp/theos.zip -d /tmp/
+          sudo mv /tmp/theos-2.4 $THEOS
+          
+          # Cài đặt dependencies
           xcode-select --install || true
-          brew install ldid wget xz
+          brew install ldid xz
+          
+          # Tải SDK từ repo chính thức của Theos
           sudo mkdir -p $THEOS/sdks
-          sudo wget https://github.com/kabiroberai/theos-sdks/raw/master/iPhoneOS14.5.sdk.tar.xz -O /tmp/iPhoneOS.sdk.tar.xz
-          sudo tar -xf /tmp/iPhoneOS.sdk.tar.xz -C $THEOS/sdks/
-          sudo ln -s $THEOS/sdks/iPhoneOS14.5.sdk $THEOS/sdks/iPhoneOS.sdk
+          sudo git clone https://github.com/theos/sdks.git $THEOS/sdks --depth=1
+          sudo ln -s $THEOS/sdks/iPhoneOS.sdk $THEOS/sdks/iPhoneOS.sdk
+          
+          # Kiểm tra
           ls -la $THEOS/sdks/
 
       - name: Create Tweak project
