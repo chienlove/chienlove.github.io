@@ -11,7 +11,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Theos (Final Version)
+      - name: Set up Theos
         run: |
           # Tạo và cấp quyền thư mục Theos
           sudo mkdir -p /opt/theos
@@ -26,7 +26,7 @@ jobs:
           xcode-select --install || true
           brew install ldid xz
           
-          # Tải và cài đặt SDK (sử dụng phiên bản cụ thể)
+          # Tải và cài đặt SDK
           mkdir -p $THEOS/sdks
           cd $THEOS/sdks
           wget https://github.com/theos/sdks/archive/refs/heads/master.zip -O sdks.zip
@@ -39,7 +39,6 @@ jobs:
           if [ -n "$LATEST_SDK" ]; then
               ln -s "$LATEST_SDK" iPhoneOS.sdk
               echo "✅ Đã chọn SDK: $LATEST_SDK"
-              ls -la
           else
               echo "❌ Lỗi: Không tìm thấy bất kỳ SDK nào"
               ls -la
@@ -50,6 +49,8 @@ jobs:
         run: |
           export THEOS=/opt/theos
           mkdir -p TweakProject
+          
+          # Tạo file Tweak.x
           cat > TweakProject/Tweak.x << 'EOL'
           #import <UIKit/UIKit.h>
           
@@ -66,6 +67,12 @@ jobs:
           }
           EOL
           
+          # Tạo file Filter.plist (QUAN TRỌNG)
+          cat > TweakProject/BypassScreenCapture.plist << 'EOL'
+          { Filter = { Bundles = ( "com.apple.springboard" ); }; }
+          EOL
+          
+          # Tạo Makefile
           cat > TweakProject/Makefile << 'EOL'
           ARCHS = arm64 arm64e
           TARGET = iphone:latest
