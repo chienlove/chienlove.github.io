@@ -11,17 +11,17 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Theos
+      - name: Set up Theos (Fixed SDK)
         run: |
           export THEOS=/opt/theos
           sudo git clone --recursive https://github.com/theos/theos.git $THEOS
           xcode-select --install || true
-          brew install ldid
+          brew install ldid wget
           sudo mkdir -p $THEOS/sdks
-          sudo curl -L https://github.com/theos/sdks/archive/refs/heads/master.zip -o /tmp/sdks.zip
-          sudo unzip -q /tmp/sdks.zip -d $THEOS/sdks
-          sudo mv $THEOS/sdks/sdks-master/*.sdk $THEOS/sdks/
-          sudo ln -s $THEOS/sdks/iPhoneOS*.sdk $THEOS/sdks/iPhoneOS.sdk
+          sudo wget https://github.com/theos/sdks/raw/master/iPhoneOS16.4.sdk.tar.xz -O /tmp/iPhoneOS.sdk.tar.xz
+          sudo tar -xf /tmp/iPhoneOS.sdk.tar.xz -C $THEOS/sdks/
+          sudo ln -s $THEOS/sdks/iPhoneOS16.4.sdk $THEOS/sdks/iPhoneOS.sdk
+          ls -la $THEOS/sdks/
 
       - name: Create Tweak project
         run: |
@@ -59,7 +59,7 @@ jobs:
           cp .theos/obj/debug/*.dylib ../BypassScreenCapture.dylib
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v4  # Đã cập nhật lên v4
+        uses: actions/upload-artifact@v4
         with:
           name: BypassScreenCapture.dylib
           path: BypassScreenCapture.dylib
