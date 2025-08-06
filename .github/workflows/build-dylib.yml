@@ -16,11 +16,11 @@ jobs:
           export THEOS=/opt/theos
           sudo git clone --recursive https://github.com/theos/theos.git $THEOS
           xcode-select --install || true
-          brew install ldid wget
+          brew install ldid wget xz
           sudo mkdir -p $THEOS/sdks
-          sudo wget https://github.com/theos/sdks/raw/master/iPhoneOS16.4.sdk.tar.xz -O /tmp/iPhoneOS.sdk.tar.xz
+          sudo wget https://github.com/kabiroberai/theos-sdks/raw/master/iPhoneOS14.5.sdk.tar.xz -O /tmp/iPhoneOS.sdk.tar.xz
           sudo tar -xf /tmp/iPhoneOS.sdk.tar.xz -C $THEOS/sdks/
-          sudo ln -s $THEOS/sdks/iPhoneOS16.4.sdk $THEOS/sdks/iPhoneOS.sdk
+          sudo ln -s $THEOS/sdks/iPhoneOS14.5.sdk $THEOS/sdks/iPhoneOS.sdk
           ls -la $THEOS/sdks/
 
       - name: Create Tweak project
