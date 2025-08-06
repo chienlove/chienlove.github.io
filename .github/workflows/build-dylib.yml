@@ -11,8 +11,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Theos
+      - name: Set up environment
         run: |
+          # Install dpkg and other required tools
+          brew install dpkg
+          brew install ldid xz make
+          brew upgrade make || true
+          
+          # Setup Theos
           sudo rm -rf /opt/theos 2>/dev/null || true
           sudo mkdir -p /opt/theos
           sudo chown -R $USER:admin /opt/theos
@@ -21,9 +27,7 @@ jobs:
           export THEOS=/opt/theos
           git clone --recursive --depth 1 https://github.com/theos/theos.git $THEOS
           
-          xcode-select --install || true
-          brew install ldid xz make
-          
+          # Setup SDKs
           mkdir -p $THEOS/sdks
           cd $THEOS/sdks
           wget https://github.com/theos/sdks/archive/refs/heads/master.zip -O sdks.zip
@@ -62,7 +66,7 @@ jobs:
           { Filter = { Bundles = ( "com.apple.springboard" ); }; }
           EOL
           
-          # Makefile (FIXED FORMAT)
+          # Makefile (with proper tabs)
           cat > TweakProject/Makefile << 'EOL'
           ARCHS = arm64 arm64e
           TARGET = iphone:latest
@@ -96,23 +100,36 @@ jobs:
           export THEOS=/opt/theos
           cd TweakProject
           
-          # Fix Makefile line endings (important)
+          # Fix line endings and permissions
           dos2unix Makefile 2>/dev/null || true
+          find . -type f -exec chmod 644 {} \;
+          find . -type d -exec chmod 755 {} \;
           
+          # Build with parallel processing
+          export THEOS_MAKE_PARALLEL=yes
           make clean
           make package
           
-          # Extract dylib
-          mkdir -p pkg
-          dpkg-deb -R packages/*.deb pkg
-          cp pkg/Library/MobileSubstrate/DynamicLibraries/*.dylib ../BypassScreenCapture.dylib
+          # Extract dylib directly from .theos build
+          cp .theos/obj/debug/BypassScreenCapture.dylib ../BypassScreenCapture.dylib
           
           if [ -f "../BypassScreenCapture.dylib" ]; then
               echo "✅ Build successful!"
               file "../BypassScreenCapture.dylib"
+              ls -la ../BypassScreenCapture.dylib
           else
-              echo "❌ Build failed"
-              exit 1
+              echo "❌ Build failed - trying alternative method..."
+              # Fallback method to extract from deb
+              mkdir -p pkg
+              dpkg-deb -R packages/*.deb pkg 2>/dev/null || true
+              cp pkg/Library/MobileSubstrate/DynamicLibraries/*.dylib ../BypassScreenCapture.dylib || true
+              
+              if [ -f "../BypassScreenCapture.dylib" ]; then
+                  echo "✅ Fallback extraction successful"
+              else
+                  echo "❌ All build methods failed"
+                  exit 1
+              fi
           fi
 
       - name: Upload artifacts
