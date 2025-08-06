@@ -1,0 +1,70 @@
+name: Build iOS Bypass ScreenCapture Dylib
+
+on:
+  workflow_dispatch:  # Cho phép chạy thủ công từ tab Actions
+
+jobs:
+  build:
+    runs-on: macos-latest  # Yêu cầu macOS để build Theos
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Theos
+        run: |
+          # Cài đặt Theos và dependencies
+          export THEOS=/opt/theos
+          sudo git clone --recursive https://github.com/theos/theos.git $THEOS
+          
+          # Cài Xcode CLI tools (nếu chưa có)
+          xcode-select --install || true
+          brew install ldid
+          sudo mkdir -p $THEOS/sdks
+          sudo curl -L https://github.com/theos/sdks/archive/refs/heads/master.zip -o /tmp/sdks.zip
+          sudo unzip -q /tmp/sdks.zip -d $THEOS/sdks
+          sudo mv $THEOS/sdks/sdks-master/*.sdk $THEOS/sdks/
+          sudo ln -s $THEOS/sdks/iPhoneOS*.sdk $THEOS/sdks/iPhoneOS.sdk
+
+      - name: Create Tweak project
+        run: |
+          export THEOS=/opt/theos
+          mkdir -p TweakProject
+          cat > TweakProject/Tweak.x << 'EOL'
+          #import <UIKit/UIKit.h>
+          
+          %hook UIScreen
+          - (BOOL)isCaptured { return NO; }
+          %end
+          
+          %hook UIView
+          - (BOOL)_shouldPreventScreenCapture { return NO; }
+          %end
+          
+          __attribute__((constructor)) static void init() {
+              NSLog(@"[Bypass] Dylib injected!");
+          }
+          EOL
+          
+          cat > TweakProject/Makefile << 'EOL'
+          ARCHS = arm64 arm64e
+          TARGET = iphone:latest
+          include $(THEOS)/makefiles/common.mk
+          TWEAK_NAME = BypassScreenCapture
+          BypassScreenCapture_FILES = Tweak.x
+          include $(THEOS_MAKE_PATH)/tweak.mk
+          EOL
+
+      - name: Build dylib
+        run: |
+          export THEOS=/opt/theos
+          cd TweakProject && make clean && make package
+          
+          # Copy file .dylib đã build
+          cp .theos/obj/debug/*.dylib ../BypassScreenCapture.dylib
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: BypassScreenCapture.dylib
+          path: BypassScreenCapture.dylib
