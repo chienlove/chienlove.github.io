@@ -11,22 +11,26 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Theos
+      - name: Set up Theos (Ultimate Version)
         run: |
-          # Tạo và cấp quyền thư mục Theos
+          # Clean previous installations
+          sudo rm -rf /opt/theos 2>/dev/null || true
+          
+          # Setup directories with proper permissions
           sudo mkdir -p /opt/theos
           sudo chown -R $USER:admin /opt/theos
           sudo chmod -R 755 /opt/theos
           
-          # Cài đặt Theos
+          # Install Theos
           export THEOS=/opt/theos
-          git clone --recursive https://github.com/theos/theos.git $THEOS
+          git clone --recursive --depth 1 https://github.com/theos/theos.git $THEOS
           
-          # Cài đặt dependencies
+          # Install dependencies
           xcode-select --install || true
-          brew install ldid xz
+          brew install ldid xz make
+          brew upgrade make || true
           
-          # Tải và cài đặt SDK
+          # Setup SDKs
           mkdir -p $THEOS/sdks
           cd $THEOS/sdks
           wget https://github.com/theos/sdks/archive/refs/heads/master.zip -O sdks.zip
@@ -34,23 +38,23 @@ jobs:
           mv sdks-master/* .
           rm -rf sdks-master sdks.zip
           
-          # Tạo symlink cho SDK mới nhất
+          # Find and link latest SDK
           LATEST_SDK=$(ls -d iPhoneOS*.sdk | sort -V | tail -1)
           if [ -n "$LATEST_SDK" ]; then
-              ln -s "$LATEST_SDK" iPhoneOS.sdk
-              echo "✅ Đã chọn SDK: $LATEST_SDK"
+              ln -sf "$LATEST_SDK" iPhoneOS.sdk
+              echo "✅ Using SDK: $LATEST_SDK"
           else
-              echo "❌ Lỗi: Không tìm thấy bất kỳ SDK nào"
+              echo "❌ Error: No SDK found"
               ls -la
               exit 1
           fi
 
-      - name: Create Tweak project
+      - name: Create complete Tweak project
         run: |
           export THEOS=/opt/theos
           mkdir -p TweakProject
           
-          # Tạo file Tweak.x
+          # Create Tweak.x
           cat > TweakProject/Tweak.x << 'EOL'
           #import <UIKit/UIKit.h>
           
@@ -67,29 +71,68 @@ jobs:
           }
           EOL
           
-          # Tạo file Filter.plist (QUAN TRỌNG)
+          # Create Filter.plist
           cat > TweakProject/BypassScreenCapture.plist << 'EOL'
           { Filter = { Bundles = ( "com.apple.springboard" ); }; }
           EOL
           
-          # Tạo Makefile
+          # Create control file (ESSENTIAL for packaging)
+          mkdir -p TweakProject/layout/DEBIAN
+          cat > TweakProject/layout/DEBIAN/control << 'EOL'
+          Package: com.yourcompany.bypassscreencapture
+          Name: BypassScreenCapture
+          Version: 1.0
+          Architecture: iphoneos-arm
+          Description: Disable screen capture protection
+          Maintainer: YourName
+          Author: YourName
+          Section: Tweaks
+          EOL
+          
+          # Create Makefile with parallel building
           cat > TweakProject/Makefile << 'EOL'
           ARCHS = arm64 arm64e
           TARGET = iphone:latest
           include $(THEOS)/makefiles/common.mk
           TWEAK_NAME = BypassScreenCapture
           BypassScreenCapture_FILES = Tweak.x
+          BypassScreenCapture_CFLAGS = -fobjc-arc
           include $(THEOS_MAKE_PATH)/tweak.mk
+          
+          after-install::
+              install.exec "killall -9 SpringBoard"
           EOL
 
-      - name: Build dylib
+      - name: Build and package tweak
         run: |
           export THEOS=/opt/theos
-          cd TweakProject && make clean && make package
-          cp .theos/obj/debug/*.dylib ../BypassScreenCapture.dylib
+          cd TweakProject
+          
+          # Enable parallel building
+          export THEOS_MAKE_PARALLEL=yes
+          
+          # Clean and build
+          make clean
+          make package
+          
+          # Extract the dylib from the package
+          mkdir -p pkg
+          dpkg-deb -R packages/*.deb pkg
+          cp pkg/Library/MobileSubstrate/DynamicLibraries/*.dylib ../BypassScreenCapture.dylib
+          
+          # Verify the output
+          if [ -f "../BypassScreenCapture.dylib" ]; then
+              echo "✅ Build successful!"
+              file "../BypassScreenCapture.dylib"
+          else
+              echo "❌ Error: Failed to build dylib"
+              exit 1
+          fi
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: BypassScreenCapture.dylib
-          path: BypassScreenCapture.dylib
+          name: BypassScreenCapture
+          path: |
+            BypassScreenCapture.dylib
+            TweakProject/packages/*.deb
