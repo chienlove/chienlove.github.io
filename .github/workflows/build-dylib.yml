@@ -1,11 +1,11 @@
 name: Build iOS Bypass ScreenCapture Dylib
 
 on:
-  workflow_dispatch:  # Cho phép chạy thủ công từ tab Actions
+  workflow_dispatch:
 
 jobs:
   build:
-    runs-on: macos-latest  # Yêu cầu macOS để build Theos
+    runs-on: macos-latest
     
     steps:
       - name: Checkout code
@@ -13,11 +13,8 @@ jobs:
 
       - name: Set up Theos
         run: |
-          # Cài đặt Theos và dependencies
           export THEOS=/opt/theos
           sudo git clone --recursive https://github.com/theos/theos.git $THEOS
-          
-          # Cài Xcode CLI tools (nếu chưa có)
           xcode-select --install || true
           brew install ldid
           sudo mkdir -p $THEOS/sdks
@@ -59,12 +56,10 @@ jobs:
         run: |
           export THEOS=/opt/theos
           cd TweakProject && make clean && make package
-          
-          # Copy file .dylib đã build
           cp .theos/obj/debug/*.dylib ../BypassScreenCapture.dylib
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4  # Đã cập nhật lên v4
         with:
           name: BypassScreenCapture.dylib
           path: BypassScreenCapture.dylib
