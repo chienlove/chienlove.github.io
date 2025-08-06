@@ -11,29 +11,33 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Theos (Final Fix)
+      - name: Set up Theos (Full Fix)
         run: |
-          # Cài đặt Theos
+          # Tạo thư mục với quyền sudo
+          sudo mkdir -p /opt/theos
+          sudo chown -R $USER:admin /opt/theos
+          sudo chmod -R 755 /opt/theos
+          
+          # Cài đặt Theos với quyền user
           export THEOS=/opt/theos
-          sudo rm -rf $THEOS 2>/dev/null || true
           git clone --recursive https://github.com/theos/theos.git $THEOS
           
           # Cài đặt dependencies
           xcode-select --install || true
           brew install ldid xz
           
-          # Tải SDK từ repo riêng (đã kiểm tra tồn tại)
-          sudo mkdir -p $THEOS/sdks
+          # Tải và cài đặt SDK
+          mkdir -p $THEOS/sdks
           cd $THEOS/sdks
-          sudo wget https://github.com/theos/sdks/archive/master.zip -O sdks.zip
-          sudo unzip -q sdks.zip
-          sudo mv sdks-master/* .
-          sudo rm -rf sdks-master sdks.zip
+          wget https://github.com/theos/sdks/archive/master.zip
+          unzip -q master.zip
+          mv sdks-master/* .
+          rm -rf sdks-master master.zip
           
-          # Tạo symlink cho SDK
+          # Tạo symlink và kiểm tra
           if [ -d "iPhoneOS16.0.sdk" ]; then
-              sudo ln -s iPhoneOS16.0.sdk iPhoneOS.sdk
-              echo "✅ SDK đã được thiết lập:"
+              ln -s iPhoneOS16.0.sdk iPhoneOS.sdk
+              echo "✅ SDK setup thành công!"
               ls -la
           else
               echo "❌ Lỗi: Không tìm thấy SDK"
