@@ -1,7 +1,12 @@
-name: Build iOS Bypass ScreenCapture Dylib
+name: Build iOS Bypass ScreenCapture Dylib (Custom App)
 
 on:
   workflow_dispatch:
+    inputs:
+      app_bundle_id:
+        description: "Nhập CFBundleIdentifier của app (ví dụ: com.spotify.client)"
+        required: true
+        default: "com.overseas.tandoo"  # Đã di chuyển default value vào đúng vị trí
 
 jobs:
   build:
@@ -13,9 +18,8 @@ jobs:
 
       - name: Set up environment
         run: |
-          # Install dpkg and other required tools
-          brew install dpkg
-          brew install ldid xz make
+          # Install dependencies
+          brew install dpkg ldid xz make
           brew upgrade make || true
           
           # Setup Theos
@@ -44,10 +48,11 @@ jobs:
           export THEOS=/opt/theos
           mkdir -p TweakProject
           
-          # Tweak.x
+          # Tweak.x - Core bypass logic
           cat > TweakProject/Tweak.x << 'EOL'
           #import <UIKit/UIKit.h>
           
+          // Hook chính để bypass screen capture
           %hook UIScreen
           - (BOOL)isCaptured { return NO; }
           %end
@@ -56,17 +61,29 @@ jobs:
           - (BOOL)_shouldPreventScreenCapture { return NO; }
           %end
           
+          // Hook thêm cho các phương thức bảo vệ tuỳ chỉnh
+          %hook SBApplication
+          - (BOOL)hasProtectionForScreenCapture { return NO; }
+          %end
+          
           __attribute__((constructor)) static void init() {
-              NSLog(@"[Bypass] Dylib injected!");
+              NSLog(@"[Bypass] Dylib injected vào bundle: ${{ github.event.inputs.app_bundle_id }}");
           }
           EOL
           
-          # Filter.plist
-          cat > TweakProject/BypassScreenCapture.plist << 'EOL'
-          { Filter = { Bundles = ( "com.apple.springboard" ); }; }
+          # Filter.plist - Target app bundle ID
+          cat > TweakProject/BypassScreenCapture.plist << EOL
+          { 
+              Filter = { 
+                  Bundles = ( 
+                      "${{ github.event.inputs.app_bundle_id }}",
+                      "com.apple.UIKit" 
+                  ); 
+              }; 
+          }
           EOL
           
-          # Makefile (with proper tabs)
+          # Makefile
           cat > TweakProject/Makefile << 'EOL'
           ARCHS = arm64 arm64e
           TARGET = iphone:latest
@@ -84,12 +101,12 @@ jobs:
           
           # control file
           mkdir -p TweakProject/layout/DEBIAN
-          cat > TweakProject/layout/DEBIAN/control << 'EOL'
+          cat > TweakProject/layout/DEBIAN/control << EOL
           Package: com.yourcompany.bypass
-          Name: BypassScreenCapture
+          Name: BypassScreenCapture for ${{ github.event.inputs.app_bundle_id }}
           Version: 1.0-1
           Architecture: iphoneos-arm
-          Description: Disable screen capture protections
+          Description: Disable screen capture protections for specific app
           Maintainer: YourName
           Author: YourName
           Section: Tweaks
@@ -100,42 +117,33 @@ jobs:
           export THEOS=/opt/theos
           cd TweakProject
           
-          # Fix line endings and permissions
-          dos2unix Makefile 2>/dev/null || true
+          # Fix permissions and build
           find . -type f -exec chmod 644 {} \;
           find . -type d -exec chmod 755 {} \;
           
-          # Build with parallel processing
           export THEOS_MAKE_PARALLEL=yes
           make clean
           make package
           
-          # Extract dylib directly from .theos build
-          cp .theos/obj/debug/BypassScreenCapture.dylib ../BypassScreenCapture.dylib
-          
-          if [ -f "../BypassScreenCapture.dylib" ]; then
-              echo "✅ Build successful!"
-              file "../BypassScreenCapture.dylib"
-              ls -la ../BypassScreenCapture.dylib
-          else
-              echo "❌ Build failed - trying alternative method..."
-              # Fallback method to extract from deb
-              mkdir -p pkg
-              dpkg-deb -R packages/*.deb pkg 2>/dev/null || true
-              cp pkg/Library/MobileSubstrate/DynamicLibraries/*.dylib ../BypassScreenCapture.dylib || true
-              
-              if [ -f "../BypassScreenCapture.dylib" ]; then
-                  echo "✅ Fallback extraction successful"
-              else
-                  echo "❌ All build methods failed"
-                  exit 1
-              fi
-          fi
+          # Extract dylib
+          cp .theos/obj/debug/BypassScreenCapture.dylib ../BypassScreenCapture.dylib || \
+          (mkdir -p pkg && dpkg-deb -R packages/*.deb pkg && \
+          cp pkg/Library/MobileSubstrate/DynamicLibraries/*.dylib ../BypassScreenCapture.dylib)
 
+      - name: Verify and upload artifacts
+        run: |
+          if [ -f "BypassScreenCapture.dylib" ]; then
+              echo "✅ Build thành công cho bundle ID: ${{ github.event.inputs.app_bundle_id }}"
+              file BypassScreenCapture.dylib
+          else
+              echo "❌ Build thất bại!"
+              exit 1
+          fi
+          
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: BypassScreenCapture
+          name: BypassScreenCapture_${{ github.event.inputs.app_bundle_id }}
           path: |
             BypassScreenCapture.dylib
             TweakProject/packages/*.deb
