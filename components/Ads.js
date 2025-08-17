@@ -1,75 +1,107 @@
+// components/Ads.js
 'use client';
 import { useEffect, useRef } from 'react';
 
+/**
+ * Dùng 2 ad unit tách biệt:
+ * - Mobile: 300x250 (hiệu quả trên điện thoại)
+ * - Desktop: 728x90 (leaderboard)
+ *
+ * Truyền slot riêng để tối ưu RPM theo thiết bị.
+ * Nếu bạn chỉ có 1 slot, tạm thời truyền cùng 1 giá trị cho cả 2.
+ */
 export default function AdUnit({
-  slot = '5160182988',
+  mobileSlot = '5160182988',   // <-- điền slot mobile (300x250)
+  desktopSlot = '4575220124', // <-- điền slot desktop (728x90)
   className = '',
-  format = 'auto',
-  fullWidth = true,
-  style,
   label = 'Quảng cáo',
 }) {
-  const insRef = useRef(null);
+  const mobileRef = useRef(null);
+  const desktopRef = useRef(null);
 
   useEffect(() => {
-    const el = insRef.current;
-    if (!el || typeof window === 'undefined') return;
-
-    let attempts = 0;
-    let timer;
-
-    const tryPush = () => {
+    const pushOnce = (el) => {
       try {
-        // Nếu <ins> đã render ad rồi thì thôi
+        if (!el) return;
         if (el.getAttribute('data-adsbygoogle-status') === 'done') return;
-
         if (window.adsbygoogle && typeof window.adsbygoogle.push === 'function') {
           window.adsbygoogle.push({});
-        } else if (attempts < 40) { // ~10s (40 * 250ms)
-          attempts += 1;
-          timer = setTimeout(tryPush, 250);
         }
-      } catch (_) {
-        // nuốt lỗi nhẹ do adblock...
+      } catch (_) {}
+    };
+
+    const makeObserver = (el) => {
+      if (!el) return null;
+      if ('IntersectionObserver' in window) {
+        const io = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) {
+                pushOnce(el);
+                io.unobserve(el);
+              }
+            });
+          },
+          { rootMargin: '200px' }
+        );
+        io.observe(el);
+        return io;
+      } else {
+        pushOnce(el);
+        return null;
       }
     };
 
-    // Chỉ push khi sắp vào viewport (tiết kiệm)
-    if ('IntersectionObserver' in window) {
-      const io = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            if (entry.isIntersecting) {
-              tryPush();
-              io.unobserve(el);
-            }
-          });
-        },
-        { rootMargin: '200px' }
-      );
-      io.observe(el);
-      return () => {
-        io.disconnect();
-        clearTimeout(timer);
-      };
-    } else {
-      tryPush();
-      return () => clearTimeout(timer);
-    }
+    const mObs = makeObserver(mobileRef.current);
+    const dObs = makeObserver(desktopRef.current);
+    return () => {
+      mObs && mObs.disconnect();
+      dObs && dObs.disconnect();
+    };
   }, []);
 
   return (
     <div className={`my-6 w-full flex flex-col items-center ${className}`}>
       <span className="text-sm text-gray-500 font-semibold mb-1">{label}</span>
-      <ins
-        ref={insRef}
-        className="adsbygoogle"
-        style={style || { display: 'block' }}
-        data-ad-client="ca-pub-3905625903416797"
-        data-ad-slot={slot}
-        data-ad-format={format}
-        data-full-width-responsive={fullWidth ? 'true' : 'false'}
-      />
+
+      {/* Mobile: 300x250 */}
+      <div className="block md:hidden w-full">
+        <ins
+          ref={mobileRef}
+          className="adsbygoogle"
+          style={{
+            display: 'block',
+            width: '300px',
+            height: '250px',
+            margin: '0 auto',
+            // giữ chỗ tránh CLS
+            minHeight: '250px',
+          }}
+          data-ad-client="ca-pub-3905625903416797"
+          data-ad-slot={mobileSlot}
+          data-ad-format="rectangle"
+          data-full-width-responsive="false"
+        />
+      </div>
+
+      {/* Desktop: 728x90 */}
+      <div className="hidden md:block w-full" style={{ maxWidth: 1000 }}>
+        <ins
+          ref={desktopRef}
+          className="adsbygoogle"
+          style={{
+            display: 'block',
+            width: '728px',
+            height: '90px',
+            margin: '0 auto',
+            minHeight: '90px',
+          }}
+          data-ad-client="ca-pub-3905625903416797"
+          data-ad-slot={desktopSlot}
+          data-ad-format="horizontal"
+          data-full-width-responsive="false"
+        />
+      </div>
     </div>
   );
 }
