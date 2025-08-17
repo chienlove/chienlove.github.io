@@ -1,3 +1,4 @@
+// pages/index.js
 'use client';
 
 import Layout from '../components/Layout';
@@ -17,7 +18,8 @@ export default function Home({ categoriesWithApps, certStatus }) {
   return (
     <Layout>
       <div className="container mx-auto px-1 md:px-2 py-6 space-y-10">
-        <AdUnit slot="5160182988" />
+        {/* Banner đầu trang */}
+        <AdUnit mobileSlot="5160182988" desktopSlot="4575220124" />
 
         {categoriesWithApps.map((category, index) => (
           <div
@@ -68,11 +70,15 @@ export default function Home({ categoriesWithApps, certStatus }) {
               ))}
             </div>
 
-            {(index + 1) % 2 === 0 && <AdUnit slot="5160182988" />}
+            {/* Banner giữa trang: sau mỗi 2 danh mục và giới hạn để tránh dày đặc */}
+            {((index + 1) % 2 === 0) && (index < 4) && (
+              <AdUnit mobileSlot="5160182988" desktopSlot="4575220124" />
+            )}
           </div>
         ))}
 
-        <AdUnit slot="5160182988" />
+        {/* Banner cuối trang */}
+        <AdUnit mobileSlot="5160182988" desktopSlot="4575220124" />
       </div>
     </Layout>
   );
@@ -87,6 +93,7 @@ export async function getServerSideProps(ctx) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Giữ nguyên chế độ chỉ-admin khi đang dev
   if (!user && !isGoogleBot) {
     return {
       redirect: {
@@ -113,7 +120,7 @@ export async function getServerSideProps(ctx) {
     })
   );
 
-  // ✅ Gọi API check chứng chỉ ở đây (ẩn hoàn toàn khỏi client)
+  // Kiểm tra chứng chỉ (giữ server-side như bạn đang dùng)
   let certStatus = null;
   try {
     const res = await fetch('https://ipadl.storeios.net/api/check-revocation');
