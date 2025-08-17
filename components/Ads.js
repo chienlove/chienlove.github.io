@@ -3,16 +3,14 @@
 import { useEffect, useRef } from 'react';
 
 /**
- * Dùng 2 ad unit tách biệt:
- * - Mobile: 300x250 (hiệu quả trên điện thoại)
- * - Desktop: 728x90 (leaderboard)
- *
- * Truyền slot riêng để tối ưu RPM theo thiết bị.
- * Nếu bạn chỉ có 1 slot, tạm thời truyền cùng 1 giá trị cho cả 2.
+ * Hai ad unit tách biệt:
+ * - Mobile: 300x250
+ * - Desktop: 728x90
+ * Có retry đợi script sẵn sàng, đẩy khi vào viewport.
  */
 export default function AdUnit({
-  mobileSlot = '5160182988',   // <-- điền slot mobile (300x250)
-  desktopSlot = '4575220124', // <-- điền slot desktop (728x90)
+  mobileSlot = '5160182988',   // slot 300x250
+  desktopSlot = '4575220124',  // slot 728x90 (bạn vừa set fixed trong AdSense)
   className = '',
   label = 'Quảng cáo',
 }) {
@@ -20,24 +18,34 @@ export default function AdUnit({
   const desktopRef = useRef(null);
 
   useEffect(() => {
-    const pushOnce = (el) => {
-      try {
-        if (!el) return;
-        if (el.getAttribute('data-adsbygoogle-status') === 'done') return;
-        if (window.adsbygoogle && typeof window.adsbygoogle.push === 'function') {
-          window.adsbygoogle.push({});
+    const tryPush = (el) => {
+      if (!el) return;
+      let attempts = 0;
+      const max = 40; // ~10s (40 * 250ms)
+      const tick = () => {
+        try {
+          if (el.getAttribute('data-adsbygoogle-status') === 'done') return;
+          if (typeof window !== 'undefined' && window.adsbygoogle && typeof window.adsbygoogle.push === 'function') {
+            window.adsbygoogle.push({});
+          } else if (attempts < max) {
+            attempts += 1;
+            setTimeout(tick, 250);
+          }
+        } catch (_) {
+          // nuốt lỗi nhẹ (adblock, v.v.)
         }
-      } catch (_) {}
+      };
+      tick();
     };
 
-    const makeObserver = (el) => {
-      if (!el) return null;
+    const observe = (el) => {
+      if (!el) return () => {};
       if ('IntersectionObserver' in window) {
         const io = new IntersectionObserver(
           (entries) => {
             entries.forEach((entry) => {
               if (entry.isIntersecting) {
-                pushOnce(el);
+                tryPush(el);
                 io.unobserve(el);
               }
             });
@@ -45,18 +53,18 @@ export default function AdUnit({
           { rootMargin: '200px' }
         );
         io.observe(el);
-        return io;
+        return () => io.disconnect();
       } else {
-        pushOnce(el);
-        return null;
+        tryPush(el);
+        return () => {};
       }
     };
 
-    const mObs = makeObserver(mobileRef.current);
-    const dObs = makeObserver(desktopRef.current);
+    const unMobile = observe(mobileRef.current);
+    const unDesktop = observe(desktopRef.current);
     return () => {
-      mObs && mObs.disconnect();
-      dObs && dObs.disconnect();
+      unMobile && unMobile();
+      unDesktop && unDesktop();
     };
   }, []);
 
@@ -74,12 +82,11 @@ export default function AdUnit({
             width: '300px',
             height: '250px',
             margin: '0 auto',
-            // giữ chỗ tránh CLS
-            minHeight: '250px',
+            minHeight: '250px', // giữ chỗ tránh CLS
           }}
           data-ad-client="ca-pub-3905625903416797"
           data-ad-slot={mobileSlot}
-          data-ad-format="rectangle"
+          // ❌ không đặt data-ad-format cho fixed size
           data-full-width-responsive="false"
         />
       </div>
@@ -98,7 +105,7 @@ export default function AdUnit({
           }}
           data-ad-client="ca-pub-3905625903416797"
           data-ad-slot={desktopSlot}
-          data-ad-format="horizontal"
+          // ❌ không đặt data-ad-format cho fixed size
           data-full-width-responsive="false"
         />
       </div>
