@@ -2,7 +2,7 @@
 
 import Layout from '../components/Layout';
 import AppCard from '../components/AppCard';
-import AdBanner from '../components/AdBanner';
+import AdUnit from '../components/Ads';
 import { createSupabaseServer } from '../lib/supabase';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -17,7 +17,7 @@ export default function Home({ categoriesWithApps, certStatus }) {
   return (
     <Layout>
       <div className="container mx-auto px-1 md:px-2 py-6 space-y-10">
-        <AdBanner />
+        <AdUnit slot="5160182988" />
 
         {categoriesWithApps.map((category, index) => (
           <div
@@ -68,11 +68,11 @@ export default function Home({ categoriesWithApps, certStatus }) {
               ))}
             </div>
 
-            {(index + 1) % 2 === 0 && <AdBanner />}
+            {(index + 1) % 2 === 0 && <AdUnit slot="5160182988" />}
           </div>
         ))}
 
-        <AdBanner />
+        <AdUnit slot="5160182988" />
       </div>
     </Layout>
   );

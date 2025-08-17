@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import Head from 'next/head';
+import Script from 'next/script';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabase';
@@ -94,6 +95,15 @@ export default function Layout({ children, fullWidth = false }) {
         <title>StoreIOS – TestFlight & Jailbreak</title>
         <meta name="description" content="Kho ứng dụng TestFlight beta & công cụ jailbreak cho iOS" />
       </Head>
+
+      {/* Global AdSense script – load once */}
+      <Script
+        id="adsense-loader"
+        strategy="afterInteractive"
+        src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797"
+        crossOrigin="anonymous"
+      />
+
 
       {/* HEADER */}
       <header className="sticky top-0 z-50 w-full bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
