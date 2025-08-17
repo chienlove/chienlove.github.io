@@ -15,19 +15,32 @@ export default function AdUnit({
     const el = insRef.current;
     if (!el || typeof window === 'undefined') return;
 
-    const push = () => {
+    let attempts = 0;
+    let timer;
+
+    const tryPush = () => {
       try {
+        // Nếu <ins> đã render ad rồi thì thôi
         if (el.getAttribute('data-adsbygoogle-status') === 'done') return;
-        (window.adsbygoogle = window.adsbygoogle || []).push({});
-      } catch (e) {}
+
+        if (window.adsbygoogle && typeof window.adsbygoogle.push === 'function') {
+          window.adsbygoogle.push({});
+        } else if (attempts < 40) { // ~10s (40 * 250ms)
+          attempts += 1;
+          timer = setTimeout(tryPush, 250);
+        }
+      } catch (_) {
+        // nuốt lỗi nhẹ do adblock...
+      }
     };
 
+    // Chỉ push khi sắp vào viewport (tiết kiệm)
     if ('IntersectionObserver' in window) {
       const io = new IntersectionObserver(
         (entries) => {
           entries.forEach((entry) => {
             if (entry.isIntersecting) {
-              push();
+              tryPush();
               io.unobserve(el);
             }
           });
@@ -35,9 +48,13 @@ export default function AdUnit({
         { rootMargin: '200px' }
       );
       io.observe(el);
-      return () => io.disconnect();
+      return () => {
+        io.disconnect();
+        clearTimeout(timer);
+      };
     } else {
-      push();
+      tryPush();
+      return () => clearTimeout(timer);
     }
   }, []);
 
