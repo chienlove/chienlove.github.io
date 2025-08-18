@@ -19,7 +19,9 @@ export default function Home({ categoriesWithApps, certStatus }) {
     <Layout>
       <div className="container mx-auto px-1 md:px-2 py-6 space-y-10">
         {/* Banner đầu trang */}
-        <AdUnit mobileVariant="compact" mobileSlot1="5160182988" mobileSlot2="7109430646" />
+        <AdUnit mobileVariant="compact" mobileSlot1="5160182988" mobileSlot2="7109430646"
+enableDesktopFallback
+desktopFallbackSlot="4575220124" />
 
         {categoriesWithApps.map((category, index) => (
           <div
@@ -72,13 +74,18 @@ export default function Home({ categoriesWithApps, certStatus }) {
 
             {/* Banner giữa trang: sau mỗi 2 danh mục và giới hạn để tránh dày đặc */}
             {((index + 1) % 2 === 0) && (index < 4) && (
-              <AdUnit mobileVariant="multiplex" mobileSlot1="5160182988" mobileSlot2="7109430646" />
+              <AdUnit mobileVariant="Multiplex" mobileSlot1="5160182988" mobileSlot2="7109430646"
+enableDesktopFallback
+desktopFallbackSlot="4575220124"
+/>               />
             )}
           </div>
         ))}
 
         {/* Banner cuối trang */}
-        <AdUnit mobileVariant="compact" mobileSlot1="5160182988" mobileSlot2="7109430646" />
+        <AdUnit mobileVariant="compact" mobileSlot1="5160182988" mobileSlot2="7109430646"
+enableDesktopFallback
+desktopFallbackSlot="4575220124" />
       </div>
     </Layout>
   );
