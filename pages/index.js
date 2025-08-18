@@ -74,7 +74,7 @@ desktopFallbackSlot="4575220124" />
 
             {/* Banner giữa trang: sau mỗi 2 danh mục và giới hạn để tránh dày đặc */}
             {((index + 1) % 2 === 0) && (index < 4) && (
-              <AdUnit mobileVariant="Multiplex" mobileSlot1="5160182988" mobileSlot2="7109430646"
+              <AdUnit mobileVariant="multiplex" mobileSlot1="5160182988" mobileSlot2="7109430646"
 enableDesktopFallback
 desktopFallbackSlot="4575220124"
 />               />
