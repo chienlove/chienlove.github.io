@@ -77,7 +77,7 @@ desktopFallbackSlot="4575220124" />
               <AdUnit mobileVariant="multiplex" mobileSlot1="5160182988" mobileSlot2="7109430646"
 enableDesktopFallback
 desktopFallbackSlot="4575220124"
-/>               />
+/>              
             )}
           </div>
         ))}
