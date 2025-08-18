@@ -22,7 +22,7 @@ export default function AdUnit({
   className = '',
   // Fallback tùy chọn cho desktop (mặc định tắt để tránh "đụng" Auto Ads)
   enableDesktopFallback = false,
-  desktopFallbackSlot = 'YOUR_RESPONSIVE_SLOT_ID', // nếu bật fallback, dùng slot responsive
+  desktopFallbackSlot = '4575220124', // nếu bật fallback, dùng slot responsive
 }) {
   const mRef1 = useRef(null);
   const mRef2 = useRef(null);
@@ -116,10 +116,10 @@ export default function AdUnit({
           className="adsbygoogle"
           style={{
             display: 'block',
-            width: '336px',
-            height: '280px',
+            width: '360px',
+            height: '800px',
             margin: '0 auto',
-            minHeight: '280px',
+            minHeight: '800px',
           }}
           data-ad-client="ca-pub-3905625903416797"
           data-ad-slot={mobileSlot2}
