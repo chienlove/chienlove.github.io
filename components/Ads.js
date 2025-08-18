@@ -2,17 +2,23 @@
 'use client';
 import { useEffect, useRef } from 'react';
 
+/**
+ * Mobile:
+ *  - mobileVariant="compact"   -> 300x250 (mobileSlot1)
+ *  - mobileVariant="multiplex" -> Multiplex (autorelaxed) (mobileSlot2)
+ *
+ * Desktop:
+ *  - Mặc định KHÔNG render thủ công (nhường Auto Ads).
+ *  - Có thể bật fallback cố định: enableDesktopFallback + desktopFallbackSlot (responsive).
+ */
 export default function AdUnit({
-  // Slots
   mobileSlot1 = '5160182988',   // 300x250
   mobileSlot2 = '7109430646',   // Multiplex
-  // Chọn biến thể mobile cho vị trí này
   mobileVariant = 'compact',     // 'compact' | 'multiplex'
   label = 'Quảng cáo',
   className = '',
-  // Desktop fallback (tùy chọn)
   enableDesktopFallback = false,
-  desktopFallbackSlot = '4575220124', // responsive slot (nếu dùng fallback)
+  desktopFallbackSlot = '4575220124',
 }) {
   const mRef = useRef(null);
   const dFbRef = useRef(null);
@@ -72,10 +78,10 @@ export default function AdUnit({
     <div className={`my-6 w-full flex flex-col items-center ${className}`}>
       <span className="text-sm text-gray-500 font-semibold mb-2">{label}</span>
 
-      {/* ===== Mobile: CHỈ một block theo mobileVariant ===== */}
+      {/* Mobile: mỗi vị trí chỉ 1 block theo mobileVariant */}
       <div className="block md:hidden w-full">
         {isCompact ? (
-          // 300×250 (giữ kích thước cố định để tránh CLS)
+          // 300×250: cố định để tránh CLS
           <ins
             ref={mRef}
             className="adsbygoogle"
@@ -91,15 +97,16 @@ export default function AdUnit({
             data-full-width-responsive="false"
           />
         ) : (
-          // Multiplex: cần data-ad-format="autorelaxed", KHÔNG ép width/height cố định
+          // Multiplex: cần autorelaxed, chiếm full bề ngang container
           <ins
             ref={mRef}
             className="adsbygoogle"
             style={{
               display: 'block',
               width: '100%',
+              maxWidth: '100%',
               margin: '0 auto',
-              minHeight: '800px', // giữ chỗ giảm layout shift; có thể chỉnh 600–800
+              minHeight: '600px', // 600–800 tuỳ nội dung, để tránh layout shift
             }}
             data-ad-client="ca-pub-3905625903416797"
             data-ad-slot={mobileSlot2}
@@ -109,14 +116,17 @@ export default function AdUnit({
         )}
       </div>
 
-      {/* ===== Desktop: KHÔNG render thủ công – nhường Auto Ads ===== */}
-      {/* (Tuỳ chọn) Fallback responsive cho desktop nếu muốn thêm 1 vị trí cố định */}
+      {/* Desktop: Fallback responsive nếu bật */}
       {enableDesktopFallback && (
-        <div className="hidden md:block w-full" style={{ maxWidth: 1100 }}>
+        <div className="hidden md:block w-full">
           <ins
             ref={dFbRef}
             className="adsbygoogle"
-            style={{ display: 'block', margin: '0.5rem auto 0' }}
+            style={{
+              display: 'block',
+              margin: '0.5rem auto 0',
+              minHeight: '120px', // giữ chỗ trước khi fill, giúp thấy rõ là có banner desktop
+            }}
             data-ad-client="ca-pub-3905625903416797"
             data-ad-slot={desktopFallbackSlot}
             data-ad-format="auto"

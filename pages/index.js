@@ -19,22 +19,29 @@ export default function Home({ categoriesWithApps, certStatus }) {
   // Chèn Multiplex sau card #2 và #4 (index 1 và 3)
   const multiplexIndices = new Set([1, 3]);
 
+  // Lớp "card" dùng chung cho quảng cáo để đồng bộ kích thước/viền với chuyên mục
+  const cardClass =
+    'bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4';
+
   return (
     <Layout>
       <div className="container mx-auto px-1 md:px-2 py-6 space-y-10">
-        {/* ── Banner đầu trang: Compact + desktop fallback */}
-        <AdUnit
-          mobileVariant="compact"
-          mobileSlot1="5160182988"
-          mobileSlot2="7109430646"
-          enableDesktopFallback
-          desktopFallbackSlot="4575220124"
-        />
+        {/* ── Banner đầu trang: đặt trong 1 card riêng (compact + desktop fallback) */}
+        <div className={cardClass}>
+          <AdUnit
+            className="my-0"
+            mobileVariant="compact"
+            mobileSlot1="5160182988"
+            mobileSlot2="7109430646"
+            enableDesktopFallback
+            desktopFallbackSlot="4575220124"
+          />
+        </div>
 
         {categoriesWithApps.map((category, index) => (
           <Fragment key={category.id}>
             {/* Card chuyên mục */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 pt-6 pb-2">
+            <div className={cardClass}>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-gray-800 dark:text-white">
                   {category.name}
@@ -80,26 +87,32 @@ export default function Home({ categoriesWithApps, certStatus }) {
               </div>
             </div>
 
-            {/* ── Multiplex giữa trang: đặt BÊN NGOÀI card, sau mục #2/#4; bật desktop fallback */}
+            {/* ── Multiplex giữa trang: card riêng, tách khỏi chuyên mục; bật desktop fallback */}
             {multiplexIndices.has(index) && (
-              <AdUnit
-                className="my-0"                // tránh cộng dồn khoảng cách; rely on space-y-10 của container
-                mobileVariant="multiplex"
-                mobileSlot1="5160182988"
-                mobileSlot2="7109430646"
-                enableDesktopFallback
-                desktopFallbackSlot="4575220124"
-              />
+              <div className={cardClass}>
+                <AdUnit
+                  className="my-0"
+                  mobileVariant="multiplex"
+                  mobileSlot1="5160182988"
+                  mobileSlot2="7109430646"
+                  enableDesktopFallback
+                  desktopFallbackSlot="4575220124"
+                />
+              </div>
             )}
           </Fragment>
         ))}
 
-        {/* ── Banner cuối trang: Compact (không bật desktop fallback để footer thoáng) */}
-        <AdUnit
-          mobileVariant="compact"
-          mobileSlot1="5160182988"
-          mobileSlot2="7109430646"
-        />
+        {/* ── Banner cuối trang: card riêng, compact (footer thoáng) */}
+        <div className={cardClass}>
+          <AdUnit
+            className="my-0"
+            mobileVariant="compact"
+            mobileSlot1="5160182988"
+            mobileSlot2="7109430646"
+            // cuối trang không bật fallback để nhẹ phần footer
+          />
+        </div>
       </div>
     </Layout>
   );
@@ -114,13 +127,9 @@ export async function getServerSideProps(ctx) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Giữ nguyên chế độ chỉ-admin khi đang dev
   if (!user && !isGoogleBot) {
     return {
-      redirect: {
-        destination: '/under-construction',
-        permanent: false,
-      },
+      redirect: { destination: '/under-construction', permanent: false },
     };
   }
 
@@ -138,16 +147,13 @@ export async function getServerSideProps(ctx) {
     })
   );
 
-  // Kiểm tra chứng chỉ (giữ server-side như bạn đang dùng)
   let certStatus = null;
   try {
     const res = await fetch('https://ipadl.storeios.net/api/check-revocation');
     certStatus = await res.json();
-  } catch (err) {
+  } catch {
     certStatus = { ocspStatus: 'error' };
   }
 
-  return {
-    props: { categoriesWithApps, certStatus },
-  };
+  return { props: { categoriesWithApps, certStatus } };
 }
