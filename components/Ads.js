@@ -99,7 +99,7 @@ export default function AdUnit({
               display: 'block',
               width: '100%',
               margin: '0 auto',
-              minHeight: '600px', // giữ chỗ giảm layout shift; có thể chỉnh 600–800
+              minHeight: '800px', // giữ chỗ giảm layout shift; có thể chỉnh 600–800
             }}
             data-ad-client="ca-pub-3905625903416797"
             data-ad-slot={mobileSlot2}
