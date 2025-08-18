@@ -5,6 +5,7 @@ import Layout from '../components/Layout';
 import AppCard from '../components/AppCard';
 import AdUnit from '../components/Ads';
 import { createSupabaseServer } from '../lib/supabase';
+import { Fragment } from 'react';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -15,7 +16,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 
 export default function Home({ categoriesWithApps, certStatus }) {
-  // Chọn các mốc chèn Multiplex giữa trang: sau mục #2 và #4 (index 1 và 3)
+  // Chèn Multiplex sau card #2 và #4 (index 1 và 3)
   const multiplexIndices = new Set([1, 3]);
 
   return (
@@ -31,57 +32,58 @@ export default function Home({ categoriesWithApps, certStatus }) {
         />
 
         {categoriesWithApps.map((category, index) => (
-          <div
-            key={category.id}
-            className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 pt-6 pb-2"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-800 dark:text-white">
-                {category.name}
-              </h2>
+          <Fragment key={category.id}>
+            {/* Card chuyên mục */}
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 pt-6 pb-2">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white">
+                  {category.name}
+                </h2>
 
-              {category.name.toLowerCase().includes('jailbreak') && (
-                <span
-                  className="flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300 cursor-pointer"
-                  title={
-                    certStatus?.ocspStatus === 'successful'
-                      ? certStatus.isRevoked
-                        ? 'Chứng chỉ đã bị thu hồi'
-                        : 'Chứng chỉ hợp lệ'
-                      : 'Không thể kiểm tra'
-                  }
-                >
-                  {certStatus?.ocspStatus === 'successful' ? (
-                    certStatus.isRevoked ? (
-                      <>
-                        <span className="font-bold text-red-600">Revoked</span>
-                        <FontAwesomeIcon icon={faTimesCircle} className="text-red-500" />
-                      </>
+                {category.name.toLowerCase().includes('jailbreak') && (
+                  <span
+                    className="flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300 cursor-pointer"
+                    title={
+                      certStatus?.ocspStatus === 'successful'
+                        ? certStatus.isRevoked
+                          ? 'Chứng chỉ đã bị thu hồi'
+                          : 'Chứng chỉ hợp lệ'
+                        : 'Không thể kiểm tra'
+                    }
+                  >
+                    {certStatus?.ocspStatus === 'successful' ? (
+                      certStatus.isRevoked ? (
+                        <>
+                          <span className="font-bold text-red-600">Revoked</span>
+                          <FontAwesomeIcon icon={faTimesCircle} className="text-red-500" />
+                        </>
+                      ) : (
+                        <>
+                          <span className="font-bold text-green-600">Signed</span>
+                          <FontAwesomeIcon icon={faCheckCircle} className="text-green-500" />
+                        </>
+                      )
                     ) : (
                       <>
-                        <span className="font-bold text-green-600">Signed</span>
-                        <FontAwesomeIcon icon={faCheckCircle} className="text-green-500" />
+                        <span className="font-bold text-gray-500">Error</span>
+                        <FontAwesomeIcon icon={faExclamationCircle} className="text-gray-400" />
                       </>
-                    )
-                  ) : (
-                    <>
-                      <span className="font-bold text-gray-500">Error</span>
-                      <FontAwesomeIcon icon={faExclamationCircle} className="text-gray-400" />
-                    </>
-                  )}
-                </span>
-              )}
+                    )}
+                  </span>
+                )}
+              </div>
+
+              <div>
+                {category.apps.map((app) => (
+                  <AppCard key={app.id} app={app} mode="list" />
+                ))}
+              </div>
             </div>
 
-            <div>
-              {category.apps.map((app) => (
-                <AppCard key={app.id} app={app} mode="list" />
-              ))}
-            </div>
-
-            {/* ── Multiplex giữa trang: sau mục #2 và #4, có desktop fallback */}
+            {/* ── Multiplex giữa trang: đặt BÊN NGOÀI card, sau mục #2/#4; bật desktop fallback */}
             {multiplexIndices.has(index) && (
               <AdUnit
+                className="my-0"                // tránh cộng dồn khoảng cách; rely on space-y-10 của container
                 mobileVariant="multiplex"
                 mobileSlot1="5160182988"
                 mobileSlot2="7109430646"
@@ -89,7 +91,7 @@ export default function Home({ categoriesWithApps, certStatus }) {
                 desktopFallbackSlot="4575220124"
               />
             )}
-          </div>
+          </Fragment>
         ))}
 
         {/* ── Banner cuối trang: Compact (không bật desktop fallback để footer thoáng) */}
