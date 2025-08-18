@@ -15,13 +15,20 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 
 export default function Home({ categoriesWithApps, certStatus }) {
+  // Chọn các mốc chèn Multiplex giữa trang: sau mục #2 và #4 (index 1 và 3)
+  const multiplexIndices = new Set([1, 3]);
+
   return (
     <Layout>
       <div className="container mx-auto px-1 md:px-2 py-6 space-y-10">
-        {/* Banner đầu trang */}
-        <AdUnit mobileVariant="compact" mobileSlot1="5160182988" mobileSlot2="7109430646"
-enableDesktopFallback
-desktopFallbackSlot="4575220124" />
+        {/* ── Banner đầu trang: Compact + desktop fallback */}
+        <AdUnit
+          mobileVariant="compact"
+          mobileSlot1="5160182988"
+          mobileSlot2="7109430646"
+          enableDesktopFallback
+          desktopFallbackSlot="4575220124"
+        />
 
         {categoriesWithApps.map((category, index) => (
           <div
@@ -72,20 +79,25 @@ desktopFallbackSlot="4575220124" />
               ))}
             </div>
 
-            {/* Banner giữa trang: sau mỗi 2 danh mục và giới hạn để tránh dày đặc */}
-            {((index + 1) % 2 === 0) && (index < 4) && (
-              <AdUnit mobileVariant="multiplex" mobileSlot1="5160182988" mobileSlot2="7109430646"
-enableDesktopFallback
-desktopFallbackSlot="4575220124"
-/>              
+            {/* ── Multiplex giữa trang: sau mục #2 và #4, có desktop fallback */}
+            {multiplexIndices.has(index) && (
+              <AdUnit
+                mobileVariant="multiplex"
+                mobileSlot1="5160182988"
+                mobileSlot2="7109430646"
+                enableDesktopFallback
+                desktopFallbackSlot="4575220124"
+              />
             )}
           </div>
         ))}
 
-        {/* Banner cuối trang */}
-        <AdUnit mobileVariant="compact" mobileSlot1="5160182988" mobileSlot2="7109430646"
-enableDesktopFallback
-desktopFallbackSlot="4575220124" />
+        {/* ── Banner cuối trang: Compact (không bật desktop fallback để footer thoáng) */}
+        <AdUnit
+          mobileVariant="compact"
+          mobileSlot1="5160182988"
+          mobileSlot2="7109430646"
+        />
       </div>
     </Layout>
   );
@@ -120,10 +132,7 @@ export async function getServerSideProps(ctx) {
         .eq('category_id', category.id)
         .order('created_at', { ascending: false });
 
-      return {
-        ...category,
-        apps: apps || [],
-      };
+      return { ...category, apps: apps || [] };
     })
   );
 
@@ -137,9 +146,6 @@ export async function getServerSideProps(ctx) {
   }
 
   return {
-    props: {
-      categoriesWithApps,
-      certStatus,
-    },
+    props: { categoriesWithApps, certStatus },
   };
 }
