@@ -6,29 +6,39 @@ import AppCard from '../components/AppCard';
 import AdUnit from '../components/Ads';
 import { createSupabaseServer } from '../lib/supabase';
 import { Fragment } from 'react';
+
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faTimesCircle, faCheckCircle, faExclamationCircle } from '@fortawesome/free-solid-svg-icons';
+import {
+  faTimesCircle,
+  faCheckCircle,
+  faExclamationCircle,
+} from '@fortawesome/free-solid-svg-icons';
 
 export default function Home({ categoriesWithApps, certStatus }) {
-  // Vị trí Multiplex: sau card #2 và #4
+  // Chèn Multiplex sau card #2 và #4 (index 1 và 3)
   const multiplexIndices = new Set([1, 3]);
 
-  // Card nội dung (giữ nguyên padding bạn đang dùng)
+  // Card nội dung
   const contentCard =
     'bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4';
 
-  // Card QUẢNG CÁO: KHÔNG padding, có overflow-hidden để bo góc cắt chuẩn
-  const adCard =
-    'bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden';
+  // Card quảng cáo: dùng chung style với content (có padding), KHÔNG overflow/cắt
+  const adCard = contentCard;
+
+  // Nhãn quảng cáo (đặt ngoài card)
+  const AdLabel = () => (
+    <div className="text-sm text-gray-500 dark:text-gray-400 font-semibold mb-2 px-1">
+      Quảng cáo
+    </div>
+  );
 
   return (
     <Layout>
       <div className="container mx-auto px-1 md:px-2 py-6 space-y-10">
-        {/* ── Banner đầu trang: adCard riêng, Compact */}
+        {/* ── Banner đầu trang: NHÃN ngoài card + card quảng cáo (compact) */}
+        <AdLabel />
         <div className={adCard}>
-          <div className="px-4 md:px-6 pt-4"> {/* label và khoảng cách trên */}
-            <AdUnit className="my-0" mobileVariant="compact" />
-          </div>
+          <AdUnit className="my-0" mobileVariant="compact" />
         </div>
 
         {categoriesWithApps.map((category, index) => (
@@ -45,9 +55,7 @@ export default function Home({ categoriesWithApps, certStatus }) {
                     className="flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300 cursor-pointer"
                     title={
                       certStatus?.ocspStatus === 'successful'
-                        ? certStatus.isRevoked
-                          ? 'Chứng chỉ đã bị thu hồi'
-                          : 'Chứng chỉ hợp lệ'
+                        ? (certStatus.isRevoked ? 'Chứng chỉ đã bị thu hồi' : 'Chứng chỉ hợp lệ')
                         : 'Không thể kiểm tra'
                     }
                   >
@@ -80,23 +88,22 @@ export default function Home({ categoriesWithApps, certStatus }) {
               </div>
             </div>
 
-            {/* ── Multiplex giữa trang: adCard riêng, KHÔNG padding, để ad fill trọn card */}
+            {/* ── Multiplex giữa trang: NHÃN ngoài card + card quảng cáo (multiplex) */}
             {multiplexIndices.has(index) && (
-              <div className={adCard}>
-                {/* Label và khoảng cách trên, còn vùng quảng cáo không padding để creative fill full */}
-                <div className="px-4 md:px-6 pt-4">
+              <>
+                <AdLabel />
+                <div className={adCard}>
                   <AdUnit className="my-0" mobileVariant="multiplex" />
                 </div>
-              </div>
+              </>
             )}
           </Fragment>
         ))}
 
-        {/* ── Banner cuối trang: adCard riêng, Compact */}
+        {/* ── Banner cuối trang: NHÃN ngoài card + card quảng cáo (compact) */}
+        <AdLabel />
         <div className={adCard}>
-          <div className="px-4 md:px-6 pt-4">
-            <AdUnit className="my-0" mobileVariant="compact" />
-          </div>
+          <AdUnit className="my-0" mobileVariant="compact" />
         </div>
       </div>
     </Layout>
@@ -112,6 +119,7 @@ export async function getServerSideProps(ctx) {
     data: { user },
   } = await supabase.auth.getUser();
 
+  // Giữ nguyên flow hiện có của bạn
   if (!user && !isGoogleBot) {
     return {
       redirect: { destination: '/under-construction', permanent: false },

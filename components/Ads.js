@@ -1,21 +1,21 @@
 // components/Ads.js
 'use client';
+
 import { useEffect, useRef } from 'react';
 
 /**
  * Mobile:
- *  - mobileVariant="compact"   -> 300x250 (mobileSlot1, cố định, không tràn)
- *  - mobileVariant="multiplex" -> Multiplex (autorelaxed) (mobileSlot2), ép fit card
+ *  - mobileVariant="compact"   -> 300x250 (mobileSlot1)
+ *  - mobileVariant="multiplex" -> Multiplex (autorelaxed) (mobileSlot2)
  *
  * Desktop:
  *  - KHÔNG render banner thủ công (nhường hoàn toàn cho Auto Ads).
  */
 export default function AdUnit({
   className = '',
-  mobileVariant = 'compact', // 'compact' | 'multiplex'
-  mobileSlot1 = '5160182988',
-  mobileSlot2 = '7109430646',
-  label = 'Quảng cáo',
+  mobileVariant = 'compact',      // 'compact' | 'multiplex'
+  mobileSlot1 = '5160182988',     // 300x250
+  mobileSlot2 = '7109430646',     // Multiplex
 }) {
   const mRef = useRef(null);
 
@@ -28,13 +28,13 @@ export default function AdUnit({
       } catch {}
     };
 
-    // IntersectionObserver: chỉ push khi vào viewport
     const el = mRef.current;
     if (!el) return;
+
     if ('IntersectionObserver' in window) {
       const io = new IntersectionObserver(
-        entries => {
-          entries.forEach(e => {
+        (entries) => {
+          entries.forEach((e) => {
             if (e.isIntersecting) {
               push();
               io.unobserve(el);
@@ -54,14 +54,10 @@ export default function AdUnit({
 
   return (
     <div className={`w-full ${className}`}>
-      <span className="text-sm text-gray-500 dark:text-gray-400 font-semibold mb-2 block">
-        {label}
-      </span>
-
       {/* Mobile only */}
       <div className="block md:hidden w-full">
         {isCompact ? (
-          // 300×250 cố định -> không tràn, căn giữa
+          // 300×250: cố định, căn giữa -- KHÔNG tràn
           <ins
             ref={mRef}
             className="adsbygoogle"
@@ -70,7 +66,7 @@ export default function AdUnit({
               width: 300,
               height: 250,
               margin: '0 auto',
-              minHeight: 250, // chống CLS
+              minHeight: 250,
               boxSizing: 'border-box',
             }}
             data-ad-client="ca-pub-3905625903416797"
@@ -78,8 +74,8 @@ export default function AdUnit({
             data-full-width-responsive="false"
           />
         ) : (
-          // Multiplex: ép fit card nhờ clipper + ép iframe 100%
-          <div className="ad-clip">
+          // Multiplex: ép bên trong card luôn fit 100% bề ngang (không cắt)
+          <div className="ad-fit">
             <ins
               ref={mRef}
               className="adsbygoogle"
@@ -88,7 +84,7 @@ export default function AdUnit({
                 width: '100%',
                 maxWidth: '100%',
                 margin: 0,
-                minHeight: 660, // 600–800 tuỳ creative
+                minHeight: 660, // 600–800 tùy creative
                 boxSizing: 'border-box',
               }}
               data-ad-client="ca-pub-3905625903416797"
@@ -100,19 +96,24 @@ export default function AdUnit({
         )}
       </div>
 
-      {/* Desktop: KHÔNG render gì – Auto Ads sẽ tự quyết */}
+      {/* Desktop: KHÔNG render gì -- Auto Ads sẽ tự quyết */}
       <div className="hidden md:block w-full" />
 
       <style jsx>{`
-        /* Clipper bám đúng card: bo góc + cắt mọi phần thò ra */
-        .ad-clip {
+        /* Bọc Multiplex để mọi phần tử bên trong không vượt quá bề ngang card */
+        .ad-fit {
           width: 100%;
-          overflow: hidden;
-          border-radius: inherit;
         }
-        /* Ép mọi iframe AdSense bên trong không vượt quá bề ngang card */
-        .ad-clip :global(iframe) {
+        /* Ép chính iframe của AdSense co theo card */
+        .ad-fit :global(iframe) {
           width: 100% !important;
+          max-width: 100% !important;
+          height: auto;
+        }
+        /* Một số creative dùng div/img bên trong -- phòng trường hợp tràn */
+        .ad-fit :global(img),
+        .ad-fit :global(video),
+        .ad-fit :global(div) {
           max-width: 100% !important;
         }
       `}</style>
