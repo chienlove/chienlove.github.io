@@ -19,14 +19,14 @@ export default function Home({ categoriesWithApps, certStatus }) {
   // Chèn Multiplex sau card #2 và #4 (index 1 và 3)
   const multiplexIndices = new Set([1, 3]);
 
-  // Lớp "card" dùng chung cho quảng cáo để đồng bộ kích thước/viền với chuyên mục
+  // Card dùng chung: thêm overflow-hidden để cắt phần Multiplex lấn ra ngoài
   const cardClass =
-    'bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4';
+    'bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4 overflow-hidden';
 
   return (
     <Layout>
       <div className="container mx-auto px-1 md:px-2 py-6 space-y-10">
-        {/* ── Banner đầu trang: đặt trong 1 card riêng (compact + desktop fallback) */}
+        {/* ── Banner đầu trang: card riêng, Compact + desktop fallback */}
         <div className={cardClass}>
           <AdUnit
             className="my-0"
@@ -52,9 +52,7 @@ export default function Home({ categoriesWithApps, certStatus }) {
                     className="flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300 cursor-pointer"
                     title={
                       certStatus?.ocspStatus === 'successful'
-                        ? certStatus.isRevoked
-                          ? 'Chứng chỉ đã bị thu hồi'
-                          : 'Chứng chỉ hợp lệ'
+                        ? (certStatus.isRevoked ? 'Chứng chỉ đã bị thu hồi' : 'Chứng chỉ hợp lệ')
                         : 'Không thể kiểm tra'
                     }
                   >
@@ -110,7 +108,6 @@ export default function Home({ categoriesWithApps, certStatus }) {
             mobileVariant="compact"
             mobileSlot1="5160182988"
             mobileSlot2="7109430646"
-            // cuối trang không bật fallback để nhẹ phần footer
           />
         </div>
       </div>
