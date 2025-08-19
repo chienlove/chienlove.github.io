@@ -19,14 +19,15 @@ export default function Home({ categoriesWithApps, certStatus }) {
   // Chèn Multiplex sau card #2 và #4 (index 1 và 3)
   const multiplexIndices = new Set([1, 3]);
 
-  // Card dùng chung cho cả chuyên mục và quảng cáo (KHÔNG overflow-hidden để Multiplex không bị cắt)
+  // Card dùng chung cho cả chuyên mục và quảng cáo (không cần overflow-hidden;
+  // Multiplex đã có "clipper" chống tràn ngay trong Ads.js)
   const cardClass =
     'bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4';
 
   return (
     <Layout>
       <div className="container mx-auto px-1 md:px-2 py-6 space-y-10">
-        {/* ── Banner đầu trang: card riêng, compact (desktop: Auto Ads sẽ tự xử lý) */}
+        {/* ── Banner đầu trang: card riêng, compact (desktop: Auto Ads tự xử lý) */}
         <div className={cardClass}>
           <AdUnit
             className="my-0"
@@ -63,7 +64,7 @@ export default function Home({ categoriesWithApps, certStatus }) {
                       ) : (
                         <>
                           <span className="font-bold text-green-600">Signed</span>
-                        <FontAwesomeIcon icon={faCheckCircle} className="text-green-500" />
+                          <FontAwesomeIcon icon={faCheckCircle} className="text-green-500" />
                         </>
                       )
                     ) : (
@@ -83,7 +84,7 @@ export default function Home({ categoriesWithApps, certStatus }) {
               </div>
             </div>
 
-            {/* ── Multiplex giữa trang: card riêng, tách khỏi chuyên mục */}
+            {/* ── Multiplex giữa trang: card riêng, tách khỏi chuyên mục (desktop: Auto Ads) */}
             {multiplexIndices.has(index) && (
               <div className={cardClass}>
                 <AdUnit
@@ -97,7 +98,7 @@ export default function Home({ categoriesWithApps, certStatus }) {
           </Fragment>
         ))}
 
-        {/* ── Banner cuối trang: card riêng, compact */}
+        {/* ── Banner cuối trang: card riêng, compact (footer thoáng) */}
         <div className={cardClass}>
           <AdUnit
             className="my-0"
