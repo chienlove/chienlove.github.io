@@ -19,22 +19,20 @@ export default function Home({ categoriesWithApps, certStatus }) {
   // Chèn Multiplex sau card #2 và #4 (index 1 và 3)
   const multiplexIndices = new Set([1, 3]);
 
-  // Card dùng chung: thêm overflow-hidden để cắt phần Multiplex lấn ra ngoài
+  // Card dùng chung cho cả chuyên mục và quảng cáo (KHÔNG overflow-hidden để Multiplex không bị cắt)
   const cardClass =
-    'bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4 overflow-hidden';
+    'bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4';
 
   return (
     <Layout>
       <div className="container mx-auto px-1 md:px-2 py-6 space-y-10">
-        {/* ── Banner đầu trang: card riêng, Compact + desktop fallback */}
+        {/* ── Banner đầu trang: card riêng, compact (desktop: Auto Ads sẽ tự xử lý) */}
         <div className={cardClass}>
           <AdUnit
             className="my-0"
             mobileVariant="compact"
             mobileSlot1="5160182988"
             mobileSlot2="7109430646"
-            enableDesktopFallback
-            desktopFallbackSlot="4575220124"
           />
         </div>
 
@@ -65,7 +63,7 @@ export default function Home({ categoriesWithApps, certStatus }) {
                       ) : (
                         <>
                           <span className="font-bold text-green-600">Signed</span>
-                          <FontAwesomeIcon icon={faCheckCircle} className="text-green-500" />
+                        <FontAwesomeIcon icon={faCheckCircle} className="text-green-500" />
                         </>
                       )
                     ) : (
@@ -85,7 +83,7 @@ export default function Home({ categoriesWithApps, certStatus }) {
               </div>
             </div>
 
-            {/* ── Multiplex giữa trang: card riêng, tách khỏi chuyên mục; bật desktop fallback */}
+            {/* ── Multiplex giữa trang: card riêng, tách khỏi chuyên mục */}
             {multiplexIndices.has(index) && (
               <div className={cardClass}>
                 <AdUnit
@@ -93,15 +91,13 @@ export default function Home({ categoriesWithApps, certStatus }) {
                   mobileVariant="multiplex"
                   mobileSlot1="5160182988"
                   mobileSlot2="7109430646"
-                  enableDesktopFallback
-                  desktopFallbackSlot="4575220124"
                 />
               </div>
             )}
           </Fragment>
         ))}
 
-        {/* ── Banner cuối trang: card riêng, compact (footer thoáng) */}
+        {/* ── Banner cuối trang: card riêng, compact */}
         <div className={cardClass}>
           <AdUnit
             className="my-0"

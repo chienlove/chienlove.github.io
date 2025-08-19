@@ -2,18 +2,22 @@
 'use client';
 import { useEffect, useRef } from 'react';
 
+/**
+ * Mobile:
+ *  - mobileVariant="compact"   -> 300x250 (mobileSlot1)
+ *  - mobileVariant="multiplex" -> Multiplex (autorelaxed) (mobileSlot2)
+ *
+ * Desktop:
+ *  - KHÔNG render banner thủ công (nhường hoàn toàn cho Auto Ads).
+ */
 export default function AdUnit({
-  // Slots
   mobileSlot1 = '5160182988',   // 300x250
   mobileSlot2 = '7109430646',   // Multiplex
   mobileVariant = 'compact',     // 'compact' | 'multiplex'
   label = 'Quảng cáo',
   className = '',
-  enableDesktopFallback = false,
-  desktopFallbackSlot = '4575220124', // responsive
 }) {
   const mRef = useRef(null);
-  const dFbRef = useRef(null);
 
   useEffect(() => {
     const canPush = () =>
@@ -57,12 +61,8 @@ export default function AdUnit({
     };
 
     const unM = observe(mRef.current);
-    const unD = enableDesktopFallback ? observe(dFbRef.current) : () => {};
-    return () => {
-      unM && unM();
-      unD && unD();
-    };
-  }, [enableDesktopFallback]);
+    return () => { unM && unM(); };
+  }, []);
 
   const isCompact = mobileVariant === 'compact';
 
@@ -70,10 +70,10 @@ export default function AdUnit({
     <div className={`my-6 w-full flex flex-col items-center ${className}`}>
       <span className="text-sm text-gray-500 font-semibold mb-2">{label}</span>
 
-      {/* ===== Mobile: chỉ 1 block theo biến thể ===== */}
+      {/* Mobile only */}
       <div className="block md:hidden w-full">
         {isCompact ? (
-          // Compact: 300×250 cố định
+          // 300×250 cố định
           <ins
             ref={mRef}
             className="adsbygoogle"
@@ -89,15 +89,12 @@ export default function AdUnit({
             data-full-width-responsive="false"
           />
         ) : (
-          // Multiplex: bọc thêm 1 layer để kiểm soát bề rộng & tránh tràn
+          // Multiplex: full width theo card chứa, không ép kích thước cố định
           <div
             className="mx-auto"
             style={{
               width: '100%',
-              maxWidth: '100%',
-              // padding nội bộ cho cảm giác giống nội dung card (không bắt buộc)
-              paddingLeft: '2px',
-              paddingRight: '2px',
+              maxWidth: '100%',    // không vượt quá bề ngang card
             }}
           >
             <ins
@@ -108,8 +105,7 @@ export default function AdUnit({
                 width: '100%',
                 maxWidth: '100%',
                 margin: '0 auto',
-                // Multiplex thường cao; giữ chỗ tránh CLS
-                minHeight: '680px',
+                minHeight: '620px', // giữ chỗ giảm layout shift
               }}
               data-ad-client="ca-pub-3905625903416797"
               data-ad-slot={mobileSlot2}
@@ -120,25 +116,8 @@ export default function AdUnit({
         )}
       </div>
 
-      {/* ===== Desktop: fallback responsive cố định (tuỳ chọn) ===== */}
-      {enableDesktopFallback && (
-        <div className="hidden md:block w-full">
-          <ins
-            ref={dFbRef}
-            className="adsbygoogle"
-            style={{
-              display: 'block',
-              margin: '0.5rem auto 0',
-              // Giữ chỗ đủ lớn để thấy rõ có banner desktop
-              minHeight: '250px',
-            }}
-            data-ad-client="ca-pub-3905625903416797"
-            data-ad-slot={desktopFallbackSlot}
-            data-ad-format="auto"
-            data-full-width-responsive="true"
-          />
-        </div>
-      )}
+      {/* Desktop: KHÔNG render gì ở đây -- để Auto Ads quyết định */}
+      <div className="hidden md:block w-full" />
     </div>
   );
 }
