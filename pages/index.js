@@ -6,41 +6,35 @@ import AppCard from '../components/AppCard';
 import AdUnit from '../components/Ads';
 import { createSupabaseServer } from '../lib/supabase';
 import { Fragment } from 'react';
-
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {
-  faSpinner,
-  faTimesCircle,
-  faCheckCircle,
-  faExclamationCircle,
-} from '@fortawesome/free-solid-svg-icons';
+import { faTimesCircle, faCheckCircle, faExclamationCircle } from '@fortawesome/free-solid-svg-icons';
 
 export default function Home({ categoriesWithApps, certStatus }) {
-  // Chèn Multiplex sau card #2 và #4 (index 1 và 3)
+  // Vị trí Multiplex: sau card #2 và #4
   const multiplexIndices = new Set([1, 3]);
 
-  // Card dùng chung cho cả chuyên mục và quảng cáo (không cần overflow-hidden;
-  // Multiplex đã có "clipper" chống tràn ngay trong Ads.js)
-  const cardClass =
+  // Card nội dung (giữ nguyên padding bạn đang dùng)
+  const contentCard =
     'bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4';
+
+  // Card QUẢNG CÁO: KHÔNG padding, có overflow-hidden để bo góc cắt chuẩn
+  const adCard =
+    'bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 overflow-hidden';
 
   return (
     <Layout>
       <div className="container mx-auto px-1 md:px-2 py-6 space-y-10">
-        {/* ── Banner đầu trang: card riêng, compact (desktop: Auto Ads tự xử lý) */}
-        <div className={cardClass}>
-          <AdUnit
-            className="my-0"
-            mobileVariant="compact"
-            mobileSlot1="5160182988"
-            mobileSlot2="7109430646"
-          />
+        {/* ── Banner đầu trang: adCard riêng, Compact */}
+        <div className={adCard}>
+          <div className="px-4 md:px-6 pt-4"> {/* label và khoảng cách trên */}
+            <AdUnit className="my-0" mobileVariant="compact" />
+          </div>
         </div>
 
         {categoriesWithApps.map((category, index) => (
           <Fragment key={category.id}>
             {/* Card chuyên mục */}
-            <div className={cardClass}>
+            <div className={contentCard}>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-gray-800 dark:text-white">
                   {category.name}
@@ -51,7 +45,9 @@ export default function Home({ categoriesWithApps, certStatus }) {
                     className="flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300 cursor-pointer"
                     title={
                       certStatus?.ocspStatus === 'successful'
-                        ? (certStatus.isRevoked ? 'Chứng chỉ đã bị thu hồi' : 'Chứng chỉ hợp lệ')
+                        ? certStatus.isRevoked
+                          ? 'Chứng chỉ đã bị thu hồi'
+                          : 'Chứng chỉ hợp lệ'
                         : 'Không thể kiểm tra'
                     }
                   >
@@ -84,28 +80,23 @@ export default function Home({ categoriesWithApps, certStatus }) {
               </div>
             </div>
 
-            {/* ── Multiplex giữa trang: card riêng, tách khỏi chuyên mục (desktop: Auto Ads) */}
+            {/* ── Multiplex giữa trang: adCard riêng, KHÔNG padding, để ad fill trọn card */}
             {multiplexIndices.has(index) && (
-              <div className={cardClass}>
-                <AdUnit
-                  className="my-0"
-                  mobileVariant="multiplex"
-                  mobileSlot1="5160182988"
-                  mobileSlot2="7109430646"
-                />
+              <div className={adCard}>
+                {/* Label và khoảng cách trên, còn vùng quảng cáo không padding để creative fill full */}
+                <div className="px-4 md:px-6 pt-4">
+                  <AdUnit className="my-0" mobileVariant="multiplex" />
+                </div>
               </div>
             )}
           </Fragment>
         ))}
 
-        {/* ── Banner cuối trang: card riêng, compact (footer thoáng) */}
-        <div className={cardClass}>
-          <AdUnit
-            className="my-0"
-            mobileVariant="compact"
-            mobileSlot1="5160182988"
-            mobileSlot2="7109430646"
-          />
+        {/* ── Banner cuối trang: adCard riêng, Compact */}
+        <div className={adCard}>
+          <div className="px-4 md:px-6 pt-4">
+            <AdUnit className="my-0" mobileVariant="compact" />
+          </div>
         </div>
       </div>
     </Layout>
