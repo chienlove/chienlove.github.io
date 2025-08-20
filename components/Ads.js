@@ -74,7 +74,7 @@ export default function AdUnit({
             data-full-width-responsive="false"
           />
         ) : (
-          // Multiplex: ép bên trong card luôn fit 100% bề ngang (không cắt)
+          // Multiplex: ép iframe/các phần tử bên trong co theo card, canh giữa
           <div className="ad-fit">
             <ins
               ref={mRef}
@@ -83,8 +83,8 @@ export default function AdUnit({
                 display: 'block',
                 width: '100%',
                 maxWidth: '100%',
-                margin: 0,
-                minHeight: 660, // 600–800 tùy creative
+                margin: '0 auto',
+                minHeight: 660, // 600–800 tuỳ inventory
                 boxSizing: 'border-box',
               }}
               data-ad-client="ca-pub-3905625903416797"
@@ -104,17 +104,22 @@ export default function AdUnit({
         .ad-fit {
           width: 100%;
         }
-        /* Ép chính iframe của AdSense co theo card */
+        /* Ép chính iframe của AdSense co theo card và canh giữa */
         .ad-fit :global(iframe) {
+          display: block !important;
           width: 100% !important;
           max-width: 100% !important;
-          height: auto;
+          margin-left: auto !important;
+          margin-right: auto !important;
+          height: auto !important;
         }
-        /* Một số creative dùng div/img bên trong -- phòng trường hợp tràn */
+        /* Phòng trường hợp creative dùng img/video/div full-bleed */
         .ad-fit :global(img),
-        .ad-fit :global(video),
-        .ad-fit :global(div) {
+        .ad-fit :global(video) {
           max-width: 100% !important;
+          height: auto !important;
+          display: block !important;
+          margin: 0 auto !important;
         }
       `}</style>
     </div>

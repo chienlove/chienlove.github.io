@@ -22,12 +22,11 @@ export default function Home({ categoriesWithApps, certStatus }) {
   const contentCard =
     'bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4';
 
-  // Card quảng cáo: dùng chung style với content (có padding), KHÔNG overflow/cắt
+  // Card quảng cáo: dùng chung style với content
   const adCard = contentCard;
 
-  // Nhãn quảng cáo (đặt ngoài card)
   const AdLabel = () => (
-    <div className="text-sm text-gray-500 dark:text-gray-400 font-semibold mb-2 px-1">
+    <div className="text-sm text-gray-500 dark:text-gray-400 font-semibold px-1">
       Quảng cáo
     </div>
   );
@@ -35,10 +34,12 @@ export default function Home({ categoriesWithApps, certStatus }) {
   return (
     <Layout>
       <div className="container mx-auto px-1 md:px-2 py-6 space-y-10">
-        {/* ── Banner đầu trang: NHÃN ngoài card + card quảng cáo (compact) */}
-        <AdLabel />
-        <div className={adCard}>
-          <AdUnit className="my-0" mobileVariant="compact" />
+        {/* ── Banner đầu trang: GỘP label + card vào 1 nhóm để không bị "xa" */}
+        <div className="space-y-2">
+          <AdLabel />
+          <div className={adCard}>
+            <AdUnit className="my-0" mobileVariant="compact" />
+          </div>
         </div>
 
         {categoriesWithApps.map((category, index) => (
@@ -88,22 +89,24 @@ export default function Home({ categoriesWithApps, certStatus }) {
               </div>
             </div>
 
-            {/* ── Multiplex giữa trang: NHÃN ngoài card + card quảng cáo (multiplex) */}
+            {/* ── Multiplex giữa trang: GỘP label + card vào 1 nhóm */}
             {multiplexIndices.has(index) && (
-              <>
+              <div className="space-y-2">
                 <AdLabel />
                 <div className={adCard}>
                   <AdUnit className="my-0" mobileVariant="multiplex" />
                 </div>
-              </>
+              </div>
             )}
           </Fragment>
         ))}
 
-        {/* ── Banner cuối trang: NHÃN ngoài card + card quảng cáo (compact) */}
-        <AdLabel />
-        <div className={adCard}>
-          <AdUnit className="my-0" mobileVariant="compact" />
+        {/* ── Banner cuối trang: GỘP label + card */}
+        <div className="space-y-2">
+          <AdLabel />
+          <div className={adCard}>
+            <AdUnit className="my-0" mobileVariant="compact" />
+          </div>
         </div>
       </div>
     </Layout>
@@ -119,7 +122,7 @@ export async function getServerSideProps(ctx) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Giữ nguyên flow hiện có của bạn
+  // Flow gốc giữ nguyên
   if (!user && !isGoogleBot) {
     return {
       redirect: { destination: '/under-construction', permanent: false },
