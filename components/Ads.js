@@ -5,10 +5,9 @@ import { useEffect, useRef } from 'react';
 
 export default function AdUnit({
   className = '',
-  mobileVariant = 'compact',      // 'compact' | 'multiplex'
-  mobileSlot1 = '5160182988',     // 300x250
-  mobileSlot2 = '7109430646',     // Multiplex
-  desktopSlot = '1234567890',     // <-- thay bằng slot desktop của bạn
+  mobileVariant = 'compact',
+  mobileSlot1 = '5160182988',
+  mobileSlot2 = '7109430646',
 }) {
   const mRef = useRef(null);
   const dRef = useRef(null);
@@ -89,15 +88,15 @@ export default function AdUnit({
         )}
       </div>
 
-      {/* DESKTOP */}
-      <div className="hidden md:block w-full flex justify-center">
+      {/* DESKTOP: Để Google tự chèn quảng cáo */}
+      <div className="hidden md:block w-full">
         <ins
           ref={dRef}
           className="adsbygoogle"
-          style={{ display: 'inline-block', width: '300px', height: '250px' }}
+          style={{ display: 'block' }}
           data-ad-client="ca-pub-3905625903416797"
-          data-ad-slot={desktopSlot}
-          data-full-width-responsive="false"
+          data-ad-format="auto"
+          data-full-width-responsive="true"
         />
       </div>
     </div>
