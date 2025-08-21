@@ -240,7 +240,7 @@ export default function Detail({ serverApp, serverRelated }) {
                       )}
                     </div>
                   )}
-                  {app.category === 'jailbreak' && (
+                  {app.category_id === 'jailbreak' && (
   <button
     onClick={handleDownload}
     disabled={isDownloading}
