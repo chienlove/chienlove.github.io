@@ -17,22 +17,37 @@ import {
   faCheckCircle,
   faTimesCircle,
   faExclamationTriangle,
-  faEye
 } from '@fortawesome/free-solid-svg-icons';
 
 export async function getServerSideProps(context) {
   const slug = context.params.slug?.toLowerCase();
 
+  // Lấy app + slug chuyên mục qua quan hệ
   const { data: appData, error } = await supabase
     .from('apps')
-    .select('*, downloads, views')
+    .select(
+      `
+      *,
+      downloads,
+      views,
+      category:categories ( slug, name )
+    `
+    )
     .ilike('slug', slug)
     .single();
 
+  // Nếu không thấy theo slug, thử coi "slug" đang là id rồi redirect
   if (!appData || error) {
     const { data: fallback } = await supabase
       .from('apps')
-      .select('*, downloads, views')
+      .select(
+        `
+        *,
+        downloads,
+        views,
+        category:categories ( slug, name )
+      `
+      )
       .eq('id', slug)
       .single();
 
@@ -44,14 +59,14 @@ export async function getServerSideProps(context) {
         },
       };
     }
-
     return { notFound: true };
   }
 
+  // Lấy 10 app cùng category_id (không dùng text category nữa)
   const { data: relatedApps } = await supabase
     .from('apps')
     .select('id, name, slug, icon_url, author, version')
-    .eq('category', appData.category)
+    .eq('category_id', appData.category_id)
     .neq('id', appData.id)
     .limit(10);
 
@@ -68,7 +83,6 @@ export default function Detail({ serverApp, serverRelated }) {
 
   const [app, setApp] = useState(serverApp);
   const [related, setRelated] = useState(serverRelated);
-  const [loading, setLoading] = useState(false);
   const [dominantColor, setDominantColor] = useState('#f0f2f5');
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [status, setStatus] = useState(null);
@@ -79,23 +93,28 @@ export default function Detail({ serverApp, serverRelated }) {
     setApp(serverApp);
     setRelated(serverRelated);
     setShowFullDescription(false);
-    setDominantColor("#f0f2f5");
-  }, [router.query.slug]);
+    setDominantColor('#f0f2f5');
+  }, [router.query.slug, serverApp, serverRelated]);
+
+  const isTestflight = app?.category?.slug === 'testflight';
+  const isJailbreak  = app?.category?.slug === 'jailbreak';
 
   useEffect(() => {
     if (!app?.id) return;
 
-    if (app.category === "testflight") {
-      fetch("/api/admin/add-view", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+    // Tăng view chỉ cho TestFlight
+    if (isTestflight) {
+      fetch('/api/admin/add-view', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: app.id }),
       }).catch(console.error);
     }
 
-    if (app.category === "testflight" && app.testflight_url) {
+    // Check slot TestFlight
+    if (isTestflight && app.testflight_url) {
       setStatusLoading(true);
-      const id = app.testflight_url.split("/").pop();
+      const id = app.testflight_url.split('/').pop();
       fetch(`/api/admin/check-slot?id=${id}`)
         .then((res) => res.json())
         .then((data) => {
@@ -105,7 +124,8 @@ export default function Detail({ serverApp, serverRelated }) {
         .finally(() => setStatusLoading(false));
     }
 
-    if (app.icon_url && typeof window !== "undefined") {
+    // Tính màu nền từ icon
+    if (app.icon_url && typeof window !== 'undefined') {
       const fac = new FastAverageColor();
       fac
         .getColorAsync(app.icon_url)
@@ -113,24 +133,23 @@ export default function Detail({ serverApp, serverRelated }) {
         .catch(console.error)
         .finally(() => fac.destroy());
     }
-  }, [app]);
+  }, [app, isTestflight]);
 
   const truncate = (text, limit) =>
-    text?.length > limit ? text.slice(0, limit) + "..." : text;
+    text?.length > limit ? text.slice(0, limit) + '...' : text;
 
   const handleDownload = (e) => {
     e.preventDefault();
-
     if (!app?.id) return;
-    if (app.category === "testflight") return;
+    if (isTestflight) return;
 
     setIsDownloading(true);
     router.push(`/install/${app.slug}`);
 
     fetch(`/api/admin/add-download?id=${app.id}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      cache: "no-store",
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
     })
       .then((res) => res.json())
       .then((data) => {
@@ -141,21 +160,9 @@ export default function Detail({ serverApp, serverRelated }) {
           }));
         }
       })
-      .catch((err) => {
-        console.error("Lỗi ngầm khi tăng lượt tải:", err);
-      })
-      .finally(() => {
-        setIsDownloading(false);
-      });
+      .catch((err) => console.error('Lỗi ngầm khi tăng lượt tải:', err))
+      .finally(() => setIsDownloading(false));
   };
-
-  if (loading) {
-    return (
-      <Layout fullWidth>
-        <div className="min-h-screen flex items-center justify-center">Đang tải...</div>
-      </Layout>
-    );
-  }
 
   if (!app) {
     return (
@@ -207,7 +214,7 @@ export default function Detail({ serverApp, serverRelated }) {
                 <h1 className="mt-4 text-2xl font-bold text-gray-900 drop-shadow">{app.name}</h1>
                 {app.author && <p className="text-gray-700 text-sm">{app.author}</p>}
                 <div className="mt-4 space-x-2">
-                  {app.category === 'testflight' && app.testflight_url && (
+                  {isTestflight && app.testflight_url && (
                     <div className="flex flex-wrap justify-center gap-2">
                       <a
                         href={app.testflight_url}
@@ -240,78 +247,93 @@ export default function Detail({ serverApp, serverRelated }) {
                       )}
                     </div>
                   )}
-                  {app.category === 'jailbreak' && (
-  <button
-    onClick={handleDownload}
-    disabled={isDownloading}
-    className={`inline-block border border-green-500 text-green-700 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-green-200 active:shadow-inner active:ring-2 active:ring-green-500 ${isDownloading ? 'opacity-50 cursor-not-allowed bg-green-100' : 'hover:bg-green-100'}`}
-  >
-    {isDownloading ? (
-      <span className="flex items-center">
-        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-green-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
-        Đang tải...
-      </span>
-    ) : (
-      <>
-        <FontAwesomeIcon icon={faDownload} className="mr-2" />
-        Cài đặt ứng dụng
-      </>
-    )}
-  </button>
-)}
+
+                  {isJailbreak && (
+                    <button
+                      onClick={handleDownload}
+                      disabled={isDownloading}
+                      className={`inline-block border border-green-500 text-green-700 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-green-200 active:shadow-inner active:ring-2 active:ring-green-500 ${
+                        isDownloading ? 'opacity-50 cursor-not-allowed bg-green-100' : 'hover:bg-green-100'
+                      }`}
+                    >
+                      {isDownloading ? (
+                        <span className="flex items-center">
+                          <svg
+                            className="animate-spin -ml-1 mr-2 h-4 w-4 text-green-700"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            ></circle>
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
+                          </svg>
+                          Đang tải...
+                        </span>
+                      ) : (
+                        <>
+                          <FontAwesomeIcon icon={faDownload} className="mr-2" />
+                          Cài đặt ứng dụng
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
           </div>
         </div>
 
+        {/* Info cards */}
         <div className="max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 mt-6 space-y-6">
           <div className="bg-white rounded-xl p-4 shadow flex justify-between text-center overflow-x-auto divide-x divide-gray-200">
-  {/* Cột 1 - Tác giả */}
-  <div className="px-0.5 sm:px-1.5">
-    <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Tác giả</p>
-    <FontAwesomeIcon icon={faUser} className="text-xl text-gray-600 mb-1" />
-    <p className="text-sm text-gray-800">{app.author || 'Không rõ'}</p>
-  </div>
-  
-  {/* Cột 2 - Phiên bản */}
-  <div className="px-1 sm:px-2">
-    <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Phiên bản</p>
-    <FontAwesomeIcon icon={faCodeBranch} className="text-xl text-gray-600 mb-1" />
-    <p className="text-sm text-gray-800">{app.version || 'Không rõ'}</p>
-  </div>
-  
-  {/* Cột 3 - Dung lượng */}
-  <div className="px-1 sm:px-2">
-    <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Dung lượng</p>
-    <FontAwesomeIcon icon={faDatabase} className="text-xl text-gray-600 mb-1" />
-    <p className="text-sm text-gray-800">{app.size ? `${app.size} MB` : 'Không rõ'}</p>
-  </div>
-  
-  {/* Cột 4 - Lượt xem/tải */}
-  <div className="px-0.5 sm:px-1.5">
-    <p className="text-xs font-semibold text-gray-500 uppercase mb-1">
-      {app.category === 'testflight' ? 'LƯỢT XEM' : 'Lượt tải'}
-    </p>
-    {app.category === 'testflight' ? (
-      <div className="flex flex-col items-center">
-        <span className="text-xl font-medium text-gray-600 mb-1">
-          {app.views ?? 0}
-        </span>
-        <span className="text-xs text-gray-500">Lượt</span>
-      </div>
-    ) : (
-      <>
-        <FontAwesomeIcon icon={faDownload} className="text-xl text-gray-600 mb-1" />
-        <p className="text-sm text-gray-800">{app.downloads ?? 0}</p>
-      </>
-    )}
-  </div>
-</div>
+            <div className="px-0.5 sm:px-1.5">
+              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Tác giả</p>
+              <FontAwesomeIcon icon={faUser} className="text-xl text-gray-600 mb-1" />
+              <p className="text-sm text-gray-800">{app.author || 'Không rõ'}</p>
+            </div>
 
+            <div className="px-1 sm:px-2">
+              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Phiên bản</p>
+              <FontAwesomeIcon icon={faCodeBranch} className="text-xl text-gray-600 mb-1" />
+              <p className="text-sm text-gray-800">{app.version || 'Không rõ'}</p>
+            </div>
+
+            <div className="px-1 sm:px-2">
+              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Dung lượng</p>
+              <FontAwesomeIcon icon={faDatabase} className="text-xl text-gray-600 mb-1" />
+              <p className="text-sm text-gray-800">{app.size ? `${app.size} MB` : 'Không rõ'}</p>
+            </div>
+
+            <div className="px-0.5 sm:px-1.5">
+              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">
+                {isTestflight ? 'LƯỢT XEM' : 'Lượt tải'}
+              </p>
+              {isTestflight ? (
+                <div className="flex flex-col items-center">
+                  <span className="text-xl font-medium text-gray-600 mb-1">{app.views ?? 0}</span>
+                  <span className="text-xs text-gray-500">Lượt</span>
+                </div>
+              ) : (
+                <>
+                  <FontAwesomeIcon icon={faDownload} className="text-xl text-gray-600 mb-1" />
+                  <p className="text-sm text-gray-800">{app.downloads ?? 0}</p>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Mô tả */}
           <div className="bg-white rounded-xl p-4 shadow">
             <h2 className="text-lg font-bold text-gray-800 mb-2">Mô tả</h2>
             <p className="text-gray-700 whitespace-pre-line">
@@ -327,6 +349,7 @@ export default function Detail({ serverApp, serverRelated }) {
             )}
           </div>
 
+          {/* Ảnh màn hình */}
           {Array.isArray(app.screenshots) && app.screenshots.length > 0 && (
             <div className="bg-white rounded-xl p-4 shadow">
               <h2 className="text-lg font-bold text-gray-800 mb-3">Ảnh màn hình</h2>
@@ -340,6 +363,7 @@ export default function Detail({ serverApp, serverRelated }) {
             </div>
           )}
 
+          {/* Related */}
           {related.length > 0 && (
             <div className="bg-white rounded-xl p-4 shadow">
               <h2 className="text-lg font-bold text-gray-800 mb-4">Ứng dụng cùng chuyên mục</h2>
