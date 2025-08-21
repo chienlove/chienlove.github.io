@@ -158,29 +158,32 @@ const HotAppCard = ({ app, rank }) => {
 };
 
 // --- COMPONENT CHÍNH - Home ---
-export default function Home({ hotApps, categoriesWithApps, paginationData }) {
+export default function Home({ hotApps, categoriesWithApps, paginationData, initialCertStatus }) {
   const router = useRouter();
-  const [certStatus, setCertStatus] = useState(null);
+  const [certStatus, setCertStatus] = useState(initialCertStatus);
 
   // ✅ Tối ưu: Chuyển việc fetch trạng thái chứng chỉ sang client-side
   useEffect(() => {
-    const fetchCertStatus = async () => {
-      try {
-        const res = await fetch('https://ipadl.storeios.net/api/check-revocation');
-        if (res.ok) {
-          const data = await res.json();
-          setCertStatus(data);
-        } else {
+    // Chỉ fetch lại nếu server không cung cấp được dữ liệu ban đầu
+    if (!initialCertStatus) {
+      const fetchCertStatus = async () => {
+        try {
+          const res = await fetch('https://ipadl.storeios.net/api/check-revocation');
+          if (res.ok) {
+            const data = await res.json();
+            setCertStatus(data);
+          } else {
+            setCertStatus({ ocspStatus: 'error' });
+          }
+        } catch (error) {
+          console.error('Error fetching cert status:', error);
           setCertStatus({ ocspStatus: 'error' });
         }
-      } catch (error) {
-        console.error('Error fetching cert status:', error);
-        setCertStatus({ ocspStatus: 'error' });
-      }
-    };
+      };
 
-    fetchCertStatus();
-  }, []);
+      fetchCertStatus();
+    }
+  }, [initialCertStatus]);
 
   const multiplexIndices = new Set([0, 2]); // Chèn quảng cáo sau chuyên mục #1 và #3
   const contentCard = 'bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4';
@@ -328,24 +331,38 @@ export async function getServerSideProps(ctx) {
   const APPS_PER_PAGE = 10; // Số lượng app mỗi trang, tốt cho SEO
 
   // Lấy danh sách chuyên mục
-  const { data: categories } = await supabase
+  const { data: categories, error: categoriesError } = await supabase
     .from('categories')
     .select('id, name, slug')
     .order('created_at', { ascending: true });
+
+  if (categoriesError) {
+    console.error('Error fetching categories:', categoriesError);
+    // Trả về rỗng để tránh lỗi crash, nhưng vẫn hiển thị trang
+    return { props: { hotApps: [], categoriesWithApps: [], paginationData: {}, initialCertStatus: null } };
+  }
 
   const paginationData = {};
 
   // Lấy dữ liệu ứng dụng cho từng chuyên mục
   const categoriesWithApps = await Promise.all(
     (categories || []).map(async (category) => {
-      const pageForThisCategory = category.slug === categorySlug ? currentPage : 1;
+      // Xác định trang hiện tại cho chuyên mục này
+      // Nếu có categorySlug trong URL và nó khớp với category hiện tại, dùng currentPage từ query
+      // Ngược lại, luôn bắt đầu từ trang 1 cho các chuyên mục khác
+      const pageForThisCategory = (categorySlug && category.slug === categorySlug) ? currentPage : 1;
       const startIndex = (pageForThisCategory - 1) * APPS_PER_PAGE;
 
       // Lấy tổng số app để tính toán phân trang
-      const { count } = await supabase
+      const { count, error: countError } = await supabase
         .from('apps')
         .select('*', { count: 'exact', head: true })
         .eq('category_id', category.id);
+
+      if (countError) {
+        console.error(`Error counting apps for category ${category.name}:`, countError);
+        return { ...category, apps: [] }; // Trả về chuyên mục rỗng nếu có lỗi
+      }
 
       const totalPages = Math.ceil(count / APPS_PER_PAGE);
       paginationData[category.id] = { 
@@ -355,12 +372,17 @@ export async function getServerSideProps(ctx) {
       };
 
       // Lấy danh sách app cho trang hiện tại
-      const { data: apps } = await supabase
+      const { data: apps, error: appsError } = await supabase
         .from('apps')
-        .select('*')
+        .select('id, name, slug, icon_url, author, version, category_id, views, downloads') // Chỉ chọn các cột cần thiết
         .eq('category_id', category.id)
         .order('created_at', { ascending: false })
         .range(startIndex, startIndex + APPS_PER_PAGE - 1);
+
+      if (appsError) {
+        console.error(`Error fetching apps for category ${category.name}:`, appsError);
+        return { ...category, apps: [] }; // Trả về chuyên mục rỗng nếu có lỗi
+      }
 
       return { ...category, apps: apps || [] };
     })
@@ -368,28 +390,52 @@ export async function getServerSideProps(ctx) {
 
   // ✅ Lấy 5 ứng dụng hot nhất (dựa trên lượt xem + tải)
   // Sử dụng trực tiếp các cột views và downloads có sẵn
-  const { data: hotApps } = await supabase
+  const { data: hotAppsData, error: hotAppsError } = await supabase
     .from('apps')
-    .select('*')
-    .order('views', { ascending: false, nullsLast: true })
+    .select('id, name, slug, icon_url, author, version, category_id, views, downloads')
+    .order('views', { ascending: false, nullsFirst: true })
     .order('downloads', { ascending: false, nullsLast: true })
     .limit(5);
 
+  if (hotAppsError) {
+    console.error('Error fetching hot apps:', hotAppsError);
+    // Tiếp tục với hotApps rỗng nếu có lỗi
+    hotAppsData = []; 
+  }
+
   // Sắp xếp lại theo tổng điểm (views + downloads)
-  const sortedHotApps = (hotApps || [])
+  const sortedHotApps = (hotAppsData || [])
     .map(app => ({
       ...app,
       hotScore: (app.views || 0) + (app.downloads || 0)
     }))
     .sort((a, b) => b.hotScore - a.hotScore)
-    .slice(0, 5);
+    .slice(0, 5); // Đảm bảo chỉ lấy 5 ứng dụng hàng đầu
+
+  // ✅ Tối ưu: Fetch certStatus ở server, nhưng không chặn render nếu lỗi
+  let initialCertStatus = null;
+  try {
+    const res = await fetch('https://ipadl.storeios.net/api/check-revocation', {
+      signal: AbortSignal.timeout(2000) // Thêm timeout 2 giây để tránh chờ quá lâu
+    });
+    if (res.ok) {
+      initialCertStatus = await res.json();
+    } else {
+      initialCertStatus = { ocspStatus: 'error', message: `HTTP Error: ${res.status}` };
+    }
+  } catch (error) {
+    console.error('Could not fetch cert status on server:', error.name, error.message);
+    initialCertStatus = { ocspStatus: 'error', message: error.message }; // Đặt trạng thái lỗi
+  }
 
   return {
     props: {
       hotApps: sortedHotApps,
       categoriesWithApps,
       paginationData,
+      initialCertStatus,
     },
   };
 }
+
 
