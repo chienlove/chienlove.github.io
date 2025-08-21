@@ -62,17 +62,20 @@ export default function AdUnit({
           </div>
         ) : (
           // Multiplex: KHÔNG giới hạn height, chiếm full bề ngang card, chặn tràn ngang
-          <div className="w-full overflow-x-hidden">
-            <ins
-              ref={mRef}
-              className="adsbygoogle"
-              style={{ display: 'block', width: '100%' }}
-              data-ad-client="ca-pub-3905625903416797"
-              data-ad-slot={mobileSlot2}
-              data-ad-format="autorelaxed"
-              data-full-width-responsive="true"
-            />
-          </div>
+          <div
+  className="w-full overflow-x-hidden overflow-y-visible"
+  style={{ maxHeight: 'none', height: 'auto' }}  // chống bị ancestor giới hạn
+>
+  <ins
+    ref={mRef}
+    className="adsbygoogle"
+    style={{ display: 'block' }}                 // để Google tự tính width/height
+    data-ad-client="ca-pub-3905625903416797"
+    data-ad-slot={mobileSlot2}
+    data-ad-format="autorelaxed"
+    data-full-width-responsive="true"
+  />
+</div>
         )}
       </div>
 
