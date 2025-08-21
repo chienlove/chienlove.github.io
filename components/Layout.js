@@ -1,22 +1,15 @@
+// components/Layout.js
 import { useEffect, useState, useRef } from 'react';
 import Head from 'next/head';
-import Script from 'next/script';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabase';
 import SearchModal from './SearchModal';
-
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {
-  faSun, faMoon, faSearch, faBars, faTimes,
-  faTools, faLayerGroup, faChevronDown, faChevronUp,
-  faCode, faLock, faRocket
-} from '@fortawesome/free-solid-svg-icons';
-import {
-  faGithub, faTwitter, faDiscord, faTelegram
-} from '@fortawesome/free-brands-svg-icons';
+import { faSun, faMoon, faSearch, faBars, faTimes, faTools, faLayerGroup, faChevronDown, faChevronUp, faCode, faLock, faRocket } from '@fortawesome/free-solid-svg-icons';
+import { faGithub, faTwitter, faDiscord, faTelegram } from '@fortawesome/free-brands-svg-icons';
 
-export default function Layout({ children, fullWidth = false }) {
+export default function Layout({ children, fullWidth = false, categories: categoriesFromSSR = null }) {
   const router = useRouter();
   const [darkMode, setDarkMode] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -25,14 +18,11 @@ export default function Layout({ children, fullWidth = false }) {
   const [sortBy, setSortBy] = useState('created_at');
   const [q, setQ] = useState('');
   const [apps, setApps] = useState([]);
-  const [categories, setCategories] = useState([]);
+  const [categories, setCategories] = useState(categoriesFromSSR || []);
   const [loading, setLoading] = useState(false);
   const menuRef = useRef();
 
-  const [accordionOpen, setAccordionOpen] = useState({
-    tools: true,
-    categories: true,
-  });
+  const [accordionOpen, setAccordionOpen] = useState({ tools: true, categories: true });
 
   useEffect(() => {
     const stored = localStorage.getItem('darkMode');
@@ -45,26 +35,23 @@ export default function Layout({ children, fullWidth = false }) {
     localStorage.setItem('darkMode', darkMode);
   }, [darkMode]);
 
+  // ⚠️ Chỉ fetch categories nếu SSR KHÔNG truyền vào
   useEffect(() => {
+    if (categoriesFromSSR && categoriesFromSSR.length) return; // đã có → không fetch
     (async () => {
       const { data } = await supabase
         .from('categories')
-        .select('*, apps:apps(count)')
+        .select('id, name') // đủ cho sidebar
         .order('name', { ascending: true });
       setCategories(data || []);
     })();
-  }, []);
+  }, [categoriesFromSSR]);
 
   const runSearch = async () => {
     setLoading(true);
-    let query = supabase
-      .from('apps')
-      .select('*')
-      .order(sortBy, { ascending: sortBy === 'name' });
-
+    let query = supabase.from('apps').select('*').order(sortBy, { ascending: sortBy === 'name' });
     if (q.trim()) query = query.ilike('name', `%${q.trim()}%`);
     if (activeCategory !== 'all') query = query.eq('category_id', activeCategory);
-
     const { data } = await query;
     setApps(data || []);
     setLoading(false);
@@ -81,11 +68,7 @@ export default function Layout({ children, fullWidth = false }) {
         setMobileMenuOpen(false);
       }
     }
-    if (mobileMenuOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    } else {
-      document.removeEventListener('mousedown', handleClickOutside);
-    }
+    if (mobileMenuOpen) document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [mobileMenuOpen]);
 
@@ -96,21 +79,15 @@ export default function Layout({ children, fullWidth = false }) {
         <meta name="description" content="Kho ứng dụng TestFlight beta & công cụ jailbreak cho iOS" />
       </Head>
 
-
       {/* HEADER */}
       <header className="sticky top-0 z-50 w-full bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
         <div className="max-w-screen-2xl mx-auto px-4 py-4 flex items-center justify-between">
-          {/* Hamburger */}
           <button onClick={() => setMobileMenuOpen(true)} className="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 md:hidden">
             <FontAwesomeIcon icon={faBars} className="w-5 h-5" />
           </button>
-
-          {/* Logo */}
           <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-red-600 via-black to-red-600 dark:from-red-400 dark:via-white dark:to-red-400 bg-clip-text text-transparent">
             StoreiOS
           </Link>
-
-          {/* Right Icons */}
           <div className="flex items-center gap-3">
             <button onClick={() => setSearchOpen(true)} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
               <FontAwesomeIcon icon={faSearch} className="w-5 h-5" />
@@ -133,10 +110,10 @@ export default function Layout({ children, fullWidth = false }) {
               </button>
             </div>
 
-            {/* TOOLS ACCORDION */}
+            {/* TOOLS */}
             <div>
               <button
-                onClick={() => setAccordionOpen({ ...accordionOpen, tools: !accordionOpen.tools })}
+                onClick={() => setAccordionOpen(s => ({ ...s, tools: !s.tools }))}
                 className="flex items-center justify-between w-full text-left font-medium hover:text-red-600"
               >
                 <span><FontAwesomeIcon icon={faTools} className="mr-2" />Công cụ</span>
@@ -151,10 +128,10 @@ export default function Layout({ children, fullWidth = false }) {
               )}
             </div>
 
-            {/* CATEGORIES ACCORDION */}
+            {/* CATEGORIES */}
             <div>
               <button
-                onClick={() => setAccordionOpen({ ...accordionOpen, categories: !accordionOpen.categories })}
+                onClick={() => setAccordionOpen(s => ({ ...s, categories: !s.categories }))}
                 className="flex items-center justify-between w-full text-left font-medium hover:text-red-600"
               >
                 <span><FontAwesomeIcon icon={faLayerGroup} className="mr-2" />Chuyên mục</span>
@@ -162,8 +139,11 @@ export default function Layout({ children, fullWidth = false }) {
               </button>
               {accordionOpen.categories && (
                 <ul className="mt-2 ml-4 text-sm space-y-2">
-                  <li><Link href="/categories/jailbreak" onClick={() => setMobileMenuOpen(false)} className="hover:text-red-600">Jailbreak</Link></li>
-                  <li><Link href="/categories/testflight" onClick={() => setMobileMenuOpen(false)} className="hover:text-red-600">TestFlight App</Link></li>
+                  {categories.map(c => (
+                    <li key={c.id}>
+                      <span className="hover:text-red-600 cursor-default">{c.name}</span>
+                    </li>
+                  ))}
                 </ul>
               )}
             </div>
@@ -181,12 +161,12 @@ export default function Layout({ children, fullWidth = false }) {
         categories={categories}
       />
 
-      {/* MAIN CONTENT */}
+      {/* MAIN */}
       <main className={`flex-1 ${fullWidth ? '' : 'w-full max-w-screen-2xl mx-auto px-4 py-6'}`}>
         {children}
       </main>
 
-      {/* FOOTER (chuyên nghiệp – giữ như bản trước) */}
+      {/* FOOTER */}
       <footer className="bg-gray-900 text-gray-300 mt-16 border-t border-gray-800">
         <div className="max-w-screen-2xl mx-auto px-4 py-12 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
           <div>
