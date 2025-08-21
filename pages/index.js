@@ -2,19 +2,19 @@ import Layout from '../components/Layout';
 import AppCard from '../components/AppCard';
 import AdUnit from '../components/Ads';
 import { createSupabaseServer } from '../lib/supabase';
-import { Fragment, useEffect, useState } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/router';
+import { Fragment, useEffect, useState } from 'react'; // Thêm useEffect, useState
+import Link from 'next/link'; // Thêm Link
+import { useRouter } from 'next/router'; // Thêm useRouter
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faTimesCircle,
   faCheckCircle,
   faExclamationCircle,
-  faFire,
-  faChevronLeft,
-  faChevronRight,
-  faEllipsisH,
+  faFire, // Thêm icon Fire cho ứng dụng hot
+  faChevronLeft, // Thêm icon cho phân trang
+  faChevronRight, // Thêm icon cho phân trang
+  faEllipsisH, // Thêm icon cho phân trang
 } from '@fortawesome/free-solid-svg-icons';
 
 // --- COMPONENT CON - Pagination ---
@@ -160,7 +160,7 @@ const HotAppCard = ({ app, rank }) => {
 // --- COMPONENT CHÍNH - Home ---
 export default function Home({ hotApps, categoriesWithApps, paginationData, initialCertStatus }) {
   const router = useRouter();
-  const [certStatus, setCertStatus] = useState(initialCertStatus);
+  const [certStatus, setCertStatus] = useState(initialCertStatus); // Sử dụng initialCertStatus
 
   // ✅ Tối ưu: Chuyển việc fetch trạng thái chứng chỉ sang client-side
   useEffect(() => {
@@ -185,8 +185,14 @@ export default function Home({ hotApps, categoriesWithApps, paginationData, init
     }
   }, [initialCertStatus]);
 
-  const multiplexIndices = new Set([0, 2]); // Chèn quảng cáo sau chuyên mục #1 và #3
-  const contentCard = 'bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4';
+  // Chèn Multiplex sau card #2 và #4 (index 1 và 3) - giữ nguyên từ code gốc
+  const multiplexIndices = new Set([1, 3]);
+
+  // Card nội dung
+  const contentCard =
+    'bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4';
+
+  // Card quảng cáo: dùng chung style với content
   const adCard = contentCard;
 
   const AdLabel = () => (
@@ -198,7 +204,7 @@ export default function Home({ hotApps, categoriesWithApps, paginationData, init
   return (
     <Layout>
       <div className="container mx-auto px-1 md:px-2 py-6 space-y-10">
-        {/* Banner quảng cáo đầu trang */}
+        {/* ── Banner đầu trang: GỘP label + card vào 1 nhóm để không bị "xa" */}
         <div className="space-y-2">
           <AdLabel />
           <div className={adCard}>
@@ -219,8 +225,8 @@ export default function Home({ hotApps, categoriesWithApps, paginationData, init
               </div>
             </div>
             <div className="space-y-1">
-              {hotApps.map((app, index) => (
-                <HotAppCard key={app.id} app={app} rank={index + 1} />
+              {hotApps.map((app) => (
+                <HotAppCard key={app.id} app={app} rank={app.rank} /> // Sử dụng app.rank
               ))}
             </div>
           </div>
@@ -229,21 +235,23 @@ export default function Home({ hotApps, categoriesWithApps, paginationData, init
         {/* Các chuyên mục khác với phân trang */}
         {categoriesWithApps.map((category, index) => (
           <Fragment key={category.id}>
+            {/* Card chuyên mục */}
             <div className={contentCard}>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-gray-800 dark:text-white">
                   {category.name}
                 </h2>
+
                 {category.name.toLowerCase().includes('jailbreak') && certStatus && (
                   <span
                     className="flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300 cursor-pointer"
                     title={
-                      certStatus.ocspStatus === 'successful'
+                      certStatus?.ocspStatus === 'successful'
                         ? (certStatus.isRevoked ? 'Chứng chỉ đã bị thu hồi' : 'Chứng chỉ hợp lệ')
                         : 'Không thể kiểm tra'
                     }
                   >
-                    {certStatus.ocspStatus === 'successful' ? (
+                    {certStatus?.ocspStatus === 'successful' ? (
                       certStatus.isRevoked ? (
                         <>
                           <span className="font-bold text-red-600">Revoked</span>
@@ -264,7 +272,7 @@ export default function Home({ hotApps, categoriesWithApps, paginationData, init
                   </span>
                 )}
               </div>
-              
+
               {/* Hiển thị thông tin phân trang */}
               {paginationData[category.id] && paginationData[category.id].totalPages > 1 && (
                 <div className="text-sm text-gray-500 dark:text-gray-400 mb-3">
@@ -272,13 +280,13 @@ export default function Home({ hotApps, categoriesWithApps, paginationData, init
                   ({paginationData[category.id].totalApps} ứng dụng)
                 </div>
               )}
-              
+
               <div className="space-y-1">
                 {category.apps.map((app) => (
                   <AppCard key={app.id} app={app} mode="list" />
                 ))}
               </div>
-              
+
               {/* ✅ Thêm các nút phân trang */}
               <PaginationControls
                 categorySlug={category.slug}
@@ -287,7 +295,7 @@ export default function Home({ hotApps, categoriesWithApps, paginationData, init
               />
             </div>
 
-            {/* Quảng cáo xen kẽ */}
+            {/* ── Multiplex giữa trang: GỘP label + card */}
             {multiplexIndices.has(index) && (
               <div className="space-y-2">
                 <AdLabel />
@@ -299,7 +307,7 @@ export default function Home({ hotApps, categoriesWithApps, paginationData, init
           </Fragment>
         ))}
 
-        {/* Banner quảng cáo cuối trang */}
+        {/* ── Banner cuối trang: GỘP label + card */}
         <div className="space-y-2">
           <AdLabel />
           <div className={adCard}>
@@ -333,7 +341,7 @@ export async function getServerSideProps(ctx) {
   // Lấy danh sách chuyên mục
   const { data: categories, error: categoriesError } = await supabase
     .from('categories')
-    .select('id, name, slug')
+    .select('id, name, slug') // Đảm bảo có slug để dùng cho phân trang
     .order('created_at', { ascending: true });
 
   if (categoriesError) {
@@ -356,7 +364,7 @@ export async function getServerSideProps(ctx) {
       // Lấy tổng số app để tính toán phân trang
       const { count, error: countError } = await supabase
         .from('apps')
-        .select('*', { count: 'exact', head: true })
+        .select('*', { count: 'exact', head: true }) // Chỉ cần count, không cần data
         .eq('category_id', category.id);
 
       if (countError) {
@@ -374,7 +382,7 @@ export async function getServerSideProps(ctx) {
       // Lấy danh sách app cho trang hiện tại
       const { data: apps, error: appsError } = await supabase
         .from('apps')
-        .select('id, name, slug, icon_url, author, version, category_id, views, downloads') // Chỉ chọn các cột cần thiết
+        .select('id, name, slug, icon_url, author, version, category_id, views, downloads') // Đảm bảo lấy đủ các cột cần thiết cho AppCard và tính hotScore
         .eq('category_id', category.id)
         .order('created_at', { ascending: false })
         .range(startIndex, startIndex + APPS_PER_PAGE - 1);
@@ -390,7 +398,8 @@ export async function getServerSideProps(ctx) {
 
   // ✅ Lấy 5 ứng dụng hot nhất (dựa trên lượt xem + tải)
   // Sử dụng trực tiếp các cột views và downloads có sẵn
-  const { data: hotAppsData, error: hotAppsError } = await supabase
+  let hotAppsData = [];
+  const { data: fetchedHotApps, error: hotAppsError } = await supabase
     .from('apps')
     .select('id, name, slug, icon_url, author, version, category_id, views, downloads')
     .order('views', { ascending: false, nullsFirst: true })
@@ -401,16 +410,19 @@ export async function getServerSideProps(ctx) {
     console.error('Error fetching hot apps:', hotAppsError);
     // Tiếp tục với hotApps rỗng nếu có lỗi
     hotAppsData = []; 
+  } else {
+    hotAppsData = fetchedHotApps;
   }
 
-  // Sắp xếp lại theo tổng điểm (views + downloads)
+  // Sắp xếp lại theo tổng điểm (views + downloads) và gán rank
   const sortedHotApps = (hotAppsData || [])
     .map(app => ({
       ...app,
       hotScore: (app.views || 0) + (app.downloads || 0)
     }))
     .sort((a, b) => b.hotScore - a.hotScore)
-    .slice(0, 5); // Đảm bảo chỉ lấy 5 ứng dụng hàng đầu
+    .slice(0, 5) // Đảm bảo chỉ lấy 5 ứng dụng hàng đầu
+    .map((app, index) => ({ ...app, rank: index + 1 })); // Gán rank
 
   // ✅ Tối ưu: Fetch certStatus ở server, nhưng không chặn render nếu lỗi
   let initialCertStatus = null;
@@ -437,5 +449,3 @@ export async function getServerSideProps(ctx) {
     },
   };
 }
-
-
