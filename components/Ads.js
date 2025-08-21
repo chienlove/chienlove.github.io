@@ -5,44 +5,41 @@ import { useEffect, useRef } from 'react';
 
 export default function AdUnit({
   className = '',
-  mobileVariant = 'compact',         // 'compact' | 'multiplex'
-  mobileSlot1 = '5160182988',        // Compact / Display
-  mobileSlot2 = '7109430646',        // Multiplex
-  desktopSlot = null,                // Nếu null, dùng mobileSlot1
+  mobileVariant = 'compact',   // 'compact' | 'multiplex'
+  mobileSlot1 = '5160182988',  // Compact/Display 300x250
+  mobileSlot2 = '7109430646',  // Multiplex
+  desktopMode = 'auto',        // 'auto' (không chèn unit) | 'unit' (chèn 1 unit responsive)
+  desktopSlot = '4575220124',  // dùng lại slot responsive nếu cần
 }) {
   const mRef = useRef(null);
   const dRef = useRef(null);
 
   useEffect(() => {
-    const attach = (el) => {
+    const push = (el) => {
+      if (!el || typeof window === 'undefined') return;
+      try { (window.adsbygoogle = window.adsbygoogle || []).push({}); } catch {}
+    };
+
+    const observe = (el) => {
       if (!el) return;
-      const push = () => {
-        try {
-          (window.adsbygoogle = window.adsbygoogle || []).push({});
-        } catch {}
-      };
-      if (typeof window === 'undefined') return;
       if ('IntersectionObserver' in window) {
-        const io = new IntersectionObserver(
-          (entries) => {
-            entries.forEach((e) => {
-              if (e.isIntersecting) {
-                push();
-                io.unobserve(el);
-              }
-            });
-          },
-          { rootMargin: '200px' }
-        );
+        const io = new IntersectionObserver((entries) => {
+          entries.forEach((e) => {
+            if (e.isIntersecting) {
+              push(el);
+              io.unobserve(el);
+            }
+          });
+        }, { rootMargin: '200px' });
         io.observe(el);
         return () => io.disconnect();
       } else {
-        push();
+        push(el);
       }
     };
 
-    attach(mRef.current);
-    attach(dRef.current);
+    observe(mRef.current);
+    observe(dRef.current);
   }, []);
 
   const isCompact = mobileVariant === 'compact';
@@ -52,7 +49,7 @@ export default function AdUnit({
       {/* Mobile */}
       <div className="block md:hidden w-full">
         {isCompact ? (
-          // Banner 300x250: cố định kích thước, canh giữa
+          // 300x250 cố định, căn giữa
           <div className="w-full flex justify-center">
             <ins
               ref={mRef}
@@ -64,7 +61,7 @@ export default function AdUnit({
             />
           </div>
         ) : (
-          // Multiplex: chiếm full width, không giới hạn height, chặn tràn ngang
+          // Multiplex: KHÔNG giới hạn height, chiếm full bề ngang card, chặn tràn ngang
           <div className="w-full overflow-x-hidden">
             <ins
               ref={mRef}
@@ -79,20 +76,26 @@ export default function AdUnit({
         )}
       </div>
 
-      {/* Desktop: render 1 unit responsive để không phụ thuộc Auto Ads */}
-      <div className="hidden md:block w-full">
-        <div className="w-full overflow-x-hidden">
-          <ins
-            ref={dRef}
-            className="adsbygoogle"
-            style={{ display: 'block', width: '100%', minHeight: 90 }}
-            data-ad-client="ca-pub-3905625903416797"
-            data-ad-slot={desktopSlot || mobileSlot1}
-            data-ad-format="auto"
-            data-full-width-responsive="true"
-          />
+      {/* Desktop */}
+      {desktopMode === 'unit' ? (
+        // Nếu muốn chắc chắn có quảng cáo trên desktop => chèn 1 unit responsive
+        <div className="hidden md:block w-full">
+          <div className="w-full overflow-x-hidden">
+            <ins
+              ref={dRef}
+              className="adsbygoogle"
+              style={{ display: 'block', width: '100%', minHeight: 90 }}
+              data-ad-client="ca-pub-3905625903416797"
+              data-ad-slot={desktopSlot}
+              data-ad-format="auto"
+              data-full-width-responsive="true"
+            />
+          </div>
         </div>
-      </div>
+      ) : (
+        // desktopMode === 'auto' -> không chèn unit, để Auto Ads tự phân bổ
+        <div className="hidden md:block" />
+      )}
     </div>
   );
 }
