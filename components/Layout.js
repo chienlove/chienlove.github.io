@@ -1,9 +1,11 @@
-// components/Layout.js
 import { useEffect, useState, useRef } from 'react';
 import Head from 'next/head';
+import Script from 'next/script';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabase';
 import SearchModal from './SearchModal';
+
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faSun, faMoon, faSearch, faBars, faTimes,
@@ -14,7 +16,8 @@ import {
   faGithub, faTwitter, faDiscord, faTelegram
 } from '@fortawesome/free-brands-svg-icons';
 
-export default function Layout({ children, fullWidth = false, categories: categoriesFromSSR = null }) {
+export default function Layout({ children, fullWidth = false }) {
+  const router = useRouter();
   const [darkMode, setDarkMode] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -22,10 +25,14 @@ export default function Layout({ children, fullWidth = false, categories: catego
   const [sortBy, setSortBy] = useState('created_at');
   const [q, setQ] = useState('');
   const [apps, setApps] = useState([]);
-  const [categories, setCategories] = useState(categoriesFromSSR || []);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const menuRef = useRef();
-  const [accordionOpen, setAccordionOpen] = useState({ tools: true, categories: true });
+
+  const [accordionOpen, setAccordionOpen] = useState({
+    tools: true,
+    categories: true,
+  });
 
   useEffect(() => {
     const stored = localStorage.getItem('darkMode');
@@ -38,23 +45,26 @@ export default function Layout({ children, fullWidth = false, categories: catego
     localStorage.setItem('darkMode', darkMode);
   }, [darkMode]);
 
-  // ⚠️ Chỉ fetch categories nếu SSR KHÔNG truyền vào
   useEffect(() => {
-    if (categoriesFromSSR && categoriesFromSSR.length) return;
     (async () => {
       const { data } = await supabase
         .from('categories')
-        .select('id, name') // đủ dùng cho sidebar
+        .select('*, apps:apps(count)')
         .order('name', { ascending: true });
       setCategories(data || []);
     })();
-  }, [categoriesFromSSR]);
+  }, []);
 
   const runSearch = async () => {
     setLoading(true);
-    let query = supabase.from('apps').select('*').order(sortBy, { ascending: sortBy === 'name' });
+    let query = supabase
+      .from('apps')
+      .select('*')
+      .order(sortBy, { ascending: sortBy === 'name' });
+
     if (q.trim()) query = query.ilike('name', `%${q.trim()}%`);
     if (activeCategory !== 'all') query = query.eq('category_id', activeCategory);
+
     const { data } = await query;
     setApps(data || []);
     setLoading(false);
@@ -62,16 +72,21 @@ export default function Layout({ children, fullWidth = false, categories: catego
 
   useEffect(() => {
     if (searchOpen) runSearch();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, activeCategory, sortBy, searchOpen]);
 
-  // Auto-close mobile menu
+  // Auto-close menu when clicking outside
   useEffect(() => {
-    const onDown = (e) => {
-      if (menuRef.current && !menuRef.current.contains(e.target)) setMobileMenuOpen(false);
-    };
-    if (mobileMenuOpen) document.addEventListener('mousedown', onDown);
-    return () => document.removeEventListener('mousedown', onDown);
+    function handleClickOutside(e) {
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMobileMenuOpen(false);
+      }
+    }
+    if (mobileMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    } else {
+      document.removeEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [mobileMenuOpen]);
 
   return (
@@ -81,17 +96,21 @@ export default function Layout({ children, fullWidth = false, categories: catego
         <meta name="description" content="Kho ứng dụng TestFlight beta & công cụ jailbreak cho iOS" />
       </Head>
 
+
       {/* HEADER */}
       <header className="sticky top-0 z-50 w-full bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
         <div className="max-w-screen-2xl mx-auto px-4 py-4 flex items-center justify-between">
+          {/* Hamburger */}
           <button onClick={() => setMobileMenuOpen(true)} className="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 md:hidden">
             <FontAwesomeIcon icon={faBars} className="w-5 h-5" />
           </button>
 
-          <Link href="/" className="text-2xl font-extrabold bg-gradient-to-r from-red-600 via-black to-red-600 dark:from-red-400 dark:via-white dark:to-red-400 bg-clip-text text-transparent">
+          {/* Logo */}
+          <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-red-600 via-black to-red-600 dark:from-red-400 dark:via-white dark:to-red-400 bg-clip-text text-transparent">
             StoreiOS
           </Link>
 
+          {/* Right Icons */}
           <div className="flex items-center gap-3">
             <button onClick={() => setSearchOpen(true)} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
               <FontAwesomeIcon icon={faSearch} className="w-5 h-5" />
@@ -103,7 +122,7 @@ export default function Layout({ children, fullWidth = false, categories: catego
         </div>
       </header>
 
-      {/* MOBILE MENU */}
+      {/* MOBILE MENU SIDEBAR */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 flex">
           <div ref={menuRef} className="w-72 bg-white dark:bg-gray-900 p-6 space-y-6 shadow-2xl">
@@ -114,10 +133,10 @@ export default function Layout({ children, fullWidth = false, categories: catego
               </button>
             </div>
 
-            {/* Tools */}
+            {/* TOOLS ACCORDION */}
             <div>
               <button
-                onClick={() => setAccordionOpen(s => ({ ...s, tools: !s.tools }))}
+                onClick={() => setAccordionOpen({ ...accordionOpen, tools: !accordionOpen.tools })}
                 className="flex items-center justify-between w-full text-left font-medium hover:text-red-600"
               >
                 <span><FontAwesomeIcon icon={faTools} className="mr-2" />Công cụ</span>
@@ -132,10 +151,10 @@ export default function Layout({ children, fullWidth = false, categories: catego
               )}
             </div>
 
-            {/* Categories */}
+            {/* CATEGORIES ACCORDION */}
             <div>
               <button
-                onClick={() => setAccordionOpen(s => ({ ...s, categories: !s.categories }))}
+                onClick={() => setAccordionOpen({ ...accordionOpen, categories: !accordionOpen.categories })}
                 className="flex items-center justify-between w-full text-left font-medium hover:text-red-600"
               >
                 <span><FontAwesomeIcon icon={faLayerGroup} className="mr-2" />Chuyên mục</span>
@@ -143,9 +162,8 @@ export default function Layout({ children, fullWidth = false, categories: catego
               </button>
               {accordionOpen.categories && (
                 <ul className="mt-2 ml-4 text-sm space-y-2">
-                  {categories.map(c => (
-                    <li key={c.id}><span className="hover:text-red-600 cursor-default">{c.name}</span></li>
-                  ))}
+                  <li><Link href="/categories/jailbreak" onClick={() => setMobileMenuOpen(false)} className="hover:text-red-600">Jailbreak</Link></li>
+                  <li><Link href="/categories/testflight" onClick={() => setMobileMenuOpen(false)} className="hover:text-red-600">TestFlight App</Link></li>
                 </ul>
               )}
             </div>
@@ -163,16 +181,16 @@ export default function Layout({ children, fullWidth = false, categories: catego
         categories={categories}
       />
 
-      {/* MAIN */}
+      {/* MAIN CONTENT */}
       <main className={`flex-1 ${fullWidth ? '' : 'w-full max-w-screen-2xl mx-auto px-4 py-6'}`}>
         {children}
       </main>
 
-      {/* FOOTER */}
+      {/* FOOTER (chuyên nghiệp – giữ như bản trước) */}
       <footer className="bg-gray-900 text-gray-300 mt-16 border-t border-gray-800">
         <div className="max-w-screen-2xl mx-auto px-4 py-12 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
           <div>
-            <h3 className="text-white font-bold text-lg mb-3">StoreiOS</h3>
+            <h3 className="text-white font-bold text-lg mb-3">StreiOS</h3>
             <p className="text-gray-400 text-sm">Kho ứng dụng TestFlight beta & công cụ jailbreak cho cộng đồng iOS.</p>
           </div>
           <div>
