@@ -19,43 +19,47 @@ import {
   faExclamationTriangle,
 } from '@fortawesome/free-solid-svg-icons';
 
-// SSR: lấy app + join categories để có slug/name chuyên mục
 export async function getServerSideProps(context) {
   const slug = context.params.slug?.toLowerCase();
 
-  // 1) tìm theo slug
+  // 1) Lấy app + JOIN rõ ràng theo FK để chắc chắn có category.slug
   let { data: appData, error } = await supabase
     .from('apps')
-    .select(
-      `
+    .select(`
       *,
-      category:categories ( slug, name )
-    `
-    )
+      category:categories!apps_category_id_fkey ( id, slug, name )
+    `)
     .ilike('slug', slug)
     .single();
 
-  // 2) fallback: nếu người dùng gõ id
+  // 2) Fallback nếu người dùng gõ thẳng ID
   if ((!appData || error) && slug) {
     const fb = await supabase
       .from('apps')
-      .select(
-        `
+      .select(`
         *,
-        category:categories ( slug, name )
-      `
-      )
+        category:categories!apps_category_id_fkey ( id, slug, name )
+      `)
       .eq('id', slug)
       .single();
+
     if (fb.data) {
-      return {
-        redirect: { destination: `/${fb.data.slug}`, permanent: false },
-      };
+      return { redirect: { destination: `/${fb.data.slug}`, permanent: false } };
     }
     return { notFound: true };
   }
 
-  // 3) related theo category_id (KHÔNG dùng text category nữa)
+  // 3) Nếu vì lý do gì JOIN không trả category, fallback query riêng
+  if (!appData?.category && appData?.category_id) {
+    const { data: cat } = await supabase
+      .from('categories')
+      .select('id, slug, name')
+      .eq('id', appData.category_id)
+      .single();
+    if (cat) appData = { ...appData, category: cat };
+  }
+
+  // 4) Related theo category_id (đồng bộ với index.js)
   const { data: relatedApps } = await supabase
     .from('apps')
     .select('id, name, slug, icon_url, author, version')
@@ -89,8 +93,8 @@ export default function Detail({ serverApp, serverRelated }) {
     setDominantColor('#f0f2f5');
   }, [router.query.slug, serverApp, serverRelated]);
 
-  // Hỗ trợ cả schema mới (category: {slug}) lẫn cũ (category là text)
-  const categorySlug = app?.category?.slug ?? app?.category ?? null;
+  // Lấy slug chuyên mục tin cậy (từ quan hệ); nếu không có thì rỗng
+  const categorySlug = app?.category?.slug ?? null;
   const isTestflight = categorySlug === 'testflight';
   const isJailbreak = categorySlug === 'jailbreak';
 
@@ -119,7 +123,7 @@ export default function Detail({ serverApp, serverRelated }) {
         .finally(() => setStatusLoading(false));
     }
 
-    // Lấy màu nền từ icon
+    // Màu nền theo icon
     if (app.icon_url && typeof window !== 'undefined') {
       const fac = new FastAverageColor();
       fac
@@ -136,13 +140,11 @@ export default function Detail({ serverApp, serverRelated }) {
   const handleDownload = (e) => {
     e.preventDefault();
     if (!app?.id) return;
-    if (isTestflight) return; // không tải ipa cho TestFlight
+    if (isTestflight) return; // Không tải IPA cho TestFlight
 
     setIsDownloading(true);
-    // Điều hướng sang trang install
     router.push(`/install/${app.slug}`);
 
-    // Tăng lượt tải
     fetch(`/api/admin/add-download?id=${app.id}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -150,9 +152,7 @@ export default function Detail({ serverApp, serverRelated }) {
     })
       .then((res) => res.json())
       .then((data) => {
-        if (data.success) {
-          setApp((prev) => ({ ...prev, downloads: data.downloads }));
-        }
+        if (data.success) setApp((prev) => ({ ...prev, downloads: data.downloads }));
       })
       .catch((err) => console.error('Lỗi ngầm khi tăng lượt tải:', err))
       .finally(() => setIsDownloading(false));
@@ -184,9 +184,7 @@ export default function Detail({ serverApp, serverRelated }) {
           <div className="relative w-full max-w-screen-2xl px-2 sm:px-4 md:px-6 pb-8 bg-white rounded-none">
             <div
               className="w-full pb-6"
-              style={{
-                backgroundImage: `linear-gradient(to bottom, ${dominantColor}, #f0f2f5)`,
-              }}
+              style={{ backgroundImage: `linear-gradient(to bottom, ${dominantColor}, #f0f2f5)` }}
             >
               <div className="absolute top-3 left-3 z-10">
                 <Link
@@ -199,11 +197,7 @@ export default function Detail({ serverApp, serverRelated }) {
 
               <div className="pt-10 text-center px-4">
                 <div className="w-24 h-24 mx-auto overflow-hidden border-4 border-white rounded-2xl">
-                  <img
-                    src={app.icon_url || '/placeholder-icon.png'}
-                    alt={app.name}
-                    className="w-full h-full object-cover"
-                  />
+                  <img src={app.icon_url || '/placeholder-icon.png'} alt={app.name} className="w-full h-full object-cover" />
                 </div>
                 <h1 className="mt-4 text-2xl font-bold text-gray-900 drop-shadow">{app.name}</h1>
                 {app.author && <p className="text-gray-700 text-sm">{app.author}</p>}
@@ -213,8 +207,7 @@ export default function Detail({ serverApp, serverRelated }) {
                       <a
                         href={app.testflight_url}
                         className="inline-block border border-blue-500 text-blue-700 hover:bg-blue-100 transition px-4 py-2 rounded-full text-sm font-semibold"
-                        target="_blank"
-                        rel="noopener noreferrer"
+                        target="_blank" rel="noopener noreferrer"
                       >
                         <FontAwesomeIcon icon={faRocket} className="mr-2" />
                         Tham gia TestFlight
@@ -246,31 +239,13 @@ export default function Detail({ serverApp, serverRelated }) {
                     <button
                       onClick={handleDownload}
                       disabled={isDownloading}
-                      className={`inline-block border border-green-500 text-green-700 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-green-200 active:shadow-inner active:ring-2 active:ring-green-500 ${
-                        isDownloading ? 'opacity-50 cursor-not-allowed bg-green-100' : 'hover:bg-green-100'
-                      }`}
+                      className={`inline-block border border-green-500 text-green-700 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-green-200 active:shadow-inner active:ring-2 active:ring-green-500 ${isDownloading ? 'opacity-50 cursor-not-allowed bg-green-100' : 'hover:bg-green-100'}`}
                     >
                       {isDownloading ? (
                         <span className="flex items-center">
-                          <svg
-                            className="animate-spin -ml-1 mr-2 h-4 w-4 text-green-700"
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                          >
-                            <circle
-                              className="opacity-25"
-                              cx="12"
-                              cy="12"
-                              r="10"
-                              stroke="currentColor"
-                              strokeWidth="4"
-                            ></circle>
-                            <path
-                              className="opacity-75"
-                              fill="currentColor"
-                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                            ></path>
+                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-green-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                           </svg>
                           Đang tải...
                         </span>
