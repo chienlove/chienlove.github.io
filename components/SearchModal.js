@@ -3,7 +3,7 @@
 import { useRouter } from 'next/router';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, X, Filter, ListFilter, Sparkles } from 'lucide-react'; // Sử dụng Lucide Icons
+import { Search, X, Filter, ListFilter, Sparkles, TrendingUp } from 'lucide-react'; // Thêm TrendingUp icon
 import AppCard from './AppCard'; // Sử dụng lại AppCard để hiển thị kết quả
 
 // Component con cho Filter Pills
@@ -13,7 +13,7 @@ const FilterPill = ({ children, active, onClick }) => (
     className={`
       px-4 py-2 rounded-full text-sm font-medium transition-all duration-200
       ${active
-        ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md'
+        ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-md'
         : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'
       }
     `}
@@ -24,9 +24,16 @@ const FilterPill = ({ children, active, onClick }) => (
 
 // Component con cho Search Result Item (sử dụng AppCard)
 const SearchResultItem = ({ app, onClick }) => (
-  <li onClick={onClick} className="cursor-pointer">
+  <motion.li
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -20 }}
+    transition={{ duration: 0.3 }}
+    onClick={onClick}
+    className="cursor-pointer"
+  >
     <AppCard app={app} mode="list" />
-  </li>
+  </motion.li>
 );
 
 // Skeleton Loading cho Search Results
@@ -98,14 +105,14 @@ export default function SearchModal({
             className="relative w-full max-w-4xl"
           >
             {/* Glassmorphism Container */}
-            <div className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl 
-                           rounded-3xl shadow-2xl border border-white/40 dark:border-gray-700/60
+            <div className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-2xl 
+                           rounded-3xl shadow-2xl border border-white/50 dark:border-gray-700/70
                            overflow-hidden">
               
               {/* Header */}
               <div className="p-6 border-b border-gray-200/50 dark:border-gray-700/50">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-2xl font-bold bg-gradient-to-r from-emerald-500 to-teal-600 
+                  <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-500 to-violet-600 
                                 bg-clip-text text-transparent">
                     Tìm kiếm ứng dụng
                   </h2>
@@ -130,7 +137,7 @@ export default function SearchModal({
                     className="w-full pl-12 pr-4 py-4 text-lg rounded-2xl
                              bg-gray-50/50 dark:bg-gray-800/50 
                              border-2 border-transparent
-                             focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800
+                             focus:border-lime-500 focus:bg-white dark:focus:bg-gray-800
                              transition-all duration-300 placeholder-gray-400"
                   />
                 </div>
@@ -162,20 +169,41 @@ export default function SearchModal({
               <div className="p-6 max-h-96 overflow-y-auto">
                 {q.trim() === '' ? (
                   <div className="text-center py-4 text-gray-500 flex flex-col items-center justify-center">
-                    <Sparkles className="w-12 h-12 text-emerald-400 mb-3" />
-                    <p className="text-lg font-semibold mb-1">Bắt đầu tìm kiếm của bạn</p>
-                    <p className="text-sm">Nhập từ khóa để khám phá các ứng dụng tuyệt vời!</p>
+                    <Sparkles className="w-12 h-12 text-indigo-400 mb-3 animate-pulse" />
+                    <p className="text-lg font-semibold mb-1 text-gray-800 dark:text-gray-200">Bắt đầu tìm kiếm của bạn</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Nhập từ khóa để khám phá các ứng dụng tuyệt vời!</p>
+                    
+                    {/* Suggested Searches / Trending (Placeholder) */}
+                    <div className="mt-6 w-full max-w-md">
+                      <h3 className="text-md font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center justify-center gap-2">
+                        <TrendingUp className="w-5 h-5 text-lime-500" />
+                        Xu hướng tìm kiếm
+                      </h3>
+                      <div className="flex flex-wrap justify-center gap-2">
+                        <FilterPill>Productivity</FilterPill>
+                        <FilterPill>Games</FilterPill>
+                        <FilterPill>Social Media</FilterPill>
+                        <FilterPill>Utilities</FilterPill>
+                      </div>
+                    </div>
                   </div>
                 ) : loading ? (
                   <SearchSkeleton />
                 ) : apps.length === 0 ? (
                   <p className="text-center py-4 text-gray-500">Không có kết quả cho "{q}".</p>
                 ) : (
-                  <ul className="space-y-3">
-                    {apps.map(app => (
-                      <SearchResultItem key={app.id} app={app} onClick={() => handleAppClick(app.slug)} />
-                    ))}
-                  </ul>
+                  <>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
+                      Tìm thấy <span className="font-bold text-lime-500">{apps.length}</span> kết quả cho "<span className="font-bold text-gray-800 dark:text-gray-200">{q}</span>":
+                    </p>
+                    <ul className="space-y-3">
+                      <AnimatePresence>
+                        {apps.map(app => (
+                          <SearchResultItem key={app.id} app={app} onClick={() => handleAppClick(app.slug)} />
+                        ))}
+                      </AnimatePresence>
+                    </ul>
+                  </>
                 )}
               </div>
             </div>
