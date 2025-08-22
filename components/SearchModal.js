@@ -3,7 +3,7 @@
 import { useRouter } from 'next/router';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, X, Filter, ListFilter, Sparkles, TrendingUp } from 'lucide-react'; // Thêm TrendingUp icon
+import { Search, X, Filter, ListFilter, Sparkles, Flame } from 'lucide-react'; // Thêm Flame icon cho hot apps
 import AppCard from './AppCard'; // Sử dụng lại AppCard để hiển thị kết quả
 
 // Component con cho Filter Pills
@@ -13,7 +13,7 @@ const FilterPill = ({ children, active, onClick }) => (
     className={`
       px-4 py-2 rounded-full text-sm font-medium transition-all duration-200
       ${active
-        ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-md'
+        ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-md'
         : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'
       }
     `}
@@ -53,7 +53,7 @@ const SearchSkeleton = () => (
 
 export default function SearchModal({
   q, setQ, activeCategory, setCategory, sortBy, setSortBy,
-  apps, loading, searchOpen, setSearchOpen, categories
+  apps, loading, searchOpen, setSearchOpen, categories, hotApps // Thêm hotApps prop
 }) {
   const router = useRouter();
 
@@ -62,6 +62,12 @@ export default function SearchModal({
     setQ(''); // Reset query khi đóng modal
     setCategory('all'); // Reset category khi đóng modal
     router.push(`/${slug}`);
+  };
+
+  // Xử lý click vào ứng dụng hot
+  const handleHotAppClick = (appName) => {
+    setQ(appName); // Đặt từ khóa tìm kiếm là tên ứng dụng hot
+    // Logic tìm kiếm sẽ tự động chạy khi q thay đổi trong Layout.js
   };
 
   // Đóng modal khi nhấn ESC
@@ -102,7 +108,7 @@ export default function SearchModal({
             initial={{ scale: 0.9, y: -20 }}
             animate={{ scale: 1, y: 0 }}
             exit={{ scale: 0.9, y: -20 }}
-            className="relative w-full max-w-4xl"
+            className="relative w-full max-w-2xl" // Giảm max-w để khung tìm kiếm nhỏ hơn
           >
             {/* Glassmorphism Container */}
             <div className="bg-white/60 dark:bg-gray-900/60 backdrop-blur-2xl 
@@ -112,7 +118,7 @@ export default function SearchModal({
               {/* Header */}
               <div className="p-6 border-b border-gray-200/50 dark:border-gray-700/50">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-2xl font-bold bg-gradient-to-r from-indigo-500 to-violet-600 
+                  <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-500 to-purple-600 
                                 bg-clip-text text-transparent">
                     Tìm kiếm ứng dụng
                   </h2>
@@ -134,10 +140,10 @@ export default function SearchModal({
                     value={q}
                     onChange={(e) => setQ(e.target.value)}
                     placeholder="Tìm kiếm ứng dụng, tác giả, hoặc mô tả..."
-                    className="w-full pl-12 pr-4 py-4 text-lg rounded-2xl
+                    className="w-full pl-12 pr-4 py-3 text-lg rounded-xl
                              bg-gray-50/50 dark:bg-gray-800/50 
                              border-2 border-transparent
-                             focus:border-lime-500 focus:bg-white dark:focus:bg-gray-800
+                             focus:border-blue-500 focus:ring-2 focus:ring-purple-500 focus:bg-white dark:focus:bg-gray-800
                              transition-all duration-300 placeholder-gray-400"
                   />
                 </div>
@@ -169,23 +175,26 @@ export default function SearchModal({
               <div className="p-6 max-h-96 overflow-y-auto">
                 {q.trim() === '' ? (
                   <div className="text-center py-4 text-gray-500 flex flex-col items-center justify-center">
-                    <Sparkles className="w-12 h-12 text-indigo-400 mb-3 animate-pulse" />
+                    <Sparkles className="w-12 h-12 text-blue-400 mb-3 animate-pulse" />
                     <p className="text-lg font-semibold mb-1 text-gray-800 dark:text-gray-200">Bắt đầu tìm kiếm của bạn</p>
                     <p className="text-sm text-gray-600 dark:text-gray-400">Nhập từ khóa để khám phá các ứng dụng tuyệt vời!</p>
                     
-                    {/* Suggested Searches / Trending (Placeholder) */}
-                    <div className="mt-6 w-full max-w-md">
-                      <h3 className="text-md font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center justify-center gap-2">
-                        <TrendingUp className="w-5 h-5 text-lime-500" />
-                        Xu hướng tìm kiếm
-                      </h3>
-                      <div className="flex flex-wrap justify-center gap-2">
-                        <FilterPill>Productivity</FilterPill>
-                        <FilterPill>Games</FilterPill>
-                        <FilterPill>Social Media</FilterPill>
-                        <FilterPill>Utilities</FilterPill>
+                    {/* Hot Apps / Trending Searches */}
+                    {hotApps && hotApps.length > 0 && (
+                      <div className="mt-6 w-full max-w-md">
+                        <h3 className="text-md font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center justify-center gap-2">
+                          <Flame className="w-5 h-5 text-purple-500" />
+                          Ứng dụng Hot
+                        </h3>
+                        <div className="flex flex-wrap justify-center gap-2">
+                          {hotApps.map(app => (
+                            <FilterPill key={app.id} onClick={() => handleHotAppClick(app.name)}>
+                              {app.name}
+                            </FilterPill>
+                          ))}
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 ) : loading ? (
                   <SearchSkeleton />
@@ -194,7 +203,7 @@ export default function SearchModal({
                 ) : (
                   <>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                      Tìm thấy <span className="font-bold text-lime-500">{apps.length}</span> kết quả cho "<span className="font-bold text-gray-800 dark:text-gray-200">{q}</span>":
+                      Tìm thấy <span className="font-bold text-purple-500">{apps.length}</span> kết quả cho "<span className="font-bold text-gray-800 dark:text-gray-200">{q}</span>":
                     </p>
                     <ul className="space-y-3">
                       <AnimatePresence>
