@@ -17,6 +17,7 @@ const HotAppItem = ({ app, onClick }) => (
     <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-purple-600 
                     flex items-center justify-center text-white text-2xl font-bold
                     shadow-lg group-hover:shadow-xl transition-all duration-200">
+      {/* Placeholder for app icon/image. In a real app, you'd use app.iconUrl or similar */}
       {app.name.charAt(0)}
     </div>
     <span className="text-xs font-medium text-gray-700 dark:text-gray-300 mt-2 text-center">
