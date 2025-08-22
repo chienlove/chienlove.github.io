@@ -179,7 +179,7 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
         apps={apps} loading={loading}
         searchOpen={searchOpen} setSearchOpen={setSearchOpen}
         categories={categories}
-        hotApps={hotApps}  {/* THÊM DÒNG NÀY */}
+        hotApps={hotApps}
       />
 
       {/* MAIN CONTENT */}

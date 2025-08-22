@@ -323,10 +323,6 @@ export async function getServerSideProps(ctx) {
     .sort((a, b) => b.hotScore - a.hotScore)
     .slice(0, 5);
 
-  // ✅ LOẠI BỎ HOÀN TOÀN việc fetch certStatus ở server để tối ưu tốc độ
-  // certStatus sẽ được fetch ở client-side trong useEffect
-
-  // GIỮ NGUYÊN RETURN TỪ CODE GỐC - CHỈ THÊM hotApps VÀ paginationData
   return { 
     props: { 
       categoriesWithApps, 
