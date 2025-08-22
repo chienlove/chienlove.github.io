@@ -19,50 +19,43 @@ import {
   faExclamationTriangle,
 } from '@fortawesome/free-solid-svg-icons';
 
+// SSR: lấy app + join categories để có slug/name chuyên mục
 export async function getServerSideProps(context) {
   const slug = context.params.slug?.toLowerCase();
 
-  // Lấy app + slug chuyên mục qua quan hệ
-  const { data: appData, error } = await supabase
+  // 1) tìm theo slug
+  let { data: appData, error } = await supabase
     .from('apps')
     .select(
       `
       *,
-      downloads,
-      views,
       category:categories ( slug, name )
     `
     )
     .ilike('slug', slug)
     .single();
 
-  // Nếu không thấy theo slug, thử coi "slug" đang là id rồi redirect
-  if (!appData || error) {
-    const { data: fallback } = await supabase
+  // 2) fallback: nếu người dùng gõ id
+  if ((!appData || error) && slug) {
+    const fb = await supabase
       .from('apps')
       .select(
         `
         *,
-        downloads,
-        views,
         category:categories ( slug, name )
       `
       )
       .eq('id', slug)
       .single();
-
-    if (fallback) {
+    if (fb.data) {
       return {
-        redirect: {
-          destination: `/${fallback.slug}`,
-          permanent: false,
-        },
+        redirect: { destination: `/${fb.data.slug}`, permanent: false },
       };
     }
     return { notFound: true };
   }
 
-  // Lấy 10 app cùng category_id (không dùng text category nữa)
+  // 3) related theo category_id (KHÔNG dùng text category nữa)
   const { data: relatedApps } = await supabase
     .from('apps')
     .select('id, name, slug, icon_url, author, version')
@@ -96,13 +89,15 @@ export default function Detail({ serverApp, serverRelated }) {
     setDominantColor('#f0f2f5');
   }, [router.query.slug, serverApp, serverRelated]);
 
-  const isTestflight = app?.category?.slug === 'testflight';
-  const isJailbreak  = app?.category?.slug === 'jailbreak';
+  // Hỗ trợ cả schema mới (category: {slug}) lẫn cũ (category là text)
+  const categorySlug = app?.category?.slug ?? app?.category ?? null;
+  const isTestflight = categorySlug === 'testflight';
+  const isJailbreak = categorySlug === 'jailbreak';
 
   useEffect(() => {
     if (!app?.id) return;
 
-    // Tăng view chỉ cho TestFlight
+    // Tăng view cho TestFlight
     if (isTestflight) {
       fetch('/api/admin/add-view', {
         method: 'POST',
@@ -124,7 +119,7 @@ export default function Detail({ serverApp, serverRelated }) {
         .finally(() => setStatusLoading(false));
     }
 
-    // Tính màu nền từ icon
+    // Lấy màu nền từ icon
     if (app.icon_url && typeof window !== 'undefined') {
       const fac = new FastAverageColor();
       fac
@@ -133,7 +128,7 @@ export default function Detail({ serverApp, serverRelated }) {
         .catch(console.error)
         .finally(() => fac.destroy());
     }
-  }, [app, isTestflight]);
+  }, [app?.id, app?.icon_url, app?.testflight_url, isTestflight]);
 
   const truncate = (text, limit) =>
     text?.length > limit ? text.slice(0, limit) + '...' : text;
@@ -141,11 +136,13 @@ export default function Detail({ serverApp, serverRelated }) {
   const handleDownload = (e) => {
     e.preventDefault();
     if (!app?.id) return;
-    if (isTestflight) return;
+    if (isTestflight) return; // không tải ipa cho TestFlight
 
     setIsDownloading(true);
+    // Điều hướng sang trang install
     router.push(`/install/${app.slug}`);
 
+    // Tăng lượt tải
     fetch(`/api/admin/add-download?id=${app.id}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -154,10 +151,7 @@ export default function Detail({ serverApp, serverRelated }) {
       .then((res) => res.json())
       .then((data) => {
         if (data.success) {
-          setApp((prev) => ({
-            ...prev,
-            downloads: data.downloads,
-          }));
+          setApp((prev) => ({ ...prev, downloads: data.downloads }));
         }
       })
       .catch((err) => console.error('Lỗi ngầm khi tăng lượt tải:', err))
