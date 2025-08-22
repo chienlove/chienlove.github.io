@@ -6,9 +6,7 @@ import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabase';
 import SearchModal from './SearchModal';
 
-import {
-  FontAwesomeIcon
-} from '@fortawesome/react-fontawesome';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faSun, faMoon, faSearch, faBars, faTimes,
   faTools, faLayerGroup, faChevronDown, faChevronUp,
@@ -16,7 +14,9 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import {
   faGithub, faTwitter, faDiscord, faTelegram
-} from '@fortawesome/free-brands-svg-icons'export default function Layout({ children, fullWidth = false, hotApps }) {hotApps }) {
+} from '@fortawesome/free-brands-svg-icons';
+
+export default function Layout({ children, fullWidth = false, hotApps }) {
   const router = useRouter();
   const [darkMode, setDarkMode] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -27,7 +27,7 @@ import {
   const [apps, setApps] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
-  const menuRef = useRef();
+  const menuRef = useRef(null); 
 
   const [accordionOpen, setAccordionOpen] = useState({
     tools: true,
