@@ -130,7 +130,7 @@ export default function Home({ categoriesWithApps, hotApps, paginationData }) {
   );
 
   return (
-    <Layout>
+    <Layout hotApps={hotApps}>
       <div className="container mx-auto px-1 md:px-2 py-6 space-y-10">
         {/* ── Banner đầu trang: GỘP label + card vào 1 nhóm để không bị "xa" - GIỮ NGUYÊN TỪ CODE GỐC */}
         <div className="space-y-2">
