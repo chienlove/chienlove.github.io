@@ -1,10 +1,7 @@
-
-'use client';
-
 import { useRouter } from 'next/router';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, X, Filter, ListFilter } from 'lucide-react'; // Sử dụng Lucide Icons
+import { Search, X, Filter, ListFilter, Sparkles } from 'lucide-react'; // Sử dụng Lucide Icons
 import AppCard from './AppCard'; // Sử dụng lại AppCard để hiển thị kết quả
 
 // Component con cho Filter Pills
@@ -159,9 +156,11 @@ export default function SearchModal({
               {/* Results */}
               <div className="p-6 max-h-96 overflow-y-auto">
                 {q.trim() === '' ? (
-                  <p className="text-center py-4 text-gray-500">
-                    Nhập từ khóa để tìm kiếm ứng dụng...
-                  </p>
+                  <div className="text-center py-4 text-gray-500 flex flex-col items-center justify-center">
+                    <Sparkles className="w-12 h-12 text-blue-400 mb-3" />
+                    <p className="text-lg font-semibold mb-1">Bắt đầu tìm kiếm của bạn</p>
+                    <p className="text-sm">Nhập từ khóa để khám phá các ứng dụng tuyệt vời!</p>
+                  </div>
                 ) : loading ? (
                   <SearchSkeleton />
                 ) : !apps.length ? (
@@ -181,5 +180,3 @@ export default function SearchModal({
     </AnimatePresence>
   );
 }
-
-
