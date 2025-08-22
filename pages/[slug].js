@@ -1,5 +1,3 @@
-'use client';
-
 import { supabase } from '../lib/supabase';
 import Layout from '../components/Layout';
 import { useRouter } from 'next/router';
@@ -202,7 +200,7 @@ export default function Detail({ serverApp, serverRelated }) {
                 <h1 className="mt-4 text-2xl font-bold text-gray-900 drop-shadow">{app.name}</h1>
                 {app.author && <p className="text-gray-700 text-sm">{app.author}</p>}
                 <div className="mt-4 space-x-2">
-                  {isTestflight && app.testflight_url && (
+                  {(isTestflight && app.testflight_url) && (
                     <div className="flex flex-wrap justify-center gap-2">
                       <a
                         href={app.testflight_url}
@@ -233,6 +231,29 @@ export default function Detail({ serverApp, serverRelated }) {
                         </span>
                       )}
                     </div>
+                  )}
+
+                  {(!isTestflight && !isJailbreak) && (
+                    <button
+                      onClick={handleDownload}
+                      disabled={isDownloading}
+                      className={`inline-block border border-green-500 text-green-700 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-green-200 active:shadow-inner active:ring-2 active:ring-green-500 ${isDownloading ? 'opacity-50 cursor-not-allowed bg-green-100' : 'hover:bg-green-100'}`}
+                    >
+                      {isDownloading ? (
+                        <span className="flex items-center">
+                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-green-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Đang tải...
+                        </span>
+                      ) : (
+                        <>
+                          <FontAwesomeIcon icon={faDownload} className="mr-2" />
+                          Cài đặt ứng dụng
+                        </>
+                      )}
+                    </button>
                   )}
 
                   {isJailbreak && (
