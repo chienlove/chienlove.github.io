@@ -1,3 +1,5 @@
+'use client';
+
 import { supabase } from '../lib/supabase';
 import Layout from '../components/Layout';
 import { useRouter } from 'next/router';
@@ -21,6 +23,7 @@ import {
   faGlobe,
   faMobile,
   faStar,
+  faChevronDown,
 } from '@fortawesome/free-solid-svg-icons';
 
 export async function getServerSideProps(context) {
@@ -257,7 +260,30 @@ export default function Detail({ serverApp, serverRelated, pagination }) {
                     </div>
                   )}
 
-                  {(!isTestflight) && (
+                  {(!isJailbreak) && (
+                    <button
+                      onClick={handleDownload}
+                      disabled={isDownloading}
+                      className={`inline-block border border-green-500 text-green-700 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-green-200 active:shadow-inner active:ring-2 active:ring-green-500 ${isDownloading ? 'opacity-50 cursor-not-allowed bg-green-100' : 'hover:bg-green-100'}`}
+                    >
+                      {isDownloading ? (
+                        <span className="flex items-center">
+                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-green-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Đang tải...
+                        </span>
+                      ) : (
+                        <>
+                          <FontAwesomeIcon icon={faDownload} className="mr-2" />
+                          Cài đặt ứng dụng
+                        </>
+                      )}
+                    </button>
+                  )}
+
+                  {isJailbreak && (
                     <button
                       onClick={handleDownload}
                       disabled={isDownloading}
@@ -355,118 +381,86 @@ export default function Detail({ serverApp, serverRelated, pagination }) {
           )}
 
           {/* Thông tin chi tiết */}
-          <div className="bg-white rounded-xl p-4 shadow">
-            <h2 className="text-lg font-bold text-gray-800 mb-4">Thông tin</h2>
-            <div className="space-y-4">
-              {/* Hàng 1: Phiên bản và Dung lượng */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center gap-3">
-                  <FontAwesomeIcon icon={faCodeBranch} className="text-blue-500 text-lg" />
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase font-semibold">Phiên bản</p>
-                    <p className="text-sm font-medium text-gray-800">{app.version || 'Không rõ'}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <FontAwesomeIcon icon={faDatabase} className="text-green-500 text-lg" />
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase font-semibold">Dung lượng</p>
-                    <p className="text-sm font-medium text-gray-800">{app.size ? `${app.size} MB` : 'Không rõ'}</p>
-                  </div>
+          <div className="bg-white rounded-xl p-6 shadow">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Thông tin</h2>
+            <div className="space-y-5">
+              
+              {/* Nhà cung cấp */}
+              <div className="flex items-center justify-between py-3 border-b border-gray-200">
+                <span className="text-gray-500 text-base">Nhà cung cấp</span>
+                <span className="text-gray-900 font-medium text-base">{app.author || 'Không rõ'}</span>
+              </div>
+
+              {/* Kích cỡ */}
+              <div className="flex items-center justify-between py-3 border-b border-gray-200">
+                <span className="text-gray-500 text-base">Kích cỡ</span>
+                <span className="text-gray-900 font-medium text-base">{app.size ? `${app.size} MB` : 'Không rõ'}</span>
+              </div>
+
+              {/* Danh mục */}
+              <div className="flex items-center justify-between py-3 border-b border-gray-200">
+                <span className="text-gray-500 text-base">Danh mục</span>
+                <span className="text-gray-900 font-medium text-base">{app.category?.name || 'Không rõ'}</span>
+              </div>
+
+              {/* Tương thích */}
+              <div className="flex items-center justify-between py-3 border-b border-gray-200">
+                <span className="text-gray-500 text-base">Tương thích</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-900 font-medium text-base">
+                    {app.supported_devices ? (
+                      Array.isArray(app.supported_devices) ? 
+                        app.supported_devices.join(', ') : 
+                        app.supported_devices
+                    ) : 'Trên iPhone này'}
+                  </span>
+                  <FontAwesomeIcon icon={faChevronDown} className="text-gray-400 text-sm" />
                 </div>
               </div>
 
-              {/* Hàng 2: Thiết bị hỗ trợ */}
-              {app.supported_devices && (
-                <div className="flex items-start gap-3">
-                  <FontAwesomeIcon icon={faMobile} className="text-purple-500 text-lg mt-1" />
-                  <div className="flex-1">
-                    <p className="text-xs text-gray-500 uppercase font-semibold mb-1">Thiết bị hỗ trợ</p>
-                    <div className="flex flex-wrap gap-1">
-                      {Array.isArray(app.supported_devices) ? (
-                        app.supported_devices.map((device, index) => (
-                          <span key={index} className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs font-medium">
-                            {device}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs font-medium">
-                          {app.supported_devices}
-                        </span>
-                      )}
-                    </div>
-                  </div>
+              {/* Ngôn ngữ */}
+              <div className="flex items-center justify-between py-3 border-b border-gray-200">
+                <span className="text-gray-500 text-base">Ngôn ngữ</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-900 font-medium text-base">
+                    {app.languages ? (
+                      Array.isArray(app.languages) ? 
+                        `Tiếng Việt và ${app.languages.length - 1} ngôn ngữ khác` : 
+                        app.languages
+                    ) : 'Tiếng Việt và 31 ngôn ngữ khác'}
+                  </span>
+                  <FontAwesomeIcon icon={faChevronDown} className="text-gray-400 text-sm" />
                 </div>
-              )}
-
-              {/* Hàng 3: Ngôn ngữ */}
-              {app.languages && (
-                <div className="flex items-start gap-3">
-                  <FontAwesomeIcon icon={faGlobe} className="text-blue-500 text-lg mt-1" />
-                  <div className="flex-1">
-                    <p className="text-xs text-gray-500 uppercase font-semibold mb-1">Ngôn ngữ</p>
-                    <div className="flex flex-wrap gap-1">
-                      {Array.isArray(app.languages) ? (
-                        app.languages.map((lang, index) => (
-                          <span key={index} className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
-                            {lang}
-                          </span>
-                        ))
-                      ) : (
-                        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
-                          {app.languages}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Hàng 4: iOS tối thiểu và Ngày phát hành */}
-              <div className="grid grid-cols-2 gap-4">
-                {app.minimum_os_version && (
-                  <div className="flex items-center gap-3">
-                    <FontAwesomeIcon icon={faMobile} className="text-gray-500 text-lg" />
-                    <div>
-                      <p className="text-xs text-gray-500 uppercase font-semibold">iOS tối thiểu</p>
-                      <p className="text-sm font-medium text-gray-800">{app.minimum_os_version}</p>
-                    </div>
-                  </div>
-                )}
-                {app.release_date && (
-                  <div className="flex items-center gap-3">
-                    <FontAwesomeIcon icon={faCalendarAlt} className="text-orange-500 text-lg" />
-                    <div>
-                      <p className="text-xs text-gray-500 uppercase font-semibold">Ngày phát hành</p>
-                      <p className="text-sm font-medium text-gray-800">
-                        {new Date(app.release_date).toLocaleDateString('vi-VN')}
-                      </p>
-                    </div>
-                  </div>
-                )}
               </div>
 
-              {/* Hàng 5: Độ tuổi */}
-              {app.age_rating && (
-                <div className="flex items-center gap-3">
-                  <FontAwesomeIcon icon={faStar} className="text-yellow-500 text-lg" />
-                  <div>
-                    <p className="text-xs text-gray-500 uppercase font-semibold">Độ tuổi</p>
-                    <div className="flex items-center gap-2">
-                      <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-bold">
-                        {app.age_rating}+
-                      </span>
-                      <span className="text-xs text-gray-500">
-                        {app.age_rating === '4' && 'Phù hợp mọi lứa tuổi'}
-                        {app.age_rating === '9' && 'Phù hợp từ 9 tuổi trở lên'}
-                        {app.age_rating === '12' && 'Phù hợp từ 12 tuổi trở lên'}
-                        {app.age_rating === '17' && 'Phù hợp từ 17 tuổi trở lên'}
-                        {!['4', '9', '12', '17'].includes(app.age_rating) && 'Kiểm tra độ tuổi phù hợp'}
-                      </span>
-                    </div>
-                  </div>
+              {/* Tuổi */}
+              <div className="flex items-center justify-between py-3 border-b border-gray-200">
+                <span className="text-gray-500 text-base">Tuổi</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-900 font-medium text-base">
+                    {app.age_rating ? `${app.age_rating}+` : '12+'}
+                  </span>
+                  <FontAwesomeIcon icon={faChevronDown} className="text-gray-400 text-sm" />
                 </div>
-              )}
+              </div>
+
+              {/* Mua in-app */}
+              <div className="flex items-center justify-between py-3 border-b border-gray-200">
+                <span className="text-gray-500 text-base">Mua in-app</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-900 font-medium text-base">Có</span>
+                  <FontAwesomeIcon icon={faChevronDown} className="text-gray-400 text-sm" />
+                </div>
+              </div>
+
+              {/* Bản quyền */}
+              <div className="flex items-center justify-between py-3">
+                <span className="text-gray-500 text-base">Bản quyền</span>
+                <span className="text-gray-900 font-medium text-base">
+                  © {app.release_date ? new Date(app.release_date).getFullYear() : '2023'} {app.author || 'Meta'}
+                </span>
+              </div>
+
             </div>
           </div>
 
