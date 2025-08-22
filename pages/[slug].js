@@ -17,13 +17,6 @@ import {
   faCheckCircle,
   faTimesCircle,
   faExclamationTriangle,
-  faChevronLeft,
-  faChevronRight,
-  faCalendarAlt,
-  faGlobe,
-  faMobile,
-  faStar,
-  faChevronDown,
 } from '@fortawesome/free-solid-svg-icons';
 
 export async function getServerSideProps(context) {
@@ -66,41 +59,23 @@ export async function getServerSideProps(context) {
     if (cat) appData = { ...appData, category: cat };
   }
 
-  // 4) Related theo category_id với phân trang
-  const page = parseInt(context.query.page || '1', 10);
-  const limit = 5;
-  const offset = (page - 1) * limit;
-
+  // 4) Related theo category_id (đồng bộ với index.js)
   const { data: relatedApps } = await supabase
     .from('apps')
     .select('id, name, slug, icon_url, author, version')
     .eq('category_id', appData.category_id)
     .neq('id', appData.id)
-    .range(offset, offset + limit - 1);
-
-  // Đếm tổng số related apps để tính pagination
-  const { count: totalRelated } = await supabase
-    .from('apps')
-    .select('*', { count: 'exact', head: true })
-    .eq('category_id', appData.category_id)
-    .neq('id', appData.id);
-
-  const totalPages = Math.ceil((totalRelated || 0) / limit);
+    .limit(10);
 
   return {
     props: {
       serverApp: appData,
       serverRelated: relatedApps ?? [],
-      pagination: {
-        currentPage: page,
-        totalPages,
-        totalItems: totalRelated || 0,
-      },
     },
   };
 }
 
-export default function Detail({ serverApp, serverRelated, pagination }) {
+export default function Detail({ serverApp, serverRelated }) {
   const router = useRouter();
 
   const [app, setApp] = useState(serverApp);
@@ -260,29 +235,6 @@ export default function Detail({ serverApp, serverRelated, pagination }) {
                     </div>
                   )}
 
-                  {(!isJailbreak) && (
-                    <button
-                      onClick={handleDownload}
-                      disabled={isDownloading}
-                      className={`inline-block border border-green-500 text-green-700 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-green-200 active:shadow-inner active:ring-2 active:ring-green-500 ${isDownloading ? 'opacity-50 cursor-not-allowed bg-green-100' : 'hover:bg-green-100'}`}
-                    >
-                      {isDownloading ? (
-                        <span className="flex items-center">
-                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-green-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          Đang tải...
-                        </span>
-                      ) : (
-                        <>
-                          <FontAwesomeIcon icon={faDownload} className="mr-2" />
-                          Cài đặt ứng dụng
-                        </>
-                      )}
-                    </button>
-                  )}
-
                   {isJailbreak && (
                     <button
                       onClick={handleDownload}
@@ -380,101 +332,10 @@ export default function Detail({ serverApp, serverRelated, pagination }) {
             </div>
           )}
 
-          {/* Thông tin chi tiết */}
-          <div className="bg-white rounded-xl p-6 shadow">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Thông tin</h2>
-            <div className="space-y-5">
-              
-              {/* Nhà cung cấp */}
-              <div className="flex items-center justify-between py-3 border-b border-gray-200">
-                <span className="text-gray-500 text-base">Nhà cung cấp</span>
-                <span className="text-gray-900 font-medium text-base">{app.author || 'Không rõ'}</span>
-              </div>
-
-              {/* Kích cỡ */}
-              <div className="flex items-center justify-between py-3 border-b border-gray-200">
-                <span className="text-gray-500 text-base">Kích cỡ</span>
-                <span className="text-gray-900 font-medium text-base">{app.size ? `${app.size} MB` : 'Không rõ'}</span>
-              </div>
-
-              {/* Danh mục */}
-              <div className="flex items-center justify-between py-3 border-b border-gray-200">
-                <span className="text-gray-500 text-base">Danh mục</span>
-                <span className="text-gray-900 font-medium text-base">{app.category?.name || 'Không rõ'}</span>
-              </div>
-
-              {/* Tương thích */}
-              <div className="flex items-center justify-between py-3 border-b border-gray-200">
-                <span className="text-gray-500 text-base">Tương thích</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-900 font-medium text-base">
-                    {app.supported_devices ? (
-                      Array.isArray(app.supported_devices) ? 
-                        app.supported_devices.join(', ') : 
-                        app.supported_devices
-                    ) : 'Trên iPhone này'}
-                  </span>
-                  <FontAwesomeIcon icon={faChevronDown} className="text-gray-400 text-sm" />
-                </div>
-              </div>
-
-              {/* Ngôn ngữ */}
-              <div className="flex items-center justify-between py-3 border-b border-gray-200">
-                <span className="text-gray-500 text-base">Ngôn ngữ</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-900 font-medium text-base">
-                    {app.languages ? (
-                      Array.isArray(app.languages) ? 
-                        `Tiếng Việt và ${app.languages.length - 1} ngôn ngữ khác` : 
-                        app.languages
-                    ) : 'Tiếng Việt và 31 ngôn ngữ khác'}
-                  </span>
-                  <FontAwesomeIcon icon={faChevronDown} className="text-gray-400 text-sm" />
-                </div>
-              </div>
-
-              {/* Tuổi */}
-              <div className="flex items-center justify-between py-3 border-b border-gray-200">
-                <span className="text-gray-500 text-base">Tuổi</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-900 font-medium text-base">
-                    {app.age_rating ? `${app.age_rating}+` : '12+'}
-                  </span>
-                  <FontAwesomeIcon icon={faChevronDown} className="text-gray-400 text-sm" />
-                </div>
-              </div>
-
-              {/* Mua in-app */}
-              <div className="flex items-center justify-between py-3 border-b border-gray-200">
-                <span className="text-gray-500 text-base">Mua in-app</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-900 font-medium text-base">Có</span>
-                  <FontAwesomeIcon icon={faChevronDown} className="text-gray-400 text-sm" />
-                </div>
-              </div>
-
-              {/* Bản quyền */}
-              <div className="flex items-center justify-between py-3">
-                <span className="text-gray-500 text-base">Bản quyền</span>
-                <span className="text-gray-900 font-medium text-base">
-                  © {app.release_date ? new Date(app.release_date).getFullYear() : '2023'} {app.author || 'Meta'}
-                </span>
-              </div>
-
-            </div>
-          </div>
-
           {/* Related */}
           {related.length > 0 && (
             <div className="bg-white rounded-xl p-4 shadow">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold text-gray-800">Ứng dụng cùng chuyên mục</h2>
-                {pagination && pagination.totalPages > 1 && (
-                  <span className="text-sm text-gray-500">
-                    Trang {pagination.currentPage} / {pagination.totalPages}
-                  </span>
-                )}
-              </div>
+              <h2 className="text-lg font-bold text-gray-800 mb-4">Ứng dụng cùng chuyên mục</h2>
               <div className="divide-y divide-gray-200">
                 {related.map((item) => (
                   <Link
@@ -504,48 +365,6 @@ export default function Detail({ serverApp, serverRelated, pagination }) {
                   </Link>
                 ))}
               </div>
-              
-              {/* Pagination Controls */}
-              {pagination && pagination.totalPages > 1 && (
-                <div className="flex items-center justify-center gap-2 mt-6 pt-4 border-t border-gray-200">
-                  {pagination.currentPage > 1 && (
-                    <Link 
-                      href={`/${app.slug}?page=${pagination.currentPage - 1}`}
-                      className="p-2 rounded-md hover:bg-gray-200 transition-colors duration-200"
-                    >
-                      <FontAwesomeIcon icon={faChevronLeft} />
-                    </Link>
-                  )}
-                  
-                  {Array.from({ length: Math.min(pagination.totalPages, 5) }, (_, i) => {
-                    const pageNum = i + 1;
-                    return (
-                      <Link
-                        key={pageNum}
-                        href={`/${app.slug}?page=${pageNum}`}
-                        className={`
-                          w-9 h-9 flex items-center justify-center rounded-md text-sm font-bold transition-all duration-200
-                          ${pageNum === pagination.currentPage
-                            ? 'bg-blue-600 text-white scale-110 shadow-lg'
-                            : 'bg-gray-200 hover:bg-blue-500 hover:text-white'
-                          }
-                        `}
-                      >
-                        {pageNum}
-                      </Link>
-                    );
-                  })}
-                  
-                  {pagination.currentPage < pagination.totalPages && (
-                    <Link 
-                      href={`/${app.slug}?page=${pagination.currentPage + 1}`}
-                      className="p-2 rounded-md hover:bg-gray-200 transition-colors duration-200"
-                    >
-                      <FontAwesomeIcon icon={faChevronRight} />
-                    </Link>
-                  )}
-                </div>
-              )}
             </div>
           )}
         </div>
