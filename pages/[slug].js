@@ -15,6 +15,12 @@ import {
   faCheckCircle,
   faTimesCircle,
   faExclamationTriangle,
+  faChevronLeft,
+  faChevronRight,
+  faCalendarAlt,
+  faGlobe,
+  faMobile,
+  faStar,
 } from '@fortawesome/free-solid-svg-icons';
 
 export async function getServerSideProps(context) {
@@ -57,23 +63,41 @@ export async function getServerSideProps(context) {
     if (cat) appData = { ...appData, category: cat };
   }
 
-  // 4) Related theo category_id (đồng bộ với index.js)
+  // 4) Related theo category_id với phân trang
+  const page = parseInt(context.query.page || '1', 10);
+  const limit = 5;
+  const offset = (page - 1) * limit;
+
   const { data: relatedApps } = await supabase
     .from('apps')
     .select('id, name, slug, icon_url, author, version')
     .eq('category_id', appData.category_id)
     .neq('id', appData.id)
-    .limit(10);
+    .range(offset, offset + limit - 1);
+
+  // Đếm tổng số related apps để tính pagination
+  const { count: totalRelated } = await supabase
+    .from('apps')
+    .select('*', { count: 'exact', head: true })
+    .eq('category_id', appData.category_id)
+    .neq('id', appData.id);
+
+  const totalPages = Math.ceil((totalRelated || 0) / limit);
 
   return {
     props: {
       serverApp: appData,
       serverRelated: relatedApps ?? [],
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalItems: totalRelated || 0,
+      },
     },
   };
 }
 
-export default function Detail({ serverApp, serverRelated }) {
+export default function Detail({ serverApp, serverRelated, pagination }) {
   const router = useRouter();
 
   const [app, setApp] = useState(serverApp);
@@ -200,7 +224,7 @@ export default function Detail({ serverApp, serverRelated }) {
                 <h1 className="mt-4 text-2xl font-bold text-gray-900 drop-shadow">{app.name}</h1>
                 {app.author && <p className="text-gray-700 text-sm">{app.author}</p>}
                 <div className="mt-4 space-x-2">
-                  {(isTestflight && app.testflight_url) && (
+                  {isTestflight && app.testflight_url && (
                     <div className="flex flex-wrap justify-center gap-2">
                       <a
                         href={app.testflight_url}
@@ -233,30 +257,7 @@ export default function Detail({ serverApp, serverRelated }) {
                     </div>
                   )}
 
-                  {(!isTestflight && !isJailbreak) && (
-                    <button
-                      onClick={handleDownload}
-                      disabled={isDownloading}
-                      className={`inline-block border border-green-500 text-green-700 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-green-200 active:shadow-inner active:ring-2 active:ring-green-500 ${isDownloading ? 'opacity-50 cursor-not-allowed bg-green-100' : 'hover:bg-green-100'}`}
-                    >
-                      {isDownloading ? (
-                        <span className="flex items-center">
-                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-green-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          Đang tải...
-                        </span>
-                      ) : (
-                        <>
-                          <FontAwesomeIcon icon={faDownload} className="mr-2" />
-                          Cài đặt ứng dụng
-                        </>
-                      )}
-                    </button>
-                  )}
-
-                  {isJailbreak && (
+                  {(!isTestflight) && (
                     <button
                       onClick={handleDownload}
                       disabled={isDownloading}
@@ -353,10 +354,133 @@ export default function Detail({ serverApp, serverRelated }) {
             </div>
           )}
 
+          {/* Thông tin chi tiết */}
+          <div className="bg-white rounded-xl p-4 shadow">
+            <h2 className="text-lg font-bold text-gray-800 mb-4">Thông tin</h2>
+            <div className="space-y-4">
+              {/* Hàng 1: Phiên bản và Dung lượng */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center gap-3">
+                  <FontAwesomeIcon icon={faCodeBranch} className="text-blue-500 text-lg" />
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase font-semibold">Phiên bản</p>
+                    <p className="text-sm font-medium text-gray-800">{app.version || 'Không rõ'}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <FontAwesomeIcon icon={faDatabase} className="text-green-500 text-lg" />
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase font-semibold">Dung lượng</p>
+                    <p className="text-sm font-medium text-gray-800">{app.size ? `${app.size} MB` : 'Không rõ'}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Hàng 2: Thiết bị hỗ trợ */}
+              {app.supported_devices && (
+                <div className="flex items-start gap-3">
+                  <FontAwesomeIcon icon={faMobile} className="text-purple-500 text-lg mt-1" />
+                  <div className="flex-1">
+                    <p className="text-xs text-gray-500 uppercase font-semibold mb-1">Thiết bị hỗ trợ</p>
+                    <div className="flex flex-wrap gap-1">
+                      {Array.isArray(app.supported_devices) ? (
+                        app.supported_devices.map((device, index) => (
+                          <span key={index} className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs font-medium">
+                            {device}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-xs font-medium">
+                          {app.supported_devices}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Hàng 3: Ngôn ngữ */}
+              {app.languages && (
+                <div className="flex items-start gap-3">
+                  <FontAwesomeIcon icon={faGlobe} className="text-blue-500 text-lg mt-1" />
+                  <div className="flex-1">
+                    <p className="text-xs text-gray-500 uppercase font-semibold mb-1">Ngôn ngữ</p>
+                    <div className="flex flex-wrap gap-1">
+                      {Array.isArray(app.languages) ? (
+                        app.languages.map((lang, index) => (
+                          <span key={index} className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
+                            {lang}
+                          </span>
+                        ))
+                      ) : (
+                        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
+                          {app.languages}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Hàng 4: iOS tối thiểu và Ngày phát hành */}
+              <div className="grid grid-cols-2 gap-4">
+                {app.minimum_os_version && (
+                  <div className="flex items-center gap-3">
+                    <FontAwesomeIcon icon={faMobile} className="text-gray-500 text-lg" />
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase font-semibold">iOS tối thiểu</p>
+                      <p className="text-sm font-medium text-gray-800">{app.minimum_os_version}</p>
+                    </div>
+                  </div>
+                )}
+                {app.release_date && (
+                  <div className="flex items-center gap-3">
+                    <FontAwesomeIcon icon={faCalendarAlt} className="text-orange-500 text-lg" />
+                    <div>
+                      <p className="text-xs text-gray-500 uppercase font-semibold">Ngày phát hành</p>
+                      <p className="text-sm font-medium text-gray-800">
+                        {new Date(app.release_date).toLocaleDateString('vi-VN')}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Hàng 5: Độ tuổi */}
+              {app.age_rating && (
+                <div className="flex items-center gap-3">
+                  <FontAwesomeIcon icon={faStar} className="text-yellow-500 text-lg" />
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase font-semibold">Độ tuổi</p>
+                    <div className="flex items-center gap-2">
+                      <span className="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-bold">
+                        {app.age_rating}+
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {app.age_rating === '4' && 'Phù hợp mọi lứa tuổi'}
+                        {app.age_rating === '9' && 'Phù hợp từ 9 tuổi trở lên'}
+                        {app.age_rating === '12' && 'Phù hợp từ 12 tuổi trở lên'}
+                        {app.age_rating === '17' && 'Phù hợp từ 17 tuổi trở lên'}
+                        {!['4', '9', '12', '17'].includes(app.age_rating) && 'Kiểm tra độ tuổi phù hợp'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Related */}
           {related.length > 0 && (
             <div className="bg-white rounded-xl p-4 shadow">
-              <h2 className="text-lg font-bold text-gray-800 mb-4">Ứng dụng cùng chuyên mục</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold text-gray-800">Ứng dụng cùng chuyên mục</h2>
+                {pagination && pagination.totalPages > 1 && (
+                  <span className="text-sm text-gray-500">
+                    Trang {pagination.currentPage} / {pagination.totalPages}
+                  </span>
+                )}
+              </div>
               <div className="divide-y divide-gray-200">
                 {related.map((item) => (
                   <Link
@@ -386,6 +510,48 @@ export default function Detail({ serverApp, serverRelated }) {
                   </Link>
                 ))}
               </div>
+              
+              {/* Pagination Controls */}
+              {pagination && pagination.totalPages > 1 && (
+                <div className="flex items-center justify-center gap-2 mt-6 pt-4 border-t border-gray-200">
+                  {pagination.currentPage > 1 && (
+                    <Link 
+                      href={`/${app.slug}?page=${pagination.currentPage - 1}`}
+                      className="p-2 rounded-md hover:bg-gray-200 transition-colors duration-200"
+                    >
+                      <FontAwesomeIcon icon={faChevronLeft} />
+                    </Link>
+                  )}
+                  
+                  {Array.from({ length: Math.min(pagination.totalPages, 5) }, (_, i) => {
+                    const pageNum = i + 1;
+                    return (
+                      <Link
+                        key={pageNum}
+                        href={`/${app.slug}?page=${pageNum}`}
+                        className={`
+                          w-9 h-9 flex items-center justify-center rounded-md text-sm font-bold transition-all duration-200
+                          ${pageNum === pagination.currentPage
+                            ? 'bg-blue-600 text-white scale-110 shadow-lg'
+                            : 'bg-gray-200 hover:bg-blue-500 hover:text-white'
+                          }
+                        `}
+                      >
+                        {pageNum}
+                      </Link>
+                    );
+                  })}
+                  
+                  {pagination.currentPage < pagination.totalPages && (
+                    <Link 
+                      href={`/${app.slug}?page=${pagination.currentPage + 1}`}
+                      className="p-2 rounded-md hover:bg-gray-200 transition-colors duration-200"
+                    >
+                      <FontAwesomeIcon icon={faChevronRight} />
+                    </Link>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
