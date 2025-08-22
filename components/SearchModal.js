@@ -13,7 +13,7 @@ const FilterPill = ({ children, active, onClick }) => (
     className={`
       px-3 py-1.5 rounded-full text-sm font-medium transition-all duration-200
       ${active
-        ? 'bg-blue-600 text-white shadow-md'
+        ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-md'
         : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-600'
       }
     `}
@@ -96,7 +96,7 @@ export default function SearchModal({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/60 backdrop-blur-md"
             onClick={() => setSearchOpen(false)}
           ></motion.div>
 
@@ -158,7 +158,7 @@ export default function SearchModal({
                 </div>
                 <div className="flex items-center gap-1.5">
                   <ListFilter className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                  <span className="font-medium text-gray-700 dark:text-gray-300">Sắp xếp:</span>
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Sắp xếp:</span>
                   <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}
                           className="bg-gray-100 dark:bg-gray-700 rounded px-2 py-1 text-sm">
                     <option value="created_at">Mới nhất</option>
