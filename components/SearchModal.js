@@ -1,3 +1,5 @@
+'use client';
+
 import { useRouter } from 'next/router';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -11,7 +13,7 @@ const FilterPill = ({ children, active, onClick }) => (
     className={`
       px-4 py-2 rounded-full text-sm font-medium transition-all duration-200
       ${active
-        ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-md'
+        ? 'bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-md'
         : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-600'
       }
     `}
@@ -80,10 +82,13 @@ export default function SearchModal({
           className="fixed inset-0 z-50 flex items-start justify-center pt-20 px-4"
         >
           {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-black/40 backdrop-blur-md"
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 bg-black/70 backdrop-blur-md"
             onClick={() => setSearchOpen(false)}
-          ></div>
+          ></motion.div>
 
           {/* Modal */}
           <motion.div
@@ -93,14 +98,14 @@ export default function SearchModal({
             className="relative w-full max-w-4xl"
           >
             {/* Glassmorphism Container */}
-            <div className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-2xl 
-                           rounded-3xl shadow-2xl border border-white/20 dark:border-gray-700/30
+            <div className="bg-white/70 dark:bg-gray-900/70 backdrop-blur-xl 
+                           rounded-3xl shadow-2xl border border-white/40 dark:border-gray-700/60
                            overflow-hidden">
               
               {/* Header */}
               <div className="p-6 border-b border-gray-200/50 dark:border-gray-700/50">
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 
+                  <h2 className="text-2xl font-bold bg-gradient-to-r from-emerald-500 to-teal-600 
                                 bg-clip-text text-transparent">
                     Tìm kiếm ứng dụng
                   </h2>
@@ -109,13 +114,13 @@ export default function SearchModal({
                     className="p-2 rounded-full hover:bg-gray-200/50 dark:hover:bg-gray-700/50
                                transition-colors duration-200"
                   >
-                    <X className="w-6 h-6" />
+                    <X className="w-6 h-6 text-gray-700 dark:text-gray-300" />
                   </button>
                 </div>
                 
                 {/* Enhanced Search Input */}
                 <div className="relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
                   <input
                     autoFocus
                     type="text"
@@ -125,7 +130,7 @@ export default function SearchModal({
                     className="w-full pl-12 pr-4 py-4 text-lg rounded-2xl
                              bg-gray-50/50 dark:bg-gray-800/50 
                              border-2 border-transparent
-                             focus:border-blue-500 focus:bg-white dark:focus:bg-gray-800
+                             focus:border-emerald-500 focus:bg-white dark:focus:bg-gray-800
                              transition-all duration-300 placeholder-gray-400"
                   />
                 </div>
@@ -134,16 +139,16 @@ export default function SearchModal({
               {/* Filters */}
               <div className="px-6 py-4 bg-gray-50/30 dark:bg-gray-800/30 flex flex-wrap gap-3">
                 <div className="flex items-center gap-2">
-                  <Filter className="w-4 h-4 text-gray-500" />
+                  <Filter className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Danh mục:</span>
                   <select value={activeCategory} onChange={(e) => setCategory(e.target.value)}
                           className="bg-gray-100 dark:bg-gray-700 rounded px-2 py-1 text-sm">
                     <option value="all">Tất cả</option>
-                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)} 
                   </select>
                 </div>
                 <div className="flex items-center gap-2">
-                  <ListFilter className="w-4 h-4 text-gray-500" />
+                  <ListFilter className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                   <span className="text-sm font-medium text-gray-700 dark:text-gray-300">Sắp xếp:</span>
                   <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}
                           className="bg-gray-100 dark:bg-gray-700 rounded px-2 py-1 text-sm">
@@ -157,13 +162,13 @@ export default function SearchModal({
               <div className="p-6 max-h-96 overflow-y-auto">
                 {q.trim() === '' ? (
                   <div className="text-center py-4 text-gray-500 flex flex-col items-center justify-center">
-                    <Sparkles className="w-12 h-12 text-blue-400 mb-3" />
+                    <Sparkles className="w-12 h-12 text-emerald-400 mb-3" />
                     <p className="text-lg font-semibold mb-1">Bắt đầu tìm kiếm của bạn</p>
                     <p className="text-sm">Nhập từ khóa để khám phá các ứng dụng tuyệt vời!</p>
                   </div>
                 ) : loading ? (
                   <SearchSkeleton />
-                ) : !apps.length ? (
+                ) : apps.length === 0 ? (
                   <p className="text-center py-4 text-gray-500">Không có kết quả cho "{q}".</p>
                 ) : (
                   <ul className="space-y-3">
