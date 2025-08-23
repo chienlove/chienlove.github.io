@@ -6,44 +6,39 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, ChevronDown, Flame } from 'lucide-react';
 import AppCard from './AppCard';
 
-// Component cho Hot App Item (icon_url + tooltip)
-const HotAppItem = ({ app, onClick }) => {
-  const iconSrc = app.icon_url || null;
-
-  return (
-    <motion.div
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
-      onClick={() => onClick(app.name)}
-      title={app.name} // Tooltip
-      className="flex-shrink-0 md:flex-shrink cursor-pointer group"
+// Component cho Hot App Item (icon đồng bộ với kết quả tìm kiếm)
+const HotAppItem = ({ app, onClick }) => (
+  <motion.div
+    whileHover={{ scale: 1.05 }}
+    whileTap={{ scale: 0.95 }}
+    onClick={() => onClick(app.name)}
+    className="flex-shrink-0 md:flex-shrink cursor-pointer group"
+  >
+    <div
+      className="w-14 h-14 md:w-16 md:h-16 rounded-xl overflow-hidden
+                 bg-gradient-to-br from-teal-400 via-purple-500 to-pink-500
+                 flex items-center justify-center shadow-md
+                 group-hover:shadow-lg group-hover:ring-2 group-hover:ring-pink-300/40
+                 transition-all duration-300"
     >
-      <div
-        className="w-14 h-14 md:w-16 md:h-16 rounded-xl overflow-hidden
-                   bg-gradient-to-br from-teal-400 via-purple-500 to-pink-500
-                   flex items-center justify-center shadow-md
-                   group-hover:shadow-lg group-hover:ring-2 group-hover:ring-pink-300/40
-                   transition-all duration-300"
-      >
-        {iconSrc ? (
-          <img
-            src={iconSrc}
-            alt={app.name}
-            loading="lazy"
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          <span className="text-white text-lg font-bold">
-            {app.name.charAt(0)}
-          </span>
-        )}
-      </div>
-      <span className="block mt-2 text-xs font-medium text-gray-800 dark:text-gray-200 text-center truncate w-14 md:w-16">
-        {app.name}
-      </span>
-    </motion.div>
-  );
-};
+      {app.icon_url ? (
+        <img
+          src={app.icon_url}
+          alt={app.name}
+          loading="lazy"
+          className="w-full h-full object-cover"
+        />
+      ) : (
+        <span className="text-white text-lg font-bold">
+          {app.name.charAt(0)}
+        </span>
+      )}
+    </div>
+    <span className="block mt-2 text-xs font-medium text-gray-800 dark:text-gray-200 text-center truncate w-14 md:w-16">
+      {app.name}
+    </span>
+  </motion.div>
+);
 
 // Component cho Search Result Item
 const SearchResultItem = ({ app, onClick }) => (
@@ -127,7 +122,7 @@ export default function SearchModal({
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-50 flex items-start justify-center pt-16 px-4"
         >
-          {/* Backdrop */}
+          {/* Backdrop với hiệu ứng blur mạnh */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -144,6 +139,7 @@ export default function SearchModal({
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
             className="relative w-full max-w-lg"
           >
+            {/* Glassmorphism Container */}
             <div
               className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-2xl 
                          rounded-3xl shadow-2xl border border-white/30 dark:border-gray-700/50
@@ -231,6 +227,7 @@ export default function SearchModal({
               <div className="p-6 max-h-96 overflow-y-auto">
                 {q.trim() === '' ? (
                   <div className="text-center">
+                    {/* Xu hướng tìm kiếm */}
                     {hotApps && hotApps.length > 0 && (
                       <div className="mb-8">
                         <div className="flex items-center justify-center gap-2 mb-6">
