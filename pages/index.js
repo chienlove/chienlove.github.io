@@ -16,13 +16,12 @@ import {
   faEllipsisH,
 } from '@fortawesome/free-solid-svg-icons';
 
-// --- COMPONENT CON - Pagination ---
+// --- COMPONENT PHỤ: pagination ---
 const PaginationControls = ({ categorySlug, currentPage, totalPages }) => {
   if (totalPages <= 1) return null;
 
   return (
     <div className="flex items-center justify-center gap-2 mt-6 flex-wrap">
-      {/* Nút Previous */}
       {currentPage > 1 && (
         <Link
           href={`/?category=${categorySlug}&page=${currentPage - 1}`}
@@ -33,7 +32,6 @@ const PaginationControls = ({ categorySlug, currentPage, totalPages }) => {
         </Link>
       )}
 
-      {/* Hiển thị số trang đơn giản */}
       {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
         <Link
           key={pageNum}
@@ -51,7 +49,6 @@ const PaginationControls = ({ categorySlug, currentPage, totalPages }) => {
         </Link>
       ))}
 
-      {/* Nút Next */}
       {currentPage < totalPages && (
         <Link
           href={`/?category=${categorySlug}&page=${currentPage + 1}`}
@@ -65,7 +62,7 @@ const PaginationControls = ({ categorySlug, currentPage, totalPages }) => {
   );
 };
 
-// --- COMPONENT CON - Hot App Card ---
+// --- COMPONENT PHỤ: hot app badge ---
 const HotAppCard = ({ app, rank }) => {
   const rankColors = [
     'from-red-600 to-orange-500', // #1
@@ -78,6 +75,7 @@ const HotAppCard = ({ app, rank }) => {
 
   return (
     <div className="relative">
+      {/* vẫn giữ AppCard cho khu vực Hot nếu bạn thích */}
       <AppCard app={app} mode="list" />
       <div
         className={`absolute top-2 -left-2 w-8 h-8 rounded-full flex items-center justify-center
@@ -91,10 +89,44 @@ const HotAppCard = ({ app, rank }) => {
   );
 };
 
+/** NEW: Renderer nhẹ để đảm bảo luôn hiện app ở index
+ *  Chỉ cần name + slug. Không phụ thuộc vào logic ẩn/hiện bên trong AppCard.
+ */
+const LightItem = ({ app }) => {
+  if (!app) return null;
+  if (!app.slug) {
+    // Nếu thiếu slug, hiển thị dạng non-click để bạn thấy bản ghi "lạ"
+    return (
+      <div className="p-3 mb-2 rounded-lg border border-yellow-300 bg-yellow-50 text-yellow-800 text-sm">
+        {app.name || 'Ứng dụng'} -- thiếu slug nên không mở trang chi tiết được
+      </div>
+    );
+  }
+  return (
+    <Link
+      href={`/${app.slug}`}
+      className="flex items-center gap-3 p-3 mb-2 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 hover:border-red-400 transition"
+    >
+      {/* icon/thumbnail nếu có */}
+      {app.icon ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={app.icon} alt={app.name} className="w-10 h-10 rounded-lg object-cover" />
+      ) : (
+        <div className="w-10 h-10 rounded-lg bg-gray-200 dark:bg-gray-700" />
+      )}
+      <div className="flex-1 min-w-0">
+        <div className="font-semibold truncate">{app.name || 'Ứng dụng'}</div>
+        {app.description && (
+          <div className="text-sm text-gray-500 dark:text-gray-400 line-clamp-1">{app.description}</div>
+        )}
+      </div>
+    </Link>
+  );
+};
+
 export default function Home({ categoriesWithApps, hotApps, paginationData }) {
   const [certStatus, setCertStatus] = useState(null);
 
-  // ✅ Tối ưu: Chuyển việc fetch trạng thái chứng chỉ sang client-side
   useEffect(() => {
     const fetchCertStatus = async () => {
       try {
@@ -106,34 +138,26 @@ export default function Home({ categoriesWithApps, hotApps, paginationData }) {
           setCertStatus({ ocspStatus: 'error' });
         }
       } catch (error) {
-        console.error('Error fetching cert status:', error);
         setCertStatus({ ocspStatus: 'error' });
       }
     };
-
     fetchCertStatus();
   }, []);
 
-  // Chèn Multiplex sau card #2 và #4 (index 1 và 3)
   const multiplexIndices = new Set([1, 3]);
-
-  // Card nội dung
   const contentCard =
     'bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4';
-
-  // Card quảng cáo: dùng chung style với content
   const adCard = contentCard;
 
   const AdLabel = () => (
-    <div className="text-sm text-gray-500 dark:text-gray-400 font-semibold px-1">
-      Quảng cáo
-    </div>
+    <div className="text-sm text-gray-500 dark:text-gray-400 font-semibold px-1">Quảng cáo</div>
   );
 
   return (
+    {/* truyền hotApps xuống Layout để modal sử dụng */}
     <Layout hotApps={hotApps}>
       <div className="container mx-auto px-1 md:px-2 py-6 space-y-10">
-        {/* ── Banner đầu trang: GỘP label + card vào 1 nhóm để không bị "xa" */}
+        {/* Ad banner đầu */}
         <div className="space-y-2">
           <AdLabel />
           <div className={adCard}>
@@ -141,14 +165,12 @@ export default function Home({ categoriesWithApps, hotApps, paginationData }) {
           </div>
         </div>
 
-        {/* 🔥 Chuyên mục Ứng dụng Hot */}
+        {/* Ứng dụng Hot */}
         {hotApps && hotApps.length > 0 && (
           <div className={contentCard}>
             <div className="flex items-center gap-3 mb-4">
               <FontAwesomeIcon icon={faFire} className="text-2xl text-red-500" />
-              <h2 className="text-xl font-bold text-gray-800 dark:text-white">
-                Ứng dụng Hot
-              </h2>
+              <h2 className="text-xl font-bold text-gray-800 dark:text-white">Ứng dụng Hot</h2>
               <div className="text-sm text-gray-500 dark:text-gray-400">
                 Top {hotApps.length} ứng dụng được quan tâm nhất
               </div>
@@ -161,14 +183,12 @@ export default function Home({ categoriesWithApps, hotApps, paginationData }) {
           </div>
         )}
 
+        {/* Danh sách theo chuyên mục (dùng LightItem để luôn hiển thị) */}
         {categoriesWithApps.map((category, index) => (
           <Fragment key={category.id}>
-            {/* Card chuyên mục */}
             <div className={contentCard}>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-gray-800 dark:text-white">
-                  {category.name}
-                </h2>
+                <h2 className="text-xl font-bold text-gray-800 dark:text-white">{category.name}</h2>
 
                 {category.name.toLowerCase().includes('jailbreak') && certStatus && (
                   <span
@@ -201,21 +221,23 @@ export default function Home({ categoriesWithApps, hotApps, paginationData }) {
                 )}
               </div>
 
-              {/* Hiển thị thông tin phân trang */}
+              {/* Info phân trang nếu có nhiều trang */}
               {paginationData && paginationData[category.id] && paginationData[category.id].totalPages > 1 && (
                 <div className="text-sm text-gray-500 dark:text-gray-400 mb-3">
                   Trang {paginationData[category.id].currentPage} / {paginationData[category.id].totalPages}
-                  ({' '}{paginationData[category.id].totalApps} ứng dụng)
+                  {' '}({paginationData[category.id].totalApps} ứng dụng)
                 </div>
               )}
 
+              {/* RENDER BẰNG LIGHTITEM thay vì AppCard để trấn áp lỗi ẩn */}
               <div>
-                {category.apps.map((app) => (
-                  <AppCard key={app.id} app={app} mode="list" />
-                ))}
+                {category.apps.length === 0 ? (
+                  <div className="text-sm text-gray-500">Chưa có ứng dụng trong mục này</div>
+                ) : (
+                  category.apps.map((app) => <LightItem key={app.id || app.slug || app.name} app={app} />)
+                )}
               </div>
 
-              {/* ✅ Thêm các nút phân trang */}
               {paginationData && paginationData[category.id] && (
                 <PaginationControls
                   categorySlug={category.slug}
@@ -225,7 +247,7 @@ export default function Home({ categoriesWithApps, hotApps, paginationData }) {
               )}
             </div>
 
-            {/* ── Multiplex giữa trang: GỘP label + card vào 1 nhóm */}
+            {/* Ad multiplex giữa trang */}
             {multiplexIndices.has(index) && (
               <div className="space-y-2">
                 <AdLabel />
@@ -237,7 +259,7 @@ export default function Home({ categoriesWithApps, hotApps, paginationData }) {
           </Fragment>
         ))}
 
-        {/* ── Banner cuối trang: GỘP label + card */}
+        {/* Ad cuối trang */}
         <div className="space-y-2">
           <AdLabel />
           <div className={adCard}>
@@ -258,53 +280,28 @@ export async function getServerSideProps(ctx) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // Flow gốc giữ nguyên
   if (!user && !isGoogleBot) {
     return {
       redirect: { destination: '/under-construction', permanent: false },
     };
   }
 
-  // ✅ Lấy các tham số phân trang từ URL
   const { category: categorySlug, page: pageQuery } = ctx.query;
   const currentPage = parseInt(pageQuery || '1', 10);
-  const APPS_PER_PAGE = 10; // Số lượng app mỗi trang
+  const APPS_PER_PAGE = 10;
 
-  // Lấy danh sách chuyên mục - GIỮ NGUYÊN LOGIC GỐC
   const { data: categories } = await supabase.from('categories').select('id, name, slug');
 
   const paginationData = {};
-
-  // Lấy dữ liệu ứng dụng cho từng chuyên mục (có fallback)
   const categoriesWithApps = await Promise.all(
     (categories || []).map(async (category) => {
       const pageForThisCategory = (categorySlug && category.slug === categorySlug) ? currentPage : 1;
       const startIndex = (pageForThisCategory - 1) * APPS_PER_PAGE;
 
-      // --- Đếm tổng số theo category_id
-      let { count } = await supabase
+      const { count } = await supabase
         .from('apps')
         .select('*', { count: 'exact', head: true })
         .eq('category_id', category.id);
-
-      // --- Fallback đếm theo slug / name (nếu có cột)
-      if (!count || count === 0) {
-        // Fallback 1: category_slug
-        const { count: countBySlug } = await supabase
-          .from('apps')
-          .select('*', { count: 'exact', head: true })
-          .eq('category_slug', category.slug);
-        if (countBySlug && countBySlug > 0) {
-          count = countBySlug;
-        } else {
-          // Fallback 2: category_name
-          const { count: countByName } = await supabase
-            .from('apps')
-            .select('*', { count: 'exact', head: true })
-            .eq('category_name', category.name);
-          if (countByName && countByName > 0) count = countByName;
-        }
-      }
 
       const totalPages = Math.ceil((count || 0) / APPS_PER_PAGE);
       paginationData[category.id] = {
@@ -313,49 +310,23 @@ export async function getServerSideProps(ctx) {
         totalApps: count || 0,
       };
 
-      // --- Lấy danh sách app theo category_id
-      let { data: apps } = await supabase
+      const { data: apps } = await supabase
         .from('apps')
         .select('*')
         .eq('category_id', category.id)
         .order('created_at', { ascending: false })
         .range(startIndex, startIndex + APPS_PER_PAGE - 1);
 
-      // --- Fallback lấy theo slug / name nếu rỗng
-      if (!apps || apps.length === 0) {
-        // Fallback 1: category_slug
-        const bySlug = await supabase
-          .from('apps')
-          .select('*')
-          .eq('category_slug', category.slug)
-          .order('created_at', { ascending: false })
-          .range(startIndex, startIndex + APPS_PER_PAGE - 1);
-        if (bySlug.data && bySlug.data.length > 0) {
-          apps = bySlug.data;
-        } else {
-          // Fallback 2: category_name
-          const byName = await supabase
-            .from('apps')
-            .select('*')
-            .eq('category_name', category.name)
-            .order('created_at', { ascending: false })
-            .range(startIndex, startIndex + APPS_PER_PAGE - 1);
-          apps = byName.data || [];
-        }
-      }
-
       return { ...category, apps: apps || [] };
     })
   );
 
-  // ✅ Lấy 5 ứng dụng hot nhất (dựa trên lượt xem + tải)
   const { data: hotAppsData } = await supabase
     .from('apps')
     .select('*')
     .order('views', { ascending: false, nullsLast: true })
     .limit(5);
 
-  // Sắp xếp lại theo tổng điểm (views + downloads)
   const sortedHotApps = (hotAppsData || [])
     .map((app) => ({
       ...app,
