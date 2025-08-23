@@ -148,9 +148,6 @@ export default function Home({ categoriesWithApps, hotApps, paginationData }) {
               <h2 className="text-xl font-bold text-gray-800 dark:text-white">
                 Ứng dụng Hot
               </h2>
-              <div className="text-sm text-gray-500 dark:text-gray-400">
-                Top {hotApps.length} ứng dụng được quan tâm nhất
-              </div>
             </div>
             <div className="space-y-1">
               {hotApps.map((app, index) => (
