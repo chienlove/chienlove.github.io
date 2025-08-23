@@ -154,7 +154,6 @@ export default function Home({ categoriesWithApps, hotApps, paginationData }) {
   );
 
   return (
-    {/* truyền hotApps xuống Layout để modal sử dụng */}
     <Layout hotApps={hotApps}>
       <div className="container mx-auto px-1 md:px-2 py-6 space-y-10">
         {/* Ad banner đầu */}
