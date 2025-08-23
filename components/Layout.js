@@ -62,7 +62,9 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
       .select('*')
       .order(sortBy, { ascending: sortBy === 'name' });
 
-    if (q.trim()) query = query.ilike('name', `%${q.trim()}%`);
+    if (q.trim()) {
+  query = query.or(`name.ilike.%${q.trim()}%,author.ilike.%${q.trim()}%`);
+}
     if (activeCategory !== 'all') query = query.eq('category_id', activeCategory);
 
     const { data } = await query;
