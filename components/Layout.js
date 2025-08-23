@@ -1,7 +1,9 @@
 import { useEffect, useState, useRef } from 'react';
 import Head from 'next/head';
+import Script from 'next/script';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { supabase } from '../lib/supabase';
 import SearchModal from './SearchModal';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -14,7 +16,7 @@ import {
   faGithub, faTwitter, faDiscord, faTelegram
 } from '@fortawesome/free-brands-svg-icons';
 
-export default function Layout({ children, fullWidth = false, hotApps, categories = [] }) {
+export default function Layout({ children, fullWidth = false, hotApps }) {
   const router = useRouter();
   const [darkMode, setDarkMode] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -23,6 +25,7 @@ export default function Layout({ children, fullWidth = false, hotApps, categorie
   const [sortBy, setSortBy] = useState('created_at');
   const [q, setQ] = useState('');
   const [apps, setApps] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const menuRef = useRef(null); 
 
@@ -41,6 +44,35 @@ export default function Layout({ children, fullWidth = false, hotApps, categorie
     document.documentElement.classList.toggle('dark', darkMode);
     localStorage.setItem('darkMode', darkMode);
   }, [darkMode]);
+
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase
+        .from('categories')
+        .select('*, apps:apps(count)')
+        .order('name', { ascending: true });
+      setCategories(data || []);
+    })();
+  }, []);
+
+  const runSearch = async () => {
+    setLoading(true);
+    let query = supabase
+      .from('apps')
+      .select('*')
+      .order(sortBy, { ascending: sortBy === 'name' });
+
+    if (q.trim()) query = query.ilike('name', `%${q.trim()}%`);
+    if (activeCategory !== 'all') query = query.eq('category_id', activeCategory);
+
+    const { data } = await query;
+    setApps(data || []);
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    if (searchOpen) runSearch();
+  }, [q, activeCategory, sortBy, searchOpen]);
 
   // Auto-close menu when clicking outside
   useEffect(() => {
@@ -63,6 +95,7 @@ export default function Layout({ children, fullWidth = false, hotApps, categorie
         <title>StoreIOS – TestFlight & Jailbreak</title>
         <meta name="description" content="Kho ứng dụng TestFlight beta & công cụ jailbreak cho iOS" />
       </Head>
+
 
       {/* HEADER */}
       <header className="sticky top-0 z-50 w-full bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
@@ -129,17 +162,8 @@ export default function Layout({ children, fullWidth = false, hotApps, categorie
               </button>
               {accordionOpen.categories && (
                 <ul className="mt-2 ml-4 text-sm space-y-2">
-                  {categories.map((c) => (
-                    <li key={c.id}>
-                      <Link
-                        href={`/?category=${c.slug}`}
-                        onClick={() => setMobileMenuOpen(false)}
-                        className="hover:text-red-600"
-                      >
-                        {c.name}
-                      </Link>
-                    </li>
-                  ))}
+                  <li><Link href="/categories/jailbreak" onClick={() => setMobileMenuOpen(false)} className="hover:text-red-600">Jailbreak</Link></li>
+                  <li><Link href="/categories/testflight" onClick={() => setMobileMenuOpen(false)} className="hover:text-red-600">TestFlight App</Link></li>
                 </ul>
               )}
             </div>
@@ -163,11 +187,11 @@ export default function Layout({ children, fullWidth = false, hotApps, categorie
         {children}
       </main>
 
-      {/* FOOTER */}
+      {/* FOOTER (chuyên nghiệp – giữ như bản trước) */}
       <footer className="bg-gray-900 text-gray-300 mt-16 border-t border-gray-800">
         <div className="max-w-screen-2xl mx-auto px-4 py-12 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
           <div>
-            <h3 className="text-white font-bold text-lg mb-3">StoreiOS</h3>
+            <h3 className="text-white font-bold text-lg mb-3">StreiOS</h3>
             <p className="text-gray-400 text-sm">Kho ứng dụng TestFlight beta & công cụ jailbreak cho cộng đồng iOS.</p>
           </div>
           <div>
