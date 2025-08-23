@@ -72,7 +72,7 @@ export default async function handler(req, res) {
     console.log('[API] Extracted App ID:', appId, 'Primary Country:', primaryCountry);
 
     // Try multiple countries if app not found in primary country
-    const countriesToTry = [primaryCountry, 'us', 'vn', 'gb', 'au', 'ca'];
+    const countriesToTry = [primaryCountry, 'us', 'vn', 'cn', 'au', 'ca'];
     const uniqueCountries = [...new Set(countriesToTry)]; // Remove duplicates
     
     let result = null;
