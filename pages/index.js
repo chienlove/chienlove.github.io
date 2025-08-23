@@ -24,15 +24,15 @@ const PaginationControls = ({ categorySlug, currentPage, totalPages }) => {
     <div className="flex items-center justify-center gap-2 mt-6 flex-wrap">
       {/* Nút Previous */}
       {currentPage > 1 && (
-        <Link 
-          href={`/?category=${categorySlug}&page=${currentPage - 1}`} 
-          scroll={false} 
+        <Link
+          href={`/?category=${categorySlug}&page=${currentPage - 1}`}
+          scroll={false}
           className="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200"
         >
           <FontAwesomeIcon icon={faChevronLeft} />
         </Link>
       )}
-      
+
       {/* Hiển thị số trang đơn giản */}
       {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
         <Link
@@ -50,12 +50,12 @@ const PaginationControls = ({ categorySlug, currentPage, totalPages }) => {
           {pageNum}
         </Link>
       ))}
-      
+
       {/* Nút Next */}
       {currentPage < totalPages && (
-        <Link 
-          href={`/?category=${categorySlug}&page=${currentPage + 1}`} 
-          scroll={false} 
+        <Link
+          href={`/?category=${categorySlug}&page=${currentPage + 1}`}
+          scroll={false}
           className="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200"
         >
           <FontAwesomeIcon icon={faChevronRight} />
@@ -131,7 +131,7 @@ export default function Home({ categoriesWithApps, hotApps, paginationData }) {
   );
 
   return (
-    <Layout>
+    <Layout hotApps={hotApps}>
       <div className="container mx-auto px-1 md:px-2 py-6 space-y-10">
         {/* ── Banner đầu trang: GỘP label + card vào 1 nhóm để không bị "xa" */}
         <div className="space-y-2">
@@ -204,8 +204,8 @@ export default function Home({ categoriesWithApps, hotApps, paginationData }) {
               {/* Hiển thị thông tin phân trang */}
               {paginationData && paginationData[category.id] && paginationData[category.id].totalPages > 1 && (
                 <div className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-                  Trang {paginationData[category.id].currentPage} / {paginationData[category.id].totalPages} 
-                  ({paginationData[category.id].totalApps} ứng dụng)
+                  Trang {paginationData[category.id].currentPage} / {paginationData[category.id].totalPages}
+                  ({' '}{paginationData[category.id].totalApps} ứng dụng)
                 </div>
               )}
 
@@ -268,40 +268,81 @@ export async function getServerSideProps(ctx) {
   // ✅ Lấy các tham số phân trang từ URL
   const { category: categorySlug, page: pageQuery } = ctx.query;
   const currentPage = parseInt(pageQuery || '1', 10);
-  const APPS_PER_PAGE = 10; // Số lượng app mỗi trang, tốt cho SEO
+  const APPS_PER_PAGE = 10; // Số lượng app mỗi trang
 
   // Lấy danh sách chuyên mục - GIỮ NGUYÊN LOGIC GỐC
   const { data: categories } = await supabase.from('categories').select('id, name, slug');
 
   const paginationData = {};
 
-  // Lấy dữ liệu ứng dụng cho từng chuyên mục - GIỮ NGUYÊN LOGIC GỐC
+  // Lấy dữ liệu ứng dụng cho từng chuyên mục (có fallback)
   const categoriesWithApps = await Promise.all(
     (categories || []).map(async (category) => {
-      // Xác định trang hiện tại cho chuyên mục này
       const pageForThisCategory = (categorySlug && category.slug === categorySlug) ? currentPage : 1;
       const startIndex = (pageForThisCategory - 1) * APPS_PER_PAGE;
 
-      // Lấy tổng số app để tính toán phân trang
-      const { count } = await supabase
+      // --- Đếm tổng số theo category_id
+      let { count } = await supabase
         .from('apps')
         .select('*', { count: 'exact', head: true })
         .eq('category_id', category.id);
 
+      // --- Fallback đếm theo slug / name (nếu có cột)
+      if (!count || count === 0) {
+        // Fallback 1: category_slug
+        const { count: countBySlug } = await supabase
+          .from('apps')
+          .select('*', { count: 'exact', head: true })
+          .eq('category_slug', category.slug);
+        if (countBySlug && countBySlug > 0) {
+          count = countBySlug;
+        } else {
+          // Fallback 2: category_name
+          const { count: countByName } = await supabase
+            .from('apps')
+            .select('*', { count: 'exact', head: true })
+            .eq('category_name', category.name);
+          if (countByName && countByName > 0) count = countByName;
+        }
+      }
+
       const totalPages = Math.ceil((count || 0) / APPS_PER_PAGE);
-      paginationData[category.id] = { 
-        currentPage: pageForThisCategory, 
+      paginationData[category.id] = {
+        currentPage: pageForThisCategory,
         totalPages,
-        totalApps: count || 0
+        totalApps: count || 0,
       };
 
-      // Lấy danh sách app cho trang hiện tại
-      const { data: apps } = await supabase
+      // --- Lấy danh sách app theo category_id
+      let { data: apps } = await supabase
         .from('apps')
-        .select('*') // Lấy tất cả cột để đảm bảo tương thích
+        .select('*')
         .eq('category_id', category.id)
         .order('created_at', { ascending: false })
         .range(startIndex, startIndex + APPS_PER_PAGE - 1);
+
+      // --- Fallback lấy theo slug / name nếu rỗng
+      if (!apps || apps.length === 0) {
+        // Fallback 1: category_slug
+        const bySlug = await supabase
+          .from('apps')
+          .select('*')
+          .eq('category_slug', category.slug)
+          .order('created_at', { ascending: false })
+          .range(startIndex, startIndex + APPS_PER_PAGE - 1);
+        if (bySlug.data && bySlug.data.length > 0) {
+          apps = bySlug.data;
+        } else {
+          // Fallback 2: category_name
+          const byName = await supabase
+            .from('apps')
+            .select('*')
+            .eq('category_name', category.name)
+            .order('created_at', { ascending: false })
+            .range(startIndex, startIndex + APPS_PER_PAGE - 1);
+          apps = byName.data || [];
+        }
+      }
 
       return { ...category, apps: apps || [] };
     })
@@ -316,21 +357,18 @@ export async function getServerSideProps(ctx) {
 
   // Sắp xếp lại theo tổng điểm (views + downloads)
   const sortedHotApps = (hotAppsData || [])
-    .map(app => ({
+    .map((app) => ({
       ...app,
-      hotScore: (app.views || 0) + (app.downloads || 0)
+      hotScore: (app.views || 0) + (app.downloads || 0),
     }))
     .sort((a, b) => b.hotScore - a.hotScore)
     .slice(0, 5);
 
-  // ✅ LOẠI BỎ HOÀN TOÀN việc fetch certStatus ở server để tối ưu tốc độ
-  // certStatus sẽ được fetch ở client-side trong useEffect
-
-  return { 
-    props: { 
-      categoriesWithApps, 
+  return {
+    props: {
+      categoriesWithApps,
       hotApps: sortedHotApps,
-      paginationData
-    } 
+      paginationData,
+    },
   };
 }
