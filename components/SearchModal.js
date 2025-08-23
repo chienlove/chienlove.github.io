@@ -6,34 +6,35 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, ChevronDown, Flame } from 'lucide-react';
 import AppCard from './AppCard';
 
-// Component cho Hot App Item (có icon + tên, tối ưu SEO)
+// Component cho Hot App Item (icon đồng bộ với kết quả tìm kiếm)
 const HotAppItem = ({ app, onClick }) => (
   <motion.div
-    whileHover={{ scale: 1.08 }}
+    whileHover={{ scale: 1.05 }}
     whileTap={{ scale: 0.95 }}
     onClick={() => onClick(app.name)}
     className="flex-shrink-0 md:flex-shrink cursor-pointer group"
   >
     <div
-      className="w-20 h-20 md:w-24 md:h-24 rounded-2xl overflow-hidden
+      className="w-14 h-14 md:w-16 md:h-16 rounded-xl overflow-hidden
                  bg-gradient-to-br from-teal-400 via-purple-500 to-pink-500
-                 flex items-center justify-center shadow-lg
-                 group-hover:shadow-2xl group-hover:ring-4 group-hover:ring-pink-300/50
+                 flex items-center justify-center shadow-md
+                 group-hover:shadow-lg group-hover:ring-2 group-hover:ring-pink-300/40
                  transition-all duration-300"
     >
       {app.iconUrl ? (
         <img
           src={app.iconUrl}
           alt={app.name}
+          loading="lazy"
           className="w-full h-full object-cover"
         />
       ) : (
-        <span className="text-white text-2xl font-extrabold">
+        <span className="text-white text-lg font-bold">
           {app.name.charAt(0)}
         </span>
       )}
     </div>
-    <span className="block mt-2 text-sm font-semibold text-gray-800 dark:text-gray-200 text-center truncate w-20 md:w-24">
+    <span className="block mt-2 text-xs font-medium text-gray-800 dark:text-gray-200 text-center truncate w-14 md:w-16">
       {app.name}
     </span>
   </motion.div>
