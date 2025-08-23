@@ -4,7 +4,6 @@ import AdUnit from '../components/Ads';
 import { createSupabaseServer } from '../lib/supabase';
 import { Fragment, useEffect, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/router';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -21,86 +20,6 @@ import {
 const PaginationControls = ({ categorySlug, currentPage, totalPages }) => {
   if (totalPages <= 1) return null;
 
-  const renderPageNumbers = () => {
-    const pageNumbers = [];
-    const maxVisiblePages = 5;
-    
-    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
-    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-    
-    // Điều chỉnh lại startPage nếu endPage đã đạt tối đa
-    if (endPage - startPage + 1 < maxVisiblePages) {
-      startPage = Math.max(1, endPage - maxVisiblePages + 1);
-    }
-
-    // Hiển thị trang đầu và dấu ... nếu cần
-    if (startPage > 1) {
-      pageNumbers.push(
-        <Link
-          key={1}
-          href={`/?category=${categorySlug}&page=1`}
-          scroll={false}
-          className="w-9 h-9 flex items-center justify-center rounded-md text-sm font-bold transition-all duration-200 bg-gray-200 dark:bg-gray-700 hover:bg-red-500 hover:text-white"
-        >
-          1
-        </Link>
-      );
-      
-      if (startPage > 2) {
-        pageNumbers.push(
-          <span key="ellipsis-start" className="w-9 h-9 flex items-center justify-center text-gray-500">
-            <FontAwesomeIcon icon={faEllipsisH} />
-          </span>
-        );
-      }
-    }
-
-    // Hiển thị các trang trong khoảng
-    for (let i = startPage; i <= endPage; i++) {
-      const isActive = i === currentPage;
-      pageNumbers.push(
-        <Link
-          key={i}
-          href={`/?category=${categorySlug}&page=${i}`}
-          scroll={false}
-          className={`
-            w-9 h-9 flex items-center justify-center rounded-md text-sm font-bold transition-all duration-200
-            ${isActive
-              ? 'bg-red-600 text-white scale-110 shadow-lg'
-              : 'bg-gray-200 dark:bg-gray-700 hover:bg-red-500 hover:text-white'
-            }
-          `}
-        >
-          {i}
-        </Link>
-      );
-    }
-
-    // Hiển thị dấu ... và trang cuối nếu cần
-    if (endPage < totalPages) {
-      if (endPage < totalPages - 1) {
-        pageNumbers.push(
-          <span key="ellipsis-end" className="w-9 h-9 flex items-center justify-center text-gray-500">
-            <FontAwesomeIcon icon={faEllipsisH} />
-          </span>
-        );
-      }
-      
-      pageNumbers.push(
-        <Link
-          key={totalPages}
-          href={`/?category=${categorySlug}&page=${totalPages}`}
-          scroll={false}
-          className="w-9 h-9 flex items-center justify-center rounded-md text-sm font-bold transition-all duration-200 bg-gray-200 dark:bg-gray-700 hover:bg-red-500 hover:text-white"
-        >
-          {totalPages}
-        </Link>
-      );
-    }
-
-    return pageNumbers;
-  };
-
   return (
     <div className="flex items-center justify-center gap-2 mt-6 flex-wrap">
       {/* Nút Previous */}
@@ -114,8 +33,23 @@ const PaginationControls = ({ categorySlug, currentPage, totalPages }) => {
         </Link>
       )}
       
-      {/* Các số trang */}
-      {renderPageNumbers()}
+      {/* Hiển thị số trang đơn giản */}
+      {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+        <Link
+          key={pageNum}
+          href={`/?category=${categorySlug}&page=${pageNum}`}
+          scroll={false}
+          className={`
+            w-9 h-9 flex items-center justify-center rounded-md text-sm font-bold transition-all duration-200
+            ${pageNum === currentPage
+              ? 'bg-red-600 text-white scale-110 shadow-lg'
+              : 'bg-gray-200 dark:bg-gray-700 hover:bg-red-500 hover:text-white'
+            }
+          `}
+        >
+          {pageNum}
+        </Link>
+      ))}
       
       {/* Nút Next */}
       {currentPage < totalPages && (
@@ -157,36 +91,37 @@ const HotAppCard = ({ app, rank }) => {
   );
 };
 
-// --- COMPONENT CHÍNH - Home ---
-export default function Home({ hotApps, categoriesWithApps, paginationData, initialCertStatus }) {
-  const router = useRouter();
-  const [certStatus, setCertStatus] = useState(initialCertStatus);
+export default function Home({ categoriesWithApps, hotApps, paginationData }) {
+  const [certStatus, setCertStatus] = useState(null);
 
   // ✅ Tối ưu: Chuyển việc fetch trạng thái chứng chỉ sang client-side
   useEffect(() => {
-    // Chỉ fetch lại nếu server không cung cấp được dữ liệu ban đầu
-    if (!initialCertStatus) {
-      const fetchCertStatus = async () => {
-        try {
-          const res = await fetch('https://ipadl.storeios.net/api/check-revocation');
-          if (res.ok) {
-            const data = await res.json();
-            setCertStatus(data);
-          } else {
-            setCertStatus({ ocspStatus: 'error' });
-          }
-        } catch (error) {
-          console.error('Error fetching cert status:', error);
+    const fetchCertStatus = async () => {
+      try {
+        const res = await fetch('https://ipadl.storeios.net/api/check-revocation');
+        if (res.ok) {
+          const data = await res.json();
+          setCertStatus(data);
+        } else {
           setCertStatus({ ocspStatus: 'error' });
         }
-      };
+      } catch (error) {
+        console.error('Error fetching cert status:', error);
+        setCertStatus({ ocspStatus: 'error' });
+      }
+    };
 
-      fetchCertStatus();
-    }
-  }, [initialCertStatus]);
+    fetchCertStatus();
+  }, []);
 
-  const multiplexIndices = new Set([0, 2]); // Chèn quảng cáo sau chuyên mục #1 và #3
-  const contentCard = 'bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4';
+  // Chèn Multiplex sau card #2 và #4 (index 1 và 3)
+  const multiplexIndices = new Set([1, 3]);
+
+  // Card nội dung
+  const contentCard =
+    'bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4';
+
+  // Card quảng cáo: dùng chung style với content
   const adCard = contentCard;
 
   const AdLabel = () => (
@@ -198,7 +133,7 @@ export default function Home({ hotApps, categoriesWithApps, paginationData, init
   return (
     <Layout>
       <div className="container mx-auto px-1 md:px-2 py-6 space-y-10">
-        {/* Banner quảng cáo đầu trang */}
+        {/* ── Banner đầu trang: GỘP label + card vào 1 nhóm để không bị "xa" */}
         <div className="space-y-2">
           <AdLabel />
           <div className={adCard}>
@@ -226,24 +161,25 @@ export default function Home({ hotApps, categoriesWithApps, paginationData, init
           </div>
         )}
 
-        {/* Các chuyên mục khác với phân trang */}
         {categoriesWithApps.map((category, index) => (
           <Fragment key={category.id}>
+            {/* Card chuyên mục */}
             <div className={contentCard}>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-bold text-gray-800 dark:text-white">
                   {category.name}
                 </h2>
+
                 {category.name.toLowerCase().includes('jailbreak') && certStatus && (
                   <span
                     className="flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300 cursor-pointer"
                     title={
-                      certStatus.ocspStatus === 'successful'
+                      certStatus?.ocspStatus === 'successful'
                         ? (certStatus.isRevoked ? 'Chứng chỉ đã bị thu hồi' : 'Chứng chỉ hợp lệ')
                         : 'Không thể kiểm tra'
                     }
                   >
-                    {certStatus.ocspStatus === 'successful' ? (
+                    {certStatus?.ocspStatus === 'successful' ? (
                       certStatus.isRevoked ? (
                         <>
                           <span className="font-bold text-red-600">Revoked</span>
@@ -264,30 +200,32 @@ export default function Home({ hotApps, categoriesWithApps, paginationData, init
                   </span>
                 )}
               </div>
-              
+
               {/* Hiển thị thông tin phân trang */}
-              {paginationData[category.id] && paginationData[category.id].totalPages > 1 && (
+              {paginationData && paginationData[category.id] && paginationData[category.id].totalPages > 1 && (
                 <div className="text-sm text-gray-500 dark:text-gray-400 mb-3">
                   Trang {paginationData[category.id].currentPage} / {paginationData[category.id].totalPages} 
                   ({paginationData[category.id].totalApps} ứng dụng)
                 </div>
               )}
-              
-              <div className="space-y-1">
+
+              <div>
                 {category.apps.map((app) => (
                   <AppCard key={app.id} app={app} mode="list" />
                 ))}
               </div>
-              
+
               {/* ✅ Thêm các nút phân trang */}
-              <PaginationControls
-                categorySlug={category.slug}
-                currentPage={paginationData[category.id]?.currentPage || 1}
-                totalPages={paginationData[category.id]?.totalPages || 1}
-              />
+              {paginationData && paginationData[category.id] && (
+                <PaginationControls
+                  categorySlug={category.slug}
+                  currentPage={paginationData[category.id].currentPage || 1}
+                  totalPages={paginationData[category.id].totalPages || 1}
+                />
+              )}
             </div>
 
-            {/* Quảng cáo xen kẽ */}
+            {/* ── Multiplex giữa trang: GỘP label + card vào 1 nhóm */}
             {multiplexIndices.has(index) && (
               <div className="space-y-2">
                 <AdLabel />
@@ -299,7 +237,7 @@ export default function Home({ hotApps, categoriesWithApps, paginationData, init
           </Fragment>
         ))}
 
-        {/* Banner quảng cáo cuối trang */}
+        {/* ── Banner cuối trang: GỘP label + card */}
         <div className="space-y-2">
           <AdLabel />
           <div className={adCard}>
@@ -311,14 +249,16 @@ export default function Home({ hotApps, categoriesWithApps, paginationData, init
   );
 }
 
-// --- SERVER-SIDE LOGIC ---
 export async function getServerSideProps(ctx) {
   const supabase = createSupabaseServer(ctx);
   const userAgent = ctx.req.headers['user-agent'] || '';
   const isGoogleBot = userAgent.toLowerCase().includes('googlebot');
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
+  // Flow gốc giữ nguyên
   if (!user && !isGoogleBot) {
     return {
       redirect: { destination: '/under-construction', permanent: false },
@@ -330,78 +270,49 @@ export async function getServerSideProps(ctx) {
   const currentPage = parseInt(pageQuery || '1', 10);
   const APPS_PER_PAGE = 10; // Số lượng app mỗi trang, tốt cho SEO
 
-  // Lấy danh sách chuyên mục
-  const { data: categories, error: categoriesError } = await supabase
-    .from('categories')
-    .select('id, name, slug')
-    .order('created_at', { ascending: true });
-
-  if (categoriesError) {
-    console.error('Error fetching categories:', categoriesError);
-    // Trả về rỗng để tránh lỗi crash, nhưng vẫn hiển thị trang
-    return { props: { hotApps: [], categoriesWithApps: [], paginationData: {}, initialCertStatus: null } };
-  }
+  // Lấy danh sách chuyên mục - GIỮ NGUYÊN LOGIC GỐC
+  const { data: categories } = await supabase.from('categories').select('id, name, slug');
 
   const paginationData = {};
 
-  // Lấy dữ liệu ứng dụng cho từng chuyên mục
+  // Lấy dữ liệu ứng dụng cho từng chuyên mục - GIỮ NGUYÊN LOGIC GỐC
   const categoriesWithApps = await Promise.all(
     (categories || []).map(async (category) => {
       // Xác định trang hiện tại cho chuyên mục này
-      // Nếu có categorySlug trong URL và nó khớp với category hiện tại, dùng currentPage từ query
-      // Ngược lại, luôn bắt đầu từ trang 1 cho các chuyên mục khác
       const pageForThisCategory = (categorySlug && category.slug === categorySlug) ? currentPage : 1;
       const startIndex = (pageForThisCategory - 1) * APPS_PER_PAGE;
 
       // Lấy tổng số app để tính toán phân trang
-      const { count, error: countError } = await supabase
+      const { count } = await supabase
         .from('apps')
         .select('*', { count: 'exact', head: true })
         .eq('category_id', category.id);
 
-      if (countError) {
-        console.error(`Error counting apps for category ${category.name}:`, countError);
-        return { ...category, apps: [] }; // Trả về chuyên mục rỗng nếu có lỗi
-      }
-
-      const totalPages = Math.ceil(count / APPS_PER_PAGE);
+      const totalPages = Math.ceil((count || 0) / APPS_PER_PAGE);
       paginationData[category.id] = { 
         currentPage: pageForThisCategory, 
         totalPages,
-        totalApps: count 
+        totalApps: count || 0
       };
 
       // Lấy danh sách app cho trang hiện tại
-      const { data: apps, error: appsError } = await supabase
+      const { data: apps } = await supabase
         .from('apps')
-        .select('id, name, slug, icon_url, author, version, category_id, views, downloads') // Chỉ chọn các cột cần thiết
+        .select('*') // Lấy tất cả cột để đảm bảo tương thích
         .eq('category_id', category.id)
         .order('created_at', { ascending: false })
         .range(startIndex, startIndex + APPS_PER_PAGE - 1);
-
-      if (appsError) {
-        console.error(`Error fetching apps for category ${category.name}:`, appsError);
-        return { ...category, apps: [] }; // Trả về chuyên mục rỗng nếu có lỗi
-      }
 
       return { ...category, apps: apps || [] };
     })
   );
 
   // ✅ Lấy 5 ứng dụng hot nhất (dựa trên lượt xem + tải)
-  // Sử dụng trực tiếp các cột views và downloads có sẵn
-  const { data: hotAppsData, error: hotAppsError } = await supabase
+  const { data: hotAppsData } = await supabase
     .from('apps')
-    .select('id, name, slug, icon_url, author, version, category_id, views, downloads')
-    .order('views', { ascending: false, nullsFirst: true })
-    .order('downloads', { ascending: false, nullsLast: true })
+    .select('*')
+    .order('views', { ascending: false, nullsLast: true })
     .limit(5);
-
-  if (hotAppsError) {
-    console.error('Error fetching hot apps:', hotAppsError);
-    // Tiếp tục với hotApps rỗng nếu có lỗi
-    hotAppsData = []; 
-  }
 
   // Sắp xếp lại theo tổng điểm (views + downloads)
   const sortedHotApps = (hotAppsData || [])
@@ -410,30 +321,16 @@ export async function getServerSideProps(ctx) {
       hotScore: (app.views || 0) + (app.downloads || 0)
     }))
     .sort((a, b) => b.hotScore - a.hotScore)
-    .slice(0, 5); // Đảm bảo chỉ lấy 5 ứng dụng hàng đầu
+    .slice(0, 5);
 
-  // ✅ Tối ưu: Fetch certStatus ở server, nhưng không chặn render nếu lỗi
-  let initialCertStatus = null;
-  try {
-    const res = await fetch('https://ipadl.storeios.net/api/check-revocation', {
-      signal: AbortSignal.timeout(2000) // Thêm timeout 2 giây để tránh chờ quá lâu
-    });
-    if (res.ok) {
-      initialCertStatus = await res.json();
-    } else {
-      initialCertStatus = { ocspStatus: 'error', message: `HTTP Error: ${res.status}` };
-    }
-  } catch (error) {
-    console.error('Could not fetch cert status on server:', error.name, error.message);
-    initialCertStatus = { ocspStatus: 'error', message: error.message }; // Đặt trạng thái lỗi
-  }
+  // ✅ LOẠI BỎ HOÀN TOÀN việc fetch certStatus ở server để tối ưu tốc độ
+  // certStatus sẽ được fetch ở client-side trong useEffect
 
-  return {
-    props: {
+  return { 
+    props: { 
+      categoriesWithApps, 
       hotApps: sortedHotApps,
-      categoriesWithApps,
-      paginationData,
-      initialCertStatus,
-    },
+      paginationData
+    } 
   };
 }
