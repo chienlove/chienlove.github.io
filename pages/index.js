@@ -127,7 +127,7 @@ export default function Home({ categoriesWithApps, hotApps, paginationData }) {
   );
 
   return (
-    <Layout hotApps={hotApps}>
+    <Layout hotApps={hotApps} categories={categoriesWithApps}>
       <div className="container mx-auto px-1 md:px-2 py-6 space-y-10">
         {/* Banner đầu */}
         <div className="space-y-2">
