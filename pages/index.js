@@ -144,7 +144,7 @@ export default function Home({ categoriesWithApps, hotApps, paginationData }) {
         {hotApps && hotApps.length > 0 && (
           <div className={contentCard}>
             <div className="flex items-center gap-3 mb-4">
-              <h2 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-green-500">Top download
+              <h2 class="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-green-500">Top download
               </h2>
               <FontAwesomeIcon icon={faFire} className="text-2xl text-red-500" />
             </div>
@@ -162,7 +162,7 @@ export default function Home({ categoriesWithApps, hotApps, paginationData }) {
             {/* Card chuyên mục */}
             <div className={contentCard}>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-gray-800 dark:text-white">
+                <h2 class="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-green-500">
                   {category.name}
                 </h2>
 
