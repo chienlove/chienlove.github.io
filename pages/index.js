@@ -144,8 +144,7 @@ export default function Home({ categoriesWithApps, hotApps, paginationData }) {
         {hotApps && hotApps.length > 0 && (
           <div className={contentCard}>
             <div className="flex items-center gap-3 mb-4">
-              <FontAwesomeIcon icon={faFire} className="text-2xl text-red-500" />
-              <h2 class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">Top download
+              <h2 class="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-green-500">Top download
               </h2>
               <FontAwesomeIcon icon={faFire} className="text-2xl text-red-500" />
             </div>
