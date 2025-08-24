@@ -225,8 +225,12 @@ export default function Home({ categoriesWithApps, hotApps, paginationData }) {
             {multiplexIndices.has(index) && (
               <div className="space-y-2">
                 <AdLabel />
-                <div className={adCard}>
-                  <AdUnit className="my-0 min-w-0 overflow-hidden" mobileVariant="multiplex" />
+                <div className="w-full relative">
+    <AdUnit
+      className="my-0 w-full aspect-[4/3] sm:aspect-video"
+      mobileVariant="multiplex"
+      style={{ maxWidth: '100%', height: 'auto' }}
+    />
                 </div>
               </div>
             )}
