@@ -226,7 +226,7 @@ export default function Home({ categoriesWithApps, hotApps, paginationData }) {
               <div className="space-y-2">
                 <AdLabel />
                 <div className={adCard}>
-                  <AdUnit className="my-0 min-w-0 overflow-hidden" mobileVariant="multiplex" />
+                  <AdUnit className="my-0 min-w-0" mobileVariant="multiplex" />
                 </div>
               </div>
             )}
