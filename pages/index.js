@@ -80,7 +80,7 @@ const HotAppCard = ({ app, rank }) => {
       <AppCard app={app} mode="list" />
       <div
         className={`absolute top-2 -left-2 w-8 h-8 rounded-full flex items-center justify-center
-                   bg-gradient-to-br ${rankColor} text-white font-extrabold text-lg
+                   bg-gradient-to-br ${rankColor} text-white font-extrabold text-sm
                    shadow-lg border-2 border-white dark:border-gray-800
                    transform -rotate-12 z-10`}
       >
@@ -146,7 +146,7 @@ export default function Home({ categoriesWithApps, hotApps, paginationData }) {
             <div className="flex items-center gap-3 mb-4">
               <h2 class="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-green-500">Top download
               </h2>
-              <FontAwesomeIcon icon={faFire} className="text-sm text-red-500" />
+              <FontAwesomeIcon icon={faFire} className="text-xl text-red-500" />
             </div>
             <div className="space-y-1">
               {hotApps.map((app, index) => (
