@@ -145,9 +145,7 @@ export default function Home({ categoriesWithApps, hotApps, paginationData }) {
           <div className={contentCard}>
             <div className="flex items-center gap-3 mb-4">
               <FontAwesomeIcon icon={faFire} className="text-2xl text-red-500" />
-              <h2 className="text-xl font-bold text-gray-800 dark:text-white">
-                Ứng dụng Hot
-              </h2>
+              <h2 class="text-2xl font-bold text-emerald-600 dark:text-emerald-400">Ứng dụng tải/xem nhiều</h2>
             </div>
             <div className="space-y-1">
               {hotApps.map((app, index) => (
