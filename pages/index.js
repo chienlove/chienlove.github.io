@@ -79,8 +79,8 @@ const HotAppCard = ({ app, rank }) => {
     <div className="relative">
       <AppCard app={app} mode="list" />
       <div
-        className={`absolute top-2 -left-2 w-8 h-8 rounded-full flex items-center justify-center
-                   bg-gradient-to-br ${rankColor} text-white font-extrabold text-[6px]
+        className={`absolute top-2 -left-2 w-6 h-6 rounded-full flex items-center justify-center
+                   bg-gradient-to-br ${rankColor} text-white font-extrabold text-sm
                    shadow-lg border-2 border-white dark:border-gray-800
                    transform -rotate-12 z-10`}
       >
