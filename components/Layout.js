@@ -5,6 +5,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabase';
 import SearchModal from './SearchModal';
+import LoginButton from './LoginButton';
+import NotificationsBell from './NotificationsBell';
+import NotificationsPanel from './NotificationsPanel';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
