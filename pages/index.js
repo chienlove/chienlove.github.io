@@ -146,7 +146,7 @@ export default function Home({ categoriesWithApps, hotApps, paginationData }) {
             <div className="flex items-center gap-3 mb-4">
               <h2 class="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-green-500">Top download
               </h2>
-              <FontAwesomeIcon icon={faFire} className="text-2xl text-red-500" />
+              <FontAwesomeIcon icon={faFire} className="text-base text-red-500" />
             </div>
             <div className="space-y-1">
               {hotApps.map((app, index) => (
