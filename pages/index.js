@@ -89,29 +89,45 @@ const HotAppCard = ({ app, rank }) => {
   );
 };
 
-// 🔹 THÊM: Card hiển thị item affiliate (badge [Ad] + outlink an toàn)
+// App Ads
 const AffiliateInlineCard = ({ item }) => {
   const { name, author, icon_url, affiliate_url, payout_label } = item;
+
   return (
     <a
       href={affiliate_url}
       target="_blank"
       rel="nofollow sponsored noopener"
-      className="group block relative bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-3 mb-2 hover:shadow-md transition-shadow"
+      // Hàng (row) liền mạch: KHÔNG nền, KHÔNG viền khung, chỉ đường kẻ ngăn cách
+      className="
+        group block
+        border-t border-gray-200 dark:border-gray-700
+        first:border-t-0
+        py-3
+      "
     >
-      <div className="flex gap-3">
-        <div className="relative shrink-0 w-14 h-14 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700">
-          <img src={icon_url} alt={name} className="w-full h-full object-cover" loading="lazy" />
-          {/* Badge [Ad] chéo góc trái */}
-          <div className="absolute top-0 left-0 w-10 h-10 overflow-hidden pointer-events-none">
-            <div className="absolute top-[6px] left-[-18px] w-[56px] rotate-[-45deg] bg-yellow-400 text-black text-[10px] font-extrabold text-center py-[1px] shadow">
+      <div className="flex gap-3 items-center">
+        {/* Icon + Badge [Ad] chéo góc trái */}
+        <div className="relative shrink-0 w-12 h-12 md:w-14 md:h-14 rounded-xl overflow-hidden">
+          <img
+            src={icon_url}
+            alt={name}
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
+          <div className="absolute top-0 left-0 w-8 h-8 md:w-10 md:h-10 overflow-hidden pointer-events-none">
+            <div className="absolute top-[6px] left-[-18px] md:left-[-20px] w-[52px] md:w-[56px] rotate-[-45deg] bg-yellow-400 text-black text-[10px] font-extrabold text-center py-[1px] shadow">
               Ad
             </div>
           </div>
         </div>
+
+        {/* Nội dung */}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <h3 className="font-bold text-sm md:text-base truncate">{name}</h3>
+            <h3 className="font-bold text-sm md:text-base truncate group-hover:underline">
+              {name}
+            </h3>
             {payout_label ? (
               <span className="text-[10px] md:text-xs font-semibold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200">
                 {payout_label}
@@ -121,7 +137,7 @@ const AffiliateInlineCard = ({ item }) => {
           <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
             {author || 'Đối tác / Sponsored'}
           </p>
-          <p className="mt-1 text-[11px] text-gray-500 dark:text-gray-400">
+          <p className="mt-0.5 text-[11px] text-gray-400 dark:text-gray-500">
             Liên kết đối tác • Mở tab mới
           </p>
         </div>
