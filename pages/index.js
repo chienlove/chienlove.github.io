@@ -89,8 +89,8 @@ const HotAppCard = ({ app, rank }) => {
   );
 };
 
-// App ads
-const AffiliateInlineAd = ({ item }) => {
+// App Ads
+const AffiliateInlineCard = ({ item, isFirst = false }) => {
   const { name, author, icon_url, affiliate_url, payout_label } = item;
 
   return (
@@ -116,26 +116,26 @@ const AffiliateInlineAd = ({ item }) => {
         </div>
       </div>
 
-      {/* Nội dung: border-t giống AppCard, nên đường kẻ không đi qua icon */}
-      <div className="flex-1 min-w-0 border-t border-gray-200 dark:border-gray-700 pt-2">
+      {/* Nội dung: border-t giống AppCard; nếu là item đầu tiên thì bỏ đường kẻ */}
+      <div className={`flex-1 min-w-0 ${isFirst ? '' : 'border-t border-gray-200 dark:border-gray-700 pt-2'}`}>
         <div className="flex items-center justify-between">
           <h3 className="text-[16px] font-semibold text-gray-900 dark:text-white truncate">
             {name}
           </h3>
+          {payout_label && (
+            <span className="ml-2 bg-gray-200 dark:bg-gray-700 dark:text-gray-100 text-gray-800 px-2 py-0.5 rounded text-xs font-medium">
+              {payout_label}
+            </span>
+          )}
         </div>
         <div className="flex items-center justify-between mt-1">
           <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 truncate">
             <span>{author || 'Đối tác / Sponsored'}</span>
-            {payout_label && (
-              <span className="bg-gray-200 dark:bg-gray-700 dark:text-gray-100 text-gray-800 px-2 py-0.5 rounded text-xs font-medium">
-                {payout_label}
-              </span>
-            )}
           </div>
         </div>
       </div>
 
-      {/* Khối phải: kích thước giống nút tải của AppCard để canh lề tuyệt đối */}
+      {/* Khối phải để canh lề đúng như AppCard (ô chứa icon download) */}
       <div className="flex items-center justify-center w-10 h-14 mt-1" />
     </a>
   );
