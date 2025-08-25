@@ -248,11 +248,11 @@ export default function Home({ categoriesWithApps, hotApps, paginationData }) {
 
               {/* 🔹 CHỈ SỬA NHẸ 1 DÒNG: ưu tiên dùng appsRendered nếu có, không thì dùng apps gốc */}
               <div>
-                {(category.appsRendered || category.apps).map((item) => {
-                  return item.__isAffiliate
-                    ? <AffiliateInlineCard key={`aff-${item.__affKey}`} item={item} />
-                    : <AppCard key={item.id} app={item} mode="list" />;
-                })}
+  {(category.appsRendered || category.apps).map((item, idx) => {
+    return item.__isAffiliate
+      ? <AffiliateInlineCard key={`aff-${item.__affKey || item.id}`} item={item} isFirst={idx === 0} />
+      : <AppCard key={item.id} app={item} mode="list" />;
+  })}
               </div>
 
               {paginationData && paginationData[category.id] && (
