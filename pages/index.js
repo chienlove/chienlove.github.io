@@ -98,7 +98,6 @@ const AffiliateInlineCard = ({ item }) => {
       href={affiliate_url}
       target="_blank"
       rel="nofollow sponsored noopener"
-      // Hàng (row) liền mạch: KHÔNG nền, KHÔNG viền khung, chỉ đường kẻ ngăn cách
       className="
         group block
         border-t border-gray-200 dark:border-gray-700
@@ -106,23 +105,25 @@ const AffiliateInlineCard = ({ item }) => {
         py-3
       "
     >
-      <div className="flex gap-3 items-center">
-        {/* Icon + Badge [Ad] chéo góc trái */}
-        <div className="relative shrink-0 w-12 h-12 md:w-14 md:h-14 rounded-xl overflow-hidden">
+      <div className="flex items-center gap-3">
+        {/* Icon: kích thước & bo góc khớp AppCard(mode='list') */}
+        <div className="relative shrink-0 w-14 h-14 rounded-xl overflow-hidden">
           <img
             src={icon_url}
             alt={name}
             className="w-full h-full object-cover"
             loading="lazy"
           />
-          <div className="absolute top-0 left-0 w-8 h-8 md:w-10 md:h-10 overflow-hidden pointer-events-none">
-            <div className="absolute top-[6px] left-[-18px] md:left-[-20px] w-[52px] md:w-[56px] rotate-[-45deg] bg-yellow-400 text-black text-[10px] font-extrabold text-center py-[1px] shadow">
+
+          {/* Badge [Ad] chéo góc trái, giữ đúng tỉ lệ để không lệch lề */}
+          <div className="absolute top-0 left-0 w-10 h-10 overflow-hidden pointer-events-none">
+            <div className="absolute top-[6px] left-[-18px] w-[56px] rotate-[-45deg] bg-yellow-400 text-black text-[10px] font-extrabold text-center py-[1px] shadow">
               Ad
             </div>
           </div>
         </div>
 
-        {/* Nội dung */}
+        {/* Nội dung: canh lề & typography khớp item thường */}
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <h3 className="font-bold text-sm md:text-base truncate group-hover:underline">
