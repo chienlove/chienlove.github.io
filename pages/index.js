@@ -225,7 +225,7 @@ export default function Home({ categoriesWithApps, hotApps, paginationData }) {
             {multiplexIndices.has(index) && (
               <div className="space-y-2">
                 <AdLabel />
-                <div className="w-full relative">
+                <div className={adCard}>
     <AdUnit
       className="my-0 w-full h-auto max-w-full"
     mobileVariant="multiplex"
