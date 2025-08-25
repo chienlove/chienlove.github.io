@@ -89,8 +89,8 @@ const HotAppCard = ({ app, rank }) => {
   );
 };
 
-// App Ads
-const AffiliateInlineCard = ({ item }) => {
+// App ads
+const AffiliateInlineAd = ({ item }) => {
   const { name, author, icon_url, affiliate_url, payout_label } = item;
 
   return (
@@ -98,51 +98,45 @@ const AffiliateInlineCard = ({ item }) => {
       href={affiliate_url}
       target="_blank"
       rel="nofollow sponsored noopener"
-      className="
-        group block
-        border-t border-gray-200 dark:border-gray-700
-        first:border-t-0
-        py-3
-      "
+      className="flex items-start justify-between gap-3 px-2 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition rounded-lg"
     >
-      <div className="flex items-center gap-3">
-        {/* Icon: kích thước & bo góc khớp AppCard(mode='list') */}
-        <div className="relative shrink-0 w-14 h-14 rounded-xl overflow-hidden">
-          <img
-            src={icon_url}
-            alt={name}
-            className="w-full h-full object-cover"
-            loading="lazy"
-          />
-
-          {/* Badge [Ad] chéo góc trái, giữ đúng tỉ lệ để không lệch lề */}
-          <div className="absolute top-0 left-0 w-10 h-10 overflow-hidden pointer-events-none">
-            <div className="absolute top-[6px] left-[-18px] w-[56px] rotate-[-45deg] bg-yellow-400 text-black text-[10px] font-extrabold text-center py-[1px] shadow">
-              Ad
-            </div>
+      {/* Icon: kích thước & lề giống AppCard */}
+      <div className="relative w-14 h-14 rounded-2xl overflow-hidden border border-gray-300 dark:border-gray-600 flex-shrink-0 mt-1">
+        <img
+          src={icon_url}
+          alt={name}
+          className="w-full h-full object-cover"
+          loading="lazy"
+        />
+        {/* Badge [Ad] chéo góc trái */}
+        <div className="absolute top-0 left-0 w-16 h-16 overflow-hidden z-10 pointer-events-none">
+          <div className="absolute top-[6px] left-[-25px] w-[80px] rotate-[-45deg] bg-yellow-400 text-black text-[10px] font-bold text-center py-[0.5px] shadow-md">
+            Ad
           </div>
-        </div>
-
-        {/* Nội dung: canh lề & typography khớp item thường */}
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <h3 className="font-bold text-sm md:text-base truncate group-hover:underline">
-              {name}
-            </h3>
-            {payout_label ? (
-              <span className="text-[10px] md:text-xs font-semibold px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200">
-                {payout_label}
-              </span>
-            ) : null}
-          </div>
-          <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-            {author || 'Đối tác / Sponsored'}
-          </p>
-          <p className="mt-0.5 text-[11px] text-gray-400 dark:text-gray-500">
-            Liên kết đối tác • Mở tab mới
-          </p>
         </div>
       </div>
+
+      {/* Nội dung: border-t giống AppCard, nên đường kẻ không đi qua icon */}
+      <div className="flex-1 min-w-0 border-t border-gray-200 dark:border-gray-700 pt-2">
+        <div className="flex items-center justify-between">
+          <h3 className="text-[16px] font-semibold text-gray-900 dark:text-white truncate">
+            {name}
+          </h3>
+        </div>
+        <div className="flex items-center justify-between mt-1">
+          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 truncate">
+            <span>{author || 'Đối tác / Sponsored'}</span>
+            {payout_label && (
+              <span className="bg-gray-200 dark:bg-gray-700 dark:text-gray-100 text-gray-800 px-2 py-0.5 rounded text-xs font-medium">
+                {payout_label}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Khối phải: kích thước giống nút tải của AppCard để canh lề tuyệt đối */}
+      <div className="flex items-center justify-center w-10 h-14 mt-1" />
     </a>
   );
 };
