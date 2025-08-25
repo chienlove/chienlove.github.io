@@ -227,7 +227,7 @@ export default function Home({ categoriesWithApps, hotApps, paginationData }) {
                 <AdLabel />
                 <div className={adCard}>
     <AdUnit
-      className="my-0 w-full h-auto max-w-full"
+      className="my-0"
     mobileVariant="multiplex"
     />
                 </div>
