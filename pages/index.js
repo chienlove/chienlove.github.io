@@ -227,9 +227,8 @@ export default function Home({ categoriesWithApps, hotApps, paginationData }) {
                 <AdLabel />
                 <div className="w-full relative">
     <AdUnit
-      className="my-0 w-full aspect-[4/3] sm:aspect-video"
-      mobileVariant="multiplex"
-      style={{ maxWidth: '100%', height: 'auto' }}
+      className="my-0 w-full h-auto max-w-full"
+    mobileVariant="multiplex"
     />
                 </div>
               </div>
