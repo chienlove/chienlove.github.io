@@ -3,7 +3,7 @@ import Layout from '../components/Layout';
 import AppCard from '../components/AppCard';
 import AdUnit from '../components/Ads';
 import { createSupabaseServer } from '../lib/supabase';
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment } from 'react';
 import Link from 'next/link';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -16,16 +16,17 @@ import {
   faChevronRight,
 } from '@fortawesome/free-solid-svg-icons';
 
-// 🔹 import danh sách affiliate từ file tĩnh
+// Affiliate tĩnh
 import affiliateApps from '../lib/appads';
 
 /* =========================
-   Pagination (UI hoàn chỉnh)
+   Pagination components
    ========================= */
-const PaginationControls = ({ categorySlug, currentPage, totalPages }) => {
+
+// Full pagination (cho category đang active)
+function PaginationFull({ categorySlug, currentPage, totalPages }) {
   if (!totalPages || totalPages <= 1) return null;
 
-  // Window hiển thị quanh current (±2), có First/Last + ellipsis
   const windowSize = 2;
   const pages = [];
   const add = (p) => pages.push(p);
@@ -33,16 +34,13 @@ const PaginationControls = ({ categorySlug, currentPage, totalPages }) => {
   add(1);
   const start = Math.max(2, currentPage - windowSize);
   const end = Math.min(totalPages - 1, currentPage + windowSize);
-
   if (start > 2) add('...');
   for (let p = start; p <= end; p++) add(p);
   if (end < totalPages - 1) add('...');
   if (totalPages > 1) add(totalPages);
 
-  const PageButton = ({ p, aria }) => {
-    if (p === '...') {
-      return <span className="px-2 text-gray-500 select-none">…</span>;
-    }
+  const PageBtn = ({ p, aria }) => {
+    if (p === '...') return <span className="px-2 text-gray-500 select-none">…</span>;
     const active = p === currentPage;
     return (
       <Link
@@ -50,13 +48,12 @@ const PaginationControls = ({ categorySlug, currentPage, totalPages }) => {
         href={`/?category=${categorySlug}&page=${p}`}
         scroll={false}
         aria-label={aria || `Tới trang ${p}`}
-        className={`
-          w-10 h-10 flex items-center justify-center rounded-md text-sm font-bold transition-all duration-200
-          ${active
-            ? 'bg-red-600 text-white scale-110 shadow-lg'
-            : 'bg-gray-200 dark:bg-gray-700 hover:bg-red-500 hover:text-white'
-          }
-        `}
+        className={[
+          'px-2.5 h-8 min-w-[2rem] inline-flex items-center justify-center rounded-md text-[13px] font-semibold transition-colors',
+          active
+            ? 'bg-red-600 text-white shadow'
+            : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100 hover:bg-red-500 hover:text-white'
+        ].join(' ')}
       >
         {p}
       </Link>
@@ -64,50 +61,59 @@ const PaginationControls = ({ categorySlug, currentPage, totalPages }) => {
   };
 
   return (
-    <div className="flex items-center justify-center gap-2 mt-6 flex-wrap">
-      {/* First */}
+    <nav className="flex items-center justify-center gap-1.5 mt-4 flex-wrap" aria-label="Phân trang">
       {currentPage > 1 && (
-        <PageButton p={1} aria="Về trang đầu" />
+        <PageBtn p={1} aria="Về trang đầu" />
       )}
-      {/* Prev */}
       {currentPage > 1 && (
         <Link
           prefetch={false}
           href={`/?category=${categorySlug}&page=${currentPage - 1}`}
           scroll={false}
           aria-label="Trang trước"
-          className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200"
+          className="px-2.5 h-8 inline-flex items-center justify-center rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
         >
           <FontAwesomeIcon icon={faChevronLeft} />
         </Link>
       )}
 
-      {/* Page numbers */}
-      {pages.map((p, i) => (
-        <Fragment key={`${p}-${i}`}>
-          <PageButton p={p} />
-        </Fragment>
-      ))}
+      {pages.map((p, i) => <Fragment key={`${p}-${i}`}><PageBtn p={p} /></Fragment>)}
 
-      {/* Next */}
       {currentPage < totalPages && (
         <Link
           prefetch={false}
           href={`/?category=${categorySlug}&page=${currentPage + 1}`}
           scroll={false}
           aria-label="Trang sau"
-          className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200"
+          className="px-2.5 h-8 inline-flex items-center justify-center rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
         >
           <FontAwesomeIcon icon={faChevronRight} />
         </Link>
       )}
-      {/* Last */}
       {currentPage < totalPages && (
-        <PageButton p={totalPages} aria="Tới trang cuối" />
+        <PageBtn p={totalPages} aria="Tới trang cuối" />
       )}
-    </div>
+    </nav>
   );
-};
+}
+
+// Lite pagination (cho category không active)
+function PaginationLite({ categorySlug, hasNext }) {
+  if (!hasNext) return null;
+  return (
+    <nav className="flex items-center justify-center mt-4">
+      <Link
+        prefetch={false}
+        href={`/?category=${categorySlug}&page=2`}
+        scroll={false}
+        aria-label="Xem trang tiếp"
+        className="px-3 h-8 inline-flex items-center justify-center rounded-md text-[13px] font-semibold bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100 hover:bg-red-500 hover:text-white transition-colors"
+      >
+        Trang sau <FontAwesomeIcon icon={faChevronRight} className="ml-1" />
+      </Link>
+    </nav>
+  );
+}
 
 /* =========================
    Hot App Card (giữ nguyên)
@@ -178,60 +184,9 @@ const AffiliateInlineCard = ({ item, isFirst = false }) => {
 /* =========================
    Home
    ========================= */
-export default function Home({ categoriesWithApps, hotApps, paginationData }) {
-  const [certStatus, setCertStatus] = useState(null);
-
-  // 🔹 Các chuyên mục có cài IPA → hiển thị badge ký/thu hồi
+export default function Home({ categoriesWithApps, hotApps, paginationData, certStatus }) {
+  // Các chuyên mục có cài IPA → hiển thị badge ký/thu hồi
   const INSTALLABLE_SLUGS = new Set(['jailbreak', 'app-clone']);
-
-  // Cache certStatus 10 phút để giảm gọi lại khi quay về trang
-  useEffect(() => {
-    let mounted = true;
-    const KEY = 'certStatusCache';
-    const TTL = 10 * 60 * 1000;
-
-    const readCache = () => {
-      try {
-        const raw = sessionStorage.getItem(KEY);
-        if (!raw) return null;
-        const obj = JSON.parse(raw);
-        if (Date.now() - (obj.cachedAt || 0) > TTL) return null;
-        return obj.data;
-      } catch { return null; }
-    };
-
-    const writeCache = (data) => {
-      try {
-        sessionStorage.setItem(KEY, JSON.stringify({ data, cachedAt: Date.now() }));
-      } catch {}
-    };
-
-    const cached = typeof window !== 'undefined' ? readCache() : null;
-    if (cached) {
-      setCertStatus(cached);
-      return;
-    }
-
-    (async () => {
-      try {
-        const res = await fetch('https://ipadl.storeios.net/api/check-revocation');
-        if (res.ok) {
-          const data = await res.json();
-          if (!mounted) return;
-          setCertStatus(data);
-          writeCache(data);
-        } else {
-          if (!mounted) return;
-          setCertStatus({ ocspStatus: 'error' });
-        }
-      } catch (error) {
-        console.error('Error fetching cert status:', error);
-        if (mounted) setCertStatus({ ocspStatus: 'error' });
-      }
-    })();
-
-    return () => { mounted = false; };
-  }, []);
 
   const multiplexIndices = new Set([1, 3]);
   const contentCard = 'bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4';
@@ -262,80 +217,91 @@ export default function Home({ categoriesWithApps, hotApps, paginationData }) {
         )}
 
         {/* Categories */}
-        {categoriesWithApps.map((category, index) => (
-          <Fragment key={category.id}>
-            <div className={contentCard}>
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-green-500">
-                  {category.name}
-                </h2>
+        {categoriesWithApps.map((category, index) => {
+          const pageInfo = paginationData?.[category.id];
+          const hasFullPager = !!pageInfo?.totalPages && pageInfo.totalPages > 1 && pageInfo.mode === 'full';
+          const hasLitePager = pageInfo?.mode === 'lite' && pageInfo?.hasNext === true;
 
-                {/* 🔹 Badge trạng thái cert cho jailbreak + app-clone (1 lần fetch, dùng cho nhiều block) */}
-                {INSTALLABLE_SLUGS.has((category.slug || '').toLowerCase()) && certStatus && (
-                  <span
-                    className="flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300 cursor-pointer"
-                    title={
-                      certStatus?.ocspStatus === 'successful'
-                        ? (certStatus.isRevoked ? 'Chứng chỉ đã bị thu hồi' : 'Chứng chỉ hợp lệ')
-                        : 'Không thể kiểm tra'
-                    }
-                  >
-                    {certStatus?.ocspStatus === 'successful' ? (
-                      certStatus.isRevoked ? (
-                        <>
-                          <span className="font-bold text-red-600">Revoked</span>
-                          <FontAwesomeIcon icon={faTimesCircle} className="text-red-500" />
-                        </>
+          return (
+            <Fragment key={category.id}>
+              <div className={contentCard}>
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-green-500">
+                    {category.name}
+                  </h2>
+
+                  {/* Badge trạng thái cert (server-side fetch) */}
+                  {INSTALLABLE_SLUGS.has((category.slug || '').toLowerCase()) && certStatus && (
+                    <span
+                      className="flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300"
+                      title={
+                        certStatus?.ocspStatus === 'successful'
+                          ? (certStatus.isRevoked ? 'Chứng chỉ đã bị thu hồi' : 'Chứng chỉ hợp lệ')
+                          : 'Không thể kiểm tra'
+                      }
+                    >
+                      {certStatus?.ocspStatus === 'successful' ? (
+                        certStatus.isRevoked ? (
+                          <>
+                            <span className="font-bold text-red-600">Revoked</span>
+                            <FontAwesomeIcon icon={faTimesCircle} className="text-red-500" />
+                          </>
+                        ) : (
+                          <>
+                            <span className="font-bold text-green-600">Signed</span>
+                            <FontAwesomeIcon icon={faCheckCircle} className="text-green-500" />
+                          </>
+                        )
                       ) : (
                         <>
-                          <span className="font-bold text-green-600">Signed</span>
-                          <FontAwesomeIcon icon={faCheckCircle} className="text-green-500" />
+                          <span className="font-bold text-gray-500">Error</span>
+                          <FontAwesomeIcon icon={faExclamationCircle} className="text-gray-400" />
                         </>
-                      )
-                    ) : (
-                      <>
-                        <span className="font-bold text-gray-500">Error</span>
-                        <FontAwesomeIcon icon={faExclamationCircle} className="text-gray-400" />
-                      </>
-                    )}
-                  </span>
+                      )}
+                    </span>
+                  )}
+                </div>
+
+                {/* Thông tin trang (nếu có) */}
+                {hasFullPager && (
+                  <div className="text-[12px] text-gray-500 dark:text-gray-400 mb-2">
+                    Trang {pageInfo.currentPage} / {pageInfo.totalPages} ({pageInfo.totalApps} ứng dụng)
+                  </div>
+                )}
+
+                <div>
+                  {(category.appsRendered || category.apps).map((item, idx) => {
+                    return item.__isAffiliate
+                      ? <AffiliateInlineCard key={`aff-${item.__affKey || item.id}`} item={item} isFirst={idx === 0} />
+                      : <AppCard key={item.id} app={item} mode="list" />;
+                  })}
+                </div>
+
+                {/* Phân trang */}
+                {hasFullPager && (
+                  <PaginationFull
+                    categorySlug={category.slug}
+                    currentPage={pageInfo.currentPage || 1}
+                    totalPages={pageInfo.totalPages || 1}
+                  />
+                )}
+                {hasLitePager && (
+                  <PaginationLite
+                    categorySlug={category.slug}
+                    hasNext={true}
+                  />
                 )}
               </div>
 
-              {/* Info phân trang (hiển thị cho mọi chuyên mục) */}
-              {paginationData && paginationData[category.id] && paginationData[category.id].totalPages > 1 && (
-                <div className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-                  Trang {paginationData[category.id].currentPage} / {paginationData[category.id].totalPages} 
-                  ({paginationData[category.id].totalApps} ứng dụng)
+              {multiplexIndices.has(index) && (
+                <div className="space-y-2">
+                  <AdLabel />
+                  <div className={adCard}><AdUnit className="my-0" mobileVariant="multiplex" /></div>
                 </div>
               )}
-
-              <div>
-                {(category.appsRendered || category.apps).map((item, idx) => {
-                  return item.__isAffiliate
-                    ? <AffiliateInlineCard key={`aff-${item.__affKey || item.id}`} item={item} isFirst={idx === 0} />
-                    : <AppCard key={item.id} app={item} mode="list" />;
-                })}
-              </div>
-
-              {/* 🔹 Luôn render PaginationControls (nếu tổng trang > 1) */}
-              {paginationData && paginationData[category.id] && (
-                <PaginationControls
-                  categorySlug={category.slug}
-                  currentPage={paginationData[category.id].currentPage || 1}
-                  totalPages={paginationData[category.id].totalPages || 1}
-                />
-              )}
-            </div>
-
-            {multiplexIndices.has(index) && (
-              <div className="space-y-2">
-                <AdLabel />
-                <div className={adCard}><AdUnit className="my-0" mobileVariant="multiplex" /></div>
-              </div>
-            )}
-          </Fragment>
-        ))}
+            </Fragment>
+          );
+        })}
 
         {/* Footer Ad */}
         <div className="space-y-2">
@@ -348,7 +314,7 @@ export default function Home({ categoriesWithApps, hotApps, paginationData }) {
 }
 
 /* =========================
-   Affiliate interleave (giữ nguyên)
+   Affiliate interleave (giữ)
    ========================= */
 function interleaveAffiliate(apps, affiliatePool, category, {
   ratioEvery = 5,
@@ -392,7 +358,7 @@ function interleaveAffiliate(apps, affiliatePool, category, {
 }
 
 /* =========================
-   getServerSideProps (đếm cho mọi chuyên mục, dùng 'estimated')
+   getServerSideProps (tối ưu)
    ========================= */
 export async function getServerSideProps(ctx) {
   const supabase = createSupabaseServer(ctx);
@@ -422,43 +388,71 @@ export async function getServerSideProps(ctx) {
       const catSlug = (category.slug || '').toLowerCase();
       const isActive = activeSlug && catSlug === activeSlug;
 
-      // Trang của category đang xem; category khác luôn là 1
+      // Page của category đang xem; category khác luôn là 1
       const pageForThisCategory = isActive ? currentPage : 1;
       const startIndex = (pageForThisCategory - 1) * APPS_PER_PAGE;
       const endIndex = startIndex + APPS_PER_PAGE - 1;
 
-      // 🔹 Đếm cho MỌI chuyên mục để luôn có pagination hiển thị
-      const { count } = await supabase
-        .from('apps')
-        .select('*', { count: 'estimated', head: true }) // ⚡ nhanh hơn exact
-        .eq('category_id', category.id);
+      if (isActive) {
+        // 🔹 Category active: đếm 'estimated' để có tổng trang
+        const { count } = await supabase
+          .from('apps')
+          .select('*', { count: 'estimated', head: true })
+          .eq('category_id', category.id);
 
-      const totalApps = count || 0;
-      const totalPages = Math.max(1, Math.ceil(totalApps / APPS_PER_PAGE));
-      paginationData[category.id] = {
-        currentPage: pageForThisCategory,
-        totalPages,
-        totalApps,
-      };
+        const totalApps = count || 0;
+        const totalPages = Math.max(1, Math.ceil(totalApps / APPS_PER_PAGE));
+        paginationData[category.id] = {
+          mode: 'full',
+          currentPage: pageForThisCategory,
+          totalPages,
+          totalApps,
+        };
 
-      // Lấy apps theo trang áp dụng cho từng category
-      const { data: apps } = await supabase
-        .from('apps')
-        .select('*')
-        .eq('category_id', category.id)
-        .order('created_at', { ascending: false })
-        .range(startIndex, endIndex);
+        const { data: apps } = await supabase
+          .from('apps')
+          .select('*')
+          .eq('category_id', category.id)
+          .order('created_at', { ascending: false })
+          .range(startIndex, endIndex);
 
-      const appsRendered = interleaveAffiliate(apps || [], affiliatePool, category, {
-        ratioEvery: 5,
-        maxPerCategory: 2,
-      });
+        const appsRendered = interleaveAffiliate(apps || [], affiliatePool, category, {
+          ratioEvery: 5,
+          maxPerCategory: 2,
+        });
 
-      return { ...category, apps: apps || [], appsRendered };
+        return { ...category, apps: apps || [], appsRendered };
+      } else {
+        // 🔹 Category không active: KHÔNG đếm tổng -- chỉ lấy APPS_PER_PAGE + 1 để biết còn trang sau
+        const { data: appsPlusOne } = await supabase
+          .from('apps')
+          .select('*')
+          .eq('category_id', category.id)
+          .order('created_at', { ascending: false })
+          .range(0, APPS_PER_PAGE); // N + 1
+
+        const hasNext = (appsPlusOne?.length || 0) > APPS_PER_PAGE;
+        const apps = (appsPlusOne || []).slice(0, APPS_PER_PAGE);
+
+        paginationData[category.id] = {
+          mode: hasNext ? 'lite' : 'none',
+          currentPage: 1,
+          totalPages: hasNext ? 2 : 1,
+          totalApps: undefined,
+          hasNext,
+        };
+
+        const appsRendered = interleaveAffiliate(apps, affiliatePool, category, {
+          ratioEvery: 5,
+          maxPerCategory: 2,
+        });
+
+        return { ...category, apps, appsRendered };
+      }
     })
   );
 
-  // Hot apps
+  // Hot apps (giữ)
   const { data: hotAppsData } = await supabase
     .from('apps')
     .select('*')
@@ -470,7 +464,16 @@ export async function getServerSideProps(ctx) {
     .sort((a, b) => b.hotScore - a.hotScore)
     .slice(0, 5);
 
-  return { props: { categoriesWithApps, hotApps: sortedHotApps, paginationData } };
+  // 🔹 CHECK CERT: gọi server-side để ẩn khỏi Network tab của client
+  let certStatus = { ocspStatus: 'error' };
+  try {
+    const res = await fetch('https://ipadl.storeios.net/api/check-revocation', { method: 'GET' });
+    if (res.ok) certStatus = await res.json();
+  } catch {
+    certStatus = { ocspStatus: 'error' };
+  }
+
+  return { props: { categoriesWithApps, hotApps: sortedHotApps, paginationData, certStatus } };
 }
 
 /*
