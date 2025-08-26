@@ -20,7 +20,7 @@ import {
 import affiliateApps from '../lib/appads';
 
 /* =========================
-   Pagination (tối ưu UI)
+   Pagination (UI hoàn chỉnh)
    ========================= */
 const PaginationControls = ({ categorySlug, currentPage, totalPages }) => {
   if (!totalPages || totalPages <= 1) return null;
@@ -302,7 +302,7 @@ export default function Home({ categoriesWithApps, hotApps, paginationData }) {
                 )}
               </div>
 
-              {/* Chỉ hiển thị thông tin trang khi có dữ liệu count */}
+              {/* Info phân trang (hiển thị cho mọi chuyên mục) */}
               {paginationData && paginationData[category.id] && paginationData[category.id].totalPages > 1 && (
                 <div className="text-sm text-gray-500 dark:text-gray-400 mb-3">
                   Trang {paginationData[category.id].currentPage} / {paginationData[category.id].totalPages} 
@@ -318,7 +318,7 @@ export default function Home({ categoriesWithApps, hotApps, paginationData }) {
                 })}
               </div>
 
-              {/* Chỉ render PaginationControls cho chuyên mục có count */}
+              {/* 🔹 Luôn render PaginationControls (nếu tổng trang > 1) */}
               {paginationData && paginationData[category.id] && (
                 <PaginationControls
                   categorySlug={category.slug}
@@ -392,7 +392,7 @@ function interleaveAffiliate(apps, affiliatePool, category, {
 }
 
 /* =========================
-   getServerSideProps (tối ưu)
+   getServerSideProps (đếm cho mọi chuyên mục, dùng 'estimated')
    ========================= */
 export async function getServerSideProps(ctx) {
   const supabase = createSupabaseServer(ctx);
@@ -427,32 +427,27 @@ export async function getServerSideProps(ctx) {
       const startIndex = (pageForThisCategory - 1) * APPS_PER_PAGE;
       const endIndex = startIndex + APPS_PER_PAGE - 1;
 
-      // 🔹 Chỉ đếm cho category active (tối ưu truy vấn)
-      let totalPages = 1;
-      let totalApps = undefined;
+      // 🔹 Đếm cho MỌI chuyên mục để luôn có pagination hiển thị
+      const { count } = await supabase
+        .from('apps')
+        .select('*', { count: 'estimated', head: true }) // ⚡ nhanh hơn exact
+        .eq('category_id', category.id);
 
-      if (isActive) {
-        const { count } = await supabase
-          .from('apps')
-          .select('*', { count: 'estimated', head: true }) // ⚡ nhanh hơn exact
-          .eq('category_id', category.id);
+      const totalApps = count || 0;
+      const totalPages = Math.max(1, Math.ceil(totalApps / APPS_PER_PAGE));
+      paginationData[category.id] = {
+        currentPage: pageForThisCategory,
+        totalPages,
+        totalApps,
+      };
 
-        totalApps = count || 0;
-        totalPages = Math.max(1, Math.ceil(totalApps / APPS_PER_PAGE));
-        paginationData[category.id] = {
-          currentPage: pageForThisCategory,
-          totalPages,
-          totalApps,
-        };
-      }
-
-      // 🔹 Lấy apps: active dùng range theo trang, non-active chỉ lấy trang 1
+      // Lấy apps theo trang áp dụng cho từng category
       const { data: apps } = await supabase
         .from('apps')
         .select('*')
         .eq('category_id', category.id)
         .order('created_at', { ascending: false })
-        .range(isActive ? startIndex : 0, isActive ? endIndex : APPS_PER_PAGE - 1);
+        .range(startIndex, endIndex);
 
       const appsRendered = interleaveAffiliate(apps || [], affiliatePool, category, {
         ratioEvery: 5,
@@ -463,7 +458,7 @@ export async function getServerSideProps(ctx) {
     })
   );
 
-  // Hot apps (giữ nguyên)
+  // Hot apps
   const { data: hotAppsData } = await supabase
     .from('apps')
     .select('*')
@@ -477,3 +472,8 @@ export async function getServerSideProps(ctx) {
 
   return { props: { categoriesWithApps, hotApps: sortedHotApps, paginationData } };
 }
+
+/*
+Gợi ý index DB (chạy 1 lần ở Supabase):
+CREATE INDEX IF NOT EXISTS idx_apps_category_created_at ON apps (category_id, created_at DESC);
+*/
