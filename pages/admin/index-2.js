@@ -25,6 +25,10 @@ export default function Admin() {
   const [newField, setNewField] = useState("");
   const [screenshotInput, setScreenshotInput] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  
+  // Thêm state cho tính năng AppStore
+  const [appStoreUrl, setAppStoreUrl] = useState("");
+  const [loadingAppStoreInfo, setLoadingAppStoreInfo] = useState(false);
 
   // Kiểm tra UUID hợp lệ
   const isValidUUID = (id) => {
@@ -39,6 +43,125 @@ export default function Admin() {
       .replace(/[^\w\s]/gi, '')
       .replace(/\s+/g, '-')
       .trim();
+  };
+
+  // Hàm lấy thông tin từ AppStore với xử lý lỗi tốt hơn
+  const fetchAppStoreInfo = async () => {
+    if (!appStoreUrl.trim()) {
+      setErrorMessage("Vui lòng nhập URL AppStore");
+      return;
+    }
+
+    // Validate URL format
+    if (!appStoreUrl.includes('apps.apple.com')) {
+      setErrorMessage("URL phải là từ App Store (apps.apple.com)");
+      return;
+    }
+
+    setLoadingAppStoreInfo(true);
+    setErrorMessage("");
+
+    try {
+      console.log('[Frontend] Fetching AppStore info for URL:', appStoreUrl);
+      
+      const response = await fetch('/api/admin/appstore-info', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url: appStoreUrl.trim() }),
+      });
+
+      console.log('[Frontend] Response status:', response.status);
+      console.log('[Frontend] Response headers:', response.headers);
+      
+      // Kiểm tra content-type trước khi parse JSON
+      const contentType = response.headers.get('content-type');
+      console.log('[Frontend] Content-Type:', contentType);
+      
+      let responseData;
+      const responseText = await response.text();
+      console.log('[Frontend] Response text:', responseText);
+
+      // Chỉ parse JSON nếu response text không rỗng
+      if (responseText.trim()) {
+        try {
+          responseData = JSON.parse(responseText);
+        } catch (parseError) {
+          console.error('[Frontend] JSON parse error:', parseError);
+          throw new Error(`Phản hồi từ server không phải JSON hợp lệ: ${responseText.substring(0, 100)}...`);
+        }
+      } else {
+        console.error('[Frontend] Empty response from server');
+        throw new Error('Server trả về phản hồi rỗng');
+      }
+
+      if (!response.ok) {
+        const errorMsg = responseData?.error || `HTTP ${response.status}: ${response.statusText}`;
+        console.error('[Frontend] API Error:', errorMsg);
+        throw new Error(errorMsg);
+      }
+
+      console.log('[Frontend] AppStore API response:', responseData);
+
+      // Validate response data
+      if (!responseData || !responseData.name) {
+        throw new Error('Dữ liệu ứng dụng không đầy đủ (thiếu tên ứng dụng)');
+      }
+
+      // Mapping thông tin từ API vào form với safe access
+      const mappedData = {
+        name: responseData.name || '',
+        author: responseData.author || '',
+        size: responseData.size || '',
+        description: responseData.description || '',
+        version: responseData.version || '',
+        icon_url: responseData.icon || '',
+        minimum_os_version: responseData.minimumOsVersion || '',
+        age_rating: responseData.ageRating || '',
+        release_date: responseData.releaseDate ? 
+          new Date(responseData.releaseDate).toISOString().split('T')[0] : '',
+        supported_devices: Array.isArray(responseData.supportedDevices) ? 
+          responseData.supportedDevices.join(', ') : '',
+        languages: Array.isArray(responseData.languages) ? 
+          responseData.languages.join(', ') : '',
+        screenshots: Array.isArray(responseData.screenshots) ? responseData.screenshots : []
+};
+
+setForm(prev => ({
+  ...prev,
+  ...mappedData
+}));
+
+if (Array.isArray(responseData.screenshots) && responseData.screenshots.length > 0) {
+  setScreenshotInput(responseData.screenshots.join('\n'));
+      }
+
+      console.log('[Frontend] Mapped data:', mappedData);
+
+      setAppStoreUrl(""); // Clear URL sau khi thành công
+      alert("Đã lấy thông tin thành công từ AppStore!");
+
+    } catch (error) {
+      console.error("[Frontend] Error fetching AppStore info:", error);
+      
+      // Detailed error handling
+      let errorMsg = "Lỗi khi lấy thông tin từ AppStore";
+      
+      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+        errorMsg = "Lỗi kết nối mạng. Vui lòng kiểm tra kết nối internet.";
+      } else if (error.message.includes('JSON')) {
+        errorMsg = "Lỗi xử lý dữ liệu từ server.";
+      } else if (error.message.includes('405')) {
+        errorMsg = "Lỗi cấu hình API. Vui lòng kiểm tra file API route.";
+      } else if (error.message) {
+        errorMsg = error.message;
+      }
+      
+      setErrorMessage(errorMsg);
+    } finally {
+      setLoadingAppStoreInfo(false);
+    }
   };
 
   useEffect(() => {
@@ -224,10 +347,40 @@ export default function Admin() {
         .map(url => url.trim())
         .filter(url => url.length > 0 && url.startsWith("http"));
 
+      // Xử lý trường languages: chuyển từ chuỗi thành mảng
+      let languagesArray = [];
+      if (form.languages) {
+        if (typeof form.languages === 'string') {
+          // Nếu là chuỗi, tách thành mảng
+          languagesArray = form.languages
+            .split(/[,\n]+/)
+            .map(lang => lang.trim())
+            .filter(lang => lang.length > 0);
+        } else if (Array.isArray(form.languages)) {
+          // Nếu đã là mảng, sử dụng trực tiếp
+          languagesArray = form.languages;
+        }
+      }
+
+      // Xử lý trường supported_devices: chuyển từ chuỗi thành mảng
+      let supportedDevicesArray = [];
+      if (form.supported_devices) {
+        if (typeof form.supported_devices === 'string') {
+          supportedDevicesArray = form.supported_devices
+            .split(/[,\n]+/)
+            .map(device => device.trim())
+            .filter(device => device.length > 0);
+        } else if (Array.isArray(form.supported_devices)) {
+          supportedDevicesArray = form.supported_devices;
+        }
+      }
+
       const payload = {
         ...form,
         category_id: selectedCategory,
         screenshots,
+        languages: languagesArray,
+      supported_devices: supportedDevicesArray, // Sử dụng mảng thay vì chuỗi
         updated_at: new Date().toISOString(),
         slug: form.name ? createSlug(form.name) : uuidv4() // Thêm slug vào payload
       };
@@ -265,6 +418,7 @@ export default function Admin() {
     setEditingId(null);
     setSelectedCategory("");
     setScreenshotInput("");
+    setAppStoreUrl(""); // Reset AppStore URL
   }
 
   async function handleCategorySubmit(e) {
@@ -346,6 +500,9 @@ export default function Admin() {
   );
 
   const currentFields = categories.find(c => c.id === selectedCategory)?.fields || [];
+
+  // Kiểm tra xem có phải chuyên mục TestFlight không
+  const isTestFlightCategory = categories.find(c => c.id === selectedCategory)?.name?.toLowerCase().includes('testflight');
 
   if (loading) {
     return (
@@ -429,7 +586,7 @@ export default function Admin() {
               ☰
             </button>
             <h1 className="text-xl md:text-2xl font-bold">
-              {activeTab === "apps" ? "Quản lý Ứng dụng" : "Quản lý Chuyên mục"}
+              {activeTab === "apps" ? "Quản lý Ứng dụng" : activeTab === "categories" ? "Quản lý Chuyên mục" : "Quản lý Chứng chỉ"}
             </h1>
           </div>
           <div className="flex items-center gap-4">
@@ -488,169 +645,161 @@ export default function Admin() {
                   </select>
                 </div>
 
+                {/* Thêm phần lấy thông tin từ AppStore cho chuyên mục TestFlight */}
+                {selectedCategory && isTestFlightCategory && (
+                  <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
+                    <h3 className="text-md font-semibold mb-3 text-blue-800 dark:text-blue-200">
+                      🍎 Lấy thông tin từ App Store
+                    </h3>
+                    <div className="flex gap-2">
+                      <input
+                        type="url"
+                        value={appStoreUrl}
+                        onChange={(e) => setAppStoreUrl(e.target.value)}
+                        placeholder="Nhập URL App Store (ví dụ: https://apps.apple.com/us/app/...)"
+                        className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        disabled={loadingAppStoreInfo}
+                      />
+                      <button
+                        type="button"
+                        onClick={fetchAppStoreInfo}
+                        disabled={loadingAppStoreInfo || !appStoreUrl.trim()}
+                        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm font-medium"
+                      >
+                        {loadingAppStoreInfo ? "⏳ Đang lấy..." : "🔄 Get Info"}
+                      </button>
+                    </div>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
+                      Nhập URL App Store để tự động điền thông tin ứng dụng vào các trường bên dưới
+                    </p>
+                  </div>
+                )}
+
                 {selectedCategory && currentFields.map((field) => (
                   <div key={field}>
                     <label className="block text-sm font-medium mb-1">{field}</label>
                     {field.toLowerCase().includes("mô tả") || field.toLowerCase().includes("description") ? (
                       <textarea
                         value={form[field] || ""}
-                        onChange={(e) => setForm(f => ({ ...f, [field]: e.target.value }))}
-                        placeholder={`Nhập ${field}`}
-                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 min-h-[120px] focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        required
+                        onChange={(e) => setForm((prev) => ({ ...prev, [field]: e.target.value }))}
+                        className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        rows={4}
                       />
+                    ) : field.toLowerCase().includes("screenshots") ? (
+                      <div>
+                        <textarea
+                          value={screenshotInput}
+                          onChange={(e) => setScreenshotInput(e.target.value)}
+                          placeholder="Nhập URL ảnh chụp màn hình, mỗi URL một dòng"
+                          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          rows={4}
+                        />
+                        <p className="text-xs text-gray-500 mt-1">Mỗi URL một dòng</p>
+                      </div>
                     ) : (
                       <input
-                        type="text"
+                        type={field.toLowerCase().includes("date") ? "date" : "text"}
                         value={form[field] || ""}
-                        onChange={(e) => setForm(f => ({ ...f, [field]: e.target.value }))}
-                        placeholder={`Nhập ${field}`}
+                        onChange={(e) => setForm((prev) => ({ ...prev, [field]: e.target.value }))}
                         className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        
                       />
                     )}
                   </div>
                 ))}
 
-                {/* Screenshots Field */}
-                <div>
-                  <label className="block text-sm font-medium mb-1">
-                    Ảnh màn hình (mỗi URL một dòng)
-                  </label>
-                  <textarea
-                    value={screenshotInput}
-                    onChange={(e) => setScreenshotInput(e.target.value)}
-                    placeholder="https://example.com/image1.jpg\nhttps://example.com/image2.jpg"
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 min-h-[100px] focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Có thể nhập nhiều URL, mỗi URL một dòng hoặc cách nhau bằng dấu phẩy
-                  </p>
-                </div>
-
-                {screenshotInput && (
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2 mt-4">
-                    {screenshotInput
-                      .split(/[\n,]+/)
-                      .map(url => url.trim())
-                      .filter(url => url.startsWith("http"))
-                      .map((url, i) => (
-                        <div key={i} className="relative group">
-                          <img 
-                            src={url} 
-                            alt={`Screenshot ${i}`} 
-                            className="w-full h-32 object-cover rounded border border-gray-200 dark:border-gray-700"
-                            onError={(e) => {
-                              e.target.src = "https://placehold.co/300x200?text=Ảnh+không+tồn+tại";
-                              e.target.className = "w-full h-32 object-contain rounded border border-gray-200 dark:border-gray-700 p-2 bg-gray-100";
-                            }}
-                          />
-                          <div className="absolute inset-x-0 bottom-0 bg-black bg-opacity-50 text-white text-xs p-1 truncate">
-                            {url.length > 30 ? url.substring(0, 30) + "..." : url}
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                )}
-
-                <div className="flex justify-end gap-3 pt-4">
+                <div className="flex gap-4 pt-4">
+                  <button
+                    type="submit"
+                    disabled={submitting || !selectedCategory}
+                    className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium"
+                  >
+                    {submitting ? "⏳ Đang lưu..." : editingId ? "💾 Cập nhật" : "➕ Thêm mới"}
+                  </button>
                   {editingId && (
                     <button
                       type="button"
                       onClick={resetForm}
-                      className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-700"
+                      className="px-6 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 font-medium"
                     >
-                      Hủy
+                      ❌ Hủy
                     </button>
                   )}
-                  <button
-                    type="submit"
-                    disabled={submitting || !selectedCategory}
-                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-blue-400 dark:bg-blue-700 dark:hover:bg-blue-800"
-                  >
-                    {submitting ? (
-                      <span className="flex items-center">
-                        <span className="animate-spin mr-2">↻</span>
-                        Đang lưu...
-                      </span>
-                    ) : editingId ? (
-                      "Cập nhật"
-                    ) : (
-                      "Thêm ứng dụng"
-                    )}
-                  </button>
                 </div>
               </form>
             </section>
 
             {/* Apps List */}
             <section className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-md">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg md:text-xl font-semibold">Danh sách ứng dụng</h2>
-                <div className="relative w-64">
-                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                    <span>🔍</span>
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="Tìm theo tên..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="w-full px-4 py-2 pl-10 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
+              <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
+                <h2 className="text-lg md:text-xl font-semibold">📋 Danh sách ứng dụng</h2>
+                <input
+                  type="text"
+                  placeholder="🔍 Tìm kiếm ứng dụng..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full md:w-64 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
               </div>
-              
-              <div className="space-y-2">
-                {filteredApps.length > 0 ? (
-                  filteredApps.map((app) => {
-                    const category = categories.find(c => c.id === app.category_id);
-                    return (
-                      <div
-                        key={app.id}
-                        className="flex justify-between items-center p-3 border rounded hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                      >
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-medium truncate">{app.name}</h3>
-                          <div className="flex items-center text-sm text-gray-500 dark:text-gray-400">
-                            {category && (
-                              <span className="inline-block px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs mr-2 dark:bg-blue-900 dark:text-blue-200">
-                                {category.name}
-                              </span>
+
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-200 dark:border-gray-700">
+                      <th className="text-left p-3 font-medium">Tên</th>
+                      <th className="text-left p-3 font-medium">Chuyên mục</th>
+                      <th className="text-left p-3 font-medium">Ngày tạo</th>
+                      <th className="text-left p-3 font-medium">Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredApps.map((app) => (
+                      <tr key={app.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <td className="p-3">
+                          <div className="flex items-center gap-3">
+                            {app.icon_url && (
+                              <img src={app.icon_url} alt="" className="w-8 h-8 rounded" />
                             )}
-                            {app.version && <span>Phiên bản: {app.version}</span>}
+                            <span className="font-medium">{app.name || "Không có tên"}</span>
                           </div>
-                        </div>
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => handleEdit(app)}
-                            className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                            title="Sửa"
-                          >
-                            ✏️
-                          </button>
-                          <button
-                            onClick={() => handleDelete(app.id)}
-                            className="p-1.5 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                            title="Xóa"
-                          >
-                            🗑️
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div className="text-center py-6 text-gray-500 dark:text-gray-400">
-                    {search ? "Không tìm thấy ứng dụng phù hợp" : "Chưa có ứng dụng nào"}
+                        </td>
+                        <td className="p-3">
+                          {categories.find(c => c.id === app.category_id)?.name || "Không xác định"}
+                        </td>
+                        <td className="p-3">
+                          {app.created_at ? new Date(app.created_at).toLocaleDateString("vi-VN") : "N/A"}
+                        </td>
+                        <td className="p-3">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleEdit(app)}
+                              className="px-3 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600"
+                            >
+                              ✏️ Sửa
+                            </button>
+                            <button
+                              onClick={() => handleDelete(app.id)}
+                              className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
+                            >
+                              🗑️ Xoá
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {filteredApps.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    {search ? "Không tìm thấy ứng dụng nào" : "Chưa có ứng dụng nào"}
                   </div>
                 )}
               </div>
             </section>
           </>
-        ) : (
+        ) : activeTab === "categories" ? (
           <>
-            {/* Category Management */}
+            {/* Add Category Form */}
             <section className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-md mb-6">
               <h2 className="text-lg md:text-xl font-semibold mb-4">
                 {editingCategoryId ? "✏️ Sửa chuyên mục" : "➕ Thêm chuyên mục mới"}
@@ -661,15 +810,14 @@ export default function Admin() {
                   <input
                     type="text"
                     value={categoryForm.name}
-                    onChange={(e) => setCategoryForm({...categoryForm, name: e.target.value})}
-                    placeholder="Nhập tên chuyên mục"
+                    onChange={(e) => setCategoryForm(prev => ({ ...prev, name: e.target.value }))}
                     className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-1">Các trường:</label>
+                  <label className="block text-sm font-medium mb-1">Trường dữ liệu:</label>
                   <div className="flex gap-2 mb-2">
                     <input
                       type="text"
@@ -683,32 +831,33 @@ export default function Admin() {
                       onClick={addField}
                       className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
                     >
-                      Thêm
+                      ➕ Thêm
                     </button>
                   </div>
-                  
-                  {categoryForm.fields.length > 0 && (
-                    <div className="space-y-2">
-                      {categoryForm.fields.map((field, index) => (
-                        <div key={index} className="flex items-center gap-2">
-                          <span className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded-full text-sm">
-                            {field}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => removeField(index)}
-                            className="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-                            title="Xóa trường này"
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  <div className="space-y-2">
+                    {categoryForm.fields.map((field, index) => (
+                      <div key={index} className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-700 rounded">
+                        <span className="flex-1">{field}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeField(index)}
+                          className="px-2 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
+                        >
+                          ❌
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
-                <div className="flex justify-end gap-3 pt-4">
+                <div className="flex gap-4 pt-4">
+                  <button
+                    type="submit"
+                    disabled={submitting || !categoryForm.name.trim()}
+                    className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium"
+                  >
+                    {submitting ? "⏳ Đang lưu..." : editingCategoryId ? "💾 Cập nhật" : "➕ Thêm mới"}
+                  </button>
                   {editingCategoryId && (
                     <button
                       type="button"
@@ -716,89 +865,70 @@ export default function Admin() {
                         setEditingCategoryId(null);
                         setCategoryForm({ name: "", fields: [] });
                       }}
-                      className="px-4 py-2 bg-gray-300 text-gray-800 rounded hover:bg-gray-400 dark:bg-gray-600 dark:text-white dark:hover:bg-gray-700"
+                      className="px-6 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 font-medium"
                     >
-                      Hủy
+                      ❌ Hủy
                     </button>
                   )}
-                  <button
-                    type="submit"
-                    disabled={submitting || !categoryForm.name || categoryForm.fields.length === 0}
-                    className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-blue-400 dark:bg-blue-700 dark:hover:bg-blue-800"
-                  >
-                    {submitting ? (
-                      <span className="flex items-center">
-                        <span className="animate-spin mr-2">↻</span>
-                        Đang lưu...
-                      </span>
-                    ) : editingCategoryId ? (
-                      "Cập nhật"
-                    ) : (
-                      "Thêm chuyên mục"
-                    )}
-                  </button>
                 </div>
               </form>
             </section>
 
             {/* Categories List */}
             <section className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-md">
-              <h2 className="text-lg md:text-xl font-semibold mb-4">Danh sách chuyên mục</h2>
-              
-              <div className="space-y-3">
-                {categories.length > 0 ? (
-                  categories.map((category) => (
-                    <div
-                      key={category.id}
-                      className="p-3 border rounded hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-                    >
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h3 className="font-medium">{category.name}</h3>
-                          <div className="mt-1 flex flex-wrap gap-1">
-                            {category.fields.map((field, i) => (
-                              <span 
-                                key={i} 
-                                className="inline-block px-2 py-0.5 bg-gray-200 dark:bg-gray-600 rounded-full text-xs"
-                              >
-                                {field}
-                              </span>
-                            ))}
+              <h2 className="text-lg md:text-xl font-semibold mb-4">📋 Danh sách chuyên mục</h2>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-200 dark:border-gray-700">
+                      <th className="text-left p-3 font-medium">Tên</th>
+                      <th className="text-left p-3 font-medium">Số trường</th>
+                      <th className="text-left p-3 font-medium">Thao tác</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {categories.map((category) => (
+                      <tr key={category.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <td className="p-3 font-medium">{category.name}</td>
+                        <td className="p-3">{category.fields?.length || 0} trường</td>
+                        <td className="p-3">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleEditCategory(category)}
+                              className="px-3 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600"
+                            >
+                              ✏️ Sửa
+                            </button>
+                            <button
+                              onClick={() => handleDeleteCategory(category.id)}
+                              className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
+                            >
+                              🗑️ Xoá
+                            </button>
                           </div>
-                        </div>
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => handleEditCategory(category)}
-                            className="p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
-                            title="Sửa"
-                          >
-                            ✏️
-                          </button>
-                          <button
-                            onClick={() => handleDeleteCategory(category.id)}
-                            className="p-1.5 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300"
-                            title="Xóa"
-                          >
-                            🗑️
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-6 text-gray-500 dark:text-gray-400">
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+
+                {categories.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
                     Chưa có chuyên mục nào
                   </div>
                 )}
               </div>
             </section>
           </>
-          )}
-        {activeTab === "certs" && (
-          <section className="max-w-xl mx-auto">
-            <CertManagerAndSigner />
-          </section>
-)}
+        ) : activeTab === "certs" ? (
+          <>
+            {/* Certificate Management */}
+            <section className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-md">
+              <h2 className="text-lg md:text-xl font-semibold mb-4">🛡️ Quản lý và ký chứng chỉ</h2>
+              <CertManagerAndSigner />
+            </section>
+          </>
+        ) : null}
       </main>
     </div>
   );
