@@ -19,50 +19,99 @@ import {
 // 🔹 import danh sách affiliate từ file tĩnh
 import affiliateApps from '../lib/appads';
 
-// --- Pagination ---
+/* =========================
+   Pagination (tối ưu UI)
+   ========================= */
 const PaginationControls = ({ categorySlug, currentPage, totalPages }) => {
-  if (totalPages <= 1) return null;
+  if (!totalPages || totalPages <= 1) return null;
+
+  // Window hiển thị quanh current (±2), có First/Last + ellipsis
+  const windowSize = 2;
+  const pages = [];
+  const add = (p) => pages.push(p);
+
+  add(1);
+  const start = Math.max(2, currentPage - windowSize);
+  const end = Math.min(totalPages - 1, currentPage + windowSize);
+
+  if (start > 2) add('...');
+  for (let p = start; p <= end; p++) add(p);
+  if (end < totalPages - 1) add('...');
+  if (totalPages > 1) add(totalPages);
+
+  const PageButton = ({ p, aria }) => {
+    if (p === '...') {
+      return <span className="px-2 text-gray-500 select-none">…</span>;
+    }
+    const active = p === currentPage;
+    return (
+      <Link
+        prefetch={false}
+        href={`/?category=${categorySlug}&page=${p}`}
+        scroll={false}
+        aria-label={aria || `Tới trang ${p}`}
+        className={`
+          w-10 h-10 flex items-center justify-center rounded-md text-sm font-bold transition-all duration-200
+          ${active
+            ? 'bg-red-600 text-white scale-110 shadow-lg'
+            : 'bg-gray-200 dark:bg-gray-700 hover:bg-red-500 hover:text-white'
+          }
+        `}
+      >
+        {p}
+      </Link>
+    );
+  };
+
   return (
     <div className="flex items-center justify-center gap-2 mt-6 flex-wrap">
+      {/* First */}
       {currentPage > 1 && (
-        <Link 
-          href={`/?category=${categorySlug}&page=${currentPage - 1}`} 
-          scroll={false} 
-          className="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200"
+        <PageButton p={1} aria="Về trang đầu" />
+      )}
+      {/* Prev */}
+      {currentPage > 1 && (
+        <Link
+          prefetch={false}
+          href={`/?category=${categorySlug}&page=${currentPage - 1}`}
+          scroll={false}
+          aria-label="Trang trước"
+          className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200"
         >
           <FontAwesomeIcon icon={faChevronLeft} />
         </Link>
       )}
-      {Array.from({ length: Math.min(totalPages, 10) }, (_, i) => i + 1).map((pageNum) => (
-        <Link
-          key={pageNum}
-          href={`/?category=${categorySlug}&page=${pageNum}`}
-          scroll={false}
-          className={`
-            w-9 h-9 flex items-center justify-center rounded-md text-sm font-bold transition-all duration-200
-            ${pageNum === currentPage
-              ? 'bg-red-600 text-white scale-110 shadow-lg'
-              : 'bg-gray-200 dark:bg-gray-700 hover:bg-red-500 hover:text-white'
-            }
-          `}
-        >
-          {pageNum}
-        </Link>
+
+      {/* Page numbers */}
+      {pages.map((p, i) => (
+        <Fragment key={`${p}-${i}`}>
+          <PageButton p={p} />
+        </Fragment>
       ))}
+
+      {/* Next */}
       {currentPage < totalPages && (
-        <Link 
-          href={`/?category=${categorySlug}&page=${currentPage + 1}`} 
-          scroll={false} 
-          className="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200"
+        <Link
+          prefetch={false}
+          href={`/?category=${categorySlug}&page=${currentPage + 1}`}
+          scroll={false}
+          aria-label="Trang sau"
+          className="w-10 h-10 flex items-center justify-center rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors duration-200"
         >
           <FontAwesomeIcon icon={faChevronRight} />
         </Link>
+      )}
+      {/* Last */}
+      {currentPage < totalPages && (
+        <PageButton p={totalPages} aria="Tới trang cuối" />
       )}
     </div>
   );
 };
 
-// --- Hot App Card ---
+/* =========================
+   Hot App Card (giữ nguyên)
+   ========================= */
 const HotAppCard = ({ app, rank }) => {
   const rankColors = [
     'from-red-600 to-orange-500',
@@ -88,7 +137,9 @@ const HotAppCard = ({ app, rank }) => {
   );
 };
 
-// Affiliate inline card
+/* =========================
+   Affiliate inline card
+   ========================= */
 const AffiliateInlineCard = ({ item, isFirst = false }) => {
   const { name, author, icon_url, affiliate_url, payout_label } = item;
   return (
@@ -124,28 +175,62 @@ const AffiliateInlineCard = ({ item, isFirst = false }) => {
   );
 };
 
+/* =========================
+   Home
+   ========================= */
 export default function Home({ categoriesWithApps, hotApps, paginationData }) {
   const [certStatus, setCertStatus] = useState(null);
 
-  // 🔹 set slug cần hiện trạng thái cert
+  // 🔹 Các chuyên mục có cài IPA → hiển thị badge ký/thu hồi
   const INSTALLABLE_SLUGS = new Set(['jailbreak', 'app-clone']);
 
+  // Cache certStatus 10 phút để giảm gọi lại khi quay về trang
   useEffect(() => {
-    const fetchCertStatus = async () => {
+    let mounted = true;
+    const KEY = 'certStatusCache';
+    const TTL = 10 * 60 * 1000;
+
+    const readCache = () => {
+      try {
+        const raw = sessionStorage.getItem(KEY);
+        if (!raw) return null;
+        const obj = JSON.parse(raw);
+        if (Date.now() - (obj.cachedAt || 0) > TTL) return null;
+        return obj.data;
+      } catch { return null; }
+    };
+
+    const writeCache = (data) => {
+      try {
+        sessionStorage.setItem(KEY, JSON.stringify({ data, cachedAt: Date.now() }));
+      } catch {}
+    };
+
+    const cached = typeof window !== 'undefined' ? readCache() : null;
+    if (cached) {
+      setCertStatus(cached);
+      return;
+    }
+
+    (async () => {
       try {
         const res = await fetch('https://ipadl.storeios.net/api/check-revocation');
         if (res.ok) {
           const data = await res.json();
+          if (!mounted) return;
           setCertStatus(data);
+          writeCache(data);
         } else {
+          if (!mounted) return;
           setCertStatus({ ocspStatus: 'error' });
         }
       } catch (error) {
         console.error('Error fetching cert status:', error);
-        setCertStatus({ ocspStatus: 'error' });
+        if (mounted) setCertStatus({ ocspStatus: 'error' });
       }
-    };
-    fetchCertStatus();
+    })();
+
+    return () => { mounted = false; };
   }, []);
 
   const multiplexIndices = new Set([1, 3]);
@@ -185,7 +270,7 @@ export default function Home({ categoriesWithApps, hotApps, paginationData }) {
                   {category.name}
                 </h2>
 
-                {/* 🔹 Hiện trạng thái cert cho jailbreak + app-clone */}
+                {/* 🔹 Badge trạng thái cert cho jailbreak + app-clone (1 lần fetch, dùng cho nhiều block) */}
                 {INSTALLABLE_SLUGS.has((category.slug || '').toLowerCase()) && certStatus && (
                   <span
                     className="flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300 cursor-pointer"
@@ -217,6 +302,7 @@ export default function Home({ categoriesWithApps, hotApps, paginationData }) {
                 )}
               </div>
 
+              {/* Chỉ hiển thị thông tin trang khi có dữ liệu count */}
               {paginationData && paginationData[category.id] && paginationData[category.id].totalPages > 1 && (
                 <div className="text-sm text-gray-500 dark:text-gray-400 mb-3">
                   Trang {paginationData[category.id].currentPage} / {paginationData[category.id].totalPages} 
@@ -232,6 +318,7 @@ export default function Home({ categoriesWithApps, hotApps, paginationData }) {
                 })}
               </div>
 
+              {/* Chỉ render PaginationControls cho chuyên mục có count */}
               {paginationData && paginationData[category.id] && (
                 <PaginationControls
                   categorySlug={category.slug}
@@ -260,7 +347,9 @@ export default function Home({ categoriesWithApps, hotApps, paginationData }) {
   );
 }
 
-// 🔹 Helper interleave affiliate
+/* =========================
+   Affiliate interleave (giữ nguyên)
+   ========================= */
 function interleaveAffiliate(apps, affiliatePool, category, {
   ratioEvery = 5,
   maxPerCategory = 2,
@@ -302,6 +391,9 @@ function interleaveAffiliate(apps, affiliatePool, category, {
   return result;
 }
 
+/* =========================
+   getServerSideProps (tối ưu)
+   ========================= */
 export async function getServerSideProps(ctx) {
   const supabase = createSupabaseServer(ctx);
   const userAgent = ctx.req.headers['user-agent'] || '';
@@ -313,30 +405,71 @@ export async function getServerSideProps(ctx) {
   }
 
   const { category: categorySlug, page: pageQuery } = ctx.query;
+  const activeSlug = typeof categorySlug === 'string' ? categorySlug.toLowerCase() : null;
   const currentPage = parseInt(pageQuery || '1', 10);
   const APPS_PER_PAGE = 10;
 
-  const { data: categories } = await supabase.from('categories').select('id, name, slug');
+  // Lấy danh sách categories
+  const { data: categories } = await supabase
+    .from('categories')
+    .select('id, name, slug');
+
   const paginationData = {};
   const affiliatePool = affiliateApps.map(a => ({ ...a }));
 
   const categoriesWithApps = await Promise.all(
     (categories || []).map(async (category) => {
-      const pageForThisCategory = (categorySlug && category.slug === categorySlug) ? currentPage : 1;
+      const catSlug = (category.slug || '').toLowerCase();
+      const isActive = activeSlug && catSlug === activeSlug;
+
+      // Trang của category đang xem; category khác luôn là 1
+      const pageForThisCategory = isActive ? currentPage : 1;
       const startIndex = (pageForThisCategory - 1) * APPS_PER_PAGE;
+      const endIndex = startIndex + APPS_PER_PAGE - 1;
 
-      const { count } = await supabase.from('apps').select('*', { count: 'exact', head: true }).eq('category_id', category.id);
-      const totalPages = Math.ceil((count || 0) / APPS_PER_PAGE);
-      paginationData[category.id] = { currentPage: pageForThisCategory, totalPages, totalApps: count || 0 };
+      // 🔹 Chỉ đếm cho category active (tối ưu truy vấn)
+      let totalPages = 1;
+      let totalApps = undefined;
 
-      const { data: apps } = await supabase.from('apps').select('*').eq('category_id', category.id).order('created_at', { ascending: false }).range(startIndex, startIndex + APPS_PER_PAGE - 1);
+      if (isActive) {
+        const { count } = await supabase
+          .from('apps')
+          .select('*', { count: 'estimated', head: true }) // ⚡ nhanh hơn exact
+          .eq('category_id', category.id);
 
-      const appsRendered = interleaveAffiliate(apps || [], affiliatePool, category, { ratioEvery: 5, maxPerCategory: 2 });
+        totalApps = count || 0;
+        totalPages = Math.max(1, Math.ceil(totalApps / APPS_PER_PAGE));
+        paginationData[category.id] = {
+          currentPage: pageForThisCategory,
+          totalPages,
+          totalApps,
+        };
+      }
+
+      // 🔹 Lấy apps: active dùng range theo trang, non-active chỉ lấy trang 1
+      const { data: apps } = await supabase
+        .from('apps')
+        .select('*')
+        .eq('category_id', category.id)
+        .order('created_at', { ascending: false })
+        .range(isActive ? startIndex : 0, isActive ? endIndex : APPS_PER_PAGE - 1);
+
+      const appsRendered = interleaveAffiliate(apps || [], affiliatePool, category, {
+        ratioEvery: 5,
+        maxPerCategory: 2,
+      });
+
       return { ...category, apps: apps || [], appsRendered };
     })
   );
 
-  const { data: hotAppsData } = await supabase.from('apps').select('*').order('views', { ascending: false, nullsLast: true }).limit(5);
+  // Hot apps (giữ nguyên)
+  const { data: hotAppsData } = await supabase
+    .from('apps')
+    .select('*')
+    .order('views', { ascending: false, nullsLast: true })
+    .limit(5);
+
   const sortedHotApps = (hotAppsData || [])
     .map(app => ({ ...app, hotScore: (app.views || 0) + (app.downloads || 0) }))
     .sort((a, b) => b.hotScore - a.hotScore)
