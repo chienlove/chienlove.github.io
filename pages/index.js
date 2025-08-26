@@ -16,13 +16,12 @@ import {
   faChevronRight,
 } from '@fortawesome/free-solid-svg-icons';
 
-// 🔹 THÊM: import danh sách affiliate từ file tĩnh
+// 🔹 import danh sách affiliate từ file tĩnh
 import affiliateApps from '../lib/appads';
 
-// --- COMPONENT CON - Pagination ---
+// --- Pagination ---
 const PaginationControls = ({ categorySlug, currentPage, totalPages }) => {
   if (totalPages <= 1) return null;
-
   return (
     <div className="flex items-center justify-center gap-2 mt-6 flex-wrap">
       {currentPage > 1 && (
@@ -63,7 +62,7 @@ const PaginationControls = ({ categorySlug, currentPage, totalPages }) => {
   );
 };
 
-// --- COMPONENT CON - Hot App Card ---
+// --- Hot App Card ---
 const HotAppCard = ({ app, rank }) => {
   const rankColors = [
     'from-red-600 to-orange-500',
@@ -89,10 +88,9 @@ const HotAppCard = ({ app, rank }) => {
   );
 };
 
-// App Ads
+// Affiliate inline card
 const AffiliateInlineCard = ({ item, isFirst = false }) => {
   const { name, author, icon_url, affiliate_url, payout_label } = item;
-
   return (
     <a
       href={affiliate_url}
@@ -100,28 +98,15 @@ const AffiliateInlineCard = ({ item, isFirst = false }) => {
       rel="nofollow sponsored noopener"
       className="flex items-start justify-between gap-3 px-2 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition rounded-lg"
     >
-      {/* Icon: kích thước & lề giống AppCard */}
       <div className="relative w-14 h-14 rounded-2xl overflow-hidden border border-gray-300 dark:border-gray-600 flex-shrink-0 mt-1">
-        <img
-          src={icon_url}
-          alt={name}
-          className="w-full h-full object-cover"
-          loading="lazy"
-        />
-        {/* Badge [Ad] chéo góc trái */}
+        <img src={icon_url} alt={name} className="w-full h-full object-cover" loading="lazy" />
         <div className="absolute top-0 left-0 w-16 h-16 overflow-hidden z-10 pointer-events-none">
-          <div className="absolute top-[6px] left-[-25px] w-[80px] rotate-[-45deg] bg-yellow-400 text-black text-[10px] font-bold text-center py-[0.5px] shadow-md">
-            Ad
-          </div>
+          <div className="absolute top-[6px] left-[-25px] w-[80px] rotate-[-45deg] bg-yellow-400 text-black text-[10px] font-bold text-center py-[0.5px] shadow-md">Ad</div>
         </div>
       </div>
-
-      {/* Nội dung: border-t giống AppCard; nếu là item đầu tiên thì bỏ đường kẻ */}
       <div className={`flex-1 min-w-0 ${isFirst ? '' : 'border-t border-gray-200 dark:border-gray-700 pt-2'}`}>
         <div className="flex items-center justify-between">
-          <h3 className="text-[16px] font-semibold text-gray-900 dark:text-white truncate">
-            {name}
-          </h3>
+          <h3 className="text-[16px] font-semibold text-gray-900 dark:text-white truncate">{name}</h3>
           {payout_label && (
             <span className="ml-2 bg-gray-200 dark:bg-gray-700 dark:text-gray-100 text-gray-800 px-2 py-0.5 rounded text-xs font-medium">
               {payout_label}
@@ -134,8 +119,6 @@ const AffiliateInlineCard = ({ item, isFirst = false }) => {
           </div>
         </div>
       </div>
-
-      {/* Khối phải để canh lề đúng như AppCard (ô chứa icon download) */}
       <div className="flex items-center justify-center w-10 h-14 mt-1" />
     </a>
   );
@@ -143,6 +126,9 @@ const AffiliateInlineCard = ({ item, isFirst = false }) => {
 
 export default function Home({ categoriesWithApps, hotApps, paginationData }) {
   const [certStatus, setCertStatus] = useState(null);
+
+  // 🔹 set slug cần hiện trạng thái cert
+  const INSTALLABLE_SLUGS = new Set(['jailbreak', 'app-clone']);
 
   useEffect(() => {
     const fetchCertStatus = async () => {
@@ -163,43 +149,34 @@ export default function Home({ categoriesWithApps, hotApps, paginationData }) {
   }, []);
 
   const multiplexIndices = new Set([1, 3]);
-
-  const contentCard =
-    'bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4';
-
+  const contentCard = 'bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4';
   const adCard = contentCard;
 
-  const AdLabel = () => (
-    <div className="text-sm text-gray-500 dark:text-gray-400 font-semibold px-1">
-      Quảng cáo
-    </div>
-  );
+  const AdLabel = () => (<div className="text-sm text-gray-500 dark:text-gray-400 font-semibold px-1">Quảng cáo</div>);
 
   return (
     <Layout hotApps={hotApps}>
       <div className="container mx-auto px-1 md:px-2 py-6 space-y-10">
+        {/* Banner Ad */}
         <div className="space-y-2">
           <AdLabel />
-          <div className={adCard}>
-            <AdUnit className="my-0" mobileVariant="compact" />
-          </div>
+          <div className={adCard}><AdUnit className="my-0" mobileVariant="compact" /></div>
         </div>
 
+        {/* Hot apps */}
         {hotApps && hotApps.length > 0 && (
           <div className={contentCard}>
             <div className="flex items-center gap-3 mb-4">
-              <h2 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-green-500">Top download
-              </h2>
+              <h2 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-green-500">Top download</h2>
               <FontAwesomeIcon icon={faFire} className="text-xl text-red-500" />
             </div>
             <div className="space-y-1">
-              {hotApps.map((app, index) => (
-                <HotAppCard key={app.id} app={app} rank={index + 1} />
-              ))}
+              {hotApps.map((app, index) => (<HotAppCard key={app.id} app={app} rank={index + 1} />))}
             </div>
           </div>
         )}
 
+        {/* Categories */}
         {categoriesWithApps.map((category, index) => (
           <Fragment key={category.id}>
             <div className={contentCard}>
@@ -208,7 +185,8 @@ export default function Home({ categoriesWithApps, hotApps, paginationData }) {
                   {category.name}
                 </h2>
 
-                {category.name.toLowerCase().includes('jailbreak') && certStatus && (
+                {/* 🔹 Hiện trạng thái cert cho jailbreak + app-clone */}
+                {INSTALLABLE_SLUGS.has((category.slug || '').toLowerCase()) && certStatus && (
                   <span
                     className="flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300 cursor-pointer"
                     title={
@@ -246,13 +224,12 @@ export default function Home({ categoriesWithApps, hotApps, paginationData }) {
                 </div>
               )}
 
-              {/* 🔹 CHỈ SỬA NHẸ 1 DÒNG: ưu tiên dùng appsRendered nếu có, không thì dùng apps gốc */}
               <div>
-  {(category.appsRendered || category.apps).map((item, idx) => {
-    return item.__isAffiliate
-      ? <AffiliateInlineCard key={`aff-${item.__affKey || item.id}`} item={item} isFirst={idx === 0} />
-      : <AppCard key={item.id} app={item} mode="list" />;
-  })}
+                {(category.appsRendered || category.apps).map((item, idx) => {
+                  return item.__isAffiliate
+                    ? <AffiliateInlineCard key={`aff-${item.__affKey || item.id}`} item={item} isFirst={idx === 0} />
+                    : <AppCard key={item.id} app={item} mode="list" />;
+                })}
               </div>
 
               {paginationData && paginationData[category.id] && (
@@ -267,26 +244,23 @@ export default function Home({ categoriesWithApps, hotApps, paginationData }) {
             {multiplexIndices.has(index) && (
               <div className="space-y-2">
                 <AdLabel />
-                <div className={adCard}>
-                  <AdUnit className="my-0" mobileVariant="multiplex" />
-                </div>
+                <div className={adCard}><AdUnit className="my-0" mobileVariant="multiplex" /></div>
               </div>
             )}
           </Fragment>
         ))}
 
+        {/* Footer Ad */}
         <div className="space-y-2">
           <AdLabel />
-          <div className={adCard}>
-            <AdUnit className="my-0" mobileVariant="compact" />
-          </div>
+          <div className={adCard}><AdUnit className="my-0" mobileVariant="compact" /></div>
         </div>
       </div>
     </Layout>
   );
 }
 
-// 🔹 THÊM: helper trộn affiliate (giới hạn rất nhẹ, không ảnh hưởng pagination)
+// 🔹 Helper interleave affiliate
 function interleaveAffiliate(apps, affiliatePool, category, {
   ratioEvery = 5,
   maxPerCategory = 2,
@@ -300,7 +274,6 @@ function interleaveAffiliate(apps, affiliatePool, category, {
   });
 
   const want = Math.min(Math.max(0, Math.round((apps?.length || 0) / ratioEvery)), maxPerCategory);
-
   const shuffled = [...matched].sort(() => Math.random() - 0.5).slice(0, want);
 
   shuffled.forEach((aff, i) => {
@@ -310,12 +283,10 @@ function interleaveAffiliate(apps, affiliatePool, category, {
       ? apps.length
       : Math.floor(Math.random() * (posMax - posMin + 1)) + posMin;
 
-    // gắn flag để client render đúng component
     result.splice(Math.min(insertAt + i, result.length), 0, {
       ...aff,
       __isAffiliate: true,
       __affKey: `${aff.id || aff.affiliate_url}-${i}-${Math.random().toString(36).slice(2, 8)}`,
-      // chuẩn hoá url 1 chút (UTM)
       affiliate_url: (() => {
         try {
           const u = new URL(aff.affiliate_url);
@@ -323,9 +294,7 @@ function interleaveAffiliate(apps, affiliatePool, category, {
           if (!u.searchParams.get('utm_medium')) u.searchParams.set('utm_medium', 'listing');
           if (!u.searchParams.get('utm_campaign')) u.searchParams.set('utm_campaign', 'affiliate');
           return u.toString();
-        } catch {
-          return aff.affiliate_url;
-        }
+        } catch { return aff.affiliate_url; }
       })(),
     });
   });
@@ -338,14 +307,9 @@ export async function getServerSideProps(ctx) {
   const userAgent = ctx.req.headers['user-agent'] || '';
   const isGoogleBot = userAgent.toLowerCase().includes('googlebot');
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+  const { data: { user } } = await supabase.auth.getUser();
   if (!user && !isGoogleBot) {
-    return {
-      redirect: { destination: '/under-construction', permanent: false },
-    };
+    return { redirect: { destination: '/under-construction', permanent: false } };
   }
 
   const { category: categorySlug, page: pageQuery } = ctx.query;
@@ -353,10 +317,7 @@ export async function getServerSideProps(ctx) {
   const APPS_PER_PAGE = 10;
 
   const { data: categories } = await supabase.from('categories').select('id, name, slug');
-
   const paginationData = {};
-
-  // ✅ lấy affiliatePool từ file tĩnh (thay vì DB)
   const affiliatePool = affiliateApps.map(a => ({ ...a }));
 
   const categoriesWithApps = await Promise.all(
@@ -364,54 +325,22 @@ export async function getServerSideProps(ctx) {
       const pageForThisCategory = (categorySlug && category.slug === categorySlug) ? currentPage : 1;
       const startIndex = (pageForThisCategory - 1) * APPS_PER_PAGE;
 
-      const { count } = await supabase
-        .from('apps')
-        .select('*', { count: 'exact', head: true })
-        .eq('category_id', category.id);
-
+      const { count } = await supabase.from('apps').select('*', { count: 'exact', head: true }).eq('category_id', category.id);
       const totalPages = Math.ceil((count || 0) / APPS_PER_PAGE);
-      paginationData[category.id] = { 
-        currentPage: pageForThisCategory, 
-        totalPages,
-        totalApps: count || 0
-      };
+      paginationData[category.id] = { currentPage: pageForThisCategory, totalPages, totalApps: count || 0 };
 
-      const { data: apps } = await supabase
-        .from('apps')
-        .select('*')
-        .eq('category_id', category.id)
-        .order('created_at', { ascending: false })
-        .range(startIndex, startIndex + APPS_PER_PAGE - 1);
+      const { data: apps } = await supabase.from('apps').select('*').eq('category_id', category.id).order('created_at', { ascending: false }).range(startIndex, startIndex + APPS_PER_PAGE - 1);
 
-      // 🔹 trộn affiliate vào mảng hiển thị (không đổi mảng apps gốc)
-      const appsRendered = interleaveAffiliate(apps || [], affiliatePool, category, {
-        ratioEvery: 5,
-        maxPerCategory: 2,
-      });
-
+      const appsRendered = interleaveAffiliate(apps || [], affiliatePool, category, { ratioEvery: 5, maxPerCategory: 2 });
       return { ...category, apps: apps || [], appsRendered };
     })
   );
 
-  const { data: hotAppsData } = await supabase
-    .from('apps')
-    .select('*')
-    .order('views', { ascending: false, nullsLast: true })
-    .limit(5);
-
+  const { data: hotAppsData } = await supabase.from('apps').select('*').order('views', { ascending: false, nullsLast: true }).limit(5);
   const sortedHotApps = (hotAppsData || [])
-    .map(app => ({
-      ...app,
-      hotScore: (app.views || 0) + (app.downloads || 0)
-    }))
+    .map(app => ({ ...app, hotScore: (app.views || 0) + (app.downloads || 0) }))
     .sort((a, b) => b.hotScore - a.hotScore)
     .slice(0, 5);
 
-  return { 
-    props: { 
-      categoriesWithApps: categoriesWithApps, 
-      hotApps: sortedHotApps,
-      paginationData
-    } 
-  };
+  return { props: { categoriesWithApps, hotApps: sortedHotApps, paginationData } };
 }
