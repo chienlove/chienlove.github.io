@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 import Layout from '../components/Layout';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { FastAverageColor } from 'fast-average-color';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -17,6 +17,8 @@ import {
   faCheckCircle,
   faTimesCircle,
   faExclamationTriangle,
+  faChevronDown,
+  faChevronUp,
 } from '@fortawesome/free-solid-svg-icons';
 
 export async function getServerSideProps(context) {
@@ -86,17 +88,25 @@ export default function Detail({ serverApp, serverRelated }) {
   const [statusLoading, setStatusLoading] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
 
+  // Trạng thái mở rộng cho các mục nhiều nội dung
+  const [showAllDevices, setShowAllDevices] = useState(false);
+  const [showAllLanguages, setShowAllLanguages] = useState(false);
+
   useEffect(() => {
     setApp(serverApp);
     setRelated(serverRelated);
     setShowFullDescription(false);
     setDominantColor('#f0f2f5');
+    setShowAllDevices(false);
+    setShowAllLanguages(false);
   }, [router.query.slug, serverApp, serverRelated]);
 
   // Lấy slug chuyên mục tin cậy (từ quan hệ); nếu không có thì rỗng
   const categorySlug = app?.category?.slug ?? null;
   const isTestflight = categorySlug === 'testflight';
-  const isJailbreak = categorySlug === 'jailbreak';
+
+  // ✅ Cho phép các chuyên mục cài IPA trực tiếp (không phải TestFlight)
+  const isInstallable = ['jailbreak', 'app-clone'].includes(categorySlug);
 
   useEffect(() => {
     if (!app?.id) return;
@@ -136,6 +146,49 @@ export default function Detail({ serverApp, serverRelated }) {
 
   const truncate = (text, limit) =>
     text?.length > limit ? text.slice(0, limit) + '...' : text;
+
+  // Chuẩn hoá hiển thị size (có thể đã là "xx MB" hoặc chỉ là số)
+  const displaySize = useMemo(() => {
+    if (!app?.size) return 'Không rõ';
+    const s = String(app.size);
+    if (/\bMB\b/i.test(s)) return s; // đã có đơn vị
+    const n = Number(s);
+    if (!isNaN(n)) return `${n} MB`;
+    return s;
+  }, [app?.size]);
+
+  // Chuẩn hóa languages & supported_devices thành chuỗi hiển thị
+  const languagesArray = useMemo(() => {
+    if (!app?.languages) return [];
+    return Array.isArray(app.languages)
+      ? app.languages
+      : String(app.languages)
+          .split(/[,\n]+/)
+          .map((x) => x.trim())
+          .filter(Boolean);
+  }, [app?.languages]);
+
+  const devicesArray = useMemo(() => {
+    if (!app?.supported_devices) return [];
+    return Array.isArray(app.supported_devices)
+      ? app.supported_devices
+      : String(app.supported_devices)
+          .split(/[,\n]+/)
+          .map((x) => x.trim())
+          .filter(Boolean);
+  }, [app?.supported_devices]);
+
+  const languagesShort = useMemo(() => {
+    const list = languagesArray.slice(0, 6);
+    const remain = Math.max(languagesArray.length - 6, 0);
+    return { list, remain };
+  }, [languagesArray]);
+
+  const devicesShort = useMemo(() => {
+    const list = devicesArray.slice(0, 5);
+    const remain = Math.max(devicesArray.length - 5, 0);
+    return { list, remain };
+  }, [devicesArray]);
 
   const handleDownload = (e) => {
     e.preventDefault();
@@ -235,7 +288,7 @@ export default function Detail({ serverApp, serverRelated }) {
                     </div>
                   )}
 
-                  {isJailbreak && (
+                  {isInstallable && (
                     <button
                       onClick={handleDownload}
                       disabled={isDownloading}
@@ -263,7 +316,7 @@ export default function Detail({ serverApp, serverRelated }) {
           </div>
         </div>
 
-        {/* Info cards */}
+        {/* Info cards tổng quan (nhỏ) */}
         <div className="max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 mt-6 space-y-6">
           <div className="bg-white rounded-xl p-4 shadow flex justify-between text-center overflow-x-auto divide-x divide-gray-200">
             <div className="px-0.5 sm:px-1.5">
@@ -281,7 +334,7 @@ export default function Detail({ serverApp, serverRelated }) {
             <div className="px-1 sm:px-2">
               <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Dung lượng</p>
               <FontAwesomeIcon icon={faDatabase} className="text-xl text-gray-600 mb-1" />
-              <p className="text-sm text-gray-800">{app.size ? `${app.size} MB` : 'Không rõ'}</p>
+              <p className="text-sm text-gray-800">{displaySize}</p>
             </div>
 
             <div className="px-0.5 sm:px-1.5">
@@ -332,6 +385,62 @@ export default function Detail({ serverApp, serverRelated }) {
             </div>
           )}
 
+          {/* 🔹 Card thông tin chi tiết kiểu App Store */}
+          <div className="bg-white rounded-xl shadow overflow-hidden">
+            <h2 className="px-4 pt-4 text-lg font-bold text-gray-800">Thông tin</h2>
+            <div className="mt-3 divide-y divide-gray-200">
+              {/* Author */}
+              <InfoRow label="Nhà phát triển" value={app.author || 'Không rõ'} />
+              {/* Version */}
+              <InfoRow label="Phiên bản" value={app.version || 'Không rõ'} />
+              {/* Size */}
+              <InfoRow label="Dung lượng" value={displaySize} />
+              {/* Supported Devices (Expandable) */}
+              <InfoRow
+                label="Thiết bị hỗ trợ"
+                value={
+                  devicesArray.length
+                    ? (showAllDevices ? devicesArray.join(', ') : `${devicesShort.list.join(', ')}${devicesShort.remain ? `, +${devicesShort.remain}` : ''}`)
+                    : 'Không rõ'
+                }
+                expandable={devicesArray.length > devicesShort.list.length}
+                expanded={showAllDevices}
+                onToggle={() => setShowAllDevices((v) => !v)}
+              />
+              {/* Languages (Expandable) */}
+              <InfoRow
+                label="Ngôn ngữ"
+                value={
+                  languagesArray.length
+                    ? (showAllLanguages ? languagesArray.join(', ') : `${languagesShort.list.join(', ')}${languagesShort.remain ? `, +${languagesShort.remain}` : ''}`)
+                    : 'Không rõ'
+                }
+                expandable={languagesArray.length > languagesShort.list.length}
+                expanded={showAllLanguages}
+                onToggle={() => setShowAllLanguages((v) => !v)}
+              />
+              {/* Minimum OS */}
+              <InfoRow
+                label="Yêu cầu iOS"
+                value={app.minimum_os_version ? `iOS ${app.minimum_os_version}+` : 'Không rõ'}
+              />
+              {/* Release date */}
+              <InfoRow
+                label="Ngày phát hành"
+                value={
+                  app.release_date
+                    ? new Date(app.release_date).toLocaleDateString('vi-VN')
+                    : 'Không rõ'
+                }
+              />
+              {/* Age rating */}
+              <InfoRow
+                label="Xếp hạng tuổi"
+                value={app.age_rating || 'Không rõ'}
+              />
+            </div>
+          </div>
+
           {/* Related */}
           {related.length > 0 && (
             <div className="bg-white rounded-xl p-4 shadow">
@@ -370,5 +479,34 @@ export default function Detail({ serverApp, serverRelated }) {
         </div>
       </div>
     </Layout>
+  );
+}
+
+/** Hàng thông tin có viền ngăn cách & nút xem thêm kiểu App Store */
+function InfoRow({ label, value, expandable = false, expanded = false, onToggle }) {
+  return (
+    <div className="px-4 py-3 flex items-start">
+      <div className="w-40 min-w-[9rem] text-sm text-gray-500">{label}</div>
+      <div className="flex-1 text-sm text-gray-800">
+        <span className="align-top">{value}</span>
+        {expandable && (
+          <button
+            type="button"
+            onClick={onToggle}
+            className="ml-2 inline-flex items-center text-blue-600 hover:underline"
+          >
+            {expanded ? (
+              <>
+                Thu gọn <FontAwesomeIcon icon={faChevronUp} className="ml-1 h-3" />
+              </>
+            ) : (
+              <>
+                Xem thêm <FontAwesomeIcon icon={faChevronDown} className="ml-1 h-3" />
+              </>
+            )}
+          </button>
+        )}
+    </div>
+  </div>
   );
 }
