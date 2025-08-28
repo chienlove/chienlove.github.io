@@ -25,7 +25,6 @@ import {
 
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import bbcodeToMarkdown from 'bbcode-to-markdown';
 
 // ===================== SSR =====================
 export async function getServerSideProps(context) {
@@ -58,7 +57,7 @@ export async function getServerSideProps(context) {
     return { notFound: true };
   }
 
-  // 3) Fallback JOIN category
+  // 3) Fallback JOIN category bằng category_id
   if (!appData?.category && appData?.category_id) {
     const { data: cat } = await supabase
       .from('categories')
@@ -85,14 +84,58 @@ export async function getServerSideProps(context) {
 }
 
 // ===================== Helpers =====================
+// BBCode → Markdown (bản nhẹ, không kéo thư viện Node)
+function bbcodeToMarkdownLite(input = '') {
+  let s = String(input);
+
+  // [b], [i], [u]
+  s = s.replace(/\[b\](.*?)\[\/b\]/gis, '**$1**');
+  s = s.replace(/\[i\](.*?)\[\/i\]/gis, '*$1*');
+  s = s.replace(/\[u\](.*?)\[\/u\]/gis, '__$1__');
+
+  // [url] / [url=...]
+  s = s.replace(/\[url\](https?:\/\/[^\s\]]+)\[\/url\]/gis, '[$1]($1)');
+  s = s.replace(/\[url=(https?:\/\/[^\]\s]+)\](.*?)\[\/url\]/gis, '[$2]($1)');
+
+  // [img]
+  s = s.replace(/\[img\](https?:\/\/[^\s\]]+)\[\/img\]/gis, '![]($1)');
+
+  // [quote]
+  s = s.replace(/\[quote\]\s*([\s\S]*?)\s*\[\/quote\]/gis, (m, p1) => {
+    const lines = String(p1).trim().split(/\r?\n/);
+    return lines.map(l => `> ${l}`).join('\n');
+  });
+
+  // [code]
+  s = s.replace(/\[code\]\s*([\s\S]*?)\s*\[\/code\]/gis, (m, p1) => {
+    const body = String(p1).replace(/```/g, '``'); // tránh phá fenced block
+    return `\n\`\`\`\n${body}\n\`\`\`\n`;
+  });
+
+  // [list] [*] … [/list] → danh sách
+  s = s.replace(/$begin:math:display$list$end:math:display$\s*([\s\S]*?)\s*$begin:math:display$\\/list$end:math:display$/gis, (m, p1) => {
+    const items = String(p1)
+      .split(/$begin:math:display$\\*$end:math:display$/i)
+      .map(it => it.trim())
+      .filter(Boolean);
+    return items.map(it => `- ${it}`).join('\n');
+  });
+
+  // [size], [color] → bỏ thẻ, giữ nội dung
+  s = s.replace(/$begin:math:display$size=[^$end:math:display$]+\]([\s\S]*?)$begin:math:display$\\/size$end:math:display$/gis, '$1');
+  s = s.replace(/$begin:math:display$color=[^$end:math:display$]+\]([\s\S]*?)$begin:math:display$\\/color$end:math:display$/gis, '$1');
+
+  return s;
+}
+
 function normalizeDescription(raw = '') {
   if (!raw) return '';
-  let text = String(raw);
-  // Nếu phát hiện BBCode phổ biến, convert sang markdown
-  if (/\[(b|i|u|url|img|quote|code|list|\*|size|color)/i.test(text)) {
-    try { text = bbcodeToMarkdown(text); } catch {}
+  const txt = String(raw);
+  // Nếu phát hiện BBCode → đổi sang Markdown
+  if (/\[(b|i|u|url|img|quote|code|list|\*|size|color)/i.test(txt)) {
+    return bbcodeToMarkdownLite(txt);
   }
-  return text;
+  return txt;
 }
 
 function PrettyBlockquote({ children }) {
@@ -468,7 +511,7 @@ export default function Detail({ serverApp, serverRelated }) {
                 </ReactMarkdown>
               </div>
               {!showFullDescription && (
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white to-transparent" />
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white to透明" />
               )}
             </div>
 
