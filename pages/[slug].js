@@ -452,7 +452,7 @@ export default function Detail({ serverApp, serverRelated }) {
                         ) : (
                           <>
                             <FontAwesomeIcon icon={faDownload} className="mr-2" />
-                            Cài đặt ứng dụng
+                            Cài đặt
                           </>
                         )}
                       </button>
@@ -474,7 +474,7 @@ export default function Detail({ serverApp, serverRelated }) {
                         ) : (
                           <>
                             <FontAwesomeIcon icon={faFileArrowDown} className="mr-2" />
-                            Tải file IPA
+                            Tải IPA
                           </>
                         )}
                       </button>
