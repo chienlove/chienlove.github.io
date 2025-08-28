@@ -118,8 +118,7 @@ function bbcodeToMarkdownLite(input = '') {
     return `\n\`\`\`\n${body}\n\`\`\`\n`;
   });
 
-  // [list] [*] … [/list] → danh sách gạch đầu dòng
-  // (không dùng regex literal để tránh lỗi flags khi deploy)
+  // [list] [*] … [/list] → danh sách gạch đầu dòng (tránh regex literal)
   s = (() => {
     const OPEN = "[list]";
     const CLOSE = "[/list]";
@@ -132,21 +131,17 @@ function bbcodeToMarkdownLite(input = '') {
       const i2 = lo.indexOf(CLOSE, i1 + OPEN.length);
       if (i2 === -1) { out += rest; break; }
 
-      // phần trước list giữ nguyên
-      out += rest.slice(0, i1);
+      out += rest.slice(0, i1); // phần trước list
 
-      // nội dung giữa [list] ... [/list]
       const inner = rest.slice(i1 + OPEN.length, i2);
       const parts = inner
         .split(/$begin:math:display$\\*$end:math:display$/gi)
         .map(t => t.trim())
         .filter(Boolean);
 
-      const md = parts.map(it => `- ${it}`).join("\n");
-      out += md;
+      out += parts.map(it => `- ${it}`).join("\n");
 
-      // tiếp tục sau [/list]
-      rest = rest.slice(i2 + CLOSE.length);
+      rest = rest.slice(i2 + CLOSE.length); // sau [/list]
     }
     return out;
   })();
@@ -154,27 +149,18 @@ function bbcodeToMarkdownLite(input = '') {
   // [size], [color] → bỏ thẻ, giữ nội dung
   rep("\$begin:math:display$size=[^\\$end:math:display$]+\\]([\\s\\S]*?)\$begin:math:display$/size\\$end:math:display$", "gi", "$1");
   rep("\$begin:math:display$color=[^\\$end:math:display$]+\\]([\\s\\S]*?)\$begin:math:display$/color\\$end:math:display$", "gi", "$1");
-  // Quét thêm để xoá mọi thẻ color còn sót (mở/đóng lẻ, có khoảng trắng…)
+  // Xoá mọi thẻ color còn sót (mở/đóng lẻ, có khoảng trắng…)
   rep("\$begin:math:display$color[^\\$end:math:display$]*\\]", "gi", "");
   rep("\$begin:math:display$/color\\$end:math:display$", "gi", "");
 
   return s;
 }
 
+// Chỉ GIỮ MỘT bản duy nhất của hàm này
 function normalizeDescription(raw = '') {
   if (!raw) return '';
   const txt = String(raw);
   // Nếu phát hiện BBCode phổ biến → đổi sang Markdown
-  if (/\[(b|i|u|url|img|quote|code|list|\*|size|color)/i.test(txt)) {
-    return bbcodeToMarkdownLite(txt);
-  }
-  return txt;
-}
-
-function normalizeDescription(raw = '') {
-  if (!raw) return '';
-  const txt = String(raw);
-  // Nếu phát hiện BBCode → đổi sang Markdown
   if (/\[(b|i|u|url|img|quote|code|list|\*|size|color)/i.test(txt)) {
     return bbcodeToMarkdownLite(txt);
   }
