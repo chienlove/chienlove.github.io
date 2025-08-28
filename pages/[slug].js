@@ -88,42 +88,70 @@ export async function getServerSideProps(context) {
 function bbcodeToMarkdownLite(input = '') {
   let s = String(input);
 
+  // Helper: replace all using RegExp constructor (tránh literal /.../gi)
+  const rep = (pattern, flags, replacer) => {
+    const r = new RegExp(pattern, flags);
+    s = s.replace(r, replacer);
+  };
+
   // [b], [i], [u]
-  s = s.replace(/\[b\](.*?)\[\/b\]/gi, '**$1**');
-  s = s.replace(/\[i\](.*?)\[\/i\]/gi, '*$1*');
-  s = s.replace(/\[u\](.*?)\[\/u\]/gi, '__$1__');
+  rep("\\[b\\](.*?)\\[/b\\]", "gi", "**$1**");
+  rep("\\[i\\](.*?)\\[/i\\]", "gi", "*$1*");
+  rep("\\[u\\](.*?)\\[/u\\]", "gi", "__$1__");
 
   // [url] / [url=...]
-  s = s.replace(/\[url\](https?:\/\/[^\s\]]+)\[\/url\]/gi, '[$1]($1)');
-  s = s.replace(/\[url=(https?:\/\/[^\]\s]+)\](.*?)\[\/url\]/gi, '[$2]($1)');
+  rep("\\[url\\](https?:\\/\\/[^\\s\\]]+)\\[/url\\]", "gi", "[$1]($1)");
+  rep("\\[url=(https?:\\/\\/[^\\]\\s]+)\\](.*?)\\[/url\\]", "gi", "[$2]($1)");
 
   // [img]
-  s = s.replace(/\[img\](https?:\/\/[^\s\]]+)\[\/img\]/gi, '![]($1)');
+  rep("\\[img\\](https?:\\/\\/[^\\s\\]]+)\\[/img\\]", "gi", "![]($1)");
 
-  // [quote]
-  s = s.replace(/\[quote\]\s*([\s\S]*?)\s*\[\/quote\]/gi, (m, p1) => {
+  // [quote]...[/quote]  → tiền tố > cho từng dòng
+  s = s.replace(new RegExp("\\[quote\\]\\s*([\\s\\S]*?)\\s*\\[/quote\\]", "gi"), (_m, p1) => {
     const lines = String(p1).trim().split(/\r?\n/);
-    return lines.map(l => `> ${l}`).join('\n');
+    return lines.map(l => `> ${l}`).join("\n");
   });
 
-  // [code]
-  s = s.replace(/\[code\]\s*([\s\S]*?)\s*\[\/code\]/gi, (m, p1) => {
-    const body = String(p1).replace(/```/g, '``');
+  // [code]...[/code] → fenced code block
+  s = s.replace(new RegExp("\\[code\\]\\s*([\\s\\S]*?)\\s*\\[/code\\]", "gi"), (_m, p1) => {
+    const body = String(p1).replace(/```/g, "``");
     return `\n\`\`\`\n${body}\n\`\`\`\n`;
   });
 
-  // [list] [*] … [/list]
-  s = s.replace(/$begin:math:display$list$end:math:display$\s*([\s\S]*?)\s*$begin:math:display$\\/list$end:math:display$/gi, (m, p1) => {
-    const items = String(p1)
-      .split(/$begin:math:display$\\*$end:math:display$/i)
-      .map(it => it.trim())
-      .filter(Boolean);
-    return items.map(it => `- ${it}`).join('\n');
-  });
+  // [list] [*] ... [/list]  → xử lý không dùng regex literal để tránh lỗi flag
+  s = (() => {
+    const OPEN = "[list]";
+    const CLOSE = "[/list]";
+    let out = "";
+    let rest = s;
+    while (true) {
+      const i1 = rest.toLowerCase().indexOf(OPEN);
+      if (i1 === -1) { out += rest; break; }
+      const i2 = rest.toLowerCase().indexOf(CLOSE, i1 + OPEN.length);
+      if (i2 === -1) { out += rest; break; }
 
-  // [size], [color] → bỏ thẻ, giữ nội dung
-  s = s.replace(/$begin:math:display$size=[^$end:math:display$]+\]([\s\S]*?)$begin:math:display$\\/size$end:math:display$/gi, '$1');
-  s = s.replace(/$begin:math:display$color=[^$end:math:display$]+\]([\s\S]*?)$begin:math:display$\\/color$end:math:display$/gi, '$1');
+      // Phần trước list giữ nguyên
+      out += rest.slice(0, i1);
+
+      // Nội dung giữa [list] ... [/list]
+      const inner = rest.slice(i1 + OPEN.length, i2);
+      // Tách theo [*] (không phân biệt hoa thường)
+      const parts = inner.split(/$begin:math:display$\\*$end:math:display$/i)
+        .map(t => t.trim())
+        .filter(Boolean);
+
+      const md = parts.map(it => `- ${it}`).join("\n");
+      out += md;
+
+      // Tiếp tục sau [/list]
+      rest = rest.slice(i2 + CLOSE.length);
+    }
+    return out;
+  })();
+
+  // [size=...][/size], [color=...][/color] → bỏ thẻ, giữ nội dung
+  rep("\$begin:math:display$size=[^\\$end:math:display$]+\\]([\\s\\S]*?)\$begin:math:display$/size\\$end:math:display$", "gi", "$1");
+  rep("\$begin:math:display$color=[^\\$end:math:display$]+\\]([\\s\\S]*?)\$begin:math:display$/color\\$end:math:display$", "gi", "$1");
 
   return s;
 }
