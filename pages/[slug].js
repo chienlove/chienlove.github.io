@@ -83,11 +83,9 @@ export async function getServerSideProps(context) {
   };
 }
 
-// ===================== Helpers (SAFE – no regex literal) =====================
 function bbcodeToMarkdownLite(input = '') {
   let s = String(input);
 
-  // Thay thế tiện dụng – chấp nhận string hoặc function replacer
   const rep = (pattern, flags, replacer) => {
     const r = new RegExp(pattern, flags);
     s = s.replace(r, replacer);
@@ -116,37 +114,61 @@ function bbcodeToMarkdownLite(input = '') {
 
   // [code] → fenced code block
   rep("\\[code\\]\\s*([\\s\\S]*?)\\s*\\[/code\\]", "gi", (_m, p1) => {
-    const body = String(p1).replace(/```/g, "``"); // tránh phá markdown
+    const body = String(p1).replace(/```/g, "``");
     return `\n\`\`\`\n${body}\n\`\`\`\n`;
   });
 
-  // [list][*]...[/list] → markdown list (KHÔNG dùng /.../gi literal)
-  // Tìm [list]...[/list]
-  const listOpenClose = new RegExp("\$begin:math:display$list\\$end:math:display$([\\s\\S]*?)\$begin:math:display$/list\\$end:math:display$", "gi");
-  s = s.replace(listOpenClose, (_m, content) => {
-    // Tách theo [*]
-    const splitStar = new RegExp("\$begin:math:display$\\\\*\\$end:math:display$", "gi");
-    const items = String(content)
-      .split(splitStar)
-      .map(x => x.trim())
-      .filter(Boolean);
-    return "\n" + items.map(it => `- ${it}`).join("\n") + "\n";
-  });
+  // ✅ [list] xử lý không dùng regex
+  s = processListBlocks(s);
 
   // [size], [color] → bỏ thẻ, giữ nội dung
   rep("\$begin:math:display$size=[^\\$end:math:display$]+\\]([\\s\\S]*?)\$begin:math:display$/size\\$end:math:display$", "gi", "$1");
   rep("\$begin:math:display$color=[^\\$end:math:display$]+\\]([\\s\\S]*?)\$begin:math:display$/color\\$end:math:display$", "gi", "$1");
-  // Quét thêm để xoá mọi thẻ color mở/đóng lẻ (kể cả có khoảng trắng)
   rep("\$begin:math:display$color[^\\$end:math:display$]*\\]", "gi", "");
   rep("\$begin:math:display$/color\\$end:math:display$", "gi", "");
 
   return s;
 }
 
+// ✅ Hàm xử lý [list][*]… không dùng regex
+function processListBlocks(str) {
+  let output = '';
+  let remaining = str;
+
+  while (true) {
+    const start = remaining.toLowerCase().indexOf('[list]');
+    if (start === -1) {
+      output += remaining;
+      break;
+    }
+
+    const end = remaining.toLowerCase().indexOf('[/list]', start);
+    if (end === -1) {
+      output += remaining;
+      break;
+    }
+
+    const before = remaining.substring(0, start);
+    const listContent = remaining.substring(start + 6, end); // 6 = '[list]'.length
+    const after = remaining.substring(end + 7); // 7 = '[/list]'.length
+
+    // Tách item theo [*] (không regex)
+    const items = listContent.split('[*')
+      .map(x => x.trim())
+      .filter(Boolean);
+
+    const markdownList = '\n' + items.map(it => `- ${it}`).join('\n') + '\n';
+
+    output += before + markdownList;
+    remaining = after;
+  }
+
+  return output;
+}
+
 function normalizeDescription(raw = '') {
   if (!raw) return '';
   const txt = String(raw);
-  // Nếu phát hiện BBCode phổ biến → convert sang Markdown
   if (/\[(b|i|u|url|img|quote|code|list|\*|size|color)/i.test(txt)) {
     return bbcodeToMarkdownLite(txt);
   }
