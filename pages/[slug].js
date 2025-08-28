@@ -83,12 +83,10 @@ export async function getServerSideProps(context) {
   };
 }
 
-// ===================== Helpers =====================
-// BBCode → Markdown (nhẹ, không cần thư viện ngoài)
 function bbcodeToMarkdownLite(input = '') {
   let s = String(input);
 
-  // Helper: replace bằng RegExp constructor (tránh regex literal gây lỗi build)
+  // Helper: replace bằng RegExp constructor để an toàn khi build
   const rep = (pattern, flags, replacer) => {
     const r = new RegExp(pattern, flags);
     s = s.replace(r, replacer);
@@ -99,7 +97,7 @@ function bbcodeToMarkdownLite(input = '') {
   rep("\\[i\\](.*?)\\[/i\\]", "gi", "*$1*");
   rep("\\[u\\](.*?)\\[/u\\]", "gi", "__$1__");
 
-  // [url] / [url=...]
+  // [url] và [url=...]
   rep("\\[url\\](https?:\\/\\/[^\\s\\]]+)\\[/url\\]", "gi", "[$1]($1)");
   rep("\\[url=(https?:\\/\\/[^\\]\\s]+)\\](.*?)\\[/url\\]", "gi", "[$2]($1)");
 
@@ -107,53 +105,34 @@ function bbcodeToMarkdownLite(input = '') {
   rep("\\[img\\](https?:\\/\\/[^\\s\\]]+)\\[/img\\]", "gi", "![]($1)");
 
   // [quote] → > blockquote
-  s = s.replace(new RegExp("\\[quote\\]\\s*([\\s\\S]*?)\\s*\\[/quote\\]", "gi"), (_m, p1) => {
-    const lines = String(p1).trim().split(/\r?\n/);
-    return lines.map(l => `> ${l}`).join("\n");
+  s = s.replace(/\[quote\]\s*([\s\S]*?)\s*\[\/quote\]/gi, (_m, p1) => {
+    return p1
+      .trim()
+      .split(/\r?\n/)
+      .map(line => `> ${line}`)
+      .join('\n');
   });
 
-  // [code] → fenced code block
-  s = s.replace(new RegExp("\\[code\\]\\s*([\\s\\S]*?)\\s*\\[/code\\]", "gi"), (_m, p1) => {
-    const body = String(p1).replace(/```/g, "``"); // tránh phá fenced block
+  // [code] → fenced block
+  s = s.replace(/\[code\]\s*([\s\S]*?)\s*\[\/code\]/gi, (_m, p1) => {
+    const body = p1.replace(/```/g, '``'); // tránh phá markdown
     return `\n\`\`\`\n${body}\n\`\`\`\n`;
   });
 
-  // [list] [*] … [/list] → danh sách gạch đầu dòng (không dùng regex literal)
-  s = (() => {
-    const OPEN = "[list]";
-    const CLOSE = "[/list]";
-    let out = "";
-    let rest = s;
-    while (true) {
-      const lo = rest.toLowerCase();
-      const i1 = lo.indexOf(OPEN);
-      if (i1 === -1) { out += rest; break; }
-      const i2 = lo.indexOf(CLOSE, i1 + OPEN.length);
-      if (i2 === -1) { out += rest; break; }
-
-      // phần trước list giữ nguyên
-      out += rest.slice(0, i1);
-
-      // nội dung giữa [list] ... [/list]
-      const inner = rest.slice(i1 + OPEN.length, i2);
-      const parts = inner
-        .split(/$begin:math:display$\\*$end:math:display$/gi)
-        .map(t => t.trim())
-        .filter(Boolean);
-
-      // ➜ thêm \n trước/sau để Markdown hiểu là danh sách
-      out += '\n' + parts.map(it => `- ${it}`).join("\n") + '\n';
-
-      // tiếp tục sau [/list]
-      rest = rest.slice(i2 + CLOSE.length);
-    }
-    return out;
-  })();
+  // [list][*]...[*]...[/list] → markdown list
+  s = s.replace(/$begin:math:display$list$end:math:display$([\s\S]*?)$begin:math:display$\\/list$end:math:display$/gi, (_m, p1) => {
+    const items = p1
+      .split(/$begin:math:display$\\*$end:math:display$/gi)
+      .map(item => item.trim())
+      .filter(Boolean);
+    return '\n' + items.map(item => `- ${item}`).join('\n') + '\n';
+  });
 
   // [size], [color] → bỏ thẻ, giữ nội dung
   rep("\$begin:math:display$size=[^\\$end:math:display$]+\\]([\\s\\S]*?)\$begin:math:display$/size\\$end:math:display$", "gi", "$1");
   rep("\$begin:math:display$color=[^\\$end:math:display$]+\\]([\\s\\S]*?)\$begin:math:display$/color\\$end:math:display$", "gi", "$1");
-  // Xoá mọi thẻ color còn sót (mở/đóng lẻ, có khoảng trắng…)
+
+  // Xoá mọi thẻ mở/đóng color còn sót
   rep("\$begin:math:display$color[^\\$end:math:display$]*\\]", "gi", "");
   rep("\$begin:math:display$/color\\$end:math:display$", "gi", "");
 
