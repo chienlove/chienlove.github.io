@@ -84,11 +84,11 @@ export async function getServerSideProps(context) {
 }
 
 // ===================== Helpers =====================
-// BBCode → Markdown (bản nhẹ, không kéo thư viện Node)
+// BBCode → Markdown (bản nhẹ, không cần thư viện ngoài)
 function bbcodeToMarkdownLite(input = '') {
   let s = String(input);
 
-  // Helper: replace all using RegExp constructor (tránh literal /.../gi)
+  // Helper: replace bằng RegExp constructor để an toàn khi build
   const rep = (pattern, flags, replacer) => {
     const r = new RegExp(pattern, flags);
     s = s.replace(r, replacer);
@@ -106,54 +106,69 @@ function bbcodeToMarkdownLite(input = '') {
   // [img]
   rep("\\[img\\](https?:\\/\\/[^\\s\\]]+)\\[/img\\]", "gi", "![]($1)");
 
-  // [quote]...[/quote]  → tiền tố > cho từng dòng
+  // [quote] → > blockquote
   s = s.replace(new RegExp("\\[quote\\]\\s*([\\s\\S]*?)\\s*\\[/quote\\]", "gi"), (_m, p1) => {
     const lines = String(p1).trim().split(/\r?\n/);
     return lines.map(l => `> ${l}`).join("\n");
   });
 
-  // [code]...[/code] → fenced code block
+  // [code] → fenced code block
   s = s.replace(new RegExp("\\[code\\]\\s*([\\s\\S]*?)\\s*\\[/code\\]", "gi"), (_m, p1) => {
-    const body = String(p1).replace(/```/g, "``");
+    const body = String(p1).replace(/```/g, "``"); // tránh phá fenced block
     return `\n\`\`\`\n${body}\n\`\`\`\n`;
   });
 
-  // [list] [*] ... [/list]  → xử lý không dùng regex literal để tránh lỗi flag
+  // [list] [*] … [/list] → danh sách gạch đầu dòng
+  // (không dùng regex literal để tránh lỗi flags khi deploy)
   s = (() => {
     const OPEN = "[list]";
     const CLOSE = "[/list]";
     let out = "";
     let rest = s;
     while (true) {
-      const i1 = rest.toLowerCase().indexOf(OPEN);
+      const lo = rest.toLowerCase();
+      const i1 = lo.indexOf(OPEN);
       if (i1 === -1) { out += rest; break; }
-      const i2 = rest.toLowerCase().indexOf(CLOSE, i1 + OPEN.length);
+      const i2 = lo.indexOf(CLOSE, i1 + OPEN.length);
       if (i2 === -1) { out += rest; break; }
 
-      // Phần trước list giữ nguyên
+      // phần trước list giữ nguyên
       out += rest.slice(0, i1);
 
-      // Nội dung giữa [list] ... [/list]
+      // nội dung giữa [list] ... [/list]
       const inner = rest.slice(i1 + OPEN.length, i2);
-      // Tách theo [*] (không phân biệt hoa thường)
-      const parts = inner.split(/$begin:math:display$\\*$end:math:display$/i)
+      const parts = inner
+        .split(/$begin:math:display$\\*$end:math:display$/gi)
         .map(t => t.trim())
         .filter(Boolean);
 
       const md = parts.map(it => `- ${it}`).join("\n");
       out += md;
 
-      // Tiếp tục sau [/list]
+      // tiếp tục sau [/list]
       rest = rest.slice(i2 + CLOSE.length);
     }
     return out;
   })();
 
-  // [size=...][/size], [color=...][/color] → bỏ thẻ, giữ nội dung
+  // [size], [color] → bỏ thẻ, giữ nội dung
   rep("\$begin:math:display$size=[^\\$end:math:display$]+\\]([\\s\\S]*?)\$begin:math:display$/size\\$end:math:display$", "gi", "$1");
   rep("\$begin:math:display$color=[^\\$end:math:display$]+\\]([\\s\\S]*?)\$begin:math:display$/color\\$end:math:display$", "gi", "$1");
+  // Quét thêm để xoá mọi thẻ color còn sót (mở/đóng lẻ, có khoảng trắng…)
+  rep("\$begin:math:display$color[^\\$end:math:display$]*\\]", "gi", "");
+  rep("\$begin:math:display$/color\\$end:math:display$", "gi", "");
 
   return s;
+}
+
+function normalizeDescription(raw = '') {
+  if (!raw) return '';
+  const txt = String(raw);
+  // Nếu phát hiện BBCode phổ biến → đổi sang Markdown
+  if (/\[(b|i|u|url|img|quote|code|list|\*|size|color)/i.test(txt)) {
+    return bbcodeToMarkdownLite(txt);
+  }
+  return txt;
 }
 
 function normalizeDescription(raw = '') {
