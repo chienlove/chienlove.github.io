@@ -83,9 +83,83 @@ export async function getServerSideProps(context) {
   };
 }
 
+// ===================== Helpers (triệt để, an toàn Vercel) =====================
+
+// Xoá thẻ BBCode dạng [tag=...] hoặc [tag] ... [/tag] mà KHÔNG dùng regex
+function stripSimpleTagAll(str, tag) {
+  let s = String(str);
+  const open = `[${tag}`;
+  const close = `[/${tag}]`;
+
+  // 1) Xoá tất cả thẻ đóng lẻ
+  while (true) {
+    const idx = s.toLowerCase().indexOf(close);
+    if (idx === -1) break;
+    s = s.slice(0, idx) + s.slice(idx + close.length);
+  }
+
+  // 2) Xoá cặp thẻ mở/đóng (giữ nội dung bên trong)
+  while (true) {
+    const lower = s.toLowerCase();
+    const iOpen = lower.indexOf(open);
+    if (iOpen === -1) break;
+
+    const iBracket = s.indexOf(']', iOpen);
+    if (iBracket === -1) { // không có ']' → xoá từ '[' đến hết
+      s = s.slice(0, iOpen);
+      break;
+    }
+
+    const iClose = s.toLowerCase().indexOf(close, iBracket + 1);
+    if (iClose === -1) {
+      // Không có thẻ đóng -> chỉ xoá phần mở [tag...]
+      s = s.slice(0, iOpen) + s.slice(iBracket + 1);
+      continue;
+    }
+
+    // Có đủ mở/đóng: giữ nội dung giữa hai thẻ
+    const inner = s.slice(iBracket + 1, iClose);
+    s = s.slice(0, iOpen) + inner + s.slice(iClose + close.length);
+  }
+
+  return s;
+}
+
+// Chuyển các block [list][*]...[/list] thành Markdown '- ...' (không dùng regex)
+function processListBlocks(str) {
+  let output = '';
+  let remaining = String(str);
+
+  while (true) {
+    const lower = remaining.toLowerCase();
+    const start = lower.indexOf('[list]');
+    if (start === -1) { output += remaining; break; }
+
+    const end = lower.indexOf('[/list]', start + 6);
+    if (end === -1) { output += remaining; break; }
+
+    const before = remaining.slice(0, start);
+    const listContent = remaining.slice(start + 6, end);  // 6 = "[list]".length
+    const after = remaining.slice(end + 7);                // 7 = "[/list]".length
+
+    // Tách đúng theo token "[*]" (3 ký tự) -- KHÔNG regex
+    const items = listContent
+      .split('[*]')
+      .map(t => t.trim())
+      .filter(Boolean);
+
+    const md = '\n' + items.map(it => `- ${it}`).join('\n') + '\n';
+    output += before + md;
+    remaining = after;
+  }
+  return output;
+}
+
+// BBCode → Markdown (giữ regex an toàn cho b/i/u/url/img/quote/code)
 function bbcodeToMarkdownLite(input = '') {
   let s = String(input);
 
+  // Helper: thay bằng RegExp constructor cho các thẻ đơn giản
   const rep = (pattern, flags, replacer) => {
     const r = new RegExp(pattern, flags);
     s = s.replace(r, replacer);
@@ -96,7 +170,7 @@ function bbcodeToMarkdownLite(input = '') {
   rep("\\[i\\](.*?)\\[/i\\]", "gi", "*$1*");
   rep("\\[u\\](.*?)\\[/u\\]", "gi", "__$1__");
 
-  // [url] và [url=...]
+  // [url] & [url=...]
   rep("\\[url\\](https?:\\/\\/[^\\s\\]]+)\\[/url\\]", "gi", "[$1]($1)");
   rep("\\[url=(https?:\\/\\/[^\\]\\s]+)\\](.*?)\\[/url\\]", "gi", "[$2]($1)");
 
@@ -104,71 +178,33 @@ function bbcodeToMarkdownLite(input = '') {
   rep("\\[img\\](https?:\\/\\/[^\\s\\]]+)\\[/img\\]", "gi", "![]($1)");
 
   // [quote] → blockquote
-  rep("\\[quote\\]\\s*([\\s\\S]*?)\\s*\\[/quote\\]", "gi", (_m, p1) => {
-    return String(p1)
-      .trim()
-      .split(/\r?\n/)
-      .map(line => `> ${line}`)
-      .join("\n");
+  // (dùng RegExp constructor; nếu môi trường bạn vẫn chèn marker lạ, có thể chuyển sang thuật toán thuần string tương tự list)
+  const quoteR = new RegExp("\\[quote\\]\\s*([\\s\\S]*?)\\s*\\[/quote\\]", "gi");
+  s = s.replace(quoteR, (_m, p1) => {
+    return String(p1).trim().split(/\r?\n/).map(l => `> ${l}`).join('\n');
   });
 
   // [code] → fenced code block
-  rep("\\[code\\]\\s*([\\s\\S]*?)\\s*\\[/code\\]", "gi", (_m, p1) => {
+  const codeR = new RegExp("\\[code\\]\\s*([\\s\\S]*?)\\s*\\[/code\\]", "gi");
+  s = s.replace(codeR, (_m, p1) => {
     const body = String(p1).replace(/```/g, "``");
     return `\n\`\`\`\n${body}\n\`\`\`\n`;
   });
 
-  // ✅ [list] xử lý không dùng regex
+  // ✅ [list] → '- ' bullets
   s = processListBlocks(s);
 
-  // [size], [color] → bỏ thẻ, giữ nội dung
-  rep("\$begin:math:display$size=[^\\$end:math:display$]+\\]([\\s\\S]*?)\$begin:math:display$/size\\$end:math:display$", "gi", "$1");
-  rep("\$begin:math:display$color=[^\\$end:math:display$]+\\]([\\s\\S]*?)\$begin:math:display$/color\\$end:math:display$", "gi", "$1");
-  rep("\$begin:math:display$color[^\\$end:math:display$]*\\]", "gi", "");
-  rep("\$begin:math:display$/color\\$end:math:display$", "gi", "");
+  // ✅ Bỏ thẻ [color], [size] KHÔNG dùng regex
+  s = stripSimpleTagAll(s, 'color');
+  s = stripSimpleTagAll(s, 'size');
 
   return s;
-}
-
-// ✅ Hàm xử lý [list][*]… không dùng regex
-function processListBlocks(str) {
-  let output = '';
-  let remaining = str;
-
-  while (true) {
-    const start = remaining.toLowerCase().indexOf('[list]');
-    if (start === -1) {
-      output += remaining;
-      break;
-    }
-
-    const end = remaining.toLowerCase().indexOf('[/list]', start);
-    if (end === -1) {
-      output += remaining;
-      break;
-    }
-
-    const before = remaining.substring(0, start);
-    const listContent = remaining.substring(start + 6, end); // 6 = '[list]'.length
-    const after = remaining.substring(end + 7); // 7 = '[/list]'.length
-
-    // Tách item theo [*] (không regex)
-    const items = listContent.split('[*')
-      .map(x => x.trim())
-      .filter(Boolean);
-
-    const markdownList = '\n' + items.map(it => `- ${it}`).join('\n') + '\n';
-
-    output += before + markdownList;
-    remaining = after;
-  }
-
-  return output;
 }
 
 function normalizeDescription(raw = '') {
   if (!raw) return '';
   const txt = String(raw);
+  // phát hiện có BBCode phổ biến → convert
   if (/\[(b|i|u|url|img|quote|code|list|\*|size|color)/i.test(txt)) {
     return bbcodeToMarkdownLite(txt);
   }
