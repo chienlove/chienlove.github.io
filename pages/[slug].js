@@ -165,57 +165,37 @@ function processListBlocks(str) {
 function bbcodeToMarkdownLite(input = '') {
   let s = String(input);
 
-  // Helper an toàn
-  const replaceTag = (openTag, closeTag, replacer) => {
-    const o = openTag.toLowerCase();
-    const c = closeTag.toLowerCase();
-    let result = '';
-    let pos = 0;
+  // Step 1: [b], [i], [u] (có thể lồng nhau)
+  s = s.replace(/\[b\](.*?)\[\/b\]/gi, '**$1**');
+  s = s.replace(/\[i\](.*?)\[\/i\]/gi, '*$1*');
+  s = s.replace(/\[u\](.*?)\[\/u\]/gi, '__$1__');
 
-    while (true) {
-      const iOpen = s.toLowerCase().indexOf(o, pos);
-      if (iOpen === -1) break;
-
-      const iClose = s.toLowerCase().indexOf(c, iOpen + o.length);
-      if (iClose === -1) break;
-
-      const before = s.slice(pos, iOpen);
-      const content = s.slice(iOpen + o.length, iClose);
-      result += before + replacer(content);
-      pos = iClose + c.length;
-    }
-    return result + s.slice(pos);
-  };
-
-  // [b], [i], [u]
-  s = replaceTag('[b]', '[/b]', c => `**${c}**`);
-  s = replaceTag('[i]', '[/i]', c => `*${c}*`);
-  s = replaceTag('[u]', '[/u]', c => `__${c}__`);
-
-  // [url] và [url=...]
+  // Step 2: [url] & [url=...]
   s = s.replace(/\[url\](https?:\/\/[^\s\]]+)\[\/url\]/gi, '[$1]($1)');
   s = s.replace(/\[url=(https?:\/\/[^\]\s]+)\](.*?)\[\/url\]/gi, '[$2]($1)');
 
-  // [img]
+  // Step 3: [img]
   s = s.replace(/\[img\](https?:\/\/[^\s\]]+)\[\/img\]/gi, '![]($1)');
 
-  // [quote]
-  s = replaceTag('[quote]', '[/quote]', content => {
-    return content.trim().split(/\r?\n/).map(line => `> ${line}`).join('\n');
-  });
-
-  // [code]
-  s = replaceTag('[code]', '[/code]', content => {
-    const body = content.replace(/```/g, '``');
-    return `\n\`\`\`\n${body}\n\`\`\`\n`;
-  });
-
-  // [list]
-  s = processListBlocks(s);
-
-  // [color], [size]
+  // Step 4: [color] và [size] – bỏ qua
   s = stripSimpleTagAll(s, 'color');
   s = stripSimpleTagAll(s, 'size');
+
+  // Step 5: [list] – xử lý sau khi đã có [b][i][u] trong nội dung
+  s = processListBlocks(s);
+
+  // Step 6: [quote] – giờ có thể xử lý an toàn vì nội dung đã được format
+  const quoteR = new RegExp('\\[quote\\]\\s*([\\s\\S]*?)\\s*\\[/quote\\]', 'gi');
+  s = s.replace(quoteR, (_m, p1) => {
+    return String(p1).trim().split(/\r?\n/).map(line => `> ${line}`).join('\n');
+  });
+
+  // Step 7: [code] – dùng RegExp (an toàn vì không có tag con phức tạp)
+  const codeR = new RegExp('\\[code\\]\\s*([\\s\\S]*?)\\s*\\[/code\\]', 'gi');
+  s = s.replace(codeR, (_m, p1) => {
+    const body = String(p1).replace(/```/g, '``');
+    return `\n\`\`\`\n${body}\n\`\`\`\n`;
+  });
 
   return s;
 }
