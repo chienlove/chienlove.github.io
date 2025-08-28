@@ -364,7 +364,7 @@ export default function Detail({ serverApp, serverRelated }) {
       const tokRes = await fetch('/api/generate-token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: app.id, slug: app.slug }),
+        body: JSON.stringify({ id: app.id, ipa_name: app.download_link }),
       });
       if (!tokRes.ok) throw new Error(`HTTP ${tokRes.status}`);
       const { token } = await tokRes.json();
