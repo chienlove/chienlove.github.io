@@ -84,11 +84,11 @@ export async function getServerSideProps(context) {
 }
 
 // ===================== Helpers =====================
-// BBCode → Markdown (bản nhẹ, không cần thư viện ngoài)
+// BBCode → Markdown (nhẹ, không cần thư viện ngoài)
 function bbcodeToMarkdownLite(input = '') {
   let s = String(input);
 
-  // Helper: replace bằng RegExp constructor để an toàn khi build
+  // Helper: replace bằng RegExp constructor (tránh regex literal gây lỗi build)
   const rep = (pattern, flags, replacer) => {
     const r = new RegExp(pattern, flags);
     s = s.replace(r, replacer);
@@ -118,7 +118,7 @@ function bbcodeToMarkdownLite(input = '') {
     return `\n\`\`\`\n${body}\n\`\`\`\n`;
   });
 
-  // [list] [*] … [/list] → danh sách gạch đầu dòng (tránh regex literal)
+  // [list] [*] … [/list] → danh sách gạch đầu dòng (không dùng regex literal)
   s = (() => {
     const OPEN = "[list]";
     const CLOSE = "[/list]";
@@ -131,17 +131,21 @@ function bbcodeToMarkdownLite(input = '') {
       const i2 = lo.indexOf(CLOSE, i1 + OPEN.length);
       if (i2 === -1) { out += rest; break; }
 
-      out += rest.slice(0, i1); // phần trước list
+      // phần trước list giữ nguyên
+      out += rest.slice(0, i1);
 
+      // nội dung giữa [list] ... [/list]
       const inner = rest.slice(i1 + OPEN.length, i2);
       const parts = inner
         .split(/$begin:math:display$\\*$end:math:display$/gi)
         .map(t => t.trim())
         .filter(Boolean);
 
-      out += parts.map(it => `- ${it}`).join("\n");
+      // ➜ thêm \n trước/sau để Markdown hiểu là danh sách
+      out += '\n' + parts.map(it => `- ${it}`).join("\n") + '\n';
 
-      rest = rest.slice(i2 + CLOSE.length); // sau [/list]
+      // tiếp tục sau [/list]
+      rest = rest.slice(i2 + CLOSE.length);
     }
     return out;
   })();
@@ -156,7 +160,6 @@ function bbcodeToMarkdownLite(input = '') {
   return s;
 }
 
-// Chỉ GIỮ MỘT bản duy nhất của hàm này
 function normalizeDescription(raw = '') {
   if (!raw) return '';
   const txt = String(raw);
@@ -318,7 +321,7 @@ export default function Detail({ serverApp, serverRelated }) {
 
     try {
       // 1) Lấy token ngắn hạn (JWT 1 lần dùng)
-      const tokRes = await fetch('/api/generate-download-token', {
+      const tokRes = await fetch('/api/generate-token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: app.id, slug: app.slug }),
