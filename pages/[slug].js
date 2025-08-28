@@ -89,31 +89,31 @@ function bbcodeToMarkdownLite(input = '') {
   let s = String(input);
 
   // [b], [i], [u]
-  s = s.replace(/\[b\](.*?)\[\/b\]/gis, '**$1**');
-  s = s.replace(/\[i\](.*?)\[\/i\]/gis, '*$1*');
-  s = s.replace(/\[u\](.*?)\[\/u\]/gis, '__$1__');
+  s = s.replace(/\[b\](.*?)\[\/b\]/gi, '**$1**');
+  s = s.replace(/\[i\](.*?)\[\/i\]/gi, '*$1*');
+  s = s.replace(/\[u\](.*?)\[\/u\]/gi, '__$1__');
 
   // [url] / [url=...]
-  s = s.replace(/\[url\](https?:\/\/[^\s\]]+)\[\/url\]/gis, '[$1]($1)');
-  s = s.replace(/\[url=(https?:\/\/[^\]\s]+)\](.*?)\[\/url\]/gis, '[$2]($1)');
+  s = s.replace(/\[url\](https?:\/\/[^\s\]]+)\[\/url\]/gi, '[$1]($1)');
+  s = s.replace(/\[url=(https?:\/\/[^\]\s]+)\](.*?)\[\/url\]/gi, '[$2]($1)');
 
   // [img]
-  s = s.replace(/\[img\](https?:\/\/[^\s\]]+)\[\/img\]/gis, '![]($1)');
+  s = s.replace(/\[img\](https?:\/\/[^\s\]]+)\[\/img\]/gi, '![]($1)');
 
   // [quote]
-  s = s.replace(/\[quote\]\s*([\s\S]*?)\s*\[\/quote\]/gis, (m, p1) => {
+  s = s.replace(/\[quote\]\s*([\s\S]*?)\s*\[\/quote\]/gi, (m, p1) => {
     const lines = String(p1).trim().split(/\r?\n/);
     return lines.map(l => `> ${l}`).join('\n');
   });
 
   // [code]
-  s = s.replace(/\[code\]\s*([\s\S]*?)\s*\[\/code\]/gis, (m, p1) => {
-    const body = String(p1).replace(/```/g, '``'); // tránh phá fenced block
+  s = s.replace(/\[code\]\s*([\s\S]*?)\s*\[\/code\]/gi, (m, p1) => {
+    const body = String(p1).replace(/```/g, '``');
     return `\n\`\`\`\n${body}\n\`\`\`\n`;
   });
 
-  // [list] [*] … [/list] → danh sách
-  s = s.replace(/$begin:math:display$list$end:math:display$\s*([\s\S]*?)\s*$begin:math:display$\\/list$end:math:display$/gis, (m, p1) => {
+  // [list] [*] … [/list]
+  s = s.replace(/$begin:math:display$list$end:math:display$\s*([\s\S]*?)\s*$begin:math:display$\\/list$end:math:display$/gi, (m, p1) => {
     const items = String(p1)
       .split(/$begin:math:display$\\*$end:math:display$/i)
       .map(it => it.trim())
@@ -122,8 +122,8 @@ function bbcodeToMarkdownLite(input = '') {
   });
 
   // [size], [color] → bỏ thẻ, giữ nội dung
-  s = s.replace(/$begin:math:display$size=[^$end:math:display$]+\]([\s\S]*?)$begin:math:display$\\/size$end:math:display$/gis, '$1');
-  s = s.replace(/$begin:math:display$color=[^$end:math:display$]+\]([\s\S]*?)$begin:math:display$\\/color$end:math:display$/gis, '$1');
+  s = s.replace(/$begin:math:display$size=[^$end:math:display$]+\]([\s\S]*?)$begin:math:display$\\/size$end:math:display$/gi, '$1');
+  s = s.replace(/$begin:math:display$color=[^$end:math:display$]+\]([\s\S]*?)$begin:math:display$\\/color$end:math:display$/gi, '$1');
 
   return s;
 }
