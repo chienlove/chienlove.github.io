@@ -58,8 +58,10 @@ export default async function handler(req, res) {
     const plistName = (app.download_link || '').trim();
     if (!plistName) return res.status(400).json({ error: 'No plist/ipa mapping for this app' });
 
-    const base = process.env.NEXT_PUBLIC_BASE_URL || '';
-    if (!base) return res.status(500).json({ error: 'Missing NEXT_PUBLIC_BASE_URL' });
+    // >>> Cách B: tự suy ra base từ header, bỏ phụ thuộc NEXT_PUBLIC_BASE_URL
+    const proto = req.headers['x-forwarded-proto'] || 'https';
+    const host  = req.headers['x-forwarded-host'] || req.headers.host;
+    const base  = `${proto}://${host}`;
 
     // 4) Gọi API generate-token đã có sẵn của bạn để lấy token cho /api/plist
     const tRes = await fetch(`${base}/api/generate-token`, {
