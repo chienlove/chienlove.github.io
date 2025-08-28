@@ -1,3 +1,4 @@
+// pages/[slug].js
 'use client';
 
 import { supabase } from '../lib/supabase';
@@ -19,12 +20,18 @@ import {
   faExclamationTriangle,
   faChevronDown,
   faChevronUp,
+  faFileArrowDown,
 } from '@fortawesome/free-solid-svg-icons';
 
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import bbcodeToMarkdown from 'bbcode-to-markdown';
+
+// ===================== SSR =====================
 export async function getServerSideProps(context) {
   const slug = context.params.slug?.toLowerCase();
 
-  // 1) Lấy app + JOIN rõ ràng theo FK để chắc chắn có category.slug
+  // 1) App + JOIN category (đảm bảo có category.slug)
   let { data: appData, error } = await supabase
     .from('apps')
     .select(`
@@ -51,7 +58,7 @@ export async function getServerSideProps(context) {
     return { notFound: true };
   }
 
-  // 3) Nếu vì lý do gì JOIN không trả category, fallback query riêng
+  // 3) Fallback JOIN category
   if (!appData?.category && appData?.category_id) {
     const { data: cat } = await supabase
       .from('categories')
@@ -61,7 +68,7 @@ export async function getServerSideProps(context) {
     if (cat) appData = { ...appData, category: cat };
   }
 
-  // 4) Related theo category_id (đồng bộ với index.js)
+  // 4) Related theo category_id
   const { data: relatedApps } = await supabase
     .from('apps')
     .select('id, name, slug, icon_url, author, version')
@@ -77,6 +84,29 @@ export async function getServerSideProps(context) {
   };
 }
 
+// ===================== Helpers =====================
+function normalizeDescription(raw = '') {
+  if (!raw) return '';
+  let text = String(raw);
+  // Nếu phát hiện BBCode phổ biến, convert sang markdown
+  if (/\[(b|i|u|url|img|quote|code|list|\*|size|color)/i.test(text)) {
+    try { text = bbcodeToMarkdown(text); } catch {}
+  }
+  return text;
+}
+
+function PrettyBlockquote({ children }) {
+  return (
+    <blockquote className="relative my-4 rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50 to-white p-4 pl-5 dark:border-blue-900/40 dark:from-blue-950/30 dark:to-transparent">
+      <div className="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl bg-blue-500/80 dark:bg-blue-400/80" />
+      <div className="text-blue-900 dark:text-blue-100 leading-relaxed">
+        {children}
+      </div>
+    </blockquote>
+  );
+}
+
+// ===================== Page =====================
 export default function Detail({ serverApp, serverRelated }) {
   const router = useRouter();
 
@@ -86,9 +116,11 @@ export default function Detail({ serverApp, serverRelated }) {
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [status, setStatus] = useState(null);
   const [statusLoading, setStatusLoading] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false);
 
-  // Trạng thái mở rộng cho các mục nhiều nội dung
+  const [isInstalling, setIsInstalling] = useState(false);
+  const [isFetchingIpa, setIsFetchingIpa] = useState(false);
+
+  // Trạng thái mở rộng cho mục nhiều nội dung
   const [showAllDevices, setShowAllDevices] = useState(false);
   const [showAllLanguages, setShowAllLanguages] = useState(false);
 
@@ -101,17 +133,15 @@ export default function Detail({ serverApp, serverRelated }) {
     setShowAllLanguages(false);
   }, [router.query.slug, serverApp, serverRelated]);
 
-  // Lấy slug chuyên mục tin cậy (từ quan hệ); nếu không có thì rỗng
+  // Category flags
   const categorySlug = app?.category?.slug ?? null;
   const isTestflight = categorySlug === 'testflight';
-
-  // ✅ Cho phép các chuyên mục cài IPA trực tiếp (không phải TestFlight)
   const isInstallable = ['jailbreak', 'app-clone'].includes(categorySlug);
 
   useEffect(() => {
     if (!app?.id) return;
 
-    // Tăng view cho TestFlight
+    // Đếm view cho TestFlight
     if (isTestflight) {
       fetch('/api/admin/add-view', {
         method: 'POST',
@@ -147,35 +177,29 @@ export default function Detail({ serverApp, serverRelated }) {
   const truncate = (text, limit) =>
     text?.length > limit ? text.slice(0, limit) + '...' : text;
 
-  // Chuẩn hoá hiển thị size (có thể đã là "xx MB" hoặc chỉ là số)
+  // Chuẩn hoá size hiển thị
   const displaySize = useMemo(() => {
     if (!app?.size) return 'Không rõ';
     const s = String(app.size);
-    if (/\bMB\b/i.test(s)) return s; // đã có đơn vị
+    if (/\bMB\b/i.test(s)) return s;
     const n = Number(s);
     if (!isNaN(n)) return `${n} MB`;
     return s;
   }, [app?.size]);
 
-  // Chuẩn hóa languages & supported_devices thành chuỗi hiển thị
+  // Chuẩn hoá languages & devices
   const languagesArray = useMemo(() => {
     if (!app?.languages) return [];
     return Array.isArray(app.languages)
       ? app.languages
-      : String(app.languages)
-          .split(/[,\n]+/)
-          .map((x) => x.trim())
-          .filter(Boolean);
+      : String(app.languages).split(/[,\n]+/).map((x) => x.trim()).filter(Boolean);
   }, [app?.languages]);
 
   const devicesArray = useMemo(() => {
     if (!app?.supported_devices) return [];
     return Array.isArray(app.supported_devices)
       ? app.supported_devices
-      : String(app.supported_devices)
-          .split(/[,\n]+/)
-          .map((x) => x.trim())
-          .filter(Boolean);
+      : String(app.supported_devices).split(/[,\n]+/).map((x) => x.trim()).filter(Boolean);
   }, [app?.supported_devices]);
 
   const languagesShort = useMemo(() => {
@@ -190,25 +214,58 @@ export default function Detail({ serverApp, serverRelated }) {
     return { list, remain };
   }, [devicesArray]);
 
-  const handleDownload = (e) => {
+  // ========= Actions =========
+  const handleInstall = async (e) => {
     e.preventDefault();
-    if (!app?.id) return;
-    if (isTestflight) return; // Không tải IPA cho TestFlight
+    if (!app?.id || isTestflight) return;
 
-    setIsDownloading(true);
+    setIsInstalling(true);
+    // Điều hướng sang trang /install/[slug] (itms-services + JWT)
     router.push(`/install/${app.slug}`);
 
-    fetch(`/api/admin/add-download?id=${app.id}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      cache: 'no-store',
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) setApp((prev) => ({ ...prev, downloads: data.downloads }));
-      })
-      .catch((err) => console.error('Lỗi ngầm khi tăng lượt tải:', err))
-      .finally(() => setIsDownloading(false));
+    // Ghi nhận lượt tải
+    try {
+      const res = await fetch(`/api/admin/add-download?id=${app.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+      });
+      const data = await res.json();
+      if (data.success) setApp((prev) => ({ ...prev, downloads: data.downloads }));
+    } catch (err) {
+      console.error('Lỗi tăng lượt tải:', err);
+    } finally {
+      setIsInstalling(false);
+    }
+  };
+
+  const handleDownloadIpa = async (e) => {
+    e.preventDefault();
+    if (!app?.id || !isInstallable) return;
+    setIsFetchingIpa(true);
+
+    try {
+      // 1) Lấy token ngắn hạn (JWT 1 lần dùng)
+      const tokRes = await fetch('/api/generate-download-token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: app.id, slug: app.slug }),
+      });
+      if (!tokRes.ok) throw new Error(`HTTP ${tokRes.status}`);
+      const { token } = await tokRes.json();
+      if (!token) throw new Error('Thiếu token');
+
+      // 2) Điều hướng qua proxy download không lộ nguồn
+      window.location.href = `/api/download-ipa?slug=${encodeURIComponent(app.slug)}&token=${encodeURIComponent(token)}`;
+
+      // 3) Ghi nhận lượt tải (async)
+      fetch(`/api/admin/add-download?id=${app.id}`, { method: 'POST' }).catch(() => {});
+    } catch (err) {
+      alert('Không thể tạo link tải IPA. Vui lòng thử lại.');
+      console.error('Download IPA error:', err);
+    } finally {
+      setIsFetchingIpa(false);
+    }
   };
 
   if (!app) {
@@ -254,9 +311,11 @@ export default function Detail({ serverApp, serverRelated }) {
                 </div>
                 <h1 className="mt-4 text-2xl font-bold text-gray-900 drop-shadow">{app.name}</h1>
                 {app.author && <p className="text-gray-700 text-sm">{app.author}</p>}
-                <div className="mt-4 space-x-2">
+
+                <div className="mt-4 flex flex-wrap justify-center gap-2">
+                  {/* TestFlight buttons */}
                   {isTestflight && app.testflight_url && (
-                    <div className="flex flex-wrap justify-center gap-2">
+                    <>
                       <a
                         href={app.testflight_url}
                         className="inline-block border border-blue-500 text-blue-700 hover:bg-blue-100 transition px-4 py-2 rounded-full text-sm font-semibold"
@@ -285,30 +344,55 @@ export default function Detail({ serverApp, serverRelated }) {
                           Ngừng nhận
                         </span>
                       )}
-                    </div>
+                    </>
                   )}
 
+                  {/* Cài đặt & Tải IPA cho jailbreak / app-clone */}
                   {isInstallable && (
-                    <button
-                      onClick={handleDownload}
-                      disabled={isDownloading}
-                      className={`inline-block border border-green-500 text-green-700 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-green-200 active:shadow-inner active:ring-2 active:ring-green-500 ${isDownloading ? 'opacity-50 cursor-not-allowed bg-green-100' : 'hover:bg-green-100'}`}
-                    >
-                      {isDownloading ? (
-                        <span className="flex items-center">
-                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-green-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                          </svg>
-                          Đang tải...
-                        </span>
-                      ) : (
-                        <>
-                          <FontAwesomeIcon icon={faDownload} className="mr-2" />
-                          Cài đặt ứng dụng
-                        </>
-                      )}
-                    </button>
+                    <>
+                      <button
+                        onClick={handleInstall}
+                        disabled={isInstalling}
+                        className={`inline-flex items-center border border-green-500 text-green-700 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-green-200 active:shadow-inner active:ring-2 active:ring-green-500 ${isInstalling ? 'opacity-50 cursor-not-allowed bg-green-100' : 'hover:bg-green-100'}`}
+                      >
+                        {isInstalling ? (
+                          <>
+                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-green-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Đang mở cài đặt…
+                          </>
+                        ) : (
+                          <>
+                            <FontAwesomeIcon icon={faDownload} className="mr-2" />
+                            Cài đặt ứng dụng
+                          </>
+                        )}
+                      </button>
+
+                      <button
+                        onClick={handleDownloadIpa}
+                        disabled={isFetchingIpa}
+                        className={`inline-flex items-center border border-blue-500 text-blue-700 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-blue-200 active:shadow-inner active:ring-2 active:ring-blue-500 ${isFetchingIpa ? 'opacity-50 cursor-not-allowed bg-blue-100' : 'hover:bg-blue-100'}`}
+                        title="Tải file IPA (ẩn nguồn tải)"
+                      >
+                        {isFetchingIpa ? (
+                          <>
+                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-blue-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Đang tạo link…
+                          </>
+                        ) : (
+                          <>
+                            <FontAwesomeIcon icon={faFileArrowDown} className="mr-2" />
+                            Tải file IPA
+                          </>
+                        )}
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
@@ -316,7 +400,7 @@ export default function Detail({ serverApp, serverRelated }) {
           </div>
         </div>
 
-        {/* Info cards tổng quan (nhỏ) */}
+        {/* Info cards tổng quan */}
         <div className="max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 mt-6 space-y-6">
           <div className="bg-white rounded-xl p-4 shadow flex justify-between text-center overflow-x-auto divide-x divide-gray-200">
             <div className="px-0.5 sm:px-1.5">
@@ -355,16 +439,43 @@ export default function Detail({ serverApp, serverRelated }) {
             </div>
           </div>
 
-          {/* Mô tả */}
+          {/* Mô tả (Markdown + BBCode) */}
           <div className="bg-white rounded-xl p-4 shadow">
-            <h2 className="text-lg font-bold text-gray-800 mb-2">Mô tả</h2>
-            <p className="text-gray-700 whitespace-pre-line">
-              {showFullDescription ? app.description : truncate(app.description, 500)}
-            </p>
-            {app.description?.length > 500 && (
+            <h2 className="text-lg font-bold text-gray-800 mb-3">Mô tả</h2>
+
+            <div className={`relative overflow-hidden transition-all duration-300 ${showFullDescription ? '' : 'max-h-72'}`}>
+              <div className={`${showFullDescription ? '' : 'mask-gradient-bottom'}`}>
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    h1: ({node, ...props}) => <h3 className="text-xl font-bold mt-3 mb-2" {...props} />,
+                    h2: ({node, ...props}) => <h4 className="text-lg font-bold mt-3 mb-2" {...props} />,
+                    h3: ({node, ...props}) => <h5 className="text-base font-bold mt-3 mb-2" {...props} />,
+                    p:  ({node, ...props}) => <p className="text-gray-700 leading-7 mb-3" {...props} />,
+                    ul: ({node, ...props}) => <ul className="list-disc pl-5 space-y-1 mb-3" {...props} />,
+                    ol: ({node, ...props}) => <ol className="list-decimal pl-5 space-y-1 mb-3" {...props} />,
+                    li: ({node, ...props}) => <li className="marker:text-blue-500" {...props} />,
+                    a:  ({node, ...props}) => <a className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
+                    code: ({inline, ...props}) =>
+                      inline
+                        ? <code className="px-1 py-0.5 rounded bg-gray-100 text-pink-700" {...props} />
+                        : <pre className="p-3 rounded bg-gray-900 text-gray-100 overflow-auto mb-3"><code {...props} /></pre>,
+                    blockquote: ({node, ...props}) => <PrettyBlockquote {...props} />,
+                    hr: () => <hr className="my-4 border-gray-200" />,
+                  }}
+                >
+                  {normalizeDescription(app.description)}
+                </ReactMarkdown>
+              </div>
+              {!showFullDescription && (
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white to-transparent" />
+              )}
+            </div>
+
+            {app?.description && app.description.length > 300 && (
               <button
-                onClick={() => setShowFullDescription(!showFullDescription)}
-                className="mt-2 text-sm text-blue-600 hover:underline font-bold"
+                onClick={() => setShowFullDescription((v) => !v)}
+                className="mt-3 text-sm text-blue-600 hover:underline font-bold"
               >
                 {showFullDescription ? 'Thu gọn' : 'Xem thêm...'}
               </button>
@@ -385,17 +496,13 @@ export default function Detail({ serverApp, serverRelated }) {
             </div>
           )}
 
-          {/* 🔹 Card thông tin chi tiết kiểu App Store */}
+          {/* Thông tin chi tiết kiểu App Store */}
           <div className="bg-white rounded-xl shadow overflow-hidden">
             <h2 className="px-4 pt-4 text-lg font-bold text-gray-800">Thông tin</h2>
             <div className="mt-3 divide-y divide-gray-200">
-              {/* Author */}
               <InfoRow label="Nhà phát triển" value={app.author || 'Không rõ'} />
-              {/* Version */}
               <InfoRow label="Phiên bản" value={app.version || 'Không rõ'} />
-              {/* Size */}
               <InfoRow label="Dung lượng" value={displaySize} />
-              {/* Supported Devices (Expandable) */}
               <InfoRow
                 label="Thiết bị hỗ trợ"
                 value={
@@ -407,7 +514,6 @@ export default function Detail({ serverApp, serverRelated }) {
                 expanded={showAllDevices}
                 onToggle={() => setShowAllDevices((v) => !v)}
               />
-              {/* Languages (Expandable) */}
               <InfoRow
                 label="Ngôn ngữ"
                 value={
@@ -419,12 +525,10 @@ export default function Detail({ serverApp, serverRelated }) {
                 expanded={showAllLanguages}
                 onToggle={() => setShowAllLanguages((v) => !v)}
               />
-              {/* Minimum OS */}
               <InfoRow
                 label="Yêu cầu iOS"
                 value={app.minimum_os_version ? `iOS ${app.minimum_os_version}+` : 'Không rõ'}
               />
-              {/* Release date */}
               <InfoRow
                 label="Ngày phát hành"
                 value={
@@ -433,7 +537,6 @@ export default function Detail({ serverApp, serverRelated }) {
                     : 'Không rõ'
                 }
               />
-              {/* Age rating */}
               <InfoRow
                 label="Xếp hạng tuổi"
                 value={app.age_rating || 'Không rõ'}
@@ -482,7 +585,7 @@ export default function Detail({ serverApp, serverRelated }) {
   );
 }
 
-/** Hàng thông tin có viền ngăn cách & nút xem thêm kiểu App Store */
+// ====== InfoRow ======
 function InfoRow({ label, value, expandable = false, expanded = false, onToggle }) {
   return (
     <div className="px-4 py-3 flex items-start">
@@ -506,7 +609,7 @@ function InfoRow({ label, value, expandable = false, expanded = false, onToggle 
             )}
           </button>
         )}
+      </div>
     </div>
-  </div>
   );
 }

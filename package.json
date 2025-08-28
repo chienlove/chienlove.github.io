@@ -37,7 +37,12 @@
     "jsonwebtoken": "9.0.2",
     "framer-motion": "12.23.12",
     "lucide-react": "0.541.0",
-    "firebase": "^12.1.0"
+    "firebase": "^12.1.0",
+    "reat-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "bbcode-to-markdown": "^1.0.3"
+    
+    
   },
   "devDependencies": {
     "eslint": "8.55.0",
