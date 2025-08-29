@@ -30,7 +30,10 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
   const [apps, setApps] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
-  const menuRef = useRef(null); 
+  const menuRef = useRef(null);
+
+  // NEW: mở/đóng bảng thông báo
+  const [notifOpen, setNotifOpen] = useState(false);
 
   const [accordionOpen, setAccordionOpen] = useState({
     tools: true,
@@ -66,8 +69,8 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
       .order(sortBy, { ascending: sortBy === 'name' });
 
     if (q.trim()) {
-  query = query.or(`name.ilike.%${q.trim()}%,author.ilike.%${q.trim()}%`);
-}
+      query = query.or(`name.ilike.%${q.trim()}%,author.ilike.%${q.trim()}%`);
+    }
     if (activeCategory !== 'all') query = query.eq('category_id', activeCategory);
 
     const { data } = await query;
@@ -101,10 +104,9 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
         <meta name="description" content="Kho ứng dụng TestFlight beta & công cụ jailbreak cho iOS" />
       </Head>
 
-
       {/* HEADER */}
       <header className="sticky top-0 z-50 w-full bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
-        <div className="max-w-screen-2xl mx-auto px-4 py-4 flex items-center justify-between">
+        <div className="max-w-screen-2xl mx-auto px-4 py-4 flex items-center justify-between relative">
           {/* Hamburger */}
           <button onClick={() => setMobileMenuOpen(true)} className="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 md:hidden">
             <FontAwesomeIcon icon={faBars} className="w-5 h-5" />
@@ -115,7 +117,7 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
             StoreiOS
           </Link>
 
-          {/* Right Icons */}
+          {/* Right area: search, darkmode, login, notifications */}
           <div className="flex items-center gap-3">
             <button onClick={() => setSearchOpen(true)} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
               <FontAwesomeIcon icon={faSearch} className="w-5 h-5" />
@@ -123,6 +125,15 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
             <button onClick={() => setDarkMode(!darkMode)} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
               <FontAwesomeIcon icon={darkMode ? faSun : faMoon} className="w-5 h-5" />
             </button>
+
+            {/* NEW: nút đăng nhập Google/Facebook */}
+            <LoginButton />
+
+            {/* NEW: chuông + panel thông báo */}
+            <div className="relative">
+              <NotificationsBell onClick={() => setNotifOpen(v => !v)} />
+              <NotificationsPanel open={notifOpen} onClose={() => setNotifOpen(false)} />
+            </div>
           </div>
         </div>
       </header>
@@ -192,7 +203,7 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
         {children}
       </main>
 
-      {/* FOOTER (chuyên nghiệp – giữ như bản trước) */}
+      {/* FOOTER */}
       <footer className="bg-gray-900 text-gray-300 mt-16 border-t border-gray-800">
         <div className="max-w-screen-2xl mx-auto px-4 py-12 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
           <div>
