@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react';
+// components/Comments.js
+import { useEffect, useState } from 'react';
 import { auth, db } from '../lib/firebase-client';
 import {
   addDoc,
@@ -10,6 +11,8 @@ import {
   serverTimestamp,
   where,
   Timestamp,
+  doc,
+  runTransaction,
 } from 'firebase/firestore';
 
 export default function Comments({ postId }) {
@@ -50,7 +53,7 @@ export default function Comments({ postId }) {
       authorId: user.uid,
       content: content.trim(),
       createdAt: serverTimestamp(),
-      replyToUserId: null, // reply sẽ set ở form ReplyBox
+      replyToUserId: null,
     });
     setContent('');
   };
@@ -115,14 +118,37 @@ function ReplyBox({ postId, parent, currentUser }) {
     if (!text.trim() || !currentUser) return;
     setSubmitting(true);
     try {
-      await addDoc(collection(db, 'comments'), {
+      // 1) Tạo reply comment
+      const replyRef = await addDoc(collection(db, 'comments'), {
         postId: String(postId),
         parentId: parent.id,
         authorId: currentUser.uid,
         content: text.trim(),
         createdAt: serverTimestamp(),
-        replyToUserId: parent.authorId || null, // quan trọng để tạo thông báo
+        replyToUserId: parent.authorId || null,
       });
+
+      // 2) Nếu reply người khác -> tạo notification + tăng badge
+      if (parent.authorId && parent.authorId !== currentUser.uid) {
+        await addDoc(collection(db, 'notifications'), {
+          toUserId: parent.authorId,   // <-- NotificationsPanel đang đọc theo field này
+          type: 'reply',
+          postId: String(postId),
+          commentId: replyRef.id,
+          isRead: false,
+          createdAt: serverTimestamp(),
+          fromUserId: currentUser.uid,
+        });
+
+        // 3) Tăng badge: user_counters/{toUserId}.unreadCount
+        const counterDoc = doc(db, 'user_counters', parent.authorId);
+        await runTransaction(db, async (tx) => {
+          const snap = await tx.get(counterDoc);
+          const cur = snap.exists() ? (snap.data().unreadCount || 0) : 0;
+          tx.set(counterDoc, { unreadCount: cur + 1 }, { merge: true });
+        });
+      }
+
       setText('');
     } finally {
       setSubmitting(false);

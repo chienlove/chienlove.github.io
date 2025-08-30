@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 import Layout from '../components/Layout';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
+import Comments from '../components/Comments';
 import { useEffect, useState, useMemo, memo } from 'react';
 import { FastAverageColor } from 'fast-average-color';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -718,6 +719,12 @@ export default function Detail({ serverApp, serverRelated }) {
               </div>
             </div>
           )}
+          
+          {/* Bình luận */}
+<div className="bg-white rounded-xl p-4 shadow">
+  <Comments postId={app.slug} />
+</div>
+
         </div>
       </div>
     </Layout>
