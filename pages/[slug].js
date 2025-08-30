@@ -1,4 +1,3 @@
-// pages/[slug].js
 'use client';
 
 import { supabase } from '../lib/supabase';
@@ -384,6 +383,21 @@ export default function Detail({ serverApp, serverRelated }) {
     }
   };
 
+  // ======= Auto-scroll & highlight theo ?comment= =======
+  useEffect(() => {
+    const id = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('comment') : null;
+    if (!id) return;
+    const el = document.getElementById(`c-${id}`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    el.classList.add('ring-2', 'ring-amber-400', 'bg-amber-50');
+    const t = setTimeout(() => {
+      el.classList.remove('ring-2', 'ring-amber-400', 'bg-amber-50');
+    }, 3000);
+    return () => clearTimeout(t);
+  }, [router.query?.slug]);
+  // ================================================
+
   if (!app) {
     return (
       <Layout fullWidth>
@@ -721,9 +735,9 @@ export default function Detail({ serverApp, serverRelated }) {
           )}
           
           {/* Bình luận */}
-<div className="bg-white rounded-xl p-4 shadow">
-  <Comments postId={app.slug} />
-</div>
+          <div className="bg-white rounded-xl p-4 shadow">
+            <Comments postId={app.slug} />
+          </div>
 
         </div>
       </div>
