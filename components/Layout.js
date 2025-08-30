@@ -91,8 +91,8 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
       if (!u) { setNotifCount(0); return; }
       const qn = query(
         collection(db, 'notifications'),
-        where('userId', '==', u.uid),
-        where('read', '==', false)
+        where('toUserId', '==', u.uid),
+        where('isRead', '==', false)
       );
       unsubNoti = onSnapshot(qn, (snap) => setNotifCount(snap.size), () => setNotifCount(0));
     });
