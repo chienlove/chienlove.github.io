@@ -1,33 +1,37 @@
 // components/Comments.js
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { auth, db } from '../lib/firebase-client';
 import {
-  addDoc,
-  collection,
-  limit,
-  onSnapshot,
-  orderBy,
-  query,
-  serverTimestamp,
-  where,
-  Timestamp,
-  doc,
-  runTransaction,
+  addDoc, collection, doc, getDoc, limit, onSnapshot,
+  orderBy, query, runTransaction, serverTimestamp, where
 } from 'firebase/firestore';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faPaperPlane, faReply, faUserCircle } from '@fortawesome/free-solid-svg-icons';
 
 export default function Comments({ postId }) {
-  const [user, setUser] = useState(null);
+  const [me, setMe] = useState(null);
   const [content, setContent] = useState('');
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [adminUids, setAdminUids] = useState([]);
 
-  // Auth state
+  // Auth
   useEffect(() => {
-    const unsub = auth.onAuthStateChanged(setUser);
+    const unsub = auth.onAuthStateChanged(setMe);
     return () => unsub();
   }, []);
 
-  // Realtime comments of a post
+  // Load admin UID list once
+  useEffect(() => {
+    (async () => {
+      try {
+        const snap = await getDoc(doc(db, 'app_config', 'admins'));
+        if (snap.exists()) setAdminUids(Array.isArray(snap.data().uids) ? snap.data().uids : []);
+      } catch {}
+    })();
+  }, []);
+
+  // Realtime comments for post
   useEffect(() => {
     if (!postId) return;
     setLoading(true);
@@ -35,50 +39,67 @@ export default function Comments({ postId }) {
       collection(db, 'comments'),
       where('postId', '==', String(postId)),
       orderBy('createdAt', 'desc'),
-      limit(20)
+      limit(50)
     );
     const unsub = onSnapshot(q, (snap) => {
-      setItems(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      setItems(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       setLoading(false);
     });
     return () => unsub();
   }, [postId]);
 
+  const nameOf = (user) =>
+    user?.displayName ||
+    user?.email?.split('@')[0] ||
+    'Người dùng';
+
   const onSubmit = async (e) => {
     e.preventDefault();
-    if (!user || !content.trim()) return;
-    await addDoc(collection(db, 'comments'), {
+    if (!me || !content.trim()) return;
+
+    // 1) Tạo root comment
+    const payload = {
       postId: String(postId),
       parentId: null,
-      authorId: user.uid,
+      authorId: me.uid,
+      userName: nameOf(me),
+      userPhoto: me.photoURL || '',
       content: content.trim(),
       createdAt: serverTimestamp(),
-      replyToUserId: null,
-    });
+      replyToUserId: null
+    };
+    const ref = await addDoc(collection(db, 'comments'), payload);
     setContent('');
+
+    // 2) Gửi noti cho admin
+    await notifyAdmins({
+      adminUids,
+      excludeUids: [me.uid],
+      postId: String(postId),
+      commentId: ref.id,
+      fromUserId: me.uid
+    });
   };
 
   return (
     <div className="mt-6">
       <h3 className="font-bold mb-3">Bình luận</h3>
 
-      {user ? (
+      {me ? (
         <form onSubmit={onSubmit} className="flex gap-2">
           <input
             value={content}
             onChange={(e) => setContent(e.target.value)}
             className="flex-1 border rounded px-3 py-2"
             placeholder="Viết bình luận..."
-            maxLength={5000}
+            maxLength={3000}
           />
           <button className="px-4 py-2 bg-blue-600 text-white rounded">
             Gửi
           </button>
         </form>
       ) : (
-        <div className="text-sm text-gray-600">
-          Hãy đăng nhập để bình luận.
-        </div>
+        <div className="text-sm text-gray-600">Hãy đăng nhập để bình luận.</div>
       )}
 
       <div className="mt-4">
@@ -87,21 +108,39 @@ export default function Comments({ postId }) {
         ) : items.length === 0 ? (
           <div className="text-sm text-gray-500">Chưa có bình luận.</div>
         ) : (
-          <ul className="space-y-3">
-            {items.map((c) => (
-              <li key={c.id} id={`c-${c.id}`} className="border rounded p-3">
-                <div className="text-xs text-gray-500">
-                  {formatTS(c.createdAt)}
-                </div>
-                <div className="mt-1 whitespace-pre-wrap break-words">
-                  {c.content}
-                </div>
-
-                {user && user.uid !== c.authorId && (
-                  <ReplyBox postId={postId} parent={c} currentUser={user} />
-                )}
-              </li>
-            ))}
+          <ul className="space-y-4">
+            {items
+              .filter(c => !c.parentId)
+              .map(root => (
+                <li key={root.id} className="border rounded p-3">
+                  <CommentRow c={root} />
+                  <ReplySection
+                    me={me}
+                    postId={postId}
+                    parent={root}
+                    adminUids={adminUids}
+                  />
+                  {/* Replies */}
+                  <div className="mt-3 space-y-3 pl-4 border-l">
+                    {items
+                      .filter(r => r.parentId === root.id)
+                      .sort((a,b) => (a.createdAt?.seconds||0) - (b.createdAt?.seconds||0))
+                      .map(r => (
+                        <div key={r.id} className="bg-gray-50 dark:bg-gray-800/50 rounded p-2">
+                          <CommentRow c={r} small />
+                          {/* Reply-to-reply (tối giản: 1 cấp); vẫn cho phép respond vào parent gốc */}
+                          <ReplySection
+                            me={me}
+                            postId={postId}
+                            parent={root}
+                            replyingTo={r}
+                            adminUids={adminUids}
+                          />
+                        </div>
+                      ))}
+                  </div>
+                </li>
+              ))}
           </ul>
         )}
       </div>
@@ -109,82 +148,138 @@ export default function Comments({ postId }) {
   );
 }
 
-function ReplyBox({ postId, parent, currentUser }) {
-  const [text, setText] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-
-  const onReply = async (e) => {
-    e.preventDefault();
-    if (!text.trim() || !currentUser) return;
-    setSubmitting(true);
-    try {
-      // 1) Tạo reply comment
-      const replyRef = await addDoc(collection(db, 'comments'), {
-        postId: String(postId),
-        parentId: parent.id,
-        authorId: currentUser.uid,
-        content: text.trim(),
-        createdAt: serverTimestamp(),
-        replyToUserId: parent.authorId || null,
-      });
-
-      // 2) Nếu reply người khác -> tạo notification + tăng badge
-      if (parent.authorId && parent.authorId !== currentUser.uid) {
-        await addDoc(collection(db, 'notifications'), {
-          toUserId: parent.authorId,   // <-- NotificationsPanel đang đọc theo field này
-          type: 'reply',
-          postId: String(postId),
-          commentId: replyRef.id,
-          isRead: false,
-          createdAt: serverTimestamp(),
-          fromUserId: currentUser.uid,
-        });
-
-        // 3) Tăng badge: user_counters/{toUserId}.unreadCount
-        const counterDoc = doc(db, 'user_counters', parent.authorId);
-        await runTransaction(db, async (tx) => {
-          const snap = await tx.get(counterDoc);
-          const cur = snap.exists() ? (snap.data().unreadCount || 0) : 0;
-          tx.set(counterDoc, { unreadCount: cur + 1 }, { merge: true });
-        });
-      }
-
-      setText('');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
+function CommentRow({ c, small=false }) {
+  const hasAvatar = !!c.userPhoto;
   return (
-    <form onSubmit={onReply} className="mt-2 flex gap-2">
-      <input
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        className="flex-1 border rounded px-3 py-1"
-        placeholder="Trả lời…"
-        maxLength={5000}
-      />
-      <button
-        disabled={submitting}
-        className="px-3 py-1 bg-gray-800 text-white rounded disabled:opacity-60"
-      >
-        Reply
-      </button>
-    </form>
+    <div className="flex items-start gap-3">
+      {hasAvatar ? (
+        <img
+          src={c.userPhoto}
+          alt="avatar"
+          className={`${small ? 'w-7 h-7' : 'w-9 h-9'} rounded-full object-cover`}
+          referrerPolicy="no-referrer"
+        />
+      ) : (
+        <div className={`${small ? 'w-7 h-7' : 'w-9 h-9'} rounded-full bg-gray-200 flex items-center justify-center`}>
+          <FontAwesomeIcon icon={faUserCircle} className={`${small ? 'w-4 h-4' : 'w-5 h-5'}`} />
+        </div>
+      )}
+      <div className="flex-1">
+        <div className={`font-medium ${small ? 'text-sm' : ''}`}>{c.userName || 'Người dùng'}</div>
+        <div className="mt-1 whitespace-pre-wrap break-words">{c.content}</div>
+      </div>
+    </div>
   );
 }
 
-function formatTS(ts) {
-  try {
-    if (!ts) return '';
-    const d =
-      ts instanceof Timestamp
-        ? ts.toDate()
-        : ts?.seconds
-        ? new Date(ts.seconds * 1000)
-        : new Date(ts);
-    return d.toLocaleString();
-  } catch {
-    return '';
-  }
+function ReplySection({ me, postId, parent, replyingTo=null, adminUids }) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState('');
+  const canReply = !!me && me.uid !== (replyingTo?.authorId || parent.authorId);
+
+  const onReply = async (e) => {
+    e.preventDefault();
+    if (!canReply || !text.trim()) return;
+
+    // 1) Tạo reply (đính kèm tên & ảnh)
+    const replyRef = await addDoc(collection(db, 'comments'), {
+      postId: String(postId),
+      parentId: parent.id,
+      authorId: me.uid,
+      userName: me.displayName || me.email?.split('@')[0] || 'Người dùng',
+      userPhoto: me.photoURL || '',
+      content: text.trim(),
+      createdAt: serverTimestamp(),
+      replyToUserId: replyingTo?.authorId || parent.authorId || null
+    });
+    setText('');
+    setOpen(false);
+
+    // 2) Noti cho chủ comment (nếu khác mình)
+    const ownerUid = replyingTo?.authorId || parent.authorId;
+    if (ownerUid && ownerUid !== me.uid) {
+      await createNotification({
+        toUserId: ownerUid,
+        type: 'reply',
+        postId: String(postId),
+        commentId: replyRef.id,
+        fromUserId: me.uid
+      });
+      await bumpCounter(ownerUid, +1);
+    }
+
+    // 3) Noti cho admin (không trùng mình / không trùng owner)
+    await notifyAdmins({
+      adminUids,
+      excludeUids: [me.uid, ownerUid].filter(Boolean),
+      postId: String(postId),
+      commentId: replyRef.id,
+      fromUserId: me.uid
+    });
+  };
+
+  if (!canReply) return null;
+
+  return (
+    <div className="mt-2">
+      {!open ? (
+        <button
+          onClick={() => setOpen(true)}
+          className="inline-flex items-center gap-2 text-sm text-gray-600 hover:underline"
+        >
+          <FontAwesomeIcon icon={faReply} />
+          Trả lời
+        </button>
+      ) : (
+        <form onSubmit={onReply} className="flex gap-2">
+          <input
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            className="flex-1 border rounded px-3 py-1"
+            placeholder="Viết phản hồi…"
+            maxLength={3000}
+            autoFocus
+          />
+          <button className="px-3 py-1 bg-gray-800 text-white rounded">
+            <FontAwesomeIcon icon={faPaperPlane} className="mr-1" />
+            Gửi
+          </button>
+          <button type="button" onClick={() => setOpen(false)} className="px-3 py-1 rounded border">
+            Hủy
+          </button>
+        </form>
+      )}
+    </div>
+  );
+}
+
+/* ====== helpers: notifications & counters ====== */
+
+async function createNotification({ toUserId, type, postId, commentId, fromUserId }) {
+  await addDoc(collection(db, 'notifications'), {
+    toUserId,
+    type,
+    postId,
+    commentId,
+    isRead: false,
+    createdAt: serverTimestamp(),
+    fromUserId
+  });
+}
+
+async function bumpCounter(uid, delta) {
+  const ref = doc(db, 'user_counters', uid);
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    const cur = snap.exists() ? (snap.data().unreadCount || 0) : 0;
+    tx.set(ref, { unreadCount: Math.max(0, cur + delta) }, { merge: true });
+  });
+}
+
+async function notifyAdmins({ adminUids = [], excludeUids = [], postId, commentId, fromUserId }) {
+  const targets = adminUids.filter(u => !excludeUids.includes(u));
+  await Promise.all(targets.map(async (uid) => {
+    await createNotification({ toUserId: uid, type: 'comment', postId, commentId, fromUserId });
+    await bumpCounter(uid, +1);
+  }));
 }
