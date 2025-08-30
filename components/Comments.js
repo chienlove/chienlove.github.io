@@ -1,3 +1,4 @@
+// components/Comments.js
 import { useEffect, useMemo, useState } from 'react';
 import { auth, db } from '../lib/firebase-client';
 import {
@@ -8,7 +9,6 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPaperPlane, faReply, faTrash, faUserCircle } from '@fortawesome/free-solid-svg-icons';
 
-/* ---------- helpers ---------- */
 function preferredName(user) {
   if (!user) return 'Người dùng';
   const p0 = user.providerData?.[0];
@@ -30,7 +30,6 @@ async function createNotification({ toUserId, type, postId, commentId, fromUserI
   });
 }
 async function bumpCounter(uid, delta) {
-  // Tuỳ bạn còn dùng user_counters hay không; giữ lại để tương thích
   const ref = doc(db, 'user_counters', uid);
   await runTransaction(db, async (tx) => {
     const snap = await tx.get(ref);
@@ -39,7 +38,6 @@ async function bumpCounter(uid, delta) {
   });
 }
 
-/* ---------- main component ---------- */
 export default function Comments({ postId }) {
   const [me, setMe] = useState(null);
   const [adminUids, setAdminUids] = useState([]);
@@ -47,13 +45,11 @@ export default function Comments({ postId }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // auth
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(setMe);
     return () => unsub();
   }, []);
 
-  // load admins
   useEffect(() => {
     (async () => {
       try {
@@ -66,7 +62,6 @@ export default function Comments({ postId }) {
     })();
   }, []);
 
-  // realtime comments
   useEffect(() => {
     if (!postId) return;
     setLoading(true);
@@ -84,7 +79,7 @@ export default function Comments({ postId }) {
     return () => unsub();
   }, [postId]);
 
-  // patch comment cũ của chính mình nếu thiếu tên/ảnh
+  // vá comment cũ thiếu tên/ảnh của chính mình
   useEffect(() => {
     if (!me || items.length === 0) return;
     const fixes = items
@@ -115,7 +110,6 @@ export default function Comments({ postId }) {
     const ref = await addDoc(collection(db, 'comments'), payload);
     setContent('');
 
-    // notify all admins (trừ chính mình)
     const targetAdmins = adminUids.filter(u => u !== me.uid);
     await Promise.all(targetAdmins.map(async (uid) => {
       await createNotification({ toUserId: uid, type: 'comment', postId: String(postId), commentId: ref.id, fromUserId: me.uid });
@@ -123,7 +117,6 @@ export default function Comments({ postId }) {
     }));
   };
 
-  // tách root & replies
   const roots = items.filter(c => !c.parentId);
   const repliesByParent = useMemo(() => {
     const m = {};
@@ -176,10 +169,7 @@ export default function Comments({ postId }) {
                     await deleteDoc(doc(db, 'comments', c.id));
                   }}
                 />
-                {/* hộp reply cho comment gốc */}
                 <ReplyBox me={me} postId={postId} parent={c} adminUids={adminUids} />
-
-                {/* replies */}
                 {(repliesByParent[c.id] || []).map((r) => (
                   <div key={r.id} id={`c-${r.id}`} className="mt-3 pl-4 border-l border-gray-200 dark:border-gray-800 scroll-mt-24">
                     <CommentRow
@@ -217,7 +207,6 @@ function CommentRow({ c, me, small=false, canDelete=false, onDelete }) {
       )}
       <div className="flex-1">
         <div className={`flex items-center gap-3 ${small ? 'text-sm' : 'text-[15px]'}`}>
-          {/* tên tài khoản: xanh đậm/dễ đọc */}
           <span className="font-semibold text-blue-800 dark:text-blue-300">{name}</span>
           {canDelete && (
             <button onClick={onDelete} className="text-xs text-red-600 inline-flex items-center gap-1 hover:underline">
@@ -226,7 +215,6 @@ function CommentRow({ c, me, small=false, canDelete=false, onDelete }) {
             </button>
           )}
         </div>
-        {/* nội dung: xám đậm để readable */}
         <div className="mt-1 whitespace-pre-wrap break-words text-gray-900 dark:text-gray-100 leading-6">
           {c.content}
         </div>
@@ -238,8 +226,8 @@ function CommentRow({ c, me, small=false, canDelete=false, onDelete }) {
 function ReplyBox({ me, postId, parent, replyingTo=null, adminUids }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
-  const target = replyingTo || parent;                 // comment đang được reply
-  const canReply = !!me && me.uid !== target.authorId; // không reply chính mình
+  const target = replyingTo || parent;
+  const canReply = !!me && me.uid !== target.authorId;
 
   const onReply = async (e) => {
     e.preventDefault();
@@ -247,7 +235,7 @@ function ReplyBox({ me, postId, parent, replyingTo=null, adminUids }) {
 
     const ref = await addDoc(collection(db, 'comments'), {
       postId: String(postId),
-      parentId: parent.id, // luôn gắn vào comment gốc
+      parentId: parent.id,
       authorId: me.uid,
       userName: preferredName(me),
       userPhoto: preferredPhoto(me),
@@ -258,12 +246,10 @@ function ReplyBox({ me, postId, parent, replyingTo=null, adminUids }) {
     setText('');
     setOpen(false);
 
-    // notify owner
     if (target.authorId && target.authorId !== me.uid) {
       await createNotification({ toUserId: target.authorId, type: 'reply', postId: String(postId), commentId: ref.id, fromUserId: me.uid });
       await bumpCounter(target.authorId, +1);
     }
-    // notify admins (trừ mình & trừ owner)
     const targets = adminUids.filter(u => u !== me.uid && u !== target.authorId);
     await Promise.all(targets.map(async (uid) => {
       await createNotification({ toUserId: uid, type: 'comment', postId: String(postId), commentId: ref.id, fromUserId: me.uid });

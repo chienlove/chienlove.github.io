@@ -1,3 +1,4 @@
+// components/NotificationsPanel.js
 import { useEffect, useState } from 'react';
 import { auth, db } from '../lib/firebase-client';
 import {
@@ -30,13 +31,12 @@ export default function NotificationsPanel({ open, onClose }) {
   }, [user, open]);
 
   const decCounter = async (uid, amount = 1) => {
-    // vẫn hỗ trợ giảm user_counters nếu bạn đang dùng (không bắt buộc với badge mới)
+    // giữ tương thích nếu bạn còn dùng user_counters
     const counterRef = doc(db, 'user_counters', uid);
     await runTransaction(db, async (tx) => {
       const snap = await tx.get(counterRef);
       const cur = snap.exists() ? (snap.data().unreadCount || 0) : 0;
-      const next = Math.max(0, cur - amount);
-      tx.set(counterRef, { unreadCount: next }, { merge: true });
+      tx.set(counterRef, { unreadCount: Math.max(0, cur - amount) }, { merge: true });
     });
   };
 
@@ -59,7 +59,7 @@ export default function NotificationsPanel({ open, onClose }) {
   if (!open) return null;
 
   return (
-    // DÙNG fixed để không lệch & không bị khuyết trên mobile
+    // ✅ fixed + padding để không lệch/khuyết trên mobile
     <div className="fixed right-3 top-14 z-50 w-[22rem] max-w-[92vw]">
       <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl overflow-hidden">
         <div className="px-3 py-2 flex justify-between items-center border-b border-gray-100 dark:border-gray-800">
@@ -79,16 +79,16 @@ export default function NotificationsPanel({ open, onClose }) {
 
         <ul className="space-y-2 max-h-[65vh] overflow-auto p-3">
           {items.length === 0 && (
-            <li className="text-sm text-gray-500 dark:text-gray-400 py-4 text-center">Chưa có thông báo</li>
+            <li className="text-sm text-gray-600 dark:text-gray-400 py-4 text-center">Chưa có thông báo</li>
           )}
 
           {items.map((n) => (
             <li key={n.id} className="border border-gray-100 dark:border-gray-800 rounded-xl p-3 flex justify-between items-center bg-white/60 dark:bg-gray-900/60">
               <div className="pr-3">
-                <div className="text-[13px] text-gray-800 dark:text-gray-200 font-medium">
+                <div className="text-[13px] text-gray-900 dark:text-gray-100 font-medium">
                   {n.type === 'reply' ? 'Có trả lời bình luận' : 'Hoạt động mới'}
                 </div>
-                {/* Đúng routing: /<slug>?comment=<id>#c-<id> */}
+                {/* ✅ Link có ?comment & #c-... để scroll chính xác */}
                 <Link
                   href={`/${n.postId}?comment=${n.commentId}#c-${n.commentId}`}
                   onClick={() => !n.isRead && markRead(n.id, n.isRead)}
