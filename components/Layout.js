@@ -3,9 +3,15 @@ import { useEffect, useState, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { supabase } from '../lib/supabase';
+
+// 🔥 Firebase: auth + Firestore cho badge thông báo
+import { auth, db } from '../lib/firebase-client';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
+
 import SearchModal from './SearchModal';
 import LoginButton from './LoginButton';
 import NotificationsPanel from './NotificationsPanel';
+
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faBars, faTimes, faSearch, faBell, faWrench, faLayerGroup, faArrowUpRightFromSquare } from '@fortawesome/free-solid-svg-icons';
 
@@ -17,12 +23,15 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
   const [sortBy, setSortBy] = useState('created_at');
   const [q, setQ] = useState('');
   const [apps, setApps] = useState([]);
-  const [categories, setCategories] = useState([]); // <-- dùng cho menu hamburger
+  const [categories, setCategories] = useState([]); // cho menu hamburger
   const [loading, setLoading] = useState(false);
+
   const [notifOpen, setNotifOpen] = useState(false);
+  const [notifCount, setNotifCount] = useState(0); // 🔴 badge thật
+
   const drawerRef = useRef(null);
 
-  // keyboard shortcut: '/' hoặc Cmd/Ctrl+K mở search
+  // keyboard: '/' hoặc Cmd/Ctrl+K mở search
   useEffect(() => {
     const onKey = (e) => {
       const isSlash = e.key === '/';
@@ -53,13 +62,13 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
     setCategories(data || []);
   })(); }, []);
 
-  // search modal (nếu bạn đang dùng)
+  // Search modal data
   const runSearch = async () => {
     setLoading(true);
-    let query = supabase.from('apps').select('*').order(sortBy, { ascending: sortBy === 'name' });
-    if (q.trim()) query = query.or(`name.ilike.%${q.trim()}%,author.ilike.%${q.trim()}%`);
-    if (activeCategory !== 'all') query = query.eq('category_id', activeCategory);
-    const { data } = await query;
+    let queryQ = supabase.from('apps').select('*').order(sortBy, { ascending: sortBy === 'name' });
+    if (q.trim()) queryQ = queryQ.or(`name.ilike.%${q.trim()}%,author.ilike.%${q.trim()}%`);
+    if (activeCategory !== 'all') queryQ = queryQ.eq('category_id', activeCategory);
+    const { data } = await queryQ;
     setApps(data || []);
     setLoading(false);
   };
@@ -74,8 +83,21 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
     return () => document.removeEventListener('mousedown', close);
   }, [mobileMenuOpen]);
 
-  // TODO: nối badge thật
-  const notifCount = 0;
+  // 🔴 Subscribe badge thông báo thật từ Firestore
+  useEffect(() => {
+    let unsubNoti = null;
+    const unsubAuth = auth.onAuthStateChanged((u) => {
+      if (unsubNoti) { unsubNoti(); unsubNoti = null; }
+      if (!u) { setNotifCount(0); return; }
+      const qn = query(
+        collection(db, 'notifications'),
+        where('userId', '==', u.uid),
+        where('read', '==', false)
+      );
+      unsubNoti = onSnapshot(qn, (snap) => setNotifCount(snap.size), () => setNotifCount(0));
+    });
+    return () => { unsubAuth && unsubAuth(); unsubNoti && unsubNoti(); };
+  }, []);
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
@@ -201,7 +223,6 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
               </div>
             </div>
 
-            {/* Link cố định khác (nếu muốn) */}
             <div className="mt-6 border-t border-gray-200 dark:border-gray-800 pt-4 space-y-2">
               <Link href="/about" onClick={() => setMobileMenuOpen(false)} className="block px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800">Giới thiệu</Link>
               <Link href="/privacy" onClick={() => setMobileMenuOpen(false)} className="block px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800">Bảo mật</Link>
@@ -226,7 +247,7 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
         {children}
       </main>
 
-      {/* FOOTER (giữ nguyên) */}
+      {/* FOOTER */}
       <footer className="bg-gray-900 text-gray-300 mt-16 border-t border-gray-800">
         <div className="max-w-screen-2xl mx-auto px-4 py-10 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
           <div>
