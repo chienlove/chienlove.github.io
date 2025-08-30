@@ -1,4 +1,3 @@
-// components/Layout.js
 import { useEffect, useState, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -7,7 +6,7 @@ import SearchModal from './SearchModal';
 import LoginButton from './LoginButton';
 import NotificationsPanel from './NotificationsPanel';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBars, faTimes, faSearch, faBell } from '@fortawesome/free-solid-svg-icons';
+import { faBars, faTimes, faSearch, faBell, faGrip, faWrench, faLayerGroup, faArrowUpRightFromSquare } from '@fortawesome/free-solid-svg-icons';
 
 export default function Layout({ children, fullWidth = false, hotApps }) {
   const [darkMode, setDarkMode] = useState(false);
@@ -20,17 +19,16 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
-  const menuRef = useRef(null);
+  const [menuDropOpen, setMenuDropOpen] = useState(false);
+  const drawerRef = useRef(null);
+  const menuDropRef = useRef(null);
 
-  // keyboard shortcut: '/' or Cmd/Ctrl+K mở search
+  // keyboard shortcut to open search
   useEffect(() => {
     const onKey = (e) => {
       const isSlash = e.key === '/';
       const isK = (e.key === 'k' || e.key === 'K') && (e.metaKey || e.ctrlKey);
-      if (isSlash || isK) {
-        e.preventDefault();
-        setSearchOpen(true);
-      }
+      if (isSlash || isK) { e.preventDefault(); setSearchOpen(true); }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
@@ -47,7 +45,7 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
   }, [darkMode]);
 
   useEffect(() => { (async () => {
-    const { data } = await supabase.from('categories').select('*, apps:apps(count)').order('name', { ascending: true });
+    const { data } = await supabase.from('categories').select('id, name, slug').order('name', { ascending: true });
     setCategories(data || []);
   })(); }, []);
 
@@ -63,13 +61,15 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
   useEffect(() => { if (searchOpen) runSearch(); }, [q, activeCategory, sortBy, searchOpen]);
 
   useEffect(() => {
-    function handleClickOutside(e) { if (menuRef.current && !menuRef.current.contains(e.target)) setMobileMenuOpen(false); }
-    if (mobileMenuOpen) document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [mobileMenuOpen]);
+    const close = (e) => {
+      if (drawerRef.current && !drawerRef.current.contains(e.target)) setMobileMenuOpen(false);
+      if (menuDropRef.current && !menuDropRef.current.contains(e.target)) setMenuDropOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, []);
 
-  // TODO: nối badge thật với dữ liệu thông báo của user
-  const notifCount = 0;
+  const notifCount = 0; // TODO: nối với Firestore nếu cần
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
@@ -91,14 +91,14 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
             </Link>
           </div>
 
-          {/* Middle (ẩn bớt để thoáng; bạn có thể thêm nav nếu muốn) */}
+          {/* Middle: Nav tối giản */}
           <nav className="hidden md:flex items-center gap-6 text-sm">
             <Link href="/tools" className="hover:text-red-600">Công cụ</Link>
             <Link href="/categories" className="hover:text-red-600">Chuyên mục</Link>
             <Link href="/about" className="hover:text-red-600">Giới thiệu</Link>
           </nav>
 
-          {/* Right: chỉ icon tròn */}
+          {/* Right: Search | Menu | Bell | Avatar */}
           <div className="flex items-center gap-2">
             {/* Search */}
             <button
@@ -109,6 +109,62 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
             >
               <FontAwesomeIcon icon={faSearch} className="w-4 h-4" />
             </button>
+
+            {/* Menu dropdown (Công cụ + Chuyên mục) */}
+            <div className="relative" ref={menuDropRef}>
+              <button
+                onClick={() => setMenuDropOpen(v => !v)}
+                className="flex items-center justify-center w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
+                aria-label="Menu"
+                title="Menu"
+              >
+                <FontAwesomeIcon icon={faGrip} className="w-4 h-4" />
+              </button>
+              {menuDropOpen && (
+                <div className="absolute right-0 mt-2 w-80 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl overflow-hidden">
+                  {/* Công cụ */}
+                  <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-800">
+                    <div className="flex items-center gap-2 text-sm font-semibold">
+                      <FontAwesomeIcon icon={faWrench} className="w-4 h-4" />
+                      Công cụ
+                    </div>
+                    <div className="mt-2 grid grid-cols-1 gap-1 text-sm">
+                      <a href="https://appinfo.storeios.net" target="_blank" rel="noopener noreferrer"
+                         className="flex items-center justify-between px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800">
+                        <span>App Info</span>
+                        <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="w-3.5 h-3.5 opacity-70" />
+                      </a>
+                      <a href="https://ipadl.storeios.net" target="_blank" rel="noopener noreferrer"
+                         className="flex items-center justify-between px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800">
+                        <span>IPA Downloader</span>
+                        <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="w-3.5 h-3.5 opacity-70" />
+                      </a>
+                    </div>
+                  </div>
+
+                  {/* Chuyên mục */}
+                  <div className="px-4 py-3">
+                    <div className="flex items-center gap-2 text-sm font-semibold">
+                      <FontAwesomeIcon icon={faLayerGroup} className="w-4 h-4" />
+                      Chuyên mục
+                    </div>
+                    <div className="mt-2 grid grid-cols-1 gap-1 text-sm max-h-60 overflow-auto pr-1">
+                      {categories.length === 0 && (
+                        <span className="px-3 py-2 text-gray-500">Chưa có chuyên mục</span>
+                      )}
+                      {categories.map((c) => {
+                        const href = c.slug ? `/categories/${c.slug}` : `/categories/${c.id}`;
+                        return (
+                          <Link key={c.id} href={href} className="px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800">
+                            {c.name}
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Notifications */}
             <div className="relative">
@@ -137,7 +193,7 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
       {/* MOBILE DRAWER */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 flex">
-          <div ref={menuRef} className="w-80 max-w-[85%] bg-white dark:bg-gray-900 h-full p-6 shadow-2xl">
+          <div ref={drawerRef} className="w-80 max-w-[85%] bg-white dark:bg-gray-900 h-full p-6 shadow-2xl">
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-bold">Menu</h2>
               <button onClick={() => setMobileMenuOpen(false)} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700" aria-label="Close">
@@ -145,7 +201,6 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
               </button>
             </div>
 
-            {/* Quick search */}
             <button
               onClick={() => { setMobileMenuOpen(false); setSearchOpen(true); }}
               className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-left flex items-center gap-2"
@@ -158,8 +213,10 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
               <Link href="/tools" onClick={() => setMobileMenuOpen(false)} className="block px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800">Công cụ</Link>
               <Link href="/categories" onClick={() => setMobileMenuOpen(false)} className="block px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800">Chuyên mục</Link>
               <Link href="/about" onClick={() => setMobileMenuOpen(false)} className="block px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800">Giới thiệu</Link>
-              <Link href="/notifications" onClick={() => setMobileMenuOpen(false)} className="block px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800">Thông báo</Link>
-              <Link href="/login" onClick={() => setMobileMenuOpen(false)} className="block px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800">Đăng nhập / Đăng ký</Link>
+              <a href="https://appinfo.storeios.net" target="_blank" rel="noopener noreferrer"
+                 className="block px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800">App Info</a>
+              <a href="https://ipadl.storeios.net" target="_blank" rel="noopener noreferrer"
+                 className="block px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800">IPA Downloader</a>
             </div>
           </div>
         </div>

@@ -1,4 +1,3 @@
-// components/LoginButton.js
 import { useEffect, useState, useRef } from 'react';
 import { auth } from '../lib/firebase-client';
 import {
@@ -12,22 +11,27 @@ import {
   linkWithCredential,
   fetchSignInMethodsForEmail,
 } from 'firebase/auth';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faUserCircle, faChevronDown, faMoon, faSun } from '@fortawesome/free-solid-svg-icons';
+import { faGoogle, faGithub } from '@fortawesome/free-brands-svg-icons';
 
-const ENFORCE_EMAIL_VERIFICATION = true; // không tự đăng nhập sau đăng ký
+const ENFORCE_EMAIL_VERIFICATION = true;
 
 export default function LoginButton({ onToggleTheme, isDark }) {
   const [user, setUser] = useState(null);
-  const [open, setOpen] = useState(false);         // auth modal
-  const [menuOpen, setMenuOpen] = useState(false); // user dropdown
+  const [openAuth, setOpenAuth] = useState(false);   // Auth modal
+  const [menuOpen, setMenuOpen] = useState(false);   // User dropdown
+  const [guestMenuOpen, setGuestMenuOpen] = useState(false); // Dropdown khi chưa login
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState('login');       // 'login' | 'signup'
+  const [mode, setMode] = useState('login');         // 'login' | 'signup'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [msg, setMsg] = useState('');
-  const [toast, setToast] = useState(null);        // {type:'success'|'error'|'info', text:''}
+  const [toast, setToast] = useState(null);
   const [pendingCred, setPendingCred] = useState(null);
   const [hint, setHint] = useState('');
   const menuRef = useRef(null);
+  const guestMenuRef = useRef(null);
 
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(setUser);
@@ -37,46 +41,42 @@ export default function LoginButton({ onToggleTheme, isDark }) {
   useEffect(() => {
     const onClick = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
+      if (guestMenuRef.current && !guestMenuRef.current.contains(e.target)) setGuestMenuOpen(false);
     };
-    if (menuOpen) document.addEventListener('mousedown', onClick);
+    document.addEventListener('mousedown', onClick);
     return () => document.removeEventListener('mousedown', onClick);
-  }, [menuOpen]);
+  }, []);
 
-  const showToast = (type, text, ms = 3200) => {
+  const showToast = (type, text, ms = 3000) => {
     setToast({ type, text });
     window.clearTimeout((showToast._t || 0));
     showToast._t = window.setTimeout(() => setToast(null), ms);
   };
 
   const handleAccountExists = async (error, provider) => {
-    try {
-      const emailFromError = error?.customData?.email;
-      if (!emailFromError) return setMsg('Tài khoản đã tồn tại với nhà cung cấp khác.');
-      const methods = await fetchSignInMethodsForEmail(auth, emailFromError);
-      const cred =
-        provider === 'github'
-          ? GithubAuthProvider.credentialFromError(error)
-          : GoogleAuthProvider.credentialFromError(error);
-      setPendingCred(cred);
+    const emailFromError = error?.customData?.email;
+    if (!emailFromError) return setMsg('Tài khoản đã tồn tại với nhà cung cấp khác.');
+    const methods = await fetchSignInMethodsForEmail(auth, emailFromError);
+    const cred = provider === 'github'
+      ? GithubAuthProvider.credentialFromError(error)
+      : GoogleAuthProvider.credentialFromError(error);
+    setPendingCred(cred);
 
-      if (methods.includes('google.com')) {
-        setHint('google');
-        setMsg('Email này đã đăng ký bằng Google. Vui lòng đăng nhập Google để liên kết.');
-        await loginGoogle(true);
-        return;
-      }
-      if (methods.includes('password')) {
-        setHint('password');
-        setOpen(true);
-        setMode('login');
-        setEmail(emailFromError);
-        setMsg('Email này đã đăng ký bằng mật khẩu. Hãy đăng nhập để liên kết.');
-        return;
-      }
-      setMsg('Email đã tồn tại với nhà cung cấp khác. Hãy đăng nhập bằng nhà cung cấp cũ, rồi thử lại.');
-    } catch (e) {
-      setMsg(e.message);
+    if (methods.includes('google.com')) {
+      setHint('google');
+      setMsg('Email này đã đăng ký bằng Google. Vui lòng đăng nhập Google để liên kết.');
+      await loginGoogle(true);
+      return;
     }
+    if (methods.includes('password')) {
+      setHint('password');
+      setOpenAuth(true);
+      setMode('login');
+      setEmail(emailFromError);
+      setMsg('Email này đã đăng ký bằng mật khẩu. Hãy đăng nhập để liên kết.');
+      return;
+    }
+    setMsg('Email đã tồn tại với nhà cung cấp khác. Hãy đăng nhập bằng nhà cung cấp cũ rồi thử lại.');
   };
 
   const doLinkIfNeeded = async () => {
@@ -84,8 +84,8 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       await linkWithCredential(auth.currentUser, pendingCred);
       setPendingCred(null);
       setHint('');
-      showToast('success', 'Đã liên kết tài khoản thành công!');
-      setOpen(false);
+      showToast('success', 'Đã liên kết tài khoản!');
+      setOpenAuth(false);
     }
   };
 
@@ -94,7 +94,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     try {
       await signInWithPopup(auth, new GoogleAuthProvider());
       if (isLinking) await doLinkIfNeeded();
-      setOpen(false);
+      setOpenAuth(false);
       showToast('success', 'Đăng nhập Google thành công!');
     } catch (e) {
       if (e.code === 'auth/account-exists-with-different-credential') await handleAccountExists(e, 'google');
@@ -106,7 +106,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     setLoading(true); setMsg('');
     try {
       await signInWithPopup(auth, new GithubAuthProvider());
-      setOpen(false);
+      setOpenAuth(false);
       showToast('success', 'Đăng nhập GitHub thành công!');
     } catch (e) {
       if (e.code === 'auth/account-exists-with-different-credential') await handleAccountExists(e, 'github');
@@ -121,15 +121,15 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       if (mode === 'signup') {
         const { user: created } = await createUserWithEmailAndPassword(auth, email, password);
         await sendEmailVerification(created);
-        showToast('success', 'Đăng ký thành công! Vui lòng kiểm tra email để xác minh tài khoản.');
+        showToast('success', 'Đăng ký thành công! Hãy kiểm tra email để xác minh tài khoản.');
         setMode('login');
-        setOpen(false);
+        setOpenAuth(false);
         setEmail(''); setPassword('');
         if (ENFORCE_EMAIL_VERIFICATION) await auth.signOut();
       } else {
         await signInWithEmailAndPassword(auth, email, password);
         if (pendingCred && hint === 'password') await doLinkIfNeeded();
-        setOpen(false);
+        setOpenAuth(false);
         setEmail(''); setPassword('');
         showToast('success', 'Đăng nhập thành công!');
       }
@@ -149,9 +149,12 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     }
   };
 
-  const logout = async () => { await auth.signOut(); setMenuOpen(false); showToast('info', 'Bạn đã đăng xuất.'); };
+  const logout = async () => {
+    await auth.signOut();
+    setMenuOpen(false);
+    showToast('info', 'Bạn đã đăng xuất.');
+  };
 
-  // -- UI: Toast --
   const Toast = () => toast ? (
     <div
       className={`fixed top-4 left-1/2 -translate-x-1/2 z-[120] rounded-full px-4 py-2 text-sm shadow-lg border
@@ -162,21 +165,26 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     </div>
   ) : null;
 
-  // -- UI: Logged-in (avatar + dropdown) --
+  // ==== Logged-in ====
   if (user) {
-    const avatar = user.photoURL || '/avatar-default.svg';
+    const avatar = user.photoURL || null; // dùng FA nếu null
     return (
       <>
         <Toast />
         <div className="relative" ref={menuRef}>
           <button
-            className="flex items-center gap-2 pl-2 pr-2 py-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700"
+            className="flex items-center gap-1 pl-2 pr-2 py-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700"
             onClick={() => setMenuOpen(v => !v)}
             aria-label="User menu"
             title={user.displayName || user.email}
           >
-            <img src={avatar} alt="avatar" className="w-9 h-9 rounded-full" referrerPolicy="no-referrer" />
-            <svg className="w-4 h-4 opacity-70 hidden lg:block" viewBox="0 0 20 20" fill="currentColor"><path d="M5.25 7.5 10 12.25 14.75 7.5h-9.5z"/></svg>
+            {avatar ? (
+              <img src={avatar} alt="avatar" className="w-9 h-9 rounded-full" referrerPolicy="no-referrer" />
+            ) : (
+              <FontAwesomeIcon icon={faUserCircle} className="w-6 h-6" />
+            )}
+            {/* caret luôn hiển thị */}
+            <FontAwesomeIcon icon={faChevronDown} className="w-3.5 h-3.5 opacity-75" />
           </button>
 
           {menuOpen && (
@@ -191,12 +199,10 @@ export default function LoginButton({ onToggleTheme, isDark }) {
               <a href="/notifications" className="block px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800">Thông báo</a>
               <button
                 onClick={onToggleTheme}
-                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center justify-between"
+                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-2"
               >
-                Chế độ tối
-                <span className="ml-3 inline-flex items-center justify-center w-9 h-5 rounded-full bg-gray-200 dark:bg-gray-700">
-                  <span className={`w-4 h-4 bg-white rounded-full transform transition ${isDark ? 'translate-x-4' : 'translate-x-0'}`} />
-                </span>
+                <FontAwesomeIcon icon={isDark ? faSun : faMoon} className="w-4 h-4" />
+                {isDark ? 'Chế độ sáng' : 'Chế độ tối'}
               </button>
               <div className="h-px bg-gray-200 dark:bg-gray-700" />
               <button onClick={logout} className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800">Đăng xuất</button>
@@ -207,43 +213,61 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     );
   }
 
-  // -- UI: Logged-out (icon-only) --
+  // ==== Logged-out ====
   return (
     <>
       <Toast />
-      <button
-        onClick={() => setOpen(true)}
-        className="relative w-9 h-9 inline-flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700"
-        aria-label="Đăng nhập / Đăng ký"
-        title="Đăng nhập / Đăng ký"
-      >
-        {/* Icon user + plus (inline SVG để không phụ thuộc icon lib) */}
-        <svg viewBox="0 0 24 24" className="w-5 h-5 opacity-90" fill="currentColor" aria-hidden>
-          <path d="M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5 2.3-5 5 2.3 5 5 5zm0 2c-4 0-8 2-8 6v1h12.5a5.5 5.5 0 0 1-.8-2.9c0-1.1.3-2.1.8-3.1-1.4-.8-3.1-1-4.5-1z"/>
-        </svg>
-        <span className="absolute -bottom-0 -right-0 w-4 h-4 rounded-full bg-emerald-600 text-white text-[10px] flex items-center justify-center">+</span>
-      </button>
+      <div className="relative" ref={guestMenuRef}>
+        <button
+          onClick={() => setGuestMenuOpen(v => !v)}
+          className="relative w-9 h-9 inline-flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700"
+          aria-label="Mở menu"
+          title="Tài khoản"
+        >
+          <FontAwesomeIcon icon={faUserCircle} className="w-5 h-5" />
+        </button>
+
+        {guestMenuOpen && (
+          <div className="absolute right-0 mt-2 w-64 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl overflow-hidden">
+            <button
+              onClick={() => { setOpenAuth(true); setGuestMenuOpen(false); }}
+              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800"
+            >
+              Đăng nhập / Đăng ký
+            </button>
+            <button
+              onClick={() => { onToggleTheme(); setGuestMenuOpen(false); }}
+              className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-2"
+            >
+              <FontAwesomeIcon icon={isDark ? faSun : faMoon} className="w-4 h-4" />
+              {isDark ? 'Chế độ sáng' : 'Chế độ tối'}
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Auth Modal */}
-      {open && (
+      {openAuth && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-2xl">
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-800">
               <h3 className="text-lg font-semibold">{mode==='signup' ? 'Tạo tài khoản' : 'Đăng nhập'}</h3>
-              <button onClick={() => setOpen(false)} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="Close">
+              <button onClick={() => setOpenAuth(false)} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="Close">
                 <svg className="w-5 h-5" viewBox="0 0 20 20"><path d="M6 6l8 8M14 6l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
               </button>
             </div>
 
             <div className="px-5 pt-5 pb-2">
-              {/* Social */}
+              {/* Social + icons */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <button onClick={() => loginGoogle(false)} disabled={loading}
                         className="flex items-center justify-center gap-2 px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-60">
+                  <FontAwesomeIcon icon={faGoogle} />
                   Google
                 </button>
                 <button onClick={loginGithub} disabled={loading}
                         className="flex items-center justify-center gap-2 px-3 py-2 rounded bg-gray-900 text-white hover:bg-black disabled:opacity-60">
+                  <FontAwesomeIcon icon={faGithub} />
                   GitHub
                 </button>
               </div>
