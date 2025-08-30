@@ -2,9 +2,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { auth, db } from '../lib/firebase-client';
 import {
-  addDoc, collection, deleteDoc, doc, getDoc, getDocs,
-  limit, onSnapshot, orderBy, query, runTransaction, serverTimestamp,
-  updateDoc, where
+  addDoc, collection, deleteDoc, doc, getDoc,
+  limit, onSnapshot, orderBy, query, runTransaction,
+  serverTimestamp, updateDoc, where
 } from 'firebase/firestore';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPaperPlane, faReply, faTrash, faUserCircle } from '@fortawesome/free-solid-svg-icons';
@@ -13,13 +13,7 @@ import { faPaperPlane, faReply, faTrash, faUserCircle } from '@fortawesome/free-
 function preferredName(user) {
   if (!user) return 'Người dùng';
   const p0 = user.providerData?.[0];
-  return (
-    user.displayName ||
-    user.email ||
-    p0?.displayName ||
-    p0?.email ||
-    'Người dùng'
-  );
+  return user.displayName || user.email || p0?.displayName || p0?.email || 'Người dùng';
 }
 function preferredPhoto(user) {
   return user?.photoURL || user?.providerData?.[0]?.photoURL || '';
@@ -90,7 +84,7 @@ export default function Comments({ postId }) {
     return () => unsub();
   }, [postId]);
 
-  // patch các comment cũ (chỉ của chính mình) nếu thiếu userName/userPhoto
+  // patch comment cũ của chính mình nếu thiếu tên/ảnh
   useEffect(() => {
     if (!me || items.length === 0) return;
     const fixes = items
@@ -129,16 +123,13 @@ export default function Comments({ postId }) {
     }));
   };
 
-  // build map replies
+  // tách root & replies
   const roots = items.filter(c => !c.parentId);
   const repliesByParent = useMemo(() => {
     const m = {};
     items.forEach(c => {
-      if (c.parentId) {
-        (m[c.parentId] ||= []).push(c);
-      }
+      if (c.parentId) (m[c.parentId] ||= []).push(c);
     });
-    // sort replies oldest→newest
     Object.values(m).forEach(arr => arr.sort((a,b) => (a.createdAt?.seconds||0) - (b.createdAt?.seconds||0)));
     return m;
   }, [items]);
@@ -184,12 +175,9 @@ export default function Comments({ postId }) {
                     await deleteDoc(doc(db, 'comments', c.id));
                   }}
                 />
-                <ReplyBox
-                  me={me}
-                  postId={postId}
-                  parent={c}
-                  adminUids={adminUids}
-                />
+                {/* hộp reply cho comment gốc */}
+                <ReplyBox me={me} postId={postId} parent={c} adminUids={adminUids} />
+
                 {/* replies */}
                 {(repliesByParent[c.id] || []).map((r) => (
                   <div key={r.id} className="mt-3 pl-4 border-l">
@@ -202,6 +190,8 @@ export default function Comments({ postId }) {
                         await deleteDoc(doc(db, 'comments', r.id));
                       }}
                     />
+                    {/* hộp reply cho từng reply */}
+                    <ReplyBox me={me} postId={postId} parent={c} replyingTo={r} adminUids={adminUids} />
                   </div>
                 ))}
               </li>
@@ -241,15 +231,17 @@ function CommentRow({ c, me, small=false, canDelete=false, onDelete }) {
   );
 }
 
-function ReplyBox({ me, postId, parent, adminUids }) {
+function ReplyBox({ me, postId, parent, replyingTo=null, adminUids }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
-  const canReply = !!me && me.uid !== parent.authorId;
+  const target = replyingTo || parent;                 // comment đang được reply
+  const canReply = !!me && me.uid !== target.authorId; // không reply chính mình
 
   const onReply = async (e) => {
     e.preventDefault();
     if (!canReply || !text.trim()) return;
 
+    // luôn gắn parentId = comment gốc; replyToUserId = tác giả comment bạn đang trả lời
     const ref = await addDoc(collection(db, 'comments'), {
       postId: String(postId),
       parentId: parent.id,
@@ -258,18 +250,18 @@ function ReplyBox({ me, postId, parent, adminUids }) {
       userPhoto: preferredPhoto(me),
       content: text.trim(),
       createdAt: serverTimestamp(),
-      replyToUserId: parent.authorId || null
+      replyToUserId: target.authorId || null
     });
     setText('');
     setOpen(false);
 
-    // notify owner
-    if (parent.authorId && parent.authorId !== me.uid) {
-      await createNotification({ toUserId: parent.authorId, type: 'reply', postId: String(postId), commentId: ref.id, fromUserId: me.uid });
-      await bumpCounter(parent.authorId, +1);
+    // notify owner (người bị reply)
+    if (target.authorId && target.authorId !== me.uid) {
+      await createNotification({ toUserId: target.authorId, type: 'reply', postId: String(postId), commentId: ref.id, fromUserId: me.uid });
+      await bumpCounter(target.authorId, +1);
     }
-    // notify admins (trừ mình & trừ chủ comment nếu đã notify trên)
-    const targets = adminUids.filter(u => u !== me.uid && u !== parent.authorId);
+    // notify admins (trừ mình & trừ owner đã notify)
+    const targets = adminUids.filter(u => u !== me.uid && u !== target.authorId);
     await Promise.all(targets.map(async (uid) => {
       await createNotification({ toUserId: uid, type: 'comment', postId: String(postId), commentId: ref.id, fromUserId: me.uid });
       await bumpCounter(uid, +1);
@@ -291,7 +283,7 @@ function ReplyBox({ me, postId, parent, adminUids }) {
             value={text}
             onChange={(e) => setText(e.target.value)}
             className="flex-1 border rounded px-3 py-1"
-            placeholder="Viết phản hồi…"
+            placeholder={`Phản hồi ${replyingTo ? (replyingTo.userName || 'người dùng') : (parent.userName || 'người dùng')}…`}
             maxLength={3000}
             autoFocus
           />

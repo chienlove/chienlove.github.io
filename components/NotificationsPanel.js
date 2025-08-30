@@ -1,16 +1,8 @@
 import { useEffect, useState } from 'react';
 import { auth, db } from '../lib/firebase-client';
 import {
-  collection,
-  doc,
-  limit,
-  onSnapshot,
-  orderBy,
-  query,
-  updateDoc,
-  where,
-  writeBatch,
-  runTransaction,
+  collection, doc, limit, onSnapshot, orderBy, query,
+  updateDoc, where, writeBatch, runTransaction,
 } from 'firebase/firestore';
 import Link from 'next/link';
 
@@ -81,10 +73,8 @@ export default function NotificationsPanel({ open, onClose }) {
               <div className="text-sm">
                 {n.type === 'reply' ? 'Có trả lời bình luận' : 'Hoạt động mới'}
               </div>
-              <Link
-                href={`/post/${n.postId}?comment=${n.commentId}`}
-                className="text-blue-600 text-sm underline"
-              >
+              {/* Link đúng theo routing slug: /<slug>?comment=<id> */}
+              <Link href={`/${n.postId}?comment=${n.commentId}`} className="text-blue-600 text-sm underline">
                 Xem chi tiết
               </Link>
             </div>
