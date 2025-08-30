@@ -6,7 +6,7 @@ import SearchModal from './SearchModal';
 import LoginButton from './LoginButton';
 import NotificationsPanel from './NotificationsPanel';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBars, faTimes, faSearch, faTools, faLayerGroup, faChevronDown, faChevronUp } from '@fortawesome/free-solid-svg-icons';
+import { faBars, faTimes, faSearch, faBell, faTools, faLayerGroup, faChevronDown, faChevronUp } from '@fortawesome/free-solid-svg-icons';
 
 export default function Layout({ children, fullWidth = false, hotApps }) {
   const [darkMode, setDarkMode] = useState(false);
@@ -54,6 +54,9 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [mobileMenuOpen]);
 
+  // Badge thông báo – có thể gắn số thực tế từ Firestore
+  const notifCount = 0; // TODO: truyền số thực từ props hoặc hook
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       <Head>
@@ -62,7 +65,7 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
       </Head>
 
       {/* HEADER */}
-      <header className="sticky top-0 z-50 w-full bg-white/85 dark:bg-gray-900/85 backdrop-blur supports-[backdrop-filter]:backdrop-blur border-b border-gray-200 dark:border-gray-800">
+      <header className="sticky top-0 z-50 w-full bg-white/85 dark:bg-gray-900/85 backdrop-blur border-b border-gray-200 dark:border-gray-800">
         <div className="max-w-screen-2xl mx-auto px-4 h-16 flex items-center justify-between">
           {/* Left */}
           <div className="flex items-center gap-3">
@@ -74,38 +77,42 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
             </Link>
           </div>
 
-          {/* Middle (desktop): minimal nav */}
+          {/* Middle */}
           <nav className="hidden md:flex items-center gap-6 text-sm">
             <Link href="/tools" className="hover:text-red-600">Công cụ</Link>
             <Link href="/categories" className="hover:text-red-600">Chuyên mục</Link>
             <Link href="/about" className="hover:text-red-600">Giới thiệu</Link>
           </nav>
 
-          {/* Right: search pill + bell + avatar(menu) */}
-          <div className="flex items-center gap-4">
-            {/* Search pill (desktop) */}
+          {/* Right: search icon + bell icon + avatar(menu) */}
+          <div className="flex items-center gap-3">
             <button
               onClick={() => setSearchOpen(true)}
-              className="hidden md:flex items-center gap-2 pl-3 pr-3 h-9 rounded-full bg-gray-100 dark:bg-gray-800 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700"
+              className="flex items-center justify-center w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
               aria-label="Search"
+              title="Tìm kiếm (/)"
             >
               <FontAwesomeIcon icon={faSearch} className="w-4 h-4" />
-              <span className="pr-1">Tìm kiếm…</span>
-              <kbd className="hidden lg:inline rounded bg-white/70 dark:bg-black/30 px-1.5 py-0.5 text-[11px] border border-gray-300 dark:border-gray-700">/</kbd>
             </button>
 
-            {/* Notifications (chỉ là text-link, panel nổi) */}
             <div className="relative">
               <button
                 onClick={() => setNotifOpen(v => !v)}
-                className="px-3 h-9 rounded-full bg-gray-100 dark:bg-gray-800 text-sm hover:bg-gray-200 dark:hover:bg-gray-700"
+                className="relative flex items-center justify-center w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
+                aria-label="Notifications"
+                title="Thông báo"
               >
-                Thông báo
+                <FontAwesomeIcon icon={faBell} className="w-4 h-4" />
+                {notifCount > 0 && (
+                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] flex items-center justify-center">
+                    {notifCount > 99 ? '99+' : notifCount}
+                  </span>
+                )}
               </button>
               <NotificationsPanel open={notifOpen} onClose={() => setNotifOpen(false)} />
             </div>
 
-            {/* Auth (LoginButton chứa avatar & dropdown + dark mode) */}
+            {/* Avatar & dropdown + dark mode nằm bên trong */}
             <LoginButton onToggleTheme={() => setDarkMode(v => !v)} isDark={darkMode} />
           </div>
         </div>
@@ -122,7 +129,6 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
               </button>
             </div>
 
-            {/* Search quick */}
             <button
               onClick={() => { setMobileMenuOpen(false); setSearchOpen(true); }}
               className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-left flex items-center gap-2"
@@ -190,7 +196,7 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
         {children}
       </main>
 
-      {/* FOOTER (giữ gọn) */}
+      {/* FOOTER */}
       <footer className="bg-gray-900 text-gray-300 mt-16 border-t border-gray-800">
         <div className="max-w-screen-2xl mx-auto px-4 py-10 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
           <div>
