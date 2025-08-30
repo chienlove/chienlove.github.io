@@ -1,3 +1,4 @@
+// components/LoginButton.js
 import { useEffect, useState, useRef } from 'react';
 import { auth } from '../lib/firebase-client';
 import {
@@ -12,18 +13,24 @@ import {
   fetchSignInMethodsForEmail,
 } from 'firebase/auth';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUserCircle, faChevronDown, faMoon, faSun } from '@fortawesome/free-solid-svg-icons';
+import {
+  faUserCircle,
+  faChevronDown,
+  faMoon,
+  faSun,
+  faPlus,
+} from '@fortawesome/free-solid-svg-icons';
 import { faGoogle, faGithub } from '@fortawesome/free-brands-svg-icons';
 
 const ENFORCE_EMAIL_VERIFICATION = true;
 
 export default function LoginButton({ onToggleTheme, isDark }) {
   const [user, setUser] = useState(null);
-  const [openAuth, setOpenAuth] = useState(false);   // Auth modal
-  const [menuOpen, setMenuOpen] = useState(false);   // User dropdown
-  const [guestMenuOpen, setGuestMenuOpen] = useState(false); // Dropdown khi chưa login
+  const [openAuth, setOpenAuth] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [guestMenuOpen, setGuestMenuOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState('login');         // 'login' | 'signup'
+  const [mode, setMode] = useState('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [msg, setMsg] = useState('');
@@ -156,18 +163,14 @@ export default function LoginButton({ onToggleTheme, isDark }) {
   };
 
   const Toast = () => toast ? (
-    <div
-      className={`fixed top-4 left-1/2 -translate-x-1/2 z-[120] rounded-full px-4 py-2 text-sm shadow-lg border
-      ${toast.type==='success' ? 'bg-emerald-50 border-emerald-300 text-emerald-800 dark:bg-emerald-900/30 dark:border-emerald-700 dark:text-emerald-200'
-      : toast.type==='error' ? 'bg-red-50 border-red-300 text-red-800 dark:bg-red-900/30 dark:border-red-700 dark:text-red-200'
-      : 'bg-sky-50 border-sky-300 text-sky-800 dark:bg-sky-900/30 dark:border-sky-700 dark:text-sky-200'}`}>
+    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[120] rounded-full px-4 py-2 text-sm shadow-lg border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100">
       {toast.text}
     </div>
   ) : null;
 
   // ==== Logged-in ====
   if (user) {
-    const avatar = user.photoURL || null; // dùng FA nếu null
+    const avatar = user.photoURL || null;
     return (
       <>
         <Toast />
@@ -183,7 +186,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
             ) : (
               <FontAwesomeIcon icon={faUserCircle} className="w-6 h-6" />
             )}
-            {/* caret luôn hiển thị */}
             <FontAwesomeIcon icon={faChevronDown} className="w-3.5 h-3.5 opacity-75" />
           </button>
 
@@ -225,6 +227,9 @@ export default function LoginButton({ onToggleTheme, isDark }) {
           title="Tài khoản"
         >
           <FontAwesomeIcon icon={faUserCircle} className="w-5 h-5" />
+          <span className="absolute -top-1 -right-1 bg-emerald-600 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full">
+            <FontAwesomeIcon icon={faPlus} className="w-2 h-2" />
+          </span>
         </button>
 
         {guestMenuOpen && (
@@ -278,7 +283,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
                 <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
               </div>
 
-              {/* Email form */}
               <form onSubmit={onSubmitEmail} className="space-y-3">
                 <input
                   type="email"
