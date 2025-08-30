@@ -1,6 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
 import Head from 'next/head';
-import Script from 'next/script';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { supabase } from '../lib/supabase';
@@ -13,11 +12,8 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faSun, faMoon, faSearch, faBars, faTimes,
   faTools, faLayerGroup, faChevronDown, faChevronUp,
-  faCode, faLock, faRocket
+  faCode, faLock, faRocket, faBell
 } from '@fortawesome/free-solid-svg-icons';
-import {
-  faGithub, faTwitter, faDiscord, faTelegram
-} from '@fortawesome/free-brands-svg-icons';
 
 export default function Layout({ children, fullWidth = false, hotApps }) {
   const router = useRouter();
@@ -30,25 +26,20 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
   const [apps, setApps] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [notifOpen, setNotifOpen] = useState(false);
+  const [accordionOpen, setAccordionOpen] = useState({ tools: true, categories: true });
+
   const menuRef = useRef(null);
 
-  // NEW: mở/đóng bảng thông báo
-  const [notifOpen, setNotifOpen] = useState(false);
-
-  const [accordionOpen, setAccordionOpen] = useState({
-    tools: true,
-    categories: true,
-  });
-
   useEffect(() => {
-    const stored = localStorage.getItem('darkMode');
-    const prefers = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const stored = typeof window !== 'undefined' ? localStorage.getItem('darkMode') : null;
+    const prefers = typeof window !== 'undefined' ? window.matchMedia('(prefers-color-scheme: dark)').matches : false;
     setDarkMode(stored ? stored === 'true' : prefers);
   }, []);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
-    localStorage.setItem('darkMode', darkMode);
+    if (typeof window !== 'undefined') localStorage.setItem('darkMode', darkMode);
   }, [darkMode]);
 
   useEffect(() => {
@@ -68,9 +59,7 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
       .select('*')
       .order(sortBy, { ascending: sortBy === 'name' });
 
-    if (q.trim()) {
-      query = query.or(`name.ilike.%${q.trim()}%,author.ilike.%${q.trim()}%`);
-    }
+    if (q.trim()) query = query.or(`name.ilike.%${q.trim()}%,author.ilike.%${q.trim()}%`);
     if (activeCategory !== 'all') query = query.eq('category_id', activeCategory);
 
     const { data } = await query;
@@ -78,22 +67,13 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
     setLoading(false);
   };
 
-  useEffect(() => {
-    if (searchOpen) runSearch();
-  }, [q, activeCategory, sortBy, searchOpen]);
+  useEffect(() => { if (searchOpen) runSearch(); }, [q, activeCategory, sortBy, searchOpen]);
 
-  // Auto-close menu when clicking outside
   useEffect(() => {
     function handleClickOutside(e) {
-      if (menuRef.current && !menuRef.current.contains(e.target)) {
-        setMobileMenuOpen(false);
-      }
+      if (menuRef.current && !menuRef.current.contains(e.target)) setMobileMenuOpen(false);
     }
-    if (mobileMenuOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    } else {
-      document.removeEventListener('mousedown', handleClickOutside);
-    }
+    if (mobileMenuOpen) document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [mobileMenuOpen]);
 
@@ -106,39 +86,48 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
 
       {/* HEADER */}
       <header className="sticky top-0 z-50 w-full bg-white/90 dark:bg-gray-900/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-800">
-        <div className="max-w-screen-2xl mx-auto px-4 py-4 flex items-center justify-between relative">
-          {/* Hamburger */}
-          <button onClick={() => setMobileMenuOpen(true)} className="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 md:hidden">
-            <FontAwesomeIcon icon={faBars} className="w-5 h-5" />
-          </button>
+        <div className="max-w-screen-2xl mx-auto px-4 py-4 flex items-center justify-between">
+          {/* Left: hamburger + logo */}
+          <div className="flex items-center gap-2">
+            <button onClick={() => setMobileMenuOpen(true)} className="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 md:hidden">
+              <FontAwesomeIcon icon={faBars} className="w-5 h-5" />
+            </button>
+            <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-red-600 via-black to-red-600 dark:from-red-400 dark:via-white dark:to-red-400 bg-clip-text text-transparent">
+              StoreiOS
+            </Link>
+          </div>
 
-          {/* Logo */}
-          <Link href="/" className="text-2xl font-bold bg-gradient-to-r from-red-600 via-black to-red-600 dark:from-red-400 dark:via-white dark:to-red-400 bg-clip-text text-transparent">
-            StoreiOS
-          </Link>
+          {/* Middle: quick nav (desktop) */}
+          <nav className="hidden md:flex items-center gap-6 text-sm">
+            <Link href="/tools" className="hover:text-red-600">Công cụ</Link>
+            <Link href="/categories" className="hover:text-red-600">Chuyên mục</Link>
+            <Link href="/about" className="hover:text-red-600">Giới thiệu</Link>
+          </nav>
 
-          {/* Right area: search, darkmode, login, notifications */}
+          {/* Right: search / theme / notifications / auth */}
           <div className="flex items-center gap-3">
-            <button onClick={() => setSearchOpen(true)} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+            <button onClick={() => setSearchOpen(true)} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700" aria-label="Search">
               <FontAwesomeIcon icon={faSearch} className="w-5 h-5" />
             </button>
-            <button onClick={() => setDarkMode(!darkMode)} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700">
+            <button onClick={() => setDarkMode(!darkMode)} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700" aria-label="Toggle theme">
               <FontAwesomeIcon icon={darkMode ? faSun : faMoon} className="w-5 h-5" />
             </button>
 
-            {/* NEW: nút đăng nhập Google/Facebook */}
-            <LoginButton />
-
-            {/* NEW: chuông + panel thông báo */}
+            {/* Notifications */}
             <div className="relative">
-              <NotificationsBell onClick={() => setNotifOpen(v => !v)} />
+              <button onClick={() => setNotifOpen(v => !v)} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700" aria-label="Notifications">
+                <FontAwesomeIcon icon={faBell} className="w-5 h-5" />
+              </button>
               <NotificationsPanel open={notifOpen} onClose={() => setNotifOpen(false)} />
             </div>
+
+            {/* Auth */}
+            <LoginButton />
           </div>
         </div>
       </header>
 
-      {/* MOBILE MENU SIDEBAR */}
+      {/* MOBILE MENU */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 flex">
           <div ref={menuRef} className="w-72 bg-white dark:bg-gray-900 p-6 space-y-6 shadow-2xl">
@@ -149,7 +138,14 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
               </button>
             </div>
 
-            {/* TOOLS ACCORDION */}
+            <button
+              onClick={() => { setMobileMenuOpen(false); setSearchOpen(true); }}
+              className="w-full px-3 py-2 rounded bg-gray-100 dark:bg-gray-800 text-left"
+            >
+              Tìm kiếm…
+            </button>
+
+            {/* Tools */}
             <div>
               <button
                 onClick={() => setAccordionOpen({ ...accordionOpen, tools: !accordionOpen.tools })}
@@ -167,7 +163,7 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
               )}
             </div>
 
-            {/* CATEGORIES ACCORDION */}
+            {/* Categories */}
             <div>
               <button
                 onClick={() => setAccordionOpen({ ...accordionOpen, categories: !accordionOpen.categories })}
@@ -182,6 +178,11 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
                   <li><Link href="/categories/testflight" onClick={() => setMobileMenuOpen(false)} className="hover:text-red-600">TestFlight App</Link></li>
                 </ul>
               )}
+            </div>
+
+            <div className="pt-2 border-t border-gray-200 dark:border-gray-800">
+              <Link href="/notifications" onClick={() => setMobileMenuOpen(false)} className="block px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800">Thông báo</Link>
+              <Link href="/login" onClick={() => setMobileMenuOpen(false)} className="block px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800">Đăng nhập / Đăng ký</Link>
             </div>
           </div>
         </div>
@@ -198,7 +199,7 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
         hotApps={hotApps}
       />
 
-      {/* MAIN CONTENT */}
+      {/* MAIN */}
       <main className={`flex-1 ${fullWidth ? '' : 'w-full max-w-screen-2xl mx-auto px-4 py-6'}`}>
         {children}
       </main>
@@ -207,7 +208,7 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
       <footer className="bg-gray-900 text-gray-300 mt-16 border-t border-gray-800">
         <div className="max-w-screen-2xl mx-auto px-4 py-12 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
           <div>
-            <h3 className="text-white font-bold text-lg mb-3">StreiOS</h3>
+            <h3 className="text-white font-bold text-lg mb-3">StoreiOS</h3>
             <p className="text-gray-400 text-sm">Kho ứng dụng TestFlight beta & công cụ jailbreak cho cộng đồng iOS.</p>
           </div>
           <div>
@@ -228,12 +229,7 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
           </div>
           <div>
             <h4 className="font-semibold text-white mb-3">Kết nối</h4>
-            <div className="flex gap-4 text-xl">
-              <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="hover:text-white"><FontAwesomeIcon icon={faGithub} /></a>
-              <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" className="hover:text-white"><FontAwesomeIcon icon={faTwitter} /></a>
-              <a href="https://discord.gg" target="_blank" rel="noopener noreferrer" className="hover:text-white"><FontAwesomeIcon icon={faDiscord} /></a>
-              <a href="https://t.me" target="_blank" rel="noopener noreferrer" className="hover:text-white"><FontAwesomeIcon icon={faTelegram} /></a>
-            </div>
+            <p className="text-sm text-gray-400">Theo dõi để không bỏ lỡ app TestFlight hot.</p>
           </div>
         </div>
         <div className="text-center text-xs text-gray-500 border-t border-gray-800 py-6">
