@@ -1,3 +1,4 @@
+// components/LoginButton.js
 import { useEffect, useState, useRef } from 'react';
 import { auth } from '../lib/firebase-client';
 import {
@@ -12,12 +13,12 @@ import {
   fetchSignInMethodsForEmail,
 } from 'firebase/auth';
 
-const ENFORCE_EMAIL_VERIFICATION = true; // ✅ Không tự login sau đăng ký
+const ENFORCE_EMAIL_VERIFICATION = true; // không tự đăng nhập sau đăng ký
 
 export default function LoginButton({ onToggleTheme, isDark }) {
   const [user, setUser] = useState(null);
   const [open, setOpen] = useState(false);         // auth modal
-  const [menuOpen, setMenuOpen] = useState(false); // profile dropdown
+  const [menuOpen, setMenuOpen] = useState(false); // user dropdown
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState('login');       // 'login' | 'signup'
   const [email, setEmail] = useState('');
@@ -43,12 +44,13 @@ export default function LoginButton({ onToggleTheme, isDark }) {
 
   const showToast = (type, text, ms = 3200) => {
     setToast({ type, text });
-    setTimeout(() => setToast(null), ms);
+    window.clearTimeout((showToast._t || 0));
+    showToast._t = window.setTimeout(() => setToast(null), ms);
   };
 
   const handleAccountExists = async (error, provider) => {
     try {
-      const emailFromError = error.customData?.email;
+      const emailFromError = error?.customData?.email;
       if (!emailFromError) return setMsg('Tài khoản đã tồn tại với nhà cung cấp khác.');
       const methods = await fetchSignInMethodsForEmail(auth, emailFromError);
       const cred =
@@ -71,7 +73,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
         setMsg('Email này đã đăng ký bằng mật khẩu. Hãy đăng nhập để liên kết.');
         return;
       }
-      setMsg('Email đã tồn tại với một nhà cung cấp khác. Hãy đăng nhập bằng nhà cung cấp cũ, rồi thử lại.');
+      setMsg('Email đã tồn tại với nhà cung cấp khác. Hãy đăng nhập bằng nhà cung cấp cũ, rồi thử lại.');
     } catch (e) {
       setMsg(e.message);
     }
@@ -117,17 +119,13 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     setLoading(true); setMsg('');
     try {
       if (mode === 'signup') {
-        // Tạo tài khoản → gửi xác minh → signOut (không tự đăng nhập)
         const { user: created } = await createUserWithEmailAndPassword(auth, email, password);
         await sendEmailVerification(created);
         showToast('success', 'Đăng ký thành công! Vui lòng kiểm tra email để xác minh tài khoản.');
         setMode('login');
         setOpen(false);
         setEmail(''); setPassword('');
-        if (ENFORCE_EMAIL_VERIFICATION) {
-          // Sau khi gửi verify, đảm bảo chưa đăng nhập session
-          await auth.signOut();
-        }
+        if (ENFORCE_EMAIL_VERIFICATION) await auth.signOut();
       } else {
         await signInWithEmailAndPassword(auth, email, password);
         if (pendingCred && hint === 'password') await doLinkIfNeeded();
@@ -153,30 +151,32 @@ export default function LoginButton({ onToggleTheme, isDark }) {
 
   const logout = async () => { await auth.signOut(); setMenuOpen(false); showToast('info', 'Bạn đã đăng xuất.'); };
 
-  // Logged-in UI (avatar + dropdown)
+  // -- UI: Toast --
+  const Toast = () => toast ? (
+    <div
+      className={`fixed top-4 left-1/2 -translate-x-1/2 z-[120] rounded-full px-4 py-2 text-sm shadow-lg border
+      ${toast.type==='success' ? 'bg-emerald-50 border-emerald-300 text-emerald-800 dark:bg-emerald-900/30 dark:border-emerald-700 dark:text-emerald-200'
+      : toast.type==='error' ? 'bg-red-50 border-red-300 text-red-800 dark:bg-red-900/30 dark:border-red-700 dark:text-red-200'
+      : 'bg-sky-50 border-sky-300 text-sky-800 dark:bg-sky-900/30 dark:border-sky-700 dark:text-sky-200'}`}>
+      {toast.text}
+    </div>
+  ) : null;
+
+  // -- UI: Logged-in (avatar + dropdown) --
   if (user) {
     const avatar = user.photoURL || '/avatar-default.svg';
     return (
       <>
-        {/* Toast */}
-        {toast && (
-          <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-[120] rounded-full px-4 py-2 text-sm shadow-lg border
-            ${toast.type==='success' ? 'bg-emerald-50 border-emerald-300 text-emerald-800 dark:bg-emerald-900/30 dark:border-emerald-700 dark:text-emerald-200'
-            : toast.type==='error' ? 'bg-red-50 border-red-300 text-red-800 dark:bg-red-900/30 dark:border-red-700 dark:text-red-200'
-            : 'bg-sky-50 border-sky-300 text-sky-800 dark:bg-sky-900/30 dark:border-sky-700 dark:text-sky-200'}`}>
-            {toast.text}
-          </div>
-        )}
-
+        <Toast />
         <div className="relative" ref={menuRef}>
           <button
-            className="flex items-center gap-2 pl-2 pr-3 py-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700"
+            className="flex items-center gap-2 pl-2 pr-2 py-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700"
             onClick={() => setMenuOpen(v => !v)}
             aria-label="User menu"
+            title={user.displayName || user.email}
           >
-            <img src={avatar} alt="avatar" className="w-8 h-8 rounded-full" referrerPolicy="no-referrer" />
-            <span className="hidden lg:block text-sm max-w-[160px] truncate">{user.displayName || user.email}</span>
-            <svg className="w-4 h-4 opacity-70" viewBox="0 0 20 20" fill="currentColor"><path d="M5.25 7.5 10 12.25 14.75 7.5h-9.5z"/></svg>
+            <img src={avatar} alt="avatar" className="w-9 h-9 rounded-full" referrerPolicy="no-referrer" />
+            <svg className="w-4 h-4 opacity-70 hidden lg:block" viewBox="0 0 20 20" fill="currentColor"><path d="M5.25 7.5 10 12.25 14.75 7.5h-9.5z"/></svg>
           </button>
 
           {menuOpen && (
@@ -207,26 +207,24 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     );
   }
 
-  // Logged-out UI
+  // -- UI: Logged-out (icon-only) --
   return (
     <>
-      {/* Toast */}
-      {toast && (
-        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-[120] rounded-full px-4 py-2 text-sm shadow-lg border
-          ${toast.type==='success' ? 'bg-emerald-50 border-emerald-300 text-emerald-800 dark:bg-emerald-900/30 dark:border-emerald-700 dark:text-emerald-200'
-          : toast.type==='error' ? 'bg-red-50 border-red-300 text-red-800 dark:bg-red-900/30 dark:border-red-700 dark:text-red-200'
-          : 'bg-sky-50 border-sky-300 text-sky-800 dark:bg-sky-900/30 dark:border-sky-700 dark:text-sky-200'}`}>
-          {toast.text}
-        </div>
-      )}
-
+      <Toast />
       <button
         onClick={() => setOpen(true)}
-        className="px-3 py-1.5 text-sm rounded-full bg-gray-900 text-white dark:bg-white dark:text-gray-900 hover:opacity-90"
+        className="relative w-9 h-9 inline-flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700"
+        aria-label="Đăng nhập / Đăng ký"
+        title="Đăng nhập / Đăng ký"
       >
-        Đăng nhập / Đăng ký
+        {/* Icon user + plus (inline SVG để không phụ thuộc icon lib) */}
+        <svg viewBox="0 0 24 24" className="w-5 h-5 opacity-90" fill="currentColor" aria-hidden>
+          <path d="M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5 2.3-5 5 2.3 5 5 5zm0 2c-4 0-8 2-8 6v1h12.5a5.5 5.5 0 0 1-.8-2.9c0-1.1.3-2.1.8-3.1-1.4-.8-3.1-1-4.5-1z"/>
+        </svg>
+        <span className="absolute -bottom-0 -right-0 w-4 h-4 rounded-full bg-emerald-600 text-white text-[10px] flex items-center justify-center">+</span>
       </button>
 
+      {/* Auth Modal */}
       {open && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
           <div className="w-full max-w-md rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-2xl">

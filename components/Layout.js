@@ -1,3 +1,4 @@
+// components/Layout.js
 import { useEffect, useState, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -6,7 +7,7 @@ import SearchModal from './SearchModal';
 import LoginButton from './LoginButton';
 import NotificationsPanel from './NotificationsPanel';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBars, faTimes, faSearch, faBell, faTools, faLayerGroup, faChevronDown, faChevronUp } from '@fortawesome/free-solid-svg-icons';
+import { faBars, faTimes, faSearch, faBell } from '@fortawesome/free-solid-svg-icons';
 
 export default function Layout({ children, fullWidth = false, hotApps }) {
   const [darkMode, setDarkMode] = useState(false);
@@ -19,8 +20,21 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
-  const [accordionOpen, setAccordionOpen] = useState({ tools: true, categories: true });
   const menuRef = useRef(null);
+
+  // keyboard shortcut: '/' or Cmd/Ctrl+K mở search
+  useEffect(() => {
+    const onKey = (e) => {
+      const isSlash = e.key === '/';
+      const isK = (e.key === 'k' || e.key === 'K') && (e.metaKey || e.ctrlKey);
+      if (isSlash || isK) {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   useEffect(() => {
     const stored = typeof window !== 'undefined' ? localStorage.getItem('darkMode') : null;
@@ -54,8 +68,8 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [mobileMenuOpen]);
 
-  // Badge thông báo – có thể gắn số thực tế từ Firestore
-  const notifCount = 0; // TODO: truyền số thực từ props hoặc hook
+  // TODO: nối badge thật với dữ liệu thông báo của user
+  const notifCount = 0;
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
@@ -77,24 +91,26 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
             </Link>
           </div>
 
-          {/* Middle */}
+          {/* Middle (ẩn bớt để thoáng; bạn có thể thêm nav nếu muốn) */}
           <nav className="hidden md:flex items-center gap-6 text-sm">
             <Link href="/tools" className="hover:text-red-600">Công cụ</Link>
             <Link href="/categories" className="hover:text-red-600">Chuyên mục</Link>
             <Link href="/about" className="hover:text-red-600">Giới thiệu</Link>
           </nav>
 
-          {/* Right: search icon + bell icon + avatar(menu) */}
-          <div className="flex items-center gap-3">
+          {/* Right: chỉ icon tròn */}
+          <div className="flex items-center gap-2">
+            {/* Search */}
             <button
               onClick={() => setSearchOpen(true)}
               className="flex items-center justify-center w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
               aria-label="Search"
-              title="Tìm kiếm (/)"
+              title="Tìm kiếm (/ hoặc Ctrl/⌘+K)"
             >
               <FontAwesomeIcon icon={faSearch} className="w-4 h-4" />
             </button>
 
+            {/* Notifications */}
             <div className="relative">
               <button
                 onClick={() => setNotifOpen(v => !v)}
@@ -112,7 +128,7 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
               <NotificationsPanel open={notifOpen} onClose={() => setNotifOpen(false)} />
             </div>
 
-            {/* Avatar & dropdown + dark mode nằm bên trong */}
+            {/* Avatar / Auth */}
             <LoginButton onToggleTheme={() => setDarkMode(v => !v)} isDark={darkMode} />
           </div>
         </div>
@@ -129,6 +145,7 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
               </button>
             </div>
 
+            {/* Quick search */}
             <button
               onClick={() => { setMobileMenuOpen(false); setSearchOpen(true); }}
               className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-left flex items-center gap-2"
@@ -137,42 +154,10 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
               Tìm kiếm…
             </button>
 
-            {/* Tools */}
-            <div className="mt-6">
-              <button
-                onClick={() => setAccordionOpen({ ...accordionOpen, tools: !accordionOpen.tools })}
-                className="flex items-center justify-between w-full text-left font-medium hover:text-red-600"
-              >
-                <span><FontAwesomeIcon icon={faTools} className="mr-2" />Công cụ</span>
-                <FontAwesomeIcon icon={accordionOpen.tools ? faChevronUp : faChevronDown} />
-              </button>
-              {accordionOpen.tools && (
-                <ul className="mt-2 ml-4 text-sm space-y-2">
-                  <li><Link href="/tools/a" onClick={() => setMobileMenuOpen(false)} className="hover:text-red-600">A</Link></li>
-                  <li><Link href="/tools/b" onClick={() => setMobileMenuOpen(false)} className="hover:text-red-600">B</Link></li>
-                  <li><Link href="/tools/c" onClick={() => setMobileMenuOpen(false)} className="hover:text-red-600">C</Link></li>
-                </ul>
-              )}
-            </div>
-
-            {/* Categories */}
-            <div className="mt-4">
-              <button
-                onClick={() => setAccordionOpen({ ...accordionOpen, categories: !accordionOpen.categories })}
-                className="flex items-center justify-between w-full text-left font-medium hover:text-red-600"
-              >
-                <span><FontAwesomeIcon icon={faLayerGroup} className="mr-2" />Chuyên mục</span>
-                <FontAwesomeIcon icon={accordionOpen.categories ? faChevronUp : faChevronDown} />
-              </button>
-              {accordionOpen.categories && (
-                <ul className="mt-2 ml-4 text-sm space-y-2">
-                  <li><Link href="/categories/jailbreak" onClick={() => setMobileMenuOpen(false)} className="hover:text-red-600">Jailbreak</Link></li>
-                  <li><Link href="/categories/testflight" onClick={() => setMobileMenuOpen(false)} className="hover:text-red-600">TestFlight App</Link></li>
-                </ul>
-              )}
-            </div>
-
-            <div className="mt-6 border-t border-gray-200 dark:border-gray-800 pt-4">
+            <div className="mt-6 space-y-3">
+              <Link href="/tools" onClick={() => setMobileMenuOpen(false)} className="block px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800">Công cụ</Link>
+              <Link href="/categories" onClick={() => setMobileMenuOpen(false)} className="block px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800">Chuyên mục</Link>
+              <Link href="/about" onClick={() => setMobileMenuOpen(false)} className="block px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800">Giới thiệu</Link>
               <Link href="/notifications" onClick={() => setMobileMenuOpen(false)} className="block px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800">Thông báo</Link>
               <Link href="/login" onClick={() => setMobileMenuOpen(false)} className="block px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800">Đăng nhập / Đăng ký</Link>
             </div>
