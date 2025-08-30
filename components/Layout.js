@@ -1,3 +1,4 @@
+// components/Layout.js
 import { useEffect, useState, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -6,7 +7,7 @@ import SearchModal from './SearchModal';
 import LoginButton from './LoginButton';
 import NotificationsPanel from './NotificationsPanel';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBars, faTimes, faSearch, faBell, faGrip, faWrench, faLayerGroup, faArrowUpRightFromSquare } from '@fortawesome/free-solid-svg-icons';
+import { faBars, faTimes, faSearch, faBell, faWrench, faLayerGroup, faArrowUpRightFromSquare } from '@fortawesome/free-solid-svg-icons';
 
 export default function Layout({ children, fullWidth = false, hotApps }) {
   const [darkMode, setDarkMode] = useState(false);
@@ -16,24 +17,26 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
   const [sortBy, setSortBy] = useState('created_at');
   const [q, setQ] = useState('');
   const [apps, setApps] = useState([]);
-  const [categories, setCategories] = useState([]);
+  const [categories, setCategories] = useState([]); // <-- dùng cho menu hamburger
   const [loading, setLoading] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
-  const [menuDropOpen, setMenuDropOpen] = useState(false);
   const drawerRef = useRef(null);
-  const menuDropRef = useRef(null);
 
-  // keyboard shortcut to open search
+  // keyboard shortcut: '/' hoặc Cmd/Ctrl+K mở search
   useEffect(() => {
     const onKey = (e) => {
       const isSlash = e.key === '/';
       const isK = (e.key === 'k' || e.key === 'K') && (e.metaKey || e.ctrlKey);
-      if (isSlash || isK) { e.preventDefault(); setSearchOpen(true); }
+      if (isSlash || isK) {
+        e.preventDefault();
+        setSearchOpen(true);
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
+  // dark mode
   useEffect(() => {
     const stored = typeof window !== 'undefined' ? localStorage.getItem('darkMode') : null;
     const prefers = typeof window !== 'undefined' ? window.matchMedia('(prefers-color-scheme: dark)').matches : false;
@@ -44,11 +47,13 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
     if (typeof window !== 'undefined') localStorage.setItem('darkMode', darkMode);
   }, [darkMode]);
 
+  // lấy chuyên mục cho menu
   useEffect(() => { (async () => {
     const { data } = await supabase.from('categories').select('id, name, slug').order('name', { ascending: true });
     setCategories(data || []);
   })(); }, []);
 
+  // search modal (nếu bạn đang dùng)
   const runSearch = async () => {
     setLoading(true);
     let query = supabase.from('apps').select('*').order(sortBy, { ascending: sortBy === 'name' });
@@ -60,16 +65,17 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
   };
   useEffect(() => { if (searchOpen) runSearch(); }, [q, activeCategory, sortBy, searchOpen]);
 
+  // đóng drawer khi click ra ngoài
   useEffect(() => {
     const close = (e) => {
       if (drawerRef.current && !drawerRef.current.contains(e.target)) setMobileMenuOpen(false);
-      if (menuDropRef.current && !menuDropRef.current.contains(e.target)) setMenuDropOpen(false);
     };
-    document.addEventListener('mousedown', close);
+    if (mobileMenuOpen) document.addEventListener('mousedown', close);
     return () => document.removeEventListener('mousedown', close);
-  }, []);
+  }, [mobileMenuOpen]);
 
-  const notifCount = 0; // TODO: nối với Firestore nếu cần
+  // TODO: nối badge thật
+  const notifCount = 0;
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
@@ -91,88 +97,28 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
             </Link>
           </div>
 
-          {/* Middle: Nav tối giản */}
+          {/* Middle (tối giản) */}
           <nav className="hidden md:flex items-center gap-6 text-sm">
             <Link href="/tools" className="hover:text-red-600">Công cụ</Link>
             <Link href="/categories" className="hover:text-red-600">Chuyên mục</Link>
             <Link href="/about" className="hover:text-red-600">Giới thiệu</Link>
           </nav>
 
-          {/* Right: Search | Menu | Bell | Avatar */}
+          {/* Right: Search | Bell | Avatar */}
           <div className="flex items-center gap-2">
-            {/* Search */}
             <button
               onClick={() => setSearchOpen(true)}
               className="flex items-center justify-center w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
-              aria-label="Search"
-              title="Tìm kiếm (/ hoặc Ctrl/⌘+K)"
+              aria-label="Search" title="Tìm kiếm (/ hoặc Ctrl/⌘+K)"
             >
               <FontAwesomeIcon icon={faSearch} className="w-4 h-4" />
             </button>
 
-            {/* Menu dropdown (Công cụ + Chuyên mục) */}
-            <div className="relative" ref={menuDropRef}>
-              <button
-                onClick={() => setMenuDropOpen(v => !v)}
-                className="flex items-center justify-center w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
-                aria-label="Menu"
-                title="Menu"
-              >
-                <FontAwesomeIcon icon={faGrip} className="w-4 h-4" />
-              </button>
-              {menuDropOpen && (
-                <div className="absolute right-0 mt-2 w-80 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl overflow-hidden">
-                  {/* Công cụ */}
-                  <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-800">
-                    <div className="flex items-center gap-2 text-sm font-semibold">
-                      <FontAwesomeIcon icon={faWrench} className="w-4 h-4" />
-                      Công cụ
-                    </div>
-                    <div className="mt-2 grid grid-cols-1 gap-1 text-sm">
-                      <a href="https://appinfo.storeios.net" target="_blank" rel="noopener noreferrer"
-                         className="flex items-center justify-between px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800">
-                        <span>App Info</span>
-                        <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="w-3.5 h-3.5 opacity-70" />
-                      </a>
-                      <a href="https://ipadl.storeios.net" target="_blank" rel="noopener noreferrer"
-                         className="flex items-center justify-between px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800">
-                        <span>IPA Downloader</span>
-                        <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="w-3.5 h-3.5 opacity-70" />
-                      </a>
-                    </div>
-                  </div>
-
-                  {/* Chuyên mục */}
-                  <div className="px-4 py-3">
-                    <div className="flex items-center gap-2 text-sm font-semibold">
-                      <FontAwesomeIcon icon={faLayerGroup} className="w-4 h-4" />
-                      Chuyên mục
-                    </div>
-                    <div className="mt-2 grid grid-cols-1 gap-1 text-sm max-h-60 overflow-auto pr-1">
-                      {categories.length === 0 && (
-                        <span className="px-3 py-2 text-gray-500">Chưa có chuyên mục</span>
-                      )}
-                      {categories.map((c) => {
-                        const href = c.slug ? `/categories/${c.slug}` : `/categories/${c.id}`;
-                        return (
-                          <Link key={c.id} href={href} className="px-3 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800">
-                            {c.name}
-                          </Link>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Notifications */}
             <div className="relative">
               <button
                 onClick={() => setNotifOpen(v => !v)}
                 className="relative flex items-center justify-center w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
-                aria-label="Notifications"
-                title="Thông báo"
+                aria-label="Notifications" title="Thông báo"
               >
                 <FontAwesomeIcon icon={faBell} className="w-4 h-4" />
                 {notifCount > 0 && (
@@ -184,13 +130,12 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
               <NotificationsPanel open={notifOpen} onClose={() => setNotifOpen(false)} />
             </div>
 
-            {/* Avatar / Auth */}
             <LoginButton onToggleTheme={() => setDarkMode(v => !v)} isDark={darkMode} />
           </div>
         </div>
       </header>
 
-      {/* MOBILE DRAWER */}
+      {/* MOBILE DRAWER (Hamburger) */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 flex">
           <div ref={drawerRef} className="w-80 max-w-[85%] bg-white dark:bg-gray-900 h-full p-6 shadow-2xl">
@@ -201,6 +146,7 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
               </button>
             </div>
 
+            {/* Tìm kiếm nhanh */}
             <button
               onClick={() => { setMobileMenuOpen(false); setSearchOpen(true); }}
               className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-left flex items-center gap-2"
@@ -209,14 +155,56 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
               Tìm kiếm…
             </button>
 
-            <div className="mt-6 space-y-3">
-              <Link href="/tools" onClick={() => setMobileMenuOpen(false)} className="block px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800">Công cụ</Link>
-              <Link href="/categories" onClick={() => setMobileMenuOpen(false)} className="block px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800">Chuyên mục</Link>
+            {/* --- Công cụ --- */}
+            <div className="mt-6">
+              <div className="flex items-center gap-2 text-sm font-semibold mb-2">
+                <FontAwesomeIcon icon={faWrench} className="w-4 h-4" />
+                Công cụ
+              </div>
+              <div className="space-y-1">
+                <a
+                  href="https://appinfo.storeios.net" target="_blank" rel="noopener noreferrer"
+                  className="flex items-center justify-between px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                >
+                  <span>App Info</span>
+                  <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="w-3.5 h-3.5 opacity-70" />
+                </a>
+                <a
+                  href="https://ipadl.storeios.net" target="_blank" rel="noopener noreferrer"
+                  className="flex items-center justify-between px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                >
+                  <span>IPA Downloader</span>
+                  <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="w-3.5 h-3.5 opacity-70" />
+                </a>
+              </div>
+            </div>
+
+            {/* --- Chuyên mục --- */}
+            <div className="mt-6">
+              <div className="flex items-center gap-2 text-sm font-semibold mb-2">
+                <FontAwesomeIcon icon={faLayerGroup} className="w-4 h-4" />
+                Chuyên mục
+              </div>
+              <div className="space-y-1 max-h-64 overflow-auto pr-1">
+                {categories.length === 0 && (
+                  <div className="px-2 py-2 text-sm text-gray-500">Chưa có chuyên mục</div>
+                )}
+                {categories.map((c) => {
+                  const href = c.slug ? `/categories/${c.slug}` : `/categories/${c.id}`;
+                  return (
+                    <Link key={c.id} href={href} onClick={() => setMobileMenuOpen(false)}
+                          className="block px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800">
+                      {c.name}
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Link cố định khác (nếu muốn) */}
+            <div className="mt-6 border-t border-gray-200 dark:border-gray-800 pt-4 space-y-2">
               <Link href="/about" onClick={() => setMobileMenuOpen(false)} className="block px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800">Giới thiệu</Link>
-              <a href="https://appinfo.storeios.net" target="_blank" rel="noopener noreferrer"
-                 className="block px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800">App Info</a>
-              <a href="https://ipadl.storeios.net" target="_blank" rel="noopener noreferrer"
-                 className="block px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800">IPA Downloader</a>
+              <Link href="/privacy" onClick={() => setMobileMenuOpen(false)} className="block px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800">Bảo mật</Link>
             </div>
           </div>
         </div>
@@ -238,7 +226,7 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
         {children}
       </main>
 
-      {/* FOOTER */}
+      {/* FOOTER (giữ nguyên) */}
       <footer className="bg-gray-900 text-gray-300 mt-16 border-t border-gray-800">
         <div className="max-w-screen-2xl mx-auto px-4 py-10 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
           <div>
