@@ -6,6 +6,7 @@ import {
   limit, onSnapshot, orderBy, query, runTransaction,
   serverTimestamp, updateDoc, where
 } from 'firebase/firestore';
+import { sendEmailVerification } from 'firebase/auth';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faPaperPlane, faReply, faTrash, faUserCircle, faCheckCircle, faQuoteLeft } from '@fortawesome/free-solid-svg-icons';
 
@@ -85,6 +86,7 @@ export default function Comments({ postId, postTitle }) {
   const [content, setContent] = useState('');
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const verified = !!me?.emailVerified;
 
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(setMe);
@@ -136,7 +138,12 @@ export default function Comments({ postId, postTitle }) {
 
   const onSubmit = async (e) => {
     e.preventDefault();
-    if (!me || !content.trim()) return;
+    if (!me) return;
+    if (!me.emailVerified) {
+      alert('Tài khoản của bạn chưa được xác minh email. Vui lòng xác minh trước khi bình luận.');
+      return;
+    }
+    if (!content.trim()) return;
 
     const payload = {
       postId: String(postId),
@@ -183,7 +190,28 @@ export default function Comments({ postId, postTitle }) {
     <div className="mt-6">
       <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-3">Bình luận</h3>
 
-      {me ? (
+      {!me ? (
+        <div className="text-sm text-gray-700 dark:text-gray-300">Hãy đăng nhập để bình luận.</div>
+      ) : !verified ? (
+        <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">
+          Tài khoản của bạn <b>chưa được xác minh email</b>. Vui lòng kiểm tra hộp thư và hoàn tất xác minh để có thể bình luận.
+          <button
+            onClick={async () => {
+              try {
+                if (auth.currentUser) {
+                  await sendEmailVerification(auth.currentUser);
+                  alert('Đã gửi lại email xác minh.');
+                }
+              } catch (e) {
+                alert('Không thể gửi email xác minh, hãy thử lại.');
+              }
+            }}
+            className="ml-2 underline font-semibold"
+          >
+            Gửi lại email xác minh
+          </button>
+        </div>
+      ) : (
         <form onSubmit={onSubmit} className="flex flex-col gap-2">
           <textarea
             value={content}
@@ -193,13 +221,15 @@ export default function Comments({ postId, postTitle }) {
             maxLength={3000}
           />
           <div className="flex justify-end">
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:scale-95 shadow-sm">
+            <button
+              type="submit"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:scale-95 shadow-sm inline-flex items-center gap-2"
+            >
+              <FontAwesomeIcon icon={faPaperPlane} />
               Gửi
             </button>
           </div>
         </form>
-      ) : (
-        <div className="text-sm text-gray-700 dark:text-gray-300">Hãy đăng nhập để bình luận.</div>
       )}
 
       <div className="mt-4">
@@ -318,7 +348,7 @@ function ReplyBox({ me, postId, parent, replyingTo=null, adminUids, postTitle })
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
   const target = replyingTo || parent;
-  const canReply = !!me && me.uid !== target.authorId;
+  const canReply = !!me && !!me.emailVerified && me.uid !== (target?.authorId ?? '');
 
   const onReply = async (e) => {
     e.preventDefault();
@@ -370,7 +400,31 @@ function ReplyBox({ me, postId, parent, replyingTo=null, adminUids, postTitle })
     }));
   };
 
-  if (!canReply) return null;
+  if (!me) return null;
+
+  // Nếu chưa xác minh: không hiển thị form trả lời (giữ UX gọn gàng)
+  if (!me.emailVerified) {
+    return (
+      <div className="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">
+        Hãy xác minh email để có thể trả lời.
+        <button
+          onClick={async () => {
+            try {
+              if (auth.currentUser) {
+                await sendEmailVerification(auth.currentUser);
+                alert('Đã gửi lại email xác minh.');
+              }
+            } catch {}
+          }}
+          className="ml-2 underline font-semibold"
+        >
+          Gửi lại email xác minh
+        </button>
+      </div>
+    );
+  }
+
+  if (me.uid === (target?.authorId ?? '')) return null;
 
   return (
     <div className="mt-2">
@@ -392,16 +446,22 @@ function ReplyBox({ me, postId, parent, replyingTo=null, adminUids, postTitle })
             onChange={(e) => setText(e.target.value)}
             className="w-full min-h-[72px] border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-[15px] leading-6 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/40 outline-none"
             placeholder={`Phản hồi ${replyingTo ? (replyingTo.userName || 'người dùng') : (parent.userName || 'người dùng')}…`}
-            maxLength={3000}
-            autoFocus
+            maxLength={2000}
           />
-          <div className="flex items-center gap-2">
-            <button className="px-3 py-1.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg shadow-sm">
-              <FontAwesomeIcon icon={faPaperPlane} className="mr-1" />
-              Gửi
+          <div className="flex gap-2 justify-end">
+            <button
+              type="button"
+              onClick={() => { setOpen(false); setText(''); }}
+              className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+            >
+              Huỷ
             </button>
-            <button type="button" onClick={() => setOpen(false)} className="px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300">
-              Hủy
+            <button
+              type="submit"
+              className="px-4 py-2 text-sm rounded-lg bg-gray-900 text-white dark:bg-white dark:text-gray-900 hover:opacity-90 inline-flex items-center gap-2"
+            >
+              <FontAwesomeIcon icon={faPaperPlane} />
+              Gửi phản hồi
             </button>
           </div>
         </form>

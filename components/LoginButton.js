@@ -134,7 +134,16 @@ export default function LoginButton({ onToggleTheme, isDark }) {
         setEmail(''); setPassword('');
         if (ENFORCE_EMAIL_VERIFICATION) await auth.signOut();
       } else {
-        await signInWithEmailAndPassword(auth, email, password);
+        const cred = await signInWithEmailAndPassword(auth, email, password);
+        const u = cred.user || auth.currentUser;
+        // 🔐 Chặn dùng tài khoản chưa xác minh để tương tác
+        if (ENFORCE_EMAIL_VERIFICATION && u && !u.emailVerified) {
+          try { await sendEmailVerification(u); } catch {}
+          showToast('info', 'Tài khoản chưa xác minh. Đã gửi lại email xác minh.');
+          await auth.signOut();
+          setLoading(false);
+          return;
+        }
         if (pendingCred && hint === 'password') await doLinkIfNeeded();
         setOpenAuth(false);
         setEmail(''); setPassword('');
@@ -147,18 +156,15 @@ export default function LoginButton({ onToggleTheme, isDark }) {
   };
 
   const onReset = async () => {
-  if (!email) return setMsg('Nhập email trước khi đặt lại mật khẩu.');
-  try {
-    const actionCodeSettings = {
-      url: 'https://auth.storeios.net',
-      handleCodeInApp: false,
-    };
-    await sendPasswordResetEmail(auth, email, actionCodeSettings);
-    showToast('info', 'Đã gửi email đặt lại mật khẩu.');
-  } catch (e) {
-    setMsg(e.message);
-  }
-};
+    if (!email) return setMsg('Nhập email trước khi đặt lại mật khẩu.');
+    try {
+      const actionCodeSettings = { url: 'https://auth.storeios.net', handleCodeInApp: false };
+      await sendPasswordResetEmail(auth, email, actionCodeSettings);
+      showToast('info', 'Đã gửi email đặt lại mật khẩu.');
+    } catch (e) {
+      setMsg(e.message);
+    }
+  };
 
   const logout = async () => {
     await auth.signOut();
@@ -304,21 +310,25 @@ export default function LoginButton({ onToggleTheme, isDark }) {
                   onChange={e => setPassword(e.target.value)}
                   required
                 />
+
+                {msg && <div className="text-sm text-red-600">{msg}</div>}
+
                 <div className="flex items-center justify-between">
                   <button type="submit" disabled={loading}
-                          className="px-3 py-2 rounded-lg bg-gray-900 text-white dark:bg-white dark:text-gray-900 hover:opacity-90">
+                          className="px-3 py-2 rounded-lg bg-gray-900 text-white dark:bg.white dark:text-gray-900 hover:opacity-90">
                     {mode === 'signup' ? 'Đăng ký' : 'Đăng nhập'}
                   </button>
                   <div className="flex items-center gap-4 text-sm">
-                    <button type="button" onClick={() => setMode(m => m === 'signup' ? 'login' : 'signup')} className="underline">
+                    <button type="button" onClick={() => setMode(m => m==='signup' ? 'login' : 'signup')}
+                            className="underline">
                       {mode === 'signup' ? 'Tôi đã có tài khoản' : 'Tạo tài khoản mới'}
                     </button>
-                    <button type="button" onClick={onReset} className="underline">Quên mật khẩu</button>
+                    <button type="button" onClick={onReset} className="underline">Quên mật khẩu?</button>
                   </div>
                 </div>
               </form>
 
-              {msg && <p className="mt-3 text-sm text-red-600 dark:text-red-400">{msg}</p>}
+              <div className="h-3" />
             </div>
           </div>
         </div>
