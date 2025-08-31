@@ -122,31 +122,30 @@ export default function NotificationsPanel({ open, onClose }) {
                   onClick={() => !n.isRead && markRead(n.id, n.isRead)}
                   className="flex items-start gap-3 no-underline"
                 >
-                  {/* Dot unread */}
                   {!n.isRead && (
                     <span className="mt-1 inline-flex h-2.5 w-2.5 rounded-full bg-sky-500 flex-shrink-0" aria-hidden />
                   )}
 
                   <div className="flex-1 min-w-0">
-                    {/* Dòng chính: tên người + badge loại + tiêu đề */}
                     <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
                       <span className="font-semibold text-sky-800 dark:text-sky-300">{who}</span>
                       <span className="text-[11px] px-2 py-0.5 rounded-full bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300">
                         {n.type === 'reply' ? 'Phản hồi' : 'Bình luận'}
                       </span>
                       <span className="truncate text-sm text-slate-700 dark:text-slate-200">
-                        trong <i className="text-slate-900 dark:text-white font-medium">{title}</i>
+                        trong <i className="font-medium">
+                          {/* Tiêu đề bài kiểu link */}
+                          <span className="text-blue-600 hover:underline">{title}</span>
+                        </i>
                       </span>
                     </div>
 
-                    {/* Nội dung trích đoạn */}
                     {content && (
                       <div className="mt-1 text-[13px] text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-gray-800/60 border border-slate-200 dark:border-gray-700 rounded-lg p-2 line-clamp-3">
                         "{content}"
                       </div>
                     )}
 
-                    {/* Thời gian */}
                     {t && (
                       <div className="mt-1 text-[12px] text-slate-500" title={t.abs}>
                         {t.rel}
@@ -155,7 +154,6 @@ export default function NotificationsPanel({ open, onClose }) {
                   </div>
                 </Link>
 
-                {/* Nút Đã đọc cho item chưa đọc */}
                 {!n.isRead && (
                   <div className="mt-2">
                     <button

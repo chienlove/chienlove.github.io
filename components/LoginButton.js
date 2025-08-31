@@ -19,10 +19,12 @@ import {
   faMoon,
   faSun,
   faPlus,
+  faEye,
+  faEyeSlash,
 } from '@fortawesome/free-solid-svg-icons';
 import { faGoogle, faGithub } from '@fortawesome/free-brands-svg-icons';
 
-const ENFORCE_EMAIL_VERIFICATION = true; // chỉ dùng sau signup để gửi verify, KHÔNG chặn login
+const ENFORCE_EMAIL_VERIFICATION = true; // dùng khi signup để gửi mail; KHÔNG chặn login
 
 export default function LoginButton({ onToggleTheme, isDark }) {
   const [user, setUser] = useState(null);
@@ -33,6 +35,12 @@ export default function LoginButton({ onToggleTheme, isDark }) {
   const [mode, setMode] = useState('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPwd, setShowPwd] = useState(false);
+
+  // Đăng ký: xác nhận mật khẩu + show/hide
+  const [confirmPwd, setConfirmPwd] = useState('');
+  const [showConfirm, setShowConfirm] = useState(false);
+
   const [msg, setMsg] = useState('');
   const [toast, setToast] = useState(null);
   const [pendingCred, setPendingCred] = useState(null);
@@ -54,10 +62,28 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     return () => document.removeEventListener('mousedown', onClick);
   }, []);
 
-  const showToast = (type, text, ms = 2200) => {
+  const showToast = (type, text, ms = 2000) => {
     setToast({ type, text });
     window.clearTimeout((showToast._t || 0));
     showToast._t = window.setTimeout(() => setToast(null), ms);
+  };
+
+  // Toast giữa màn hình + màu theo loại
+  const Toast = () => {
+    if (!toast) return null;
+    const tone =
+      toast.type === 'success' ? 'bg-emerald-600' :
+      toast.type === 'error'   ? 'bg-rose-600' :
+      toast.type === 'info'    ? 'bg-sky-600' :
+                                 'bg-gray-800';
+    return (
+      <div className="fixed inset-0 z-[120] flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/20" />
+        <div className={`relative rounded-xl px-4 py-2 text-sm shadow-xl text-white ${tone}`}>
+          {toast.text}
+        </div>
+      </div>
+    );
   };
 
   const handleAccountExists = async (error, provider) => {
@@ -121,19 +147,24 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     } finally { setLoading(false); }
   };
 
+  // Kiểm tra độ mạnh & trùng khớp (đăng ký)
+  const pwdStrong = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(password);
+  const pwdMatch  = password && confirmPwd && password === confirmPwd;
+
   const onSubmitEmail = async (e) => {
     e.preventDefault();
     setLoading(true); setMsg('');
     try {
       if (mode === 'signup') {
+        if (!pwdStrong) { setMsg('Mật khẩu phải ≥8 ký tự và có chữ, số, ký tự đặc biệt.'); setLoading(false); return; }
+        if (!pwdMatch)  { setMsg('Xác nhận mật khẩu không khớp.'); setLoading(false); return; }
+
         const { user: created } = await createUserWithEmailAndPassword(auth, email, password);
-        if (ENFORCE_EMAIL_VERIFICATION) {
-          try { await sendEmailVerification(created); } catch {}
-        }
-        showToast('success', 'Đăng ký thành công! Hãy kiểm tra email để xác minh tài khoản.');
+        if (ENFORCE_EMAIL_VERIFICATION) { try { await sendEmailVerification(created); } catch {} }
+        showToast('success', 'Đăng ký thành công! Hãy kiểm tra email để xác minh.');
         setMode('login');
         setOpenAuth(false);
-        setEmail(''); setPassword('');
+        setEmail(''); setPassword(''); setConfirmPwd('');
         // KHÔNG signOut cưỡng bức -- bạn yêu cầu chỉ chặn khi bình luận
       } else {
         await signInWithEmailAndPassword(auth, email, password);
@@ -162,16 +193,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     setMenuOpen(false);
     showToast('info', 'Bạn đã đăng xuất.');
   };
-
-  // Toast ở GIỮA màn hình (không bị quảng cáo pinned che)
-  const Toast = () => !toast ? null : (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/20" />
-      <div className="relative rounded-xl px-4 py-2 text-sm shadow-xl border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100">
-        {toast.text}
-      </div>
-    </div>
-  );
 
   // ==== Logged-in ====
   if (user) {
@@ -268,7 +289,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
             </div>
 
             <div className="px-5 pt-5 pb-2">
-              {/* Social + icons */}
+              {/* Social */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <button onClick={() => loginGoogle(false)} disabled={loading}
                         className="flex items-center justify-center gap-2 px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-60">
@@ -297,20 +318,57 @@ export default function LoginButton({ onToggleTheme, isDark }) {
                   onChange={e => setEmail(e.target.value)}
                   required
                 />
-                <input
-                  type="password"
-                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2"
-                  placeholder="Mật khẩu"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  required
-                />
+
+                {/* Password + show/hide */}
+                <div className="relative">
+                  <input
+                    type={showPwd ? 'text' : 'password'}
+                    className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 pr-10"
+                    placeholder="Mật khẩu"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    required
+                  />
+                  <button type="button" onClick={() => setShowPwd(v => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-600">
+                    <FontAwesomeIcon icon={showPwd ? faEyeSlash : faEye} />
+                  </button>
+                </div>
+
+                {/* Signup: confirm + strength */}
+                {mode === 'signup' && (
+                  <>
+                    <div className="relative">
+                      <input
+                        type={showConfirm ? 'text' : 'password'}
+                        className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 pr-10"
+                        placeholder="Xác nhận mật khẩu"
+                        value={confirmPwd}
+                        onChange={e => setConfirmPwd(e.target.value)}
+                        required
+                      />
+                      <button type="button" onClick={() => setShowConfirm(v => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-600">
+                        <FontAwesomeIcon icon={showConfirm ? faEyeSlash : faEye} />
+                      </button>
+                    </div>
+
+                    <ul className="text-xs space-y-1 mt-1">
+                      <li className={password.length >= 8 ? 'text-emerald-600' : 'text-gray-500'}>• Tối thiểu 8 ký tự</li>
+                      <li className={/[A-Za-z]/.test(password) ? 'text-emerald-600' : 'text-gray-500'}>• Có chữ</li>
+                      <li className={/\d/.test(password) ? 'text-emerald-600' : 'text-gray-500'}>• Có số</li>
+                      <li className={/[^A-Za-z0-9]/.test(password) ? 'text-emerald-600' : 'text-gray-500'}>• Có ký tự đặc biệt</li>
+                      <li className={pwdMatch ? 'text-emerald-600' : 'text-gray-500'}>• Xác nhận mật khẩu khớp</li>
+                    </ul>
+                  </>
+                )}
 
                 {msg && <div className="text-sm text-red-600">{msg}</div>}
 
                 <div className="flex items-center justify-between">
-                  <button type="submit" disabled={loading}
-                          className="px-3 py-2 rounded-lg bg-gray-900 text-white dark:bg-white dark:text-gray-900 hover:opacity-90">
+                  <button
+                    type="submit"
+                    disabled={loading || (mode==='signup' && (!pwdStrong || !pwdMatch))}
+                    className={`px-3 py-2 rounded-lg text-white ${mode==='signup' ? (pwdStrong && pwdMatch ? 'bg-gray-900 hover:opacity-90' : 'bg-gray-400 cursor-not-allowed') : 'bg-gray-900 hover:opacity-90'}`}
+                  >
                     {mode === 'signup' ? 'Đăng ký' : 'Đăng nhập'}
                   </button>
                   <div className="flex items-center gap-4 text-sm">

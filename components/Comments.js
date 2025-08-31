@@ -4,13 +4,17 @@ import { auth, db } from '../lib/firebase-client';
 import {
   addDoc, collection, deleteDoc, doc, getDoc,
   limit, onSnapshot, orderBy, query, runTransaction,
-  serverTimestamp, updateDoc, where
+  serverTimestamp, updateDoc, where,
+  arrayUnion, arrayRemove, increment
 } from 'firebase/firestore';
 import { sendEmailVerification } from 'firebase/auth';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPaperPlane, faReply, faTrash, faUserCircle, faCheckCircle, faQuoteLeft } from '@fortawesome/free-solid-svg-icons';
+import {
+  faPaperPlane, faReply, faTrash, faUserCircle, faCheckCircle, faQuoteLeft, faHeart as faHeartSolid
+} from '@fortawesome/free-solid-svg-icons';
+import { faHeart as faHeartRegular } from '@fortawesome/free-regular-svg-icons';
 
-/* ========= Helpers gốc & mới (KHÔNG xoá, chỉ bổ sung) ========= */
+/* ========= Helpers ========= */
 function preferredName(user) {
   if (!user) return 'Người dùng';
   const p0 = user.providerData?.[0];
@@ -19,9 +23,7 @@ function preferredName(user) {
 function preferredPhoto(user) {
   return user?.photoURL || user?.providerData?.[0]?.photoURL || '';
 }
-
 function formatDate(ts) {
-  // Hỗ trợ Firestore Timestamp, number, string, Date
   try {
     let d = null;
     if (!ts) return '';
@@ -30,21 +32,12 @@ function formatDate(ts) {
     else if (typeof ts === 'string') d = new Date(ts);
     else if (ts instanceof Date) d = ts;
     if (!d) return '';
-
     const diff = (Date.now() - d.getTime()) / 1000;
     const rtf = new Intl.RelativeTimeFormat('vi', { numeric: 'auto' });
-    const units = [
-      ['year', 31536000],
-      ['month', 2592000],
-      ['week', 604800],
-      ['day', 86400],
-      ['hour', 3600],
-      ['minute', 60],
-      ['second', 1],
-    ];
+    const units = [['year',31536000],['month',2592000],['week',604800],['day',86400],['hour',3600],['minute',60],['second',1]];
     for (const [unit, sec] of units) {
       if (Math.abs(diff) >= sec || unit === 'second') {
-        const val = Math.round(diff / sec * -1); // quá khứ -> âm
+        const val = Math.round(diff / sec * -1);
         return { rel: rtf.format(val, unit), abs: d.toLocaleString('vi-VN') };
       }
     }
@@ -56,7 +49,7 @@ function excerpt(s, n = 140) {
   return t.length > n ? `${t.slice(0, n)}…` : t;
 }
 
-/* Cho phép truyền thêm metadata để thông báo hiển thị giàu nội dung */
+/* ========= Notifications helper ========= */
 async function createNotification(payload = {}) {
   const { toUserId, type, postId, commentId, fromUserId, ...extra } = payload;
   await addDoc(collection(db, 'notifications'), {
@@ -67,7 +60,7 @@ async function createNotification(payload = {}) {
     isRead: false,
     createdAt: serverTimestamp(),
     fromUserId,
-    ...extra, // fromUserName, fromUserPhoto, postTitle, commentText,...
+    ...extra, // fromUserName, fromUserPhoto, postTitle, commentText, ...
   });
 }
 async function bumpCounter(uid, delta) {
@@ -79,15 +72,20 @@ async function bumpCounter(uid, delta) {
   });
 }
 
-/* ==================== Modal trung tâm (alert + confirm) ==================== */
-function CenterModal({ open, title, children, onClose, actions }) {
+/* ========= Modal trung tâm (alert + confirm) ========= */
+function CenterModal({ open, title, children, onClose, actions, tone = 'info' }) {
   if (!open) return null;
+  const toneClass =
+    tone === 'success' ? 'border-emerald-300 bg-emerald-50' :
+    tone === 'error'   ? 'border-rose-300 bg-rose-50' :
+    tone === 'warning' ? 'border-amber-300 bg-amber-50' :
+                         'border-sky-300 bg-sky-50';
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative w-[92vw] max-w-md rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-2xl p-4">
+      <div className={`relative w-[92vw] max-w-md rounded-2xl border shadow-2xl p-4 ${toneClass}`}>
         {title && <h3 className="text-lg font-semibold mb-2">{title}</h3>}
-        <div className="text-sm text-gray-800 dark:text-gray-200">{children}</div>
+        <div className="text-sm text-gray-900">{children}</div>
         <div className="mt-4 flex justify-end gap-2">
           {actions}
         </div>
@@ -104,27 +102,29 @@ export default function Comments({ postId, postTitle }) {
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // modal state
+  // Modal center
   const [modalOpen, setModalOpen] = useState(false);
   const [modalTitle, setModalTitle] = useState('');
   const [modalContent, setModalContent] = useState(null);
   const [modalActions, setModalActions] = useState(null);
+  const [modalTone, setModalTone] = useState('info');
 
-  // confirm delete
+  // ===== Helpers mở modal
   const openConfirm = (message, onConfirm) => {
     setModalTitle('Xác nhận xoá');
     setModalContent(<p>{message}</p>);
+    setModalTone('warning');
     setModalActions(
       <>
         <button
           onClick={() => setModalOpen(false)}
-          className="px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+          className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-white"
         >
           Huỷ
         </button>
         <button
           onClick={async () => { setModalOpen(false); await onConfirm(); }}
-          className="px-3 py-2 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700"
+          className="px-3 py-2 text-sm rounded-lg bg-rose-600 text-white hover:bg-rose-700"
         >
           Xoá
         </button>
@@ -132,15 +132,15 @@ export default function Comments({ postId, postTitle }) {
     );
     setModalOpen(true);
   };
-
   const openVerifyPrompt = () => {
     setModalTitle('Cần xác minh email');
     setModalContent(
       <div>
         <p>Tài khoản của bạn <b>chưa được xác minh email</b>. Vui lòng xác minh để có thể bình luận.</p>
-        <p className="mt-2 text-xs text-gray-500">Nếu không thấy email, hãy kiểm tra thư rác hoặc gửi lại.</p>
+        <p className="mt-2 text-xs text-gray-600">Không thấy email? Hãy kiểm tra thư rác hoặc gửi lại.</p>
       </div>
     );
+    setModalTone('info');
     setModalActions(
       <>
         <button
@@ -148,9 +148,13 @@ export default function Comments({ postId, postTitle }) {
             try {
               if (auth.currentUser) {
                 await sendEmailVerification(auth.currentUser);
-                setModalContent(<p>Đã gửi lại email xác minh. Hãy kiểm tra hộp thư của bạn.</p>);
+                setModalContent(<p>Đã gửi lại email xác minh. Hãy kiểm tra hộp thư.</p>);
+                setModalTone('success');
               }
-            } catch {}
+            } catch {
+              setModalContent(<p>Không gửi được email xác minh. Vui lòng thử lại sau.</p>);
+              setModalTone('error');
+            }
           }}
           className="px-3 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700"
         >
@@ -158,7 +162,29 @@ export default function Comments({ postId, postTitle }) {
         </button>
         <button
           onClick={() => setModalOpen(false)}
-          className="px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+          className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-white"
+        >
+          Để sau
+        </button>
+      </>
+    );
+    setModalOpen(true);
+  };
+  const openLoginPrompt = () => {
+    setModalTitle('Cần đăng nhập');
+    setModalContent(<p>Bạn cần <b>đăng nhập</b> để thực hiện thao tác này.</p>);
+    setModalTone('info');
+    setModalActions(
+      <>
+        <a
+          href="/login" // nếu bạn có trang /login; nếu không có, có thể mở modal đăng nhập tuỳ kiến trúc
+          className="px-3 py-2 text-sm rounded-lg bg-gray-900 text-white hover:opacity-90"
+        >
+          Đăng nhập
+        </a>
+        <button
+          onClick={() => setModalOpen(false)}
+          className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-white"
         >
           Để sau
         </button>
@@ -215,9 +241,10 @@ export default function Comments({ postId, postTitle }) {
 
   const isAdmin = useMemo(() => (uid) => adminUids.includes(uid), [adminUids]);
 
+  // ===== Submit bình luận (chỉ chặn nếu chưa verify)
   const onSubmit = async (e) => {
     e.preventDefault();
-    if (!me) return;
+    if (!me) { openLoginPrompt(); return; }
     if (!me.emailVerified) { openVerifyPrompt(); return; }
     if (!content.trim()) return;
 
@@ -229,7 +256,9 @@ export default function Comments({ postId, postTitle }) {
       userPhoto: preferredPhoto(me),
       content: content.trim(),
       createdAt: serverTimestamp(),
-      replyToUserId: null
+      replyToUserId: null,
+      likeCount: 0,
+      likedBy: []
     };
     const ref = await addDoc(collection(db, 'comments'), payload);
     setContent('');
@@ -252,6 +281,20 @@ export default function Comments({ postId, postTitle }) {
     }));
   };
 
+  // ===== Toggle ❤️ like
+  const toggleLike = async (c) => {
+    if (!me) { openLoginPrompt(); return; }
+    const cid = c.id;
+    const ref = doc(db, 'comments', cid);
+    const hasLiked = Array.isArray(c.likedBy) && c.likedBy.includes(me.uid);
+    try {
+      await updateDoc(ref, {
+        likedBy: hasLiked ? arrayRemove(me.uid) : arrayUnion(me.uid),
+        likeCount: increment(hasLiked ? -1 : +1),
+      });
+    } catch {}
+  };
+
   const roots = items.filter(c => !c.parentId);
   const repliesByParent = useMemo(() => {
     const m = {};
@@ -265,7 +308,7 @@ export default function Comments({ postId, postTitle }) {
   return (
     <div className="mt-6">
       {/* Centered Modal */}
-      <CenterModal open={modalOpen} title={modalTitle} onClose={() => setModalOpen(false)} actions={modalActions}>
+      <CenterModal open={modalOpen} title={modalTitle} onClose={() => setModalOpen(false)} actions={modalActions} tone={modalTone}>
         {modalContent}
       </CenterModal>
 
@@ -309,8 +352,8 @@ export default function Comments({ postId, postTitle }) {
                   <CommentRow
                     c={c}
                     me={me}
-                    isAdminFn={isAdmin}
-                    canDelete={!!me && (me.uid === c.authorId || isAdmin(me.uid))}
+                    isAdminFn={(uid)=>adminUids.includes(uid)}
+                    canDelete={!!me && (me.uid === c.authorId || adminUids.includes(me.uid))}
                     onDelete={() => {
                       openConfirm('Xoá bình luận này và toàn bộ phản hồi của nó?', async () => {
                         const r = repliesByParent[c.id] || [];
@@ -318,6 +361,7 @@ export default function Comments({ postId, postTitle }) {
                         await deleteDoc(doc(db, 'comments', c.id));
                       });
                     }}
+                    onToggleLike={()=>toggleLike(c)}
                   />
                   <ReplyBox
                     me={me}
@@ -326,9 +370,9 @@ export default function Comments({ postId, postTitle }) {
                     adminUids={adminUids}
                     postTitle={postTitle}
                     onNeedVerify={openVerifyPrompt}
+                    onNeedLogin={openLoginPrompt}
                   />
                   {replies.map((r) => {
-                    // Xác định người bị trả lời để hiển thị quote đẹp
                     const target = r.replyToUserId === c.authorId
                       ? c
                       : replies.find(x => x.authorId === r.replyToUserId) || null;
@@ -338,14 +382,15 @@ export default function Comments({ postId, postTitle }) {
                           c={r}
                           me={me}
                           small
-                          isAdminFn={isAdmin}
+                          isAdminFn={(uid)=>adminUids.includes(uid)}
                           quoteFrom={target}
-                          canDelete={!!me && (me.uid === r.authorId || isAdmin(me.uid))}
+                          canDelete={!!me && (me.uid === r.authorId || adminUids.includes(me.uid))}
                           onDelete={() => {
                             openConfirm('Bạn có chắc muốn xoá phản hồi này?', async () => {
                               await deleteDoc(doc(db, 'comments', r.id));
                             });
                           }}
+                          onToggleLike={()=>toggleLike(r)}
                         />
                         <ReplyBox
                           me={me}
@@ -355,6 +400,7 @@ export default function Comments({ postId, postTitle }) {
                           adminUids={adminUids}
                           postTitle={postTitle}
                           onNeedVerify={openVerifyPrompt}
+                          onNeedLogin={openLoginPrompt}
                         />
                       </div>
                     );
@@ -370,10 +416,12 @@ export default function Comments({ postId, postTitle }) {
 }
 
 /* ==================== Hàng mục con ==================== */
-function CommentRow({ c, me, small=false, canDelete=false, onDelete, isAdminFn=() => false, quoteFrom=null }) {
+function CommentRow({ c, me, small=false, canDelete=false, onDelete, isAdminFn=() => false, quoteFrom=null, onToggleLike }) {
   const avatar = c.userPhoto;
   const name = c.userName || (me && me.uid === c.authorId ? preferredName(me) : 'Người dùng');
   const time = formatDate(c.createdAt);
+  const youLiked = !!me && Array.isArray(c.likedBy) && c.likedBy.includes(me.uid);
+  const likeCount = Math.max(0, Number(c.likeCount || 0));
 
   return (
     <div className="flex items-start gap-3">
@@ -399,6 +447,17 @@ function CommentRow({ c, me, small=false, canDelete=false, onDelete, isAdminFn=(
               {time.rel}
             </span>
           )}
+
+          {/* ❤️ Like */}
+          <button
+            onClick={onToggleLike}
+            className={`ml-2 inline-flex items-center gap-1 text-xs ${youLiked ? 'text-rose-600' : 'text-gray-600 hover:text-rose-600'}`}
+            title={youLiked ? 'Bỏ thích' : 'Thích'}
+          >
+            <FontAwesomeIcon icon={youLiked ? faHeartSolid : faHeartRegular} className="w-4 h-4" />
+            <span>{likeCount}</span>
+          </button>
+
           {canDelete && (
             <button onClick={onDelete} className="ml-auto text-xs text-red-600 inline-flex items-center gap-1 hover:underline">
               <FontAwesomeIcon icon={faTrash} />
@@ -407,7 +466,7 @@ function CommentRow({ c, me, small=false, canDelete=false, onDelete, isAdminFn=(
           )}
         </div>
 
-        {/* Quote mục tiêu (nếu là reply và xác định được) */}
+        {/* Quote mục tiêu (nếu là reply) */}
         {quoteFrom && quoteFrom.id !== c.id && (
           <div className="mt-2 text-[13px] text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg p-2">
             <div className="flex items-center gap-2 mb-1 opacity-80">
@@ -426,7 +485,7 @@ function CommentRow({ c, me, small=false, canDelete=false, onDelete, isAdminFn=(
   );
 }
 
-function ReplyBox({ me, postId, parent, replyingTo=null, adminUids, postTitle, onNeedVerify }) {
+function ReplyBox({ me, postId, parent, replyingTo=null, adminUids, postTitle, onNeedVerify, onNeedLogin }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
   const target = replyingTo || parent;
@@ -434,7 +493,7 @@ function ReplyBox({ me, postId, parent, replyingTo=null, adminUids, postTitle, o
 
   const onReply = async (e) => {
     e.preventDefault();
-    if (!me) return;
+    if (!me) { onNeedLogin?.(); return; }
     if (!me.emailVerified) { onNeedVerify?.(); return; }
     if (!canReply || !text.trim()) return;
 
@@ -446,7 +505,9 @@ function ReplyBox({ me, postId, parent, replyingTo=null, adminUids, postTitle, o
       userPhoto: preferredPhoto(me),
       content: text.trim(),
       createdAt: serverTimestamp(),
-      replyToUserId: target.authorId || null
+      replyToUserId: target.authorId || null,
+      likeCount: 0,
+      likedBy: []
     });
     setText('');
     setOpen(false);
@@ -466,7 +527,7 @@ function ReplyBox({ me, postId, parent, replyingTo=null, adminUids, postTitle, o
       });
       await bumpCounter(target.authorId, +1);
     }
-    // Notify admin khác (không trùng người bị reply)
+    // Notify admin khác
     const targets = adminUids.filter(u => u !== me.uid && u !== target.authorId);
     await Promise.all(targets.map(async (uid) => {
       await createNotification({
@@ -484,14 +545,24 @@ function ReplyBox({ me, postId, parent, replyingTo=null, adminUids, postTitle, o
     }));
   };
 
-  if (!me) return null;
+  if (!me) {
+    return (
+      <div className="mt-2">
+        <button onClick={() => onNeedLogin?.()} className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 hover:underline">
+          <FontAwesomeIcon icon={faReply} />
+          Trả lời
+        </button>
+      </div>
+    );
+  }
   if (me.uid === (target?.authorId ?? '')) return null;
 
   return (
     <div className="mt-2">
       {!open ? (
         <button onClick={() => {
-          if (me && !me.emailVerified) { onNeedVerify?.(); return; }
+          if (!me) { onNeedLogin?.(); return; }
+          if (!me.emailVerified) { onNeedVerify?.(); return; }
           setOpen(true);
         }} className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 hover:underline">
           <FontAwesomeIcon icon={faReply} />
@@ -499,7 +570,6 @@ function ReplyBox({ me, postId, parent, replyingTo=null, adminUids, postTitle, o
         </button>
       ) : (
         <form onSubmit={onReply} className="flex flex-col gap-2 mt-2">
-          {/* Preview trích dẫn khi đang soạn */}
           {target && (
             <div className="text-[12px] text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 rounded-lg p-2">
               <span className="font-medium">{target.userName || 'Người dùng'}:</span> {excerpt(target.content, 160)}
@@ -525,7 +595,6 @@ function ReplyBox({ me, postId, parent, replyingTo=null, adminUids, postTitle, o
               type="submit"
               className="px-4 py-2 text-sm rounded-lg bg-gray-900 text-white dark:bg-white dark:text-gray-900 hover:opacity-90 inline-flex items-center gap-2"
             >
-              <FontAwesomeIcon icon={faPaperPlane} />
               Gửi phản hồi
             </button>
           </div>
