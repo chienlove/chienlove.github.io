@@ -22,7 +22,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { faGoogle, faGithub } from '@fortawesome/free-brands-svg-icons';
 
-const ENFORCE_EMAIL_VERIFICATION = true;
+const ENFORCE_EMAIL_VERIFICATION = true; // chỉ dùng sau signup để gửi verify, KHÔNG chặn login
 
 export default function LoginButton({ onToggleTheme, isDark }) {
   const [user, setUser] = useState(null);
@@ -54,7 +54,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     return () => document.removeEventListener('mousedown', onClick);
   }, []);
 
-  const showToast = (type, text, ms = 3000) => {
+  const showToast = (type, text, ms = 2200) => {
     setToast({ type, text });
     window.clearTimeout((showToast._t || 0));
     showToast._t = window.setTimeout(() => setToast(null), ms);
@@ -127,23 +127,16 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     try {
       if (mode === 'signup') {
         const { user: created } = await createUserWithEmailAndPassword(auth, email, password);
-        await sendEmailVerification(created);
+        if (ENFORCE_EMAIL_VERIFICATION) {
+          try { await sendEmailVerification(created); } catch {}
+        }
         showToast('success', 'Đăng ký thành công! Hãy kiểm tra email để xác minh tài khoản.');
         setMode('login');
         setOpenAuth(false);
         setEmail(''); setPassword('');
-        if (ENFORCE_EMAIL_VERIFICATION) await auth.signOut();
+        // KHÔNG signOut cưỡng bức -- bạn yêu cầu chỉ chặn khi bình luận
       } else {
-        const cred = await signInWithEmailAndPassword(auth, email, password);
-        const u = cred.user || auth.currentUser;
-        // 🔐 Chặn dùng tài khoản chưa xác minh để tương tác
-        if (ENFORCE_EMAIL_VERIFICATION && u && !u.emailVerified) {
-          try { await sendEmailVerification(u); } catch {}
-          showToast('info', 'Tài khoản chưa xác minh. Đã gửi lại email xác minh.');
-          await auth.signOut();
-          setLoading(false);
-          return;
-        }
+        await signInWithEmailAndPassword(auth, email, password);
         if (pendingCred && hint === 'password') await doLinkIfNeeded();
         setOpenAuth(false);
         setEmail(''); setPassword('');
@@ -161,9 +154,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       const actionCodeSettings = { url: 'https://auth.storeios.net', handleCodeInApp: false };
       await sendPasswordResetEmail(auth, email, actionCodeSettings);
       showToast('info', 'Đã gửi email đặt lại mật khẩu.');
-    } catch (e) {
-      setMsg(e.message);
-    }
+    } catch (e) { setMsg(e.message); }
   };
 
   const logout = async () => {
@@ -172,11 +163,15 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     showToast('info', 'Bạn đã đăng xuất.');
   };
 
-  const Toast = () => toast ? (
-    <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[120] rounded-full px-4 py-2 text-sm shadow-lg border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100">
-      {toast.text}
+  // Toast ở GIỮA màn hình (không bị quảng cáo pinned che)
+  const Toast = () => !toast ? null : (
+    <div className="fixed inset-0 z-[120] flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/20" />
+      <div className="relative rounded-xl px-4 py-2 text-sm shadow-xl border bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100">
+        {toast.text}
+      </div>
     </div>
-  ) : null;
+  );
 
   // ==== Logged-in ====
   if (user) {
@@ -315,7 +310,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
 
                 <div className="flex items-center justify-between">
                   <button type="submit" disabled={loading}
-                          className="px-3 py-2 rounded-lg bg-gray-900 text-white dark:bg.white dark:text-gray-900 hover:opacity-90">
+                          className="px-3 py-2 rounded-lg bg-gray-900 text-white dark:bg-white dark:text-gray-900 hover:opacity-90">
                     {mode === 'signup' ? 'Đăng ký' : 'Đăng nhập'}
                   </button>
                   <div className="flex items-center gap-4 text-sm">

@@ -79,6 +79,23 @@ async function bumpCounter(uid, delta) {
   });
 }
 
+/* ==================== Modal trung tâm (alert + confirm) ==================== */
+function CenterModal({ open, title, children, onClose, actions }) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="relative w-[92vw] max-w-md rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-2xl p-4">
+        {title && <h3 className="text-lg font-semibold mb-2">{title}</h3>}
+        <div className="text-sm text-gray-800 dark:text-gray-200">{children}</div>
+        <div className="mt-4 flex justify-end gap-2">
+          {actions}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ==================== Component chính ==================== */
 export default function Comments({ postId, postTitle }) {
   const [me, setMe] = useState(null);
@@ -86,7 +103,69 @@ export default function Comments({ postId, postTitle }) {
   const [content, setContent] = useState('');
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const verified = !!me?.emailVerified;
+
+  // modal state
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalTitle, setModalTitle] = useState('');
+  const [modalContent, setModalContent] = useState(null);
+  const [modalActions, setModalActions] = useState(null);
+
+  // confirm delete
+  const openConfirm = (message, onConfirm) => {
+    setModalTitle('Xác nhận xoá');
+    setModalContent(<p>{message}</p>);
+    setModalActions(
+      <>
+        <button
+          onClick={() => setModalOpen(false)}
+          className="px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+        >
+          Huỷ
+        </button>
+        <button
+          onClick={async () => { setModalOpen(false); await onConfirm(); }}
+          className="px-3 py-2 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700"
+        >
+          Xoá
+        </button>
+      </>
+    );
+    setModalOpen(true);
+  };
+
+  const openVerifyPrompt = () => {
+    setModalTitle('Cần xác minh email');
+    setModalContent(
+      <div>
+        <p>Tài khoản của bạn <b>chưa được xác minh email</b>. Vui lòng xác minh để có thể bình luận.</p>
+        <p className="mt-2 text-xs text-gray-500">Nếu không thấy email, hãy kiểm tra thư rác hoặc gửi lại.</p>
+      </div>
+    );
+    setModalActions(
+      <>
+        <button
+          onClick={async () => {
+            try {
+              if (auth.currentUser) {
+                await sendEmailVerification(auth.currentUser);
+                setModalContent(<p>Đã gửi lại email xác minh. Hãy kiểm tra hộp thư của bạn.</p>);
+              }
+            } catch {}
+          }}
+          className="px-3 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+        >
+          Gửi lại email xác minh
+        </button>
+        <button
+          onClick={() => setModalOpen(false)}
+          className="px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+        >
+          Để sau
+        </button>
+      </>
+    );
+    setModalOpen(true);
+  };
 
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(setMe);
@@ -139,10 +218,7 @@ export default function Comments({ postId, postTitle }) {
   const onSubmit = async (e) => {
     e.preventDefault();
     if (!me) return;
-    if (!me.emailVerified) {
-      alert('Tài khoản của bạn chưa được xác minh email. Vui lòng xác minh trước khi bình luận.');
-      return;
-    }
+    if (!me.emailVerified) { openVerifyPrompt(); return; }
     if (!content.trim()) return;
 
     const payload = {
@@ -188,29 +264,15 @@ export default function Comments({ postId, postTitle }) {
 
   return (
     <div className="mt-6">
+      {/* Centered Modal */}
+      <CenterModal open={modalOpen} title={modalTitle} onClose={() => setModalOpen(false)} actions={modalActions}>
+        {modalContent}
+      </CenterModal>
+
       <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-3">Bình luận</h3>
 
       {!me ? (
         <div className="text-sm text-gray-700 dark:text-gray-300">Hãy đăng nhập để bình luận.</div>
-      ) : !verified ? (
-        <div className="text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">
-          Tài khoản của bạn <b>chưa được xác minh email</b>. Vui lòng kiểm tra hộp thư và hoàn tất xác minh để có thể bình luận.
-          <button
-            onClick={async () => {
-              try {
-                if (auth.currentUser) {
-                  await sendEmailVerification(auth.currentUser);
-                  alert('Đã gửi lại email xác minh.');
-                }
-              } catch (e) {
-                alert('Không thể gửi email xác minh, hãy thử lại.');
-              }
-            }}
-            className="ml-2 underline font-semibold"
-          >
-            Gửi lại email xác minh
-          </button>
-        </div>
       ) : (
         <form onSubmit={onSubmit} className="flex flex-col gap-2">
           <textarea
@@ -219,6 +281,7 @@ export default function Comments({ postId, postTitle }) {
             className="w-full min-h-[96px] border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-[15px] leading-6 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/40 outline-none"
             placeholder="Viết bình luận..."
             maxLength={3000}
+            onFocus={() => { if (me && !me.emailVerified) openVerifyPrompt(); }}
           />
           <div className="flex justify-end">
             <button
@@ -248,13 +311,22 @@ export default function Comments({ postId, postTitle }) {
                     me={me}
                     isAdminFn={isAdmin}
                     canDelete={!!me && (me.uid === c.authorId || isAdmin(me.uid))}
-                    onDelete={async () => {
-                      const r = repliesByParent[c.id] || [];
-                      await Promise.all(r.map(rr => deleteDoc(doc(db, 'comments', rr.id))));
-                      await deleteDoc(doc(db, 'comments', c.id));
+                    onDelete={() => {
+                      openConfirm('Xoá bình luận này và toàn bộ phản hồi của nó?', async () => {
+                        const r = repliesByParent[c.id] || [];
+                        await Promise.all(r.map(rr => deleteDoc(doc(db, 'comments', rr.id))));
+                        await deleteDoc(doc(db, 'comments', c.id));
+                      });
                     }}
                   />
-                  <ReplyBox me={me} postId={postId} parent={c} adminUids={adminUids} postTitle={postTitle} />
+                  <ReplyBox
+                    me={me}
+                    postId={postId}
+                    parent={c}
+                    adminUids={adminUids}
+                    postTitle={postTitle}
+                    onNeedVerify={openVerifyPrompt}
+                  />
                   {replies.map((r) => {
                     // Xác định người bị trả lời để hiển thị quote đẹp
                     const target = r.replyToUserId === c.authorId
@@ -269,11 +341,21 @@ export default function Comments({ postId, postTitle }) {
                           isAdminFn={isAdmin}
                           quoteFrom={target}
                           canDelete={!!me && (me.uid === r.authorId || isAdmin(me.uid))}
-                          onDelete={async () => {
-                            await deleteDoc(doc(db, 'comments', r.id));
+                          onDelete={() => {
+                            openConfirm('Bạn có chắc muốn xoá phản hồi này?', async () => {
+                              await deleteDoc(doc(db, 'comments', r.id));
+                            });
                           }}
                         />
-                        <ReplyBox me={me} postId={postId} parent={c} replyingTo={r} adminUids={adminUids} postTitle={postTitle} />
+                        <ReplyBox
+                          me={me}
+                          postId={postId}
+                          parent={c}
+                          replyingTo={r}
+                          adminUids={adminUids}
+                          postTitle={postTitle}
+                          onNeedVerify={openVerifyPrompt}
+                        />
                       </div>
                     );
                   })}
@@ -344,14 +426,16 @@ function CommentRow({ c, me, small=false, canDelete=false, onDelete, isAdminFn=(
   );
 }
 
-function ReplyBox({ me, postId, parent, replyingTo=null, adminUids, postTitle }) {
+function ReplyBox({ me, postId, parent, replyingTo=null, adminUids, postTitle, onNeedVerify }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
   const target = replyingTo || parent;
-  const canReply = !!me && !!me.emailVerified && me.uid !== (target?.authorId ?? '');
+  const canReply = !!me && me.uid !== (target?.authorId ?? '');
 
   const onReply = async (e) => {
     e.preventDefault();
+    if (!me) return;
+    if (!me.emailVerified) { onNeedVerify?.(); return; }
     if (!canReply || !text.trim()) return;
 
     const ref = await addDoc(collection(db, 'comments'), {
@@ -401,35 +485,15 @@ function ReplyBox({ me, postId, parent, replyingTo=null, adminUids, postTitle })
   };
 
   if (!me) return null;
-
-  // Nếu chưa xác minh: không hiển thị form trả lời (giữ UX gọn gàng)
-  if (!me.emailVerified) {
-    return (
-      <div className="mt-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">
-        Hãy xác minh email để có thể trả lời.
-        <button
-          onClick={async () => {
-            try {
-              if (auth.currentUser) {
-                await sendEmailVerification(auth.currentUser);
-                alert('Đã gửi lại email xác minh.');
-              }
-            } catch {}
-          }}
-          className="ml-2 underline font-semibold"
-        >
-          Gửi lại email xác minh
-        </button>
-      </div>
-    );
-  }
-
   if (me.uid === (target?.authorId ?? '')) return null;
 
   return (
     <div className="mt-2">
       {!open ? (
-        <button onClick={() => setOpen(true)} className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 hover:underline">
+        <button onClick={() => {
+          if (me && !me.emailVerified) { onNeedVerify?.(); return; }
+          setOpen(true);
+        }} className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 hover:underline">
           <FontAwesomeIcon icon={faReply} />
           Trả lời
         </button>
@@ -447,6 +511,7 @@ function ReplyBox({ me, postId, parent, replyingTo=null, adminUids, postTitle })
             className="w-full min-h-[72px] border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-[15px] leading-6 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/40 outline-none"
             placeholder={`Phản hồi ${replyingTo ? (replyingTo.userName || 'người dùng') : (parent.userName || 'người dùng')}…`}
             maxLength={2000}
+            onFocus={() => { if (me && !me.emailVerified) onNeedVerify?.(); }}
           />
           <div className="flex gap-2 justify-end">
             <button

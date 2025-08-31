@@ -1,5 +1,5 @@
 // components/NotificationsPanel.js
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import { auth, db } from '../lib/firebase-client';
 import {
   collection, doc, limit, onSnapshot, orderBy, query,
@@ -54,7 +54,6 @@ export default function NotificationsPanel({ open, onClose }) {
   }, [user, open]);
 
   const decCounter = async (uid, amount = 1) => {
-    // giữ tương thích nếu bạn còn dùng user_counters
     const counterRef = doc(db, 'user_counters', uid);
     await runTransaction(db, async (tx) => {
       const snap = await tx.get(counterRef);
@@ -82,19 +81,18 @@ export default function NotificationsPanel({ open, onClose }) {
   if (!open) return null;
 
   return (
-    // ✅ fixed + padding để không lệch/khuyết trên mobile
-    <div className="fixed right-3 top-14 z-50 w-[22rem] max-w-[92vw]">
-      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-xl overflow-hidden">
-        <div className="px-3 py-2 flex justify-between items-center border-b border-gray-100 dark:border-gray-800">
-          <h4 className="font-semibold text-gray-900 dark:text-gray-100">Thông báo</h4>
+    <div className="fixed right-3 top-14 z-50 w-[24rem] max-w-[92vw]">
+      <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-2xl shadow-2xl overflow-hidden">
+        <div className="px-4 py-3 flex justify-between items-center border-b border-gray-100 dark:border-gray-800 bg-gradient-to-r from-sky-50 to-white dark:from-gray-900 dark:to-gray-900">
+          <h4 className="font-semibold text-slate-900 dark:text-slate-100">Thông báo</h4>
           <div className="flex items-center gap-2">
             <button
               onClick={markAllRead}
-              className="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200"
+              className="text-xs px-2.5 py-1.5 rounded bg-slate-900 text-white dark:bg-white dark:text-slate-900 hover:opacity-90"
             >
               Đánh dấu tất cả đã đọc
             </button>
-            <button onClick={onClose} className="text-sm text-gray-600 dark:text-gray-300 hover:underline">
+            <button onClick={onClose} className="text-sm text-slate-600 dark:text-slate-300 hover:underline">
               Đóng
             </button>
           </div>
@@ -102,48 +100,67 @@ export default function NotificationsPanel({ open, onClose }) {
 
         <ul className="space-y-2 max-h-[65vh] overflow-auto p-3">
           {items.length === 0 && (
-            <li className="text-sm text-gray-600 dark:text-gray-400 py-4 text-center">Chưa có thông báo</li>
+            <li className="text-sm text-slate-600 dark:text-slate-400 py-4 text-center">Chưa có thông báo</li>
           )}
 
           {items.map((n) => {
             const t = formatDate(n.createdAt);
             const who = n.fromUserName || 'Ai đó';
             const title = n.postTitle || `Bài viết ${n.postId}`;
-            const content = n.commentText ? `"${n.commentText}"` : '';
+            const content = n.commentText || '';
             const href = `/${n.postId}?comment=${n.commentId}#c-${n.commentId}`;
+
             return (
               <li
                 key={n.id}
-                className={`border border-gray-100 dark:border-gray-800 rounded-xl p-3 bg-white/70 dark:bg-gray-900/60 hover:bg-gray-50 dark:hover:bg-gray-800/70 transition`}
+                className={`border border-slate-100 dark:border-gray-800 rounded-xl p-3 transition ${
+                  n.isRead ? 'bg-white dark:bg-gray-900' : 'bg-sky-50/60 dark:bg-gray-800/60'
+                }`}
               >
                 <Link
                   href={href}
                   onClick={() => !n.isRead && markRead(n.id, n.isRead)}
                   className="flex items-start gap-3 no-underline"
                 >
-                  <div className="flex-1">
-                    <div className="text-[13px] text-gray-900 dark:text-gray-100 font-medium leading-5">
-                      {n.type === 'reply' ? (
-                        <span><b>{who}</b> đã trả lời bình luận trong <i>{title}</i> {content}</span>
-                      ) : (
-                        <span><b>{who}</b> đã bình luận trong <i>{title}</i> {content}</span>
-                      )}
+                  {/* Dot unread */}
+                  {!n.isRead && (
+                    <span className="mt-1 inline-flex h-2.5 w-2.5 rounded-full bg-sky-500 flex-shrink-0" aria-hidden />
+                  )}
+
+                  <div className="flex-1 min-w-0">
+                    {/* Dòng chính: tên người + badge loại + tiêu đề */}
+                    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                      <span className="font-semibold text-sky-800 dark:text-sky-300">{who}</span>
+                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300">
+                        {n.type === 'reply' ? 'Phản hồi' : 'Bình luận'}
+                      </span>
+                      <span className="truncate text-sm text-slate-700 dark:text-slate-200">
+                        trong <i className="text-slate-900 dark:text-white font-medium">{title}</i>
+                      </span>
                     </div>
+
+                    {/* Nội dung trích đoạn */}
+                    {content && (
+                      <div className="mt-1 text-[13px] text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-gray-800/60 border border-slate-200 dark:border-gray-700 rounded-lg p-2 line-clamp-3">
+                        "{content}"
+                      </div>
+                    )}
+
+                    {/* Thời gian */}
                     {t && (
-                      <div className="mt-1 text-[12px] text-gray-500" title={t.abs}>
+                      <div className="mt-1 text-[12px] text-slate-500" title={t.abs}>
                         {t.rel}
                       </div>
                     )}
                   </div>
-                  {!n.isRead && (
-                    <span className="mt-1 inline-flex h-2 w-2 rounded-full bg-blue-500" aria-hidden />
-                  )}
                 </Link>
+
+                {/* Nút Đã đọc cho item chưa đọc */}
                 {!n.isRead && (
                   <div className="mt-2">
                     <button
                       onClick={() => markRead(n.id, n.isRead)}
-                      className="text-[12px] px-2 py-1 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded"
+                      className="text-[12px] px-2 py-1 rounded bg-slate-900 text-white dark:bg-white dark:text-slate-900"
                     >
                       Đã đọc
                     </button>
