@@ -110,6 +110,11 @@ export default function NotificationsPanel({ open, onClose }) {
             const content = n.commentText || '';
             const href = `/${n.postId}?comment=${n.commentId}#c-${n.commentId}`;
 
+            const kind =
+              n.type === 'reply' ? { label: 'Phản hồi', tone: 'bg-violet-100 text-violet-700 dark:bg-violet-900/40 dark:text-violet-300' } :
+              n.type === 'like'  ? { label: 'Thích ❤️', tone: 'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300' } :
+                                   { label: 'Bình luận', tone: 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300' };
+
             return (
               <li
                 key={n.id}
@@ -129,8 +134,8 @@ export default function NotificationsPanel({ open, onClose }) {
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
                       <span className="font-semibold text-sky-800 dark:text-sky-300">{who}</span>
-                      <span className="text-[11px] px-2 py-0.5 rounded-full bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300">
-                        {n.type === 'reply' ? 'Phản hồi' : 'Bình luận'}
+                      <span className={`text-[11px] px-2 py-0.5 rounded-full ${kind.tone}`}>
+                        {kind.label}
                       </span>
                       <span className="truncate text-sm text-slate-700 dark:text-slate-200">
                         trong <i className="font-medium">

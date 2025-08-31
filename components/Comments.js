@@ -10,9 +10,8 @@ import {
 import { sendEmailVerification } from 'firebase/auth';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faPaperPlane, faReply, faTrash, faUserCircle, faCheckCircle, faQuoteLeft, faHeart as faHeartSolid
+  faPaperPlane, faReply, faTrash, faUserCircle, faCheckCircle, faQuoteLeft, faHeart
 } from '@fortawesome/free-solid-svg-icons';
-import { faHeart as faHeartRegular } from '@fortawesome/free-regular-svg-icons';
 
 /* ========= Helpers ========= */
 function preferredName(user) {
@@ -54,13 +53,13 @@ async function createNotification(payload = {}) {
   const { toUserId, type, postId, commentId, fromUserId, ...extra } = payload;
   await addDoc(collection(db, 'notifications'), {
     toUserId,
-    type,
+    type,           // 'comment' | 'reply' | 'like'
     postId,
     commentId,
     isRead: false,
     createdAt: serverTimestamp(),
     fromUserId,
-    ...extra, // fromUserName, fromUserPhoto, postTitle, commentText, ...
+    ...extra,       // fromUserName, fromUserPhoto, postTitle, commentText, ...
   });
 }
 async function bumpCounter(uid, delta) {
@@ -152,8 +151,8 @@ export default function Comments({ postId, postTitle }) {
                 setModalTone('success');
               }
             } catch {
-              setModalContent(<p>Không gửi được email xác minh. Vui lòng thử lại sau.</p>);
-              setModalTone('error');
+                setModalContent(<p>Không gửi được email xác minh. Vui lòng thử lại sau.</p>);
+                setModalTone('error');
             }
           }}
           className="px-3 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700"
@@ -177,7 +176,7 @@ export default function Comments({ postId, postTitle }) {
     setModalActions(
       <>
         <a
-          href="/login" // nếu bạn có trang /login; nếu không có, có thể mở modal đăng nhập tuỳ kiến trúc
+          href="/login"
           className="px-3 py-2 text-sm rounded-lg bg-gray-900 text-white hover:opacity-90"
         >
           Đăng nhập
@@ -281,7 +280,7 @@ export default function Comments({ postId, postTitle }) {
     }));
   };
 
-  // ===== Toggle ❤️ like
+  // ===== Toggle ❤️ like + tạo notification khi like (không thông báo khi bỏ like hoặc tự-like)
   const toggleLike = async (c) => {
     if (!me) { openLoginPrompt(); return; }
     const cid = c.id;
@@ -292,6 +291,21 @@ export default function Comments({ postId, postTitle }) {
         likedBy: hasLiked ? arrayRemove(me.uid) : arrayUnion(me.uid),
         likeCount: increment(hasLiked ? -1 : +1),
       });
+      // tạo noti khi LIKE (không phải bỏ like) & không phải like chính mình
+      if (!hasLiked && me.uid !== c.authorId) {
+        await createNotification({
+          toUserId: c.authorId,
+          type: 'like',
+          postId: String(c.postId),
+          commentId: c.id,
+          fromUserId: me.uid,
+          fromUserName: preferredName(me),
+          fromUserPhoto: preferredPhoto(me),
+          postTitle: c.postTitle || postTitle || '',
+          commentText: excerpt(c.content, 120),
+        });
+        await bumpCounter(c.authorId, +1);
+      }
     } catch {}
   };
 
@@ -448,13 +462,15 @@ function CommentRow({ c, me, small=false, canDelete=false, onDelete, isAdminFn=(
             </span>
           )}
 
-          {/* ❤️ Like */}
+          {/* ❤️ Like (chỉ dùng faHeart solid để tránh lỗi gói regular) */}
           <button
             onClick={onToggleLike}
-            className={`ml-2 inline-flex items-center gap-1 text-xs ${youLiked ? 'text-rose-600' : 'text-gray-600 hover:text-rose-600'}`}
+            className={`ml-2 inline-flex items-center gap-1 text-xs transition ${
+              youLiked ? 'text-rose-600' : 'text-gray-500 hover:text-rose-600'
+            }`}
             title={youLiked ? 'Bỏ thích' : 'Thích'}
           >
-            <FontAwesomeIcon icon={youLiked ? faHeartSolid : faHeartRegular} className="w-4 h-4" />
+            <FontAwesomeIcon icon={faHeart} className={`w-4 h-4 ${youLiked ? '' : 'opacity-60'}`} />
             <span>{likeCount}</span>
           </button>
 
@@ -593,9 +609,9 @@ function ReplyBox({ me, postId, parent, replyingTo=null, adminUids, postTitle, o
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-sm rounded-lg bg-gray-900 text-white dark:bg-white dark:text-gray-900 hover:opacity-90 inline-flex items-center gap-2"
+              className="px-4 py-2 text-sm rounded-lg bg-gray-900 text-white dark:bg.white dark:text-gray-900 hover:opacity-90 inline-flex items-center gap-2"
             >
-              Gửi phản hồi
+              Gửi
             </button>
           </div>
         </form>

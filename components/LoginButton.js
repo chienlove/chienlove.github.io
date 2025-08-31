@@ -24,7 +24,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { faGoogle, faGithub } from '@fortawesome/free-brands-svg-icons';
 
-const ENFORCE_EMAIL_VERIFICATION = true; // dùng khi signup để gửi mail; KHÔNG chặn login
+const ENFORCE_EMAIL_VERIFICATION = true; // gửi mail verify sau signup; KHÔNG chặn login
 
 export default function LoginButton({ onToggleTheme, isDark }) {
   const [user, setUser] = useState(null);
@@ -36,11 +36,8 @@ export default function LoginButton({ onToggleTheme, isDark }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
-
-  // Đăng ký: xác nhận mật khẩu + show/hide
   const [confirmPwd, setConfirmPwd] = useState('');
   const [showConfirm, setShowConfirm] = useState(false);
-
   const [msg, setMsg] = useState('');
   const [toast, setToast] = useState(null);
   const [pendingCred, setPendingCred] = useState(null);
@@ -75,6 +72,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       toast.type === 'success' ? 'bg-emerald-600' :
       toast.type === 'error'   ? 'bg-rose-600' :
       toast.type === 'info'    ? 'bg-sky-600' :
+      toast.type === 'warning' ? 'bg-amber-600' :
                                  'bg-gray-800';
     return (
       <div className="fixed inset-0 z-[120] flex items-center justify-center">
@@ -165,7 +163,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
         setMode('login');
         setOpenAuth(false);
         setEmail(''); setPassword(''); setConfirmPwd('');
-        // KHÔNG signOut cưỡng bức -- bạn yêu cầu chỉ chặn khi bình luận
+        // KHÔNG signOut cưỡng bức -- chỉ chặn khi bình luận
       } else {
         await signInWithEmailAndPassword(auth, email, password);
         if (pendingCred && hint === 'password') await doLinkIfNeeded();
@@ -254,7 +252,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
         >
           <FontAwesomeIcon icon={faUserCircle} className="w-5 h-5" />
           <span className="absolute -top-1 -right-1 bg-emerald-600 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full">
-            <FontAwesomeIcon icon={faPlus} className="w-2 h-2" />
+            <span>+</span>
           </span>
         </button>
 
@@ -356,7 +354,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
                       <li className={/[A-Za-z]/.test(password) ? 'text-emerald-600' : 'text-gray-500'}>• Có chữ</li>
                       <li className={/\d/.test(password) ? 'text-emerald-600' : 'text-gray-500'}>• Có số</li>
                       <li className={/[^A-Za-z0-9]/.test(password) ? 'text-emerald-600' : 'text-gray-500'}>• Có ký tự đặc biệt</li>
-                      <li className={pwdMatch ? 'text-emerald-600' : 'text-gray-500'}>• Xác nhận mật khẩu khớp</li>
+                      <li className={password && confirmPwd && password === confirmPwd ? 'text-emerald-600' : 'text-gray-500'}>• Xác nhận mật khẩu khớp</li>
                     </ul>
                   </>
                 )}
