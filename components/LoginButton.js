@@ -147,14 +147,18 @@ export default function LoginButton({ onToggleTheme, isDark }) {
   };
 
   const onReset = async () => {
-    if (!email) return setMsg('Nhập email trước khi đặt lại mật khẩu.');
-    try {
-      await sendPasswordResetEmail(auth, email);
-      showToast('info', 'Đã gửi email đặt lại mật khẩu.');
-    } catch (e) {
-      setMsg(e.message);
-    }
-  };
+  if (!email) return setMsg('Nhập email trước khi đặt lại mật khẩu.');
+  try {
+    const actionCodeSettings = {
+      url: 'https://auth.storeios.net'
+      handleCodeInApp: false,
+    };
+    await sendPasswordResetEmail(auth, email, actionCodeSettings);
+    showToast('info', 'Đã gửi email đặt lại mật khẩu.');
+  } catch (e) {
+    setMsg(e.message);
+  }
+};
 
   const logout = async () => {
     await auth.signOut();
