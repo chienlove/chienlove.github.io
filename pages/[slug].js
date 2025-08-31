@@ -1,36 +1,37 @@
+// pages/[slug].js
 'use client';
 
-import { supabase } from '../lib/supabase';
 import Layout from '../components/Layout';
+import Comments from '../components/Comments';
+import { supabase } from '../lib/supabase';
+import { useEffect, useMemo, useState, memo } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import Comments from '../components/Comments';
-import { useEffect, useState, useMemo, memo } from 'react';
-import { FastAverageColor } from 'fast-average-color';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {
-  faDownload,
-  faRocket,
-  faArrowLeft,
-  faCodeBranch,
-  faDatabase,
-  faUser,
-  faCheckCircle,
-  faTimesCircle,
-  faExclamationTriangle,
-  faChevronDown,
-  faChevronUp,
-  faFileArrowDown,
-} from '@fortawesome/free-solid-svg-icons';
+import Head from 'next/head';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import Head from 'next/head';
+import { FastAverageColor } from 'fast-average-color';
 
-// ===================== SSR =====================
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {
+  faArrowLeft,
+  faChevronDown,
+  faChevronUp,
+  faCheckCircle,
+  faDownload,
+  faExclamationTriangle,
+  faFileArrowDown,
+  faRocket,
+  faTimesCircle,
+} from '@fortawesome/free-solid-svg-icons';
+
+/* =========================================================
+   SSR: Lấy dữ liệu ứng dụng + chuyên mục + ứng dụng liên quan
+   ========================================================= */
 export async function getServerSideProps(context) {
   const slug = context.params.slug?.toLowerCase();
 
-  // 1) App + JOIN category
+  // 1) Tìm theo slug (JOIN category)
   let { data: appData, error } = await supabase
     .from('apps')
     .select(`
@@ -40,7 +41,7 @@ export async function getServerSideProps(context) {
     .ilike('slug', slug)
     .single();
 
-  // 2) Fallback bằng ID
+  // 2) Nếu không thấy, thử theo ID rồi redirect sang slug chuẩn
   if ((!appData || error) && slug) {
     const fb = await supabase
       .from('apps')
@@ -52,12 +53,14 @@ export async function getServerSideProps(context) {
       .single();
 
     if (fb.data) {
-      return { redirect: { destination: `/${fb.data.slug}`, permanent: false } };
+      return {
+        redirect: { destination: `/${fb.data.slug}`, permanent: false },
+      };
     }
     return { notFound: true };
   }
 
-  // 3) Fallback JOIN category nếu chưa có
+  // 3) Nếu chưa có category join, fallback lấy riêng
   if (!appData?.category && appData?.category_id) {
     const { data: cat } = await supabase
       .from('categories')
@@ -67,7 +70,7 @@ export async function getServerSideProps(context) {
     if (cat) appData = { ...appData, category: cat };
   }
 
-  // 4) Related apps
+  // 4) Ứng dụng liên quan (cùng category)
   const { data: relatedApps } = await supabase
     .from('apps')
     .select('id, name, slug, icon_url, author, version')
@@ -83,25 +86,25 @@ export async function getServerSideProps(context) {
   };
 }
 
-// ===================== Helpers =====================
+/* ===================== Helpers chung ===================== */
 
-// Tách danh sách từ chuỗi: "iOS 14, iPadOS" → ["iOS 14", "iPadOS"]
+// Chuỗi "a, b\nc" -> ["a","b","c"]
 function parseList(input) {
   if (!input) return [];
   if (Array.isArray(input)) return input;
   return String(input)
     .split(/[,\n]+/)
-    .map(x => x.trim())
+    .map((x) => x.trim())
     .filter(Boolean);
 }
 
-// Xoá thẻ [tag=...] hoặc [tag]...[/tag] – không dùng regex
+// Loại thẻ [tag]...[/tag] hoặc [tag=...]...[/tag], KHÔNG dùng literal regex inline (tránh Vercel inject)
 function stripSimpleTagAll(str, tag) {
   let s = String(str);
   const open = `[${tag}`;
   const close = `[/${tag}]`;
 
-  // Xoá thẻ đóng lẻ
+  // Xoá thẻ đóng lẻ trước
   while (true) {
     const idx = s.toLowerCase().indexOf(close);
     if (idx === -1) break;
@@ -122,6 +125,7 @@ function stripSimpleTagAll(str, tag) {
 
     const iClose = lower.indexOf(close, iBracket + 1);
     if (iClose === -1) {
+      // Nếu không có đóng, xoá đoạn [tag...] giữ lại nội dung
       s = s.slice(0, iOpen) + s.slice(iBracket + 1);
       continue;
     }
@@ -132,7 +136,7 @@ function stripSimpleTagAll(str, tag) {
   return s;
 }
 
-// Chuyển [list][*]...[/list] → Markdown
+// Chuyển block [list][*]a[*]b[/list] -> markdown
 function processListBlocks(str) {
   let output = '';
   let remaining = String(str);
@@ -140,10 +144,15 @@ function processListBlocks(str) {
   while (true) {
     const lower = remaining.toLowerCase();
     const start = lower.indexOf('[list]');
-    if (start === -1) { output += remaining; break; }
-
+    if (start === -1) {
+      output += remaining;
+      break;
+    }
     const end = lower.indexOf('[/list]', start + 6);
-    if (end === -1) { output += remaining; break; }
+    if (end === -1) {
+      output += remaining;
+      break;
+    }
 
     const before = remaining.slice(0, start);
     const listContent = remaining.slice(start + 6, end);
@@ -151,49 +160,56 @@ function processListBlocks(str) {
 
     const items = listContent
       .split('[*]')
-      .map(t => t.trim())
+      .map((t) => t.trim())
       .filter(Boolean);
 
-    const md = '\n' + items.map(it => `- ${it}`).join('\n') + '\n';
+    const md = '\n' + items.map((it) => `- ${it}`).join('\n') + '\n';
     output += before + md;
     remaining = after;
   }
   return output;
 }
 
-// BBCode → Markdown (an toàn, ít regex)
+// Chuyển BBCode cơ bản sang Markdown (an toàn, hạn chế regex literal)
 function bbcodeToMarkdownLite(input = '') {
   let s = String(input);
 
   // Step 1: [b], [i], [u] (có thể lồng nhau)
-  s = s.replace(/\[b\](.*?)\[\/b\]/gi, '**$1**');
-  s = s.replace(/\[i\](.*?)\[\/i\]/gi, '*$1*');
-  s = s.replace(/\[u\](.*?)\[\/u\]/gi, '__$1__');
+  s = s.replace(new RegExp('\\[b\\](.*?)\\[/b\\]', 'gi'), '**$1**');
+  s = s.replace(new RegExp('\\[i\\](.*?)\\[/i\\]', 'gi'), '*$1*');
+  s = s.replace(new RegExp('\\[u\\](.*?)\\[/u\\]', 'gi'), '__$1__');
 
   // Step 2: [url] & [url=...]
-  s = s.replace(/\[url\](https?:\/\/[^\s\]]+)\[\/url\]/gi, '[$1]($1)');
-  s = s.replace(/\[url=(https?:\/\/[^\]\s]+)\](.*?)\[\/url\]/gi, '[$2]($1)');
+  s = s.replace(new RegExp('\\[url\\](https?:\\/\\/[^\\s\\]]+)\\[/url\\]', 'gi'), '[$1]($1)');
+  s = s.replace(
+    new RegExp('\\[url=(https?:\\/\\/[^\\]\\s]+)\\](.*?)\\[/url\\]', 'gi'),
+    '[$2]($1)'
+  );
 
   // Step 3: [img]
-  s = s.replace(/\[img\](https?:\/\/[^\s\]]+)\[\/img\]/gi, '![]($1)');
+  s = s.replace(new RegExp('\\[img\\](https?:\\/\\/[^\\s\\]]+)\\[/img\\]', 'gi'), '![]($1)');
 
-  // Step 4: [color] và [size] – bỏ qua
+  // Step 4: [color] và [size] – bỏ thẻ, giữ nội dung
   s = stripSimpleTagAll(s, 'color');
   s = stripSimpleTagAll(s, 'size');
 
-  // Step 5: [list] – xử lý sau khi đã có [b][i][u] trong nội dung
+  // Step 5: [list]
   s = processListBlocks(s);
 
-  // Step 6: [quote] – giờ có thể xử lý an toàn vì nội dung đã được format
+  // Step 6: [quote]
   const quoteR = new RegExp('\\[quote\\]\\s*([\\s\\S]*?)\\s*\\[/quote\\]', 'gi');
   s = s.replace(quoteR, (_m, p1) => {
-    return String(p1).trim().split(/\r?\n/).map(line => `> ${line}`).join('\n');
+    return String(p1)
+      .trim()
+      .split(/\r?\n/)
+      .map((line) => `> ${line}`)
+      .join('\n');
   });
 
-  // Step 7: [code] – dùng RegExp (an toàn vì không có tag con phức tạp)
+  // Step 7: [code]
   const codeR = new RegExp('\\[code\\]\\s*([\\s\\S]*?)\\s*\\[/code\\]', 'gi');
   s = s.replace(codeR, (_m, p1) => {
-    const body = String(p1).replace(/```/g, '``');
+    const body = String(p1).replace(/```/g, '``'); // tránh phá fenced code
     return `\n\`\`\`\n${body}\n\`\`\`\n`;
   });
 
@@ -203,9 +219,11 @@ function bbcodeToMarkdownLite(input = '') {
 function normalizeDescription(raw = '') {
   if (!raw) return '';
   const txt = String(raw);
+  // Nếu thấy có BBCode -> convert
   if (/\[(b|i|u|url|img|quote|code|list|\*|size|color)/i.test(txt)) {
     return bbcodeToMarkdownLite(txt);
   }
+  // Nếu không, coi như đã là Markdown/Plain
   return txt;
 }
 
@@ -213,15 +231,19 @@ function PrettyBlockquote({ children }) {
   return (
     <blockquote className="relative my-4 rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50 to-white p-4 pl-5 dark:border-blue-900/40 dark:from-blue-950/30 dark:to-transparent">
       <div className="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl bg-blue-500/80 dark:bg-blue-400/80" />
-      <div className="text-blue-900 dark:text-blue-100 leading-relaxed">
-        {children}
-      </div>
+      <div className="text-blue-900 dark:text-blue-100 leading-relaxed">{children}</div>
     </blockquote>
   );
 }
 
-// ===================== InfoRow (tối ưu) =====================
-const InfoRow = memo(({ label, value, expandable = false, expanded = false, onToggle }) => {
+/* ===================== InfoRow tái sử dụng ===================== */
+const InfoRow = memo(function InfoRow({
+  label,
+  value,
+  expandable = false,
+  expanded = false,
+  onToggle,
+}) {
   return (
     <div className="px-4 py-3 flex items-start">
       <div className="w-40 min-w-[9rem] text-sm text-gray-500">{label}</div>
@@ -248,45 +270,56 @@ const InfoRow = memo(({ label, value, expandable = false, expanded = false, onTo
     </div>
   );
 });
-InfoRow.displayName = 'InfoRow';
 
-// ===================== Page =====================
+/* =========================================================
+   Trang chi tiết
+   ========================================================= */
 export default function Detail({ serverApp, serverRelated }) {
   const router = useRouter();
+
   const [app, setApp] = useState(serverApp);
   const [related, setRelated] = useState(serverRelated);
   const [dominantColor, setDominantColor] = useState('#f0f2f5');
-  const [showFullDescription, setShowFullDescription] = useState(false);
+
   const [status, setStatus] = useState(null);
   const [statusLoading, setStatusLoading] = useState(false);
+
   const [isInstalling, setIsInstalling] = useState(false);
   const [isFetchingIpa, setIsFetchingIpa] = useState(false);
+
   const [showAllDevices, setShowAllDevices] = useState(false);
   const [showAllLanguages, setShowAllLanguages] = useState(false);
+  const [showFullDescription, setShowFullDescription] = useState(false);
 
   const categorySlug = app?.category?.slug ?? null;
   const isTestflight = categorySlug === 'testflight';
   const isInstallable = ['jailbreak', 'app-clone'].includes(categorySlug);
 
+  // Khi đổi slug route -> reset view state
   useEffect(() => {
     setApp(serverApp);
     setRelated(serverRelated);
-    setShowFullDescription(false);
     setDominantColor('#f0f2f5');
+    setStatus(null);
+    setStatusLoading(false);
+    setIsInstalling(false);
+    setIsFetchingIpa(false);
     setShowAllDevices(false);
     setShowAllLanguages(false);
+    setShowFullDescription(false);
   }, [router.query.slug, serverApp, serverRelated]);
 
+  // Tác vụ theo app: đếm view testflight, check slot, lấy màu banner
   useEffect(() => {
     if (!app?.id) return;
 
-    // Đếm view TestFlight
+    // Đếm view (TestFlight)
     if (isTestflight) {
       fetch('/api/admin/add-view', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: app.id }),
-      }).catch(console.error);
+      }).catch(() => {});
     }
 
     // Kiểm tra slot TestFlight
@@ -294,22 +327,24 @@ export default function Detail({ serverApp, serverRelated }) {
       setStatusLoading(true);
       const id = app.testflight_url.split('/').pop();
       fetch(`/api/admin/check-slot?id=${id}`)
-        .then(res => res.json())
-        .then(data => data.success && setStatus(data.status))
-        .catch(console.error)
+        .then((res) => res.json())
+        .then((data) => data.success && setStatus(data.status))
+        .catch(() => {})
         .finally(() => setStatusLoading(false));
     }
 
-    // Màu nền từ icon
+    // Lấy màu chủ đạo từ icon
     if (app.icon_url && typeof window !== 'undefined') {
       const fac = new FastAverageColor();
-      fac.getColorAsync(app.icon_url)
-        .then(color => setDominantColor(color.hex))
-        .catch(console.error)
+      fac
+        .getColorAsync(app.icon_url)
+        .then((color) => setDominantColor(color.hex))
+        .catch(() => {})
         .finally(() => fac.destroy());
     }
   }, [app?.id, app?.icon_url, app?.testflight_url, isTestflight]);
 
+  // Format kích thước hiển thị
   const displaySize = useMemo(() => {
     if (!app?.size) return 'Không rõ';
     const s = String(app.size);
@@ -333,28 +368,26 @@ export default function Detail({ serverApp, serverRelated }) {
     return { list, remain };
   }, [devicesArray]);
 
+  // Nút cài đặt (đếm download rồi chuyển trang đếm ngược)
   const handleInstall = async (e) => {
     e.preventDefault();
     if (!app?.id || isTestflight) return;
-
     setIsInstalling(true);
-
     try {
-      // Ghi nhận lượt tải TRƯỚC
       await fetch(`/api/admin/add-download?id=${app.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         cache: 'no-store',
       });
     } catch (err) {
-      console.error('Lỗi tăng lượt tải:', err);
+      console.error('add-download error', err);
     } finally {
-      // Sau đó mới redirect
       router.push(`/install/${app.slug}`);
       setIsInstalling(false);
     }
   };
 
+  // Nút tải IPA (qua token + proxy)
   const handleDownloadIpa = async (e) => {
     e.preventDefault();
     if (!app?.id || !isInstallable) return;
@@ -370,8 +403,10 @@ export default function Detail({ serverApp, serverRelated }) {
       const { token } = await tokRes.json();
       if (!token) throw new Error('Thiếu token');
 
-      // Tải qua proxy
-      window.location.href = `/api/download-ipa?slug=${encodeURIComponent(app.slug)}&token=${encodeURIComponent(token)}`;
+      // Điều hướng tới endpoint tải (giấu link gốc)
+      window.location.href = `/api/download-ipa?slug=${encodeURIComponent(
+        app.slug
+      )}&token=${encodeURIComponent(token)}`;
 
       // Ghi log tải
       fetch(`/api/admin/add-download?id=${app.id}`, { method: 'POST' }).catch(() => {});
@@ -383,20 +418,33 @@ export default function Detail({ serverApp, serverRelated }) {
     }
   };
 
-  // ======= Auto-scroll & highlight theo ?comment= =======
+  // ======= Auto-scroll & highlight theo ?comment= (đợi element xuất hiện) =======
   useEffect(() => {
-    const id = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('comment') : null;
+    const params =
+      typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+    const id = params?.get('comment');
     if (!id) return;
-    const el = document.getElementById(`c-${id}`);
-    if (!el) return;
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    el.classList.add('ring-2', 'ring-amber-400', 'bg-amber-50');
-    const t = setTimeout(() => {
-      el.classList.remove('ring-2', 'ring-amber-400', 'bg-amber-50');
-    }, 3000);
-    return () => clearTimeout(t);
+
+    let tried = 0;
+    const maxTries = 40; // ~2s với 50ms/lần
+    const iv = setInterval(() => {
+      const el = document.getElementById(`c-${id}`);
+      tried++;
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        el.classList.add('ring-2', 'ring-amber-400', 'bg-amber-50');
+        setTimeout(() => {
+          el.classList.remove('ring-2', 'ring-amber-400', 'bg-amber-50');
+        }, 3000);
+        clearInterval(iv);
+      } else if (tried >= maxTries) {
+        clearInterval(iv);
+      }
+    }, 50);
+
+    return () => clearInterval(iv);
   }, [router.query?.slug]);
-  // ================================================
+  // ==============================================================================
 
   if (!app) {
     return (
@@ -417,328 +465,260 @@ export default function Detail({ serverApp, serverRelated }) {
     );
   }
 
-  const title = `${app.name} - App Store`;
-  const description = app.description ? app.description.replace(/<\/?[^>]+(>|$)/g, '').slice(0, 160) : 'Ứng dụng iOS miễn phí, jailbreak, TestFlight';
+  const pageTitle = `${app.name} - App Store`;
+  const pageDesc = app.description
+    ? app.description.replace(/<\/?[^>]+(>|$)/g, '').slice(0, 160)
+    : 'Ứng dụng iOS miễn phí, jailbreak, TestFlight';
+
+  const mdDescription = normalizeDescription(app.description || '');
 
   return (
     <Layout fullWidth>
       <Head>
-        <title>{title}</title>
-        <meta name="description" content={description} />
-        <meta property="og:title" content={title} />
-        <meta property="og:description" content={description} />
-        <meta property="og:image" content={app.icon_url} />
+        <title>{pageTitle}</title>
+        <meta name="description" content={pageDesc} />
+        <meta property="og:title" content={pageTitle} />
+        <meta property="og:description" content={pageDesc} />
+        <meta property="og:image" content={app.icon_url || ''} />
         <meta property="og:type" content="website" />
         <meta name="twitter:card" content="summary_large_image" />
       </Head>
 
       <div className="bg-gray-100 min-h-screen pb-12">
-        <div className="w-full flex justify-center mt-10 bg-gray-100">
-          <div className="relative w-full max-w-screen-2xl px-2 sm:px-4 md:px-6 pb-8 bg-white rounded-none">
-            <div
-              className="w-full pb-6"
-              style={{ backgroundImage: `linear-gradient(to bottom, ${dominantColor}, #f0f2f5)` }}
-            >
-              <div className="absolute top-3 left-3 z-10">
-                <Link
-                  href="/"
-                  className="inline-flex items-center justify-center w-9 h-9 text-blue-600 hover:text-white bg-white hover:bg-blue-600 active:scale-95 transition-all duration-150 rounded-full shadow-sm"
-                >
-                  <FontAwesomeIcon icon={faArrowLeft} className="w-4 h-4" />
-                </Link>
+        {/* Banner màu theo icon */}
+        <div
+          className="w-full"
+          style={{ backgroundImage: `linear-gradient(to bottom, ${dominantColor}, #f0f2f5)` }}
+        >
+          <div className="relative max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 pt-6 pb-8">
+            {/* Nút back */}
+            <div className="absolute top-3 left-3 z-10">
+              <Link
+                href="/"
+                className="inline-flex items-center justify-center w-9 h-9 text-blue-600 hover:text-white bg-white hover:bg-blue-600 active:scale-95 transition-all duration-150 rounded-full shadow-sm"
+              >
+                <FontAwesomeIcon icon={faArrowLeft} className="w-4 h-4" />
+              </Link>
+            </div>
+
+            {/* Icon + tiêu đề */}
+            <div className="pt-8 text-center">
+              <div className="w-24 h-24 mx-auto overflow-hidden border-4 border-white rounded-2xl bg-white">
+                <img
+                  src={app.icon_url || '/placeholder-icon.png'}
+                  alt={app.name}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.src = '/placeholder-icon.png';
+                  }}
+                />
               </div>
+              <h1 className="mt-4 text-2xl font-bold text-gray-900 drop-shadow">{app.name}</h1>
+              {app.author && <p className="text-gray-700 text-sm">{app.author}</p>}
 
-              <div className="pt-10 text-center px-4">
-                <div className="w-24 h-24 mx-auto overflow-hidden border-4 border-white rounded-2xl">
-                  <img
-                    src={app.icon_url || '/placeholder-icon.png'}
-                    alt={app.name}
-                    className="w-full h-full object-cover"
-                    onError={(e) => { e.target.src = '/placeholder-icon.png'; }}
-                  />
-                </div>
-                <h1 className="mt-4 text-2xl font-bold text-gray-900 drop-shadow">{app.name}</h1>
-                {app.author && <p className="text-gray-700 text-sm">{app.author}</p>}
+              {/* Nút hành động */}
+              <div className="mt-4 flex flex-wrap justify-center gap-2">
+                {isTestflight && app.testflight_url && (
+                  <>
+                    <a
+                      href={app.testflight_url}
+                      className="inline-block border border-blue-500 text-blue-700 hover:bg-blue-100 transition px-4 py-2 rounded-full text-sm font-semibold"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <FontAwesomeIcon icon={faRocket} className="mr-2" />
+                      Tham gia TestFlight
+                    </a>
+                    {statusLoading || status === null ? (
+                      <span className="inline-block border border-gray-300 text-gray-500 bg-gray-50 px-4 py-2 rounded-full text-sm font-semibold">
+                        Đang kiểm tra...
+                      </span>
+                    ) : status === 'Y' ? (
+                      <span className="inline-block border border-green-500 text-green-700 bg-green-50 px-4 py-2 rounded-full text-sm font-semibold">
+                        <FontAwesomeIcon icon={faCheckCircle} className="mr-1" />
+                        Còn slot
+                      </span>
+                    ) : status === 'F' ? (
+                      <span className="inline-block border border-red-500 text-red-700 bg-red-50 px-4 py-2 rounded-full text-sm font-semibold">
+                        <FontAwesomeIcon icon={faExclamationTriangle} className="mr-1" />
+                        Đã đầy
+                      </span>
+                    ) : (
+                      <span className="inline-block border border-yellow-500 text-yellow-700 bg-yellow-50 px-4 py-2 rounded-full text-sm font-semibold">
+                        <FontAwesomeIcon icon={faTimesCircle} className="mr-1" />
+                        Ngừng nhận
+                      </span>
+                    )}
+                  </>
+                )}
 
-                <div className="mt-4 flex flex-wrap justify-center gap-2">
-                  {isTestflight && app.testflight_url && (
-                    <>
-                      <a
-                        href={app.testflight_url}
-                        className="inline-block border border-blue-500 text-blue-700 hover:bg-blue-100 transition px-4 py-2 rounded-full text-sm font-semibold"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <FontAwesomeIcon icon={faRocket} className="mr-2" />
-                        Tham gia TestFlight
-                      </a>
-                      {statusLoading || status === null ? (
-                        <span className="inline-block border border-gray-300 text-gray-500 bg-gray-50 px-4 py-2 rounded-full text-sm font-semibold">
-                          Đang kiểm tra...
-                        </span>
-                      ) : status === 'Y' ? (
-                        <span className="inline-block border border-green-500 text-green-700 bg-green-50 px-4 py-2 rounded-full text-sm font-semibold">
-                          <FontAwesomeIcon icon={faCheckCircle} className="mr-1" />
-                          Còn slot
-                        </span>
-                      ) : status === 'F' ? (
-                        <span className="inline-block border border-red-500 text-red-700 bg-red-50 px-4 py-2 rounded-full text-sm font-semibold">
-                          <FontAwesomeIcon icon={faExclamationTriangle} className="mr-1" />
-                          Đã đầy
-                        </span>
-                      ) : (
-                        <span className="inline-block border border-yellow-500 text-yellow-700 bg-yellow-50 px-4 py-2 rounded-full text-sm font-semibold">
-                          <FontAwesomeIcon icon={faTimesCircle} className="mr-1" />
-                          Ngừng nhận
-                        </span>
-                      )}
-                    </>
-                  )}
+                {!isTestflight && app.download_link && (
+                  <>
+                    {/* Nút cài đặt qua trang đếm ngược */}
+                    <button
+                      onClick={handleInstall}
+                      disabled={isInstalling}
+                      className="inline-flex items-center gap-2 border border-blue-500 text-blue-700 hover:bg-blue-100 disabled:opacity-60 transition px-4 py-2 rounded-full text-sm font-semibold"
+                    >
+                      <FontAwesomeIcon icon={faDownload} />
+                      {isInstalling ? 'Đang chuyển...' : 'Cài đặt ứng dụng'}
+                    </button>
 
-                  {isInstallable && (
-                    <>
-                      <button
-                        onClick={handleInstall}
-                        disabled={isInstalling}
-                        className={`inline-flex items-center border border-green-500 text-green-700 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-green-200 active:shadow-inner active:ring-2 active:ring-green-500 ${isInstalling ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-100'}`}
-                      >
-                        {isInstalling ? (
-                          <>
-                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Đang xử lý…
-                          </>
-                        ) : (
-                          <>
-                            <FontAwesomeIcon icon={faDownload} className="mr-2" />
-                            Cài đặt
-                          </>
-                        )}
-                      </button>
-
-                      <button
-                        onClick={handleDownloadIpa}
-                        disabled={isFetchingIpa}
-                        className={`inline-flex items-center border border-blue-500 text-blue-700 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-blue-200 active:shadow-inner active:ring-2 active:ring-blue-500 ${isFetchingIpa ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-100'}`}
-                        title="Tải file IPA (ẩn nguồn tải)"
-                      >
-                        {isFetchingIpa ? (
-                          <>
-                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Đang tạo…
-                          </>
-                        ) : (
-                          <>
-                            <FontAwesomeIcon icon={faFileArrowDown} className="mr-2" />
-                            Tải IPA
-                          </>
-                        )}
-                      </button>
-                    </>
-                  )}
-                </div>
+                    {/* Nút tải IPA (ẩn link) */}
+                    <button
+                      onClick={handleDownloadIpa}
+                      disabled={isFetchingIpa}
+                      className="inline-flex items-center gap-2 border border-gray-400 text-gray-700 hover:bg-gray-100 disabled:opacity-60 transition px-4 py-2 rounded-full text-sm font-semibold"
+                    >
+                      <FontAwesomeIcon icon={faFileArrowDown} />
+                      {isFetchingIpa ? 'Đang tạo link...' : 'Tải IPA'}
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </div>
         </div>
 
-        <div className="max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 mt-6 space-y-6">
-          {/* Info cards */}
-          <div className="bg-white rounded-xl p-4 shadow flex justify-between text-center overflow-x-auto divide-x divide-gray-200">
-            <div className="px-0.5 sm:px-1.5">
-              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Tác giả</p>
-              <FontAwesomeIcon icon={faUser} className="text-xl text-gray-600 mb-1" />
-              <p className="text-sm text-gray-800">{app.author || 'Không rõ'}</p>
+        {/* Nội dung chính */}
+        <div className="max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 mt-6">
+          {/* Thông tin cơ bản */}
+          <div className="bg-white rounded-xl shadow border border-gray-200 overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-100 font-semibold text-gray-800">
+              Thông tin ứng dụng
             </div>
-            <div className="px-1 sm:px-2">
-              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Phiên bản</p>
-              <FontAwesomeIcon icon={faCodeBranch} className="text-xl text-gray-600 mb-1" />
-              <p className="text-sm text-gray-800">{app.version || 'Không rõ'}</p>
-            </div>
-            <div className="px-1 sm:px-2">
-              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Dung lượng</p>
-              <FontAwesomeIcon icon={faDatabase} className="text-xl text-gray-600 mb-1" />
-              <p className="text-sm text-gray-800">{displaySize}</p>
-            </div>
-            <div className="px-0.5 sm:px-1.5">
-              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">
-                {isTestflight ? 'LƯỢT XEM' : 'Lượt tải'}
-              </p>
-              {isTestflight ? (
-                <div className="flex flex-col items-center">
-                  <span className="text-xl font-medium text-gray-600 mb-1">{app.views ?? 0}</span>
-                  <span className="text-xs text-gray-500">Lượt</span>
-                </div>
-              ) : (
-                <>
-                  <FontAwesomeIcon icon={faDownload} className="text-xl text-gray-600 mb-1" />
-                  <p className="text-sm text-gray-800">{app.downloads ?? 0}</p>
-                </>
+            <div className="divide-y divide-gray-100">
+              <InfoRow label="Phiên bản" value={app.version || '--'} />
+              <InfoRow label="Kích thước" value={displaySize} />
+              <InfoRow
+                label="Ngôn ngữ"
+                value={
+                  showAllLanguages || languagesArray.length <= 6 ? (
+                    <span>{languagesArray.join(', ') || '--'}</span>
+                  ) : (
+                    <span>
+                      {languagesShort.list.join(', ')}{' '}
+                      {languagesShort.remain > 0 && (
+                        <span className="text-gray-500">+{languagesShort.remain} nữa</span>
+                      )}
+                    </span>
+                  )
+                }
+                expandable={languagesArray.length > 6}
+                expanded={showAllLanguages}
+                onToggle={() => setShowAllLanguages((s) => !s)}
+              />
+              <InfoRow
+                label="Thiết bị hỗ trợ"
+                value={
+                  showAllDevices || devicesArray.length <= 5 ? (
+                    <span>{devicesArray.join(', ') || '--'}</span>
+                  ) : (
+                    <span>
+                      {devicesShort.list.join(', ')}{' '}
+                      {devicesShort.remain > 0 && (
+                        <span className="text-gray-500">+{devicesShort.remain} nữa</span>
+                      )}
+                    </span>
+                  )
+                }
+                expandable={devicesArray.length > 5}
+                expanded={showAllDevices}
+                onToggle={() => setShowAllDevices((s) => !s)}
+              />
+              <InfoRow label="Giá" value={app.price || 'Miễn phí'} />
+              {app.category?.name && <InfoRow label="Chuyên mục" value={app.category.name} />}
+              {app.minimum_os_version && (
+                <InfoRow label="Yêu cầu iOS" value={app.minimum_os_version} />
               )}
+              {app.age_rating && <InfoRow label="Độ tuổi" value={app.age_rating} />}
+              {app.release_date && <InfoRow label="Phát hành" value={app.release_date} />}
             </div>
           </div>
 
-          {/* Mô tả */}
-          <div className="bg-white rounded-xl p-4 shadow">
-            <h2 className="text-lg font-bold text-gray-800 mb-3">Mô tả</h2>
-            <div className={`relative overflow-hidden transition-all duration-300 ${showFullDescription ? '' : 'max-h-72'}`}>
-              <div className={`${showFullDescription ? '' : 'mask-gradient-bottom'}`}>
+          {/* Mô tả (Markdown) */}
+          {mdDescription && (
+            <div className="mt-6 bg-white rounded-xl shadow border border-gray-200 overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-100 font-semibold text-gray-800">
+                Mô tả
+              </div>
+              <div className="px-4 py-4 prose prose-sm max-w-none prose-blue dark:prose-invert">
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
                   components={{
-                    h1: ({...props}) => <h3 className="text-xl font-bold mt-3 mb-2" {...props} />,
-                    h2: ({...props}) => <h4 className="text-lg font-bold mt-3 mb-2" {...props} />,
-                    h3: ({...props}) => <h5 className="text-base font-bold mt-3 mb-2" {...props} />,
-                    p: ({...props}) => <p className="text-gray-700 leading-7 mb-3" {...props} />,
-                    ul: ({...props}) => <ul className="list-disc pl-5 space-y-1 mb-3" {...props} />,
-                    ol: ({...props}) => <ol className="list-decimal pl-5 space-y-1 mb-3" {...props} />,
-                    li: ({...props}) => <li className="marker:text-blue-500" {...props} />,
-                    a: ({...props}) => <a className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
-                    code: ({inline, ...props}) =>
-                      inline ? (
-                        <code className="px-1 py-0.5 rounded bg-gray-100 text-pink-700" {...props} />
-                      ) : (
-                        <pre className="p-3 rounded bg-gray-900 text-gray-100 overflow-auto mb-3"><code {...props} /></pre>
-                      ),
-                    blockquote: ({...props}) => <PrettyBlockquote {...props} />,
-                    hr: () => <hr className="my-4 border-gray-200" />,
+                    blockquote: ({ node, ...props }) => <PrettyBlockquote {...props} />,
                   }}
                 >
-                  {normalizeDescription(app.description)}
+                  {showFullDescription ? mdDescription : mdDescription.slice(0, 2000)}
                 </ReactMarkdown>
-              </div>
-              {!showFullDescription && (
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white via-white to-transparent" />
-              )}
-            </div>
-            {app?.description && app.description.length > 300 && (
-              <button
-                onClick={() => setShowFullDescription(v => !v)}
-                className="mt-3 text-sm text-blue-600 hover:underline font-bold"
-              >
-                {showFullDescription ? 'Thu gọn' : 'Xem thêm...'}
-              </button>
-            )}
-          </div>
 
-          {/* Screenshots */}
-          {Array.isArray(app.screenshots) && app.screenshots.length > 0 && (
-            <div className="bg-white rounded-xl p-4 shadow">
-              <h2 className="text-lg font-bold text-gray-800 mb-3">Ảnh màn hình</h2>
-              <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1">
-                {app.screenshots.map((url, i) => (
-                  <div key={i} className="flex-shrink-0 w-48 md:w-56 rounded-xl overflow-hidden border">
-                    <img
-                      src={url}
-                      alt={`Screenshot ${i + 1}`}
-                      className="w-full h-auto object-cover"
-                      onError={(e) => { e.target.src = '/placeholder-image.png'; }}
-                    />
+                {mdDescription.length > 2000 && (
+                  <div className="mt-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowFullDescription((s) => !s)}
+                      className="inline-flex items-center text-blue-600 hover:underline"
+                    >
+                      {showFullDescription ? (
+                        <>
+                          Thu gọn <FontAwesomeIcon icon={faChevronUp} className="ml-1 h-3" />
+                        </>
+                      ) : (
+                        <>
+                          Xem đầy đủ <FontAwesomeIcon icon={faChevronDown} className="ml-1 h-3" />
+                        </>
+                      )}
+                    </button>
                   </div>
-                ))}
+                )}
               </div>
             </div>
           )}
 
-          {/* Thông tin chi tiết */}
-          <div className="bg-white rounded-xl shadow overflow-hidden">
-            <h2 className="px-4 pt-4 text-lg font-bold text-gray-800">Thông tin</h2>
-            <div className="mt-3 divide-y divide-gray-200">
-              <InfoRow label="Nhà phát triển" value={app.author || 'Không rõ'} />
-              <InfoRow label="Phiên bản" value={app.version || 'Không rõ'} />
-              <InfoRow label="Dung lượng" value={displaySize} />
-              <InfoRow
-                label="Thiết bị hỗ trợ"
-                value={
-                  devicesArray.length
-                    ? showAllDevices
-                      ? devicesArray.join(', ')
-                      : `${devicesShort.list.join(', ')}${devicesShort.remain ? `, +${devicesShort.remain}` : ''}`
-                    : 'Không rõ'
-                }
-                expandable={devicesArray.length > devicesShort.list.length}
-                expanded={showAllDevices}
-                onToggle={() => setShowAllDevices(v => !v)}
-              />
-              <InfoRow
-                label="Ngôn ngữ"
-                value={
-                  languagesArray.length
-                    ? showAllLanguages
-                      ? languagesArray.join(', ')
-                      : `${languagesShort.list.join(', ')}${languagesShort.remain ? `, +${languagesShort.remain}` : ''}`
-                    : 'Không rõ'
-                }
-                expandable={languagesArray.length > languagesShort.list.length}
-                expanded={showAllLanguages}
-                onToggle={() => setShowAllLanguages(v => !v)}
-              />
-              <InfoRow
-                label="Yêu cầu iOS"
-                value={app.minimum_os_version ? `iOS ${app.minimum_os_version}+` : 'Không rõ'}
-              />
-              <InfoRow
-                label="Ngày phát hành"
-                value={
-                  app.release_date
-                    ? new Date(app.release_date).toLocaleDateString('vi-VN')
-                    : 'Không rõ'
-                }
-              />
-              <InfoRow
-                label="Xếp hạng tuổi"
-                value={app.age_rating || 'Không rõ'}
-              />
-            </div>
-          </div>
-
-          {/* Related */}
-          {related.length > 0 && (
-            <div className="bg-white rounded-xl p-4 shadow">
-              <h2 className="text-lg font-bold text-gray-800 mb-4">Ứng dụng cùng chuyên mục</h2>
-              <div className="divide-y divide-gray-200">
-                {related.map((item) => (
+          {/* Ứng dụng cùng chuyên mục */}
+          {Array.isArray(related) && related.length > 0 && (
+            <div className="mt-6 bg-white rounded-xl shadow border border-gray-200 overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-100 font-semibold text-gray-800">
+                Ứng dụng cùng chuyên mục
+              </div>
+              <div className="p-4 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 lg:grid-cols-6 gap-3">
+                {related.map((r) => (
                   <Link
-                    href={`/${item.slug}`}
-                    key={item.id}
-                    className="flex items-center justify-between py-4 hover:bg-gray-50 px-2 rounded-lg transition"
+                    key={r.id}
+                    href={`/${r.slug}`}
+                    className="group border border-gray-200 rounded-xl p-3 bg-white hover:shadow transition"
                   >
-                    <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-lg overflow-hidden border border-gray-200 bg-white mx-auto">
                       <img
-                        src={item.icon_url || '/placeholder-icon.png'}
-                        alt={item.name}
-                        className="w-14 h-14 rounded-xl object-cover shadow-sm"
-                        onError={(e) => { e.target.src = '/placeholder-icon.png'; }}
+                        src={r.icon_url || '/placeholder-icon.png'}
+                        alt={r.name}
+                        className="w-full h-full object-cover"
                       />
-                      <div className="flex flex-col">
-                        <p className="text-sm font-semibold text-gray-800">{item.name}</p>
-                        <div className="flex items-center gap-2 text-xs text-gray-500">
-                          {item.author && <span>{item.author}</span>}
-                          {item.version && (
-                            <span className="bg-gray-200 text-gray-800 px-2 py-0.5 rounded text-xs font-medium">
-                              {item.version}
-                            </span>
-                          )}
-                        </div>
-                      </div>
                     </div>
-                    <FontAwesomeIcon icon={faDownload} className="text-blue-500 text-lg" />
+                    <div className="mt-2 text-center">
+                      <div className="text-sm font-semibold text-gray-800 line-clamp-2 group-hover:text-blue-600">
+                        {r.name}
+                      </div>
+                      {r.version && (
+                        <div className="text-xs text-gray-500 mt-0.5">v{r.version}</div>
+                      )}
+                    </div>
                   </Link>
                 ))}
               </div>
             </div>
           )}
-          
-          {/* Bình luận */}
-          <div className="bg-white rounded-xl p-4 shadow">
-            <Comments postId={app.slug} />
-          </div>
 
+          {/* Bình luận */}
+          <div className="mt-6 bg-white rounded-xl shadow border border-gray-200 overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-100 font-semibold text-gray-800">
+              Thảo luận
+            </div>
+            <div className="p-4">
+              {/* Truyền postTitle để thông báo giàu nội dung */}
+              <Comments postId={app.slug} postTitle={app.name} />
+            </div>
+          </div>
         </div>
       </div>
     </Layout>

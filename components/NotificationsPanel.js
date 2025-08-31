@@ -1,11 +1,34 @@
 // components/NotificationsPanel.js
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { auth, db } from '../lib/firebase-client';
 import {
   collection, doc, limit, onSnapshot, orderBy, query,
   updateDoc, where, writeBatch, runTransaction,
 } from 'firebase/firestore';
 import Link from 'next/link';
+
+/* === helper định dạng thời gian === */
+function formatDate(ts) {
+  try {
+    let d = null;
+    if (!ts) return null;
+    if (ts.seconds) d = new Date(ts.seconds * 1000);
+    else if (typeof ts === 'number') d = new Date(ts);
+    else if (typeof ts === 'string') d = new Date(ts);
+    else if (ts instanceof Date) d = ts;
+    if (!d) return null;
+    const rel = new Intl.RelativeTimeFormat('vi', { numeric: 'auto' });
+    const diff = (Date.now() - d.getTime()) / 1000;
+    const units = [['year',31536000],['month',2592000],['week',604800],['day',86400],['hour',3600],['minute',60],['second',1]];
+    for (const [unit, sec] of units) {
+      if (Math.abs(diff) >= sec || unit === 'second') {
+        const val = Math.round(diff / sec * -1);
+        return { rel: rel.format(val, unit), abs: d.toLocaleString('vi-VN') };
+      }
+    }
+    return { rel: '', abs: d.toLocaleString('vi-VN') };
+  } catch { return null; }
+}
 
 export default function NotificationsPanel({ open, onClose }) {
   const [user, setUser] = useState(null);
@@ -18,13 +41,13 @@ export default function NotificationsPanel({ open, onClose }) {
 
   useEffect(() => {
     if (!user || !open) return;
-    const q = query(
+    const qn = query(
       collection(db, 'notifications'),
       where('toUserId', '==', user.uid),
       orderBy('createdAt', 'desc'),
       limit(30)
     );
-    const unsub = onSnapshot(q, (snap) => {
+    const unsub = onSnapshot(qn, (snap) => {
       setItems(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
     });
     return () => unsub();
@@ -82,31 +105,53 @@ export default function NotificationsPanel({ open, onClose }) {
             <li className="text-sm text-gray-600 dark:text-gray-400 py-4 text-center">Chưa có thông báo</li>
           )}
 
-          {items.map((n) => (
-            <li key={n.id} className="border border-gray-100 dark:border-gray-800 rounded-xl p-3 flex justify-between items-center bg-white/60 dark:bg-gray-900/60">
-              <div className="pr-3">
-                <div className="text-[13px] text-gray-900 dark:text-gray-100 font-medium">
-                  {n.type === 'reply' ? 'Có trả lời bình luận' : 'Hoạt động mới'}
-                </div>
-                {/* ✅ Link có ?comment & #c-... để scroll chính xác */}
+          {items.map((n) => {
+            const t = formatDate(n.createdAt);
+            const who = n.fromUserName || 'Ai đó';
+            const title = n.postTitle || `Bài viết ${n.postId}`;
+            const content = n.commentText ? `"${n.commentText}"` : '';
+            const href = `/${n.postId}?comment=${n.commentId}#c-${n.commentId}`;
+            return (
+              <li
+                key={n.id}
+                className={`border border-gray-100 dark:border-gray-800 rounded-xl p-3 bg-white/70 dark:bg-gray-900/60 hover:bg-gray-50 dark:hover:bg-gray-800/70 transition`}
+              >
                 <Link
-                  href={`/${n.postId}?comment=${n.commentId}#c-${n.commentId}`}
+                  href={href}
                   onClick={() => !n.isRead && markRead(n.id, n.isRead)}
-                  className="text-blue-600 dark:text-blue-400 text-sm underline"
+                  className="flex items-start gap-3 no-underline"
                 >
-                  Xem chi tiết
+                  <div className="flex-1">
+                    <div className="text-[13px] text-gray-900 dark:text-gray-100 font-medium leading-5">
+                      {n.type === 'reply' ? (
+                        <span><b>{who}</b> đã trả lời bình luận trong <i>{title}</i> {content}</span>
+                      ) : (
+                        <span><b>{who}</b> đã bình luận trong <i>{title}</i> {content}</span>
+                      )}
+                    </div>
+                    {t && (
+                      <div className="mt-1 text-[12px] text-gray-500" title={t.abs}>
+                        {t.rel}
+                      </div>
+                    )}
+                  </div>
+                  {!n.isRead && (
+                    <span className="mt-1 inline-flex h-2 w-2 rounded-full bg-blue-500" aria-hidden />
+                  )}
                 </Link>
-              </div>
-              {!n.isRead && (
-                <button
-                  onClick={() => markRead(n.id, n.isRead)}
-                  className="text-xs px-2 py-1 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded"
-                >
-                  Đã đọc
-                </button>
-              )}
-            </li>
-          ))}
+                {!n.isRead && (
+                  <div className="mt-2">
+                    <button
+                      onClick={() => markRead(n.id, n.isRead)}
+                      className="text-[12px] px-2 py-1 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded"
+                    >
+                      Đã đọc
+                    </button>
+                  </div>
+                )}
+              </li>
+            );
+          })}
         </ul>
       </div>
     </div>

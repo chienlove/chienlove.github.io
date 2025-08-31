@@ -7,8 +7,9 @@ import {
   serverTimestamp, updateDoc, where
 } from 'firebase/firestore';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faPaperPlane, faReply, faTrash, faUserCircle } from '@fortawesome/free-solid-svg-icons';
+import { faPaperPlane, faReply, faTrash, faUserCircle, faCheckCircle, faQuoteLeft } from '@fortawesome/free-solid-svg-icons';
 
+/* ========= Helpers gốc & mới (KHÔNG xoá, chỉ bổ sung) ========= */
 function preferredName(user) {
   if (!user) return 'Người dùng';
   const p0 = user.providerData?.[0];
@@ -18,7 +19,45 @@ function preferredPhoto(user) {
   return user?.photoURL || user?.providerData?.[0]?.photoURL || '';
 }
 
-async function createNotification({ toUserId, type, postId, commentId, fromUserId }) {
+function formatDate(ts) {
+  // Hỗ trợ Firestore Timestamp, number, string, Date
+  try {
+    let d = null;
+    if (!ts) return '';
+    if (ts.seconds) d = new Date(ts.seconds * 1000);
+    else if (typeof ts === 'number') d = new Date(ts);
+    else if (typeof ts === 'string') d = new Date(ts);
+    else if (ts instanceof Date) d = ts;
+    if (!d) return '';
+
+    const diff = (Date.now() - d.getTime()) / 1000;
+    const rtf = new Intl.RelativeTimeFormat('vi', { numeric: 'auto' });
+    const units = [
+      ['year', 31536000],
+      ['month', 2592000],
+      ['week', 604800],
+      ['day', 86400],
+      ['hour', 3600],
+      ['minute', 60],
+      ['second', 1],
+    ];
+    for (const [unit, sec] of units) {
+      if (Math.abs(diff) >= sec || unit === 'second') {
+        const val = Math.round(diff / sec * -1); // quá khứ -> âm
+        return { rel: rtf.format(val, unit), abs: d.toLocaleString('vi-VN') };
+      }
+    }
+    return { rel: '', abs: d.toLocaleString('vi-VN') };
+  } catch { return ''; }
+}
+function excerpt(s, n = 140) {
+  const t = String(s || '').replace(/\s+/g, ' ').trim();
+  return t.length > n ? `${t.slice(0, n)}…` : t;
+}
+
+/* Cho phép truyền thêm metadata để thông báo hiển thị giàu nội dung */
+async function createNotification(payload = {}) {
+  const { toUserId, type, postId, commentId, fromUserId, ...extra } = payload;
   await addDoc(collection(db, 'notifications'), {
     toUserId,
     type,
@@ -26,7 +65,8 @@ async function createNotification({ toUserId, type, postId, commentId, fromUserI
     commentId,
     isRead: false,
     createdAt: serverTimestamp(),
-    fromUserId
+    fromUserId,
+    ...extra, // fromUserName, fromUserPhoto, postTitle, commentText,...
   });
 }
 async function bumpCounter(uid, delta) {
@@ -38,7 +78,8 @@ async function bumpCounter(uid, delta) {
   });
 }
 
-export default function Comments({ postId }) {
+/* ==================== Component chính ==================== */
+export default function Comments({ postId, postTitle }) {
   const [me, setMe] = useState(null);
   const [adminUids, setAdminUids] = useState([]);
   const [content, setContent] = useState('');
@@ -110,9 +151,20 @@ export default function Comments({ postId }) {
     const ref = await addDoc(collection(db, 'comments'), payload);
     setContent('');
 
+    // Gửi noti cho admin khác (tránh tự notify chính mình)
     const targetAdmins = adminUids.filter(u => u !== me.uid);
     await Promise.all(targetAdmins.map(async (uid) => {
-      await createNotification({ toUserId: uid, type: 'comment', postId: String(postId), commentId: ref.id, fromUserId: me.uid });
+      await createNotification({
+        toUserId: uid,
+        type: 'comment',
+        postId: String(postId),
+        commentId: ref.id,
+        fromUserId: me.uid,
+        fromUserName: preferredName(me),
+        fromUserPhoto: preferredPhoto(me),
+        postTitle: postTitle || '',
+        commentText: excerpt(payload.content),
+      });
       await bumpCounter(uid, +1);
     }));
   };
@@ -136,12 +188,12 @@ export default function Comments({ postId }) {
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            className="w-full min-h-[96px] border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-[15px] leading-6 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
+            className="w-full min-h-[96px] border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-[15px] leading-6 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/40 outline-none"
             placeholder="Viết bình luận..."
             maxLength={3000}
           />
           <div className="flex justify-end">
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:scale-95">
+            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:scale-95 shadow-sm">
               Gửi
             </button>
           </div>
@@ -157,35 +209,47 @@ export default function Comments({ postId }) {
           <div className="text-sm text-gray-500 dark:text-gray-400">Chưa có bình luận.</div>
         ) : (
           <ul className="space-y-4">
-            {roots.map((c) => (
-              <li key={c.id} id={`c-${c.id}`} className="border border-gray-200 dark:border-gray-800 rounded-xl p-3 scroll-mt-24 bg-white dark:bg-gray-900">
-                <CommentRow
-                  c={c}
-                  me={me}
-                  canDelete={!!me && (me.uid === c.authorId || isAdmin(me.uid))}
-                  onDelete={async () => {
-                    const r = repliesByParent[c.id] || [];
-                    await Promise.all(r.map(rr => deleteDoc(doc(db, 'comments', rr.id))));
-                    await deleteDoc(doc(db, 'comments', c.id));
-                  }}
-                />
-                <ReplyBox me={me} postId={postId} parent={c} adminUids={adminUids} />
-                {(repliesByParent[c.id] || []).map((r) => (
-                  <div key={r.id} id={`c-${r.id}`} className="mt-3 pl-4 border-l border-gray-200 dark:border-gray-800 scroll-mt-24">
-                    <CommentRow
-                      c={r}
-                      me={me}
-                      small
-                      canDelete={!!me && (me.uid === r.authorId || isAdmin(me.uid))}
-                      onDelete={async () => {
-                        await deleteDoc(doc(db, 'comments', r.id));
-                      }}
-                    />
-                    <ReplyBox me={me} postId={postId} parent={c} replyingTo={r} adminUids={adminUids} />
-                  </div>
-                ))}
-              </li>
-            ))}
+            {roots.map((c) => {
+              const replies = repliesByParent[c.id] || [];
+              return (
+                <li key={c.id} id={`c-${c.id}`} className="border border-gray-200 dark:border-gray-800 rounded-xl p-3 scroll-mt-24 bg-white dark:bg-gray-900">
+                  <CommentRow
+                    c={c}
+                    me={me}
+                    isAdminFn={isAdmin}
+                    canDelete={!!me && (me.uid === c.authorId || isAdmin(me.uid))}
+                    onDelete={async () => {
+                      const r = repliesByParent[c.id] || [];
+                      await Promise.all(r.map(rr => deleteDoc(doc(db, 'comments', rr.id))));
+                      await deleteDoc(doc(db, 'comments', c.id));
+                    }}
+                  />
+                  <ReplyBox me={me} postId={postId} parent={c} adminUids={adminUids} postTitle={postTitle} />
+                  {replies.map((r) => {
+                    // Xác định người bị trả lời để hiển thị quote đẹp
+                    const target = r.replyToUserId === c.authorId
+                      ? c
+                      : replies.find(x => x.authorId === r.replyToUserId) || null;
+                    return (
+                      <div key={r.id} id={`c-${r.id}`} className="mt-3 pl-4 border-l border-gray-200 dark:border-gray-800 scroll-mt-24">
+                        <CommentRow
+                          c={r}
+                          me={me}
+                          small
+                          isAdminFn={isAdmin}
+                          quoteFrom={target}
+                          canDelete={!!me && (me.uid === r.authorId || isAdmin(me.uid))}
+                          onDelete={async () => {
+                            await deleteDoc(doc(db, 'comments', r.id));
+                          }}
+                        />
+                        <ReplyBox me={me} postId={postId} parent={c} replyingTo={r} adminUids={adminUids} postTitle={postTitle} />
+                      </div>
+                    );
+                  })}
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>
@@ -193,9 +257,12 @@ export default function Comments({ postId }) {
   );
 }
 
-function CommentRow({ c, me, small=false, canDelete=false, onDelete }) {
+/* ==================== Hàng mục con ==================== */
+function CommentRow({ c, me, small=false, canDelete=false, onDelete, isAdminFn=() => false, quoteFrom=null }) {
   const avatar = c.userPhoto;
   const name = c.userName || (me && me.uid === c.authorId ? preferredName(me) : 'Người dùng');
+  const time = formatDate(c.createdAt);
+
   return (
     <div className="flex items-start gap-3">
       {avatar ? (
@@ -206,16 +273,40 @@ function CommentRow({ c, me, small=false, canDelete=false, onDelete }) {
         </div>
       )}
       <div className="flex-1">
-        <div className={`flex items-center gap-3 ${small ? 'text-sm' : 'text-[15px]'}`}>
-          <span className="font-semibold text-blue-800 dark:text-blue-300">{name}</span>
+        <div className={`flex flex-wrap items-center gap-2 ${small ? 'text-[13px]' : 'text-[15px]'}`}>
+          <span className="font-semibold text-blue-800 dark:text-blue-300 inline-flex items-center gap-1">
+            {name}
+            {isAdminFn(c.authorId) && (
+              <span className="inline-flex items-center justify-center -mt-[1px]" title="Quản trị viên đã xác minh">
+                <FontAwesomeIcon icon={faCheckCircle} className="w-3.5 h-3.5 text-blue-500" />
+              </span>
+            )}
+          </span>
+          {time && (
+            <span className="text-xs text-gray-500" title={time.abs}>
+              {time.rel}
+            </span>
+          )}
           {canDelete && (
-            <button onClick={onDelete} className="text-xs text-red-600 inline-flex items-center gap-1 hover:underline">
+            <button onClick={onDelete} className="ml-auto text-xs text-red-600 inline-flex items-center gap-1 hover:underline">
               <FontAwesomeIcon icon={faTrash} />
               Xoá
             </button>
           )}
         </div>
-        <div className="mt-1 whitespace-pre-wrap break-words text-gray-900 dark:text-gray-100 leading-6">
+
+        {/* Quote mục tiêu (nếu là reply và xác định được) */}
+        {quoteFrom && quoteFrom.id !== c.id && (
+          <div className="mt-2 text-[13px] text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg p-2">
+            <div className="flex items-center gap-2 mb-1 opacity-80">
+              <FontAwesomeIcon icon={faQuoteLeft} className="w-3.5 h-3.5" />
+              <span className="font-medium">{quoteFrom.userName || 'Người dùng'}</span>
+            </div>
+            <div className="whitespace-pre-wrap break-words">{excerpt(quoteFrom.content, 200)}</div>
+          </div>
+        )}
+
+        <div className="mt-2 whitespace-pre-wrap break-words text-gray-900 dark:text-gray-100 leading-6">
           {c.content}
         </div>
       </div>
@@ -223,7 +314,7 @@ function CommentRow({ c, me, small=false, canDelete=false, onDelete }) {
   );
 }
 
-function ReplyBox({ me, postId, parent, replyingTo=null, adminUids }) {
+function ReplyBox({ me, postId, parent, replyingTo=null, adminUids, postTitle }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
   const target = replyingTo || parent;
@@ -246,13 +337,35 @@ function ReplyBox({ me, postId, parent, replyingTo=null, adminUids }) {
     setText('');
     setOpen(false);
 
+    // Notify người bị trả lời
     if (target.authorId && target.authorId !== me.uid) {
-      await createNotification({ toUserId: target.authorId, type: 'reply', postId: String(postId), commentId: ref.id, fromUserId: me.uid });
+      await createNotification({
+        toUserId: target.authorId,
+        type: 'reply',
+        postId: String(postId),
+        commentId: ref.id,
+        fromUserId: me.uid,
+        fromUserName: preferredName(me),
+        fromUserPhoto: preferredPhoto(me),
+        postTitle: postTitle || '',
+        commentText: excerpt(text),
+      });
       await bumpCounter(target.authorId, +1);
     }
+    // Notify admin khác (không trùng người bị reply)
     const targets = adminUids.filter(u => u !== me.uid && u !== target.authorId);
     await Promise.all(targets.map(async (uid) => {
-      await createNotification({ toUserId: uid, type: 'comment', postId: String(postId), commentId: ref.id, fromUserId: me.uid });
+      await createNotification({
+        toUserId: uid,
+        type: 'comment',
+        postId: String(postId),
+        commentId: ref.id,
+        fromUserId: me.uid,
+        fromUserName: preferredName(me),
+        fromUserPhoto: preferredPhoto(me),
+        postTitle: postTitle || '',
+        commentText: excerpt(text),
+      });
       await bumpCounter(uid, +1);
     }));
   };
@@ -268,16 +381,22 @@ function ReplyBox({ me, postId, parent, replyingTo=null, adminUids }) {
         </button>
       ) : (
         <form onSubmit={onReply} className="flex flex-col gap-2 mt-2">
+          {/* Preview trích dẫn khi đang soạn */}
+          {target && (
+            <div className="text-[12px] text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 rounded-lg p-2">
+              <span className="font-medium">{target.userName || 'Người dùng'}:</span> {excerpt(target.content, 160)}
+            </div>
+          )}
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
-            className="w-full min-h-[72px] border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-[15px] leading-6 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100"
+            className="w-full min-h-[72px] border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-[15px] leading-6 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/40 outline-none"
             placeholder={`Phản hồi ${replyingTo ? (replyingTo.userName || 'người dùng') : (parent.userName || 'người dùng')}…`}
             maxLength={3000}
             autoFocus
           />
           <div className="flex items-center gap-2">
-            <button className="px-3 py-1.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg">
+            <button className="px-3 py-1.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-lg shadow-sm">
               <FontAwesomeIcon icon={faPaperPlane} className="mr-1" />
               Gửi
             </button>
