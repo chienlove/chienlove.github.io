@@ -150,7 +150,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
   if (!email) return setMsg('Nhập email trước khi đặt lại mật khẩu.');
   try {
     const actionCodeSettings = {
-      url: 'https://auth.storeios.net'
+      url: 'https://auth.storeios.net',
       handleCodeInApp: false,
     };
     await sendPasswordResetEmail(auth, email, actionCodeSettings);
