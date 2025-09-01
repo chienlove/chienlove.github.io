@@ -1,0 +1,32 @@
+name: Deploy Firestore Indexes (manual, only 2 files)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  deploy-indexes:
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout (sparse: only 2 files)"
+        uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            firebase.json
+            firestore.indexes.json
+          sparse-checkout-cone: false
+
+      - name: "Sanity check"
+        run: |
+          echo "Repo root:"
+          ls -la
+          test -f firebase.json || (echo "❌ Missing firebase.json at repo root" && exit 1)
+          test -f firestore.indexes.json || (echo "❌ Missing firestore.indexes.json at repo root" && exit 1)
+          echo "✅ Found firebase.json & firestore.indexes.json"
+
+      # Dùng GitHub Action chạy Firebase CLI bằng service account
+      - name: "Deploy Firestore Indexes only"
+        uses: w9jds/firebase-action@v13
+        with:
+          args: deploy --only firestore:indexes --project comments-storeios
+        env:
+          GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
