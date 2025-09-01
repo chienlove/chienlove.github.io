@@ -28,7 +28,7 @@ import {
   faAngleRight,
 } from '@fortawesome/free-solid-svg-icons';
 
-// ✅ Dynamic import còn lại
+// Dynamic import – Comments
 const Comments = dynamic(() => import('../components/Comments'), {
   ssr: false,
   loading: () => <div className="text-sm text-gray-500">Đang tải bình luận…</div>,
@@ -92,7 +92,6 @@ export async function getServerSideProps(context) {
 }
 
 /* ===================== Helpers ===================== */
-// Tách danh sách từ chuỗi: "iOS 14, iPadOS" → ["iOS 14", "iPadOS"]
 function parseList(input) {
   if (!input) return [];
   if (Array.isArray(input)) return input;
@@ -102,65 +101,48 @@ function parseList(input) {
     .filter(Boolean);
 }
 
-// Xoá thẻ [tag=...] hoặc [tag]...[/tag] – không dùng regex
 function stripSimpleTagAll(str, tag) {
   let s = String(str);
   const open = `[${tag}`;
   const close = `[/${tag}]`;
-
-  // Xoá thẻ đóng lẻ
   while (true) {
     const idx = s.toLowerCase().indexOf(close);
     if (idx === -1) break;
     s = s.slice(0, idx) + s.slice(idx + close.length);
   }
-
-  // Xử lý cặp mở/đóng
   while (true) {
     const lower = s.toLowerCase();
     const iOpen = lower.indexOf(open);
     if (iOpen === -1) break;
-
     const iBracket = s.indexOf(']', iOpen);
-    if (iBracket === -1) {
-      s = s.slice(0, iOpen);
-      break;
-    }
-
+    if (iBracket === -1) { s = s.slice(0, iOpen); break; }
     const iClose = lower.indexOf(close, iBracket + 1);
     if (iClose === -1) {
       s = s.slice(0, iOpen) + s.slice(iBracket + 1);
       continue;
     }
-
     const inner = s.slice(iBracket + 1, iClose);
     s = s.slice(0, iOpen) + inner + s.slice(iClose + close.length);
   }
   return s;
 }
 
-// Chuyển [list][*]...[/list] → Markdown
 function processListBlocks(str) {
   let output = '';
   let remaining = String(str);
-
   while (true) {
     const lower = remaining.toLowerCase();
     const start = lower.indexOf('[list]');
     if (start === -1) { output += remaining; break; }
-
     const end = lower.indexOf('[/list]', start + 6);
     if (end === -1) { output += remaining; break; }
-
     const before = remaining.slice(0, start);
     const listContent = remaining.slice(start + 6, end);
     const after = remaining.slice(end + 7);
-
     const items = listContent
       .split('[*]')
       .map(t => t.trim())
       .filter(Boolean);
-
     const md = '\n' + items.map(it => `- ${it}`).join('\n') + '\n';
     output += before + md;
     remaining = after;
@@ -168,42 +150,26 @@ function processListBlocks(str) {
   return output;
 }
 
-// BBCode → Markdown (an toàn, ít regex)
 function bbcodeToMarkdownLite(input = '') {
   let s = String(input);
-
-  // Step 1: [b], [i], [u]
   s = s.replace(/\[b\](.*?)\[\/b\]/gi, '**$1**');
   s = s.replace(/\[i\](.*?)\[\/i\]/gi, '*$1*');
   s = s.replace(/\[u\](.*?)\[\/u\]/gi, '__$1__');
-
-  // Step 2: [url] & [url=...]
   s = s.replace(/\[url\](https?:\/\/[^\s\]]+)\[\/url\]/gi, '[$1]($1)');
   s = s.replace(/\[url=(https?:\/\/[^\]\s]+)\](.*?)\[\/url\]/gi, '[$2]($1)');
-
-  // Step 3: [img]
   s = s.replace(/\[img\](https?:\/\/[^\s\]]+)\[\/img\]/gi, '![]($1)');
-
-  // Step 4: [color] và [size] – bỏ qua
   s = stripSimpleTagAll(s, 'color');
   s = stripSimpleTagAll(s, 'size');
-
-  // Step 5: [list]
   s = processListBlocks(s);
-
-  // Step 6: [quote]
   const quoteR = new RegExp('\\[quote\\]\\s*([\\s\\S]*?)\\s*\\[/quote\\]', 'gi');
   s = s.replace(quoteR, (_m, p1) =>
     String(p1).trim().split(/\r?\n/).map(line => `> ${line}`).join('\n')
   );
-
-  // Step 7: [code]
   const codeR = new RegExp('\\[code\\]\\s*([\\s\\S]*?)\\s*\\[/code\\]', 'gi');
   s = s.replace(codeR, (_m, p1) => {
     const body = String(p1).replace(/```/g, '``');
     return `\n\`\`\`\n${body}\n\`\`\`\n`;
   });
-
   return s;
 }
 
@@ -225,37 +191,34 @@ function PrettyBlockquote({ children }) {
   );
 }
 
-// ===================== InfoRow (tối ưu) =====================
-const InfoRow = memo(({ label, value, expandable = false, expanded = false, onToggle }) => {
-  return (
-    <div className="px-4 py-3 flex items-start">
-      <div className="w-40 min-w-[9rem] text-sm text-gray-500">{label}</div>
-      <div className="flex-1 text-sm text-gray-800">
-        <span className="align-top">{value}</span>
-        {expandable && (
-          <button
-            type="button"
-            onClick={onToggle}
-            className="ml-2 inline-flex items-center text-blue-600 hover:underline"
-          >
-            {expanded ? (
-              <>
-                Thu gọn <FontAwesomeIcon icon={faChevronUp} className="ml-1 h-3" />
-              </>
-            ) : (
-              <>
-                Xem thêm <FontAwesomeIcon icon={faChevronDown} className="ml-1 h-3" />
-              </>
-            )}
-          </button>
-        )}
-      </div>
+const InfoRow = memo(({ label, value, expandable, expanded, onToggle }) => (
+  <div className="px-4 py-3 flex items-start">
+    <div className="w-40 min-w-[9rem] text-sm text-gray-500">{label}</div>
+    <div className="flex-1 text-sm text-gray-800">
+      <span className="align-top">{value}</span>
+      {expandable && (
+        <button
+          type="button"
+          onClick={onToggle}
+          className="ml-2 inline-flex items-center text-blue-600 hover:underline"
+        >
+          {expanded ? (
+            <>
+              Thu gọn <FontAwesomeIcon icon={faChevronUp} className="ml-1 h-3" />
+            </>
+          ) : (
+            <>
+              Xem thêm <FontAwesomeIcon icon={faChevronDown} className="ml-1 h-3" />
+            </>
+          )}
+        </button>
+      )}
     </div>
-  );
-});
+  </div>
+));
 InfoRow.displayName = 'InfoRow';
 
-/* ===================== Center Modal (dùng cho gate) ===================== */
+/* ===================== Center Modal (generic) ===================== */
 function CenterModal({ open, title, body, actions }) {
   if (!open) return null;
   return (
@@ -270,10 +233,9 @@ function CenterModal({ open, title, body, actions }) {
   );
 }
 
-/* ===================== LoginButton để mở modal ===================== */
+/* LoginButton popup */
 import LoginButton from '../components/LoginButton';
 
-/* ===================== Page ===================== */
 export default function Detail({ serverApp, serverRelated }) {
   const router = useRouter();
   const [app, setApp] = useState(serverApp);
@@ -287,10 +249,9 @@ export default function Detail({ serverApp, serverRelated }) {
   const [showAllDevices, setShowAllDevices] = useState(false);
   const [showAllLanguages, setShowAllLanguages] = useState(false);
 
-  // ✅ Đợi cả ReactMarkdown và remarkGfm
+  // ReactMarkdown & remark-gfm
   const [remarkGfm, setRemarkGfm] = useState(null);
   const [ReactMarkdown, setReactMarkdown] = useState(null);
-
   useEffect(() => {
     Promise.all([
       import('react-markdown').then(m => m.default),
@@ -325,8 +286,6 @@ export default function Detail({ serverApp, serverRelated }) {
 
   useEffect(() => {
     if (!app?.id) return;
-
-    // Đếm view TestFlight
     if (isTestflight) {
       fetch('/api/admin/add-view', {
         method: 'POST',
@@ -334,8 +293,6 @@ export default function Detail({ serverApp, serverRelated }) {
         body: JSON.stringify({ id: app.id }),
       }).catch(console.error);
     }
-
-    // Kiểm tra slot TestFlight
     if (isTestflight && app.testflight_url) {
       setStatusLoading(true);
       const id = app.testflight_url.split('/').pop();
@@ -345,8 +302,6 @@ export default function Detail({ serverApp, serverRelated }) {
         .catch(console.error)
         .finally(() => setStatusLoading(false));
     }
-
-    // Màu nền từ icon
     if (app.icon_url && typeof window !== 'undefined') {
       const fac = new FastAverageColor();
       fac.getColorAsync(app.icon_url)
@@ -473,10 +428,10 @@ export default function Detail({ serverApp, serverRelated }) {
         <meta name="twitter:card" content="summary_large_image" />
       </Head>
 
-      {/* Modal cũ */}
+      {/* Modal cũ (nếu bạn vẫn dùng) */}
       <CenterModal open={modal.open} title={modal.title} body={modal.body} actions={modal.actions} />
 
-      {/* Modal LoginButton khi cần đăng nhập / xác minh */}
+      {/* Modal LoginButton (popup) */}
       {showLoginModal && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-4">
           <div className="relative w-full max-w-md rounded-2xl border border-gray-200 bg-white dark:bg-gray-900 shadow-2xl p-4">
@@ -494,40 +449,43 @@ export default function Detail({ serverApp, serverRelated }) {
         </div>
       )}
 
-      {/* Breadcrumb nằm TRÊN CÙNG, ngoài màu nền gradient */}
+      {/* ===== Refined Breadcrumb ===== */}
       <div className="bg-gray-100">
-        <div className="w-full flex justify-center mt-2 px-2 sm:px-4 md:px-6">
+        <div className="w-full flex justify-center px-2 sm:px-4 md:px-6">
           <div className="w-full max-w-screen-2xl">
-            <nav aria-label="Breadcrumb" className="px-2 py-2">
-              <ol className="flex items-center gap-1 text-sm text-blue-900/90">
+            <nav aria-label="Breadcrumb" className="px-2 py-3">
+              <ol className="flex items-center gap-1.5 text-sm text-gray-700 dark:text-gray-300">
                 <li>
-                  <Link href="/" className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-white/80 hover:bg-white text-blue-700 font-medium shadow-sm">
+                  <Link
+                    href="/"
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/80 hover:bg-white text-blue-600 font-medium shadow-sm transition"
+                  >
                     <FontAwesomeIcon icon={faHouse} className="w-3.5 h-3.5" />
                     <span className="hidden sm:inline">Trang chủ</span>
                   </Link>
                 </li>
-                <li className="text-blue-700/50">
-                  <FontAwesomeIcon icon={faAngleRight} />
+                <li className="text-gray-400">
+                  <FontAwesomeIcon icon={faAngleRight} className="w-3 h-3" />
                 </li>
                 <li>
                   {app?.category?.slug ? (
                     <Link
                       href={`/category/${app.category.slug}`}
-                      className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-white/80 hover:bg-white text-blue-700 font-medium shadow-sm"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/80 hover:bg-white text-blue-600 font-medium shadow-sm transition"
                     >
-                      <span className="truncate max-w-[40vw] sm:max-w-none">{app.category.name || 'Chuyên mục'}</span>
+                      {app.category.name || 'Chuyên mục'}
                     </Link>
                   ) : (
-                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-white text-blue-700/70 font-medium shadow-sm">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/60 text-blue-500 font-medium">
                       Chuyên mục
                     </span>
                   )}
                 </li>
-                <li className="text-blue-700/50">
-                  <FontAwesomeIcon icon={faAngleRight} />
+                <li className="text-gray-400">
+                  <FontAwesomeIcon icon={faAngleRight} className="w-3 h-3" />
                 </li>
                 <li>
-                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-600 text-white font-semibold shadow">
+                  <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold shadow">
                     {app.name}
                   </span>
                 </li>
@@ -537,7 +495,7 @@ export default function Detail({ serverApp, serverRelated }) {
         </div>
       </div>
 
-      {/* Hero với màu nền gradient */}
+      {/* Hero Section */}
       <div className="bg-gray-100 min-h-screen pb-12">
         <div className="w-full flex justify-center mt-0 bg-gray-100">
           <div className="relative w-full max-w-screen-2xl px-2 sm:px-4 md:px-6 pb-8 bg-white rounded-none">
@@ -545,7 +503,6 @@ export default function Detail({ serverApp, serverRelated }) {
               className="w-full pb-6"
               style={{ backgroundImage: `linear-gradient(to bottom, ${dominantColor}, #f0f2f5)` }}
             >
-              {/* Back */}
               <div className="absolute top-3 left-3 z-10">
                 <Link
                   href="/"
