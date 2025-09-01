@@ -1,16 +1,17 @@
 // components/Comments.js
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { auth, db } from '../lib/firebase-client';
 import {
   addDoc, collection, deleteDoc, doc, getDoc,
-  limit, onSnapshot, orderBy, query, runTransaction,
+  limit, orderBy, query, runTransaction,
   serverTimestamp, updateDoc, where,
-  arrayUnion, arrayRemove, increment
+  arrayUnion, arrayRemove, increment,
+  getDocs, startAfter
 } from 'firebase/firestore';
 import { sendEmailVerification } from 'firebase/auth';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faPaperPlane, faReply, faTrash, faUserCircle, faCheckCircle, faQuoteLeft, faHeart
+  faPaperPlane, faReply, faTrash, faUserCircle, faCheckCircle, faQuoteLeft, faHeart, faChevronDown
 } from '@fortawesome/free-solid-svg-icons';
 
 /* ========= Helpers ========= */
@@ -97,9 +98,19 @@ function CenterModal({ open, title, children, onClose, actions, tone = 'info' })
 export default function Comments({ postId, postTitle }) {
   const [me, setMe] = useState(null);
   const [adminUids, setAdminUids] = useState([]);
-  const [content, setContent] = useState('');
+
+  // Danh sách comment (roots + replies)
   const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingInitial, setLoadingInitial] = useState(true);
+
+  // Phân trang cho ROOT comments (parentId == null)
+  const PAGE_SIZE = 20;
+  const lastDocRef = useRef(null);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  // Form tạo bình luận
+  const [content, setContent] = useState('');
 
   // Modal center
   const [modalOpen, setModalOpen] = useState(false);
@@ -151,8 +162,8 @@ export default function Comments({ postId, postTitle }) {
                 setModalTone('success');
               }
             } catch {
-                setModalContent(<p>Không gửi được email xác minh. Vui lòng thử lại sau.</p>);
-                setModalTone('error');
+              setModalContent(<p>Không gửi được email xác minh. Vui lòng thử lại sau.</p>);
+              setModalTone('error');
             }
           }}
           className="px-3 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700"
@@ -209,22 +220,84 @@ export default function Comments({ postId, postTitle }) {
     })();
   }, []);
 
+  // ===== Tải trang đầu (roots + replies), không dùng realtime để tiết kiệm reads
   useEffect(() => {
     if (!postId) return;
-    setLoading(true);
-    const q = query(
-      collection(db, 'comments'),
-      where('postId', '==', String(postId)),
-      orderBy('createdAt', 'desc'),
-      limit(100)
-    );
-    const unsub = onSnapshot(q, (snap) => {
-      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      setItems(list);
-      setLoading(false);
-    });
-    return () => unsub();
+    setLoadingInitial(true);
+    setItems([]);
+    lastDocRef.current = null;
+
+    (async () => {
+      const { roots, last, more } = await fetchRootPage(postId, PAGE_SIZE, null);
+      // load replies for these roots
+      const replies = await fetchRepliesForRoots(postId, roots.map(r => r.id));
+      setItems(mergeRootsReplies(roots, replies));
+      lastDocRef.current = last;
+      setHasMore(more);
+      setLoadingInitial(false);
+    })();
   }, [postId]);
+
+  // ===== Hàm fetch
+  async function fetchRootPage(postId, pageSize, afterDoc) {
+    // Query chỉ lấy ROOT (parentId == null)
+    const col = collection(db, 'comments');
+    const qBase = query(
+      col,
+      where('postId', '==', String(postId)),
+      where('parentId', '==', null),
+      orderBy('createdAt', 'desc'),
+      limit(pageSize)
+    );
+    const q = afterDoc ? query(qBase, startAfter(afterDoc)) : qBase;
+    const snap = await getDocs(q);
+    const roots = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const last = snap.docs.length > 0 ? snap.docs[snap.docs.length - 1] : null;
+
+    // Có còn nữa nếu trang này đủ đầy
+    // (Firestore không trả total count, nên ước lượng theo page size)
+    const more = snap.docs.length === pageSize;
+    return { roots, last, more };
+  }
+
+  async function fetchRepliesForRoots(postId, rootIds) {
+    // Lấy replies theo từng root (để giữ thứ tự asc per thread)
+    const result = {};
+    await Promise.all(rootIds.map(async (rid) => {
+      const qy = query(
+        collection(db, 'comments'),
+        where('postId', '==', String(postId)),
+        where('parentId', '==', rid),
+        orderBy('createdAt', 'asc'),
+        limit(200)
+      );
+      const snap = await getDocs(qy);
+      result[rid] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    }));
+    return result;
+  }
+
+  function mergeRootsReplies(roots, repliesBy) {
+    // items = [ root, ...replies, root, ...replies, ...]
+    const out = [];
+    roots.forEach(r => {
+      out.push(r);
+      const reps = repliesBy[r.id] || [];
+      reps.forEach(x => out.push(x));
+    });
+    return out;
+  }
+
+  const loadMore = async () => {
+    if (!hasMore || loadingMore || !lastDocRef.current) return;
+    setLoadingMore(true);
+    const { roots, last, more } = await fetchRootPage(postId, PAGE_SIZE, lastDocRef.current);
+    const replies = await fetchRepliesForRoots(postId, roots.map(r => r.id));
+    setItems(prev => [...prev, ...mergeRootsReplies(roots, replies)]);
+    lastDocRef.current = last;
+    setHasMore(more);
+    setLoadingMore(false);
+  };
 
   // vá comment cũ thiếu tên/ảnh của chính mình
   useEffect(() => {
@@ -261,6 +334,13 @@ export default function Comments({ postId, postTitle }) {
     };
     const ref = await addDoc(collection(db, 'comments'), payload);
     setContent('');
+
+    // Sau khi tạo mới, refresh trang đầu để thấy bình luận mới
+    const { roots, last, more } = await fetchRootPage(postId, PAGE_SIZE, null);
+    const replies = await fetchRepliesForRoots(postId, roots.map(r => r.id));
+    setItems(mergeRootsReplies(roots, replies));
+    lastDocRef.current = last;
+    setHasMore(more);
 
     // Gửi noti cho admin khác (tránh tự notify chính mình)
     const targetAdmins = adminUids.filter(u => u !== me.uid);
@@ -309,13 +389,14 @@ export default function Comments({ postId, postTitle }) {
     } catch {}
   };
 
-  const roots = items.filter(c => !c.parentId);
+  // Tổ chức dữ liệu để render (roots & replies)
+  const roots = useMemo(() => items.filter(c => !c.parentId), [items]);
   const repliesByParent = useMemo(() => {
     const m = {};
     items.forEach(c => {
       if (c.parentId) (m[c.parentId] ||= []).push(c);
     });
-    Object.values(m).forEach(arr => arr.sort((a,b) => (a.createdAt?.seconds||0) - (b.createdAt?.seconds||0)));
+    // replies đã fetch theo order asc
     return m;
   }, [items]);
 
@@ -335,10 +416,12 @@ export default function Comments({ postId, postTitle }) {
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            className="w-full min-h-[96px] border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-[15px] leading-6 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/40 outline-none"
+            // 👇 Chống zoom iOS: cỡ chữ >= 16px (text-base ~ 16px)
+            className="w-full min-h-[96px] border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-base leading-6 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/40 outline-none"
             placeholder="Viết bình luận..."
             maxLength={3000}
             onFocus={() => { if (me && !me.emailVerified) openVerifyPrompt(); }}
+            inputMode="text"
           />
           <div className="flex justify-end">
             <button
@@ -353,76 +436,139 @@ export default function Comments({ postId, postTitle }) {
       )}
 
       <div className="mt-4">
-        {loading ? (
+        {loadingInitial ? (
           <div className="text-sm text-gray-500 dark:text-gray-400">Đang tải bình luận…</div>
         ) : roots.length === 0 ? (
           <div className="text-sm text-gray-500 dark:text-gray-400">Chưa có bình luận.</div>
         ) : (
-          <ul className="space-y-4">
-            {roots.map((c) => {
-              const replies = repliesByParent[c.id] || [];
-              return (
-                <li key={c.id} id={`c-${c.id}`} className="border border-gray-200 dark:border-gray-800 rounded-xl p-3 scroll-mt-24 bg-white dark:bg-gray-900">
-                  <CommentRow
-                    c={c}
-                    me={me}
-                    isAdminFn={(uid)=>adminUids.includes(uid)}
-                    canDelete={!!me && (me.uid === c.authorId || adminUids.includes(me.uid))}
-                    onDelete={() => {
-                      openConfirm('Xoá bình luận này và toàn bộ phản hồi của nó?', async () => {
-                        const r = repliesByParent[c.id] || [];
-                        await Promise.all(r.map(rr => deleteDoc(doc(db, 'comments', rr.id))));
-                        await deleteDoc(doc(db, 'comments', c.id));
-                      });
-                    }}
-                    onToggleLike={()=>toggleLike(c)}
-                  />
-                  <ReplyBox
-                    me={me}
-                    postId={postId}
-                    parent={c}
-                    adminUids={adminUids}
-                    postTitle={postTitle}
-                    onNeedVerify={openVerifyPrompt}
-                    onNeedLogin={openLoginPrompt}
-                  />
-                  {replies.map((r) => {
-                    const target = r.replyToUserId === c.authorId
-                      ? c
-                      : replies.find(x => x.authorId === r.replyToUserId) || null;
-                    return (
-                      <div key={r.id} id={`c-${r.id}`} className="mt-3 pl-4 border-l border-gray-200 dark:border-gray-800 scroll-mt-24">
-                        <CommentRow
-                          c={r}
-                          me={me}
-                          small
-                          isAdminFn={(uid)=>adminUids.includes(uid)}
-                          quoteFrom={target}
-                          canDelete={!!me && (me.uid === r.authorId || adminUids.includes(me.uid))}
-                          onDelete={() => {
-                            openConfirm('Bạn có chắc muốn xoá phản hồi này?', async () => {
-                              await deleteDoc(doc(db, 'comments', r.id));
-                            });
-                          }}
-                          onToggleLike={()=>toggleLike(r)}
-                        />
-                        <ReplyBox
-                          me={me}
-                          postId={postId}
-                          parent={c}
-                          replyingTo={r}
-                          adminUids={adminUids}
-                          postTitle={postTitle}
-                          onNeedVerify={openVerifyPrompt}
-                          onNeedLogin={openLoginPrompt}
-                        />
-                      </div>
-                    );
-                  })}
-                </li>
-              );
-            })}
-          </ul>
+          <>
+            <ul className="space-y-4">
+              {roots.map((c) => {
+                const replies = repliesByParent[c.id] || [];
+                return (
+                  <li key={c.id} id={`c-${c.id}`} className="border border-gray-200 dark:border-gray-800 rounded-xl p-3 scroll-mt-24 bg-white dark:bg-gray-900">
+                    <CommentRow
+                      c={c}
+                      me={me}
+                      isAdminFn={(uid)=>adminUids.includes(uid)}
+                      canDelete={!!me && (me.uid === c.authorId || adminUids.includes(me.uid))}
+                      onDelete={() => {
+                        openConfirm('Xoá bình luận này và toàn bộ phản hồi của nó?', async () => {
+                          // xoá replies trước
+                          const reps = repliesByParent[c.id] || [];
+                          await Promise.all(reps.map(rr => deleteDoc(doc(db, 'comments', rr.id))));
+                          await deleteDoc(doc(db, 'comments', c.id));
+                          // cập nhật UI cục bộ
+                          setItems(prev => prev.filter(x => x.id !== c.id && x.parentId !== c.id));
+                        });
+                      }}
+                      onToggleLike={()=>toggleLike(c)}
+                    />
+                    <ReplyBox
+                      me={me}
+                      postId={postId}
+                      parent={c}
+                      adminUids={adminUids}
+                      postTitle={postTitle}
+                      onNeedVerify={openVerifyPrompt}
+                      onNeedLogin={openLoginPrompt}
+                      onCreated={async () => {
+                        // sau khi reply, refetch replies riêng cho root này
+                        const only = await fetchRepliesForRoots(postId, [c.id]);
+                        setItems(prev => {
+                          const others = prev.filter(x => x.id !== c.id && x.parentId !== c.id);
+                          return mergeRootsReplies([c], only);
+                        });
+                        // rồi ghép lại với các root khác (giữ vị trí hiện tại)
+                        setItems(prev => {
+                          const currentRoots = prev.filter(x => !x.parentId);
+                          const rebuilt = [];
+                          currentRoots.forEach(r => {
+                            if (r.id === c.id) {
+                              rebuilt.push(r, ... (only[c.id] || []));
+                            } else {
+                              const reps = repliesByParent[r.id] || [];
+                              rebuilt.push(r, ...reps);
+                            }
+                          });
+                          return rebuilt;
+                        });
+                      }}
+                    />
+                    {replies.map((r) => {
+                      const target = r.replyToUserId === c.authorId
+                        ? c
+                        : replies.find(x => x.authorId === r.replyToUserId) || null;
+                      return (
+                        <div key={r.id} id={`c-${r.id}`} className="mt-3 pl-4 border-l border-gray-200 dark:border-gray-800 scroll-mt-24">
+                          <CommentRow
+                            c={r}
+                            me={me}
+                            small
+                            isAdminFn={(uid)=>adminUids.includes(uid)}
+                            quoteFrom={target}
+                            canDelete={!!me && (me.uid === r.authorId || adminUids.includes(me.uid))}
+                            onDelete={() => {
+                              openConfirm('Bạn có chắc muốn xoá phản hồi này?', async () => {
+                                await deleteDoc(doc(db, 'comments', r.id));
+                                setItems(prev => prev.filter(x => x.id !== r.id));
+                              });
+                            }}
+                            onToggleLike={()=>toggleLike(r)}
+                          />
+                          <ReplyBox
+                            me={me}
+                            postId={postId}
+                            parent={c}
+                            replyingTo={r}
+                            adminUids={adminUids}
+                            postTitle={postTitle}
+                            onNeedVerify={openVerifyPrompt}
+                            onNeedLogin={openLoginPrompt}
+                            onCreated={async () => {
+                              // refetch replies của root này
+                              const only = await fetchRepliesForRoots(postId, [c.id]);
+                              setItems(prev => {
+                                const others = prev.filter(x => x.id !== c.id && x.parentId !== c.id);
+                                return mergeRootsReplies([c], only);
+                              });
+                              setItems(prev => {
+                                const currentRoots = prev.filter(x => !x.parentId);
+                                const rebuilt = [];
+                                currentRoots.forEach(r0 => {
+                                  if (r0.id === c.id) {
+                                    rebuilt.push(r0, ... (only[c.id] || []));
+                                  } else {
+                                    const reps = repliesByParent[r0.id] || [];
+                                    rebuilt.push(r0, ...reps);
+                                  }
+                                });
+                                return rebuilt;
+                              });
+                            }}
+                          />
+                        </div>
+                      );
+                    })}
+                  </li>
+                );
+              })}
+            </ul>
+
+            {/* Nút tải thêm */}
+            {hasMore && (
+              <div className="mt-4 flex justify-center">
+                <button
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                  className="px-4 py-2 rounded-lg border border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800 inline-flex items-center gap-2"
+                >
+                  <FontAwesomeIcon icon={faChevronDown} className={loadingMore ? 'animate-bounce' : ''} />
+                  {loadingMore ? 'Đang tải...' : 'Xem thêm bình luận'}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -462,7 +608,7 @@ function CommentRow({ c, me, small=false, canDelete=false, onDelete, isAdminFn=(
             </span>
           )}
 
-          {/* ❤️ Like (chỉ dùng faHeart solid để tránh lỗi gói regular) */}
+          {/* ❤️ Like (solid để tránh cần gói regular) */}
           <button
             onClick={onToggleLike}
             className={`ml-2 inline-flex items-center gap-1 text-xs transition ${
@@ -501,7 +647,7 @@ function CommentRow({ c, me, small=false, canDelete=false, onDelete, isAdminFn=(
   );
 }
 
-function ReplyBox({ me, postId, parent, replyingTo=null, adminUids, postTitle, onNeedVerify, onNeedLogin }) {
+function ReplyBox({ me, postId, parent, replyingTo=null, adminUids, postTitle, onNeedVerify, onNeedLogin, onCreated }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
   const target = replyingTo || parent;
@@ -559,6 +705,8 @@ function ReplyBox({ me, postId, parent, replyingTo=null, adminUids, postTitle, o
       });
       await bumpCounter(uid, +1);
     }));
+
+    onCreated?.();
   };
 
   if (!me) {
@@ -594,10 +742,12 @@ function ReplyBox({ me, postId, parent, replyingTo=null, adminUids, postTitle, o
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
-            className="w-full min-h-[72px] border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-[15px] leading-6 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/40 outline-none"
+            // 👇 chống zoom iOS: đặt cỡ chữ 16px
+            className="w-full min-h-[72px] border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-base leading-6 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/40 outline-none"
             placeholder={`Phản hồi ${replyingTo ? (replyingTo.userName || 'người dùng') : (parent.userName || 'người dùng')}…`}
             maxLength={2000}
             onFocus={() => { if (me && !me.emailVerified) onNeedVerify?.(); }}
+            inputMode="text"
           />
           <div className="flex gap-2 justify-end">
             <button
@@ -609,7 +759,7 @@ function ReplyBox({ me, postId, parent, replyingTo=null, adminUids, postTitle, o
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-sm rounded-lg bg-gray-900 text-white dark:bg.white dark:text-gray-900 hover:opacity-90 inline-flex items-center gap-2"
+              className="px-4 py-2 text-sm rounded-lg bg-gray-900 text-white dark:bg-white dark:text-gray-900 hover:opacity-90 inline-flex items-center gap-2"
             >
               Gửi
             </button>
