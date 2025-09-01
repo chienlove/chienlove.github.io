@@ -94,7 +94,7 @@ function CenterModal({ open, title, children, onClose, actions, tone = 'info' })
 }
 
 /* ========= Badge Verified kiểu X (Twitter) – 24x24, có đệm, chống khuyết ========= */
-const VerifiedBadge = ({ className = '' }) => (
+const VerifiedBadgeX = ({ className = '' }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     viewBox="0 0 24 24"
