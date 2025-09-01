@@ -233,9 +233,6 @@ function CenterModal({ open, title, body, actions }) {
   );
 }
 
-/* LoginButton popup */
-import LoginButton from '../components/LoginButton';
-
 export default function Detail({ serverApp, serverRelated }) {
   const router = useRouter();
   const [app, setApp] = useState(serverApp);
@@ -249,7 +246,7 @@ export default function Detail({ serverApp, serverRelated }) {
   const [showAllDevices, setShowAllDevices] = useState(false);
   const [showAllLanguages, setShowAllLanguages] = useState(false);
 
-  // ReactMarkdown & remark-gfm
+  // ReactMarkdown & remark-gfm (lazy)
   const [remarkGfm, setRemarkGfm] = useState(null);
   const [ReactMarkdown, setReactMarkdown] = useState(null);
   useEffect(() => {
@@ -264,7 +261,6 @@ export default function Detail({ serverApp, serverRelated }) {
 
   const [me, setMe] = useState(null);
   const [modal, setModal] = useState({ open: false, title: '', body: null, actions: null });
-  const [showLoginModal, setShowLoginModal] = useState(false);
 
   const categorySlug = app?.category?.slug ?? null;
   const isTestflight = categorySlug === 'testflight';
@@ -334,6 +330,45 @@ export default function Detail({ serverApp, serverRelated }) {
     return { list, remain };
   }, [devicesArray]);
 
+  // ========= Modal "Cần xác minh email" mở popup Login của Layout =========
+  const requireVerified = () => {
+    setModal({
+      open: true,
+      title: 'Cần xác minh email',
+      body: (
+        <div className="text-sm">
+          <p>Bạn cần <b>đăng nhập</b> và <b>xác minh email</b> để tải IPA.</p>
+          <p className="mt-1 text-xs text-gray-500">
+            Không thấy email xác minh? Hãy kiểm tra thư rác hoặc gửi lại từ trang{' '}
+            <Link href="/profile" className="text-blue-600 underline">Hồ sơ</Link>.
+          </p>
+        </div>
+      ),
+      actions: (
+        <>
+          <button
+            onClick={() => {
+              try {
+                // mở popup login toàn cục của Layout
+                window.dispatchEvent(new Event('open-login'));
+              } catch {}
+              setModal(s => ({ ...s, open: false }));
+            }}
+            className="px-3 py-2 text-sm rounded bg-gray-900 text-white"
+          >
+            Đăng nhập
+          </button>
+          <button
+            onClick={() => setModal(s => ({ ...s, open: false }))}
+            className="px-3 py-2 text-sm rounded border"
+          >
+            Đóng
+          </button>
+        </>
+      ),
+    });
+  };
+
   const handleInstall = async (e) => {
     e.preventDefault();
     if (!app?.id || isTestflight) return;
@@ -355,10 +390,13 @@ export default function Detail({ serverApp, serverRelated }) {
   const handleDownloadIpa = async (e) => {
     e.preventDefault();
     if (!app?.id || !isInstallable) return;
+
+    // ⬇️ Kiểm tra login + verify
     if (!me || !me.emailVerified) {
-      setShowLoginModal(true);
+      requireVerified();
       return;
     }
+
     setIsFetchingIpa(true);
     try {
       const tokRes = await fetch('/api/generate-token', {
@@ -369,7 +407,11 @@ export default function Detail({ serverApp, serverRelated }) {
       if (!tokRes.ok) throw new Error(`HTTP ${tokRes.status}`);
       const { token } = await tokRes.json();
       if (!token) throw new Error('Thiếu token');
+
+      // Tải qua proxy
       window.location.href = `/api/download-ipa?slug=${encodeURIComponent(app.slug)}&token=${encodeURIComponent(token)}`;
+
+      // Ghi log tải
       fetch(`/api/admin/add-download?id=${app.id}`, { method: 'POST' }).catch(() => {});
     } catch (err) {
       alert('Không thể tạo link tải IPA. Vui lòng thử lại.');
@@ -379,18 +421,32 @@ export default function Detail({ serverApp, serverRelated }) {
     }
   };
 
+  // ======= Auto-scroll & highlight theo ?comment= (ĐỢI ELEMENT XUẤT HIỆN) =======
   useEffect(() => {
-    const id = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('comment') : null;
+    const id = typeof window !== 'undefined'
+      ? new URLSearchParams(window.location.search).get('comment')
+      : null;
     if (!id) return;
-    const el = document.getElementById(`c-${id}`);
-    if (!el) return;
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    el.classList.add('ring-2', 'ring-amber-400', 'bg-amber-50');
-    const t = setTimeout(() => {
-      el.classList.remove('ring-2', 'ring-amber-400', 'bg-amber-50');
-    }, 3000);
-    return () => clearTimeout(t);
+
+    let tried = 0;
+    const maxTries = 40; // ~2s với 50ms/lần
+    const iv = setInterval(() => {
+      const el = document.getElementById(`c-${id}`);
+      tried++;
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        el.classList.add('ring-2', 'ring-amber-400', 'bg-amber-50');
+        setTimeout(() => {
+          el.classList.remove('ring-2', 'ring-amber-400', 'bg-amber-50');
+        }, 3000);
+        clearInterval(iv);
+      } else if (tried >= maxTries) {
+        clearInterval(iv);
+      }
+    }, 50);
+    return () => clearInterval(iv);
   }, [router.query?.slug]);
+  // ================================================
 
   if (!app) {
     return (
@@ -428,28 +484,10 @@ export default function Detail({ serverApp, serverRelated }) {
         <meta name="twitter:card" content="summary_large_image" />
       </Head>
 
-      {/* Modal cũ (nếu bạn vẫn dùng) */}
+      {/* Modal trung tâm cho thông báo "Cần xác minh email" */}
       <CenterModal open={modal.open} title={modal.title} body={modal.body} actions={modal.actions} />
 
-      {/* Modal LoginButton (popup) */}
-      {showLoginModal && (
-        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-4">
-          <div className="relative w-full max-w-md rounded-2xl border border-gray-200 bg-white dark:bg-gray-900 shadow-2xl p-4">
-            <button
-              onClick={() => setShowLoginModal(false)}
-              className="absolute top-2 right-2 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
-              aria-label="Đóng"
-            >
-              <svg className="w-5 h-5" viewBox="0 0 20 20" fill="none" stroke="currentColor">
-                <path d="M6 6l8 8M14 6l-8 8" strokeWidth="2" strokeLinecap="round"/>
-              </svg>
-            </button>
-            <LoginButton onToggleTheme={() => {}} isDark={false} />
-          </div>
-        </div>
-      )}
-
-      {/* ===== Refined Breadcrumb ===== */}
+      {/* ===== Breadcrumb ===== */}
       <div className="bg-gray-100">
         <div className="w-full flex justify-center px-2 sm:px-4 md:px-6">
           <div className="w-full max-w-screen-2xl">

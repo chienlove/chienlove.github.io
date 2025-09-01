@@ -29,6 +29,9 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifCount, setNotifCount] = useState(0); // 🔴 badge thật
 
+  // ⬇️ Popup đăng nhập toàn cục + event 'open-login'
+  const [loginOpen, setLoginOpen] = useState(false);
+
   const drawerRef = useRef(null);
 
   // keyboard: '/' hoặc Cmd/Ctrl+K mở search
@@ -99,6 +102,16 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
     return () => { unsubAuth && unsubAuth(); unsubNoti && unsubNoti(); };
   }, []);
 
+  // ⬇️ Cho phép trang con mở popup login của Layout
+  useEffect(() => {
+    const open = () => setLoginOpen(true);
+    // Cho phép gọi thẳng window.openLogin()
+    window.openLogin = open;
+    // hoặc bắn event 'open-login'
+    window.addEventListener('open-login', open);
+    return () => window.removeEventListener('open-login', open);
+  }, []);
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       <Head>
@@ -155,6 +168,24 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
             <LoginButton onToggleTheme={() => setDarkMode(v => !v)} isDark={darkMode} />
           </div>
         </div>
+
+        {/* ⬇️ POPUP LOGIN (toàn cục) đặt ngay trong header để đè lên UI */}
+        {loginOpen && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-4">
+            <div className="relative w-full max-w-md rounded-2xl border border-gray-200 bg-white dark:bg-gray-900 shadow-2xl p-4">
+              <button
+                onClick={() => setLoginOpen(false)}
+                className="absolute top-2 right-2 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
+                aria-label="Đóng"
+              >
+                <svg className="w-5 h-5" viewBox="0 0 20 20" fill="none" stroke="currentColor">
+                  <path d="M6 6l8 8M14 6l-8 8" strokeWidth="2" strokeLinecap="round"/>
+                </svg>
+              </button>
+              <LoginButton onToggleTheme={() => {}} isDark={false} />
+            </div>
+          </div>
+        )}
       </header>
 
       {/* MOBILE DRAWER (Hamburger) */}
