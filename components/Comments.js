@@ -71,27 +71,27 @@ async function bumpCounter(uid, delta) {
   });
 }
 
-/* ========= Modal trung tâm (alert + confirm) ========= */
-function CenterModal({ open, title, children, onClose, actions, tone = 'info' }) {
-  if (!open) return null;
-  const toneClass =
-    tone === 'success' ? 'border-emerald-300 bg-emerald-50' :
-    tone === 'error'   ? 'border-rose-300 bg-rose-50' :
-    tone === 'warning' ? 'border-amber-300 bg-amber-50' :
-                         'border-sky-300 bg-sky-50';
-  return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className={`relative w-[92vw] max-w-md rounded-2xl border shadow-2xl p-4 ${toneClass}`}>
-        {title && <h3 className="text-lg font-semibold mb-2">{title}</h3>}
-        <div className="text-sm text-gray-900">{children}</div>
-        <div className="mt-4 flex justify-end gap-2">
-          {actions}
-        </div>
-      </div>
-    </div>
-  );
-}
+/* ========= Badge Verified kiểu X (Twitter) – chống méo ========= */
+const VerifiedBadgeX = ({ className = '' }) => (
+  <svg
+    viewBox="0 0 512 512"
+    preserveAspectRatio="xMidYMid meet"
+    aria-label="Đã xác minh"
+    role="img"
+    className={`inline-block align-middle ${className}`}
+  >
+    {/* Nền "bông" xanh */}
+    <path
+      fill="#1DA1F2"
+      d="M459.2 195.8l-33.6-45.8 6.2-56.8c1.9-17.9-17-30.2-32.9-22.1l-51.5 26.1-46.8-35.5c-13.2-10-31.2-10-44.4 0l-46.8 35.5-51.5-26.1c-15.9-8.1-34.8 4.2-32.9 22.1l6.2 56.8-33.6 45.8c-10.6 14.5-4.7 35 12 41.7l50.8 20.5-3.8 57.5c-1.1 17.2 15.9 29.8 31.8 22.7l52.7-23.8 52.7 23.8c15.9 7.2 32.9-5.5 31.8-22.7l-3.8-57.5 50.8-20.5c16.7-6.7 22.6-27.2 12-41.7z"
+    />
+    {/* Dấu tick trắng */}
+    <path
+      fill="#FFFFFF"
+      d="M353 207l-15.9-15.9a12 12 0 00-17 0l-60.3 60.3-27.7-27.7a12 12 0 00-17 0L210.6 239a12 12 0 000 17l38.2 38.2a12 12 0 0017 0l81.6-81.6a12 12 0 000-17z"
+    />
+  </svg>
+);
 
 /* ==================== Component chính ==================== */
 export default function Comments({ postId, postTitle }) {
@@ -451,14 +451,13 @@ function CommentRow({ c, me, small=false, canDelete=false, onDelete, isAdminFn=(
           <span className="font-semibold text-blue-800 dark:text-blue-300 inline-flex items-center gap-1">
             {name}
             {isAdminFn(c.authorId) && (
-  <span className="inline-flex items-center justify-center -mt-[1px]" title="Tài khoản đã xác minh">
-    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" className="text-[#1DA1F2]">
-      <g fill="currentColor">
-        <path d="M22.25 12.03l-2.4-2.06.36-3.17a1 1 0 00-1.45-1.02l-2.96 1.46-2.45-1.86a1 1 0 00-1.18 0l-2.45 1.86L5.24 5.78a1 1 0 00-1.45 1.02l.36 3.17-2.4 2.06a1 1 0 000 1.54l2.4 2.06-.36 3.17a1 1 0 001.45 1.02l2.96-1.46 2.45 1.86a1 1 0 001.18 0l2.45-1.86 2.96 1.46a1 1 0 001.45-1.02l-.36-3.17 2.4-2.06a1 1 0 000-1.54zM10.57 15.9l-3.06-3.05 1.42-1.42 1.64 1.63 4.12-4.12 1.41 1.42-5.53 5.54z"/>
-      </g>
-    </svg>
-  </span>
-)}
+              <span
+                className="inline-flex items-center justify-center translate-y-[0.5px]"
+                title="Quản trị viên đã xác minh"
+              >
+                <VerifiedBadgeX className="w-4 h-4 shrink-0" />
+              </span>
+            )}
           </span>
           {time && (
             <span className="text-xs text-gray-500" title={time.abs}>
