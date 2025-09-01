@@ -23,10 +23,28 @@ jobs:
           test -f firestore.indexes.json || (echo "❌ Missing firestore.indexes.json at repo root" && exit 1)
           echo "✅ Found firebase.json & firestore.indexes.json"
 
-      # Dùng GitHub Action chạy Firebase CLI bằng service account
-      - name: "Deploy Firestore Indexes only"
-        uses: w9jds/firebase-action@v12.9.0
+      # Cấp thông tin xác thực Google theo chuẩn chính chủ
+      - name: "Auth to Google Cloud"
+        uses: google-github-actions/auth@v2
         with:
-          args: deploy --only firestore:indexes --project comments-storeios
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          export_default_credentials: true
+
+      - name: "Set up Node.js"
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: "Install Firebase CLI"
+        run: npm i -g firebase-tools
+
+      - name: "Deploy Firestore Indexes only"
         env:
-          GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          # google-github-actions/auth đã set GOOGLE_APPLICATION_CREDENTIALS giúp ta
+          CI: "true"
+        run: |
+          firebase --version
+          firebase deploy \
+            --only firestore:indexes \
+            --project comments-storeios \
+            --non-interactive
