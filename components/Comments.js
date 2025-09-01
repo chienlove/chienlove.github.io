@@ -96,57 +96,32 @@ function CenterModal({ open, title, children, onClose, actions, tone = 'info' })
 /* ========= Badge Verified kiểu X (Twitter) – 24x24, có đệm, chống khuyết ========= */
 const VerifiedBadgeX = ({ className = '' }) => (
   <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    aria-label="Đã xác minh"
-    role="img"
-    className={`inline-block align-middle ${className}`}
-    style={{ overflow: 'visible' }}
-    fill="none"
-  >
-    {/* Background circle với gradient xanh dương */}
-    <defs>
-      <linearGradient id="blueGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#3b82f6" />
-        <stop offset="100%" stopColor="#1d4ed8" />
-      </linearGradient>
-    </defs>
-    
-    {/* Outer decorative petals/flower shape (optional) */}
-    <g transform="translate(12,12)">
-      {/* 8 petals around the circle */}
-      <g fill="#60a5fa" opacity="0.3">
-        <circle cx="0" cy="-10" r="2" />
-        <circle cx="7" cy="-7" r="2" />
-        <circle cx="10" cy="0" r="2" />
-        <circle cx="7" cy="7" r="2" />
-        <circle cx="0" cy="10" r="2" />
-        <circle cx="-7" cy="7" r="2" />
-        <circle cx="-10" cy="0" r="2" />
-        <circle cx="-7" cy="-7" r="2" />
-      </g>
-    </g>
-    
-    {/* Main blue circle */}
-    <circle 
-      cx="12" 
-      cy="12" 
-      r="9" 
-      fill="url(#blueGradient)"
-      stroke="#1e40af"
-      strokeWidth="0.5"
-    />
-    
-    {/* White checkmark */}
-    <path 
-      d="M9 12l2 2 4-4" 
-      stroke="#ffffff" 
-      strokeWidth="2.5" 
-      strokeLinecap="round" 
-      strokeLinejoin="round"
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 24 24"
+      className={`inline-block ${className}`}
       fill="none"
-    />
-  </svg>
+    >
+      <defs>
+        <linearGradient id="twitterBlue" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#1d9bf0" />
+          <stop offset="100%" stopColor="#1a8cd8" />
+        </linearGradient>
+      </defs>
+      {/* Twitter/X verified badge shape - các cạnh răng cưa */}
+      <path
+        d="M12.017 0l2.56 3.93L20.16 2.49l.921 5.498 5.497.921-1.441 5.583L28.07 12l-2.933 2.498 1.441 5.583-5.497.921-.921 5.498-5.583-1.441L12.017 28l-2.498-2.933-5.583 1.441-.921-5.498-5.497-.921 1.441-5.583L-4.07 12l2.933-2.498L-2.578 4.919l5.497-.921.921-5.498 5.583 1.441L12.017 0z"
+        transform="scale(0.43) translate(12,12)"
+        fill="url(#twitterBlue)"
+      />
+      {/* White checkmark */}
+      <path 
+        d="M9 12.5l2 2 4-4" 
+        stroke="white" 
+        strokeWidth="2.5" 
+        strokeLinecap="round" 
+        strokeLinejoin="round"
+      />
+    </svg>
 );
 
 /* ==================== Component chính ==================== */
