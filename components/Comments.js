@@ -94,7 +94,7 @@ function CenterModal({ open, title, children, onClose, actions, tone = 'info' })
 }
 
 /* ========= Badge Verified kiểu X (Twitter) – 24x24, có đệm, chống khuyết ========= */
-const VerifiedBadgeX = ({ className = '' }) => (
+const VerifiedBadge = ({ className = '' }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
     viewBox="0 0 24 24"
@@ -102,12 +102,50 @@ const VerifiedBadgeX = ({ className = '' }) => (
     role="img"
     className={`inline-block align-middle ${className}`}
     style={{ overflow: 'visible' }}
-    fill="currentColor"
+    fill="none"
   >
-    {/* "Bông" xanh có sẵn khoảng đệm bên trong viewBox nên không bị cắt mép */}
-    <path d="M22.25 12.03l-2.4-2.06.36-3.17a1 1 0 00-1.45-1.02l-2.96 1.46-2.45-1.86a1 1 0 00-1.18 0l-2.45 1.86L5.24 5.78a1 1 0 00-1.45 1.02l.36 3.17-2.4 2.06a1 1 0 000 1.54l2.4 2.06-.36 3.17a1 1 0 001.45 1.02l2.96-1.46 2.45 1.86a1 1 0 001.18 0l2.45-1.86 2.96 1.46a1 1 0 001.45-1.02l-.36-3.17 2.4-2.06a1 1 0 000-1.54z"/>
-    {/* Tick trắng */}
-    <path fill="#fff" d="M10.57 15.9l-3.06-3.05 1.42-1.42 1.64 1.63 4.12-4.12 1.41 1.42-5.53 5.54z"/>
+    {/* Background circle với gradient xanh dương */}
+    <defs>
+      <linearGradient id="blueGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#3b82f6" />
+        <stop offset="100%" stopColor="#1d4ed8" />
+      </linearGradient>
+    </defs>
+    
+    {/* Outer decorative petals/flower shape (optional) */}
+    <g transform="translate(12,12)">
+      {/* 8 petals around the circle */}
+      <g fill="#60a5fa" opacity="0.3">
+        <circle cx="0" cy="-10" r="2" />
+        <circle cx="7" cy="-7" r="2" />
+        <circle cx="10" cy="0" r="2" />
+        <circle cx="7" cy="7" r="2" />
+        <circle cx="0" cy="10" r="2" />
+        <circle cx="-7" cy="7" r="2" />
+        <circle cx="-10" cy="0" r="2" />
+        <circle cx="-7" cy="-7" r="2" />
+      </g>
+    </g>
+    
+    {/* Main blue circle */}
+    <circle 
+      cx="12" 
+      cy="12" 
+      r="9" 
+      fill="url(#blueGradient)"
+      stroke="#1e40af"
+      strokeWidth="0.5"
+    />
+    
+    {/* White checkmark */}
+    <path 
+      d="M9 12l2 2 4-4" 
+      stroke="#ffffff" 
+      strokeWidth="2.5" 
+      strokeLinecap="round" 
+      strokeLinejoin="round"
+      fill="none"
+    />
   </svg>
 );
 
