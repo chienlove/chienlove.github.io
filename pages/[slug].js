@@ -411,7 +411,7 @@ export default function Detail({ serverApp, serverRelated }) {
       ),
       actions: (
         <>
-          <Link href="/login" className="px-3 py-2 text-sm rounded bg-gray-900 text-white">Đăng nhập</Link>
+          <Link href="/LoginButton" className="px-3 py-2 text-sm rounded bg-gray-900 text-white">Đăng nhập</Link>
           <button onClick={() => setModal(s => ({ ...s, open: false }))} className="px-3 py-2 text-sm rounded border">Đóng</button>
         </>
       ),
