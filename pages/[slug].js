@@ -6,10 +6,11 @@ import Layout from '../components/Layout';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { useEffect, useState, useMemo, memo } from 'react';
-import { FastAverageColor } from 'fast-average-color';
-import { auth } from '../lib/firebase-client';
+import { useEffect, useMemo, useState, memo } from 'react';
 import Head from 'next/head';
+import { auth } from '../lib/firebase-client';
+
+// FontAwesome
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faDownload,
@@ -28,15 +29,10 @@ import {
   faAngleRight,
 } from '@fortawesome/free-solid-svg-icons';
 
-// ✅ Dynamic import giảm JS ban đầu
+// ✅ Dynamic import để giảm lỗi/hydration & bundle
 const ReactMarkdown = dynamic(() => import('react-markdown'), { ssr: false });
-const remarkGfmPromise = import('remark-gfm'); // load khi render, không block bundle
-const Comments = dynamic(() => import('../components/Comments'), {
-  ssr: false,
-  loading: () => <div className="text-sm text-gray-500">Đang tải bình luận…</div>,
-});
 
-/* ===================== SSR ===================== */
+// ───────────────── SSR ─────────────────
 export async function getServerSideProps(context) {
   const slug = context.params.slug?.toLowerCase();
 
@@ -93,174 +89,101 @@ export async function getServerSideProps(context) {
   };
 }
 
-/* ===================== Helpers ===================== */
-
-// Tách danh sách từ chuỗi: "iOS 14, iPadOS" → ["iOS 14", "iPadOS"]
+// ───────────────── Helpers ─────────────────
 function parseList(input) {
   if (!input) return [];
   if (Array.isArray(input)) return input;
-  return String(input)
-    .split(/[,\n]+/)
-    .map(x => x.trim())
-    .filter(Boolean);
+  return String(input).split(/[,\n]+/).map(s => s.trim()).filter(Boolean);
 }
 
-// Xoá thẻ [tag=...] hoặc [tag]...[/tag] – không dùng regex
 function stripSimpleTagAll(str, tag) {
   let s = String(str);
   const open = `[${tag}`;
   const close = `[/${tag}]`;
-
-  // Xoá thẻ đóng lẻ
   while (true) {
     const idx = s.toLowerCase().indexOf(close);
     if (idx === -1) break;
     s = s.slice(0, idx) + s.slice(idx + close.length);
   }
-
-  // Xử lý cặp mở/đóng
   while (true) {
     const lower = s.toLowerCase();
     const iOpen = lower.indexOf(open);
     if (iOpen === -1) break;
-
     const iBracket = s.indexOf(']', iOpen);
-    if (iBracket === -1) {
-      s = s.slice(0, iOpen);
-      break;
-    }
-
+    if (iBracket === -1) { s = s.slice(0, iOpen); break; }
     const iClose = lower.indexOf(close, iBracket + 1);
-    if (iClose === -1) {
-      s = s.slice(0, iOpen) + s.slice(iBracket + 1);
-      continue;
-    }
-
+    if (iClose === -1) { s = s.slice(0, iOpen) + s.slice(iBracket + 1); continue; }
     const inner = s.slice(iBracket + 1, iClose);
     s = s.slice(0, iOpen) + inner + s.slice(iClose + close.length);
   }
   return s;
 }
-
-// Chuyển [list][*]...[/list] → Markdown
 function processListBlocks(str) {
-  let output = '';
-  let remaining = String(str);
-
+  let out = '';
+  let remain = String(str);
   while (true) {
-    const lower = remaining.toLowerCase();
+    const lower = remain.toLowerCase();
     const start = lower.indexOf('[list]');
-    if (start === -1) { output += remaining; break; }
-
+    if (start === -1) { out += remain; break; }
     const end = lower.indexOf('[/list]', start + 6);
-    if (end === -1) { output += remaining; break; }
-
-    const before = remaining.slice(0, start);
-    const listContent = remaining.slice(start + 6, end);
-    const after = remaining.slice(end + 7);
-
-    const items = listContent
-      .split('[*]')
-      .map(t => t.trim())
-      .filter(Boolean);
-
+    if (end === -1) { out += remain; break; }
+    const before = remain.slice(0, start);
+    const listContent = remain.slice(start + 6, end);
+    const after = remain.slice(end + 7);
+    const items = listContent.split('[*]').map(t => t.trim()).filter(Boolean);
     const md = '\n' + items.map(it => `- ${it}`).join('\n') + '\n';
-    output += before + md;
-    remaining = after;
+    out += before + md;
+    remain = after;
   }
-  return output;
+  return out;
 }
-
-// BBCode → Markdown (an toàn, ít regex)
 function bbcodeToMarkdownLite(input = '') {
   let s = String(input);
-
-  // Step 1: [b], [i], [u]
   s = s.replace(/\[b\](.*?)\[\/b\]/gi, '**$1**');
   s = s.replace(/\[i\](.*?)\[\/i\]/gi, '*$1*');
   s = s.replace(/\[u\](.*?)\[\/u\]/gi, '__$1__');
-
-  // Step 2: [url] & [url=...]
   s = s.replace(/\[url\](https?:\/\/[^\s\]]+)\[\/url\]/gi, '[$1]($1)');
   s = s.replace(/\[url=(https?:\/\/[^\]\s]+)\](.*?)\[\/url\]/gi, '[$2]($1)');
-
-  // Step 3: [img]
   s = s.replace(/\[img\](https?:\/\/[^\s\]]+)\[\/img\]/gi, '![]($1)');
-
-  // Step 4: [color] và [size] – bỏ qua
   s = stripSimpleTagAll(s, 'color');
   s = stripSimpleTagAll(s, 'size');
-
-  // Step 5: [list]
   s = processListBlocks(s);
-
-  // Step 6: [quote]
   const quoteR = new RegExp('\\[quote\\]\\s*([\\s\\S]*?)\\s*\\[/quote\\]', 'gi');
-  s = s.replace(quoteR, (_m, p1) => {
-    return String(p1).trim().split(/\r?\n/).map(line => `> ${line}`).join('\n');
-  });
-
-  // Step 7: [code]
+  s = s.replace(quoteR, (_m, p1) => String(p1).trim().split(/\r?\n/).map(l => `> ${l}`).join('\n'));
   const codeR = new RegExp('\\[code\\]\\s*([\\s\\S]*?)\\s*\\[/code\\]', 'gi');
-  s = s.replace(codeR, (_m, p1) => {
-    const body = String(p1).replace(/```/g, '``');
-    return `\n\`\`\`\n${body}\n\`\`\`\n`;
-  });
-
+  s = s.replace(codeR, (_m, p1) => `\n\`\`\`\n${String(p1).replace(/```/g, '``')}\n\`\`\`\n`);
   return s;
 }
-
 function normalizeDescription(raw = '') {
   if (!raw) return '';
-  const txt = String(raw);
-  if (/\[(b|i|u|url|img|quote|code|list|\*|size|color)/i.test(txt)) {
-    return bbcodeToMarkdownLite(txt);
-    }
-  return txt;
+  const t = String(raw);
+  if (/\[(b|i|u|url|img|quote|code|list|\*|size|color)/i.test(t)) return bbcodeToMarkdownLite(t);
+  return t;
 }
-
 function PrettyBlockquote({ children }) {
   return (
     <blockquote className="relative my-4 rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50 to-white p-4 pl-5 dark:border-blue-900/40 dark:from-blue-950/30 dark:to-transparent">
       <div className="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl bg-blue-500/80 dark:bg-blue-400/80" />
-      <div className="text-blue-900 dark:text-blue-100 leading-relaxed">
-        {children}
-      </div>
+      <div className="text-blue-900 dark:text-blue-100 leading-relaxed">{children}</div>
     </blockquote>
   );
 }
-
-// ===================== InfoRow (tối ưu) =====================
-const InfoRow = memo(({ label, value, expandable = false, expanded = false, onToggle }) => {
-  return (
-    <div className="px-4 py-3 flex items-start">
-      <div className="w-40 min-w-[9rem] text-sm text-gray-500">{label}</div>
-      <div className="flex-1 text-sm text-gray-800">
-        <span className="align-top">{value}</span>
-        {expandable && (
-          <button
-            type="button"
-            onClick={onToggle}
-            className="ml-2 inline-flex items-center text-blue-600 hover:underline"
-          >
-            {expanded ? (
-              <>
-                Thu gọn <FontAwesomeIcon icon={faChevronUp} className="ml-1 h-3" />
-              </>
-            ) : (
-              <>
-                Xem thêm <FontAwesomeIcon icon={faChevronDown} className="ml-1 h-3" />
-              </>
-            )}
-          </button>
-        )}
-      </div>
+const InfoRow = memo(({ label, value, expandable=false, expanded=false, onToggle }) => (
+  <div className="px-4 py-3 flex items-start">
+    <div className="w-40 min-w-[9rem] text-sm text-gray-500">{label}</div>
+    <div className="flex-1 text-sm text-gray-800">
+      <span className="align-top">{value}</span>
+      {expandable && (
+        <button type="button" onClick={onToggle} className="ml-2 inline-flex items-center text-blue-600 hover:underline">
+          {expanded ? <>Thu gọn <FontAwesomeIcon icon={faChevronUp} className="ml-1 h-3" /></> : <>Xem thêm <FontAwesomeIcon icon={faChevronDown} className="ml-1 h-3" /></>}
+        </button>
+      )}
     </div>
-  );
-});
+  </div>
+));
 InfoRow.displayName = 'InfoRow';
 
-/* ===================== Center Modal (dùng cho gate) ===================== */
+// ───────────────── Modal trung tâm ─────────────────
 function CenterModal({ open, title, body, actions }) {
   if (!open) return null;
   return (
@@ -275,11 +198,11 @@ function CenterModal({ open, title, body, actions }) {
   );
 }
 
-/* ===================== Page ===================== */
+// ───────────────── Page ─────────────────
 export default function Detail({ serverApp, serverRelated }) {
   const router = useRouter();
-  const [app, setApp] = useState(serverApp);
-  const [related, setRelated] = useState(serverRelated);
+  const [app, setApp] = useState(serverApp || null);
+  const [related, setRelated] = useState(Array.isArray(serverRelated) ? serverRelated : []);
   const [dominantColor, setDominantColor] = useState('#f0f2f5');
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [status, setStatus] = useState(null);
@@ -289,32 +212,34 @@ export default function Detail({ serverApp, serverRelated }) {
   const [showAllDevices, setShowAllDevices] = useState(false);
   const [showAllLanguages, setShowAllLanguages] = useState(false);
 
-  // ✅ Auth state để gate tải IPA
+  // Auth để gate tải IPA
   const [me, setMe] = useState(null);
   const [modal, setModal] = useState({ open: false, title: '', body: null, actions: null });
 
-  // remark plugin dynamic
+  // remark-gfm dynamic
   const [remarkGfm, setRemarkGfm] = useState(null);
-  useEffect(() => { remarkGfmPromise.then(m => setRemarkGfm(m.default)); }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    import('remark-gfm').then(m => { if (mounted) setRemarkGfm(m.default); }).catch(() => setRemarkGfm(null));
+    const unsub = auth?.onAuthStateChanged ? auth.onAuthStateChanged(u => setMe(u)) : () => {};
+    return () => { mounted = false; unsub && unsub(); };
+  }, []);
 
   const categorySlug = app?.category?.slug ?? null;
   const isTestflight = categorySlug === 'testflight';
   const isInstallable = ['jailbreak', 'app-clone'].includes(categorySlug);
 
   useEffect(() => {
-    const unsub = auth.onAuthStateChanged(u => setMe(u));
-    return () => unsub();
-  }, []);
-
-  useEffect(() => {
-    setApp(serverApp);
-    setRelated(serverRelated);
+    setApp(serverApp || null);
+    setRelated(Array.isArray(serverRelated) ? serverRelated : []);
     setShowFullDescription(false);
     setDominantColor('#f0f2f5');
     setShowAllDevices(false);
     setShowAllLanguages(false);
   }, [router.query.slug, serverApp, serverRelated]);
 
+  // FastAverageColor → dynamic import + try/catch để tránh nổ client
   useEffect(() => {
     if (!app?.id) return;
 
@@ -324,36 +249,45 @@ export default function Detail({ serverApp, serverRelated }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: app.id }),
-      }).catch(console.error);
+      }).catch(() => {});
     }
 
     // Kiểm tra slot TestFlight
-    if (isTestflight && app.testflight_url) {
-      setStatusLoading(true);
-      const id = app.testflight_url.split('/').pop();
-      fetch(`/api/admin/check-slot?id=${id}`)
-        .then(res => res.json())
-        .then(data => data.success && setStatus(data.status))
-        .catch(console.error)
-        .finally(() => setStatusLoading(false));
+    if (isTestflight && app?.testflight_url) {
+      try {
+        setStatusLoading(true);
+        const id = app.testflight_url.split('/').pop();
+        fetch(`/api/admin/check-slot?id=${encodeURIComponent(id)}`)
+          .then(res => res.json())
+          .then(data => { if (data?.success) setStatus(data.status || null); })
+          .catch(() => {})
+          .finally(() => setStatusLoading(false));
+      } catch { setStatusLoading(false); }
     }
 
-    // Màu nền từ icon
-    if (app.icon_url && typeof window !== 'undefined') {
-      const fac = new FastAverageColor();
-      fac.getColorAsync(app.icon_url)
-        .then(color => setDominantColor(color.hex))
-        .catch(console.error)
-        .finally(() => fac.destroy());
+    // Dominant color
+    if (app?.icon_url && typeof window !== 'undefined') {
+      (async () => {
+        try {
+          const { FastAverageColor } = await import('fast-average-color');
+          const fac = new FastAverageColor();
+          const color = await fac.getColorAsync(app.icon_url);
+          if (color?.hex) setDominantColor(color.hex);
+          fac.destroy();
+        } catch {
+          // ignore, dùng màu mặc định
+        }
+      })();
     }
   }, [app?.id, app?.icon_url, app?.testflight_url, isTestflight]);
 
   const displaySize = useMemo(() => {
-    if (!app?.size) return 'Không rõ';
-    const s = String(app.size);
-    if (/\bMB\b/i.test(s)) return s;
-    const n = Number(s);
-    return !isNaN(n) ? `${n} MB` : s;
+    const s = app?.size;
+    if (!s) return 'Không rõ';
+    const str = String(s);
+    if (/\bMB\b/i.test(str)) return str;
+    const n = Number(str);
+    return isNaN(n) ? str : `${n} MB`;
   }, [app?.size]);
 
   const languagesArray = useMemo(() => parseList(app?.languages), [app?.languages]);
@@ -361,39 +295,28 @@ export default function Detail({ serverApp, serverRelated }) {
 
   const languagesShort = useMemo(() => {
     const list = languagesArray.slice(0, 6);
-    const remain = Math.max(languagesArray.length - 6, 0);
-    return { list, remain };
+    return { list, remain: Math.max(languagesArray.length - 6, 0) };
   }, [languagesArray]);
-
   const devicesShort = useMemo(() => {
     const list = devicesArray.slice(0, 5);
-    const remain = Math.max(devicesArray.length - 5, 0);
-    return { list, remain };
+    return { list, remain: Math.max(devicesArray.length - 5, 0) };
   }, [devicesArray]);
 
   const handleInstall = async (e) => {
     e.preventDefault();
     if (!app?.id || isTestflight) return;
-
     setIsInstalling(true);
-
     try {
-      // Ghi nhận lượt tải TRƯỚC
-      await fetch(`/api/admin/add-download?id=${app.id}`, {
+      await fetch(`/api/admin/add-download?id=${encodeURIComponent(app.id)}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         cache: 'no-store',
       });
-    } catch (err) {
-      console.error('Lỗi tăng lượt tải:', err);
-    } finally {
-      // Sau đó mới redirect
-      router.push(`/install/${app.slug}`);
-      setIsInstalling(false);
-    }
+    } catch {}
+    router.push(`/install/${app.slug}`);
+    setIsInstalling(false);
   };
 
-  // ✅ Gate tải IPA: yêu cầu login + emailVerified
   const requireVerified = () => {
     setModal({
       open: true,
@@ -401,7 +324,9 @@ export default function Detail({ serverApp, serverRelated }) {
       body: (
         <div className="text-sm">
           <p>Bạn cần <b>đăng nhập</b> và <b>xác minh email</b> để tải IPA.</p>
-          <p className="mt-1 text-xs text-gray-500">Không thấy email xác minh? Hãy kiểm tra thư rác hoặc gửi lại từ trang <Link href="/profile" className="text-blue-600 underline">Hồ sơ</Link>.</p>
+          <p className="mt-1 text-xs text-gray-500">
+            Không thấy email xác minh? Vào <Link href="/profile" className="text-blue-600 underline">Hồ sơ</Link> để gửi lại.
+          </p>
         </div>
       ),
       actions: (
@@ -417,56 +342,57 @@ export default function Detail({ serverApp, serverRelated }) {
     e.preventDefault();
     if (!app?.id || !isInstallable) return;
 
-    // 👇 Gate client
+    // Gate client
     if (!me || !me.emailVerified) {
       requireVerified();
       return;
     }
 
     setIsFetchingIpa(true);
-
     try {
-      // Nếu API yêu cầu Bearer token: kèm theo ID token ở header
-      // const tokenId = await me.getIdToken();
-      const tokRes = await fetch('/api/generate-token', {
+      // Nếu server yêu cầu Bearer token, dùng:
+      // const idToken = await me.getIdToken();
+      const res = await fetch('/api/generate-token', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          // 'Authorization': `Bearer ${tokenId}`,
+          // 'Authorization': `Bearer ${idToken}`,
         },
         body: JSON.stringify({ id: app.id, ipa_name: app.download_link }),
       });
-      if (!tokRes.ok) throw new Error(`HTTP ${tokRes.status}`);
-      const { token } = await tokRes.json();
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json().catch(() => ({}));
+      const token = json?.token;
       if (!token) throw new Error('Thiếu token');
-
-      // Tải qua proxy
       window.location.href = `/api/download-ipa?slug=${encodeURIComponent(app.slug)}&token=${encodeURIComponent(token)}`;
-
-      // Ghi log tải (không critical)
-      fetch(`/api/admin/add-download?id=${app.id}`, { method: 'POST' }).catch(() => {});
+      // log không critical
+      fetch(`/api/admin/add-download?id=${encodeURIComponent(app.id)}`, { method: 'POST' }).catch(() => {});
     } catch (err) {
       alert('Không thể tạo link tải IPA. Vui lòng thử lại.');
-      console.error('Download IPA error:', err);
+      // eslint-disable-next-line no-console
+      console.error(err);
     } finally {
       setIsFetchingIpa(false);
     }
   };
 
-  // ======= Auto-scroll & highlight theo ?comment= =======
+  // Scroll tới comment nếu có ?comment=
   useEffect(() => {
-    const id = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('comment') : null;
-    if (!id) return;
-    const el = document.getElementById(`c-${id}`);
-    if (!el) return;
-    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    el.classList.add('ring-2', 'ring-amber-400', 'bg-amber-50');
-    const t = setTimeout(() => {
-      el.classList.remove('ring-2', 'ring-amber-400', 'bg-amber-50');
-    }, 3000);
-    return () => clearTimeout(t);
+    try {
+      const id = typeof window !== 'undefined'
+        ? new URLSearchParams(window.location.search).get('comment')
+        : null;
+      if (!id) return;
+      const el = document.getElementById(`c-${id}`);
+      if (!el) return;
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      el.classList.add('ring-2', 'ring-amber-400', 'bg-amber-50');
+      const t = setTimeout(() => {
+        el.classList.remove('ring-2', 'ring-amber-400', 'bg-amber-50');
+      }, 3000);
+      return () => clearTimeout(t);
+    } catch {}
   }, [router.query?.slug]);
-  // ================================================
 
   if (!app) {
     return (
@@ -487,8 +413,20 @@ export default function Detail({ serverApp, serverRelated }) {
     );
   }
 
-  const title = `${app.name} - App Store`;
-  const description = app.description ? app.description.replace(/<\/?[^>]+(>|$)/g, '').slice(0, 160) : 'Ứng dụng iOS miễn phí, jailbreak, TestFlight';
+  const title = `${app?.name || 'Ứng dụng'} - App Store`;
+  const description = app?.description
+    ? String(app.description).replace(/<\/?[^>]+(>|$)/g, '').slice(0, 160)
+    : 'Ứng dụng iOS miễn phí, jailbreak, TestFlight';
+
+  // Dynamic import Comments sau khi mount (giảm rủi ro client exception sớm)
+  const [CommentsComp, setCommentsComp] = useState(null);
+  useEffect(() => {
+    let mounted = true;
+    import('../components/Comments')
+      .then(m => { if (mounted) setCommentsComp(() => m.default); })
+      .catch(() => setCommentsComp(null));
+    return () => { mounted = false; };
+  }, []);
 
   return (
     <Layout fullWidth>
@@ -497,12 +435,12 @@ export default function Detail({ serverApp, serverRelated }) {
         <meta name="description" content={description} />
         <meta property="og:title" content={title} />
         <meta property="og:description" content={description} />
-        <meta property="og:image" content={app.icon_url} />
+        {app?.icon_url && <meta property="og:image" content={app.icon_url} />}
         <meta property="og:type" content="website" />
         <meta name="twitter:card" content="summary_large_image" />
       </Head>
 
-      {/* Center Modal cho gate */}
+      {/* Modal gate */}
       <CenterModal open={modal.open} title={modal.title} body={modal.body} actions={modal.actions} />
 
       <div className="bg-gray-100 min-h-screen pb-12">
@@ -512,7 +450,7 @@ export default function Detail({ serverApp, serverRelated }) {
               className="w-full pb-6"
               style={{ backgroundImage: `linear-gradient(to bottom, ${dominantColor}, #f0f2f5)` }}
             >
-              {/* Back */}
+              {/* Nút Back */}
               <div className="absolute top-3 left-3 z-10">
                 <Link
                   href="/"
@@ -523,7 +461,7 @@ export default function Detail({ serverApp, serverRelated }) {
                 </Link>
               </div>
 
-              {/* ✅ BREADCRUMB */}
+              {/* ✅ Breadcrumb */}
               <nav aria-label="Breadcrumb" className="pt-3 px-4">
                 <ol className="mx-auto max-w-screen-2xl flex items-center gap-1 text-sm text-blue-900/90">
                   <li>
@@ -532,16 +470,14 @@ export default function Detail({ serverApp, serverRelated }) {
                       <span className="hidden sm:inline">Trang chủ</span>
                     </Link>
                   </li>
-                  <li className="text-blue-700/50">
-                    <FontAwesomeIcon icon={faAngleRight} />
-                  </li>
+                  <li className="text-blue-700/50"><FontAwesomeIcon icon={faAngleRight} /></li>
                   <li>
                     {app?.category?.slug ? (
                       <Link
                         href={`/category/${app.category.slug}`}
                         className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-white/80 hover:bg-white text-blue-700 font-medium shadow-sm"
                       >
-                        <span className="truncate max-w-[40vw] sm:max-w-none">{app.category.name || 'Chuyên mục'}</span>
+                        <span className="truncate max-w-[40vw] sm:max-w-none">{app?.category?.name || 'Chuyên mục'}</span>
                       </Link>
                     ) : (
                       <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-white text-blue-700/70 font-medium shadow-sm">
@@ -549,12 +485,10 @@ export default function Detail({ serverApp, serverRelated }) {
                       </span>
                     )}
                   </li>
-                  <li className="text-blue-700/50">
-                    <FontAwesomeIcon icon={faAngleRight} />
-                  </li>
+                  <li className="text-blue-700/50"><FontAwesomeIcon icon={faAngleRight} /></li>
                   <li>
                     <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-600 text-white font-semibold shadow">
-                      {app.name}
+                      {app?.name || 'Ứng dụng'}
                     </span>
                   </li>
                 </ol>
@@ -564,17 +498,18 @@ export default function Detail({ serverApp, serverRelated }) {
               <div className="pt-6 text-center px-4">
                 <div className="w-24 h-24 mx-auto overflow-hidden border-4 border-white rounded-2xl">
                   <img
-                    src={app.icon_url || '/placeholder-icon.png'}
-                    alt={app.name}
+                    src={app?.icon_url || '/placeholder-icon.png'}
+                    alt={app?.name || 'App'}
                     className="w-full h-full object-cover"
-                    onError={(e) => { e.target.src = '/placeholder-icon.png'; }}
+                    onError={(e) => { e.currentTarget.src = '/placeholder-icon.png'; }}
                   />
                 </div>
-                <h1 className="mt-4 text-2xl font-bold text-gray-900 drop-shadow">{app.name}</h1>
-                {app.author && <p className="text-gray-700 text-sm">{app.author}</p>}
+                <h1 className="mt-4 text-2xl font-bold text-gray-900 drop-shadow">{app?.name || 'Ứng dụng'}</h1>
+                {app?.author && <p className="text-gray-700 text-sm">{app.author}</p>}
 
                 <div className="mt-4 flex flex-wrap justify-center gap-2">
-                  {isTestflight && app.testflight_url && (
+                  {/* TestFlight */}
+                  {isTestflight && app?.testflight_url && (
                     <>
                       <a
                         href={app.testflight_url}
@@ -608,6 +543,7 @@ export default function Detail({ serverApp, serverRelated }) {
                     </>
                   )}
 
+                  {/* Install / Download IPA */}
                   {isInstallable && (
                     <>
                       <button
@@ -667,12 +603,12 @@ export default function Detail({ serverApp, serverRelated }) {
             <div className="px-0.5 sm:px-1.5">
               <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Tác giả</p>
               <FontAwesomeIcon icon={faUser} className="text-xl text-gray-600 mb-1" />
-              <p className="text-sm text-gray-800">{app.author || 'Không rõ'}</p>
+              <p className="text-sm text-gray-800">{app?.author || 'Không rõ'}</p>
             </div>
             <div className="px-1 sm:px-2">
               <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Phiên bản</p>
               <FontAwesomeIcon icon={faCodeBranch} className="text-xl text-gray-600 mb-1" />
-              <p className="text-sm text-gray-800">{app.version || 'Không rõ'}</p>
+              <p className="text-sm text-gray-800">{app?.version || 'Không rõ'}</p>
             </div>
             <div className="px-1 sm:px-2">
               <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Dung lượng</p>
@@ -685,13 +621,13 @@ export default function Detail({ serverApp, serverRelated }) {
               </p>
               {isTestflight ? (
                 <div className="flex flex-col items-center">
-                  <span className="text-xl font-medium text-gray-600 mb-1">{app.views ?? 0}</span>
+                  <span className="text-xl font-medium text-gray-600 mb-1">{app?.views ?? 0}</span>
                   <span className="text-xs text-gray-500">Lượt</span>
                 </div>
               ) : (
                 <>
                   <FontAwesomeIcon icon={faDownload} className="text-xl text-gray-600 mb-1" />
-                  <p className="text-sm text-gray-800">{app.downloads ?? 0}</p>
+                  <p className="text-sm text-gray-800">{app?.downloads ?? 0}</p>
                 </>
               )}
             </div>
@@ -714,23 +650,21 @@ export default function Detail({ serverApp, serverRelated }) {
                     li: (props) => <li className="marker:text-blue-500" {...props} />,
                     a: (props) => <a className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
                     code: ({ inline, ...props }) =>
-                      inline ? (
-                        <code className="px-1 py-0.5 rounded bg-gray-100 text-pink-700" {...props} />
-                      ) : (
-                        <pre className="p-3 rounded bg-gray-900 text-gray-100 overflow-auto mb-3"><code {...props} /></pre>
-                      ),
+                      inline
+                        ? <code className="px-1 py-0.5 rounded bg-gray-100 text-pink-700" {...props} />
+                        : <pre className="p-3 rounded bg-gray-900 text-gray-100 overflow-auto mb-3"><code {...props} /></pre>,
                     blockquote: (props) => <PrettyBlockquote {...props} />,
                     hr: () => <hr className="my-4 border-gray-200" />,
                   }}
                 >
-                  {normalizeDescription(app.description)}
+                  {normalizeDescription(app?.description)}
                 </ReactMarkdown>
               </div>
               {!showFullDescription && (
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white via-white to-transparent" />
               )}
             </div>
-            {app?.description && app.description.length > 300 && (
+            {app?.description && String(app.description).length > 300 && (
               <button
                 onClick={() => setShowFullDescription(v => !v)}
                 className="mt-3 text-sm text-blue-600 hover:underline font-bold"
@@ -741,17 +675,17 @@ export default function Detail({ serverApp, serverRelated }) {
           </div>
 
           {/* Screenshots */}
-          {Array.isArray(app.screenshots) && app.screenshots.length > 0 && (
+          {Array.isArray(app?.screenshots) && app.screenshots.length > 0 && (
             <div className="bg-white rounded-xl p-4 shadow">
               <h2 className="text-lg font-bold text-gray-800 mb-3">Ảnh màn hình</h2>
               <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1">
                 {app.screenshots.map((url, i) => (
                   <div key={i} className="flex-shrink-0 w-48 md:w-56 rounded-xl overflow-hidden border">
                     <img
-                      src={url}
+                      src={url || '/placeholder-image.png'}
                       alt={`Screenshot ${i + 1}`}
                       className="w-full h-auto object-cover"
-                      onError={(e) => { e.target.src = '/placeholder-image.png'; }}
+                      onError={(e) => { e.currentTarget.src = '/placeholder-image.png'; }}
                     />
                   </div>
                 ))}
@@ -763,16 +697,14 @@ export default function Detail({ serverApp, serverRelated }) {
           <div className="bg-white rounded-xl shadow overflow-hidden">
             <h2 className="px-4 pt-4 text-lg font-bold text-gray-800">Thông tin</h2>
             <div className="mt-3 divide-y divide-gray-200">
-              <InfoRow label="Nhà phát triển" value={app.author || 'Không rõ'} />
-              <InfoRow label="Phiên bản" value={app.version || 'Không rõ'} />
+              <InfoRow label="Nhà phát triển" value={app?.author || 'Không rõ'} />
+              <InfoRow label="Phiên bản" value={app?.version || 'Không rõ'} />
               <InfoRow label="Dung lượng" value={displaySize} />
               <InfoRow
                 label="Thiết bị hỗ trợ"
                 value={
                   devicesArray.length
-                    ? showAllDevices
-                      ? devicesArray.join(', ')
-                      : `${devicesShort.list.join(', ')}${devicesShort.remain ? `, +${devicesShort.remain}` : ''}`
+                    ? (showAllDevices ? devicesArray.join(', ') : `${devicesShort.list.join(', ')}${devicesShort.remain ? `, +${devicesShort.remain}` : ''}`)
                     : 'Không rõ'
                 }
                 expandable={devicesArray.length > devicesShort.list.length}
@@ -783,31 +715,19 @@ export default function Detail({ serverApp, serverRelated }) {
                 label="Ngôn ngữ"
                 value={
                   languagesArray.length
-                    ? showAllLanguages
-                      ? languagesArray.join(', ')
-                      : `${languagesShort.list.join(', ')}${languagesShort.remain ? `, +${languagesShort.remain}` : ''}`
+                    ? (showAllLanguages ? languagesArray.join(', ') : `${languagesShort.list.join(', ')}${languagesShort.remain ? `, +${languagesShort.remain}` : ''}`)
                     : 'Không rõ'
                 }
                 expandable={languagesArray.length > languagesShort.list.length}
                 expanded={showAllLanguages}
                 onToggle={() => setShowAllLanguages(v => !v)}
               />
-              <InfoRow
-                label="Yêu cầu iOS"
-                value={app.minimum_os_version ? `iOS ${app.minimum_os_version}+` : 'Không rõ'}
-              />
+              <InfoRow label="Yêu cầu iOS" value={app?.minimum_os_version ? `iOS ${app.minimum_os_version}+` : 'Không rõ'} />
               <InfoRow
                 label="Ngày phát hành"
-                value={
-                  app.release_date
-                    ? new Date(app.release_date).toLocaleDateString('vi-VN')
-                    : 'Không rõ'
-                }
+                value={app?.release_date ? new Date(app.release_date).toLocaleDateString('vi-VN') : 'Không rõ'}
               />
-              <InfoRow
-                label="Xếp hạng tuổi"
-                value={app.age_rating || 'Không rõ'}
-              />
+              <InfoRow label="Xếp hạng tuổi" value={app?.age_rating || 'Không rõ'} />
             </div>
           </div>
 
@@ -827,7 +747,7 @@ export default function Detail({ serverApp, serverRelated }) {
                         src={item.icon_url || '/placeholder-icon.png'}
                         alt={item.name}
                         className="w-14 h-14 rounded-xl object-cover shadow-sm"
-                        onError={(e) => { e.target.src = '/placeholder-icon.png'; }}
+                        onError={(e) => { e.currentTarget.src = '/placeholder-icon.png'; }}
                       />
                       <div className="flex flex-col">
                         <p className="text-sm font-semibold text-gray-800">{item.name}</p>
@@ -848,9 +768,13 @@ export default function Detail({ serverApp, serverRelated }) {
             </div>
           )}
 
-          {/* Bình luận */}
+          {/* Bình luận (dynamic import) */}
           <div className="bg-white rounded-xl p-4 shadow">
-            <Comments postId={app.slug} postTitle={app.name} />
+            {CommentsComp ? (
+              <CommentsComp postId={app?.slug} postTitle={app?.name} />
+            ) : (
+              <div className="text-sm text-gray-500">Đang tải bình luận…</div>
+            )}
           </div>
         </div>
       </div>
