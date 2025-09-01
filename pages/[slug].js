@@ -24,11 +24,9 @@ import {
   faChevronDown,
   faChevronUp,
   faFileArrowDown,
-  faHouse,
-  faAngleRight,
 } from '@fortawesome/free-solid-svg-icons';
 
-// Dynamic import – Comments
+// Bình luận lazy
 const Comments = dynamic(() => import('../components/Comments'), {
   ssr: false,
   loading: () => <div className="text-sm text-gray-500">Đang tải bình luận…</div>,
@@ -65,7 +63,7 @@ export async function getServerSideProps(context) {
     return { notFound: true };
   }
 
-  // 3) Fallback JOIN category nếu chưa có
+  // 3) Bổ sung category nếu thiếu
   if (!appData?.category && appData?.category_id) {
     const { data: cat } = await supabase
       .from('categories')
@@ -75,13 +73,14 @@ export async function getServerSideProps(context) {
     if (cat) appData = { ...appData, category: cat };
   }
 
-  // 4) Related apps
+  // 4) Related apps (lấy rộng để phân trang client)
   const { data: relatedApps } = await supabase
     .from('apps')
     .select('id, name, slug, icon_url, author, version, category_id')
     .eq('category_id', appData.category_id)
     .neq('id', appData.id)
-    .limit(10);
+    .order('created_at', { ascending: false })
+    .limit(50);
 
   return {
     props: {
@@ -105,11 +104,14 @@ function stripSimpleTagAll(str, tag) {
   let s = String(str);
   const open = `[${tag}`;
   const close = `[/${tag}]`;
+
+  // remove stray close
   while (true) {
     const idx = s.toLowerCase().indexOf(close);
     if (idx === -1) break;
     s = s.slice(0, idx) + s.slice(idx + close.length);
   }
+  // paired open/close
   while (true) {
     const lower = s.toLowerCase();
     const iOpen = lower.indexOf(open);
@@ -130,19 +132,23 @@ function stripSimpleTagAll(str, tag) {
 function processListBlocks(str) {
   let output = '';
   let remaining = String(str);
+
   while (true) {
     const lower = remaining.toLowerCase();
     const start = lower.indexOf('[list]');
     if (start === -1) { output += remaining; break; }
     const end = lower.indexOf('[/list]', start + 6);
     if (end === -1) { output += remaining; break; }
+
     const before = remaining.slice(0, start);
     const listContent = remaining.slice(start + 6, end);
     const after = remaining.slice(end + 7);
+
     const items = listContent
       .split('[*]')
       .map(t => t.trim())
       .filter(Boolean);
+
     const md = '\n' + items.map(it => `- ${it}`).join('\n') + '\n';
     output += before + md;
     remaining = after;
@@ -161,15 +167,18 @@ function bbcodeToMarkdownLite(input = '') {
   s = stripSimpleTagAll(s, 'color');
   s = stripSimpleTagAll(s, 'size');
   s = processListBlocks(s);
+
   const quoteR = new RegExp('\\[quote\\]\\s*([\\s\\S]*?)\\s*\\[/quote\\]', 'gi');
-  s = s.replace(quoteR, (_m, p1) =>
-    String(p1).trim().split(/\r?\n/).map(line => `> ${line}`).join('\n')
-  );
+  s = s.replace(quoteR, (_m, p1) => {
+    return String(p1).trim().split(/\r?\n/).map(line => `> ${line}`).join('\n');
+  });
+
   const codeR = new RegExp('\\[code\\]\\s*([\\s\\S]*?)\\s*\\[/code\\]', 'gi');
   s = s.replace(codeR, (_m, p1) => {
     const body = String(p1).replace(/```/g, '``');
     return `\n\`\`\`\n${body}\n\`\`\`\n`;
   });
+
   return s;
 }
 
@@ -186,39 +195,65 @@ function PrettyBlockquote({ children }) {
   return (
     <blockquote className="relative my-4 rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50 to-white p-4 pl-5 dark:border-blue-900/40 dark:from-blue-950/30 dark:to-transparent">
       <div className="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl bg-blue-500/80 dark:bg-blue-400/80" />
-      <div className="text-blue-900 dark:text-blue-100 leading-relaxed">{children}</div>
+      <div className="text-blue-900 dark:text-blue-100 leading-relaxed">
+        {children}
+      </div>
     </blockquote>
   );
 }
 
-const InfoRow = memo(({ label, value, expandable, expanded, onToggle }) => (
-  <div className="px-4 py-3 flex items-start">
-    <div className="w-40 min-w-[9rem] text-sm text-gray-500">{label}</div>
-    <div className="flex-1 text-sm text-gray-800">
-      <span className="align-top">{value}</span>
-      {expandable && (
-        <button
-          type="button"
-          onClick={onToggle}
-          className="ml-2 inline-flex items-center text-blue-600 hover:underline"
-        >
-          {expanded ? (
-            <>
-              Thu gọn <FontAwesomeIcon icon={faChevronUp} className="ml-1 h-3" />
-            </>
-          ) : (
-            <>
-              Xem thêm <FontAwesomeIcon icon={faChevronDown} className="ml-1 h-3" />
-            </>
-          )}
-        </button>
-      )}
+/* ====== Breadcrumb kiểu mũi tên ======
+   Dễ kiểm soát bằng clip-path. Item thường: nền xanh, chữ trắng; item cuối: nền trắng, viền xanh.
+*/
+function ArrowCrumb({ href, children, last = false }) {
+  const base = 'relative inline-flex items-center px-5 h-10 text-sm font-semibold';
+  const style = last
+    ? { clipPath: 'polygon(10px 0,100% 0, calc(100% - 10px) 50%,100% 100%,10px 100%,0 50%)' }
+    : { clipPath: 'polygon(10px 0,100% 0, calc(100% - 10px) 50%,100% 100%,10px 100%,0 50%)' };
+  const className = last
+    ? `${base} bg-white text-sky-600 border-2 border-sky-500`
+    : `${base} bg-sky-500 text-white hover:bg-sky-600`;
+
+  const Comp = href ? Link : 'span';
+  const props = href ? { href } : {};
+  return (
+    <Comp {...props} className={className} style={style}>
+      {children}
+    </Comp>
+  );
+}
+
+/* ===================== InfoRow ===================== */
+const InfoRow = memo(({ label, value, expandable = false, expanded = false, onToggle }) => {
+  return (
+    <div className="px-4 py-3 flex items-start">
+      <div className="w-40 min-w-[9rem] text-sm text-gray-500">{label}</div>
+      <div className="flex-1 text-sm text-gray-800">
+        <span className="align-top">{value}</span>
+        {expandable && (
+          <button
+            type="button"
+            onClick={onToggle}
+            className="ml-2 inline-flex items-center text-blue-600 hover:underline"
+          >
+            {expanded ? (
+              <>
+                Thu gọn <FontAwesomeIcon icon={faChevronUp} className="ml-1 h-3" />
+              </>
+            ) : (
+              <>
+                Xem thêm <FontAwesomeIcon icon={faChevronDown} className="ml-1 h-3" />
+              </>
+            )}
+          </button>
+        )}
+      </div>
     </div>
-  </div>
-));
+  );
+});
 InfoRow.displayName = 'InfoRow';
 
-/* ===================== Center Modal (generic) ===================== */
+/* ===================== Center Modal (thông báo) ===================== */
 function CenterModal({ open, title, body, actions }) {
   if (!open) return null;
   return (
@@ -233,6 +268,7 @@ function CenterModal({ open, title, body, actions }) {
   );
 }
 
+/* ===================== Page ===================== */
 export default function Detail({ serverApp, serverRelated }) {
   const router = useRouter();
   const [app, setApp] = useState(serverApp);
@@ -246,7 +282,16 @@ export default function Detail({ serverApp, serverRelated }) {
   const [showAllDevices, setShowAllDevices] = useState(false);
   const [showAllLanguages, setShowAllLanguages] = useState(false);
 
-  // ReactMarkdown & remark-gfm (lazy)
+  // Phân trang Related
+  const PAGE_SIZE = 5;
+  const [relPage, setRelPage] = useState(1);
+  const relTotalPages = Math.max(1, Math.ceil((related?.length || 0) / PAGE_SIZE));
+  const relatedSlice = useMemo(() => {
+    const start = (relPage - 1) * PAGE_SIZE;
+    return (related || []).slice(start, start + PAGE_SIZE);
+  }, [related, relPage]);
+
+  // Markdown lazy
   const [remarkGfm, setRemarkGfm] = useState(null);
   const [ReactMarkdown, setReactMarkdown] = useState(null);
   useEffect(() => {
@@ -274,6 +319,7 @@ export default function Detail({ serverApp, serverRelated }) {
   useEffect(() => {
     setApp(serverApp);
     setRelated(serverRelated);
+    setRelPage(1);
     setShowFullDescription(false);
     setDominantColor('#f0f2f5');
     setShowAllDevices(false);
@@ -282,6 +328,8 @@ export default function Detail({ serverApp, serverRelated }) {
 
   useEffect(() => {
     if (!app?.id) return;
+
+    // Đếm view TestFlight
     if (isTestflight) {
       fetch('/api/admin/add-view', {
         method: 'POST',
@@ -289,6 +337,8 @@ export default function Detail({ serverApp, serverRelated }) {
         body: JSON.stringify({ id: app.id }),
       }).catch(console.error);
     }
+
+    // Kiểm tra slot TestFlight
     if (isTestflight && app.testflight_url) {
       setStatusLoading(true);
       const id = app.testflight_url.split('/').pop();
@@ -298,6 +348,8 @@ export default function Detail({ serverApp, serverRelated }) {
         .catch(console.error)
         .finally(() => setStatusLoading(false));
     }
+
+    // Màu nền từ icon
     if (app.icon_url && typeof window !== 'undefined') {
       const fac = new FastAverageColor();
       fac.getColorAsync(app.icon_url)
@@ -330,7 +382,7 @@ export default function Detail({ serverApp, serverRelated }) {
     return { list, remain };
   }, [devicesArray]);
 
-  // ========= Modal "Cần xác minh email" mở popup Login của Layout =========
+  // ======= Modal "Cần xác minh email": nút Đăng nhập mở popup global của Layout =======
   const requireVerified = () => {
     setModal({
       open: true,
@@ -338,10 +390,7 @@ export default function Detail({ serverApp, serverRelated }) {
       body: (
         <div className="text-sm">
           <p>Bạn cần <b>đăng nhập</b> và <b>xác minh email</b> để tải IPA.</p>
-          <p className="mt-1 text-xs text-gray-500">
-            Không thấy email xác minh? Hãy kiểm tra thư rác hoặc gửi lại từ trang{' '}
-            <Link href="/profile" className="text-blue-600 underline">Hồ sơ</Link>.
-          </p>
+          <p className="mt-1 text-xs text-gray-500">Không thấy email xác minh? Hãy kiểm tra thư rác hoặc gửi lại từ trang <Link href="/profile" className="text-blue-600 underline">Hồ sơ</Link>.</p>
         </div>
       ),
       actions: (
@@ -349,8 +398,11 @@ export default function Detail({ serverApp, serverRelated }) {
           <button
             onClick={() => {
               try {
-                // mở popup login toàn cục của Layout
-                window.dispatchEvent(new Event('open-login'));
+                // Gọi popup đăng nhập ở Layout
+                if (typeof window !== 'undefined') {
+                  if (typeof window.openLogin === 'function') window.openLogin();
+                  else window.dispatchEvent(new Event('open-login'));
+                }
               } catch {}
               setModal(s => ({ ...s, open: false }));
             }}
@@ -358,10 +410,7 @@ export default function Detail({ serverApp, serverRelated }) {
           >
             Đăng nhập
           </button>
-          <button
-            onClick={() => setModal(s => ({ ...s, open: false }))}
-            className="px-3 py-2 text-sm rounded border"
-          >
+          <button onClick={() => setModal(s => ({ ...s, open: false }))} className="px-3 py-2 text-sm rounded border">
             Đóng
           </button>
         </>
@@ -372,6 +421,7 @@ export default function Detail({ serverApp, serverRelated }) {
   const handleInstall = async (e) => {
     e.preventDefault();
     if (!app?.id || isTestflight) return;
+
     setIsInstalling(true);
     try {
       await fetch(`/api/admin/add-download?id=${app.id}`, {
@@ -391,13 +441,14 @@ export default function Detail({ serverApp, serverRelated }) {
     e.preventDefault();
     if (!app?.id || !isInstallable) return;
 
-    // ⬇️ Kiểm tra login + verify
+    // Kiểm tra login + verify
     if (!me || !me.emailVerified) {
       requireVerified();
       return;
     }
 
     setIsFetchingIpa(true);
+
     try {
       const tokRes = await fetch('/api/generate-token', {
         method: 'POST',
@@ -421,15 +472,13 @@ export default function Detail({ serverApp, serverRelated }) {
     }
   };
 
-  // ======= Auto-scroll & highlight theo ?comment= (ĐỢI ELEMENT XUẤT HIỆN) =======
+  // ======= Auto-scroll & highlight theo ?comment= (đợi element xuất hiện) =======
   useEffect(() => {
-    const id = typeof window !== 'undefined'
-      ? new URLSearchParams(window.location.search).get('comment')
-      : null;
+    const id = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('comment') : null;
     if (!id) return;
 
     let tried = 0;
-    const maxTries = 40; // ~2s với 50ms/lần
+    const maxTries = 40; // ~2s với 50ms
     const iv = setInterval(() => {
       const el = document.getElementById(`c-${id}`);
       tried++;
@@ -446,7 +495,6 @@ export default function Detail({ serverApp, serverRelated }) {
     }, 50);
     return () => clearInterval(iv);
   }, [router.query?.slug]);
-  // ================================================
 
   if (!app) {
     return (
@@ -468,9 +516,7 @@ export default function Detail({ serverApp, serverRelated }) {
   }
 
   const title = `${app.name} - App Store`;
-  const description = app.description
-    ? app.description.replace(/<\/?[^>]+(>|$)/g, '').slice(0, 160)
-    : 'Ứng dụng iOS miễn phí, jailbreak, TestFlight';
+  const description = app.description ? app.description.replace(/<\/?[^>]+(>|$)/g, '').slice(0, 160) : 'Ứng dụng iOS miễn phí, jailbreak, TestFlight';
 
   return (
     <Layout fullWidth>
@@ -484,70 +530,39 @@ export default function Detail({ serverApp, serverRelated }) {
         <meta name="twitter:card" content="summary_large_image" />
       </Head>
 
-      {/* Modal trung tâm cho thông báo "Cần xác minh email" */}
+      {/* Modal xác minh / đăng nhập */}
       <CenterModal open={modal.open} title={modal.title} body={modal.body} actions={modal.actions} />
 
-      {/* ===== Breadcrumb ===== */}
-      <div className="bg-gray-100">
+      {/* ===== Breadcrumb kiểu mũi tên ===== */}
+      <div className="bg-white">
         <div className="w-full flex justify-center px-2 sm:px-4 md:px-6">
           <div className="w-full max-w-screen-2xl">
-            <nav aria-label="Breadcrumb" className="px-2 py-3">
-              <ol className="flex items-center gap-1.5 text-sm text-gray-700 dark:text-gray-300">
-                <li>
-                  <Link
-                    href="/"
-                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/80 hover:bg-white text-blue-600 font-medium shadow-sm transition"
-                  >
-                    <FontAwesomeIcon icon={faHouse} className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Trang chủ</span>
-                  </Link>
-                </li>
-                <li className="text-gray-400">
-                  <FontAwesomeIcon icon={faAngleRight} className="w-3 h-3" />
-                </li>
-                <li>
-                  {app?.category?.slug ? (
-                    <Link
-                      href={`/category/${app.category.slug}`}
-                      className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/80 hover:bg-white text-blue-600 font-medium shadow-sm transition"
-                    >
-                      {app.category.name || 'Chuyên mục'}
-                    </Link>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white/60 text-blue-500 font-medium">
-                      Chuyên mục
-                    </span>
-                  )}
-                </li>
-                <li className="text-gray-400">
-                  <FontAwesomeIcon icon={faAngleRight} className="w-3 h-3" />
-                </li>
-                <li>
-                  <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold shadow">
-                    {app.name}
-                  </span>
-                </li>
-              </ol>
+            <nav aria-label="Breadcrumb" className="px-2 py-4">
+              <div className="flex flex-wrap gap-3">
+                <ArrowCrumb href="/">Home</ArrowCrumb>
+                {app?.category?.slug ? (
+                  <ArrowCrumb href={`/category/${app.category.slug}`}>{app.category.name || 'Category'}</ArrowCrumb>
+                ) : (
+                  <ArrowCrumb>Category</ArrowCrumb>
+                )}
+                <ArrowCrumb last>{app.name}</ArrowCrumb>
+              </div>
             </nav>
           </div>
         </div>
       </div>
 
-      {/* Hero Section */}
+      {/* HERO */}
       <div className="bg-gray-100 min-h-screen pb-12">
         <div className="w-full flex justify-center mt-0 bg-gray-100">
           <div className="relative w-full max-w-screen-2xl px-2 sm:px-4 md:px-6 pb-8 bg-white rounded-none">
-            <div
-              className="w-full pb-6"
-              style={{ backgroundImage: `linear-gradient(to bottom, ${dominantColor}, #f0f2f5)` }}
-            >
+            <div className="w-full pb-6" style={{ backgroundImage: `linear-gradient(to bottom, ${dominantColor}, #f0f2f5)` }}>
               <div className="absolute top-3 left-3 z-10">
                 <Link
                   href="/"
                   className="inline-flex items-center justify-center w-9 h-9 text-blue-600 hover:text-white bg-white hover:bg-blue-600 active:scale-95 transition-all duration-150 rounded-full shadow-sm"
-                  aria-label="Back"
                 >
-                  <FontAwesomeIcon icon={faArrowLeft} className="w-4 h-4" />
+                  <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M15 18l-6-6 6-6" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                 </Link>
               </div>
 
@@ -564,6 +579,7 @@ export default function Detail({ serverApp, serverRelated }) {
                 {app.author && <p className="text-gray-700 text-sm">{app.author}</p>}
 
                 <div className="mt-4 flex flex-wrap justify-center gap-2">
+                  {/* TestFlight */}
                   {isTestflight && app.testflight_url && (
                     <>
                       <a
@@ -577,7 +593,7 @@ export default function Detail({ serverApp, serverRelated }) {
                       </a>
                       {statusLoading || status === null ? (
                         <span className="inline-block border border-gray-300 text-gray-500 bg-gray-50 px-4 py-2 rounded-full text-sm font-semibold">
-                          Đang kiểm tra…
+                          Đang kiểm tra...
                         </span>
                       ) : status === 'Y' ? (
                         <span className="inline-block border border-green-500 text-green-700 bg-green-50 px-4 py-2 rounded-full text-sm font-semibold">
@@ -598,6 +614,7 @@ export default function Detail({ serverApp, serverRelated }) {
                     </>
                   )}
 
+                  {/* Cài đặt / Tải IPA */}
                   {isInstallable && (
                     <>
                       <button
@@ -784,7 +801,10 @@ export default function Detail({ serverApp, serverRelated }) {
                 expanded={showAllLanguages}
                 onToggle={() => setShowAllLanguages(v => !v)}
               />
-              <InfoRow label="Yêu cầu iOS" value={app.minimum_os_version ? `iOS ${app.minimum_os_version}+` : 'Không rõ'} />
+              <InfoRow
+                label="Yêu cầu iOS"
+                value={app.minimum_os_version ? `iOS ${app.minimum_os_version}+` : 'Không rõ'}
+              />
               <InfoRow
                 label="Ngày phát hành"
                 value={
@@ -793,16 +813,20 @@ export default function Detail({ serverApp, serverRelated }) {
                     : 'Không rõ'
                 }
               />
-              <InfoRow label="Xếp hạng tuổi" value={app.age_rating || 'Không rõ'} />
+              <InfoRow
+                label="Xếp hạng tuổi"
+                value={app.age_rating || 'Không rõ'}
+              />
             </div>
           </div>
 
-          {/* Related */}
-          {related.length > 0 && (
+          {/* Related + Phân trang */}
+          {relatedSlice.length > 0 && (
             <div className="bg-white rounded-xl p-4 shadow">
               <h2 className="text-lg font-bold text-gray-800 mb-4">Ứng dụng cùng chuyên mục</h2>
+
               <div className="divide-y divide-gray-200">
-                {related.map((item) => (
+                {relatedSlice.map((item) => (
                   <Link
                     href={`/${item.slug}`}
                     key={item.id}
@@ -831,6 +855,29 @@ export default function Detail({ serverApp, serverRelated }) {
                   </Link>
                 ))}
               </div>
+
+              {/* Pagination controls */}
+              {relTotalPages > 1 && (
+                <div className="mt-4 flex items-center justify-between">
+                  <button
+                    onClick={() => setRelPage(p => Math.max(1, p - 1))}
+                    disabled={relPage === 1}
+                    className={`px-3 py-1.5 rounded border text-sm ${relPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'}`}
+                  >
+                    ← Trang trước
+                  </button>
+                  <div className="text-sm text-gray-600">
+                    Trang <b>{relPage}</b> / {relTotalPages}
+                  </div>
+                  <button
+                    onClick={() => setRelPage(p => Math.min(relTotalPages, p + 1))}
+                    disabled={relPage === relTotalPages}
+                    className={`px-3 py-1.5 rounded border text-sm ${relPage === relTotalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'}`}
+                  >
+                    Trang sau →
+                  </button>
+                </div>
+              )}
             </div>
           )}
 
@@ -838,6 +885,7 @@ export default function Detail({ serverApp, serverRelated }) {
           <div className="bg-white rounded-xl p-4 shadow">
             <Comments postId={app.slug} postTitle={app.name} />
           </div>
+
         </div>
       </div>
     </Layout>
