@@ -451,10 +451,14 @@ function CommentRow({ c, me, small=false, canDelete=false, onDelete, isAdminFn=(
           <span className="font-semibold text-blue-800 dark:text-blue-300 inline-flex items-center gap-1">
             {name}
             {isAdminFn(c.authorId) && (
-              <span className="inline-flex items-center justify-center -mt-[1px]" title="Quản trị viên đã xác minh">
-                <FontAwesomeIcon icon={faCheckCircle} className="w-3.5 h-3.5 text-blue-500" />
-              </span>
-            )}
+  <span className="inline-flex items-center justify-center -mt-[1px]" title="Tài khoản đã xác minh">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" className="text-[#1DA1F2]">
+      <g fill="currentColor">
+        <path d="M22.25 12.03l-2.4-2.06.36-3.17a1 1 0 00-1.45-1.02l-2.96 1.46-2.45-1.86a1 1 0 00-1.18 0l-2.45 1.86L5.24 5.78a1 1 0 00-1.45 1.02l.36 3.17-2.4 2.06a1 1 0 000 1.54l2.4 2.06-.36 3.17a1 1 0 001.45 1.02l2.96-1.46 2.45 1.86a1 1 0 001.18 0l2.45-1.86 2.96 1.46a1 1 0 001.45-1.02l-.36-3.17 2.4-2.06a1 1 0 000-1.54zM10.57 15.9l-3.06-3.05 1.42-1.42 1.64 1.63 4.12-4.12 1.41 1.42-5.53 5.54z"/>
+      </g>
+    </svg>
+  </span>
+)}
           </span>
           {time && (
             <span className="text-xs text-gray-500" title={time.abs}>
