@@ -8,6 +8,8 @@
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
+
+    // BẮT BUỘC: phục vụ where(toUserId == uid) + orderBy(createdAt desc)
     {
       "collectionGroup": "notifications",
       "queryScope": "COLLECTION",
@@ -16,6 +18,8 @@
         { "fieldPath": "createdAt", "order": "DESCENDING" }
       ]
     },
+
+    // TUỲ CHỌN: nếu có lọc chưa đọc where(isRead == false) + orderBy(createdAt desc)
     {
       "collectionGroup": "notifications",
       "queryScope": "COLLECTION",
@@ -26,7 +30,7 @@
       ]
     },
 
-    /* --- hai index bạn đã tạo thủ công trước đó (để KHÔNG bị xóa) --- */
+    // GIỮ LẠI: các index bạn đã tạo thủ công (để CLI không xoá)
     {
       "collectionGroup": "notifications",
       "queryScope": "COLLECTION",
