@@ -3,8 +3,6 @@ import { useEffect, useState, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { supabase } from '../lib/supabase';
-
-// 🔥 Firebase: auth + Firestore cho badge thông báo
 import { auth, db } from '../lib/firebase-client';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 
@@ -23,18 +21,18 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
   const [sortBy, setSortBy] = useState('created_at');
   const [q, setQ] = useState('');
   const [apps, setApps] = useState([]);
-  const [categories, setCategories] = useState([]); // cho menu hamburger
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const [notifOpen, setNotifOpen] = useState(false);
-  const [notifCount, setNotifCount] = useState(0); // 🔴 badge thật
+  const [notifCount, setNotifCount] = useState(0);
 
-  // ⬇️ Popup đăng nhập toàn cục + event 'open-login'
+  // 🔴 Popup đăng nhập toàn cục (để trang con có thể gọi)
   const [loginOpen, setLoginOpen] = useState(false);
 
   const drawerRef = useRef(null);
 
-  // keyboard: '/' hoặc Cmd/Ctrl+K mở search
+  // Keyboard open search
   useEffect(() => {
     const onKey = (e) => {
       const isSlash = e.key === '/';
@@ -48,7 +46,7 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  // dark mode
+  // Dark mode
   useEffect(() => {
     const stored = typeof window !== 'undefined' ? localStorage.getItem('darkMode') : null;
     const prefers = typeof window !== 'undefined' ? window.matchMedia('(prefers-color-scheme: dark)').matches : false;
@@ -59,13 +57,15 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
     if (typeof window !== 'undefined') localStorage.setItem('darkMode', darkMode);
   }, [darkMode]);
 
-  // lấy chuyên mục cho menu
-  useEffect(() => { (async () => {
-    const { data } = await supabase.from('categories').select('id, name, slug').order('name', { ascending: true });
-    setCategories(data || []);
-  })(); }, []);
+  // Lấy chuyên mục
+  useEffect(() => {
+    (async () => {
+      const { data } = await supabase.from('categories').select('id, name, slug').order('name', { ascending: true });
+      setCategories(data || []);
+    })();
+  }, []);
 
-  // Search modal data
+  // Search dataset
   const runSearch = async () => {
     setLoading(true);
     let queryQ = supabase.from('apps').select('*').order(sortBy, { ascending: sortBy === 'name' });
@@ -77,16 +77,14 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
   };
   useEffect(() => { if (searchOpen) runSearch(); }, [q, activeCategory, sortBy, searchOpen]);
 
-  // đóng drawer khi click ra ngoài
+  // Đóng drawer khi click ngoài
   useEffect(() => {
-    const close = (e) => {
-      if (drawerRef.current && !drawerRef.current.contains(e.target)) setMobileMenuOpen(false);
-    };
+    const close = (e) => { if (drawerRef.current && !drawerRef.current.contains(e.target)) setMobileMenuOpen(false); };
     if (mobileMenuOpen) document.addEventListener('mousedown', close);
     return () => document.removeEventListener('mousedown', close);
   }, [mobileMenuOpen]);
 
-  // 🔴 Subscribe badge thông báo thật từ Firestore
+  // Badge thông báo thật từ Firestore
   useEffect(() => {
     let unsubNoti = null;
     const unsubAuth = auth.onAuthStateChanged((u) => {
@@ -102,14 +100,19 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
     return () => { unsubAuth && unsubAuth(); unsubNoti && unsubNoti(); };
   }, []);
 
-  // ⬇️ Cho phép trang con mở popup login của Layout
+  // ⬇️ Cho phép trang con mở popup login của Layout (event & function)
   useEffect(() => {
     const open = () => setLoginOpen(true);
-    // Cho phép gọi thẳng window.openLogin()
+    const close = () => setLoginOpen(false);
+    // Expose function & event
     window.openLogin = open;
-    // hoặc bắn event 'open-login'
+    window.closeLogin = close;
     window.addEventListener('open-login', open);
-    return () => window.removeEventListener('open-login', open);
+    window.addEventListener('close-login', close);
+    return () => {
+      window.removeEventListener('open-login', open);
+      window.removeEventListener('close-login', close);
+    };
   }, []);
 
   return (
@@ -132,14 +135,14 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
             </Link>
           </div>
 
-          {/* Middle (tối giản) */}
+          {/* Middle */}
           <nav className="hidden md:flex items-center gap-6 text-sm">
             <Link href="/tools" className="hover:text-red-600">Công cụ</Link>
             <Link href="/categories" className="hover:text-red-600">Chuyên mục</Link>
             <Link href="/about" className="hover:text-red-600">Giới thiệu</Link>
           </nav>
 
-          {/* Right: Search | Bell | Avatar */}
+          {/* Right: Search | Bell | Avatar/Login */}
           <div className="flex items-center gap-2">
             <button
               onClick={() => setSearchOpen(true)}
@@ -169,7 +172,7 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
           </div>
         </div>
 
-        {/* ⬇️ POPUP LOGIN (toàn cục) đặt ngay trong header để đè lên UI */}
+        {/* ⬇️ POPUP LOGIN toàn cục */}
         {loginOpen && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-4">
             <div className="relative w-full max-w-md rounded-2xl border border-gray-200 bg-white dark:bg-gray-900 shadow-2xl p-4">
@@ -182,13 +185,14 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
                   <path d="M6 6l8 8M14 6l-8 8" strokeWidth="2" strokeLinecap="round"/>
                 </svg>
               </button>
+              {/* Tận dụng component đăng nhập sẵn có */}
               <LoginButton onToggleTheme={() => {}} isDark={false} />
             </div>
           </div>
         )}
       </header>
 
-      {/* MOBILE DRAWER (Hamburger) */}
+      {/* MOBILE DRAWER */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 flex">
           <div ref={drawerRef} className="w-80 max-w-[85%] bg-white dark:bg-gray-900 h-full p-6 shadow-2xl">
