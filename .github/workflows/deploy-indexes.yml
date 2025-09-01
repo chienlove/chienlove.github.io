@@ -25,7 +25,7 @@ jobs:
 
       # Dùng GitHub Action chạy Firebase CLI bằng service account
       - name: "Deploy Firestore Indexes only"
-        uses: w9jds/firebase-action@v12
+        uses: w9jds/firebase-action@v12.9.0
         with:
           args: deploy --only firestore:indexes --project comments-storeios
         env:
