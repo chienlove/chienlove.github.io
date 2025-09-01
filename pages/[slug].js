@@ -28,9 +28,7 @@ import {
   faAngleRight,
 } from '@fortawesome/free-solid-svg-icons';
 
-// ✅ Dynamic import giảm JS ban đầu
-const ReactMarkdown = dynamic(() => import('react-markdown'), { ssr: false });
-const remarkGfmPromise = import('remark-gfm'); // load khi render, không block bundle
+// ✅ Dynamic import còn lại
 const Comments = dynamic(() => import('../components/Comments'), {
   ssr: false,
   loading: () => <div className="text-sm text-gray-500">Đang tải bình luận…</div>,
@@ -215,7 +213,7 @@ function normalizeDescription(raw = '') {
   const txt = String(raw);
   if (/\[(b|i|u|url|img|quote|code|list|\*|size|color)/i.test(txt)) {
     return bbcodeToMarkdownLite(txt);
-    }
+  }
   return txt;
 }
 
@@ -289,13 +287,23 @@ export default function Detail({ serverApp, serverRelated }) {
   const [showAllDevices, setShowAllDevices] = useState(false);
   const [showAllLanguages, setShowAllLanguages] = useState(false);
 
-  // ✅ Auth state để gate tải IPA
+  // ✅ Đợi cả ReactMarkdown và remarkGfm
+  const [remarkGfm, setRemarkGfm] = useState(null);
+  const [ReactMarkdown, setReactMarkdown] = useState(null);
+
+  useEffect(() => {
+    Promise.all([
+      import('react-markdown').then(m => m.default),
+      import('remark-gfm').then(m => m.default),
+    ]).then(([md, gfm]) => {
+      setReactMarkdown(() => md);
+      setRemarkGfm(() => gfm);
+    });
+  }, []);
+
+  // Auth state để gate tải IPA
   const [me, setMe] = useState(null);
   const [modal, setModal] = useState({ open: false, title: '', body: null, actions: null });
-
-  // remark plugin dynamic
-  const [remarkGfm, setRemarkGfm] = useState(null);
-  useEffect(() => { remarkGfmPromise.then(m => setRemarkGfm(m.default)); }, []);
 
   const categorySlug = app?.category?.slug ?? null;
   const isTestflight = categorySlug === 'testflight';
@@ -378,7 +386,6 @@ export default function Detail({ serverApp, serverRelated }) {
     setIsInstalling(true);
 
     try {
-      // Ghi nhận lượt tải TRƯỚC
       await fetch(`/api/admin/add-download?id=${app.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -387,13 +394,11 @@ export default function Detail({ serverApp, serverRelated }) {
     } catch (err) {
       console.error('Lỗi tăng lượt tải:', err);
     } finally {
-      // Sau đó mới redirect
       router.push(`/install/${app.slug}`);
       setIsInstalling(false);
     }
   };
 
-  // ✅ Gate tải IPA: yêu cầu login + emailVerified
   const requireVerified = () => {
     setModal({
       open: true,
@@ -417,7 +422,6 @@ export default function Detail({ serverApp, serverRelated }) {
     e.preventDefault();
     if (!app?.id || !isInstallable) return;
 
-    // 👇 Gate client
     if (!me || !me.emailVerified) {
       requireVerified();
       return;
@@ -426,24 +430,16 @@ export default function Detail({ serverApp, serverRelated }) {
     setIsFetchingIpa(true);
 
     try {
-      // Nếu API yêu cầu Bearer token: kèm theo ID token ở header
-      // const tokenId = await me.getIdToken();
       const tokRes = await fetch('/api/generate-token', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          // 'Authorization': `Bearer ${tokenId}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: app.id, ipa_name: app.download_link }),
       });
       if (!tokRes.ok) throw new Error(`HTTP ${tokRes.status}`);
       const { token } = await tokRes.json();
       if (!token) throw new Error('Thiếu token');
 
-      // Tải qua proxy
       window.location.href = `/api/download-ipa?slug=${encodeURIComponent(app.slug)}&token=${encodeURIComponent(token)}`;
-
-      // Ghi log tải (không critical)
       fetch(`/api/admin/add-download?id=${app.id}`, { method: 'POST' }).catch(() => {});
     } catch (err) {
       alert('Không thể tạo link tải IPA. Vui lòng thử lại.');
@@ -453,7 +449,6 @@ export default function Detail({ serverApp, serverRelated }) {
     }
   };
 
-  // ======= Auto-scroll & highlight theo ?comment= =======
   useEffect(() => {
     const id = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('comment') : null;
     if (!id) return;
@@ -466,7 +461,6 @@ export default function Detail({ serverApp, serverRelated }) {
     }, 3000);
     return () => clearTimeout(t);
   }, [router.query?.slug]);
-  // ================================================
 
   if (!app) {
     return (
@@ -488,7 +482,9 @@ export default function Detail({ serverApp, serverRelated }) {
   }
 
   const title = `${app.name} - App Store`;
-  const description = app.description ? app.description.replace(/<\/?[^>]+(>|$)/g, '').slice(0, 160) : 'Ứng dụng iOS miễn phí, jailbreak, TestFlight';
+  const description = app.description
+    ? app.description.replace(/<\/?[^>]+(>|$)/g, '').slice(0, 160)
+    : 'Ứng dụng iOS miễn phí, jailbreak, TestFlight';
 
   return (
     <Layout fullWidth>
@@ -502,7 +498,6 @@ export default function Detail({ serverApp, serverRelated }) {
         <meta name="twitter:card" content="summary_large_image" />
       </Head>
 
-      {/* Center Modal cho gate */}
       <CenterModal open={modal.open} title={modal.title} body={modal.body} actions={modal.actions} />
 
       <div className="bg-gray-100 min-h-screen pb-12">
@@ -512,7 +507,6 @@ export default function Detail({ serverApp, serverRelated }) {
               className="w-full pb-6"
               style={{ backgroundImage: `linear-gradient(to bottom, ${dominantColor}, #f0f2f5)` }}
             >
-              {/* Back */}
               <div className="absolute top-3 left-3 z-10">
                 <Link
                   href="/"
@@ -523,7 +517,6 @@ export default function Detail({ serverApp, serverRelated }) {
                 </Link>
               </div>
 
-              {/* ✅ BREADCRUMB */}
               <nav aria-label="Breadcrumb" className="pt-3 px-4">
                 <ol className="mx-auto max-w-screen-2xl flex items-center gap-1 text-sm text-blue-900/90">
                   <li>
@@ -560,7 +553,6 @@ export default function Detail({ serverApp, serverRelated }) {
                 </ol>
               </nav>
 
-              {/* Hero */}
               <div className="pt-6 text-center px-4">
                 <div className="w-24 h-24 mx-auto overflow-hidden border-4 border-white rounded-2xl">
                   <img
@@ -587,7 +579,7 @@ export default function Detail({ serverApp, serverRelated }) {
                       </a>
                       {statusLoading || status === null ? (
                         <span className="inline-block border border-gray-300 text-gray-500 bg-gray-50 px-4 py-2 rounded-full text-sm font-semibold">
-                          Đang kiểm tra...
+                          Đang kiểm tra…
                         </span>
                       ) : status === 'Y' ? (
                         <span className="inline-block border border-green-500 text-green-700 bg-green-50 px-4 py-2 rounded-full text-sm font-semibold">
@@ -702,29 +694,31 @@ export default function Detail({ serverApp, serverRelated }) {
             <h2 className="text-lg font-bold text-gray-800 mb-3">Mô tả</h2>
             <div className={`relative overflow-hidden transition-all duration-300 ${showFullDescription ? '' : 'max-h-72'}`}>
               <div className={`${showFullDescription ? '' : 'mask-gradient-bottom'}`}>
-                <ReactMarkdown
-                  remarkPlugins={remarkGfm ? [remarkGfm] : []}
-                  components={{
-                    h1: (props) => <h3 className="text-xl font-bold mt-3 mb-2" {...props} />,
-                    h2: (props) => <h4 className="text-lg font-bold mt-3 mb-2" {...props} />,
-                    h3: (props) => <h5 className="text-base font-bold mt-3 mb-2" {...props} />,
-                    p: (props) => <p className="text-gray-700 leading-7 mb-3" {...props} />,
-                    ul: (props) => <ul className="list-disc pl-5 space-y-1 mb-3" {...props} />,
-                    ol: (props) => <ol className="list-decimal pl-5 space-y-1 mb-3" {...props} />,
-                    li: (props) => <li className="marker:text-blue-500" {...props} />,
-                    a: (props) => <a className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
-                    code: ({ inline, ...props }) =>
-                      inline ? (
-                        <code className="px-1 py-0.5 rounded bg-gray-100 text-pink-700" {...props} />
-                      ) : (
-                        <pre className="p-3 rounded bg-gray-900 text-gray-100 overflow-auto mb-3"><code {...props} /></pre>
-                      ),
-                    blockquote: (props) => <PrettyBlockquote {...props} />,
-                    hr: () => <hr className="my-4 border-gray-200" />,
-                  }}
-                >
-                  {normalizeDescription(app.description)}
-                </ReactMarkdown>
+                {ReactMarkdown && remarkGfm && (
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      h1: (props) => <h3 className="text-xl font-bold mt-3 mb-2" {...props} />,
+                      h2: (props) => <h4 className="text-lg font-bold mt-3 mb-2" {...props} />,
+                      h3: (props) => <h5 className="text-base font-bold mt-3 mb-2" {...props} />,
+                      p: (props) => <p className="text-gray-700 leading-7 mb-3" {...props} />,
+                      ul: (props) => <ul className="list-disc pl-5 space-y-1 mb-3" {...props} />,
+                      ol: (props) => <ol className="list-decimal pl-5 space-y-1 mb-3" {...props} />,
+                      li: (props) => <li className="marker:text-blue-500" {...props} />,
+                      a: (props) => <a className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
+                      code: ({ inline, ...props }) =>
+                        inline ? (
+                          <code className="px-1 py-0.5 rounded bg-gray-100 text-pink-700" {...props} />
+                        ) : (
+                          <pre className="p-3 rounded bg-gray-900 text-gray-100 overflow-auto mb-3"><code {...props} /></pre>
+                        ),
+                      blockquote: (props) => <PrettyBlockquote {...props} />,
+                      hr: () => <hr className="my-4 border-gray-200" />,
+                    }}
+                  >
+                    {normalizeDescription(app.description)}
+                  </ReactMarkdown>
+                )}
               </div>
               {!showFullDescription && (
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white via-white to-transparent" />
@@ -792,10 +786,7 @@ export default function Detail({ serverApp, serverRelated }) {
                 expanded={showAllLanguages}
                 onToggle={() => setShowAllLanguages(v => !v)}
               />
-              <InfoRow
-                label="Yêu cầu iOS"
-                value={app.minimum_os_version ? `iOS ${app.minimum_os_version}+` : 'Không rõ'}
-              />
+              <InfoRow label="Yêu cầu iOS" value={app.minimum_os_version ? `iOS ${app.minimum_os_version}+` : 'Không rõ'} />
               <InfoRow
                 label="Ngày phát hành"
                 value={
@@ -804,10 +795,7 @@ export default function Detail({ serverApp, serverRelated }) {
                     : 'Không rõ'
                 }
               />
-              <InfoRow
-                label="Xếp hạng tuổi"
-                value={app.age_rating || 'Không rõ'}
-              />
+              <InfoRow label="Xếp hạng tuổi" value={app.age_rating || 'Không rõ'} />
             </div>
           </div>
 
