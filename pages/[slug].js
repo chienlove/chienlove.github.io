@@ -1,15 +1,12 @@
-// pages/[slug].js
 'use client';
 
 import { supabase } from '../lib/supabase';
 import Layout from '../components/Layout';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import dynamic from 'next/dynamic';
-import { useEffect, useMemo, useState, memo } from 'react';
-import Head from 'next/head';
-import { auth } from '../lib/firebase-client';
-
+import Comments from '../components/Comments';
+import { useEffect, useState, useMemo, memo } from 'react';
+import { FastAverageColor } from 'fast-average-color';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faDownload,
@@ -24,51 +21,12 @@ import {
   faChevronDown,
   faChevronUp,
   faFileArrowDown,
-  faHouse,
-  faAngleRight,
 } from '@fortawesome/free-solid-svg-icons';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import Head from 'next/head';
 
-// ✅ Dynamic import an toàn
-const ReactMarkdown = dynamic(() => import('react-markdown'), { ssr: false });
-const CommentsLazy = dynamic(() => import('../components/Comments'), {
-  ssr: false,
-  loading: () => <div className="text-sm text-gray-500">Đang tải bình luận…</div>,
-});
-
-/** ───────────────── Error Boundary ─────────────────
- * Chặn mọi lỗi JS từ component con (kể cả "this.data") để không sập trang.
- */
-import React from 'react';
-class ErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false, message: '' };
-  }
-  static getDerivedStateFromError(err) {
-    return { hasError: true, message: err?.message || 'Lỗi không xác định' };
-  }
-  componentDidCatch(err, info) {
-    // Bạn có thể gửi log lên server ở đây nếu muốn
-    // console.error('ErrorBoundary:', err, info);
-  }
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
-          <div className="font-semibold mb-1">Không tải được phần này</div>
-          <div className="opacity-80">
-            Có lỗi khi tải thành phần giao diện. Hãy tải lại trang hoặc thử lại sau.
-          </div>
-          {/* Mở comment nếu bạn muốn hiện thông điệp gốc:
-          <pre className="mt-2 text-xs opacity-70 whitespace-pre-wrap">{this.state.message}</pre>
-          */}
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
-// ───────────────── SSR ─────────────────
+// ===================== SSR =====================
 export async function getServerSideProps(context) {
   const slug = context.params.slug?.toLowerCase();
 
@@ -82,7 +40,7 @@ export async function getServerSideProps(context) {
     .ilike('slug', slug)
     .single();
 
-  // 2) Fallback theo ID
+  // 2) Fallback bằng ID
   if ((!appData || error) && slug) {
     const fb = await supabase
       .from('apps')
@@ -99,7 +57,7 @@ export async function getServerSideProps(context) {
     return { notFound: true };
   }
 
-  // 3) JOIN category nếu thiếu
+  // 3) Fallback JOIN category nếu chưa có
   if (!appData?.category && appData?.category_id) {
     const { data: cat } = await supabase
       .from('categories')
@@ -109,10 +67,10 @@ export async function getServerSideProps(context) {
     if (cat) appData = { ...appData, category: cat };
   }
 
-  // 4) Related
+  // 4) Related apps
   const { data: relatedApps } = await supabase
     .from('apps')
-    .select('id, name, slug, icon_url, author, version, category_id')
+    .select('id, name, slug, icon_url, author, version')
     .eq('category_id', appData.category_id)
     .neq('id', appData.id)
     .limit(10);
@@ -125,120 +83,179 @@ export async function getServerSideProps(context) {
   };
 }
 
-// ───────────────── Helpers ─────────────────
+// ===================== Helpers =====================
+
+// Tách danh sách từ chuỗi: "iOS 14, iPadOS" → ["iOS 14", "iPadOS"]
 function parseList(input) {
   if (!input) return [];
   if (Array.isArray(input)) return input;
-  return String(input).split(/[,\n]+/).map(s => s.trim()).filter(Boolean);
+  return String(input)
+    .split(/[,\n]+/)
+    .map(x => x.trim())
+    .filter(Boolean);
 }
+
+// Xoá thẻ [tag=...] hoặc [tag]...[/tag] – không dùng regex
 function stripSimpleTagAll(str, tag) {
   let s = String(str);
   const open = `[${tag}`;
   const close = `[/${tag}]`;
+
+  // Xoá thẻ đóng lẻ
   while (true) {
     const idx = s.toLowerCase().indexOf(close);
     if (idx === -1) break;
     s = s.slice(0, idx) + s.slice(idx + close.length);
   }
+
+  // Xử lý cặp mở/đóng
   while (true) {
     const lower = s.toLowerCase();
     const iOpen = lower.indexOf(open);
     if (iOpen === -1) break;
+
     const iBracket = s.indexOf(']', iOpen);
-    if (iBracket === -1) { s = s.slice(0, iOpen); break; }
+    if (iBracket === -1) {
+      s = s.slice(0, iOpen);
+      break;
+    }
+
     const iClose = lower.indexOf(close, iBracket + 1);
-    if (iClose === -1) { s = s.slice(0, iOpen) + s.slice(iBracket + 1); continue; }
+    if (iClose === -1) {
+      s = s.slice(0, iOpen) + s.slice(iBracket + 1);
+      continue;
+    }
+
     const inner = s.slice(iBracket + 1, iClose);
     s = s.slice(0, iOpen) + inner + s.slice(iClose + close.length);
   }
   return s;
 }
+
+// Chuyển [list][*]...[/list] → Markdown
 function processListBlocks(str) {
-  let out = '';
-  let remain = String(str);
+  let output = '';
+  let remaining = String(str);
+
   while (true) {
-    const lower = remain.toLowerCase();
+    const lower = remaining.toLowerCase();
     const start = lower.indexOf('[list]');
-    if (start === -1) { out += remain; break; }
+    if (start === -1) { output += remaining; break; }
+
     const end = lower.indexOf('[/list]', start + 6);
-    if (end === -1) { out += remain; break; }
-    const before = remain.slice(0, start);
-    const listContent = remain.slice(start + 6, end);
-    const after = remain.slice(end + 7);
-    const items = listContent.split('[*]').map(t => t.trim()).filter(Boolean);
+    if (end === -1) { output += remaining; break; }
+
+    const before = remaining.slice(0, start);
+    const listContent = remaining.slice(start + 6, end);
+    const after = remaining.slice(end + 7);
+
+    const items = listContent
+      .split('[*]')
+      .map(t => t.trim())
+      .filter(Boolean);
+
     const md = '\n' + items.map(it => `- ${it}`).join('\n') + '\n';
-    out += before + md;
-    remain = after;
+    output += before + md;
+    remaining = after;
   }
-  return out;
+  return output;
 }
+
+// BBCode → Markdown (an toàn, ít regex)
 function bbcodeToMarkdownLite(input = '') {
   let s = String(input);
+
+  // Step 1: [b], [i], [u] (có thể lồng nhau)
   s = s.replace(/\[b\](.*?)\[\/b\]/gi, '**$1**');
   s = s.replace(/\[i\](.*?)\[\/i\]/gi, '*$1*');
   s = s.replace(/\[u\](.*?)\[\/u\]/gi, '__$1__');
+
+  // Step 2: [url] & [url=...]
   s = s.replace(/\[url\](https?:\/\/[^\s\]]+)\[\/url\]/gi, '[$1]($1)');
   s = s.replace(/\[url=(https?:\/\/[^\]\s]+)\](.*?)\[\/url\]/gi, '[$2]($1)');
+
+  // Step 3: [img]
   s = s.replace(/\[img\](https?:\/\/[^\s\]]+)\[\/img\]/gi, '![]($1)');
+
+  // Step 4: [color] và [size] – bỏ qua
   s = stripSimpleTagAll(s, 'color');
   s = stripSimpleTagAll(s, 'size');
+
+  // Step 5: [list] – xử lý sau khi đã có [b][i][u] trong nội dung
   s = processListBlocks(s);
+
+  // Step 6: [quote] – giờ có thể xử lý an toàn vì nội dung đã được format
   const quoteR = new RegExp('\\[quote\\]\\s*([\\s\\S]*?)\\s*\\[/quote\\]', 'gi');
-  s = s.replace(quoteR, (_m, p1) => String(p1).trim().split(/\r?\n/).map(l => `> ${l}`).join('\n'));
+  s = s.replace(quoteR, (_m, p1) => {
+    return String(p1).trim().split(/\r?\n/).map(line => `> ${line}`).join('\n');
+  });
+
+  // Step 7: [code] – dùng RegExp (an toàn vì không có tag con phức tạp)
   const codeR = new RegExp('\\[code\\]\\s*([\\s\\S]*?)\\s*\\[/code\\]', 'gi');
-  s = s.replace(codeR, (_m, p1) => `\n\`\`\`\n${String(p1).replace(/```/g, '``')}\n\`\`\`\n`);
+  s = s.replace(codeR, (_m, p1) => {
+    const body = String(p1).replace(/```/g, '``');
+    return `\n\`\`\`\n${body}\n\`\`\`\n`;
+  });
+
   return s;
 }
+
 function normalizeDescription(raw = '') {
   if (!raw) return '';
-  const t = String(raw);
-  if (/\[(b|i|u|url|img|quote|code|list|\*|size|color)/i.test(t)) return bbcodeToMarkdownLite(t);
-  return t;
+  const txt = String(raw);
+  if (/\[(b|i|u|url|img|quote|code|list|\*|size|color)/i.test(txt)) {
+    return bbcodeToMarkdownLite(txt);
+  }
+  return txt;
 }
+
 function PrettyBlockquote({ children }) {
   return (
     <blockquote className="relative my-4 rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50 to-white p-4 pl-5 dark:border-blue-900/40 dark:from-blue-950/30 dark:to-transparent">
       <div className="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl bg-blue-500/80 dark:bg-blue-400/80" />
-      <div className="text-blue-900 dark:text-blue-100 leading-relaxed">{children}</div>
+      <div className="text-blue-900 dark:text-blue-100 leading-relaxed">
+        {children}
+      </div>
     </blockquote>
   );
 }
-const InfoRow = memo(({ label, value, expandable=false, expanded=false, onToggle }) => (
-  <div className="px-4 py-3 flex items-start">
-    <div className="w-40 min-w-[9rem] text-sm text-gray-500">{label}</div>
-    <div className="flex-1 text-sm text-gray-800">
-      <span className="align-top">{value}</span>
-      {expandable && (
-        <button type="button" onClick={onToggle} className="ml-2 inline-flex items-center text-blue-600 hover:underline">
-          {expanded ? <>Thu gọn <FontAwesomeIcon icon={faChevronUp} className="ml-1 h-3" /></> : <>Xem thêm <FontAwesomeIcon icon={faChevronDown} className="ml-1 h-3" /></>}
-        </button>
-      )}
-    </div>
-  </div>
-));
-InfoRow.displayName = 'InfoRow';
 
-// ───────────────── Modal trung tâm ─────────────────
-function CenterModal({ open, title, body, actions }) {
-  if (!open) return null;
+// ===================== InfoRow (tối ưu) =====================
+const InfoRow = memo(({ label, value, expandable = false, expanded = false, onToggle }) => {
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/40" />
-      <div className="relative w-[92vw] max-w-md rounded-2xl border border-gray-200 bg-white shadow-2xl p-4">
-        {title && <h3 className="text-lg font-semibold mb-2">{title}</h3>}
-        <div className="text-sm text-gray-800">{body}</div>
-        <div className="mt-4 flex justify-end gap-2">{actions}</div>
+    <div className="px-4 py-3 flex items-start">
+      <div className="w-40 min-w-[9rem] text-sm text-gray-500">{label}</div>
+      <div className="flex-1 text-sm text-gray-800">
+        <span className="align-top">{value}</span>
+        {expandable && (
+          <button
+            type="button"
+            onClick={onToggle}
+            className="ml-2 inline-flex items-center text-blue-600 hover:underline"
+          >
+            {expanded ? (
+              <>
+                Thu gọn <FontAwesomeIcon icon={faChevronUp} className="ml-1 h-3" />
+              </>
+            ) : (
+              <>
+                Xem thêm <FontAwesomeIcon icon={faChevronDown} className="ml-1 h-3" />
+              </>
+            )}
+          </button>
+        )}
       </div>
     </div>
   );
-}
+});
+InfoRow.displayName = 'InfoRow';
 
-// ───────────────── Page ─────────────────
+// ===================== Page =====================
 export default function Detail({ serverApp, serverRelated }) {
   const router = useRouter();
-  const [app, setApp] = useState(serverApp || null);
-  const [related, setRelated] = useState(Array.isArray(serverRelated) ? serverRelated : []);
-  const [bgTop, setBgTop] = useState('#eaf2ff'); // màu nền an toàn cố định
+  const [app, setApp] = useState(serverApp);
+  const [related, setRelated] = useState(serverRelated);
+  const [dominantColor, setDominantColor] = useState('#f0f2f5');
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [status, setStatus] = useState(null);
   const [statusLoading, setStatusLoading] = useState(false);
@@ -247,36 +264,18 @@ export default function Detail({ serverApp, serverRelated }) {
   const [showAllDevices, setShowAllDevices] = useState(false);
   const [showAllLanguages, setShowAllLanguages] = useState(false);
 
-  // Auth để gate IPA
-  const [me, setMe] = useState(null);
-  const [modal, setModal] = useState({ open: false, title: '', body: null, actions: null });
-
-  // remark-gfm optional (nếu tải lỗi, vẫn render được)
-  const [remarkGfm, setRemarkGfm] = useState(null);
-  useEffect(() => {
-    let mounted = true;
-    import('remark-gfm')
-      .then(m => { if (mounted) setRemarkGfm(m.default); })
-      .catch(() => setRemarkGfm(null));
-    const unsub = auth?.onAuthStateChanged ? auth.onAuthStateChanged(u => setMe(u)) : () => {};
-    return () => { mounted = false; unsub && unsub(); };
-  }, []);
-
   const categorySlug = app?.category?.slug ?? null;
   const isTestflight = categorySlug === 'testflight';
   const isInstallable = ['jailbreak', 'app-clone'].includes(categorySlug);
 
   useEffect(() => {
-    setApp(serverApp || null);
-    setRelated(Array.isArray(serverRelated) ? serverRelated : []);
+    setApp(serverApp);
+    setRelated(serverRelated);
     setShowFullDescription(false);
+    setDominantColor('#f0f2f5');
     setShowAllDevices(false);
     setShowAllLanguages(false);
-    setStatus(null);
-    setStatusLoading(false);
-    // Không tính màu động nữa (đã gỡ fast-average-color để tránh crash)
-    setBgTop('#eaf2ff');
-  }, [router.query?.slug, serverApp, serverRelated]);
+  }, [router.query.slug, serverApp, serverRelated]);
 
   useEffect(() => {
     if (!app?.id) return;
@@ -287,30 +286,36 @@ export default function Detail({ serverApp, serverRelated }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: app.id }),
-      }).catch(() => {});
+      }).catch(console.error);
     }
 
     // Kiểm tra slot TestFlight
-    if (isTestflight && app?.testflight_url) {
-      try {
-        setStatusLoading(true);
-        const id = String(app.testflight_url).split('/').pop();
-        fetch(`/api/admin/check-slot?id=${encodeURIComponent(id)}`)
-          .then(res => res.json())
-          .then(data => { if (data?.success) setStatus(data.status || null); })
-          .catch(() => {})
-          .finally(() => setStatusLoading(false));
-      } catch { setStatusLoading(false); }
+    if (isTestflight && app.testflight_url) {
+      setStatusLoading(true);
+      const id = app.testflight_url.split('/').pop();
+      fetch(`/api/admin/check-slot?id=${id}`)
+        .then(res => res.json())
+        .then(data => data.success && setStatus(data.status))
+        .catch(console.error)
+        .finally(() => setStatusLoading(false));
     }
-  }, [app?.id, app?.testflight_url, isTestflight]);
+
+    // Màu nền từ icon
+    if (app.icon_url && typeof window !== 'undefined') {
+      const fac = new FastAverageColor();
+      fac.getColorAsync(app.icon_url)
+        .then(color => setDominantColor(color.hex))
+        .catch(console.error)
+        .finally(() => fac.destroy());
+    }
+  }, [app?.id, app?.icon_url, app?.testflight_url, isTestflight]);
 
   const displaySize = useMemo(() => {
-    const s = app?.size;
-    if (!s) return 'Không rõ';
-    const str = String(s);
-    if (/\bMB\b/i.test(str)) return str;
-    const n = Number(str);
-    return isNaN(n) ? str : `${n} MB`;
+    if (!app?.size) return 'Không rõ';
+    const s = String(app.size);
+    if (/\bMB\b/i.test(s)) return s;
+    const n = Number(s);
+    return !isNaN(n) ? `${n} MB` : s;
   }, [app?.size]);
 
   const languagesArray = useMemo(() => parseList(app?.languages), [app?.languages]);
@@ -318,98 +323,80 @@ export default function Detail({ serverApp, serverRelated }) {
 
   const languagesShort = useMemo(() => {
     const list = languagesArray.slice(0, 6);
-    return { list, remain: Math.max(languagesArray.length - 6, 0) };
+    const remain = Math.max(languagesArray.length - 6, 0);
+    return { list, remain };
   }, [languagesArray]);
+
   const devicesShort = useMemo(() => {
     const list = devicesArray.slice(0, 5);
-    return { list, remain: Math.max(devicesArray.length - 5, 0) };
+    const remain = Math.max(devicesArray.length - 5, 0);
+    return { list, remain };
   }, [devicesArray]);
 
   const handleInstall = async (e) => {
     e.preventDefault();
     if (!app?.id || isTestflight) return;
+
     setIsInstalling(true);
+
     try {
-      await fetch(`/api/admin/add-download?id=${encodeURIComponent(app.id)}`, {
+      // Ghi nhận lượt tải TRƯỚC
+      await fetch(`/api/admin/add-download?id=${app.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         cache: 'no-store',
       });
-    } catch {}
-    router.push(`/install/${app.slug}`);
-    setIsInstalling(false);
-  };
-
-  const requireVerified = () => {
-    setModal({
-      open: true,
-      title: 'Cần xác minh email',
-      body: (
-        <div className="text-sm">
-          <p>Bạn cần <b>đăng nhập</b> và <b>xác minh email</b> để tải IPA.</p>
-          <p className="mt-1 text-xs text-gray-500">
-            Không thấy email xác minh? Vào <Link href="/profile" className="text-blue-600 underline">Hồ sơ</Link> để gửi lại.
-          </p>
-        </div>
-      ),
-      actions: (
-        <>
-          <Link href="/login" className="px-3 py-2 text-sm rounded bg-gray-900 text-white">Đăng nhập</Link>
-          <button onClick={() => setModal(s => ({ ...s, open: false }))} className="px-3 py-2 text-sm rounded border">Đóng</button>
-        </>
-      ),
-    });
+    } catch (err) {
+      console.error('Lỗi tăng lượt tải:', err);
+    } finally {
+      // Sau đó mới redirect
+      router.push(`/install/${app.slug}`);
+      setIsInstalling(false);
+    }
   };
 
   const handleDownloadIpa = async (e) => {
     e.preventDefault();
     if (!app?.id || !isInstallable) return;
-
-    // Gate client
-    if (!me || !me.emailVerified) {
-      requireVerified();
-      return;
-    }
-
     setIsFetchingIpa(true);
+
     try {
-      // const idToken = await me.getIdToken();
-      const res = await fetch('/api/generate-token', {
+      const tokRes = await fetch('/api/generate-token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: app.id, ipa_name: app.download_link }),
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json().catch(() => ({}));
-      const token = json?.token;
+      if (!tokRes.ok) throw new Error(`HTTP ${tokRes.status}`);
+      const { token } = await tokRes.json();
       if (!token) throw new Error('Thiếu token');
+
+      // Tải qua proxy
       window.location.href = `/api/download-ipa?slug=${encodeURIComponent(app.slug)}&token=${encodeURIComponent(token)}`;
-      fetch(`/api/admin/add-download?id=${encodeURIComponent(app.id)}`, { method: 'POST' }).catch(() => {});
+
+      // Ghi log tải
+      fetch(`/api/admin/add-download?id=${app.id}`, { method: 'POST' }).catch(() => {});
     } catch (err) {
       alert('Không thể tạo link tải IPA. Vui lòng thử lại.');
-      console.error(err);
+      console.error('Download IPA error:', err);
     } finally {
       setIsFetchingIpa(false);
     }
   };
 
-  // Scroll tới comment nếu có ?comment=
+  // ======= Auto-scroll & highlight theo ?comment= =======
   useEffect(() => {
-    try {
-      const id = typeof window !== 'undefined'
-        ? new URLSearchParams(window.location.search).get('comment')
-        : null;
-      if (!id) return;
-      const el = document.getElementById(`c-${id}`);
-      if (!el) return;
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      el.classList.add('ring-2', 'ring-amber-400', 'bg-amber-50');
-      const t = setTimeout(() => {
-        el.classList.remove('ring-2', 'ring-amber-400', 'bg-amber-50');
-      }, 3000);
-      return () => clearTimeout(t);
-    } catch {}
+    const id = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('comment') : null;
+    if (!id) return;
+    const el = document.getElementById(`c-${id}`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    el.classList.add('ring-2', 'ring-amber-400', 'bg-amber-50');
+    const t = setTimeout(() => {
+      el.classList.remove('ring-2', 'ring-amber-400', 'bg-amber-50');
+    }, 3000);
+    return () => clearTimeout(t);
   }, [router.query?.slug]);
+  // ================================================
 
   if (!app) {
     return (
@@ -430,10 +417,8 @@ export default function Detail({ serverApp, serverRelated }) {
     );
   }
 
-  const title = `${app?.name || 'Ứng dụng'} - App Store`;
-  const description = app?.description
-    ? String(app.description).replace(/<\/?[^>]+(>|$)/g, '').slice(0, 160)
-    : 'Ứng dụng iOS miễn phí, jailbreak, TestFlight';
+  const title = `${app.name} - App Store`;
+  const description = app.description ? app.description.replace(/<\/?[^>]+(>|$)/g, '').slice(0, 160) : 'Ứng dụng iOS miễn phí, jailbreak, TestFlight';
 
   return (
     <Layout fullWidth>
@@ -442,129 +427,196 @@ export default function Detail({ serverApp, serverRelated }) {
         <meta name="description" content={description} />
         <meta property="og:title" content={title} />
         <meta property="og:description" content={description} />
-        {app?.icon_url && <meta property="og:image" content={app.icon_url} />}
+        <meta property="og:image" content={app.icon_url} />
         <meta property="og:type" content="website" />
         <meta name="twitter:card" content="summary_large_image" />
       </Head>
-
-      {/* Modal gate */}
-      <CenterModal open={modal.open} title={modal.title} body={modal.body} actions={modal.actions} />
 
       <div className="bg-gray-100 min-h-screen pb-12">
         <div className="w-full flex justify-center mt-10 bg-gray-100">
           <div className="relative w-full max-w-screen-2xl px-2 sm:px-4 md:px-6 pb-8 bg-white rounded-none">
             <div
               className="w-full pb-6"
-              style={{ backgroundImage: `linear-gradient(to bottom, ${bgTop}, #f0f2f5)` }}
+              style={{ backgroundImage: `linear-gradient(to bottom, ${dominantColor}, #f0f2f5)` }}
             >
-              {/* Back */}
               <div className="absolute top-3 left-3 z-10">
                 <Link
                   href="/"
                   className="inline-flex items-center justify-center w-9 h-9 text-blue-600 hover:text-white bg-white hover:bg-blue-600 active:scale-95 transition-all duration-150 rounded-full shadow-sm"
-                  aria-label="Back"
                 >
                   <FontAwesomeIcon icon={faArrowLeft} className="w-4 h-4" />
                 </Link>
               </div>
 
-              {/* ✅ Breadcrumb */}
-              <nav aria-label="Breadcrumb" className="pt-3 px-4">
-                <ol className="mx-auto max-w-screen-2xl flex items-center gap-1 text-sm text-blue-900/90">
-                  <li>
-                    <Link href="/" className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-white/80 hover:bg-white text-blue-700 font-medium shadow-sm">
-                      <FontAwesomeIcon icon={faHouse} className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">Trang chủ</span>
-                    </Link>
-                  </li>
-                  <li className="text-blue-700/50"><FontAwesomeIcon icon={faAngleRight} /></li>
-                  <li>
-                    {app?.category?.slug ? (
-                      <Link
-                        href={`/category/${app.category.slug}`}
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-white/80 hover:bg-white text-blue-700 font-medium shadow-sm">
-                        <span className="truncate max-w-[40vw] sm:max-w-none">{app?.category?.name || 'Chuyên mục'}</span>
-                      </Link>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-white text-blue-700/70 font-medium shadow-sm">
-                        Chuyên mục
-                      </span>
-                    )}
-                  </li>
-                  <li className="text-blue-700/50"><FontAwesomeIcon icon={faAngleRight} /></li>
-                  <li>
-                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-600 text-white font-semibold shadow">
-                      {app?.name || 'Ứng dụng'}
-                    </span>
-                  </li>
-                </ol>
-              </nav>
-
-              {/* Hero */}
-              <div className="pt-6 text-center px-4">
+              <div className="pt-10 text-center px-4">
                 <div className="w-24 h-24 mx-auto overflow-hidden border-4 border-white rounded-2xl">
                   <img
-                    src={app?.icon_url || '/placeholder-icon.png'}
-                    alt={app?.name || 'App'}
+                    src={app.icon_url || '/placeholder-icon.png'}
+                    alt={app.name}
                     className="w-full h-full object-cover"
-                    onError={(e) => { e.currentTarget.src = '/placeholder-icon.png'; }}
+                    onError={(e) => { e.target.src = '/placeholder-icon.png'; }}
                   />
                 </div>
-                <h1 className="mt-4 text-2xl font-bold text-gray-900 drop-shadow">{app?.name || 'Ứng dụng'}</h1>
-                {app?.author && <p className="text-gray-700 text-sm">{app.author}</p>}
+                <h1 className="mt-4 text-2xl font-bold text-gray-900 drop-shadow">{app.name}</h1>
+                {app.author && <p className="text-gray-700 text-sm">{app.author}</p>}
 
                 <div className="mt-4 flex flex-wrap justify-center gap-2">
-                  {/* TestFlight */}
-                  {/* ...giữ nguyên... */}
+                  {isTestflight && app.testflight_url && (
+                    <>
+                      <a
+                        href={app.testflight_url}
+                        className="inline-block border border-blue-500 text-blue-700 hover:bg-blue-100 transition px-4 py-2 rounded-full text-sm font-semibold"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <FontAwesomeIcon icon={faRocket} className="mr-2" />
+                        Tham gia TestFlight
+                      </a>
+                      {statusLoading || status === null ? (
+                        <span className="inline-block border border-gray-300 text-gray-500 bg-gray-50 px-4 py-2 rounded-full text-sm font-semibold">
+                          Đang kiểm tra...
+                        </span>
+                      ) : status === 'Y' ? (
+                        <span className="inline-block border border-green-500 text-green-700 bg-green-50 px-4 py-2 rounded-full text-sm font-semibold">
+                          <FontAwesomeIcon icon={faCheckCircle} className="mr-1" />
+                          Còn slot
+                        </span>
+                      ) : status === 'F' ? (
+                        <span className="inline-block border border-red-500 text-red-700 bg-red-50 px-4 py-2 rounded-full text-sm font-semibold">
+                          <FontAwesomeIcon icon={faExclamationTriangle} className="mr-1" />
+                          Đã đầy
+                        </span>
+                      ) : (
+                        <span className="inline-block border border-yellow-500 text-yellow-700 bg-yellow-50 px-4 py-2 rounded-full text-sm font-semibold">
+                          <FontAwesomeIcon icon={faTimesCircle} className="mr-1" />
+                          Ngừng nhận
+                        </span>
+                      )}
+                    </>
+                  )}
+
+                  {isInstallable && (
+                    <>
+                      <button
+                        onClick={handleInstall}
+                        disabled={isInstalling}
+                        className={`inline-flex items-center border border-green-500 text-green-700 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-green-200 active:shadow-inner active:ring-2 active:ring-green-500 ${isInstalling ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-100'}`}
+                      >
+                        {isInstalling ? (
+                          <>
+                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Đang xử lý…
+                          </>
+                        ) : (
+                          <>
+                            <FontAwesomeIcon icon={faDownload} className="mr-2" />
+                            Cài đặt
+                          </>
+                        )}
+                      </button>
+
+                      <button
+                        onClick={handleDownloadIpa}
+                        disabled={isFetchingIpa}
+                        className={`inline-flex items-center border border-blue-500 text-blue-700 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-blue-200 active:shadow-inner active:ring-2 active:ring-blue-500 ${isFetchingIpa ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-100'}`}
+                        title="Tải file IPA (ẩn nguồn tải)"
+                      >
+                        {isFetchingIpa ? (
+                          <>
+                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Đang tạo…
+                          </>
+                        ) : (
+                          <>
+                            <FontAwesomeIcon icon={faFileArrowDown} className="mr-2" />
+                            Tải IPA
+                          </>
+                        )}
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* CONTENT */}
         <div className="max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 mt-6 space-y-6">
           {/* Info cards */}
-          {/* ...giữ nguyên... */}
+          <div className="bg-white rounded-xl p-4 shadow flex justify-between text-center overflow-x-auto divide-x divide-gray-200">
+            <div className="px-0.5 sm:px-1.5">
+              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Tác giả</p>
+              <FontAwesomeIcon icon={faUser} className="text-xl text-gray-600 mb-1" />
+              <p className="text-sm text-gray-800">{app.author || 'Không rõ'}</p>
+            </div>
+            <div className="px-1 sm:px-2">
+              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Phiên bản</p>
+              <FontAwesomeIcon icon={faCodeBranch} className="text-xl text-gray-600 mb-1" />
+              <p className="text-sm text-gray-800">{app.version || 'Không rõ'}</p>
+            </div>
+            <div className="px-1 sm:px-2">
+              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Dung lượng</p>
+              <FontAwesomeIcon icon={faDatabase} className="text-xl text-gray-600 mb-1" />
+              <p className="text-sm text-gray-800">{displaySize}</p>
+            </div>
+            <div className="px-0.5 sm:px-1.5">
+              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">
+                {isTestflight ? 'LƯỢT XEM' : 'Lượt tải'}
+              </p>
+              {isTestflight ? (
+                <div className="flex flex-col items-center">
+                  <span className="text-xl font-medium text-gray-600 mb-1">{app.views ?? 0}</span>
+                  <span className="text-xs text-gray-500">Lượt</span>
+                </div>
+              ) : (
+                <>
+                  <FontAwesomeIcon icon={faDownload} className="text-xl text-gray-600 mb-1" />
+                  <p className="text-sm text-gray-800">{app.downloads ?? 0}</p>
+                </>
+              )}
+            </div>
+          </div>
 
           {/* Mô tả */}
           <div className="bg-white rounded-xl p-4 shadow">
             <h2 className="text-lg font-bold text-gray-800 mb-3">Mô tả</h2>
-            <ErrorBoundary>
-              <div className={`relative overflow-hidden transition-all duration-300 ${showFullDescription ? '' : 'max-h-72'}`}>
-                <div className={`${showFullDescription ? '' : 'mask-gradient-bottom'}`}>
-                  {app?.description ? (
-                    <ReactMarkdown
-                      remarkPlugins={remarkGfm ? [remarkGfm] : []}
-                      components={{
-                        h1: (props) => <h3 className="text-xl font-bold mt-3 mb-2" {...props} />,
-                        h2: (props) => <h4 className="text-lg font-bold mt-3 mb-2" {...props} />,
-                        h3: (props) => <h5 className="text-base font-bold mt-3 mb-2" {...props} />,
-                        p: (props) => <p className="text-gray-700 leading-7 mb-3" {...props} />,
-                        ul: (props) => <ul className="list-disc pl-5 space-y-1 mb-3" {...props} />,
-                        ol: (props) => <ol className="list-decimal pl-5 space-y-1 mb-3" {...props} />,
-                        li: (props) => <li className="marker:text-blue-500" {...props} />,
-                        a: (props) => <a className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
-                        code: ({ inline, ...props }) =>
-                          inline
-                            ? <code className="px-1 py-0.5 rounded bg-gray-100 text-pink-700" {...props} />
-                            : <pre className="p-3 rounded bg-gray-900 text-gray-100 overflow-auto mb-3"><code {...props} /></pre>,
-                        blockquote: (props) => <PrettyBlockquote {...props} />,
-                        hr: () => <hr className="my-4 border-gray-200" />,
-                      }}
-                    >
-                      {normalizeDescription(app?.description)}
-                    </ReactMarkdown>
-                  ) : (
-                    <p className="text-gray-500">Chưa có mô tả.</p>
-                  )}
-                </div>
-                {!showFullDescription && (
-                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white via-white to-transparent" />
-                )}
+            <div className={`relative overflow-hidden transition-all duration-300 ${showFullDescription ? '' : 'max-h-72'}`}>
+              <div className={`${showFullDescription ? '' : 'mask-gradient-bottom'}`}>
+                <ReactMarkdown
+                  remarkPlugins={[remarkGfm]}
+                  components={{
+                    h1: ({...props}) => <h3 className="text-xl font-bold mt-3 mb-2" {...props} />,
+                    h2: ({...props}) => <h4 className="text-lg font-bold mt-3 mb-2" {...props} />,
+                    h3: ({...props}) => <h5 className="text-base font-bold mt-3 mb-2" {...props} />,
+                    p: ({...props}) => <p className="text-gray-700 leading-7 mb-3" {...props} />,
+                    ul: ({...props}) => <ul className="list-disc pl-5 space-y-1 mb-3" {...props} />,
+                    ol: ({...props}) => <ol className="list-decimal pl-5 space-y-1 mb-3" {...props} />,
+                    li: ({...props}) => <li className="marker:text-blue-500" {...props} />,
+                    a: ({...props}) => <a className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
+                    code: ({inline, ...props}) =>
+                      inline ? (
+                        <code className="px-1 py-0.5 rounded bg-gray-100 text-pink-700" {...props} />
+                      ) : (
+                        <pre className="p-3 rounded bg-gray-900 text-gray-100 overflow-auto mb-3"><code {...props} /></pre>
+                      ),
+                    blockquote: ({...props}) => <PrettyBlockquote {...props} />,
+                    hr: () => <hr className="my-4 border-gray-200" />,
+                  }}
+                >
+                  {normalizeDescription(app.description)}
+                </ReactMarkdown>
               </div>
-            </ErrorBoundary>
-            {app?.description && String(app.description).length > 300 && (
+              {!showFullDescription && (
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white via-white to-transparent" />
+              )}
+            </div>
+            {app?.description && app.description.length > 300 && (
               <button
                 onClick={() => setShowFullDescription(v => !v)}
                 className="mt-3 text-sm text-blue-600 hover:underline font-bold"
@@ -681,13 +733,12 @@ export default function Detail({ serverApp, serverRelated }) {
               </div>
             </div>
           )}
-
+          
           {/* Bình luận */}
           <div className="bg-white rounded-xl p-4 shadow">
-            <ErrorBoundary>
-              <CommentsLazy postId={app?.slug} postTitle={app?.name} />
-            </ErrorBoundary>
+            <Comments postId={app.slug} postTitle={app.name} />
           </div>
+
         </div>
       </div>
     </Layout>
