@@ -1,12 +1,15 @@
+// pages/[slug].js
 'use client';
 
 import { supabase } from '../lib/supabase';
 import Layout from '../components/Layout';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import Comments from '../components/Comments';
+import dynamic from 'next/dynamic';
 import { useEffect, useState, useMemo, memo } from 'react';
 import { FastAverageColor } from 'fast-average-color';
+import { auth } from '../lib/firebase-client';
+import Head from 'next/head';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faDownload,
@@ -21,12 +24,19 @@ import {
   faChevronDown,
   faChevronUp,
   faFileArrowDown,
+  faHouse,
+  faAngleRight,
 } from '@fortawesome/free-solid-svg-icons';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import Head from 'next/head';
 
-// ===================== SSR =====================
+// ✅ Dynamic import giảm JS ban đầu
+const ReactMarkdown = dynamic(() => import('react-markdown'), { ssr: false });
+const remarkGfmPromise = import('remark-gfm'); // load khi render, không block bundle
+const Comments = dynamic(() => import('../components/Comments'), {
+  ssr: false,
+  loading: () => <div className="text-sm text-gray-500">Đang tải bình luận…</div>,
+});
+
+/* ===================== SSR ===================== */
 export async function getServerSideProps(context) {
   const slug = context.params.slug?.toLowerCase();
 
@@ -70,7 +80,7 @@ export async function getServerSideProps(context) {
   // 4) Related apps
   const { data: relatedApps } = await supabase
     .from('apps')
-    .select('id, name, slug, icon_url, author, version')
+    .select('id, name, slug, icon_url, author, version, category_id')
     .eq('category_id', appData.category_id)
     .neq('id', appData.id)
     .limit(10);
@@ -83,7 +93,7 @@ export async function getServerSideProps(context) {
   };
 }
 
-// ===================== Helpers =====================
+/* ===================== Helpers ===================== */
 
 // Tách danh sách từ chuỗi: "iOS 14, iPadOS" → ["iOS 14", "iPadOS"]
 function parseList(input) {
@@ -165,7 +175,7 @@ function processListBlocks(str) {
 function bbcodeToMarkdownLite(input = '') {
   let s = String(input);
 
-  // Step 1: [b], [i], [u] (có thể lồng nhau)
+  // Step 1: [b], [i], [u]
   s = s.replace(/\[b\](.*?)\[\/b\]/gi, '**$1**');
   s = s.replace(/\[i\](.*?)\[\/i\]/gi, '*$1*');
   s = s.replace(/\[u\](.*?)\[\/u\]/gi, '__$1__');
@@ -181,16 +191,16 @@ function bbcodeToMarkdownLite(input = '') {
   s = stripSimpleTagAll(s, 'color');
   s = stripSimpleTagAll(s, 'size');
 
-  // Step 5: [list] – xử lý sau khi đã có [b][i][u] trong nội dung
+  // Step 5: [list]
   s = processListBlocks(s);
 
-  // Step 6: [quote] – giờ có thể xử lý an toàn vì nội dung đã được format
+  // Step 6: [quote]
   const quoteR = new RegExp('\\[quote\\]\\s*([\\s\\S]*?)\\s*\\[/quote\\]', 'gi');
   s = s.replace(quoteR, (_m, p1) => {
     return String(p1).trim().split(/\r?\n/).map(line => `> ${line}`).join('\n');
   });
 
-  // Step 7: [code] – dùng RegExp (an toàn vì không có tag con phức tạp)
+  // Step 7: [code]
   const codeR = new RegExp('\\[code\\]\\s*([\\s\\S]*?)\\s*\\[/code\\]', 'gi');
   s = s.replace(codeR, (_m, p1) => {
     const body = String(p1).replace(/```/g, '``');
@@ -205,7 +215,7 @@ function normalizeDescription(raw = '') {
   const txt = String(raw);
   if (/\[(b|i|u|url|img|quote|code|list|\*|size|color)/i.test(txt)) {
     return bbcodeToMarkdownLite(txt);
-  }
+    }
   return txt;
 }
 
@@ -250,7 +260,22 @@ const InfoRow = memo(({ label, value, expandable = false, expanded = false, onTo
 });
 InfoRow.displayName = 'InfoRow';
 
-// ===================== Page =====================
+/* ===================== Center Modal (dùng cho gate) ===================== */
+function CenterModal({ open, title, body, actions }) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/40" />
+      <div className="relative w-[92vw] max-w-md rounded-2xl border border-gray-200 bg-white shadow-2xl p-4">
+        {title && <h3 className="text-lg font-semibold mb-2">{title}</h3>}
+        <div className="text-sm text-gray-800">{body}</div>
+        <div className="mt-4 flex justify-end gap-2">{actions}</div>
+      </div>
+    </div>
+  );
+}
+
+/* ===================== Page ===================== */
 export default function Detail({ serverApp, serverRelated }) {
   const router = useRouter();
   const [app, setApp] = useState(serverApp);
@@ -264,9 +289,22 @@ export default function Detail({ serverApp, serverRelated }) {
   const [showAllDevices, setShowAllDevices] = useState(false);
   const [showAllLanguages, setShowAllLanguages] = useState(false);
 
+  // ✅ Auth state để gate tải IPA
+  const [me, setMe] = useState(null);
+  const [modal, setModal] = useState({ open: false, title: '', body: null, actions: null });
+
+  // remark plugin dynamic
+  const [remarkGfm, setRemarkGfm] = useState(null);
+  useEffect(() => { remarkGfmPromise.then(m => setRemarkGfm(m.default)); }, []);
+
   const categorySlug = app?.category?.slug ?? null;
   const isTestflight = categorySlug === 'testflight';
   const isInstallable = ['jailbreak', 'app-clone'].includes(categorySlug);
+
+  useEffect(() => {
+    const unsub = auth.onAuthStateChanged(u => setMe(u));
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
     setApp(serverApp);
@@ -355,15 +393,47 @@ export default function Detail({ serverApp, serverRelated }) {
     }
   };
 
+  // ✅ Gate tải IPA: yêu cầu login + emailVerified
+  const requireVerified = () => {
+    setModal({
+      open: true,
+      title: 'Cần xác minh email',
+      body: (
+        <div className="text-sm">
+          <p>Bạn cần <b>đăng nhập</b> và <b>xác minh email</b> để tải IPA.</p>
+          <p className="mt-1 text-xs text-gray-500">Không thấy email xác minh? Hãy kiểm tra thư rác hoặc gửi lại từ trang <Link href="/profile" className="text-blue-600 underline">Hồ sơ</Link>.</p>
+        </div>
+      ),
+      actions: (
+        <>
+          <Link href="/login" className="px-3 py-2 text-sm rounded bg-gray-900 text-white">Đăng nhập</Link>
+          <button onClick={() => setModal(s => ({ ...s, open: false }))} className="px-3 py-2 text-sm rounded border">Đóng</button>
+        </>
+      ),
+    });
+  };
+
   const handleDownloadIpa = async (e) => {
     e.preventDefault();
     if (!app?.id || !isInstallable) return;
+
+    // 👇 Gate client
+    if (!me || !me.emailVerified) {
+      requireVerified();
+      return;
+    }
+
     setIsFetchingIpa(true);
 
     try {
+      // Nếu API yêu cầu Bearer token: kèm theo ID token ở header
+      // const tokenId = await me.getIdToken();
       const tokRes = await fetch('/api/generate-token', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          // 'Authorization': `Bearer ${tokenId}`,
+        },
         body: JSON.stringify({ id: app.id, ipa_name: app.download_link }),
       });
       if (!tokRes.ok) throw new Error(`HTTP ${tokRes.status}`);
@@ -373,7 +443,7 @@ export default function Detail({ serverApp, serverRelated }) {
       // Tải qua proxy
       window.location.href = `/api/download-ipa?slug=${encodeURIComponent(app.slug)}&token=${encodeURIComponent(token)}`;
 
-      // Ghi log tải
+      // Ghi log tải (không critical)
       fetch(`/api/admin/add-download?id=${app.id}`, { method: 'POST' }).catch(() => {});
     } catch (err) {
       alert('Không thể tạo link tải IPA. Vui lòng thử lại.');
@@ -432,6 +502,9 @@ export default function Detail({ serverApp, serverRelated }) {
         <meta name="twitter:card" content="summary_large_image" />
       </Head>
 
+      {/* Center Modal cho gate */}
+      <CenterModal open={modal.open} title={modal.title} body={modal.body} actions={modal.actions} />
+
       <div className="bg-gray-100 min-h-screen pb-12">
         <div className="w-full flex justify-center mt-10 bg-gray-100">
           <div className="relative w-full max-w-screen-2xl px-2 sm:px-4 md:px-6 pb-8 bg-white rounded-none">
@@ -439,16 +512,56 @@ export default function Detail({ serverApp, serverRelated }) {
               className="w-full pb-6"
               style={{ backgroundImage: `linear-gradient(to bottom, ${dominantColor}, #f0f2f5)` }}
             >
+              {/* Back */}
               <div className="absolute top-3 left-3 z-10">
                 <Link
                   href="/"
                   className="inline-flex items-center justify-center w-9 h-9 text-blue-600 hover:text-white bg-white hover:bg-blue-600 active:scale-95 transition-all duration-150 rounded-full shadow-sm"
+                  aria-label="Back"
                 >
                   <FontAwesomeIcon icon={faArrowLeft} className="w-4 h-4" />
                 </Link>
               </div>
 
-              <div className="pt-10 text-center px-4">
+              {/* ✅ BREADCRUMB */}
+              <nav aria-label="Breadcrumb" className="pt-3 px-4">
+                <ol className="mx-auto max-w-screen-2xl flex items-center gap-1 text-sm text-blue-900/90">
+                  <li>
+                    <Link href="/" className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-white/80 hover:bg-white text-blue-700 font-medium shadow-sm">
+                      <FontAwesomeIcon icon={faHouse} className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline">Trang chủ</span>
+                    </Link>
+                  </li>
+                  <li className="text-blue-700/50">
+                    <FontAwesomeIcon icon={faAngleRight} />
+                  </li>
+                  <li>
+                    {app?.category?.slug ? (
+                      <Link
+                        href={`/category/${app.category.slug}`}
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-white/80 hover:bg-white text-blue-700 font-medium shadow-sm"
+                      >
+                        <span className="truncate max-w-[40vw] sm:max-w-none">{app.category.name || 'Chuyên mục'}</span>
+                      </Link>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-white text-blue-700/70 font-medium shadow-sm">
+                        Chuyên mục
+                      </span>
+                    )}
+                  </li>
+                  <li className="text-blue-700/50">
+                    <FontAwesomeIcon icon={faAngleRight} />
+                  </li>
+                  <li>
+                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-600 text-white font-semibold shadow">
+                      {app.name}
+                    </span>
+                  </li>
+                </ol>
+              </nav>
+
+              {/* Hero */}
+              <div className="pt-6 text-center px-4">
                 <div className="w-24 h-24 mx-auto overflow-hidden border-4 border-white rounded-2xl">
                   <img
                     src={app.icon_url || '/placeholder-icon.png'}
@@ -547,6 +660,7 @@ export default function Detail({ serverApp, serverRelated }) {
           </div>
         </div>
 
+        {/* CONTENT */}
         <div className="max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 mt-6 space-y-6">
           {/* Info cards */}
           <div className="bg-white rounded-xl p-4 shadow flex justify-between text-center overflow-x-auto divide-x divide-gray-200">
@@ -589,23 +703,23 @@ export default function Detail({ serverApp, serverRelated }) {
             <div className={`relative overflow-hidden transition-all duration-300 ${showFullDescription ? '' : 'max-h-72'}`}>
               <div className={`${showFullDescription ? '' : 'mask-gradient-bottom'}`}>
                 <ReactMarkdown
-                  remarkPlugins={[remarkGfm]}
+                  remarkPlugins={remarkGfm ? [remarkGfm] : []}
                   components={{
-                    h1: ({...props}) => <h3 className="text-xl font-bold mt-3 mb-2" {...props} />,
-                    h2: ({...props}) => <h4 className="text-lg font-bold mt-3 mb-2" {...props} />,
-                    h3: ({...props}) => <h5 className="text-base font-bold mt-3 mb-2" {...props} />,
-                    p: ({...props}) => <p className="text-gray-700 leading-7 mb-3" {...props} />,
-                    ul: ({...props}) => <ul className="list-disc pl-5 space-y-1 mb-3" {...props} />,
-                    ol: ({...props}) => <ol className="list-decimal pl-5 space-y-1 mb-3" {...props} />,
-                    li: ({...props}) => <li className="marker:text-blue-500" {...props} />,
-                    a: ({...props}) => <a className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
-                    code: ({inline, ...props}) =>
+                    h1: (props) => <h3 className="text-xl font-bold mt-3 mb-2" {...props} />,
+                    h2: (props) => <h4 className="text-lg font-bold mt-3 mb-2" {...props} />,
+                    h3: (props) => <h5 className="text-base font-bold mt-3 mb-2" {...props} />,
+                    p: (props) => <p className="text-gray-700 leading-7 mb-3" {...props} />,
+                    ul: (props) => <ul className="list-disc pl-5 space-y-1 mb-3" {...props} />,
+                    ol: (props) => <ol className="list-decimal pl-5 space-y-1 mb-3" {...props} />,
+                    li: (props) => <li className="marker:text-blue-500" {...props} />,
+                    a: (props) => <a className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
+                    code: ({ inline, ...props }) =>
                       inline ? (
                         <code className="px-1 py-0.5 rounded bg-gray-100 text-pink-700" {...props} />
                       ) : (
                         <pre className="p-3 rounded bg-gray-900 text-gray-100 overflow-auto mb-3"><code {...props} /></pre>
                       ),
-                    blockquote: ({...props}) => <PrettyBlockquote {...props} />,
+                    blockquote: (props) => <PrettyBlockquote {...props} />,
                     hr: () => <hr className="my-4 border-gray-200" />,
                   }}
                 >
@@ -733,12 +847,11 @@ export default function Detail({ serverApp, serverRelated }) {
               </div>
             </div>
           )}
-          
+
           {/* Bình luận */}
           <div className="bg-white rounded-xl p-4 shadow">
             <Comments postId={app.slug} postTitle={app.name} />
           </div>
-
         </div>
       </div>
     </Layout>
