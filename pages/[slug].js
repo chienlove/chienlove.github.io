@@ -1,3 +1,4 @@
+// pages/[slug].js
 'use client';
 
 import { supabase } from '../lib/supabase';
@@ -29,7 +30,7 @@ import {
   faHouse,
 } from '@fortawesome/free-solid-svg-icons';
 
-// Bình luận lazy
+// Lazy-load Comments
 const Comments = dynamic(() => import('../components/Comments'), {
   ssr: false,
   loading: () => <div className="text-sm text-gray-500">Đang tải bình luận…</div>,
@@ -94,6 +95,8 @@ export async function getServerSideProps(context) {
 }
 
 /* ===================== Helpers ===================== */
+
+// Tách danh sách từ chuỗi: "iOS 14, iPadOS" → ["iOS 14", "iPadOS"]
 function parseList(input) {
   if (!input) return [];
   if (Array.isArray(input)) return input;
@@ -103,7 +106,7 @@ function parseList(input) {
     .filter(Boolean);
 }
 
-// Xoá thẻ [tag=...] hoặc [tag]...[/tag] – không dùng regex
+// Xoá thẻ [tag=...] hoặc [tag]...[/tag]
 function stripSimpleTagAll(str, tag) {
   let s = String(str);
   const open = `[${tag}`;
@@ -214,36 +217,45 @@ function PrettyBlockquote({ children }) {
   );
 }
 
-/* ===================== Breadcrumb kiểu mũi tên ===================== */
-/* Cấu trúc: mỗi item là 1 khối có clip-path tạo đầu nhọn.
-   - Item thường: nền xanh, chữ trắng
-   - Item cuối: nền trắng, viền xanh (giống ảnh bạn gửi)
-   - Không dùng dấu '>'
-   - Không xuống dòng; dài thì thu gọn + title để xem toàn bộ
+/* ===================== Breadcrumb – kiểu mũi tên như ảnh ===================== */
+/* 
+  - First: Left square, right arrow (solid sky)
+  - Middle: Arrow both sides (solid sky)
+  - Last: Left inward notch, right square (white bg + sky border)
 */
-function ArrowItem({ href, children, current }) {
-  const base =
-    'relative inline-flex items-center h-10 px-5 text-sm font-semibold select-none';
-  const commonClip =
-    'polygon(12px 0, 100% 0, calc(100% - 12px) 50%, 100% 100%, 12px 100%, 0 50%)';
-  const className = current
-    ? `${base} bg-white text-sky-600 border-2 border-sky-500`
-    : `${base} bg-sky-500 text-white hover:bg-sky-600`;
-  const Comp = href && !current ? Link : 'span';
-  const props = href && !current ? { href } : {};
+function CrumbFirst({ href, children }) {
   return (
-    <div className="relative inline-block">
-      <Comp
-        {...props}
-        className={className}
-        style={{ clipPath: commonClip }}
-        title={typeof children === 'string' ? children : undefined}
-      >
-        <span className="truncate max-w-[42vw] md:max-w-[28vw]">{children}</span>
-      </Comp>
-      {/* khoảng đệm giữa các item để nhìn rõ mũi tên */}
-      <span className="inline-block w-2" />
-    </div>
+    <Link
+      href={href}
+      className="relative inline-flex h-10 px-5 items-center text-sm font-semibold text-white bg-sky-500 hover:bg-sky-600"
+      style={{ clipPath: 'polygon(0 0, 100% 0, calc(100% - 14px) 50%, 100% 100%, 0 100%)' }}
+      title={typeof children === 'string' ? children : undefined}
+    >
+      <span className="truncate max-w-[42vw] md:max-w-[28vw]">{children}</span>
+    </Link>
+  );
+}
+function CrumbMiddle({ href, children }) {
+  return (
+    <Link
+      href={href}
+      className="relative inline-flex h-10 px-5 items-center text-sm font-semibold text-white bg-sky-500 hover:bg-sky-600"
+      style={{ clipPath: 'polygon(14px 0, 100% 0, calc(100% - 14px) 50%, 100% 100%, 14px 100%, 0 50%)' }}
+      title={typeof children === 'string' ? children : undefined}
+    >
+      <span className="truncate max-w-[42vw] md:max-w-[28vw]">{children}</span>
+    </Link>
+  );
+}
+function CrumbLast({ children }) {
+  return (
+    <span
+      className="relative inline-flex h-10 px-5 items-center text-sm font-semibold text-sky-600 bg-white border-2 border-sky-500"
+      style={{ clipPath: 'polygon(14px 0, 100% 0, 100% 100%, 14px 100%, 0 50%)' }}
+      title={typeof children === 'string' ? children : undefined}
+    >
+      <span className="truncate max-w-[42vw] md:max-w-[28vw]">{children}</span>
+    </span>
   );
 }
 
@@ -277,7 +289,7 @@ const InfoRow = memo(({ label, value, expandable = false, expanded = false, onTo
 });
 InfoRow.displayName = 'InfoRow';
 
-/* ===================== Center Modal (thông báo) ===================== */
+/* ===================== Center Modal (generic) ===================== */
 function CenterModal({ open, title, body, actions }) {
   if (!open) return null;
   return (
@@ -335,11 +347,13 @@ export default function Detail({ serverApp, serverRelated }) {
   const isTestflight = categorySlug === 'testflight';
   const isInstallable = ['jailbreak', 'app-clone'].includes(categorySlug);
 
+  // Theo dõi auth
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(setMe);
     return () => unsub();
   }, []);
 
+  // Reset state khi đổi slug
   useEffect(() => {
     setApp(serverApp);
     setRelated(serverRelated);
@@ -350,10 +364,10 @@ export default function Detail({ serverApp, serverRelated }) {
     setRelPage(1);
   }, [router.query.slug, serverApp, serverRelated]);
 
+  // View/testflight + màu nền từ icon
   useEffect(() => {
     if (!app?.id) return;
 
-    // Đếm view TestFlight
     if (isTestflight) {
       fetch('/api/admin/add-view', {
         method: 'POST',
@@ -362,7 +376,6 @@ export default function Detail({ serverApp, serverRelated }) {
       }).catch(console.error);
     }
 
-    // Kiểm tra slot TestFlight
     if (isTestflight && app.testflight_url) {
       setStatusLoading(true);
       const id = app.testflight_url.split('/').pop();
@@ -373,7 +386,6 @@ export default function Detail({ serverApp, serverRelated }) {
         .finally(() => setStatusLoading(false));
     }
 
-    // Màu nền từ icon
     if (app.icon_url && typeof window !== 'undefined') {
       const fac = new FastAverageColor();
       fac.getColorAsync(app.icon_url)
@@ -406,7 +418,7 @@ export default function Detail({ serverApp, serverRelated }) {
     return { list, remain };
   }, [devicesArray]);
 
-  // ======= Thông báo "Cần đăng nhập"
+  /* ======= Thông báo "Cần đăng nhập" – mở đúng popup LoginButton của Layout ======= */
   const requireLogin = () => {
     setModal({
       open: true,
@@ -421,12 +433,11 @@ export default function Detail({ serverApp, serverRelated }) {
           <button
             onClick={() => {
               setModal(s => ({ ...s, open: false }));
-              // Gọi popup đăng nhập của Layout/LoginButton
               try {
+                // Layout gắn window.openLogin & event 'open-login' (xem Layout/LoginButton)
                 if (typeof window !== 'undefined') {
-                  // event mà Layout đã lắng nghe để mở popup
-                  window.dispatchEvent(new Event('open-login'));
-                  if (typeof window.openLogin === 'function') window.openLogin();
+                  window.dispatchEvent(new Event('open-login')); // Ưu tiên event
+                  if (typeof window.openLogin === 'function') window.openLogin(); // fallback
                 }
               } catch {}
             }}
@@ -445,7 +456,7 @@ export default function Detail({ serverApp, serverRelated }) {
     });
   };
 
-  // ======= Thông báo "Cần xác minh email" (không còn nút Đăng nhập)
+  /* ======= Thông báo "Cần xác minh email" – KHÔNG có nút đăng nhập ======= */
   const requireVerified = () => {
     setModal({
       open: true,
@@ -454,7 +465,7 @@ export default function Detail({ serverApp, serverRelated }) {
         <div className="text-sm">
           <p>Bạn cần <b>xác minh email</b> để tải IPA.</p>
           <p className="mt-1 text-xs text-gray-500">
-            Không thấy email xác minh? Hãy kiểm tra thư rác hoặc gửi lại từ trang{' '}
+            Không thấy email xác minh? Kiểm tra thư rác hoặc gửi lại từ trang{' '}
             <Link href="/profile" className="text-blue-600 underline">Hồ sơ</Link>.
           </p>
         </div>
@@ -492,7 +503,6 @@ export default function Detail({ serverApp, serverRelated }) {
     if (!app?.id || isTestflight) return;
 
     setIsInstalling(true);
-
     try {
       await fetch(`/api/admin/add-download?id=${app.id}`, {
         method: 'POST',
@@ -511,12 +521,12 @@ export default function Detail({ serverApp, serverRelated }) {
     e.preventDefault();
     if (!app?.id || !isInstallable) return;
 
-    // Chưa đăng nhập -> hiện thông báo yêu cầu đăng nhập (không bật popup ngay)
+    // 1) Chưa đăng nhập ⇒ hiện modal đăng nhập, DỪNG luồng
     if (!me) {
       requireLogin();
       return;
     }
-    // Đã đăng nhập nhưng chưa verify -> yêu cầu xác minh (không có nút đăng nhập)
+    // 2) Đã đăng nhập nhưng chưa xác minh ⇒ hiện modal verify, DỪNG luồng
     if (!me.emailVerified) {
       requireVerified();
       return;
@@ -547,7 +557,7 @@ export default function Detail({ serverApp, serverRelated }) {
     }
   };
 
-  // ======= Auto-scroll & highlight theo ?comment= (đợi element xuất hiện) =======
+  // ======= Auto-scroll & highlight theo ?comment= (đợi element mount) =======
   useEffect(() => {
     const id = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('comment') : null;
     if (!id) return;
@@ -612,19 +622,21 @@ export default function Detail({ serverApp, serverRelated }) {
       <div className="bg-gray-100">
         <div className="w-full flex justify-center px-2 sm:px-4 md:px-6">
           <nav className="w-full max-w-screen-2xl py-3 overflow-hidden">
-            <div className="flex items-center gap-2 whitespace-nowrap overflow-hidden">
-              <ArrowItem href="/">
+            <div className="flex items-center whitespace-nowrap overflow-hidden">
+              <CrumbFirst href="/">
                 <span className="hidden sm:inline">Home</span>
                 <span className="sm:hidden"><FontAwesomeIcon icon={faHouse} /></span>
-              </ArrowItem>
-
+              </CrumbFirst>
+              <span className="inline-block w-2" />
               {app?.category?.slug && (
-                <ArrowItem href={`/category/${app.category.slug}`} >
-                  {app.category.name || 'Chuyên mục'}
-                </ArrowItem>
+                <>
+                  <CrumbMiddle href={`/category/${app.category.slug}`}>
+                    {app.category.name || 'Chuyên mục'}
+                  </CrumbMiddle>
+                  <span className="inline-block w-2" />
+                </>
               )}
-
-              <ArrowItem current>{app.name}</ArrowItem>
+              <CrumbLast>{app.name}</CrumbLast>
             </div>
           </nav>
         </div>
@@ -963,9 +975,6 @@ export default function Detail({ serverApp, serverRelated }) {
 
         </div>
       </div>
-
-      {/* Modal trung tâm */}
-      <CenterModal open={modal.open} title={modal.title} body={modal.body} actions={modal.actions} />
     </Layout>
   );
 }
