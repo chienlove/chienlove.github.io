@@ -4,9 +4,14 @@ import { supabase } from '../lib/supabase';
 import Layout from '../components/Layout';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import Comments from '../components/Comments';
+import dynamic from 'next/dynamic';
 import { useEffect, useState, useMemo, memo } from 'react';
 import { FastAverageColor } from 'fast-average-color';
+import { auth } from '../lib/firebase-client';
+import {
+  sendEmailVerification,
+} from 'firebase/auth';
+import Head from 'next/head';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faDownload,
@@ -22,22 +27,15 @@ import {
   faChevronUp,
   faFileArrowDown,
   faHouse,
-  faChevronRight,
 } from '@fortawesome/free-solid-svg-icons';
-import Head from 'next/head';
 
-// Firebase (để mở popup đăng nhập nội bộ)
-import { auth } from '../lib/firebase-client';
-import {
-  GoogleAuthProvider,
-  GithubAuthProvider,
-  signInWithPopup,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  sendEmailVerification,
-} from 'firebase/auth';
+// Bình luận lazy
+const Comments = dynamic(() => import('../components/Comments'), {
+  ssr: false,
+  loading: () => <div className="text-sm text-gray-500">Đang tải bình luận…</div>,
+});
 
-// ===================== SSR =====================
+/* ===================== SSR ===================== */
 export async function getServerSideProps(context) {
   const slug = context.params.slug?.toLowerCase();
 
@@ -68,7 +66,7 @@ export async function getServerSideProps(context) {
     return { notFound: true };
   }
 
-  // 3) Fallback JOIN category nếu chưa có
+  // 3) Bổ sung category nếu thiếu
   if (!appData?.category && appData?.category_id) {
     const { data: cat } = await supabase
       .from('categories')
@@ -78,13 +76,13 @@ export async function getServerSideProps(context) {
     if (cat) appData = { ...appData, category: cat };
   }
 
-  // 4) Related apps
+  // 4) Related apps (lấy rộng để phân trang client)
   const { data: relatedApps } = await supabase
     .from('apps')
-    .select('id, name, slug, icon_url, author, version')
+    .select('id, name, slug, icon_url, author, version, category_id')
     .eq('category_id', appData.category_id)
     .neq('id', appData.id)
-    .order('id', { ascending: false })
+    .order('created_at', { ascending: false })
     .limit(50);
 
   return {
@@ -95,8 +93,7 @@ export async function getServerSideProps(context) {
   };
 }
 
-// ===================== Helpers =====================
-
+/* ===================== Helpers ===================== */
 function parseList(input) {
   if (!input) return [];
   if (Array.isArray(input)) return input;
@@ -112,29 +109,24 @@ function stripSimpleTagAll(str, tag) {
   const open = `[${tag}`;
   const close = `[/${tag}]`;
 
+  // remove stray close
   while (true) {
     const idx = s.toLowerCase().indexOf(close);
     if (idx === -1) break;
     s = s.slice(0, idx) + s.slice(idx + close.length);
   }
-
+  // paired open/close
   while (true) {
     const lower = s.toLowerCase();
     const iOpen = lower.indexOf(open);
     if (iOpen === -1) break;
-
     const iBracket = s.indexOf(']', iOpen);
-    if (iBracket === -1) {
-      s = s.slice(0, iOpen);
-      break;
-    }
-
+    if (iBracket === -1) { s = s.slice(0, iOpen); break; }
     const iClose = lower.indexOf(close, iBracket + 1);
     if (iClose === -1) {
       s = s.slice(0, iOpen) + s.slice(iBracket + 1);
       continue;
     }
-
     const inner = s.slice(iBracket + 1, iClose);
     s = s.slice(0, iOpen) + inner + s.slice(iClose + close.length);
   }
@@ -222,114 +214,40 @@ function PrettyBlockquote({ children }) {
   );
 }
 
-// ===================== Center Modal (generic) =====================
-function CenterModal({ open, title, body, actions }) {
-  if (!open) return null;
+/* ===================== Breadcrumb kiểu mũi tên ===================== */
+/* Cấu trúc: mỗi item là 1 khối có clip-path tạo đầu nhọn.
+   - Item thường: nền xanh, chữ trắng
+   - Item cuối: nền trắng, viền xanh (giống ảnh bạn gửi)
+   - Không dùng dấu '>'
+   - Không xuống dòng; dài thì thu gọn + title để xem toàn bộ
+*/
+function ArrowItem({ href, children, current }) {
+  const base =
+    'relative inline-flex items-center h-10 px-5 text-sm font-semibold select-none';
+  const commonClip =
+    'polygon(12px 0, 100% 0, calc(100% - 12px) 50%, 100% 100%, 12px 100%, 0 50%)';
+  const className = current
+    ? `${base} bg-white text-sky-600 border-2 border-sky-500`
+    : `${base} bg-sky-500 text-white hover:bg-sky-600`;
+  const Comp = href && !current ? Link : 'span';
+  const props = href && !current ? { href } : {};
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/40" />
-      <div className="relative w-[92vw] max-w-md rounded-2xl border border-gray-200 bg-white shadow-2xl p-4">
-        {title && <h3 className="text-lg font-semibold mb-2">{title}</h3>}
-        <div className="text-sm text-gray-800">{body}</div>
-        <div className="mt-4 flex justify-end gap-2">{actions}</div>
-      </div>
+    <div className="relative inline-block">
+      <Comp
+        {...props}
+        className={className}
+        style={{ clipPath: commonClip }}
+        title={typeof children === 'string' ? children : undefined}
+      >
+        <span className="truncate max-w-[42vw] md:max-w-[28vw]">{children}</span>
+      </Comp>
+      {/* khoảng đệm giữa các item để nhìn rõ mũi tên */}
+      <span className="inline-block w-2" />
     </div>
   );
 }
 
-// ===================== Auth Modal nội bộ (mở thẳng form) =====================
-function AuthModal({ open, onClose }) {
-  const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState('login'); // login | signup
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [msg, setMsg] = useState('');
-
-  const doGoogle = async () => {
-    setLoading(true); setMsg('');
-    try {
-      await signInWithPopup(auth, new GoogleAuthProvider());
-      onClose();
-    } catch (e) {
-      setMsg(e.message || 'Không thể đăng nhập Google.');
-    } finally { setLoading(false); }
-  };
-
-  const doGithub = async () => {
-    setLoading(true); setMsg('');
-    try {
-      await signInWithPopup(auth, new GithubAuthProvider());
-      onClose();
-    } catch (e) {
-      setMsg(e.message || 'Không thể đăng nhập GitHub.');
-    } finally { setLoading(false); }
-  };
-
-  const onSubmitEmail = async (e) => {
-    e.preventDefault();
-    setLoading(true); setMsg('');
-    try {
-      if (mode === 'signup') {
-        const { user } = await createUserWithEmailAndPassword(auth, email, password);
-        try { await sendEmailVerification(user); } catch {}
-        onClose();
-        alert('Đăng ký thành công! Hãy kiểm tra email để xác minh.');
-      } else {
-        await signInWithEmailAndPassword(auth, email, password);
-        onClose();
-      }
-    } catch (e) {
-      setMsg(e.message || 'Có lỗi xảy ra.');
-    } finally { setLoading(false); }
-  };
-
-  if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-[220] flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-2xl">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-800">
-          <h3 className="text-lg font-semibold">{mode==='signup' ? 'Tạo tài khoản' : 'Đăng nhập'}</h3>
-          <button onClick={onClose} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="Close">
-            <svg className="w-5 h-5" viewBox="0 0 20 20"><path d="M6 6l8 8M14 6l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-          </button>
-        </div>
-
-        <div className="px-5 pt-5 pb-2">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <button onClick={doGoogle} disabled={loading}
-                    className="flex items-center justify-center gap-2 px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-60">
-              G
-              <span>Google</span>
-            </button>
-            <button onClick={doGithub} disabled={loading}
-                    className="flex items-center justify-center gap-2 px-3 py-2 rounded bg-gray-900 text-white hover:bg-black disabled:opacity-60">
-              GH
-              <span>GitHub</span>
-            </button>
-          </div>
-
-          <div className="mt-4 text-xs text-gray-500">-- hoặc --</div>
-
-          <form onSubmit={onSubmitEmail} className="mt-3 space-y-2">
-            <input type="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="Email"
-                   className="w-full px-3 py-2 rounded border bg-white" />
-            <input type="password" required value={password} onChange={e=>setPassword(e.target.value)} placeholder="Mật khẩu"
-                   className="w-full px-3 py-2 rounded border bg-white" />
-            {msg && <p className="text-xs text-rose-600">{msg}</p>}
-            <div className="flex items-center justify-between">
-              <button type="submit" disabled={loading}
-                      className="px-3 py-2 rounded bg-gray-900 text-white">{mode==='signup' ? 'Tạo tài khoản' : 'Đăng nhập'}</button>
-              <button type="button" onClick={()=>setMode(m=>m==='login'?'signup':'login')}
-                      className="text-sm underline">{mode==='login'?'Đăng ký bằng email':'Đã có tài khoản? Đăng nhập'}</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ===================== InfoRow =====================
+/* ===================== InfoRow ===================== */
 const InfoRow = memo(({ label, value, expandable = false, expanded = false, onToggle }) => {
   return (
     <div className="px-4 py-3 flex items-start">
@@ -359,7 +277,22 @@ const InfoRow = memo(({ label, value, expandable = false, expanded = false, onTo
 });
 InfoRow.displayName = 'InfoRow';
 
-// ===================== Page =====================
+/* ===================== Center Modal (thông báo) ===================== */
+function CenterModal({ open, title, body, actions }) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/40" />
+      <div className="relative w-[92vw] max-w-md rounded-2xl border border-gray-200 bg-white shadow-2xl p-4">
+        {title && <h3 className="text-lg font-semibold mb-2">{title}</h3>}
+        <div className="text-sm text-gray-800">{body}</div>
+        <div className="mt-4 flex justify-end gap-2">{actions}</div>
+      </div>
+    </div>
+  );
+}
+
+/* ===================== Page ===================== */
 export default function Detail({ serverApp, serverRelated }) {
   const router = useRouter();
   const [app, setApp] = useState(serverApp);
@@ -373,29 +306,18 @@ export default function Detail({ serverApp, serverRelated }) {
   const [showAllDevices, setShowAllDevices] = useState(false);
   const [showAllLanguages, setShowAllLanguages] = useState(false);
 
-  // trạng thái đăng nhập
-  const [me, setMe] = useState(null);
+  // Phân trang Related
+  const PAGE_SIZE = 5;
+  const [relPage, setRelPage] = useState(1);
+  const relTotalPages = Math.max(1, Math.ceil((related?.length || 0) / PAGE_SIZE));
+  const relatedSlice = useMemo(() => {
+    const start = (relPage - 1) * PAGE_SIZE;
+    return (related || []).slice(start, start + PAGE_SIZE);
+  }, [related, relPage]);
 
-  // modal xác minh + auth modal nội bộ
-  const [modal, setModal] = useState({ open: false, title: '', body: null, actions: null });
-  const [authOpen, setAuthOpen] = useState(false);
-
-  // phân trang related
-  const [page, setPage] = useState(1);
-  const pageSize = 5;
-  const totalPages = Math.max(1, Math.ceil((related?.length || 0) / pageSize));
-  const relatedPage = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    return (related || []).slice(start, start + pageSize);
-  }, [related, page]);
-
-  const categorySlug = app?.category?.slug ?? null;
-  const isTestflight = categorySlug === 'testflight';
-  const isInstallable = ['jailbreak', 'app-clone'].includes(categorySlug);
-
-  // dynamic import ReactMarkdown để giảm bundle
-  const [ReactMarkdown, setReactMarkdown] = useState(null);
+  // Markdown lazy
   const [remarkGfm, setRemarkGfm] = useState(null);
+  const [ReactMarkdown, setReactMarkdown] = useState(null);
   useEffect(() => {
     Promise.all([
       import('react-markdown').then(m => m.default),
@@ -405,6 +327,13 @@ export default function Detail({ serverApp, serverRelated }) {
       setRemarkGfm(() => gfm);
     });
   }, []);
+
+  const [me, setMe] = useState(null);
+  const [modal, setModal] = useState({ open: false, title: '', body: null, actions: null });
+
+  const categorySlug = app?.category?.slug ?? null;
+  const isTestflight = categorySlug === 'testflight';
+  const isInstallable = ['jailbreak', 'app-clone'].includes(categorySlug);
 
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(setMe);
@@ -418,7 +347,7 @@ export default function Detail({ serverApp, serverRelated }) {
     setDominantColor('#f0f2f5');
     setShowAllDevices(false);
     setShowAllLanguages(false);
-    setPage(1);
+    setRelPage(1);
   }, [router.query.slug, serverApp, serverRelated]);
 
   useEffect(() => {
@@ -477,14 +406,53 @@ export default function Detail({ serverApp, serverRelated }) {
     return { list, remain };
   }, [devicesArray]);
 
-  // ======= Modal "Cần xác minh" + Login
-  const openVerifyModal = () => {
+  // ======= Thông báo "Cần đăng nhập"
+  const requireLogin = () => {
+    setModal({
+      open: true,
+      title: 'Cần đăng nhập',
+      body: (
+        <div className="text-sm">
+          <p>Bạn cần <b>đăng nhập</b> để tải IPA.</p>
+        </div>
+      ),
+      actions: (
+        <>
+          <button
+            onClick={() => {
+              setModal(s => ({ ...s, open: false }));
+              // Gọi popup đăng nhập của Layout/LoginButton
+              try {
+                if (typeof window !== 'undefined') {
+                  // event mà Layout đã lắng nghe để mở popup
+                  window.dispatchEvent(new Event('open-login'));
+                  if (typeof window.openLogin === 'function') window.openLogin();
+                }
+              } catch {}
+            }}
+            className="px-3 py-2 text-sm rounded bg-gray-900 text-white"
+          >
+            Đăng nhập
+          </button>
+          <button
+            onClick={() => setModal(s => ({ ...s, open: false }))}
+            className="px-3 py-2 text-sm rounded border"
+          >
+            Đóng
+          </button>
+        </>
+      ),
+    });
+  };
+
+  // ======= Thông báo "Cần xác minh email" (không còn nút Đăng nhập)
+  const requireVerified = () => {
     setModal({
       open: true,
       title: 'Cần xác minh email',
       body: (
         <div className="text-sm">
-          <p>Bạn cần <b>đăng nhập</b> và <b>xác minh email</b> để tải IPA.</p>
+          <p>Bạn cần <b>xác minh email</b> để tải IPA.</p>
           <p className="mt-1 text-xs text-gray-500">
             Không thấy email xác minh? Hãy kiểm tra thư rác hoặc gửi lại từ trang{' '}
             <Link href="/profile" className="text-blue-600 underline">Hồ sơ</Link>.
@@ -494,27 +462,25 @@ export default function Detail({ serverApp, serverRelated }) {
       actions: (
         <>
           <button
-            onClick={() => { setAuthOpen(true); setModal(s => ({ ...s, open: false })); }}
-            className="px-3 py-2 text-sm rounded bg-gray-900 text-white"
-          >
-            Đăng nhập
-          </button>
-          <button
             onClick={async () => {
               try {
                 if (auth.currentUser && !auth.currentUser.emailVerified) {
                   await sendEmailVerification(auth.currentUser);
                   alert('Đã gửi lại email xác minh. Vui lòng kiểm tra hộp thư.');
-                } else {
-                  setAuthOpen(true);
                 }
               } catch (e) {
                 alert('Không thể gửi email xác minh. Vui lòng thử lại.');
               }
             }}
-            className="px-3 py-2 text-sm rounded border"
+            className="px-3 py-2 text-sm rounded bg-gray-900 text-white"
           >
             Gửi lại email xác minh
+          </button>
+          <button
+            onClick={() => setModal(s => ({ ...s, open: false }))}
+            className="px-3 py-2 text-sm rounded border"
+          >
+            Đóng
           </button>
         </>
       ),
@@ -545,15 +511,14 @@ export default function Detail({ serverApp, serverRelated }) {
     e.preventDefault();
     if (!app?.id || !isInstallable) return;
 
-    // ------ Logic chuẩn:
-    // Chưa đăng nhập -> mở AuthModal
+    // Chưa đăng nhập -> hiện thông báo yêu cầu đăng nhập (không bật popup ngay)
     if (!me) {
-      setAuthOpen(true);
+      requireLogin();
       return;
     }
-    // Đã đăng nhập nhưng chưa verify -> yêu cầu xác minh
+    // Đã đăng nhập nhưng chưa verify -> yêu cầu xác minh (không có nút đăng nhập)
     if (!me.emailVerified) {
-      openVerifyModal();
+      requireVerified();
       return;
     }
 
@@ -628,33 +593,6 @@ export default function Detail({ serverApp, serverRelated }) {
   const title = `${app.name} - App Store`;
   const description = app.description ? app.description.replace(/<\/?[^>]+(>|$)/g, '').slice(0, 160) : 'Ứng dụng iOS miễn phí, jailbreak, TestFlight';
 
-  // ====== CSS breadcrumb (mũi tên) ======
-  const ArrowItem = ({ href, children, current }) => {
-    // dùng clip-path tạo mũi tên; item cuối (current) là rỗng nền, có viền
-    const base = current
-      ? 'bg-white text-blue-600 border-2 border-blue-500'
-      : 'bg-blue-500 text-white border-2 border-blue-500';
-    const textClamp = 'max-w-[40vw] md:max-w-[28vw] truncate';
-    return (
-      <div className="relative inline-flex items-center h-10">
-        <div
-          className={`px-4 ${base} h-10 flex items-center rounded-l-lg select-none whitespace-nowrap ${textClamp}`}
-          style={{ clipPath: 'polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%)' }}
-        >
-          {href && !current ? (
-            <Link href={href} className="block">
-              {children}
-            </Link>
-          ) : (
-            <span className="block">{children}</span>
-          )}
-        </div>
-        {/* đệm nhỏ để tạo cảm giác arrow tách nhau, không cần ký tự '>' */}
-        <div className="w-1" />
-      </div>
-    );
-  };
-
   return (
     <Layout fullWidth>
       <Head>
@@ -667,13 +605,10 @@ export default function Detail({ serverApp, serverRelated }) {
         <meta name="twitter:card" content="summary_large_image" />
       </Head>
 
-      {/* Auth Modal nội bộ */}
-      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
-
-      {/* Modal verify / hướng dẫn */}
+      {/* Modal thông báo */}
       <CenterModal open={modal.open} title={modal.title} body={modal.body} actions={modal.actions} />
 
-      {/* ===== Breadcrumb mũi tên (không xuống dòng, không cuộn ngang) ===== */}
+      {/* ===== Breadcrumb mũi tên ===== */}
       <div className="bg-gray-100">
         <div className="w-full flex justify-center px-2 sm:px-4 md:px-6">
           <nav className="w-full max-w-screen-2xl py-3 overflow-hidden">
@@ -684,14 +619,12 @@ export default function Detail({ serverApp, serverRelated }) {
               </ArrowItem>
 
               {app?.category?.slug && (
-                <ArrowItem href={`/category/${app.category.slug}`}>
-                  <span className="truncate">{app.category.name || 'Chuyên mục'}</span>
+                <ArrowItem href={`/category/${app.category.slug}`} >
+                  {app.category.name || 'Chuyên mục'}
                 </ArrowItem>
               )}
 
-              <ArrowItem current>
-                <span className="truncate">{app.name}</span>
-              </ArrowItem>
+              <ArrowItem current>{app.name}</ArrowItem>
             </div>
           </nav>
         </div>
@@ -719,10 +652,10 @@ export default function Detail({ serverApp, serverRelated }) {
                     src={app.icon_url || '/placeholder-icon.png'}
                     alt={app.name}
                     className="w-full h-full object-cover"
-                    onError={(e) => { e.target.src = '/placeholder-icon.png'; }}
+                    onError={(e) => { e.currentTarget.src = '/placeholder-icon.png'; }}
                   />
                 </div>
-                <h1 className="mt-4 text-2xl font-bold text-gray-900 drop-shadow truncate">{app.name}</h1>
+                <h1 className="mt-4 text-2xl font-bold text-gray-900 drop-shadow truncate" title={app.name}>{app.name}</h1>
                 {app.author && <p className="text-gray-700 text-sm">{app.author}</p>}
 
                 <div className="mt-4 flex flex-wrap justify-center gap-2">
@@ -906,7 +839,7 @@ export default function Detail({ serverApp, serverRelated }) {
                       src={url}
                       alt={`Screenshot ${i + 1}`}
                       className="w-full h-auto object-cover"
-                      onError={(e) => { e.target.src = '/placeholder-image.png'; }}
+                      onError={(e) => { e.currentTarget.src = '/placeholder-image.png'; }}
                     />
                   </div>
                 ))}
@@ -936,8 +869,7 @@ export default function Detail({ serverApp, serverRelated }) {
               />
               <InfoRow
                 label="Ngôn ngữ"
-                value=
-                {
+                value={
                   languagesArray.length
                     ? showAllLanguages
                       ? languagesArray.join(', ')
@@ -973,7 +905,7 @@ export default function Detail({ serverApp, serverRelated }) {
               <h2 className="text-lg font-bold text-gray-800 mb-4">Ứng dụng cùng chuyên mục</h2>
 
               <div className="divide-y divide-gray-200">
-                {relatedPage.map((item) => (
+                {relatedSlice.map((item) => (
                   <Link
                     href={`/${item.slug}`}
                     key={item.id}
@@ -984,12 +916,12 @@ export default function Detail({ serverApp, serverRelated }) {
                         src={item.icon_url || '/placeholder-icon.png'}
                         alt={item.name}
                         className="w-14 h-14 rounded-xl object-cover shadow-sm"
-                        onError={(e) => { e.target.src = '/placeholder-icon.png'; }}
+                        onError={(e) => { e.currentTarget.src = '/placeholder-icon.png'; }}
                       />
                       <div className="flex flex-col min-w-0">
-                        <p className="text-sm font-semibold text-gray-800 truncate">{item.name}</p>
+                        <p className="text-sm font-semibold text-gray-800 truncate" title={item.name}>{item.name}</p>
                         <div className="flex items-center gap-2 text-xs text-gray-500">
-                          {item.author && <span className="truncate">{item.author}</span>}
+                          {item.author && <span className="truncate" title={item.author}>{item.author}</span>}
                           {item.version && (
                             <span className="bg-gray-200 text-gray-800 px-2 py-0.5 rounded text-xs font-medium flex-shrink-0">
                               {item.version}
@@ -1006,16 +938,16 @@ export default function Detail({ serverApp, serverRelated }) {
               {/* Pagination */}
               <div className="mt-4 flex items-center justify-between">
                 <button
-                  onClick={() => setPage(p => Math.max(1, p - 1))}
-                  disabled={page === 1}
+                  onClick={() => setRelPage(p => Math.max(1, p - 1))}
+                  disabled={relPage === 1}
                   className="px-3 py-2 rounded border text-sm disabled:opacity-50"
                 >
                   Trang trước
                 </button>
-                <div className="text-sm text-gray-600">Trang {page}/{totalPages}</div>
+                <div className="text-sm text-gray-600">Trang {relPage}/{relTotalPages}</div>
                 <button
-                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
+                  onClick={() => setRelPage(p => Math.min(relTotalPages, p + 1))}
+                  disabled={relPage === relTotalPages}
                   className="px-3 py-2 rounded border text-sm disabled:opacity-50"
                 >
                   Trang sau
@@ -1031,6 +963,9 @@ export default function Detail({ serverApp, serverRelated }) {
 
         </div>
       </div>
+
+      {/* Modal trung tâm */}
+      <CenterModal open={modal.open} title={modal.title} body={modal.body} actions={modal.actions} />
     </Layout>
   );
 }
