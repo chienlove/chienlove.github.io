@@ -10,7 +10,6 @@ import { useEffect, useMemo, useState, memo } from 'react';
 import Head from 'next/head';
 import { auth } from '../lib/firebase-client';
 
-// FontAwesome
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faDownload,
@@ -29,8 +28,12 @@ import {
   faAngleRight,
 } from '@fortawesome/free-solid-svg-icons';
 
-// ✅ Dynamic import để giảm lỗi/hydration & bundle
+// ✅ Dynamic import an toàn
 const ReactMarkdown = dynamic(() => import('react-markdown'), { ssr: false });
+const CommentsLazy = dynamic(() => import('../components/Comments'), {
+  ssr: false,
+  loading: () => <div className="text-sm text-gray-500">Đang tải bình luận…</div>,
+});
 
 // ───────────────── SSR ─────────────────
 export async function getServerSideProps(context) {
@@ -46,7 +49,7 @@ export async function getServerSideProps(context) {
     .ilike('slug', slug)
     .single();
 
-  // 2) Fallback bằng ID
+  // 2) Fallback theo ID
   if ((!appData || error) && slug) {
     const fb = await supabase
       .from('apps')
@@ -63,7 +66,7 @@ export async function getServerSideProps(context) {
     return { notFound: true };
   }
 
-  // 3) Fallback JOIN category nếu chưa có
+  // 3) JOIN category nếu thiếu
   if (!appData?.category && appData?.category_id) {
     const { data: cat } = await supabase
       .from('categories')
@@ -73,7 +76,7 @@ export async function getServerSideProps(context) {
     if (cat) appData = { ...appData, category: cat };
   }
 
-  // 4) Related apps
+  // 4) Related
   const { data: relatedApps } = await supabase
     .from('apps')
     .select('id, name, slug, icon_url, author, version, category_id')
@@ -95,7 +98,6 @@ function parseList(input) {
   if (Array.isArray(input)) return input;
   return String(input).split(/[,\n]+/).map(s => s.trim()).filter(Boolean);
 }
-
 function stripSimpleTagAll(str, tag) {
   let s = String(str);
   const open = `[${tag}`;
@@ -203,7 +205,7 @@ export default function Detail({ serverApp, serverRelated }) {
   const router = useRouter();
   const [app, setApp] = useState(serverApp || null);
   const [related, setRelated] = useState(Array.isArray(serverRelated) ? serverRelated : []);
-  const [dominantColor, setDominantColor] = useState('#f0f2f5');
+  const [bgTop, setBgTop] = useState('#eaf2ff'); // màu nền an toàn cố định
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [status, setStatus] = useState(null);
   const [statusLoading, setStatusLoading] = useState(false);
@@ -212,16 +214,17 @@ export default function Detail({ serverApp, serverRelated }) {
   const [showAllDevices, setShowAllDevices] = useState(false);
   const [showAllLanguages, setShowAllLanguages] = useState(false);
 
-  // Auth để gate tải IPA
+  // Auth để gate IPA
   const [me, setMe] = useState(null);
   const [modal, setModal] = useState({ open: false, title: '', body: null, actions: null });
 
-  // remark-gfm dynamic
+  // remark-gfm optional (nếu tải lỗi, vẫn render được)
   const [remarkGfm, setRemarkGfm] = useState(null);
-
   useEffect(() => {
     let mounted = true;
-    import('remark-gfm').then(m => { if (mounted) setRemarkGfm(m.default); }).catch(() => setRemarkGfm(null));
+    import('remark-gfm')
+      .then(m => { if (mounted) setRemarkGfm(m.default); })
+      .catch(() => setRemarkGfm(null));
     const unsub = auth?.onAuthStateChanged ? auth.onAuthStateChanged(u => setMe(u)) : () => {};
     return () => { mounted = false; unsub && unsub(); };
   }, []);
@@ -234,12 +237,14 @@ export default function Detail({ serverApp, serverRelated }) {
     setApp(serverApp || null);
     setRelated(Array.isArray(serverRelated) ? serverRelated : []);
     setShowFullDescription(false);
-    setDominantColor('#f0f2f5');
     setShowAllDevices(false);
     setShowAllLanguages(false);
-  }, [router.query.slug, serverApp, serverRelated]);
+    setStatus(null);
+    setStatusLoading(false);
+    // Không tính màu động nữa (đã gỡ fast-average-color để tránh crash)
+    setBgTop('#eaf2ff');
+  }, [router.query?.slug, serverApp, serverRelated]);
 
-  // FastAverageColor → dynamic import + try/catch để tránh nổ client
   useEffect(() => {
     if (!app?.id) return;
 
@@ -256,7 +261,7 @@ export default function Detail({ serverApp, serverRelated }) {
     if (isTestflight && app?.testflight_url) {
       try {
         setStatusLoading(true);
-        const id = app.testflight_url.split('/').pop();
+        const id = String(app.testflight_url).split('/').pop();
         fetch(`/api/admin/check-slot?id=${encodeURIComponent(id)}`)
           .then(res => res.json())
           .then(data => { if (data?.success) setStatus(data.status || null); })
@@ -264,22 +269,7 @@ export default function Detail({ serverApp, serverRelated }) {
           .finally(() => setStatusLoading(false));
       } catch { setStatusLoading(false); }
     }
-
-    // Dominant color
-    if (app?.icon_url && typeof window !== 'undefined') {
-      (async () => {
-        try {
-          const { FastAverageColor } = await import('fast-average-color');
-          const fac = new FastAverageColor();
-          const color = await fac.getColorAsync(app.icon_url);
-          if (color?.hex) setDominantColor(color.hex);
-          fac.destroy();
-        } catch {
-          // ignore, dùng màu mặc định
-        }
-      })();
-    }
-  }, [app?.id, app?.icon_url, app?.testflight_url, isTestflight]);
+  }, [app?.id, app?.testflight_url, isTestflight]);
 
   const displaySize = useMemo(() => {
     const s = app?.size;
@@ -350,7 +340,7 @@ export default function Detail({ serverApp, serverRelated }) {
 
     setIsFetchingIpa(true);
     try {
-      // Nếu server yêu cầu Bearer token, dùng:
+      // Nếu server yêu cầu Bearer token:
       // const idToken = await me.getIdToken();
       const res = await fetch('/api/generate-token', {
         method: 'POST',
@@ -365,7 +355,6 @@ export default function Detail({ serverApp, serverRelated }) {
       const token = json?.token;
       if (!token) throw new Error('Thiếu token');
       window.location.href = `/api/download-ipa?slug=${encodeURIComponent(app.slug)}&token=${encodeURIComponent(token)}`;
-      // log không critical
       fetch(`/api/admin/add-download?id=${encodeURIComponent(app.id)}`, { method: 'POST' }).catch(() => {});
     } catch (err) {
       alert('Không thể tạo link tải IPA. Vui lòng thử lại.');
@@ -418,16 +407,6 @@ export default function Detail({ serverApp, serverRelated }) {
     ? String(app.description).replace(/<\/?[^>]+(>|$)/g, '').slice(0, 160)
     : 'Ứng dụng iOS miễn phí, jailbreak, TestFlight';
 
-  // Dynamic import Comments sau khi mount (giảm rủi ro client exception sớm)
-  const [CommentsComp, setCommentsComp] = useState(null);
-  useEffect(() => {
-    let mounted = true;
-    import('../components/Comments')
-      .then(m => { if (mounted) setCommentsComp(() => m.default); })
-      .catch(() => setCommentsComp(null));
-    return () => { mounted = false; };
-  }, []);
-
   return (
     <Layout fullWidth>
       <Head>
@@ -448,9 +427,9 @@ export default function Detail({ serverApp, serverRelated }) {
           <div className="relative w-full max-w-screen-2xl px-2 sm:px-4 md:px-6 pb-8 bg-white rounded-none">
             <div
               className="w-full pb-6"
-              style={{ backgroundImage: `linear-gradient(to bottom, ${dominantColor}, #f0f2f5)` }}
+              style={{ backgroundImage: `linear-gradient(to bottom, ${bgTop}, #f0f2f5)` }}
             >
-              {/* Nút Back */}
+              {/* Back */}
               <div className="absolute top-3 left-3 z-10">
                 <Link
                   href="/"
@@ -768,13 +747,9 @@ export default function Detail({ serverApp, serverRelated }) {
             </div>
           )}
 
-          {/* Bình luận (dynamic import) */}
+          {/* Bình luận */}
           <div className="bg-white rounded-xl p-4 shadow">
-            {CommentsComp ? (
-              <CommentsComp postId={app?.slug} postTitle={app?.name} />
-            ) : (
-              <div className="text-sm text-gray-500">Đang tải bình luận…</div>
-            )}
+            <CommentsLazy postId={app?.slug} postTitle={app?.name} />
           </div>
         </div>
       </div>
