@@ -93,25 +93,21 @@ function CenterModal({ open, title, children, onClose, actions, tone = 'info' })
   );
 }
 
-/* ========= Badge Verified kiểu X (Twitter) – chống méo ========= */
+/* ========= Badge Verified kiểu X (Twitter) – 24x24, có đệm, chống khuyết ========= */
 const VerifiedBadgeX = ({ className = '' }) => (
   <svg
-    viewBox="0 0 512 512"
-    preserveAspectRatio="xMidYMid meet"
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
     aria-label="Đã xác minh"
     role="img"
     className={`inline-block align-middle ${className}`}
+    style={{ overflow: 'visible' }}
+    fill="currentColor"
   >
-    {/* Nền "bông" xanh */}
-    <path
-      fill="#1DA1F2"
-      d="M459.2 195.8l-33.6-45.8 6.2-56.8c1.9-17.9-17-30.2-32.9-22.1l-51.5 26.1-46.8-35.5c-13.2-10-31.2-10-44.4 0l-46.8 35.5-51.5-26.1c-15.9-8.1-34.8 4.2-32.9 22.1l6.2 56.8-33.6 45.8c-10.6 14.5-4.7 35 12 41.7l50.8 20.5-3.8 57.5c-1.1 17.2 15.9 29.8 31.8 22.7l52.7-23.8 52.7 23.8c15.9 7.2 32.9-5.5 31.8-22.7l-3.8-57.5 50.8-20.5c16.7-6.7 22.6-27.2 12-41.7z"
-    />
-    {/* Dấu tick trắng */}
-    <path
-      fill="#FFFFFF"
-      d="M353 207l-15.9-15.9a12 12 0 00-17 0l-60.3 60.3-27.7-27.7a12 12 0 00-17 0L210.6 239a12 12 0 000 17l38.2 38.2a12 12 0 0017 0l81.6-81.6a12 12 0 000-17z"
-    />
+    {/* "Bông" xanh có sẵn khoảng đệm bên trong viewBox nên không bị cắt mép */}
+    <path d="M22.25 12.03l-2.4-2.06.36-3.17a1 1 0 00-1.45-1.02l-2.96 1.46-2.45-1.86a1 1 0 00-1.18 0l-2.45 1.86L5.24 5.78a1 1 0 00-1.45 1.02l.36 3.17-2.4 2.06a1 1 0 000 1.54l2.4 2.06-.36 3.17a1 1 0 001.45 1.02l2.96-1.46 2.45 1.86a1 1 0 001.18 0l2.45-1.86 2.96 1.46a1 1 0 001.45-1.02l-.36-3.17 2.4-2.06a1 1 0 000-1.54z"/>
+    {/* Tick trắng */}
+    <path fill="#fff" d="M10.57 15.9l-3.06-3.05 1.42-1.42 1.64 1.63 4.12-4.12 1.41 1.42-5.53 5.54z"/>
   </svg>
 );
 
