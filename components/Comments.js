@@ -71,6 +71,28 @@ async function bumpCounter(uid, delta) {
   });
 }
 
+/* ========= Modal trung tâm (alert + confirm) ========= */
+function CenterModal({ open, title, children, onClose, actions, tone = 'info' }) {
+  if (!open) return null;
+  const toneClass =
+    tone === 'success' ? 'border-emerald-300 bg-emerald-50' :
+    tone === 'error'   ? 'border-rose-300 bg-rose-50' :
+    tone === 'warning' ? 'border-amber-300 bg-amber-50' :
+                         'border-sky-300 bg-sky-50';
+  return (
+    <div className="fixed inset-0 z-[200] flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className={`relative w-[92vw] max-w-md rounded-2xl border shadow-2xl p-4 ${toneClass}`}>
+        {title && <h3 className="text-lg font-semibold mb-2">{title}</h3>}
+        <div className="text-sm text-gray-900">{children}</div>
+        <div className="mt-4 flex justify-end gap-2">
+          {actions}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ========= Badge Verified kiểu X (Twitter) – chống méo ========= */
 const VerifiedBadgeX = ({ className = '' }) => (
   <svg
