@@ -92,7 +92,6 @@ export async function getServerSideProps(context) {
 }
 
 /* ===================== Helpers ===================== */
-
 // Tách danh sách từ chuỗi: "iOS 14, iPadOS" → ["iOS 14", "iPadOS"]
 function parseList(input) {
   if (!input) return [];
@@ -194,9 +193,9 @@ function bbcodeToMarkdownLite(input = '') {
 
   // Step 6: [quote]
   const quoteR = new RegExp('\\[quote\\]\\s*([\\s\\S]*?)\\s*\\[/quote\\]', 'gi');
-  s = s.replace(quoteR, (_m, p1) => {
-    return String(p1).trim().split(/\r?\n/).map(line => `> ${line}`).join('\n');
-  });
+  s = s.replace(quoteR, (_m, p1) =>
+    String(p1).trim().split(/\r?\n/).map(line => `> ${line}`).join('\n')
+  );
 
   // Step 7: [code]
   const codeR = new RegExp('\\[code\\]\\s*([\\s\\S]*?)\\s*\\[/code\\]', 'gi');
@@ -221,9 +220,7 @@ function PrettyBlockquote({ children }) {
   return (
     <blockquote className="relative my-4 rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50 to-white p-4 pl-5 dark:border-blue-900/40 dark:from-blue-950/30 dark:to-transparent">
       <div className="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl bg-blue-500/80 dark:bg-blue-400/80" />
-      <div className="text-blue-900 dark:text-blue-100 leading-relaxed">
-        {children}
-      </div>
+      <div className="text-blue-900 dark:text-blue-100 leading-relaxed">{children}</div>
     </blockquote>
   );
 }
@@ -273,6 +270,9 @@ function CenterModal({ open, title, body, actions }) {
   );
 }
 
+/* ===================== LoginButton để mở modal ===================== */
+import LoginButton from '../components/LoginButton';
+
 /* ===================== Page ===================== */
 export default function Detail({ serverApp, serverRelated }) {
   const router = useRouter();
@@ -301,16 +301,16 @@ export default function Detail({ serverApp, serverRelated }) {
     });
   }, []);
 
-  // Auth state để gate tải IPA
   const [me, setMe] = useState(null);
   const [modal, setModal] = useState({ open: false, title: '', body: null, actions: null });
+  const [showLoginModal, setShowLoginModal] = useState(false);
 
   const categorySlug = app?.category?.slug ?? null;
   const isTestflight = categorySlug === 'testflight';
   const isInstallable = ['jailbreak', 'app-clone'].includes(categorySlug);
 
   useEffect(() => {
-    const unsub = auth.onAuthStateChanged(u => setMe(u));
+    const unsub = auth.onAuthStateChanged(setMe);
     return () => unsub();
   }, []);
 
@@ -382,9 +382,7 @@ export default function Detail({ serverApp, serverRelated }) {
   const handleInstall = async (e) => {
     e.preventDefault();
     if (!app?.id || isTestflight) return;
-
     setIsInstalling(true);
-
     try {
       await fetch(`/api/admin/add-download?id=${app.id}`, {
         method: 'POST',
@@ -399,36 +397,14 @@ export default function Detail({ serverApp, serverRelated }) {
     }
   };
 
-  const requireVerified = () => {
-    setModal({
-      open: true,
-      title: 'Cần xác minh email',
-      body: (
-        <div className="text-sm">
-          <p>Bạn cần <b>đăng nhập</b> và <b>xác minh email</b> để tải IPA.</p>
-          <p className="mt-1 text-xs text-gray-500">Không thấy email xác minh? Hãy kiểm tra thư rác hoặc gửi lại từ trang <Link href="/profile" className="text-blue-600 underline">Hồ sơ</Link>.</p>
-        </div>
-      ),
-      actions: (
-        <>
-          <Link href="/LoginButton" className="px-3 py-2 text-sm rounded bg-gray-900 text-white">Đăng nhập</Link>
-          <button onClick={() => setModal(s => ({ ...s, open: false }))} className="px-3 py-2 text-sm rounded border">Đóng</button>
-        </>
-      ),
-    });
-  };
-
   const handleDownloadIpa = async (e) => {
     e.preventDefault();
     if (!app?.id || !isInstallable) return;
-
     if (!me || !me.emailVerified) {
-      requireVerified();
+      setShowLoginModal(true);
       return;
     }
-
     setIsFetchingIpa(true);
-
     try {
       const tokRes = await fetch('/api/generate-token', {
         method: 'POST',
@@ -438,7 +414,6 @@ export default function Detail({ serverApp, serverRelated }) {
       if (!tokRes.ok) throw new Error(`HTTP ${tokRes.status}`);
       const { token } = await tokRes.json();
       if (!token) throw new Error('Thiếu token');
-
       window.location.href = `/api/download-ipa?slug=${encodeURIComponent(app.slug)}&token=${encodeURIComponent(token)}`;
       fetch(`/api/admin/add-download?id=${app.id}`, { method: 'POST' }).catch(() => {});
     } catch (err) {
@@ -498,15 +473,79 @@ export default function Detail({ serverApp, serverRelated }) {
         <meta name="twitter:card" content="summary_large_image" />
       </Head>
 
+      {/* Modal cũ */}
       <CenterModal open={modal.open} title={modal.title} body={modal.body} actions={modal.actions} />
 
+      {/* Modal LoginButton khi cần đăng nhập / xác minh */}
+      {showLoginModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-4">
+          <div className="relative w-full max-w-md rounded-2xl border border-gray-200 bg-white dark:bg-gray-900 shadow-2xl p-4">
+            <button
+              onClick={() => setShowLoginModal(false)}
+              className="absolute top-2 right-2 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
+              aria-label="Đóng"
+            >
+              <svg className="w-5 h-5" viewBox="0 0 20 20" fill="none" stroke="currentColor">
+                <path d="M6 6l8 8M14 6l-8 8" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
+            </button>
+            <LoginButton onToggleTheme={() => {}} isDark={false} />
+          </div>
+        </div>
+      )}
+
+      {/* Breadcrumb nằm TRÊN CÙNG, ngoài màu nền gradient */}
+      <div className="bg-gray-100">
+        <div className="w-full flex justify-center mt-2 px-2 sm:px-4 md:px-6">
+          <div className="w-full max-w-screen-2xl">
+            <nav aria-label="Breadcrumb" className="px-2 py-2">
+              <ol className="flex items-center gap-1 text-sm text-blue-900/90">
+                <li>
+                  <Link href="/" className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-white/80 hover:bg-white text-blue-700 font-medium shadow-sm">
+                    <FontAwesomeIcon icon={faHouse} className="w-3.5 h-3.5" />
+                    <span className="hidden sm:inline">Trang chủ</span>
+                  </Link>
+                </li>
+                <li className="text-blue-700/50">
+                  <FontAwesomeIcon icon={faAngleRight} />
+                </li>
+                <li>
+                  {app?.category?.slug ? (
+                    <Link
+                      href={`/category/${app.category.slug}`}
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-white/80 hover:bg-white text-blue-700 font-medium shadow-sm"
+                    >
+                      <span className="truncate max-w-[40vw] sm:max-w-none">{app.category.name || 'Chuyên mục'}</span>
+                    </Link>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-white text-blue-700/70 font-medium shadow-sm">
+                      Chuyên mục
+                    </span>
+                  )}
+                </li>
+                <li className="text-blue-700/50">
+                  <FontAwesomeIcon icon={faAngleRight} />
+                </li>
+                <li>
+                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-600 text-white font-semibold shadow">
+                    {app.name}
+                  </span>
+                </li>
+              </ol>
+            </nav>
+          </div>
+        </div>
+      </div>
+
+      {/* Hero với màu nền gradient */}
       <div className="bg-gray-100 min-h-screen pb-12">
-        <div className="w-full flex justify-center mt-10 bg-gray-100">
+        <div className="w-full flex justify-center mt-0 bg-gray-100">
           <div className="relative w-full max-w-screen-2xl px-2 sm:px-4 md:px-6 pb-8 bg-white rounded-none">
             <div
               className="w-full pb-6"
               style={{ backgroundImage: `linear-gradient(to bottom, ${dominantColor}, #f0f2f5)` }}
             >
+              {/* Back */}
               <div className="absolute top-3 left-3 z-10">
                 <Link
                   href="/"
@@ -517,43 +556,7 @@ export default function Detail({ serverApp, serverRelated }) {
                 </Link>
               </div>
 
-              <nav aria-label="Breadcrumb" className="pt-3 px-4">
-                <ol className="mx-auto max-w-screen-2xl flex items-center gap-1 text-sm text-blue-900/90">
-                  <li>
-                    <Link href="/" className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-white/80 hover:bg-white text-blue-700 font-medium shadow-sm">
-                      <FontAwesomeIcon icon={faHouse} className="w-3.5 h-3.5" />
-                      <span className="hidden sm:inline">Trang chủ</span>
-                    </Link>
-                  </li>
-                  <li className="text-blue-700/50">
-                    <FontAwesomeIcon icon={faAngleRight} />
-                  </li>
-                  <li>
-                    {app?.category?.slug ? (
-                      <Link
-                        href={`/category/${app.category.slug}`}
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-white/80 hover:bg-white text-blue-700 font-medium shadow-sm"
-                      >
-                        <span className="truncate max-w-[40vw] sm:max-w-none">{app.category.name || 'Chuyên mục'}</span>
-                      </Link>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-white text-blue-700/70 font-medium shadow-sm">
-                        Chuyên mục
-                      </span>
-                    )}
-                  </li>
-                  <li className="text-blue-700/50">
-                    <FontAwesomeIcon icon={faAngleRight} />
-                  </li>
-                  <li>
-                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-600 text-white font-semibold shadow">
-                      {app.name}
-                    </span>
-                  </li>
-                </ol>
-              </nav>
-
-              <div className="pt-6 text-center px-4">
+              <div className="pt-10 text-center px-4">
                 <div className="w-24 h-24 mx-auto overflow-hidden border-4 border-white rounded-2xl">
                   <img
                     src={app.icon_url || '/placeholder-icon.png'}
