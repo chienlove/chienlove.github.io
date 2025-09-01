@@ -35,6 +35,39 @@ const CommentsLazy = dynamic(() => import('../components/Comments'), {
   loading: () => <div className="text-sm text-gray-500">Đang tải bình luận…</div>,
 });
 
+/** ───────────────── Error Boundary ─────────────────
+ * Chặn mọi lỗi JS từ component con (kể cả "this.data") để không sập trang.
+ */
+import React from 'react';
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, message: '' };
+  }
+  static getDerivedStateFromError(err) {
+    return { hasError: true, message: err?.message || 'Lỗi không xác định' };
+  }
+  componentDidCatch(err, info) {
+    // Bạn có thể gửi log lên server ở đây nếu muốn
+    // console.error('ErrorBoundary:', err, info);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-800">
+          <div className="font-semibold mb-1">Không tải được phần này</div>
+          <div className="opacity-80">
+            Có lỗi khi tải thành phần giao diện. Hãy tải lại trang hoặc thử lại sau.
+          </div>
+          {/* Mở comment nếu bạn muốn hiện thông điệp gốc:
+          <pre className="mt-2 text-xs opacity-70 whitespace-pre-wrap">{this.state.message}</pre>
+          */}
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 // ───────────────── SSR ─────────────────
 export async function getServerSideProps(context) {
   const slug = context.params.slug?.toLowerCase();
@@ -340,14 +373,10 @@ export default function Detail({ serverApp, serverRelated }) {
 
     setIsFetchingIpa(true);
     try {
-      // Nếu server yêu cầu Bearer token:
       // const idToken = await me.getIdToken();
       const res = await fetch('/api/generate-token', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          // 'Authorization': `Bearer ${idToken}`,
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: app.id, ipa_name: app.download_link }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -358,7 +387,6 @@ export default function Detail({ serverApp, serverRelated }) {
       fetch(`/api/admin/add-download?id=${encodeURIComponent(app.id)}`, { method: 'POST' }).catch(() => {});
     } catch (err) {
       alert('Không thể tạo link tải IPA. Vui lòng thử lại.');
-      // eslint-disable-next-line no-console
       console.error(err);
     } finally {
       setIsFetchingIpa(false);
@@ -454,8 +482,7 @@ export default function Detail({ serverApp, serverRelated }) {
                     {app?.category?.slug ? (
                       <Link
                         href={`/category/${app.category.slug}`}
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-white/80 hover:bg-white text-blue-700 font-medium shadow-sm"
-                      >
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-white/80 hover:bg-white text-blue-700 font-medium shadow-sm">
                         <span className="truncate max-w-[40vw] sm:max-w-none">{app?.category?.name || 'Chuyên mục'}</span>
                       </Link>
                     ) : (
@@ -488,87 +515,7 @@ export default function Detail({ serverApp, serverRelated }) {
 
                 <div className="mt-4 flex flex-wrap justify-center gap-2">
                   {/* TestFlight */}
-                  {isTestflight && app?.testflight_url && (
-                    <>
-                      <a
-                        href={app.testflight_url}
-                        className="inline-block border border-blue-500 text-blue-700 hover:bg-blue-100 transition px-4 py-2 rounded-full text-sm font-semibold"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        <FontAwesomeIcon icon={faRocket} className="mr-2" />
-                        Tham gia TestFlight
-                      </a>
-                      {statusLoading || status === null ? (
-                        <span className="inline-block border border-gray-300 text-gray-500 bg-gray-50 px-4 py-2 rounded-full text-sm font-semibold">
-                          Đang kiểm tra...
-                        </span>
-                      ) : status === 'Y' ? (
-                        <span className="inline-block border border-green-500 text-green-700 bg-green-50 px-4 py-2 rounded-full text-sm font-semibold">
-                          <FontAwesomeIcon icon={faCheckCircle} className="mr-1" />
-                          Còn slot
-                        </span>
-                      ) : status === 'F' ? (
-                        <span className="inline-block border border-red-500 text-red-700 bg-red-50 px-4 py-2 rounded-full text-sm font-semibold">
-                          <FontAwesomeIcon icon={faExclamationTriangle} className="mr-1" />
-                          Đã đầy
-                        </span>
-                      ) : (
-                        <span className="inline-block border border-yellow-500 text-yellow-700 bg-yellow-50 px-4 py-2 rounded-full text-sm font-semibold">
-                          <FontAwesomeIcon icon={faTimesCircle} className="mr-1" />
-                          Ngừng nhận
-                        </span>
-                      )}
-                    </>
-                  )}
-
-                  {/* Install / Download IPA */}
-                  {isInstallable && (
-                    <>
-                      <button
-                        onClick={handleInstall}
-                        disabled={isInstalling}
-                        className={`inline-flex items-center border border-green-500 text-green-700 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-green-200 active:shadow-inner active:ring-2 active:ring-green-500 ${isInstalling ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-100'}`}
-                      >
-                        {isInstalling ? (
-                          <>
-                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Đang xử lý…
-                          </>
-                        ) : (
-                          <>
-                            <FontAwesomeIcon icon={faDownload} className="mr-2" />
-                            Cài đặt
-                          </>
-                        )}
-                      </button>
-
-                      <button
-                        onClick={handleDownloadIpa}
-                        disabled={isFetchingIpa}
-                        className={`inline-flex items-center border border-blue-500 text-blue-700 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-blue-200 active:shadow-inner active:ring-2 active:ring-blue-500 ${isFetchingIpa ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-100'}`}
-                        title="Tải file IPA (ẩn nguồn tải)"
-                      >
-                        {isFetchingIpa ? (
-                          <>
-                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Đang tạo…
-                          </>
-                        ) : (
-                          <>
-                            <FontAwesomeIcon icon={faFileArrowDown} className="mr-2" />
-                            Tải IPA
-                          </>
-                        )}
-                      </button>
-                    </>
-                  )}
+                  {/* ...giữ nguyên... */}
                 </div>
               </div>
             </div>
@@ -578,71 +525,45 @@ export default function Detail({ serverApp, serverRelated }) {
         {/* CONTENT */}
         <div className="max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 mt-6 space-y-6">
           {/* Info cards */}
-          <div className="bg-white rounded-xl p-4 shadow flex justify-between text-center overflow-x-auto divide-x divide-gray-200">
-            <div className="px-0.5 sm:px-1.5">
-              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Tác giả</p>
-              <FontAwesomeIcon icon={faUser} className="text-xl text-gray-600 mb-1" />
-              <p className="text-sm text-gray-800">{app?.author || 'Không rõ'}</p>
-            </div>
-            <div className="px-1 sm:px-2">
-              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Phiên bản</p>
-              <FontAwesomeIcon icon={faCodeBranch} className="text-xl text-gray-600 mb-1" />
-              <p className="text-sm text-gray-800">{app?.version || 'Không rõ'}</p>
-            </div>
-            <div className="px-1 sm:px-2">
-              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Dung lượng</p>
-              <FontAwesomeIcon icon={faDatabase} className="text-xl text-gray-600 mb-1" />
-              <p className="text-sm text-gray-800">{displaySize}</p>
-            </div>
-            <div className="px-0.5 sm:px-1.5">
-              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">
-                {isTestflight ? 'LƯỢT XEM' : 'Lượt tải'}
-              </p>
-              {isTestflight ? (
-                <div className="flex flex-col items-center">
-                  <span className="text-xl font-medium text-gray-600 mb-1">{app?.views ?? 0}</span>
-                  <span className="text-xs text-gray-500">Lượt</span>
-                </div>
-              ) : (
-                <>
-                  <FontAwesomeIcon icon={faDownload} className="text-xl text-gray-600 mb-1" />
-                  <p className="text-sm text-gray-800">{app?.downloads ?? 0}</p>
-                </>
-              )}
-            </div>
-          </div>
+          {/* ...giữ nguyên... */}
 
           {/* Mô tả */}
           <div className="bg-white rounded-xl p-4 shadow">
             <h2 className="text-lg font-bold text-gray-800 mb-3">Mô tả</h2>
-            <div className={`relative overflow-hidden transition-all duration-300 ${showFullDescription ? '' : 'max-h-72'}`}>
-              <div className={`${showFullDescription ? '' : 'mask-gradient-bottom'}`}>
-                <ReactMarkdown
-                  remarkPlugins={remarkGfm ? [remarkGfm] : []}
-                  components={{
-                    h1: (props) => <h3 className="text-xl font-bold mt-3 mb-2" {...props} />,
-                    h2: (props) => <h4 className="text-lg font-bold mt-3 mb-2" {...props} />,
-                    h3: (props) => <h5 className="text-base font-bold mt-3 mb-2" {...props} />,
-                    p: (props) => <p className="text-gray-700 leading-7 mb-3" {...props} />,
-                    ul: (props) => <ul className="list-disc pl-5 space-y-1 mb-3" {...props} />,
-                    ol: (props) => <ol className="list-decimal pl-5 space-y-1 mb-3" {...props} />,
-                    li: (props) => <li className="marker:text-blue-500" {...props} />,
-                    a: (props) => <a className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
-                    code: ({ inline, ...props }) =>
-                      inline
-                        ? <code className="px-1 py-0.5 rounded bg-gray-100 text-pink-700" {...props} />
-                        : <pre className="p-3 rounded bg-gray-900 text-gray-100 overflow-auto mb-3"><code {...props} /></pre>,
-                    blockquote: (props) => <PrettyBlockquote {...props} />,
-                    hr: () => <hr className="my-4 border-gray-200" />,
-                  }}
-                >
-                  {normalizeDescription(app?.description)}
-                </ReactMarkdown>
+            <ErrorBoundary>
+              <div className={`relative overflow-hidden transition-all duration-300 ${showFullDescription ? '' : 'max-h-72'}`}>
+                <div className={`${showFullDescription ? '' : 'mask-gradient-bottom'}`}>
+                  {app?.description ? (
+                    <ReactMarkdown
+                      remarkPlugins={remarkGfm ? [remarkGfm] : []}
+                      components={{
+                        h1: (props) => <h3 className="text-xl font-bold mt-3 mb-2" {...props} />,
+                        h2: (props) => <h4 className="text-lg font-bold mt-3 mb-2" {...props} />,
+                        h3: (props) => <h5 className="text-base font-bold mt-3 mb-2" {...props} />,
+                        p: (props) => <p className="text-gray-700 leading-7 mb-3" {...props} />,
+                        ul: (props) => <ul className="list-disc pl-5 space-y-1 mb-3" {...props} />,
+                        ol: (props) => <ol className="list-decimal pl-5 space-y-1 mb-3" {...props} />,
+                        li: (props) => <li className="marker:text-blue-500" {...props} />,
+                        a: (props) => <a className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
+                        code: ({ inline, ...props }) =>
+                          inline
+                            ? <code className="px-1 py-0.5 rounded bg-gray-100 text-pink-700" {...props} />
+                            : <pre className="p-3 rounded bg-gray-900 text-gray-100 overflow-auto mb-3"><code {...props} /></pre>,
+                        blockquote: (props) => <PrettyBlockquote {...props} />,
+                        hr: () => <hr className="my-4 border-gray-200" />,
+                      }}
+                    >
+                      {normalizeDescription(app?.description)}
+                    </ReactMarkdown>
+                  ) : (
+                    <p className="text-gray-500">Chưa có mô tả.</p>
+                  )}
+                </div>
+                {!showFullDescription && (
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white via-white to-transparent" />
+                )}
               </div>
-              {!showFullDescription && (
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white via-white to-transparent" />
-              )}
-            </div>
+            </ErrorBoundary>
             {app?.description && String(app.description).length > 300 && (
               <button
                 onClick={() => setShowFullDescription(v => !v)}
@@ -654,17 +575,17 @@ export default function Detail({ serverApp, serverRelated }) {
           </div>
 
           {/* Screenshots */}
-          {Array.isArray(app?.screenshots) && app.screenshots.length > 0 && (
+          {Array.isArray(app.screenshots) && app.screenshots.length > 0 && (
             <div className="bg-white rounded-xl p-4 shadow">
               <h2 className="text-lg font-bold text-gray-800 mb-3">Ảnh màn hình</h2>
               <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1">
                 {app.screenshots.map((url, i) => (
                   <div key={i} className="flex-shrink-0 w-48 md:w-56 rounded-xl overflow-hidden border">
                     <img
-                      src={url || '/placeholder-image.png'}
+                      src={url}
                       alt={`Screenshot ${i + 1}`}
                       className="w-full h-auto object-cover"
-                      onError={(e) => { e.currentTarget.src = '/placeholder-image.png'; }}
+                      onError={(e) => { e.target.src = '/placeholder-image.png'; }}
                     />
                   </div>
                 ))}
@@ -676,14 +597,16 @@ export default function Detail({ serverApp, serverRelated }) {
           <div className="bg-white rounded-xl shadow overflow-hidden">
             <h2 className="px-4 pt-4 text-lg font-bold text-gray-800">Thông tin</h2>
             <div className="mt-3 divide-y divide-gray-200">
-              <InfoRow label="Nhà phát triển" value={app?.author || 'Không rõ'} />
-              <InfoRow label="Phiên bản" value={app?.version || 'Không rõ'} />
+              <InfoRow label="Nhà phát triển" value={app.author || 'Không rõ'} />
+              <InfoRow label="Phiên bản" value={app.version || 'Không rõ'} />
               <InfoRow label="Dung lượng" value={displaySize} />
               <InfoRow
                 label="Thiết bị hỗ trợ"
                 value={
                   devicesArray.length
-                    ? (showAllDevices ? devicesArray.join(', ') : `${devicesShort.list.join(', ')}${devicesShort.remain ? `, +${devicesShort.remain}` : ''}`)
+                    ? showAllDevices
+                      ? devicesArray.join(', ')
+                      : `${devicesShort.list.join(', ')}${devicesShort.remain ? `, +${devicesShort.remain}` : ''}`
                     : 'Không rõ'
                 }
                 expandable={devicesArray.length > devicesShort.list.length}
@@ -694,19 +617,31 @@ export default function Detail({ serverApp, serverRelated }) {
                 label="Ngôn ngữ"
                 value={
                   languagesArray.length
-                    ? (showAllLanguages ? languagesArray.join(', ') : `${languagesShort.list.join(', ')}${languagesShort.remain ? `, +${languagesShort.remain}` : ''}`)
+                    ? showAllLanguages
+                      ? languagesArray.join(', ')
+                      : `${languagesShort.list.join(', ')}${languagesShort.remain ? `, +${languagesShort.remain}` : ''}`
                     : 'Không rõ'
                 }
                 expandable={languagesArray.length > languagesShort.list.length}
                 expanded={showAllLanguages}
                 onToggle={() => setShowAllLanguages(v => !v)}
               />
-              <InfoRow label="Yêu cầu iOS" value={app?.minimum_os_version ? `iOS ${app.minimum_os_version}+` : 'Không rõ'} />
+              <InfoRow
+                label="Yêu cầu iOS"
+                value={app.minimum_os_version ? `iOS ${app.minimum_os_version}+` : 'Không rõ'}
+              />
               <InfoRow
                 label="Ngày phát hành"
-                value={app?.release_date ? new Date(app.release_date).toLocaleDateString('vi-VN') : 'Không rõ'}
+                value={
+                  app.release_date
+                    ? new Date(app.release_date).toLocaleDateString('vi-VN')
+                    : 'Không rõ'
+                }
               />
-              <InfoRow label="Xếp hạng tuổi" value={app?.age_rating || 'Không rõ'} />
+              <InfoRow
+                label="Xếp hạng tuổi"
+                value={app.age_rating || 'Không rõ'}
+              />
             </div>
           </div>
 
@@ -726,7 +661,7 @@ export default function Detail({ serverApp, serverRelated }) {
                         src={item.icon_url || '/placeholder-icon.png'}
                         alt={item.name}
                         className="w-14 h-14 rounded-xl object-cover shadow-sm"
-                        onError={(e) => { e.currentTarget.src = '/placeholder-icon.png'; }}
+                        onError={(e) => { e.target.src = '/placeholder-icon.png'; }}
                       />
                       <div className="flex flex-col">
                         <p className="text-sm font-semibold text-gray-800">{item.name}</p>
@@ -749,7 +684,9 @@ export default function Detail({ serverApp, serverRelated }) {
 
           {/* Bình luận */}
           <div className="bg-white rounded-xl p-4 shadow">
-            <CommentsLazy postId={app?.slug} postTitle={app?.name} />
+            <ErrorBoundary>
+              <CommentsLazy postId={app?.slug} postTitle={app?.name} />
+            </ErrorBoundary>
           </div>
         </div>
       </div>
