@@ -1,15 +1,12 @@
-// pages/[slug].js
 'use client';
 
 import { supabase } from '../lib/supabase';
 import Layout from '../components/Layout';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import dynamic from 'next/dynamic';
-import { useEffect, useState, useMemo, memo, useCallback } from 'react';
+import Comments from '../components/Comments';
+import { useEffect, useState, useMemo, memo } from 'react';
 import { FastAverageColor } from 'fast-average-color';
-import { auth } from '../lib/firebase-client';
-import Head from 'next/head';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faDownload,
@@ -24,19 +21,27 @@ import {
   faChevronDown,
   faChevronUp,
   faFileArrowDown,
-  faAngleRight,
+  faHouse,
+  faChevronRight,
 } from '@fortawesome/free-solid-svg-icons';
+import Head from 'next/head';
 
-// Bình luận lazy
-const Comments = dynamic(() => import('../components/Comments'), {
-  ssr: false,
-  loading: () => <div className="text-sm text-gray-500">Đang tải bình luận…</div>,
-});
+// Firebase (để mở popup đăng nhập nội bộ)
+import { auth } from '../lib/firebase-client';
+import {
+  GoogleAuthProvider,
+  GithubAuthProvider,
+  signInWithPopup,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
+} from 'firebase/auth';
 
-/* ===================== SSR ===================== */
+// ===================== SSR =====================
 export async function getServerSideProps(context) {
   const slug = context.params.slug?.toLowerCase();
 
+  // 1) App + JOIN category
   let { data: appData, error } = await supabase
     .from('apps')
     .select(`
@@ -46,6 +51,7 @@ export async function getServerSideProps(context) {
     .ilike('slug', slug)
     .single();
 
+  // 2) Fallback bằng ID
   if ((!appData || error) && slug) {
     const fb = await supabase
       .from('apps')
@@ -62,6 +68,7 @@ export async function getServerSideProps(context) {
     return { notFound: true };
   }
 
+  // 3) Fallback JOIN category nếu chưa có
   if (!appData?.category && appData?.category_id) {
     const { data: cat } = await supabase
       .from('categories')
@@ -71,12 +78,13 @@ export async function getServerSideProps(context) {
     if (cat) appData = { ...appData, category: cat };
   }
 
+  // 4) Related apps
   const { data: relatedApps } = await supabase
     .from('apps')
-    .select('id, name, slug, icon_url, author, version, category_id')
+    .select('id, name, slug, icon_url, author, version')
     .eq('category_id', appData.category_id)
     .neq('id', appData.id)
-    .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
     .limit(50);
 
   return {
@@ -87,78 +95,113 @@ export async function getServerSideProps(context) {
   };
 }
 
-/* ===================== Helpers ===================== */
+// ===================== Helpers =====================
+
 function parseList(input) {
   if (!input) return [];
   if (Array.isArray(input)) return input;
-  return String(input).split(/[,\n]+/).map(x => x.trim()).filter(Boolean);
+  return String(input)
+    .split(/[,\n]+/)
+    .map(x => x.trim())
+    .filter(Boolean);
 }
+
+// Xoá thẻ [tag=...] hoặc [tag]...[/tag] – không dùng regex
 function stripSimpleTagAll(str, tag) {
   let s = String(str);
   const open = `[${tag}`;
   const close = `[/${tag}]`;
+
   while (true) {
     const idx = s.toLowerCase().indexOf(close);
     if (idx === -1) break;
     s = s.slice(0, idx) + s.slice(idx + close.length);
   }
+
   while (true) {
     const lower = s.toLowerCase();
     const iOpen = lower.indexOf(open);
     if (iOpen === -1) break;
+
     const iBracket = s.indexOf(']', iOpen);
-    if (iBracket === -1) { s = s.slice(0, iOpen); break; }
+    if (iBracket === -1) {
+      s = s.slice(0, iOpen);
+      break;
+    }
+
     const iClose = lower.indexOf(close, iBracket + 1);
     if (iClose === -1) {
       s = s.slice(0, iOpen) + s.slice(iBracket + 1);
       continue;
     }
+
     const inner = s.slice(iBracket + 1, iClose);
     s = s.slice(0, iOpen) + inner + s.slice(iClose + close.length);
   }
   return s;
 }
+
+// Chuyển [list][*]...[/list] → Markdown
 function processListBlocks(str) {
   let output = '';
   let remaining = String(str);
+
   while (true) {
     const lower = remaining.toLowerCase();
     const start = lower.indexOf('[list]');
     if (start === -1) { output += remaining; break; }
+
     const end = lower.indexOf('[/list]', start + 6);
     if (end === -1) { output += remaining; break; }
+
     const before = remaining.slice(0, start);
     const listContent = remaining.slice(start + 6, end);
     const after = remaining.slice(end + 7);
-    const items = listContent.split('[*]').map(t => t.trim()).filter(Boolean);
+
+    const items = listContent
+      .split('[*]')
+      .map(t => t.trim())
+      .filter(Boolean);
+
     const md = '\n' + items.map(it => `- ${it}`).join('\n') + '\n';
     output += before + md;
     remaining = after;
   }
   return output;
 }
+
+// BBCode → Markdown (an toàn, ít regex)
 function bbcodeToMarkdownLite(input = '') {
   let s = String(input);
+
   s = s.replace(/\[b\](.*?)\[\/b\]/gi, '**$1**');
   s = s.replace(/\[i\](.*?)\[\/i\]/gi, '*$1*');
   s = s.replace(/\[u\](.*?)\[\/u\]/gi, '__$1__');
+
   s = s.replace(/\[url\](https?:\/\/[^\s\]]+)\[\/url\]/gi, '[$1]($1)');
   s = s.replace(/\[url=(https?:\/\/[^\]\s]+)\](.*?)\[\/url\]/gi, '[$2]($1)');
+
   s = s.replace(/\[img\](https?:\/\/[^\s\]]+)\[\/img\]/gi, '![]($1)');
+
   s = stripSimpleTagAll(s, 'color');
   s = stripSimpleTagAll(s, 'size');
+
   s = processListBlocks(s);
+
   const quoteR = new RegExp('\\[quote\\]\\s*([\\s\\S]*?)\\s*\\[/quote\\]', 'gi');
-  s = s.replace(quoteR, (_m, p1) =>
-    String(p1).trim().split(/\r?\n/).map(line => `> ${line}`).join('\n')
-  );
+  s = s.replace(quoteR, (_m, p1) => {
+    return String(p1).trim().split(/\r?\n/).map(line => `> ${line}`).join('\n');
+  });
+
   const codeR = new RegExp('\\[code\\]\\s*([\\s\\S]*?)\\s*\\[/code\\]', 'gi');
   s = s.replace(codeR, (_m, p1) => {
     const body = String(p1).replace(/```/g, '``');
     return `\n\`\`\`\n${body}\n\`\`\`\n`;
   });
+
   return s;
 }
+
 function normalizeDescription(raw = '') {
   if (!raw) return '';
   const txt = String(raw);
@@ -167,6 +210,7 @@ function normalizeDescription(raw = '') {
   }
   return txt;
 }
+
 function PrettyBlockquote({ children }) {
   return (
     <blockquote className="relative my-4 rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50 to-white p-4 pl-5 dark:border-blue-900/40 dark:from-blue-950/30 dark:to-transparent">
@@ -178,28 +222,114 @@ function PrettyBlockquote({ children }) {
   );
 }
 
-/* ====== Breadcrumb "mũi tên" như ảnh, không xuống dòng ====== */
-function ArrowCrumb({ href, children, last = false }) {
-  const Comp = href ? Link : 'span';
-  // hình mũi tên bằng clip-path; item cuối viền xanh nền trắng
-  const base = 'inline-flex items-center h-11 px-5 text-base font-semibold whitespace-nowrap truncate';
-  const style = { clipPath: 'polygon(12px 0,100% 0,calc(100% - 12px) 50%,100% 100%,12px 100%,0 50%)' };
-  const cls = last
-    ? `${base} bg-white text-sky-600 border-2 border-sky-500`
-    : `${base} bg-sky-500 text-white hover:bg-sky-600`;
+// ===================== Center Modal (generic) =====================
+function CenterModal({ open, title, body, actions }) {
+  if (!open) return null;
   return (
-    <Comp href={href || '#'} className={cls} style={style}>
-      <span className="truncate max-w-[48vw] sm:max-w-[40vw] md:max-w-[32vw]">{children}</span>
-    </Comp>
+    <div className="fixed inset-0 z-[200] flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/40" />
+      <div className="relative w-[92vw] max-w-md rounded-2xl border border-gray-200 bg-white shadow-2xl p-4">
+        {title && <h3 className="text-lg font-semibold mb-2">{title}</h3>}
+        <div className="text-sm text-gray-800">{body}</div>
+        <div className="mt-4 flex justify-end gap-2">{actions}</div>
+      </div>
+    </div>
   );
 }
-const ArrowSep = () => (
-  <span className="flex-shrink-0 px-1 text-sky-500" aria-hidden>
-    <FontAwesomeIcon icon={faAngleRight} />
-  </span>
-);
 
-/* ===================== InfoRow ===================== */
+// ===================== Auth Modal nội bộ (mở thẳng form) =====================
+function AuthModal({ open, onClose }) {
+  const [loading, setLoading] = useState(false);
+  const [mode, setMode] = useState('login'); // login | signup
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [msg, setMsg] = useState('');
+
+  const doGoogle = async () => {
+    setLoading(true); setMsg('');
+    try {
+      await signInWithPopup(auth, new GoogleAuthProvider());
+      onClose();
+    } catch (e) {
+      setMsg(e.message || 'Không thể đăng nhập Google.');
+    } finally { setLoading(false); }
+  };
+
+  const doGithub = async () => {
+    setLoading(true); setMsg('');
+    try {
+      await signInWithPopup(auth, new GithubAuthProvider());
+      onClose();
+    } catch (e) {
+      setMsg(e.message || 'Không thể đăng nhập GitHub.');
+    } finally { setLoading(false); }
+  };
+
+  const onSubmitEmail = async (e) => {
+    e.preventDefault();
+    setLoading(true); setMsg('');
+    try {
+      if (mode === 'signup') {
+        const { user } = await createUserWithEmailAndPassword(auth, email, password);
+        try { await sendEmailVerification(user); } catch {}
+        onClose();
+        alert('Đăng ký thành công! Hãy kiểm tra email để xác minh.');
+      } else {
+        await signInWithEmailAndPassword(auth, email, password);
+        onClose();
+      }
+    } catch (e) {
+      setMsg(e.message || 'Có lỗi xảy ra.');
+    } finally { setLoading(false); }
+  };
+
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-[220] flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-md rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-2xl">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-800">
+          <h3 className="text-lg font-semibold">{mode==='signup' ? 'Tạo tài khoản' : 'Đăng nhập'}</h3>
+          <button onClick={onClose} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="Close">
+            <svg className="w-5 h-5" viewBox="0 0 20 20"><path d="M6 6l8 8M14 6l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+          </button>
+        </div>
+
+        <div className="px-5 pt-5 pb-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <button onClick={doGoogle} disabled={loading}
+                    className="flex items-center justify-center gap-2 px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-60">
+              G
+              <span>Google</span>
+            </button>
+            <button onClick={doGithub} disabled={loading}
+                    className="flex items-center justify-center gap-2 px-3 py-2 rounded bg-gray-900 text-white hover:bg-black disabled:opacity-60">
+              GH
+              <span>GitHub</span>
+            </button>
+          </div>
+
+          <div className="mt-4 text-xs text-gray-500">-- hoặc --</div>
+
+          <form onSubmit={onSubmitEmail} className="mt-3 space-y-2">
+            <input type="email" required value={email} onChange={e=>setEmail(e.target.value)} placeholder="Email"
+                   className="w-full px-3 py-2 rounded border bg-white" />
+            <input type="password" required value={password} onChange={e=>setPassword(e.target.value)} placeholder="Mật khẩu"
+                   className="w-full px-3 py-2 rounded border bg-white" />
+            {msg && <p className="text-xs text-rose-600">{msg}</p>}
+            <div className="flex items-center justify-between">
+              <button type="submit" disabled={loading}
+                      className="px-3 py-2 rounded bg-gray-900 text-white">{mode==='signup' ? 'Tạo tài khoản' : 'Đăng nhập'}</button>
+              <button type="button" onClick={()=>setMode(m=>m==='login'?'signup':'login')}
+                      className="text-sm underline">{mode==='login'?'Đăng ký bằng email':'Đã có tài khoản? Đăng nhập'}</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ===================== InfoRow =====================
 const InfoRow = memo(({ label, value, expandable = false, expanded = false, onToggle }) => {
   return (
     <div className="px-4 py-3 flex items-start">
@@ -229,31 +359,7 @@ const InfoRow = memo(({ label, value, expandable = false, expanded = false, onTo
 });
 InfoRow.displayName = 'InfoRow';
 
-/* ===================== Modal khung dùng cho cảnh báo tải IPA ===================== */
-function CenterModal({ open, title, body, actions, onClose }) {
-  if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative w-[92vw] max-w-md rounded-2xl border border-gray-200 bg-white shadow-2xl p-4">
-        {title && <h3 className="text-lg font-semibold mb-2">{title}</h3>}
-        <div className="text-sm text-gray-800">{body}</div>
-        <div className="mt-4 flex justify-end gap-2">{actions}</div>
-        <button
-          aria-label="Đóng"
-          onClick={onClose}
-          className="absolute top-2 right-2 p-1 rounded-full hover:bg-gray-100"
-        >
-          <svg className="w-5 h-5" viewBox="0 0 20 20" fill="none" stroke="currentColor">
-            <path d="M6 6l8 8M14 6l-8 8" strokeWidth="2" strokeLinecap="round"/>
-          </svg>
-        </button>
-      </div>
-    </div>
-  );
-}
-
-/* ===================== Page ===================== */
+// ===================== Page =====================
 export default function Detail({ serverApp, serverRelated }) {
   const router = useRouter();
   const [app, setApp] = useState(serverApp);
@@ -267,18 +373,29 @@ export default function Detail({ serverApp, serverRelated }) {
   const [showAllDevices, setShowAllDevices] = useState(false);
   const [showAllLanguages, setShowAllLanguages] = useState(false);
 
-  // Phân trang related
-  const PAGE_SIZE = 5;
-  const [relPage, setRelPage] = useState(1);
-  const relTotalPages = Math.max(1, Math.ceil((related?.length || 0) / PAGE_SIZE));
-  const relatedSlice = useMemo(() => {
-    const start = (relPage - 1) * PAGE_SIZE;
-    return (related || []).slice(start, start + PAGE_SIZE);
-  }, [related, relPage]);
+  // trạng thái đăng nhập
+  const [me, setMe] = useState(null);
 
-  // Markdown lazy
-  const [remarkGfm, setRemarkGfm] = useState(null);
+  // modal xác minh + auth modal nội bộ
+  const [modal, setModal] = useState({ open: false, title: '', body: null, actions: null });
+  const [authOpen, setAuthOpen] = useState(false);
+
+  // phân trang related
+  const [page, setPage] = useState(1);
+  const pageSize = 5;
+  const totalPages = Math.max(1, Math.ceil((related?.length || 0) / pageSize));
+  const relatedPage = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return (related || []).slice(start, start + pageSize);
+  }, [related, page]);
+
+  const categorySlug = app?.category?.slug ?? null;
+  const isTestflight = categorySlug === 'testflight';
+  const isInstallable = ['jailbreak', 'app-clone'].includes(categorySlug);
+
+  // dynamic import ReactMarkdown để giảm bundle
   const [ReactMarkdown, setReactMarkdown] = useState(null);
+  const [remarkGfm, setRemarkGfm] = useState(null);
   useEffect(() => {
     Promise.all([
       import('react-markdown').then(m => m.default),
@@ -289,13 +406,6 @@ export default function Detail({ serverApp, serverRelated }) {
     });
   }, []);
 
-  const [me, setMe] = useState(null);
-  const [modal, setModal] = useState({ open: false, title: '', body: null, actions: null });
-
-  const categorySlug = app?.category?.slug ?? null;
-  const isTestflight = categorySlug === 'testflight';
-  const isInstallable = ['jailbreak', 'app-clone'].includes(categorySlug);
-
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(setMe);
     return () => unsub();
@@ -304,11 +414,11 @@ export default function Detail({ serverApp, serverRelated }) {
   useEffect(() => {
     setApp(serverApp);
     setRelated(serverRelated);
-    setRelPage(1);
     setShowFullDescription(false);
     setDominantColor('#f0f2f5');
     setShowAllDevices(false);
     setShowAllLanguages(false);
+    setPage(1);
   }, [router.query.slug, serverApp, serverRelated]);
 
   useEffect(() => {
@@ -367,14 +477,8 @@ export default function Detail({ serverApp, serverRelated }) {
     return { list, remain };
   }, [devicesArray]);
 
-  /* ====== Mở login của Layout ====== */
-  const openLayoutLogin = useCallback(() => {
-    try { if (typeof window !== 'undefined' && typeof window.openLogin === 'function') window.openLogin(); } catch {}
-    try { if (typeof window !== 'undefined') window.dispatchEvent(new Event('open-login')); } catch {}
-  }, []);
-
-  /* ====== Cảnh báo & nút Đăng nhập gọi đúng popup Layout ====== */
-  const requireVerified = useCallback(() => {
+  // ======= Modal "Cần xác minh" + Login
+  const openVerifyModal = () => {
     setModal({
       open: true,
       title: 'Cần xác minh email',
@@ -390,21 +494,32 @@ export default function Detail({ serverApp, serverRelated }) {
       actions: (
         <>
           <button
-            onClick={() => {
-              openLayoutLogin();
-              setModal(s => ({ ...s, open: false }));
-            }}
+            onClick={() => { setAuthOpen(true); setModal(s => ({ ...s, open: false })); }}
             className="px-3 py-2 text-sm rounded bg-gray-900 text-white"
           >
             Đăng nhập
           </button>
-          <button onClick={() => setModal(s => ({ ...s, open: false }))} className="px-3 py-2 text-sm rounded border">
-            Đóng
+          <button
+            onClick={async () => {
+              try {
+                if (auth.currentUser && !auth.currentUser.emailVerified) {
+                  await sendEmailVerification(auth.currentUser);
+                  alert('Đã gửi lại email xác minh. Vui lòng kiểm tra hộp thư.');
+                } else {
+                  setAuthOpen(true);
+                }
+              } catch (e) {
+                alert('Không thể gửi email xác minh. Vui lòng thử lại.');
+              }
+            }}
+            className="px-3 py-2 text-sm rounded border"
+          >
+            Gửi lại email xác minh
           </button>
         </>
       ),
     });
-  }, [openLayoutLogin]);
+  };
 
   const handleInstall = async (e) => {
     e.preventDefault();
@@ -430,10 +545,15 @@ export default function Detail({ serverApp, serverRelated }) {
     e.preventDefault();
     if (!app?.id || !isInstallable) return;
 
-    // Chưa đăng nhập/xác minh -> bật popup Layout
-    const u = auth.currentUser;
-    if (!u || !u.emailVerified) {
-      requireVerified();
+    // ------ Logic chuẩn:
+    // Chưa đăng nhập -> mở AuthModal
+    if (!me) {
+      setAuthOpen(true);
+      return;
+    }
+    // Đã đăng nhập nhưng chưa verify -> yêu cầu xác minh
+    if (!me.emailVerified) {
+      openVerifyModal();
       return;
     }
 
@@ -449,7 +569,10 @@ export default function Detail({ serverApp, serverRelated }) {
       const { token } = await tokRes.json();
       if (!token) throw new Error('Thiếu token');
 
+      // Tải qua proxy
       window.location.href = `/api/download-ipa?slug=${encodeURIComponent(app.slug)}&token=${encodeURIComponent(token)}`;
+
+      // Ghi log tải phụ
       fetch(`/api/admin/add-download?id=${app.id}`, { method: 'POST' }).catch(() => {});
     } catch (err) {
       alert('Không thể tạo link tải IPA. Vui lòng thử lại.');
@@ -459,13 +582,13 @@ export default function Detail({ serverApp, serverRelated }) {
     }
   };
 
-  // ======= Auto-scroll & highlight theo ?comment= (đợi element sẵn sàng) =======
+  // ======= Auto-scroll & highlight theo ?comment= (đợi element xuất hiện) =======
   useEffect(() => {
     const id = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('comment') : null;
     if (!id) return;
 
     let tried = 0;
-    const maxTries = 40;
+    const maxTries = 40; // ~2s
     const iv = setInterval(() => {
       const el = document.getElementById(`c-${id}`);
       tried++;
@@ -505,6 +628,33 @@ export default function Detail({ serverApp, serverRelated }) {
   const title = `${app.name} - App Store`;
   const description = app.description ? app.description.replace(/<\/?[^>]+(>|$)/g, '').slice(0, 160) : 'Ứng dụng iOS miễn phí, jailbreak, TestFlight';
 
+  // ====== CSS breadcrumb (mũi tên) ======
+  const ArrowItem = ({ href, children, current }) => {
+    // dùng clip-path tạo mũi tên; item cuối (current) là rỗng nền, có viền
+    const base = current
+      ? 'bg-white text-blue-600 border-2 border-blue-500'
+      : 'bg-blue-500 text-white border-2 border-blue-500';
+    const textClamp = 'max-w-[40vw] md:max-w-[28vw] truncate';
+    return (
+      <div className="relative inline-flex items-center h-10">
+        <div
+          className={`px-4 ${base} h-10 flex items-center rounded-l-lg select-none whitespace-nowrap ${textClamp}`}
+          style={{ clipPath: 'polygon(0 0, calc(100% - 12px) 0, 100% 50%, calc(100% - 12px) 100%, 0 100%)' }}
+        >
+          {href && !current ? (
+            <Link href={href} className="block">
+              {children}
+            </Link>
+          ) : (
+            <span className="block">{children}</span>
+          )}
+        </div>
+        {/* đệm nhỏ để tạo cảm giác arrow tách nhau, không cần ký tự '>' */}
+        <div className="w-1" />
+      </div>
+    );
+  };
+
   return (
     <Layout fullWidth>
       <Head>
@@ -517,45 +667,43 @@ export default function Detail({ serverApp, serverRelated }) {
         <meta name="twitter:card" content="summary_large_image" />
       </Head>
 
-      {/* Thông báo xác minh */}
-      <CenterModal
-        open={modal.open}
-        title={modal.title}
-        body={modal.body}
-        actions={modal.actions}
-        onClose={() => setModal(s => ({ ...s, open: false }))}
-      />
+      {/* Auth Modal nội bộ */}
+      <AuthModal open={authOpen} onClose={() => setAuthOpen(false)} />
 
-      {/* ===== Breadcrumb: mũi tên, không xuống dòng ===== */}
-      <div className="bg-white">
+      {/* Modal verify / hướng dẫn */}
+      <CenterModal open={modal.open} title={modal.title} body={modal.body} actions={modal.actions} />
+
+      {/* ===== Breadcrumb mũi tên (không xuống dòng, không cuộn ngang) ===== */}
+      <div className="bg-gray-100">
         <div className="w-full flex justify-center px-2 sm:px-4 md:px-6">
-          <div className="w-full max-w-screen-2xl">
-            <nav aria-label="Breadcrumb" className="px-2 py-3">
-              <ol className="flex items-center gap-2 whitespace-nowrap overflow-hidden">
-                <li className="min-w-0"><ArrowCrumb href="/">Home</ArrowCrumb></li>
-                <li><ArrowSep /></li>
-                <li className="min-w-0">
-                  {app?.category?.slug ? (
-                    <ArrowCrumb href={`/category/${app.category.slug}`}>
-                      {app.category.name || 'Category'}
-                    </ArrowCrumb>
-                  ) : (
-                    <ArrowCrumb>Category</ArrowCrumb>
-                  )}
-                </li>
-                <li><ArrowSep /></li>
-                <li className="min-w-0"><ArrowCrumb last>{app.name}</ArrowCrumb></li>
-              </ol>
-            </nav>
-          </div>
+          <nav className="w-full max-w-screen-2xl py-3 overflow-hidden">
+            <div className="flex items-center gap-2 whitespace-nowrap overflow-hidden">
+              <ArrowItem href="/">
+                <span className="hidden sm:inline">Home</span>
+                <span className="sm:hidden"><FontAwesomeIcon icon={faHouse} /></span>
+              </ArrowItem>
+
+              {app?.category?.slug && (
+                <ArrowItem href={`/category/${app.category.slug}`}>
+                  <span className="truncate">{app.category.name || 'Chuyên mục'}</span>
+                </ArrowItem>
+              )}
+
+              <ArrowItem current>
+                <span className="truncate">{app.name}</span>
+              </ArrowItem>
+            </div>
+          </nav>
         </div>
       </div>
 
       <div className="bg-gray-100 min-h-screen pb-12">
-        {/* HERO */}
-        <div className="w-full flex justify-center mt-0 bg-gray-100">
+        <div className="w-full flex justify-center mt-3 bg-gray-100">
           <div className="relative w-full max-w-screen-2xl px-2 sm:px-4 md:px-6 pb-8 bg-white rounded-none">
-            <div className="w-full pb-6" style={{ backgroundImage: `linear-gradient(to bottom, ${dominantColor}, #f0f2f5)` }}>
+            <div
+              className="w-full pb-6"
+              style={{ backgroundImage: `linear-gradient(to bottom, ${dominantColor}, #f0f2f5)` }}
+            >
               <div className="absolute top-3 left-3 z-10">
                 <Link
                   href="/"
@@ -574,102 +722,96 @@ export default function Detail({ serverApp, serverRelated }) {
                     onError={(e) => { e.target.src = '/placeholder-icon.png'; }}
                   />
                 </div>
-                <h1 className="mt-4 text-2xl font-bold text-gray-900 drop-shadow truncate max-w-[92vw] mx-auto sm:max-w-[70vw] md:max-w-[60vw]">
-                  {app.name}
-                </h1>
+                <h1 className="mt-4 text-2xl font-bold text-gray-900 drop-shadow truncate">{app.name}</h1>
                 {app.author && <p className="text-gray-700 text-sm">{app.author}</p>}
 
-                {/* Nút hành động – không xuống dòng */}
-                <div className="mt-4 flex flex-nowrap justify-center gap-2 px-2 overflow-hidden">
-                  <div className="flex flex-nowrap gap-2 max-w-full">
-                    {isTestflight && app.testflight_url && (
-                      <>
-                        <a
-                          href={app.testflight_url}
-                          className="inline-flex items-center border border-blue-500 text-blue-700 hover:bg-blue-100 transition px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                        >
-                          <FontAwesomeIcon icon={faRocket} className="mr-2" />
-                          Tham gia TestFlight
-                        </a>
-                        {statusLoading || status === null ? (
-                          <span className="inline-flex items-center border border-gray-300 text-gray-500 bg-gray-50 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap">
-                            Đang kiểm tra...
-                          </span>
-                        ) : status === 'Y' ? (
-                          <span className="inline-flex items-center border border-green-500 text-green-700 bg-green-50 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap">
-                            <FontAwesomeIcon icon={faCheckCircle} className="mr-1" />
-                            Còn slot
-                          </span>
-                        ) : status === 'F' ? (
-                          <span className="inline-flex items-center border border-red-500 text-red-700 bg-red-50 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap">
-                            <FontAwesomeIcon icon={faExclamationTriangle} className="mr-1" />
-                            Đã đầy
-                          </span>
+                <div className="mt-4 flex flex-wrap justify-center gap-2">
+                  {isTestflight && app.testflight_url && (
+                    <>
+                      <a
+                        href={app.testflight_url}
+                        className="inline-block border border-blue-500 text-blue-700 hover:bg-blue-100 transition px-4 py-2 rounded-full text-sm font-semibold"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <FontAwesomeIcon icon={faRocket} className="mr-2" />
+                        Tham gia TestFlight
+                      </a>
+                      {statusLoading || status === null ? (
+                        <span className="inline-block border border-gray-300 text-gray-500 bg-gray-50 px-4 py-2 rounded-full text-sm font-semibold">
+                          Đang kiểm tra...
+                        </span>
+                      ) : status === 'Y' ? (
+                        <span className="inline-block border border-green-500 text-green-700 bg-green-50 px-4 py-2 rounded-full text-sm font-semibold">
+                          <FontAwesomeIcon icon={faCheckCircle} className="mr-1" />
+                          Còn slot
+                        </span>
+                      ) : status === 'F' ? (
+                        <span className="inline-block border border-red-500 text-red-700 bg-red-50 px-4 py-2 rounded-full text-sm font-semibold">
+                          <FontAwesomeIcon icon={faExclamationTriangle} className="mr-1" />
+                          Đã đầy
+                        </span>
+                      ) : (
+                        <span className="inline-block border border-yellow-500 text-yellow-700 bg-yellow-50 px-4 py-2 rounded-full text-sm font-semibold">
+                          <FontAwesomeIcon icon={faTimesCircle} className="mr-1" />
+                          Ngừng nhận
+                        </span>
+                      )}
+                    </>
+                  )}
+
+                  {isInstallable && (
+                    <>
+                      <button
+                        onClick={handleInstall}
+                        disabled={isInstalling}
+                        className={`inline-flex items-center border border-green-500 text-green-700 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-green-200 active:shadow-inner active:ring-2 active:ring-green-500 ${isInstalling ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-100'}`}
+                      >
+                        {isInstalling ? (
+                          <>
+                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Đang xử lý…
+                          </>
                         ) : (
-                          <span className="inline-flex items-center border border-yellow-500 text-yellow-700 bg-yellow-50 px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap">
-                            <FontAwesomeIcon icon={faTimesCircle} className="mr-1" />
-                            Ngừng nhận
-                          </span>
+                          <>
+                            <FontAwesomeIcon icon={faDownload} className="mr-2" />
+                            Cài đặt
+                          </>
                         )}
-                      </>
-                    )}
+                      </button>
 
-                    {isInstallable && (
-                      <>
-                        <button
-                          onClick={handleInstall}
-                          disabled={isInstalling}
-                          className={`inline-flex items-center border border-green-500 text-green-700 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-green-200 active:shadow-inner active:ring-2 active:ring-green-500 whitespace-nowrap ${isInstalling ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-100'}`}
-                        >
-                          {isInstalling ? (
-                            <>
-                              <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                              </svg>
-                              Đang xử lý…
-                            </>
-                          ) : (
-                            <>
-                              <FontAwesomeIcon icon={faDownload} className="mr-2" />
-                              Cài đặt
-                            </>
-                          )}
-                        </button>
-
-                        <button
-                          onClick={handleDownloadIpa}
-                          disabled={isFetchingIpa}
-                          className={`inline-flex items-center border border-blue-500 text-blue-700 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-blue-200 active:shadow-inner active:ring-2 active:ring-blue-500 whitespace-nowrap ${isFetchingIpa ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-100'}`}
-                          title="Tải file IPA (ẩn nguồn tải)"
-                        >
-                          {isFetchingIpa ? (
-                            <>
-                              <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                              </svg>
-                              Đang tạo…
-                            </>
-                          ) : (
-                            <>
-                              <FontAwesomeIcon icon={faFileArrowDown} className="mr-2" />
-                              Tải IPA
-                            </>
-                          )}
-                        </button>
-                      </>
-                    )}
-                  </div>
+                      <button
+                        onClick={handleDownloadIpa}
+                        disabled={isFetchingIpa}
+                        className={`inline-flex items-center border border-blue-500 text-blue-700 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-blue-200 active:shadow-inner active:ring-2 active:ring-blue-500 ${isFetchingIpa ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-100'}`}
+                        title="Tải file IPA (ẩn nguồn tải)"
+                      >
+                        {isFetchingIpa ? (
+                          <>
+                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Đang tạo…
+                          </>
+                        ) : (
+                          <>
+                            <FontAwesomeIcon icon={faFileArrowDown} className="mr-2" />
+                            Tải IPA
+                          </>
+                        )}
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* CONTENT */}
         <div className="max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 mt-6 space-y-6">
           {/* Info cards */}
           <div className="bg-white rounded-xl p-4 shadow flex justify-between text-center overflow-x-auto divide-x divide-gray-200">
@@ -711,30 +853,32 @@ export default function Detail({ serverApp, serverRelated }) {
             <h2 className="text-lg font-bold text-gray-800 mb-3">Mô tả</h2>
             <div className={`relative overflow-hidden transition-all duration-300 ${showFullDescription ? '' : 'max-h-72'}`}>
               <div className={`${showFullDescription ? '' : 'mask-gradient-bottom'}`}>
-                {ReactMarkdown && remarkGfm && (
+                {ReactMarkdown ? (
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={{
-                      h1: (props) => <h3 className="text-xl font-bold mt-3 mb-2" {...props} />,
-                      h2: (props) => <h4 className="text-lg font-bold mt-3 mb-2" {...props} />,
-                      h3: (props) => <h5 className="text-base font-bold mt-3 mb-2" {...props} />,
-                      p: (props) => <p className="text-gray-700 leading-7 mb-3" {...props} />,
-                      ul: (props) => <ul className="list-disc pl-5 space-y-1 mb-3" {...props} />,
-                      ol: (props) => <ol className="list-decimal pl-5 space-y-1 mb-3" {...props} />,
-                      li: (props) => <li className="marker:text-blue-500" {...props} />,
-                      a: (props) => <a className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
-                      code: ({ inline, ...props }) =>
+                      h1: ({...props}) => <h3 className="text-xl font-bold mt-3 mb-2" {...props} />,
+                      h2: ({...props}) => <h4 className="text-lg font-bold mt-3 mb-2" {...props} />,
+                      h3: ({...props}) => <h5 className="text-base font-bold mt-3 mb-2" {...props} />,
+                      p: ({...props}) => <p className="text-gray-700 leading-7 mb-3" {...props} />,
+                      ul: ({...props}) => <ul className="list-disc pl-5 space-y-1 mb-3" {...props} />,
+                      ol: ({...props}) => <ol className="list-decimal pl-5 space-y-1 mb-3" {...props} />,
+                      li: ({...props}) => <li className="marker:text-blue-500" {...props} />,
+                      a: ({...props}) => <a className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
+                      code: ({inline, ...props}) =>
                         inline ? (
                           <code className="px-1 py-0.5 rounded bg-gray-100 text-pink-700" {...props} />
                         ) : (
                           <pre className="p-3 rounded bg-gray-900 text-gray-100 overflow-auto mb-3"><code {...props} /></pre>
                         ),
-                      blockquote: (props) => <PrettyBlockquote {...props} />,
+                      blockquote: ({...props}) => <PrettyBlockquote {...props} />,
                       hr: () => <hr className="my-4 border-gray-200" />,
                     }}
                   >
                     {normalizeDescription(app.description)}
                   </ReactMarkdown>
+                ) : (
+                  <p className="text-gray-700 leading-7 mb-3 whitespace-pre-wrap">{normalizeDescription(app.description)}</p>
                 )}
               </div>
               {!showFullDescription && (
@@ -792,7 +936,8 @@ export default function Detail({ serverApp, serverRelated }) {
               />
               <InfoRow
                 label="Ngôn ngữ"
-                value={
+                value=
+                {
                   languagesArray.length
                     ? showAllLanguages
                       ? languagesArray.join(', ')
@@ -815,17 +960,20 @@ export default function Detail({ serverApp, serverRelated }) {
                     : 'Không rõ'
                 }
               />
-              <InfoRow label="Xếp hạng tuổi" value={app.age_rating || 'Không rõ'} />
+              <InfoRow
+                label="Xếp hạng tuổi"
+                value={app.age_rating || 'Không rõ'}
+              />
             </div>
           </div>
 
-          {/* Related + Phân trang */}
-          {relatedSlice.length > 0 && (
+          {/* Related + phân trang */}
+          {related.length > 0 && (
             <div className="bg-white rounded-xl p-4 shadow">
               <h2 className="text-lg font-bold text-gray-800 mb-4">Ứng dụng cùng chuyên mục</h2>
 
               <div className="divide-y divide-gray-200">
-                {relatedSlice.map((item) => (
+                {relatedPage.map((item) => (
                   <Link
                     href={`/${item.slug}`}
                     key={item.id}
@@ -835,7 +983,7 @@ export default function Detail({ serverApp, serverRelated }) {
                       <img
                         src={item.icon_url || '/placeholder-icon.png'}
                         alt={item.name}
-                        className="w-14 h-14 rounded-xl object-cover shadow-sm flex-shrink-0"
+                        className="w-14 h-14 rounded-xl object-cover shadow-sm"
                         onError={(e) => { e.target.src = '/placeholder-icon.png'; }}
                       />
                       <div className="flex flex-col min-w-0">
@@ -855,28 +1003,24 @@ export default function Detail({ serverApp, serverRelated }) {
                 ))}
               </div>
 
-              {/* Pagination controls */}
-              {relTotalPages > 1 && (
-                <div className="mt-4 flex items-center justify-between">
-                  <button
-                    onClick={() => setRelPage(p => Math.max(1, p - 1))}
-                    disabled={relPage === 1}
-                    className={`px-3 py-1.5 rounded border text-sm ${relPage === 1 ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'}`}
-                  >
-                    ← Trang trước
-                  </button>
-                  <div className="text-sm text-gray-600">
-                    Trang <b>{relPage}</b> / {relTotalPages}
-                  </div>
-                  <button
-                    onClick={() => setRelPage(p => Math.min(relTotalPages, p + 1))}
-                    disabled={relPage === relTotalPages}
-                    className={`px-3 py-1.5 rounded border text-sm ${relPage === relTotalPages ? 'opacity-50 cursor-not-allowed' : 'hover:bg-gray-50'}`}
-                  >
-                    Trang sau →
-                  </button>
-                </div>
-              )}
+              {/* Pagination */}
+              <div className="mt-4 flex items-center justify-between">
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="px-3 py-2 rounded border text-sm disabled:opacity-50"
+                >
+                  Trang trước
+                </button>
+                <div className="text-sm text-gray-600">Trang {page}/{totalPages}</div>
+                <button
+                  onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="px-3 py-2 rounded border text-sm disabled:opacity-50"
+                >
+                  Trang sau
+                </button>
+              </div>
             </div>
           )}
 
@@ -884,6 +1028,7 @@ export default function Detail({ serverApp, serverRelated }) {
           <div className="bg-white rounded-xl p-4 shadow">
             <Comments postId={app.slug} postTitle={app.name} />
           </div>
+
         </div>
       </div>
     </Layout>
