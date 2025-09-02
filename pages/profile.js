@@ -1,10 +1,9 @@
 // pages/profile.js
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Head from 'next/head';
-
-import Layout from '../components/Layout'; // Header + Footer đẹp, đồng bộ giao diện
-
+import Layout from '../components/Layout'; // Header + Footer
 import { auth, db, storage } from '../lib/firebase-client';
+
 import {
   updateProfile,
   sendEmailVerification,
@@ -17,21 +16,22 @@ import {
   reauthenticateWithPopup,
   deleteUser,
 } from 'firebase/auth';
+
 import {
   doc,
   getDoc,
   setDoc,
   deleteDoc,
   serverTimestamp,
-  addDoc,
   collection,
+  getDocs,
+  getCountFromServer,
   query,
   where,
   orderBy,
   limit,
-  getDocs,
-  getCountFromServer,
 } from 'firebase/firestore';
+
 import {
   ref as storageRef,
   uploadBytes,
@@ -42,25 +42,47 @@ import {
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faUserCircle,
-  faCheckCircle,
-  faTimesCircle,
-  faCloudArrowUp,
-  faLink,
-  faUnlink,
-  faTriangleExclamation,
-  faShieldHalved,
-  faRightFromBracket,
-  faTrash,
-  faEnvelope,
-  faKey,
-  faCertificate,
-  faMedal,
+  faUserCircle, faCheckCircle, faTimesCircle, faCloudArrowUp,
+  faLink, faUnlink, faEnvelope, faKey, faShieldHalved,
+  faTrash, faCertificate, faMedal
 } from '@fortawesome/free-solid-svg-icons';
 import { faGoogle, faGithub } from '@fortawesome/free-brands-svg-icons';
 
-// ---- Helper: nén + cắt vuông ảnh trước khi upload (canvas, không cần lib ngoài)
-async function compressAndSquareCrop(file, maxSize = 512, quality = 0.85) {
+/* ========== Helpers ========== */
+function formatRelAbs(input) {
+  try {
+    let d = null;
+    if (!input) return null;
+    if (input?.seconds) d = new Date(input.seconds * 1000);
+    else if (typeof input === 'string') d = new Date(input);
+    else if (input instanceof Date) d = input;
+
+    if (!d || isNaN(d.getTime())) return null;
+
+    const diffSec = Math.floor((Date.now() - d.getTime()) / 1000);
+    const rtf = new Intl.RelativeTimeFormat('vi', { numeric: 'auto' });
+    const units = [
+      ['year', 31536000],
+      ['month', 2592000],
+      ['week', 604800],
+      ['day', 86400],
+      ['hour', 3600],
+      ['minute', 60],
+      ['second', 1],
+    ];
+    for (const [unit, sec] of units) {
+      if (Math.abs(diffSec) >= sec || unit === 'second') {
+        const val = Math.round(diffSec / sec * -1);
+        return { rel: rtf.format(val, unit), abs: d.toLocaleString('vi-VN'), date: d };
+      }
+    }
+    return { rel: '', abs: d.toLocaleString('vi-VN'), date: d };
+  } catch {
+    return null;
+  }
+}
+
+async function compressAndSquareCrop(file, maxSize = 640, quality = 0.85) {
   const blobURL = URL.createObjectURL(file);
   try {
     const img = await new Promise((resolve, reject) => {
@@ -69,42 +91,23 @@ async function compressAndSquareCrop(file, maxSize = 512, quality = 0.85) {
       i.onerror = reject;
       i.src = blobURL;
     });
-
     const side = Math.min(img.width, img.height);
     const sx = (img.width - side) / 2;
     const sy = (img.height - side) / 2;
-
     const finalSize = Math.min(maxSize, side);
     const canvas = document.createElement('canvas');
     canvas.width = finalSize;
     canvas.height = finalSize;
     const ctx = canvas.getContext('2d');
     ctx.drawImage(img, sx, sy, side, side, 0, 0, finalSize, finalSize);
-
     const out = await new Promise((res) =>
-      canvas.toBlob(
-        (b) => res(b || file),
-        'image/jpeg',
-        quality
-      )
+      canvas.toBlob(b => res(b || file), 'image/jpeg', quality)
     );
     return out || file;
-  } finally {
-    URL.revokeObjectURL(blobURL);
-  }
+  } finally { URL.revokeObjectURL(blobURL); }
 }
 
-// ---- Helper: log sự kiện bảo mật/hoạt động
-async function fetchPublicIP() {
-  try {
-    const r = await fetch('https://api.ipify.org?format=json');
-    const j = await r.json();
-    return j.ip || '';
-  } catch {
-    return '';
-  }
-}
-
+/* ========== Page ========== */
 export default function ProfilePage() {
   const [user, setUser] = useState(null);
   const [displayName, setDisplayName] = useState('');
@@ -118,27 +121,26 @@ export default function ProfilePage() {
   const hasGoogle = providers.includes('google.com');
   const hasGithub = providers.includes('github.com');
 
-  // Bảo mật / reauth
+  // bảo mật / reauth
   const [reauthOpen, setReauthOpen] = useState(false);
   const pendingActionRef = useRef(null);
-  const [ip, setIp] = useState('');
-  const [ua] = useState(typeof navigator !== 'undefined' ? navigator.userAgent : '');
 
-  // Đổi email / đặt lại mật khẩu
+  // đổi email & reset pass
   const [newEmail, setNewEmail] = useState('');
 
-  // Nhật ký & thống kê
-  const [logs, setLogs] = useState([]);
+  // thống kê & activity
   const [stats, setStats] = useState({ comments: 0, likes: 0, badges: [] });
+  const [recentComments, setRecentComments] = useState([]); // hoạt động gần đây lấy từ comments
+  const [joinedAt, setJoinedAt] = useState(null); // ngày tham gia
+  const [lastActive, setLastActive] = useState(null); // trạng thái hoạt động
 
-  // Toast tiện dụng
-  const showToast = (type, text, ms = 3000) => {
+  const showToast = (type, text, ms = 3200) => {
     setToast({ type, text });
-    window.clearTimeout((showToast._t || 0));
+    window.clearTimeout(showToast._t || 0);
     showToast._t = window.setTimeout(() => setToast(null), ms);
   };
 
-  // Load user
+  /* ===== Load user + hồ sơ ===== */
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(async (u) => {
       setUser(u);
@@ -146,101 +148,93 @@ export default function ProfilePage() {
 
       setDisplayName(u.displayName || '');
 
-      // tạo/lấy doc user
+      // users/{uid}
       const uref = doc(db, 'users', u.uid);
       const snap = await getDoc(uref);
       if (!snap.exists()) {
-        await setDoc(
-          uref,
-          {
-            uid: u.uid,
-            email: u.email,
-            displayName: u.displayName || '',
-            photoURL: u.photoURL || '',
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-            badges: [], // cho hiển thị huy hiệu
-          },
-          { merge: true }
-        );
+        await setDoc(uref, {
+          uid: u.uid,
+          email: u.email,
+          displayName: u.displayName || '',
+          photoURL: u.photoURL || '',
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          badges: [],
+        }, { merge: true });
       }
 
-      // IP để log
-      const myip = await fetchPublicIP();
-      setIp(myip);
+      // Ngày tham gia (ưu tiên Firestore.createdAt, fallback metadata.creationTime)
+      const created = (await getDoc(uref)).data()?.createdAt || u.metadata?.creationTime || null;
+      setJoinedAt(created ? formatRelAbs(created) : null);
 
-      // Log đăng nhập / truy cập trang hồ sơ
-      await addDoc(collection(db, 'user_logs', u.uid, 'events'), {
-        type: 'profile_open',
-        provider: (u.providerData?.[0]?.providerId) || 'password',
-        ip: myip,
-        ua,
-        ts: serverTimestamp(),
-      });
-
-      // Tải nhật ký gần đây
-      const ql = query(
-        collection(db, 'user_logs', u.uid, 'events'),
-        orderBy('ts', 'desc'),
-        limit(10)
-      );
-      const lSnap = await getDocs(ql);
-      setLogs(lSnap.docs.map((d) => ({ id: d.id, ...d.data() })));
-
-      // Thống kê cá nhân (tham khảo cấu trúc collection "comments")
-      try {
-        // Đếm bình luận
-        const qc = query(collection(db, 'comments'), where('authorId', '==', u.uid));
-        const count = await getCountFromServer(qc);
-        let likesTotal = 0;
-        // cộng tổng likesCount (nếu có)
-        const cDocs = await getDocs(qc);
-        cDocs.forEach((d) => {
-          const v = d.data()?.likesCount || 0;
-          likesTotal += Number.isFinite(v) ? v : 0;
-        });
-
-        const uDoc = await getDoc(doc(db, 'users', u.uid));
-        const badges = (uDoc.exists() && Array.isArray(uDoc.data().badges)) ? uDoc.data().badges : [];
-
-        setStats({ comments: count.data().count || 0, likes: likesTotal, badges });
-      } catch {
-        // im lặng nếu chưa có collection
-        setStats((s) => ({ ...s }));
-      }
+      // Trạng thái hoạt động (ưu tiên lastSignInTime, fallback bình luận gần nhất)
+      const lastSign = u.metadata?.lastSignInTime ? formatRelAbs(u.metadata.lastSignInTime) : null;
+      setLastActive(lastSign);
     });
     return () => unsub();
-  }, [ua]);
+  }, []);
 
-  // ===== Handlers =====
+  /* ===== Load thống kê & hoạt động gần đây từ collection comments ===== */
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      try {
+        // Đếm bình luận
+        const qCount = query(collection(db, 'comments'), where('authorId', '==', user.uid));
+        const cnt = await getCountFromServer(qCount);
+        let totalLikes = 0;
+
+        // Cộng tổng likeCount theo comments (đúng schema ở Comments.js)   [oai_citation:3‡Comments.js](file-service://file-1NtjmQujqLt7u9XVnktpUs)
+        const allDocs = await getDocs(qCount);
+        allDocs.forEach(d => {
+          const v = d.data()?.likeCount || 0;
+          totalLikes += Number.isFinite(v) ? v : 0;
+        });
+
+        // Huy hiệu (nếu có) trong users
+        const uDoc = await getDoc(doc(db, 'users', user.uid));
+        const badges = (uDoc.exists() && Array.isArray(uDoc.data().badges)) ? uDoc.data().badges : [];
+
+        // Hoạt động gần đây: 10 bình luận mới nhất của chính user
+        const qRecent = query(
+          collection(db, 'comments'),
+          where('authorId', '==', user.uid),
+          orderBy('createdAt', 'desc'),
+          limit(10)
+        );
+        const rSnap = await getDocs(qRecent);
+        const recent = rSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        setStats({ comments: cnt.data().count || 0, likes: totalLikes, badges });
+        setRecentComments(recent);
+
+        // Nếu chưa có lastActive (VD không có lastSignInTime), lấy theo comment mới nhất
+        if (!lastActive && recent.length > 0) {
+          const latest = recent[0]?.createdAt || null;
+          setLastActive(latest ? formatRelAbs(latest) : null);
+        }
+      } catch {
+        // im lặng
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  /* ===== Handlers ===== */
   const onUploadAvatar = async (e) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file || !user) return;
     try {
       setUploading(true);
-      // nén & crop vuông
-      const processed = await compressAndSquareCrop(file, 640, 0.85);
-      const ext = 'jpg';
-      const path = `avatars/${user.uid}/${Date.now()}.${ext}`;
+      const blob = await compressAndSquareCrop(file, 640, 0.85);
+      const path = `avatars/${user.uid}/${Date.now()}.jpg`;
       const r = storageRef(storage, path);
-      await uploadBytes(r, processed, { contentType: 'image/jpeg' });
+      await uploadBytes(r, blob, { contentType: 'image/jpeg' });
       const url = await getDownloadURL(r);
-
       await updateProfile(user, { photoURL: url });
-      await setDoc(
-        doc(db, 'users', user.uid),
-        { photoURL: url, updatedAt: serverTimestamp() },
-        { merge: true }
-      );
+      await setDoc(doc(db, 'users', user.uid), { photoURL: url, updatedAt: serverTimestamp() }, { merge: true });
       setUser({ ...user, photoURL: url });
       showToast('success', 'Đã cập nhật ảnh đại diện!');
-
-      await addDoc(collection(db, 'user_logs', user.uid, 'events'), {
-        type: 'avatar_update',
-        ip,
-        ua,
-        ts: serverTimestamp(),
-      });
     } catch (err) {
       showToast('error', err.message);
     } finally {
@@ -250,15 +244,12 @@ export default function ProfilePage() {
   };
 
   const onSaveBasic = async () => {
+    if (!user) return;
     if (!displayName.trim()) return showToast('error', 'Tên hiển thị không được để trống.');
     try {
       setSaving(true);
       await updateProfile(user, { displayName: displayName.trim() });
-      await setDoc(
-        doc(db, 'users', user.uid),
-        { displayName: displayName.trim(), updatedAt: serverTimestamp() },
-        { merge: true }
-      );
+      await setDoc(doc(db, 'users', user.uid), { displayName: displayName.trim(), updatedAt: serverTimestamp() }, { merge: true });
       setUser({ ...user, displayName: displayName.trim() });
       showToast('success', 'Đã lưu hồ sơ!');
     } catch (err) {
@@ -272,12 +263,6 @@ export default function ProfilePage() {
     try {
       await sendEmailVerification(user);
       showToast('success', 'Đã gửi email xác minh!');
-      await addDoc(collection(db, 'user_logs', user.uid, 'events'), {
-        type: 'email_verify_send',
-        ip,
-        ua,
-        ts: serverTimestamp(),
-      });
     } catch (err) {
       showToast('error', err.message);
     }
@@ -294,13 +279,6 @@ export default function ProfilePage() {
       await reauthenticateWithPopup(user, provider);
       setReauthOpen(false);
       showToast('success', 'Xác thực lại thành công!');
-      await addDoc(collection(db, 'user_logs', user.uid, 'events'), {
-        type: 'reauth_success',
-        provider: type,
-        ip,
-        ua,
-        ts: serverTimestamp(),
-      });
       if (pendingActionRef.current) {
         const fn = pendingActionRef.current;
         pendingActionRef.current = null;
@@ -311,29 +289,21 @@ export default function ProfilePage() {
     }
   };
 
+  const [newEmailInput, setNewEmailInput] = useState('');
   const onChangeEmail = async () => {
-    const email = newEmail.trim();
+    const email = newEmailInput.trim();
     if (!email) return showToast('error', 'Vui lòng nhập email mới.');
     const perform = async () => {
       await updateEmail(user, email);
       await setDoc(doc(db, 'users', user.uid), { email, updatedAt: serverTimestamp() }, { merge: true });
       showToast('success', 'Đã đổi email!');
-      await addDoc(collection(db, 'user_logs', user.uid, 'events'), {
-        type: 'email_change',
-        ip,
-        ua,
-        ts: serverTimestamp(),
-      });
-      setNewEmail('');
+      setNewEmailInput('');
     };
     try {
       await perform();
     } catch (err) {
-      if (err.code === 'auth/requires-recent-login') {
-        requireReauth(perform);
-      } else {
-        showToast('error', err.message);
-      }
+      if (err.code === 'auth/requires-recent-login') requireReauth(perform);
+      else showToast('error', err.message);
     }
   };
 
@@ -341,12 +311,6 @@ export default function ProfilePage() {
     try {
       await sendPasswordResetEmail(auth, user.email);
       showToast('success', 'Đã gửi email đặt lại mật khẩu!');
-      await addDoc(collection(db, 'user_logs', user.uid, 'events'), {
-        type: 'password_reset_send',
-        ip,
-        ua,
-        ts: serverTimestamp(),
-      });
     } catch (err) {
       showToast('error', err.message);
     }
@@ -357,13 +321,6 @@ export default function ProfilePage() {
       const provider = type === 'google' ? new GoogleAuthProvider() : new GithubAuthProvider();
       await linkWithPopup(user, provider);
       showToast('success', `Đã liên kết ${type === 'google' ? 'Google' : 'GitHub'}!`);
-      await addDoc(collection(db, 'user_logs', user.uid, 'events'), {
-        type: 'provider_link',
-        provider: type,
-        ip,
-        ua,
-        ts: serverTimestamp(),
-      });
     } catch (err) {
       showToast('error', err.message);
     }
@@ -373,22 +330,12 @@ export default function ProfilePage() {
     const perform = async () => {
       await unlink(user, providerId);
       showToast('success', 'Đã huỷ liên kết!');
-      await addDoc(collection(db, 'user_logs', user.uid, 'events'), {
-        type: 'provider_unlink',
-        provider: providerId,
-        ip,
-        ua,
-        ts: serverTimestamp(),
-      });
     };
     try {
       await perform();
     } catch (err) {
-      if (err.code === 'auth/requires-recent-login') {
-        requireReauth(perform);
-      } else {
-        showToast('error', err.message);
-      }
+      if (err.code === 'auth/requires-recent-login') requireReauth(perform);
+      else showToast('error', err.message);
     }
   };
 
@@ -396,44 +343,27 @@ export default function ProfilePage() {
     try {
       const base = storageRef(storage, `avatars/${uid}`);
       const all = await listAll(base);
-      await Promise.all(all.items.map((it) => deleteObject(it).catch(() => {})));
-    } catch {
-      // ignore
-    }
+      await Promise.all(all.items.map(it => deleteObject(it).catch(() => {})));
+    } catch {}
   };
 
   const onDeleteAccount = async () => {
     if (!confirm('Bạn chắc chắn muốn xoá tài khoản? Hành động này không thể hoàn tác.')) return;
-
     const perform = async () => {
       try {
-        // dọn dữ liệu trước
         await cleanupUserStorage(user.uid);
         await deleteDoc(doc(db, 'users', user.uid));
-        // log (cố gắng, có thể fail nếu rule chặn)
-        try {
-          await addDoc(collection(db, 'user_logs', user.uid, 'events'), {
-            type: 'account_delete',
-            ip,
-            ua,
-            ts: serverTimestamp(),
-          });
-        } catch {}
         await deleteUser(user);
         showToast('success', 'Đã xoá tài khoản. Hẹn gặp lại!');
       } catch (err) {
         showToast('error', err.message);
       }
     };
-
     try {
       await perform();
     } catch (err) {
-      if (err.code === 'auth/requires-recent-login') {
-        requireReauth(perform);
-      } else {
-        showToast('error', err.message);
-      }
+      if (err.code === 'auth/requires-recent-login') requireReauth(perform);
+      else showToast('error', err.message);
     }
   };
 
@@ -451,6 +381,11 @@ export default function ProfilePage() {
     );
   }
 
+  const joinedStr = joinedAt ? joinedAt.abs : '--';
+  const lastActiveStr = lastActive
+    ? (Math.abs((Date.now() - lastActive.date.getTime())/60000) < 3 ? 'Đang hoạt động' : `Hoạt động ${lastActive.rel}`)
+    : '--';
+
   return (
     <Layout>
       <Head><title>Hồ sơ – StoreiOS</title></Head>
@@ -458,15 +393,15 @@ export default function ProfilePage() {
       {toast && (
         <div
           className={`fixed top-4 left-1/2 -translate-x-1/2 z-[120] rounded-full px-4 py-2 text-sm shadow-lg border
-            ${toast.type === 'error'
-              ? 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800 text-red-700 dark:text-red-200'
-              : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100'}`}
+          ${toast.type === 'error'
+            ? 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800 text-red-700 dark:text-red-200'
+            : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100'}`}
         >
           {toast.text}
         </div>
       )}
 
-      {/* Reauth modal */}
+      {/* Re-auth modal */}
       {reauthOpen && (
         <div className="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center p-4">
           <div className="w-full max-w-sm rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-2xl">
@@ -501,7 +436,7 @@ export default function ProfilePage() {
       <div className="w-full max-w-5xl mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold mb-6">Hồ sơ của bạn</h1>
 
-        {/* Card hồ sơ + avatar */}
+        {/* Card hồ sơ */}
         <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow">
           <div className="p-6 grid grid-cols-1 md:grid-cols-[180px,1fr] gap-6">
             {/* Avatar */}
@@ -535,9 +470,15 @@ export default function ProfilePage() {
                 />
               </div>
               {uploading && <div className="mt-2 text-xs text-gray-500">Đang xử lý & tải ảnh…</div>}
+
+              {/* Ngày tham gia & Trạng thái hoạt động */}
+              <div className="mt-4 text-sm text-gray-600 dark:text-gray-300 space-y-1">
+                <div><span className="text-gray-500">Ngày tham gia:</span> <span className="font-medium">{joinedStr}</span></div>
+                <div><span className="text-gray-500">Trạng thái:</span> <span className="font-medium">{lastActiveStr}</span></div>
+              </div>
             </div>
 
-            {/* Thông tin */}
+            {/* Form info */}
             <div>
               <div className="grid gap-4">
                 <div>
@@ -557,7 +498,7 @@ export default function ProfilePage() {
                 </div>
 
                 {/* Email verify status */}
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-3">
                   {user.emailVerified ? (
                     <span className="inline-flex items-center gap-2 text-emerald-600">
                       <FontAwesomeIcon icon={faCheckCircle} />
@@ -580,7 +521,7 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              <div className="mt-6 flex items-center gap-3">
+              <div className="mt-6 flex flex-wrap items-center gap-3">
                 <button
                   onClick={onSaveBasic}
                   disabled={saving}
@@ -592,7 +533,7 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Đổi email & đặt lại mật khẩu */}
+          {/* Bảo mật nhanh: đổi email & reset pass */}
           <div className="px-6 pb-6">
             <h2 className="text-lg font-semibold mb-3">Bảo mật nhanh</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -603,8 +544,8 @@ export default function ProfilePage() {
                 </div>
                 <div className="flex gap-2">
                   <input
-                    value={newEmail}
-                    onChange={(e) => setNewEmail(e.target.value)}
+                    value={newEmailInput}
+                    onChange={(e) => setNewEmailInput(e.target.value)}
                     placeholder="Email mới"
                     className="flex-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2"
                   />
@@ -693,17 +634,7 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <p className="mt-3 text-xs text-gray-500">
-              * Nếu email của bạn đã tồn tại với nhà cung cấp khác, hệ thống sẽ yêu cầu đăng nhập bằng nhà cung cấp cũ để liên kết.
-            </p>
-          </div>
-
-          {/* Bảo mật & xoá tài khoản */}
-          <div className="px-6 pb-6">
-            <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
-              <FontAwesomeIcon icon={faShieldHalved} /> Bảo mật nâng cao
-            </h2>
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="mt-6 flex flex-wrap items-center gap-3">
               <button
                 onClick={onDeleteAccount}
                 className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 flex items-center gap-2"
@@ -712,14 +643,14 @@ export default function ProfilePage() {
                 Xoá tài khoản
               </button>
               <span className="text-xs text-gray-500 flex items-center gap-1">
-                <FontAwesomeIcon icon={faTriangleExclamation} />
+                <FontAwesomeIcon icon={faShieldHalved} />
                 Thao tác nhạy cảm có thể yêu cầu xác thực lại.
               </span>
             </div>
           </div>
         </div>
 
-        {/* Thống kê & Nhật ký */}
+        {/* Thống kê & Hoạt động gần đây */}
         <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Thống kê cá nhân */}
           <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow p-6">
@@ -759,10 +690,10 @@ export default function ProfilePage() {
             )}
           </div>
 
-          {/* Nhật ký hoạt động gần đây */}
+          {/* Hoạt động gần đây (từ comments của bạn) */}
           <div className="lg:col-span-2 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow p-6">
             <h3 className="text-lg font-semibold mb-4">Hoạt động gần đây</h3>
-            {logs.length === 0 ? (
+            {recentComments.length === 0 ? (
               <p className="text-sm text-gray-500">Chưa có hoạt động.</p>
             ) : (
               <div className="overflow-x-auto">
@@ -770,24 +701,23 @@ export default function ProfilePage() {
                   <thead>
                     <tr className="text-left text-gray-500 border-b border-gray-200 dark:border-gray-800">
                       <th className="py-2 pr-4">Thời gian</th>
-                      <th className="py-2 pr-4">Sự kiện</th>
-                      <th className="py-2 pr-4">Provider</th>
-                      <th className="py-2 pr-4">IP</th>
-                      <th className="py-2">Thiết bị</th>
+                      <th className="py-2 pr-4">Nội dung</th>
+                      <th className="py-2 pr-4">Bài viết</th>
+                      <th className="py-2">Lượt like</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {logs.map((l) => (
-                      <tr key={l.id} className="border-b border-gray-100 dark:border-gray-800">
-                        <td className="py-2 pr-4">
-                          {l.ts?.toDate ? l.ts.toDate().toLocaleString() : '-'}
-                        </td>
-                        <td className="py-2 pr-4">{l.type}</td>
-                        <td className="py-2 pr-4">{l.provider || '-'}</td>
-                        <td className="py-2 pr-4">{l.ip || '-'}</td>
-                        <td className="py-2 truncate max-w-[240px]">{l.ua || '-'}</td>
-                      </tr>
-                    ))}
+                    {recentComments.map((c) => {
+                      const t = formatRelAbs(c.createdAt);
+                      return (
+                        <tr key={c.id} className="border-b border-gray-100 dark:border-gray-800">
+                          <td className="py-2 pr-4" title={t?.abs || ''}>{t?.rel || '-'}</td>
+                          <td className="py-2 pr-4 max-w-[520px] truncate">{String(c.content || '').trim()}</td>
+                          <td className="py-2 pr-4">{c.postId || '-'}</td>
+                          <td className="py-2">{Math.max(0, Number(c.likeCount || 0))}</td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
