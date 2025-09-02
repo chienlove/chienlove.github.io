@@ -1,5 +1,6 @@
 // components/Comments.js
 import { useEffect, useMemo, useState } from 'react';
+import Link from 'next/link';
 import { auth, db } from '../lib/firebase-client';
 import {
   addDoc, collection, deleteDoc, doc, getDoc,
@@ -442,58 +443,47 @@ export default function Comments({ postId, postTitle }) {
   );
 }
 
-/* ==================== Hàng mục con ==================== */
-function CommentRow({ c, me, small=false, canDelete=false, onDelete, isAdminFn=() => false, quoteFrom=null, onToggleLike }) {
-  const avatar = c.userPhoto;
-  const name = c.userName || (me && me.uid === c.authorId ? preferredName(me) : 'Người dùng');
-  const time = formatDate(c.createdAt);
-  const youLiked = !!me && Array.isArray(c.likedBy) && c.likedBy.includes(me.uid);
-  const likeCount = Math.max(0, Number(c.likeCount || 0));
+/* ========= Component CommentRow (ĐÃ CẬP NHẬT) ========= */
+function CommentRow({ c, me, small = false, isAdminFn, quoteFrom, canDelete, onDelete, onToggleLike }) {
+  const isAdmin = isAdminFn?.(c.authorId);
+  const hasLiked = Array.isArray(c.likedBy) && c.likedBy.includes(me?.uid);
+  const likeCount = c.likeCount || 0;
+  const dt = formatDate(c.createdAt);
+  const avatar = c.userPhoto || '';
+  const userName = c.userName || 'Người dùng';
 
   return (
-    <div className="flex items-start gap-3">
-      {avatar ? (
-        <img src={avatar} alt="" className={`${small ? 'w-7 h-7' : 'w-9 h-9'} rounded-full object-cover`} referrerPolicy="no-referrer" />
-      ) : (
-        <div className={`${small ? 'w-7 h-7' : 'w-9 h-9'} rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center`}>
-          <FontAwesomeIcon icon={faUserCircle} className={`${small ? 'w-4 h-4' : 'w-5 h-5'} text-gray-600 dark:text-gray-300`} />
-        </div>
-      )}
-      <div className="flex-1">
-        <div className={`flex flex-wrap items-center gap-2 ${small ? 'text-[13px]' : 'text-[15px]'}`}>
-          <span className="font-semibold text-blue-800 dark:text-blue-300 inline-flex items-center gap-1">
-            {name}
-            {isAdminFn(c.authorId) && (
-              <span
-                className="inline-flex items-center justify-center translate-y-[0.5px]"
-                title="Quản trị viên đã xác minh"
-              >
-                <VerifiedBadgeX className="w-4 h-4" />
-              </span>
-            )}
-          </span>
-          {time && (
-            <span className="text-xs text-gray-500" title={time.abs}>
-              {time.rel}
-            </span>
+    <div className="flex gap-3">
+      <div className={`flex-shrink-0 ${small ? 'w-8 h-8' : 'w-10 h-10'} rounded-full border border-gray-300 dark:border-gray-600 flex items-center justify-center bg-gray-100 dark:bg-gray-800`}>
+        {avatar ? (
+          <img src={avatar} alt="avatar" className="w-full h-full rounded-full object-cover" referrerPolicy="no-referrer" />
+        ) : (
+          <FontAwesomeIcon icon={faUserCircle} className={`${small ? 'w-5 h-5' : 'w-6 h-6'} text-gray-400`} />
+        )}
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* TÊN NGƯỜI DÙNG - ĐÃ THÊM LIÊN KẾT */}
+          {c.authorId ? (
+            <Link 
+              href={`/users/${c.authorId}`}
+              className="font-medium text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 hover:underline transition-colors"
+            >
+              {userName}
+            </Link>
+          ) : (
+            <span className="font-medium text-gray-900 dark:text-gray-100">{userName}</span>
           )}
-
-          {/* ❤️ Like (chỉ dùng faHeart solid để tránh lỗi gói regular) */}
-          <button
-            onClick={onToggleLike}
-            className={`ml-2 inline-flex items-center gap-1 text-xs transition ${
-              youLiked ? 'text-rose-600' : 'text-gray-500 hover:text-rose-600'
-            }`}
-            title={youLiked ? 'Bỏ thích' : 'Thích'}
-          >
-            <FontAwesomeIcon icon={faHeart} className={`w-4 h-4 ${youLiked ? '' : 'opacity-60'}`} />
-            <span>{likeCount}</span>
-          </button>
-
+          
+          {isAdmin && <VerifiedBadgeX className="w-4 h-4" />}
+          
+          <span className="text-xs text-gray-500 dark:text-gray-400" title={dt?.abs}>
+            {dt?.rel}
+          </span>
+          
           {canDelete && (
-            <button onClick={onDelete} className="ml-auto text-xs text-red-600 inline-flex items-center gap-1 hover:underline">
+            <button onClick={onDelete} className="text-xs text-rose-500 hover:text-rose-700 ml-auto" title="Xoá">
               <FontAwesomeIcon icon={faTrash} />
-              Xoá
             </button>
           )}
         </div>
@@ -503,7 +493,17 @@ function CommentRow({ c, me, small=false, canDelete=false, onDelete, isAdminFn=(
           <div className="mt-2 text-[13px] text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg p-2">
             <div className="flex items-center gap-2 mb-1 opacity-80">
               <FontAwesomeIcon icon={faQuoteLeft} className="w-3.5 h-3.5" />
-              <span className="font-medium">{quoteFrom.userName || 'Người dùng'}</span>
+              {/* TÊN TRONG QUOTE CŨNG CÓ LIÊN KẾT */}
+              {quoteFrom.authorId ? (
+                <Link 
+                  href={`/users/${quoteFrom.authorId}`}
+                  className="font-medium hover:text-blue-600 dark:hover:text-blue-400 hover:underline transition-colors"
+                >
+                  {quoteFrom.userName || 'Người dùng'}
+                </Link>
+              ) : (
+                <span className="font-medium">{quoteFrom.userName || 'Người dùng'}</span>
+              )}
             </div>
             <div className="whitespace-pre-wrap break-words">{excerpt(quoteFrom.content, 200)}</div>
           </div>
@@ -511,6 +511,22 @@ function CommentRow({ c, me, small=false, canDelete=false, onDelete, isAdminFn=(
 
         <div className="mt-2 whitespace-pre-wrap break-words text-gray-900 dark:text-gray-100 leading-6">
           {c.content}
+        </div>
+
+        {/* Nút Like */}
+        <div className="mt-2 flex items-center gap-2">
+          <button
+            onClick={onToggleLike}
+            className={`inline-flex items-center gap-1 text-sm transition-colors ${
+              hasLiked 
+                ? 'text-rose-500 hover:text-rose-600' 
+                : 'text-gray-500 hover:text-rose-500 dark:text-gray-400 dark:hover:text-rose-400'
+            }`}
+            title={hasLiked ? 'Bỏ thích' : 'Thích'}
+          >
+            <FontAwesomeIcon icon={faHeart} className={hasLiked ? 'text-rose-500' : ''} />
+            {likeCount > 0 && <span>{likeCount}</span>}
+          </button>
         </div>
       </div>
     </div>
@@ -604,7 +620,18 @@ function ReplyBox({ me, postId, parent, replyingTo=null, adminUids, postTitle, o
         <form onSubmit={onReply} className="flex flex-col gap-2 mt-2">
           {target && (
             <div className="text-[12px] text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 rounded-lg p-2">
-              <span className="font-medium">{target.userName || 'Người dùng'}:</span> {excerpt(target.content, 160)}
+              {/* TÊN TRONG REPLY BOX CŨNG CÓ LIÊN KẾT */}
+              {target.authorId ? (
+                <Link 
+                  href={`/users/${target.authorId}`}
+                  className="font-medium hover:text-blue-600 dark:hover:text-blue-400 hover:underline transition-colors"
+                >
+                  {target.userName || 'Người dùng'}
+                </Link>
+              ) : (
+                <span className="font-medium">{target.userName || 'Người dùng'}</span>
+              )}
+              : {excerpt(target.content, 160)}
             </div>
           )}
           <textarea
@@ -625,7 +652,7 @@ function ReplyBox({ me, postId, parent, replyingTo=null, adminUids, postTitle, o
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-sm rounded-lg bg-gray-900 text-white dark:bg.white dark:text-gray-900 hover:opacity-90 inline-flex items-center gap-2"
+              className="px-4 py-2 text-sm rounded-lg bg-gray-900 text-white dark:bg-white dark:text-gray-900 hover:opacity-90 inline-flex items-center gap-2"
             >
               Gửi
             </button>
@@ -635,3 +662,4 @@ function ReplyBox({ me, postId, parent, replyingTo=null, adminUids, postTitle, o
     </div>
   );
 }
+
