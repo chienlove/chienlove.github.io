@@ -1,72 +1,71 @@
 // pages/profile.js
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Head from 'next/head';
-import Layout from '../components/Layout'; // header + footer
 import { auth, db, storage } from '../lib/firebase-client';
-
 import {
   updateProfile,
+  updateEmail,
+  sendPasswordResetEmail,
   sendEmailVerification,
   GoogleAuthProvider,
   GithubAuthProvider,
+  EmailAuthProvider,
+  reauthenticateWithPopup,
+  reauthenticateWithCredential,
   linkWithPopup,
   unlink,
 } from 'firebase/auth';
-
 import {
+  collection,
   doc,
   getDoc,
-  setDoc,
-  serverTimestamp,
-  collection,
   getDocs,
   getCountFromServer,
-  query,
-  where,
-  orderBy,
   limit,
+  orderBy,
+  query,
+  setDoc,
+  serverTimestamp,
 } from 'firebase/firestore';
-
 import {
   ref as storageRef,
   uploadBytes,
   getDownloadURL,
 } from 'firebase/storage';
-
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faUserCircle, faCheckCircle, faTimesCircle, faCloudArrowUp,
-  faLink, faUnlink, faCertificate, faMedal
+  faUserCircle, faCheckCircle, faCloudArrowUp, faLink, faUnlink,
+  faShieldHalved, faEnvelope, faKey, faFloppyDisk, faCalendarDays,
+  faCircleDot, faRotateRight, faTriangleExclamation, faUserPen,
+  faMagnifyingGlass, faArrowUpRightFromSquare
 } from '@fortawesome/free-solid-svg-icons';
 import { faGoogle, faGithub } from '@fortawesome/free-brands-svg-icons';
 
-/* ========= Helpers ========= */
-function toDateLike(x) {
-  if (!x) return null;
-  if (x?.seconds) return new Date(x.seconds * 1000);
-  if (x instanceof Date) return x;
-  const d = new Date(x);
-  return isNaN(d.getTime()) ? null : d;
-}
-function formatRelAbs(input) {
-  const d = toDateLike(input);
-  if (!d) return null;
-  const diffSec = Math.floor((Date.now() - d.getTime()) / 1000);
-  const rtf = new Intl.RelativeTimeFormat('vi', { numeric: 'auto' });
-  const units = [
-    ['year', 31536000], ['month', 2592000], ['week', 604800],
-    ['day', 86400], ['hour', 3600], ['minute', 60], ['second', 1],
-  ];
-  for (const [unit, sec] of units) {
-    if (Math.abs(diffSec) >= sec || unit === 'second') {
-      const val = Math.round(diffSec / sec * -1);
-      return { rel: rtf.format(val, unit), abs: d.toLocaleString('vi-VN'), date: d };
+/** Helpers **/
+const toDate = (any) => {
+  try {
+    if (!any) return null;
+    if (any.seconds) return new Date(any.seconds * 1000);
+    if (typeof any === 'number') return new Date(any);
+    if (typeof any === 'string') return new Date(any);
+    if (any instanceof Date) return any;
+  } catch {}
+  return null;
+};
+const relTime = (d) => {
+  if (!d) return '';
+  const diff = Math.floor((Date.now() - d.getTime()) / 1000);
+  const units = [['năm',31536000],['tháng',2592000],['tuần',604800],['ngày',86400],['giờ',3600],['phút',60],['giây',1]];
+  for (const [label, s] of units) {
+    if (Math.abs(diff) >= s || label === 'giây') {
+      const v = Math.round(diff / s);
+      if (v <= 0) return 'vừa xong';
+      return `${v} ${label} trước`;
     }
   }
-  return { rel: '', abs: d.toLocaleString('vi-VN'), date: d };
-}
+  return '';
+};
 
-/* ========= Page ========= */
 export default function ProfilePage() {
   const [user, setUser] = useState(null);
   const [displayName, setDisplayName] = useState('');
@@ -75,24 +74,38 @@ export default function ProfilePage() {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
 
-  // providers
-  const providers = useMemo(() => (user?.providerData?.map((p) => p.providerId) || []), [user]);
+  // UI state
+  const [securityOpen, setSecurityOpen] = useState(false);
+
+  // Stats & meta
+  const [joinedAt, setJoinedAt] = useState(null);
+  const [activeLabel, setActiveLabel] = useState('');
+  const [commentsCount, setCommentsCount] = useState(0);
+  const [likesReceived, setLikesReceived] = useState(0);
+
+  // Email change / reauth
+  const [newEmail, setNewEmail] = useState('');
+  const [passwordForReauth, setPasswordForReauth] = useState('');
+  const [emailBusy, setEmailBusy] = useState(false);
+
+  // Activity log
+  const [events, setEvents] = useState([]);
+  const [eventsLoading, setEventsLoading] = useState(true);
+
+  // Providers
+  const providers = useMemo(() => (user?.providerData?.map(p => p.providerId) || []), [user]);
   const hasGoogle = providers.includes('google.com');
   const hasGithub = providers.includes('github.com');
+  const hasPassword = providers.includes('password');
 
-  // thống kê & activity
-  const [stats, setStats] = useState({ comments: 0, likes: 0, badges: [] });
-  const [recentComments, setRecentComments] = useState([]);
-  const [joinedAt, setJoinedAt] = useState(null);
-  const [lastActive, setLastActive] = useState(null);
-
-  const showToast = (type, text, ms = 3200) => {
+  /** Toast helper */
+  const showToast = (type, text, ms = 3000) => {
     setToast({ type, text });
-    window.clearTimeout(showToast._t || 0);
+    window.clearTimeout(showToast._t);
     showToast._t = window.setTimeout(() => setToast(null), ms);
   };
 
-  /* ===== Load auth user + đảm bảo users/{uid} tồn tại ===== */
+  /** Bootstrap current user + ensure users/{uid} doc exists */
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(async (u) => {
       setUser(u);
@@ -100,7 +113,6 @@ export default function ProfilePage() {
 
       setDisplayName(u.displayName || '');
 
-      // tạo/lấy doc users/{uid}
       const uref = doc(db, 'users', u.uid);
       const snap = await getDoc(uref);
       if (!snap.exists()) {
@@ -111,104 +123,115 @@ export default function ProfilePage() {
           photoURL: u.photoURL || '',
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
-          badges: [],
-        }, { merge: true });
-      } else if (!snap.data().createdAt) {
-        await setDoc(uref, { createdAt: serverTimestamp() }, { merge: true });
+        }, { merge: true }); // tạo doc nếu thiếu  [oai_citation:12‡profile.js](file-service://file-5uidKkaSVQhAzrxFkGQJGr)
       }
 
-      // Ngày tham gia (ưu tiên users.createdAt, fallback metadata.creationTime)
-      const fresh = await getDoc(uref);
-      const created = fresh.data()?.createdAt || u.metadata?.creationTime || null;
-      setJoinedAt(created ? formatRelAbs(created) : null);
+      // Join date: ưu tiên users.createdAt; rơi xuống auth.metadata.creationTime
+      const docData = (await getDoc(uref)).data();
+      const created = toDate(docData?.createdAt) || (u.metadata?.creationTime ? new Date(u.metadata.creationTime) : null);
+      setJoinedAt(created || null);
 
-      // Trạng thái hoạt động (ưu tiên lastSignInTime)
-      const lastSign = u.metadata?.lastSignInTime ? formatRelAbs(u.metadata.lastSignInTime) : null;
-      setLastActive(lastSign);
+      // Trạng thái hoạt động: nếu là chính chủ & đang on-page thì coi là đang hoạt động
+      const setPresence = () => {
+        const active = document.visibilityState === 'visible';
+        setActiveLabel(active ? 'Đang hoạt động' : (u.metadata?.lastSignInTime ? relTime(new Date(u.metadata.lastSignInTime)) : ''));
+      };
+      setPresence();
+      const vis = () => setPresence();
+      const t = setInterval(setPresence, 30000);
+      document.addEventListener('visibilitychange', vis);
+      window.addEventListener('focus', vis);
+      window.addEventListener('blur', vis);
+      // cleanup
+      return () => {
+        clearInterval(t);
+        document.removeEventListener('visibilitychange', vis);
+        window.removeEventListener('focus', vis);
+        window.removeEventListener('blur', vis);
+      };
     });
     return () => unsub();
   }, []);
 
-  /* ===== Thống kê & Hoạt động gần đây (tương thích dữ liệu cũ/mới) =====
-     - Ưu tiên schema mới của Comments.js: authorId, likeCount, createdAt
-     - Đồng thời đọc dữ liệu cũ: userId, likesCount, timestamp
-     - Có index: dùng where+orderBy; không index: fallback chỉ where rồi sort client
-     (Comments.js: tạo comment với authorId/likeCount/createdAt)  */
+  /** Load thống kê */
   useEffect(() => {
-    if (!user) return;
-
     (async () => {
-      const myUid = user.uid;
-      const base = collection(db, 'comments');
-
-      // 1) Lấy tất cả bình luận của tôi theo cả 2 schema (mới+cũ)
-      const getByField = async (field) => {
-        try {
-          // thử orderBy createdAt desc (cần index nếu kết hợp where+orderBy)
-          const q1 = query(base, where(field, '==', myUid), orderBy('createdAt', 'desc'), limit(50));
-          const s1 = await getDocs(q1);
-          return s1.docs.map(d => ({ id: d.id, ...d.data() }));
-        } catch {
-          // fallback: chỉ where (không cần index), sau sort client
-          const q2 = query(base, where(field, '==', myUid), limit(200));
-          const s2 = await getDocs(q2);
-          return s2.docs.map(d => ({ id: d.id, ...d.data() }));
-        }
-      };
-
-      const [arrA, arrB] = await Promise.all([getByField('authorId'), getByField('userId')]);
-      const allMap = new Map();
-      [...arrA, ...arrB].forEach(c => allMap.set(c.id, c));
-      let allMine = Array.from(allMap.values());
-
-      // 2) Tổng like nhận (chấp nhận likeCount hoặc likesCount)
-      let totalLikes = 0;
-      allMine.forEach(c => {
-        const v = Number.isFinite(Number(c.likeCount)) ? Number(c.likeCount)
-                : Number.isFinite(Number(c.likesCount)) ? Number(c.likesCount)
-                : 0;
-        totalLikes += v;
-      });
-
-      // 3) Sắp xếp hoạt động theo thời gian (chấp nhận createdAt/timestamp)
-      allMine.sort((a, b) => {
-        const da = toDateLike(a.createdAt || a.timestamp) || new Date(0);
-        const db = toDateLike(b.createdAt || b.timestamp) || new Date(0);
-        return db.getTime() - da.getTime();
-      });
-      const recent = allMine.slice(0, 10);
-
-      // 4) Đếm bình luận
-      let commentsCount = allMine.length;
-      // nếu thích con số "chuẩn Firestore" và có index -> dùng getCountFromServer(authorId)
+      if (!user) return;
       try {
-        const cnt = await getCountFromServer(query(base, where('authorId', '==', myUid)));
-        commentsCount = Math.max(commentsCount, cnt.data().count || 0);
-      } catch {} // không sao nếu thiếu index
+        // Tổng bình luận
+        const qCount = query(collection(db, 'comments'), whereEq('authorId', user.uid)); // small helper below
+        const snapCount = await getCountFromServer(qCount);
+        setCommentsCount(snapCount.data().count || 0);
 
-      // 5) Huy hiệu từ users/{uid}
-      let badges = [];
-      try {
-        const uDoc = await getDoc(doc(db, 'users', myUid));
-        badges = (uDoc.exists() && Array.isArray(uDoc.data().badges)) ? uDoc.data().badges : [];
-      } catch {}
-
-      setStats({ comments: commentsCount, likes: totalLikes, badges });
-      setRecentComments(recent);
-
-      // 6) Nếu chưa có lastActive (không có lastSignInTime) => lấy theo comment mới nhất
-      if ((!lastActive || !lastActive.date) && recent.length > 0) {
-        const latest = toDateLike(recent[0].createdAt || recent[0].timestamp);
-        if (latest) setLastActive(formatRelAbs(latest));
+        // Like nhận được: lấy 200 comment gần nhất và cộng likeCount
+        const qLikes = query(
+          collection(db, 'comments'),
+          whereEq('authorId', user.uid),
+          orderBy('createdAt', 'desc'),
+          limit(200)
+        );
+        const likesSnap = await getDocs(qLikes);
+        let sum = 0;
+        likesSnap.forEach(docu => { sum += Math.max(0, Number(docu.data().likeCount || 0)); });
+        setLikesReceived(sum);
+      } catch (e) {
+        // fallback yên lặng
       }
     })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
-  /* ===== Handlers ===== */
+  /** Load nhật ký hoạt động: ưu tiên user_logs; nếu trống → fallback từ bình luận của user */
+  useEffect(() => {
+    (async () => {
+      if (!user) return;
+      setEventsLoading(true);
+      try {
+        const qLog = query(
+          collection(db, 'user_logs', user.uid, 'events'),
+          orderBy('createdAt', 'desc'),
+          limit(30)
+        );
+        const snap = await getDocs(qLog);
+        let rows = [];
+        snap.forEach(d => rows.push({ id: d.id, ...d.data() }));
+        if (rows.length === 0) {
+          // fallback: lấy 20 bình luận gần nhất của user để hiển thị dạng sự kiện
+          const qC = query(
+            collection(db, 'comments'),
+            whereEq('authorId', user.uid),
+            orderBy('createdAt', 'desc'),
+            limit(20)
+          );
+          const sc = await getDocs(qC);
+          sc.forEach(d => rows.push({
+            id: d.id,
+            type: 'comment',
+            createdAt: d.data().createdAt,
+            userAgent: navigator.userAgent,
+            provider: (user.providerData?.[0]?.providerId || 'unknown'),
+            note: (d.data().content || '').slice(0, 140),
+            postId: String(d.data().postId || ''),
+          }));
+        }
+        setEvents(rows);
+      } catch (e) {
+        setEvents([]);
+      } finally {
+        setEventsLoading(false);
+      }
+    })();
+  }, [user]);
+
+  // Firestore where helper that avoids undefined crash
+  function whereEq(field, value) {
+    const { where } = require('firebase/firestore'); // lazy to avoid SSR mismatch
+    return where(field, '==', value);
+  }
+
+  /** Upload avatar (giữ logic cũ) */
   const onUploadAvatar = async (e) => {
     const file = e.target.files?.[0];
-    if (!file || !user) return;
+    if (!file) return;
     try {
       setUploading(true);
       const path = `avatars/${user.uid}/${Date.now()}_${file.name}`;
@@ -216,8 +239,8 @@ export default function ProfilePage() {
       await uploadBytes(r, file);
       const url = await getDownloadURL(r);
       await updateProfile(user, { photoURL: url });
-      await setDoc(doc(db, 'users', user.uid), { photoURL: url, updatedAt: serverTimestamp() }, { merge: true });
       setUser({ ...user, photoURL: url });
+      await setDoc(doc(db, 'users', user.uid), { photoURL: url, updatedAt: serverTimestamp() }, { merge: true });
       showToast('success', 'Đã cập nhật ảnh đại diện!');
     } catch (err) {
       showToast('error', err.message);
@@ -225,10 +248,10 @@ export default function ProfilePage() {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
     }
-  };
+  }; // (tham chiếu code cũ)  [oai_citation:11‡profile.js](file-service://file-5uidKkaSVQhAzrxFkGQJGr)
 
+  /** Lưu tên hiển thị */
   const onSave = async () => {
-    if (!user) return;
     if (!displayName.trim()) return showToast('error', 'Tên hiển thị không được để trống.');
     try {
       setSaving(true);
@@ -241,17 +264,55 @@ export default function ProfilePage() {
     } finally {
       setSaving(false);
     }
-  };
+  }; // (tham chiếu code cũ)  [oai_citation:10‡profile.js](file-service://file-5uidKkaSVQhAzrxFkGQJGr)
 
-  const onResendVerify = async () => {
+  /** Re-auth helper */
+  const reauth = async () => {
+    if (!user) return;
     try {
-      await sendEmailVerification(user);
-      showToast('success', 'Đã gửi email xác minh!');
-    } catch (err) {
-      showToast('error', err.message);
+      if (hasPassword && passwordForReauth) {
+        const cred = EmailAuthProvider.credential(user.email, passwordForReauth);
+        await reauthenticateWithCredential(user, cred);
+      } else if (hasGoogle) {
+        await reauthenticateWithPopup(user, new GoogleAuthProvider());
+      } else if (hasGithub) {
+        await reauthenticateWithPopup(user, new GithubAuthProvider());
+      } else {
+        throw new Error('Không có phương thức re-auth phù hợp. Hãy đặt mật khẩu cho tài khoản hoặc liên kết Google/GitHub.');
+      }
+    } catch (e) {
+      throw e;
     }
   };
 
+  /** Đổi email */
+  const onChangeEmail = async () => {
+    if (!newEmail.trim()) return showToast('error', 'Nhập email mới.');
+    setEmailBusy(true);
+    try {
+      await reauth();
+      await updateEmail(user, newEmail.trim());
+      await setDoc(doc(db, 'users', user.uid), { email: newEmail.trim(), updatedAt: serverTimestamp() }, { merge: true });
+      showToast('success', 'Đã đổi email! Hãy kiểm tra hộp thư để xác minh.');
+      await sendEmailVerification(auth.currentUser);
+    } catch (e) {
+      showToast('error', e.message);
+    } finally {
+      setEmailBusy(false);
+    }
+  };
+
+  /** Reset mật khẩu */
+  const onResetPassword = async () => {
+    try {
+      await sendPasswordResetEmail(auth, user.email);
+      showToast('success', `Đã gửi email đặt lại mật khẩu tới ${user.email}`);
+    } catch (e) {
+      showToast('error', e.message);
+    }
+  };
+
+  /** Link / Unlink providers */
   const onLink = async (type) => {
     try {
       const provider = type === 'google' ? new GoogleAuthProvider() : new GithubAuthProvider();
@@ -261,9 +322,9 @@ export default function ProfilePage() {
       showToast('error', err.message);
     }
   };
-  const onUnlink = async (providerId) => {
+  const onUnlink = async (pid) => {
     try {
-      await unlink(user, providerId);
+      await unlink(user, pid);
       showToast('success', 'Đã huỷ liên kết!');
     } catch (err) {
       showToast('error', err.message);
@@ -272,265 +333,279 @@ export default function ProfilePage() {
 
   const avatar = user?.photoURL || null;
 
-  if (!user) {
-    return (
-      <Layout>
-        <Head><title>Hồ sơ – StoreiOS</title></Head>
-        <div className="w-full max-w-screen-md mx-auto px-4 py-16">
-          <h1 className="text-2xl font-bold mb-4">Hồ sơ</h1>
-          <p className="text-gray-600 dark:text-gray-300">Bạn cần đăng nhập để xem trang này.</p>
-        </div>
-      </Layout>
-    );
-  }
-
-  const joinedStr = joinedAt ? joinedAt.abs : '--';
-  const lastActiveStr = lastActive
-    ? (Math.abs((Date.now() - lastActive.date.getTime())/60000) < 3 ? 'Đang hoạt động' : `Hoạt động ${lastActive.rel}`)
-    : '--';
-
   return (
-    <Layout>
+    <>
       <Head><title>Hồ sơ – StoreiOS</title></Head>
 
       {toast && (
-        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-[120] rounded-full px-4 py-2 text-sm shadow-lg border
-          ${toast.type === 'error'
-            ? 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800 text-red-700 dark:text-red-200'
-            : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100'}`}>
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[120] rounded-full px-4 py-2 text-sm shadow-lg border
+          bg-white border-gray-200 text-gray-800">
           {toast.text}
         </div>
       )}
 
-      <div className="w-full max-w-5xl mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold mb-6">Hồ sơ của bạn</h1>
+      {/* Khối đầu trang có màu tươi */}
+      <div className="w-full bg-gradient-to-r from-sky-50 via-white to-emerald-50 border-b border-gray-200">
+        <div className="max-w-screen-2xl mx-auto px-4 py-6 flex items-center gap-4">
+          <span className="inline-flex w-10 h-10 items-center justify-center rounded-full bg-sky-100 text-sky-700">
+            <FontAwesomeIcon icon={faUserPen} />
+          </span>
+          <div>
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900">Hồ sơ cá nhân</h1>
+            <p className="text-sm text-gray-600">Quản lý thông tin, bảo mật, thống kê & hoạt động của bạn.</p>
+          </div>
+        </div>
+      </div>
 
-        {/* Card hồ sơ */}
-        <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow">
+      <div className="w-full max-w-screen-2xl mx-auto px-4 py-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Cột trái: Hồ sơ cơ bản */}
+        <section className="lg:col-span-2 rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+          <div className="bg-gradient-to-r from-sky-500 to-blue-600 text-white px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <FontAwesomeIcon icon={faUserCircle} className="w-5 h-5" />
+              <span className="font-semibold">Thông tin cơ bản</span>
+            </div>
+            <a href="/about" className="text-white/80 hover:text-white text-xs inline-flex items-center gap-1">
+              <FontAwesomeIcon icon={faMagnifyingGlass} />
+              Trợ giúp
+              <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="w-3 h-3" />
+            </a>
+          </div>
+
           <div className="p-6 grid grid-cols-1 md:grid-cols-[180px,1fr] gap-6">
             {/* Avatar */}
             <div className="flex flex-col items-center md:items-start">
               <div className="relative">
                 {avatar ? (
-                  <img
-                    src={avatar}
-                    alt="avatar"
-                    className="w-36 h-36 rounded-full object-cover border border-gray-200 dark:border-gray-700"
-                    referrerPolicy="no-referrer"
-                  />
+                  <img src={avatar} alt="avatar" className="w-36 h-36 rounded-full object-cover border border-gray-200" referrerPolicy="no-referrer" />
                 ) : (
-                  <div className="w-36 h-36 rounded-full border border-gray-200 dark:border-gray-700 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
-                    <FontAwesomeIcon icon={faUserCircle} className="w-20 h-20 opacity-70" />
+                  <div className="w-36 h-36 rounded-full border border-gray-200 flex items-center justify-center bg-gray-50">
+                    <FontAwesomeIcon icon={faUserCircle} className="w-16 h-16 text-gray-400" />
                   </div>
                 )}
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="absolute bottom-0 right-0 translate-x-1/4 translate-y-1/4 rounded-full px-3 py-1.5 text-xs bg-gray-900 text-white dark:bg-white dark:text-gray-900 shadow"
+                  className="absolute bottom-0 right-0 translate-x-1/4 translate-y-1/4 rounded-full px-3 py-1.5 text-xs bg-gray-900 text-white shadow"
                 >
                   <FontAwesomeIcon icon={faCloudArrowUp} className="mr-1" />
                   Tải ảnh
                 </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={onUploadAvatar}
-                />
+                <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={onUploadAvatar} />
               </div>
               {uploading && <div className="mt-2 text-xs text-gray-500">Đang tải ảnh…</div>}
-
-              {/* Ngày tham gia & Trạng thái */}
-              <div className="mt-4 text-sm text-gray-600 dark:text-gray-300 space-y-1">
-                <div><span className="text-gray-500">Ngày tham gia:</span> <span className="font-medium">{joinedStr}</span></div>
-                <div><span className="text-gray-500">Trạng thái:</span> <span className="font-medium">{lastActiveStr}</span></div>
-              </div>
             </div>
 
-            {/* Form info */}
-            <div>
-              <div className="grid gap-4">
-                <div>
-                  <label className="text-sm text-gray-500">Email</label>
-                  <div className="mt-1 text-sm break-all">{user.email}</div>
-                </div>
-
-                <div>
-                  <label htmlFor="displayName" className="text-sm text-gray-500">Tên hiển thị</label>
-                  <input
-                    id="displayName"
-                    className="mt-1 w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2"
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    placeholder="Tên của bạn"
-                  />
-                </div>
-
-                {/* Email verify status */}
-                <div className="flex flex-wrap items-center gap-3">
-                  {user.emailVerified ? (
-                    <span className="inline-flex items-center gap-2 text-emerald-600">
-                      <FontAwesomeIcon icon={faCheckCircle} />
-                      Email đã xác minh
-                    </span>
-                  ) : (
-                    <>
-                      <span className="inline-flex items-center gap-2 text-amber-600">
-                        <FontAwesomeIcon icon={faTimesCircle} />
-                        Email chưa xác minh
-                      </span>
-                      <button
-                        onClick={onResendVerify}
-                        className="px-3 py-1.5 rounded-lg text-sm bg-amber-600 text-white hover:bg-amber-700"
-                      >
-                        Gửi lại email xác minh
-                      </button>
-                    </>
-                  )}
-                </div>
+            {/* Form */}
+            <div className="grid gap-4">
+              <div>
+                <label className="text-sm text-gray-600">Email</label>
+                <div className="mt-1 text-sm">{user?.email}</div>
               </div>
 
-              <div className="mt-6 flex items-center gap-3">
-                <button
-                  onClick={onSave}
-                  disabled={saving}
-                  className="px-4 py-2 rounded-lg bg-gray-900 text-white dark:bg-white dark:text-gray-900 hover:opacity-90"
-                >
+              <div>
+                <label htmlFor="displayName" className="text-sm text-gray-600">Tên hiển thị</label>
+                <input
+                  id="displayName"
+                  className="mt-1 w-full rounded-lg border border-gray-300 bg-white px-3 py-2"
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder="Tên của bạn"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex items-center gap-2 text-emerald-700">
+                  <FontAwesomeIcon icon={faCheckCircle} />
+                  <span className="text-sm">{user?.emailVerified ? 'Email đã xác minh' : 'Email chưa xác minh'}</span>
+                </div>
+                {!user?.emailVerified && (
+                  <button onClick={() => sendEmailVerification(user).then(()=>showToast('success','Đã gửi email xác minh!')).catch(e=>showToast('error',e.message))}
+                          className="justify-self-end px-3 py-1.5 rounded-lg text-sm bg-amber-600 text-white hover:bg-amber-700">
+                    Gửi lại email xác minh
+                  </button>
+                )}
+              </div>
+
+              <div className="flex items-center gap-3 pt-2">
+                <button onClick={onSave} disabled={saving} className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700">
+                  <FontAwesomeIcon icon={faFloppyDisk} className="mr-2" />
                   {saving ? 'Đang lưu…' : 'Lưu hồ sơ'}
                 </button>
               </div>
             </div>
           </div>
 
-          {/* Providers */}
           <div className="px-6 pb-6">
-            <h2 className="text-lg font-semibold mb-3">Đăng nhập liên kết</h2>
+            <h3 className="text-base font-semibold mb-3">Đăng nhập liên kết</h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {/* Google */}
-              <div className="flex items-center justify-between p-3 rounded-lg border border-gray-200 dark:border-gray-800">
+              <div className="flex items-center justify-between p-3 rounded-lg border border-gray-200">
                 <div className="flex items-center gap-2">
                   <FontAwesomeIcon icon={faGoogle} />
                   <span>Google</span>
                 </div>
                 {hasGoogle ? (
-                  <button
-                    onClick={() => onUnlink('google.com')}
-                    className="px-3 py-1.5 rounded bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center gap-2"
-                    title="Huỷ liên kết Google"
-                  >
-                    <FontAwesomeIcon icon={faUnlink} />
-                    Huỷ
+                  <button onClick={() => onUnlink('google.com')} className="px-3 py-1.5 rounded bg-gray-100 hover:bg-gray-200">
+                    <FontAwesomeIcon icon={faUnlink} className="mr-2" />Huỷ
                   </button>
                 ) : (
-                  <button
-                    onClick={() => onLink('google')}
-                    className="px-3 py-1.5 rounded bg-gray-900 text-white dark:bg-white dark:text-gray-900 hover:opacity-90 flex items-center gap-2"
-                    title="Liên kết Google"
-                  >
-                    <FontAwesomeIcon icon={faLink} />
-                    Liên kết
+                  <button onClick={() => onLink('google')} className="px-3 py-1.5 rounded bg-gray-900 text-white hover:opacity-90">
+                    <FontAwesomeIcon icon={faLink} className="mr-2" />Liên kết
                   </button>
                 )}
               </div>
-
               {/* GitHub */}
-              <div className="flex items-center justify-between p-3 rounded-lg border border-gray-200 dark:border-gray-800">
+              <div className="flex items-center justify-between p-3 rounded-lg border border-gray-200">
                 <div className="flex items-center gap-2">
                   <FontAwesomeIcon icon={faGithub} />
                   <span>GitHub</span>
                 </div>
                 {hasGithub ? (
-                  <button
-                    onClick={() => onUnlink('github.com')}
-                    className="px-3 py-1.5 rounded bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center gap-2"
-                    title="Huỷ liên kết GitHub"
-                  >
-                    <FontAwesomeIcon icon={faUnlink} />
-                    Huỷ
+                  <button onClick={() => onUnlink('github.com')} className="px-3 py-1.5 rounded bg-gray-100 hover:bg-gray-200">
+                    <FontAwesomeIcon icon={faUnlink} className="mr-2" />Huỷ
                   </button>
                 ) : (
-                  <button
-                    onClick={() => onLink('github')}
-                    className="px-3 py-1.5 rounded bg-gray-900 text-white dark:bg-white dark:text-gray-900 hover:opacity-90 flex items-center gap-2"
-                    title="Liên kết GitHub"
-                  >
-                    <FontAwesomeIcon icon={faLink} />
-                    Liên kết
+                  <button onClick={() => onLink('github')} className="px-3 py-1.5 rounded bg-gray-900 text-white hover:opacity-90">
+                    <FontAwesomeIcon icon={faLink} className="mr-2" />Liên kết
                   </button>
                 )}
               </div>
             </div>
           </div>
-        </div>
+        </section>
 
-        {/* Thống kê & Hoạt động gần đây */}
-        <div className="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Thống kê cá nhân */}
-          <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow p-6">
-            <h3 className="text-lg font-semibold mb-4">Thống kê cá nhân</h3>
-            <div className="grid grid-cols-3 gap-4 text-center">
+        {/* Cột phải: Trạng thái, tham gia, thống kê */}
+        <aside className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+          <div className="bg-gradient-to-r from-emerald-500 to-teal-600 text-white px-6 py-4 flex items-center gap-3">
+            <FontAwesomeIcon icon={faShieldHalved} />
+            <span className="font-semibold">Tổng quan tài khoản</span>
+          </div>
+          <div className="p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <span className="inline-flex w-9 h-9 items-center justify-center rounded-full bg-emerald-50 text-emerald-700">
+                <FontAwesomeIcon icon={faCircleDot} />
+              </span>
               <div>
-                <div className="text-2xl font-bold">{stats.comments}</div>
-                <div className="text-xs text-gray-500 mt-1">Bình luận</div>
-              </div>
-              <div>
-                <div className="text-2xl font-bold">{stats.likes}</div>
-                <div className="text-xs text-gray-500 mt-1">Lượt like nhận</div>
-              </div>
-              <div>
-                <div className="flex items-center justify-center gap-1 text-2xl">
-                  <FontAwesomeIcon icon={faCertificate} />
-                </div>
-                <div className="text-xs text-gray-500 mt-1">Huy hiệu</div>
+                <div className="text-sm text-gray-500">Trạng thái</div>
+                <div className="font-medium">{activeLabel || '--'}</div>
               </div>
             </div>
 
-            {/* Huy hiệu */}
-            {Array.isArray(stats.badges) && stats.badges.length > 0 ? (
-              <div className="mt-4 flex flex-wrap gap-2">
-                {stats.badges.map((b, i) => (
-                  <span
-                    key={i}
-                    className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700"
-                  >
-                    <FontAwesomeIcon icon={faMedal} />
-                    {b}
-                  </span>
-                ))}
+            <div className="flex items-center gap-3">
+              <span className="inline-flex w-9 h-9 items-center justify-center rounded-full bg-sky-50 text-sky-700">
+                <FontAwesomeIcon icon={faCalendarDays} />
+              </span>
+              <div>
+                <div className="text-sm text-gray-500">Ngày tham gia</div>
+                <div className="font-medium">{joinedAt ? joinedAt.toLocaleDateString('vi-VN') : '--'}</div>
               </div>
-            ) : (
-              <p className="mt-4 text-sm text-gray-500">Chưa có huy hiệu.</p>
-            )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <div className="rounded-xl border border-gray-200 p-3">
+                <div className="text-sm text-gray-500">Bình luận</div>
+                <div className="text-2xl font-bold">{commentsCount}</div>
+              </div>
+              <div className="rounded-xl border border-gray-200 p-3">
+                <div className="text-sm text-gray-500">Lượt like nhận</div>
+                <div className="text-2xl font-bold">{likesReceived}</div>
+              </div>
+            </div>
+          </div>
+        </aside>
+
+        {/* Hàng bảo mật: đổi email & reset mật khẩu */}
+        <section className="lg:col-span-3 rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+          <div className="bg-gradient-to-r from-fuchsia-500 to-pink-500 text-white px-6 py-4 flex items-center gap-3">
+            <FontAwesomeIcon icon={faKey} />
+            <span className="font-semibold">Bảo mật & đăng nhập</span>
           </div>
 
-          {/* Hoạt động gần đây (từ comments của bạn) */}
-          <div className="lg:col-span-2 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow p-6">
-            <h3 className="text-lg font-semibold mb-4">Hoạt động gần đây</h3>
-            {recentComments.length === 0 ? (
-              <p className="text-sm text-gray-500">Chưa có hoạt động.</p>
+          <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Đổi email */}
+            <div className="rounded-xl border border-gray-200 p-4">
+              <div className="font-semibold mb-3 flex items-center gap-2"><FontAwesomeIcon icon={faEnvelope} /> Đổi email</div>
+              <input
+                className="w-full mb-3 rounded-lg border border-gray-300 px-3 py-2"
+                placeholder="Email mới"
+                type="email"
+                value={newEmail}
+                onChange={e=>setNewEmail(e.target.value)}
+              />
+              {hasPassword && (
+                <input
+                  className="w-full mb-3 rounded-lg border border-gray-300 px-3 py-2"
+                  placeholder="Mật khẩu hiện tại (để re‑auth)"
+                  type="password"
+                  value={passwordForReauth}
+                  onChange={e=>setPasswordForReauth(e.target.value)}
+                />
+              )}
+              {!hasPassword && (
+                <div className="text-xs text-gray-600 mb-3">
+                  Tài khoản không dùng mật khẩu. Hệ thống sẽ mở popup Google/GitHub để xác thực lại.
+                </div>
+              )}
+              <button onClick={onChangeEmail} disabled={emailBusy}
+                      className="px-4 py-2 rounded-lg bg-purple-600 text-white hover:bg-purple-700">
+                {emailBusy ? 'Đang xử lý…' : 'Đổi email'}
+              </button>
+            </div>
+
+            {/* Reset mật khẩu */}
+            <div className="rounded-xl border border-gray-200 p-4">
+              <div className="font-semibold mb-3 flex items-center gap-2"><FontAwesomeIcon icon={faRotateRight} /> Đặt lại mật khẩu</div>
+              <p className="text-sm text-gray-600 mb-3">Gửi email đặt lại mật khẩu tới địa chỉ đang dùng.</p>
+              <button onClick={onResetPassword} className="px-4 py-2 rounded-lg bg-rose-600 text-white hover:bg-rose-700">
+                Gửi email đặt lại mật khẩu
+              </button>
+              {!hasPassword && (
+                <p className="text-xs text-amber-700 mt-3 flex items-start gap-2">
+                  <FontAwesomeIcon icon={faTriangleExclamation} className="mt-0.5" />
+                  Tài khoản liên kết Google/GitHub không dùng mật khẩu – bạn có thể thêm mật khẩu trong mục "Quản lý tài khoản" nếu cần.
+                </p>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* Nhật ký hoạt động chi tiết */}
+        <section className="lg:col-span-3 rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+          <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white px-6 py-4 flex items-center gap-3">
+            <FontAwesomeIcon icon={faShieldHalved} />
+            <span className="font-semibold">Nhật ký hoạt động</span>
+          </div>
+          <div className="p-6">
+            {eventsLoading ? (
+              <div className="text-sm text-gray-600">Đang tải…</div>
+            ) : events.length === 0 ? (
+              <div className="text-sm text-gray-600">Chưa có hoạt động.</div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="min-w-full text-sm">
+                <table className="w-full text-sm">
                   <thead>
-                    <tr className="text-left text-gray-500 border-b border-gray-200 dark:border-gray-800">
+                    <tr className="text-left text-gray-500">
                       <th className="py-2 pr-4">Thời gian</th>
-                      <th className="py-2 pr-4">Nội dung</th>
-                      <th className="py-2 pr-4">Bài viết</th>
-                      <th className="py-2">Lượt like</th>
+                      <th className="py-2 pr-4">Sự kiện</th>
+                      <th className="py-2 pr-4">Chi tiết</th>
+                      <th className="py-2 pr-4">Thiết bị</th>
+                      <th className="py-2 pr-4">Provider</th>
+                      <th className="py-2 pr-4">IP</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {recentComments.map((c) => {
-                      const t = formatRelAbs(c.createdAt || c.timestamp);
-                      const likeNum = Number.isFinite(Number(c.likeCount)) ? Number(c.likeCount)
-                                    : Number.isFinite(Number(c.likesCount)) ? Number(c.likesCount)
-                                    : 0;
+                    {events.map(ev => {
+                      const d = toDate(ev.createdAt);
                       return (
-                        <tr key={c.id} className="border-b border-gray-100 dark:border-gray-800">
-                          <td className="py-2 pr-4" title={t?.abs || ''}>{t?.rel || '-'}</td>
-                          <td className="py-2 pr-4 max-w-[520px] truncate">{String(c.content || c.text || '').trim()}</td>
-                          <td className="py-2 pr-4">{c.postId || '-'}</td>
-                          <td className="py-2">{Math.max(0, likeNum)}</td>
+                        <tr key={ev.id} className="border-t border-gray-100">
+                          <td className="py-2 pr-4 whitespace-nowrap">{d ? `${relTime(d)} · ${d.toLocaleString('vi-VN')}` : '--'}</td>
+                          <td className="py-2 pr-4 font-medium">{ev.type || 'activity'}</td>
+                          <td className="py-2 pr-4">
+                            {ev.note || ev.commentText || ev.postTitle || ev.postId || '--'}
+                          </td>
+                          <td className="py-2 pr-4">{ev.userAgent ? ev.userAgent.split(')')[0] + ')' : '--'}</td>
+                          <td className="py-2 pr-4">{ev.provider || '--'}</td>
+                          <td className="py-2 pr-4">{ev.ip || '--'}</td>
                         </tr>
                       );
                     })}
@@ -539,8 +614,8 @@ export default function ProfilePage() {
               </div>
             )}
           </div>
-        </div>
+        </section>
       </div>
-    </Layout>
+    </>
   );
 }
