@@ -1,27 +1,22 @@
 // pages/profile.js
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Head from 'next/head';
-import Layout from '../components/Layout'; // Header + Footer đẹp
+import Layout from '../components/Layout'; // header + footer
 import { auth, db, storage } from '../lib/firebase-client';
 
 import {
   updateProfile,
   sendEmailVerification,
-  sendPasswordResetEmail,
-  updateEmail,
   GoogleAuthProvider,
   GithubAuthProvider,
   linkWithPopup,
   unlink,
-  reauthenticateWithPopup,
-  deleteUser,
 } from 'firebase/auth';
 
 import {
   doc,
   getDoc,
   setDoc,
-  deleteDoc,
   serverTimestamp,
   collection,
   getDocs,
@@ -36,15 +31,12 @@ import {
   ref as storageRef,
   uploadBytes,
   getDownloadURL,
-  listAll,
-  deleteObject,
 } from 'firebase/storage';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faUserCircle, faCheckCircle, faTimesCircle, faCloudArrowUp,
-  faLink, faUnlink, faEnvelope, faKey, faShieldHalved,
-  faTrash, faCertificate, faMedal
+  faLink, faUnlink, faCertificate, faMedal
 } from '@fortawesome/free-solid-svg-icons';
 import { faGoogle, faGithub } from '@fortawesome/free-brands-svg-icons';
 
@@ -53,11 +45,8 @@ function toDateLike(x) {
   if (!x) return null;
   if (x?.seconds) return new Date(x.seconds * 1000);
   if (x instanceof Date) return x;
-  if (typeof x === 'string' || typeof x === 'number') {
-    const d = new Date(x);
-    return isNaN(d.getTime()) ? null : d;
-  }
-  return null;
+  const d = new Date(x);
+  return isNaN(d.getTime()) ? null : d;
 }
 function formatRelAbs(input) {
   const d = toDateLike(input);
@@ -65,13 +54,8 @@ function formatRelAbs(input) {
   const diffSec = Math.floor((Date.now() - d.getTime()) / 1000);
   const rtf = new Intl.RelativeTimeFormat('vi', { numeric: 'auto' });
   const units = [
-    ['year', 31536000],
-    ['month', 2592000],
-    ['week', 604800],
-    ['day', 86400],
-    ['hour', 3600],
-    ['minute', 60],
-    ['second', 1],
+    ['year', 31536000], ['month', 2592000], ['week', 604800],
+    ['day', 86400], ['hour', 3600], ['minute', 60], ['second', 1],
   ];
   for (const [unit, sec] of units) {
     if (Math.abs(diffSec) >= sec || unit === 'second') {
@@ -80,31 +64,6 @@ function formatRelAbs(input) {
     }
   }
   return { rel: '', abs: d.toLocaleString('vi-VN'), date: d };
-}
-
-async function compressAndSquareCrop(file, maxSize = 640, quality = 0.85) {
-  const blobURL = URL.createObjectURL(file);
-  try {
-    const img = await new Promise((resolve, reject) => {
-      const i = new Image();
-      i.onload = () => resolve(i);
-      i.onerror = reject;
-      i.src = blobURL;
-    });
-    const side = Math.min(img.width, img.height);
-    const sx = (img.width - side) / 2;
-    const sy = (img.height - side) / 2;
-    const finalSize = Math.min(maxSize, side);
-    const canvas = document.createElement('canvas');
-    canvas.width = finalSize;
-    canvas.height = finalSize;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(img, sx, sy, side, side, 0, 0, finalSize, finalSize);
-    const out = await new Promise((res) =>
-      canvas.toBlob(b => res(b || file), 'image/jpeg', quality)
-    );
-    return out || file;
-  } finally { URL.revokeObjectURL(blobURL); }
 }
 
 /* ========= Page ========= */
@@ -121,13 +80,6 @@ export default function ProfilePage() {
   const hasGoogle = providers.includes('google.com');
   const hasGithub = providers.includes('github.com');
 
-  // re-auth
-  const [reauthOpen, setReauthOpen] = useState(false);
-  const pendingActionRef = useRef(null);
-
-  // bảo mật nhanh
-  const [newEmailInput, setNewEmailInput] = useState('');
-
   // thống kê & activity
   const [stats, setStats] = useState({ comments: 0, likes: 0, badges: [] });
   const [recentComments, setRecentComments] = useState([]);
@@ -140,7 +92,7 @@ export default function ProfilePage() {
     showToast._t = window.setTimeout(() => setToast(null), ms);
   };
 
-  /* ===== Load auth user & đảm bảo users/{uid} có createdAt ===== */
+  /* ===== Load auth user + đảm bảo users/{uid} tồn tại ===== */
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(async (u) => {
       setUser(u);
@@ -148,7 +100,7 @@ export default function ProfilePage() {
 
       setDisplayName(u.displayName || '');
 
-      // đảm bảo doc users/{uid}
+      // tạo/lấy doc users/{uid}
       const uref = doc(db, 'users', u.uid);
       const snap = await getDoc(uref);
       if (!snap.exists()) {
@@ -161,79 +113,93 @@ export default function ProfilePage() {
           updatedAt: serverTimestamp(),
           badges: [],
         }, { merge: true });
-      } else {
-        // nếu doc cũ chưa có createdAt thì gán
-        if (!snap.data().createdAt) {
-          await setDoc(uref, { createdAt: serverTimestamp() }, { merge: true });
-        }
+      } else if (!snap.data().createdAt) {
+        await setDoc(uref, { createdAt: serverTimestamp() }, { merge: true });
       }
 
-      // Ngày tham gia: ưu tiên users.createdAt, fallback metadata.creationTime
-      const refresh = await getDoc(uref);
-      const created = refresh.data()?.createdAt || u.metadata?.creationTime || null;
+      // Ngày tham gia (ưu tiên users.createdAt, fallback metadata.creationTime)
+      const fresh = await getDoc(uref);
+      const created = fresh.data()?.createdAt || u.metadata?.creationTime || null;
       setJoinedAt(created ? formatRelAbs(created) : null);
 
-      // Trạng thái: từ lastSignInTime (tự mình)
+      // Trạng thái hoạt động (ưu tiên lastSignInTime)
       const lastSign = u.metadata?.lastSignInTime ? formatRelAbs(u.metadata.lastSignInTime) : null;
       setLastActive(lastSign);
     });
     return () => unsub();
   }, []);
 
-  /* ===== Thống kê & hoạt động gần đây (dựa Comments) ===== */
+  /* ===== Thống kê & Hoạt động gần đây (tương thích dữ liệu cũ/mới) =====
+     - Ưu tiên schema mới của Comments.js: authorId, likeCount, createdAt
+     - Đồng thời đọc dữ liệu cũ: userId, likesCount, timestamp
+     - Có index: dùng where+orderBy; không index: fallback chỉ where rồi sort client
+     (Comments.js: tạo comment với authorId/likeCount/createdAt)  */
   useEffect(() => {
     if (!user) return;
 
     (async () => {
       const myUid = user.uid;
+      const base = collection(db, 'comments');
 
-      // Đếm bình luận
-      const qCount = query(collection(db, 'comments'), where('authorId', '==', myUid));
-      const cnt = await getCountFromServer(qCount);
+      // 1) Lấy tất cả bình luận của tôi theo cả 2 schema (mới+cũ)
+      const getByField = async (field) => {
+        try {
+          // thử orderBy createdAt desc (cần index nếu kết hợp where+orderBy)
+          const q1 = query(base, where(field, '==', myUid), orderBy('createdAt', 'desc'), limit(50));
+          const s1 = await getDocs(q1);
+          return s1.docs.map(d => ({ id: d.id, ...d.data() }));
+        } catch {
+          // fallback: chỉ where (không cần index), sau sort client
+          const q2 = query(base, where(field, '==', myUid), limit(200));
+          const s2 = await getDocs(q2);
+          return s2.docs.map(d => ({ id: d.id, ...d.data() }));
+        }
+      };
+
+      const [arrA, arrB] = await Promise.all([getByField('authorId'), getByField('userId')]);
+      const allMap = new Map();
+      [...arrA, ...arrB].forEach(c => allMap.set(c.id, c));
+      let allMine = Array.from(allMap.values());
+
+      // 2) Tổng like nhận (chấp nhận likeCount hoặc likesCount)
       let totalLikes = 0;
-
-      // Tổng likeCount theo comments (đúng schema Comments.js)  [oai_citation:3‡Comments.js](file-service://file-1NtjmQujqLt7u9XVnktpUs)
-      const allDocs = await getDocs(qCount);
-      allDocs.forEach(d => {
-        const v = d.data()?.likeCount || 0;
-        totalLikes += Number.isFinite(v) ? v : 0;
+      allMine.forEach(c => {
+        const v = Number.isFinite(Number(c.likeCount)) ? Number(c.likeCount)
+                : Number.isFinite(Number(c.likesCount)) ? Number(c.likesCount)
+                : 0;
+        totalLikes += v;
       });
 
-      // Huy hiệu trong users
-      const uDoc = await getDoc(doc(db, 'users', myUid));
-      const badges = (uDoc.exists() && Array.isArray(uDoc.data().badges)) ? uDoc.data().badges : [];
+      // 3) Sắp xếp hoạt động theo thời gian (chấp nhận createdAt/timestamp)
+      allMine.sort((a, b) => {
+        const da = toDateLike(a.createdAt || a.timestamp) || new Date(0);
+        const db = toDateLike(b.createdAt || b.timestamp) || new Date(0);
+        return db.getTime() - da.getTime();
+      });
+      const recent = allMine.slice(0, 10);
 
-      // Hoạt động gần đây: thử orderBy createdAt desc; nếu lỗi index → fallback
-      let recent = [];
+      // 4) Đếm bình luận
+      let commentsCount = allMine.length;
+      // nếu thích con số "chuẩn Firestore" và có index -> dùng getCountFromServer(authorId)
       try {
-        const qRecent = query(
-          collection(db, 'comments'),
-          where('authorId', '==', myUid),
-          orderBy('createdAt', 'desc'),
-          limit(10)
-        );
-        const rSnap = await getDocs(qRecent);
-        recent = rSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-      } catch (e) {
-        // Fallback: không orderBy (không cần index), rồi sort client
-        const qRecent2 = query(
-          collection(db, 'comments'),
-          where('authorId', '==', myUid),
-          limit(50)
-        );
-        const rSnap2 = await getDocs(qRecent2);
-        recent = rSnap2.docs.map(d => ({ id: d.id, ...d.data() }));
-        recent.sort((a, b) => (toDateLike(b.createdAt)?.getTime() || 0) - (toDateLike(a.createdAt)?.getTime() || 0));
-        recent = recent.slice(0, 10);
-      }
+        const cnt = await getCountFromServer(query(base, where('authorId', '==', myUid)));
+        commentsCount = Math.max(commentsCount, cnt.data().count || 0);
+      } catch {} // không sao nếu thiếu index
 
-      setStats({ comments: cnt.data().count || 0, likes: totalLikes, badges });
+      // 5) Huy hiệu từ users/{uid}
+      let badges = [];
+      try {
+        const uDoc = await getDoc(doc(db, 'users', myUid));
+        badges = (uDoc.exists() && Array.isArray(uDoc.data().badges)) ? uDoc.data().badges : [];
+      } catch {}
+
+      setStats({ comments: commentsCount, likes: totalLikes, badges });
       setRecentComments(recent);
 
-      // Nếu chưa có lastActive thì lấy theo bình luận mới nhất
-      if (!lastActive && recent.length > 0) {
-        const latest = recent[0]?.createdAt || null;
-        setLastActive(latest ? formatRelAbs(latest) : null);
+      // 6) Nếu chưa có lastActive (không có lastSignInTime) => lấy theo comment mới nhất
+      if ((!lastActive || !lastActive.date) && recent.length > 0) {
+        const latest = toDateLike(recent[0].createdAt || recent[0].timestamp);
+        if (latest) setLastActive(formatRelAbs(latest));
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -245,10 +211,9 @@ export default function ProfilePage() {
     if (!file || !user) return;
     try {
       setUploading(true);
-      const blob = await compressAndSquareCrop(file, 640, 0.85);
-      const path = `avatars/${user.uid}/${Date.now()}.jpg`;
+      const path = `avatars/${user.uid}/${Date.now()}_${file.name}`;
       const r = storageRef(storage, path);
-      await uploadBytes(r, blob, { contentType: 'image/jpeg' });
+      await uploadBytes(r, file);
       const url = await getDownloadURL(r);
       await updateProfile(user, { photoURL: url });
       await setDoc(doc(db, 'users', user.uid), { photoURL: url, updatedAt: serverTimestamp() }, { merge: true });
@@ -262,7 +227,7 @@ export default function ProfilePage() {
     }
   };
 
-  const onSaveBasic = async () => {
+  const onSave = async () => {
     if (!user) return;
     if (!displayName.trim()) return showToast('error', 'Tên hiển thị không được để trống.');
     try {
@@ -287,53 +252,6 @@ export default function ProfilePage() {
     }
   };
 
-  const requireReauth = (actionFn) => {
-    pendingActionRef.current = actionFn;
-    setReauthOpen(true);
-  };
-
-  const doReauth = async (type) => {
-    try {
-      const provider = type === 'google' ? new GoogleAuthProvider() : new GithubAuthProvider();
-      await reauthenticateWithPopup(user, provider);
-      setReauthOpen(false);
-      showToast('success', 'Xác thực lại thành công!');
-      if (pendingActionRef.current) {
-        const fn = pendingActionRef.current;
-        pendingActionRef.current = null;
-        await fn();
-      }
-    } catch (err) {
-      showToast('error', err.message);
-    }
-  };
-
-  const onChangeEmail = async () => {
-    const email = newEmailInput.trim();
-    if (!email) return showToast('error', 'Vui lòng nhập email mới.');
-    const perform = async () => {
-      await updateEmail(user, email);
-      await setDoc(doc(db, 'users', user.uid), { email, updatedAt: serverTimestamp() }, { merge: true });
-      showToast('success', 'Đã đổi email!');
-      setNewEmailInput('');
-    };
-    try {
-      await perform();
-    } catch (err) {
-      if (err.code === 'auth/requires-recent-login') requireReauth(perform);
-      else showToast('error', err.message);
-    }
-  };
-
-  const onResetPassword = async () => {
-    try {
-      await sendPasswordResetEmail(auth, user.email);
-      showToast('success', 'Đã gửi email đặt lại mật khẩu!');
-    } catch (err) {
-      showToast('error', err.message);
-    }
-  };
-
   const onLink = async (type) => {
     try {
       const provider = type === 'google' ? new GoogleAuthProvider() : new GithubAuthProvider();
@@ -343,45 +261,12 @@ export default function ProfilePage() {
       showToast('error', err.message);
     }
   };
-
   const onUnlink = async (providerId) => {
-    const perform = async () => {
+    try {
       await unlink(user, providerId);
       showToast('success', 'Đã huỷ liên kết!');
-    };
-    try {
-      await perform();
     } catch (err) {
-      if (err.code === 'auth/requires-recent-login') requireReauth(perform);
-      else showToast('error', err.message);
-    }
-  };
-
-  const cleanupUserStorage = async (uid) => {
-    try {
-      const base = storageRef(storage, `avatars/${uid}`);
-      const all = await listAll(base);
-      await Promise.all(all.items.map(it => deleteObject(it).catch(() => {})));
-    } catch {}
-  };
-
-  const onDeleteAccount = async () => {
-    if (!confirm('Bạn chắc chắn muốn xoá tài khoản? Hành động này không thể hoàn tác.')) return;
-    const perform = async () => {
-      try {
-        await cleanupUserStorage(user.uid);
-        await deleteDoc(doc(db, 'users', user.uid));
-        await deleteUser(user);
-        showToast('success', 'Đã xoá tài khoản. Hẹn gặp lại!');
-      } catch (err) {
-        showToast('error', err.message);
-      }
-    };
-    try {
-      await perform();
-    } catch (err) {
-      if (err.code === 'auth/requires-recent-login') requireReauth(perform);
-      else showToast('error', err.message);
+      showToast('error', err.message);
     }
   };
 
@@ -409,45 +294,11 @@ export default function ProfilePage() {
       <Head><title>Hồ sơ – StoreiOS</title></Head>
 
       {toast && (
-        <div
-          className={`fixed top-4 left-1/2 -translate-x-1/2 z-[120] rounded-full px-4 py-2 text-sm shadow-lg border
+        <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-[120] rounded-full px-4 py-2 text-sm shadow-lg border
           ${toast.type === 'error'
             ? 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800 text-red-700 dark:text-red-200'
-            : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100'}`}
-        >
+            : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-800 dark:text-gray-100'}`}>
           {toast.text}
-        </div>
-      )}
-
-      {/* Re-auth modal */}
-      {reauthOpen && (
-        <div className="fixed inset-0 z-[200] bg-black/50 flex items-center justify-center p-4">
-          <div className="w-full max-w-sm rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-2xl">
-            <h3 className="text-lg font-semibold mb-2">Xác thực lại</h3>
-            <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-              Vui lòng xác thực lại để tiếp tục thao tác nhạy cảm.
-            </p>
-            <div className="grid gap-2">
-              <button
-                onClick={() => doReauth('google')}
-                className="w-full px-3 py-2 rounded-lg bg-gray-900 text-white dark:bg-white dark:text-gray-900 hover:opacity-90 flex items-center justify-center gap-2"
-              >
-                <FontAwesomeIcon icon={faGoogle} /> Tiếp tục với Google
-              </button>
-              <button
-                onClick={() => doReauth('github')}
-                className="w-full px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 flex items-center justify-center gap-2"
-              >
-                <FontAwesomeIcon icon={faGithub} /> Tiếp tục với GitHub
-              </button>
-            </div>
-            <button
-              onClick={() => setReauthOpen(false)}
-              className="mt-4 w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
-            >
-              Huỷ
-            </button>
-          </div>
         </div>
       )}
 
@@ -487,7 +338,7 @@ export default function ProfilePage() {
                   onChange={onUploadAvatar}
                 />
               </div>
-              {uploading && <div className="mt-2 text-xs text-gray-500">Đang xử lý & tải ảnh…</div>}
+              {uploading && <div className="mt-2 text-xs text-gray-500">Đang tải ảnh…</div>}
 
               {/* Ngày tham gia & Trạng thái */}
               <div className="mt-4 text-sm text-gray-600 dark:text-gray-300 space-y-1">
@@ -500,7 +351,7 @@ export default function ProfilePage() {
             <div>
               <div className="grid gap-4">
                 <div>
-                  <label className="text-sm text-gray-500">Email hiện tại</label>
+                  <label className="text-sm text-gray-500">Email</label>
                   <div className="mt-1 text-sm break-all">{user.email}</div>
                 </div>
 
@@ -539,9 +390,9 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              <div className="mt-6 flex flex-wrap items-center gap-3">
+              <div className="mt-6 flex items-center gap-3">
                 <button
-                  onClick={onSaveBasic}
+                  onClick={onSave}
                   disabled={saving}
                   className="px-4 py-2 rounded-lg bg-gray-900 text-white dark:bg-white dark:text-gray-900 hover:opacity-90"
                 >
@@ -551,49 +402,7 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Bảo mật nhanh */}
-          <div className="px-6 pb-6">
-            <h2 className="text-lg font-semibold mb-3">Bảo mật nhanh</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="p-4 rounded-xl border border-gray-200 dark:border-gray-800">
-                <div className="flex items-center gap-2 font-medium mb-2">
-                  <FontAwesomeIcon icon={faEnvelope} />
-                  Đổi email đăng nhập
-                </div>
-                <div className="flex gap-2">
-                  <input
-                    value={newEmailInput}
-                    onChange={(e) => setNewEmailInput(e.target.value)}
-                    placeholder="Email mới"
-                    className="flex-1 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2"
-                  />
-                  <button
-                    onClick={onChangeEmail}
-                    className="px-3 py-2 rounded-lg bg-gray-900 text-white dark:bg-white dark:text-gray-900 hover:opacity-90"
-                  >
-                    Đổi
-                  </button>
-                </div>
-                <p className="text-xs text-gray-500 mt-2">Có thể yêu cầu xác thực lại.</p>
-              </div>
-
-              <div className="p-4 rounded-xl border border-gray-200 dark:border-gray-800">
-                <div className="flex items-center gap-2 font-medium mb-2">
-                  <FontAwesomeIcon icon={faKey} />
-                  Đặt lại mật khẩu
-                </div>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Gửi email đặt lại mật khẩu đến địa chỉ hiện tại.</p>
-                <button
-                  onClick={onResetPassword}
-                  className="px-3 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
-                >
-                  Gửi email đặt lại
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Providers + Xoá tài khoản */}
+          {/* Providers */}
           <div className="px-6 pb-6">
             <h2 className="text-lg font-semibold mb-3">Đăng nhập liên kết</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -651,20 +460,6 @@ export default function ProfilePage() {
                 )}
               </div>
             </div>
-
-            <div className="mt-6 flex flex-wrap items-center gap-3">
-              <button
-                onClick={onDeleteAccount}
-                className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 flex items-center gap-2"
-              >
-                <FontAwesomeIcon icon={faTrash} />
-                Xoá tài khoản
-              </button>
-              <span className="text-xs text-gray-500 flex items-center gap-1">
-                <FontAwesomeIcon icon={faShieldHalved} />
-                Thao tác nhạy cảm có thể yêu cầu xác thực lại.
-              </span>
-            </div>
           </div>
         </div>
 
@@ -690,6 +485,7 @@ export default function ProfilePage() {
               </div>
             </div>
 
+            {/* Huy hiệu */}
             {Array.isArray(stats.badges) && stats.badges.length > 0 ? (
               <div className="mt-4 flex flex-wrap gap-2">
                 {stats.badges.map((b, i) => (
@@ -707,7 +503,7 @@ export default function ProfilePage() {
             )}
           </div>
 
-          {/* Hoạt động gần đây (từ comments) */}
+          {/* Hoạt động gần đây (từ comments của bạn) */}
           <div className="lg:col-span-2 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow p-6">
             <h3 className="text-lg font-semibold mb-4">Hoạt động gần đây</h3>
             {recentComments.length === 0 ? (
@@ -725,13 +521,16 @@ export default function ProfilePage() {
                   </thead>
                   <tbody>
                     {recentComments.map((c) => {
-                      const t = formatRelAbs(c.createdAt);
+                      const t = formatRelAbs(c.createdAt || c.timestamp);
+                      const likeNum = Number.isFinite(Number(c.likeCount)) ? Number(c.likeCount)
+                                    : Number.isFinite(Number(c.likesCount)) ? Number(c.likesCount)
+                                    : 0;
                       return (
                         <tr key={c.id} className="border-b border-gray-100 dark:border-gray-800">
                           <td className="py-2 pr-4" title={t?.abs || ''}>{t?.rel || '-'}</td>
-                          <td className="py-2 pr-4 max-w-[520px] truncate">{String(c.content || '').trim()}</td>
+                          <td className="py-2 pr-4 max-w-[520px] truncate">{String(c.content || c.text || '').trim()}</td>
                           <td className="py-2 pr-4">{c.postId || '-'}</td>
-                          <td className="py-2">{Math.max(0, Number(c.likeCount || 0))}</td>
+                          <td className="py-2">{Math.max(0, likeNum)}</td>
                         </tr>
                       );
                     })}
