@@ -468,7 +468,7 @@ function CommentRow({ c, me, small=false, canDelete=false, onDelete, isAdminFn=(
                 className="inline-flex items-center justify-center translate-y-[0.5px]"
                 title="Quản trị viên đã xác minh"
               >
-                <VerifiedBadgeX className="w-3 h-3" />
+                <VerifiedBadgeX className="w-4 h-4" />
               </span>
             )}
           </span>
