@@ -93,35 +93,17 @@ function CenterModal({ open, title, children, onClose, actions, tone = 'info' })
   );
 }
 
-/* ========= Badge Verified kiểu X (Twitter) – 24x24, có đệm, chống khuyết ========= */
+/* ========= Twitter Verified Badge - Chính thức ========= */
 const VerifiedBadgeX = ({ className = '' }) => (
   <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      className={`inline-block ${className}`}
-      fill="none"
-    >
-      <defs>
-        <linearGradient id="twitterBlue" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#1d9bf0" />
-          <stop offset="100%" stopColor="#1a8cd8" />
-        </linearGradient>
-      </defs>
-      {/* Twitter/X verified badge shape - các cạnh răng cưa */}
-      <path
-        d="M12.017 0l2.56 3.93L20.16 2.49l.921 5.498 5.497.921-1.441 5.583L28.07 12l-2.933 2.498 1.441 5.583-5.497.921-.921 5.498-5.583-1.441L12.017 28l-2.498-2.933-5.583 1.441-.921-5.498-5.497-.921 1.441-5.583L-4.07 12l2.933-2.498L-2.578 4.919l5.497-.921.921-5.498 5.583 1.441L12.017 0z"
-        transform="scale(0.43) translate(12,12)"
-        fill="url(#twitterBlue)"
-      />
-      {/* White checkmark */}
-      <path 
-        d="M9 12.5l2 2 4-4" 
-        stroke="white" 
-        strokeWidth="2.5" 
-        strokeLinecap="round" 
-        strokeLinejoin="round"
-      />
-    </svg>
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 24 24"
+    className={`inline-block ${className}`}
+    fill="#1d9bf0"
+  >
+    {/* Official Twitter verified badge path */}
+    <path d="M22.25 12c0-1.43-.88-2.67-2.19-3.34.46-1.39.2-2.9-.81-3.91s-2.52-1.27-3.91-.81c-.66-1.31-1.91-2.19-3.34-2.19s-2.67.88-3.33 2.19c-1.4-.46-2.91-.2-3.92.81s-1.26 2.52-.8 3.91c-1.31.67-2.2 1.91-2.2 3.34s.89 2.67 2.2 3.34c-.46 1.39-.21 2.9.8 3.91s2.52 1.26 3.91.81c.67 1.31 1.91 2.19 3.34 2.19s2.68-.88 3.34-2.19c1.39.45 2.9.2 3.91-.81s1.27-2.52.81-3.91c1.31-.67 2.19-1.91 2.19-3.34zm-11.71 4.2L6.8 12.46l1.41-1.42 2.26 2.26 4.8-5.23 1.47 1.36-6.2 6.77z"/>
+  </svg>
 );
 
 /* ==================== Component chính ==================== */
