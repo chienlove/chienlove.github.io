@@ -1,7 +1,7 @@
 // pages/profile.js
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Head from 'next/head';
-import Layout from '../components/Layout'; // Header + Footer
+import Layout from '../components/Layout'; // Header + Footer đẹp
 import { auth, db, storage } from '../lib/firebase-client';
 
 import {
@@ -48,38 +48,38 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { faGoogle, faGithub } from '@fortawesome/free-brands-svg-icons';
 
-/* ========== Helpers ========== */
-function formatRelAbs(input) {
-  try {
-    let d = null;
-    if (!input) return null;
-    if (input?.seconds) d = new Date(input.seconds * 1000);
-    else if (typeof input === 'string') d = new Date(input);
-    else if (input instanceof Date) d = input;
-
-    if (!d || isNaN(d.getTime())) return null;
-
-    const diffSec = Math.floor((Date.now() - d.getTime()) / 1000);
-    const rtf = new Intl.RelativeTimeFormat('vi', { numeric: 'auto' });
-    const units = [
-      ['year', 31536000],
-      ['month', 2592000],
-      ['week', 604800],
-      ['day', 86400],
-      ['hour', 3600],
-      ['minute', 60],
-      ['second', 1],
-    ];
-    for (const [unit, sec] of units) {
-      if (Math.abs(diffSec) >= sec || unit === 'second') {
-        const val = Math.round(diffSec / sec * -1);
-        return { rel: rtf.format(val, unit), abs: d.toLocaleString('vi-VN'), date: d };
-      }
-    }
-    return { rel: '', abs: d.toLocaleString('vi-VN'), date: d };
-  } catch {
-    return null;
+/* ========= Helpers ========= */
+function toDateLike(x) {
+  if (!x) return null;
+  if (x?.seconds) return new Date(x.seconds * 1000);
+  if (x instanceof Date) return x;
+  if (typeof x === 'string' || typeof x === 'number') {
+    const d = new Date(x);
+    return isNaN(d.getTime()) ? null : d;
   }
+  return null;
+}
+function formatRelAbs(input) {
+  const d = toDateLike(input);
+  if (!d) return null;
+  const diffSec = Math.floor((Date.now() - d.getTime()) / 1000);
+  const rtf = new Intl.RelativeTimeFormat('vi', { numeric: 'auto' });
+  const units = [
+    ['year', 31536000],
+    ['month', 2592000],
+    ['week', 604800],
+    ['day', 86400],
+    ['hour', 3600],
+    ['minute', 60],
+    ['second', 1],
+  ];
+  for (const [unit, sec] of units) {
+    if (Math.abs(diffSec) >= sec || unit === 'second') {
+      const val = Math.round(diffSec / sec * -1);
+      return { rel: rtf.format(val, unit), abs: d.toLocaleString('vi-VN'), date: d };
+    }
+  }
+  return { rel: '', abs: d.toLocaleString('vi-VN'), date: d };
 }
 
 async function compressAndSquareCrop(file, maxSize = 640, quality = 0.85) {
@@ -107,7 +107,7 @@ async function compressAndSquareCrop(file, maxSize = 640, quality = 0.85) {
   } finally { URL.revokeObjectURL(blobURL); }
 }
 
-/* ========== Page ========== */
+/* ========= Page ========= */
 export default function ProfilePage() {
   const [user, setUser] = useState(null);
   const [displayName, setDisplayName] = useState('');
@@ -121,18 +121,18 @@ export default function ProfilePage() {
   const hasGoogle = providers.includes('google.com');
   const hasGithub = providers.includes('github.com');
 
-  // bảo mật / reauth
+  // re-auth
   const [reauthOpen, setReauthOpen] = useState(false);
   const pendingActionRef = useRef(null);
 
-  // đổi email & reset pass
-  const [newEmail, setNewEmail] = useState('');
+  // bảo mật nhanh
+  const [newEmailInput, setNewEmailInput] = useState('');
 
   // thống kê & activity
   const [stats, setStats] = useState({ comments: 0, likes: 0, badges: [] });
-  const [recentComments, setRecentComments] = useState([]); // hoạt động gần đây lấy từ comments
-  const [joinedAt, setJoinedAt] = useState(null); // ngày tham gia
-  const [lastActive, setLastActive] = useState(null); // trạng thái hoạt động
+  const [recentComments, setRecentComments] = useState([]);
+  const [joinedAt, setJoinedAt] = useState(null);
+  const [lastActive, setLastActive] = useState(null);
 
   const showToast = (type, text, ms = 3200) => {
     setToast({ type, text });
@@ -140,7 +140,7 @@ export default function ProfilePage() {
     showToast._t = window.setTimeout(() => setToast(null), ms);
   };
 
-  /* ===== Load user + hồ sơ ===== */
+  /* ===== Load auth user & đảm bảo users/{uid} có createdAt ===== */
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(async (u) => {
       setUser(u);
@@ -148,7 +148,7 @@ export default function ProfilePage() {
 
       setDisplayName(u.displayName || '');
 
-      // users/{uid}
+      // đảm bảo doc users/{uid}
       const uref = doc(db, 'users', u.uid);
       const snap = await getDoc(uref);
       if (!snap.exists()) {
@@ -161,60 +161,79 @@ export default function ProfilePage() {
           updatedAt: serverTimestamp(),
           badges: [],
         }, { merge: true });
+      } else {
+        // nếu doc cũ chưa có createdAt thì gán
+        if (!snap.data().createdAt) {
+          await setDoc(uref, { createdAt: serverTimestamp() }, { merge: true });
+        }
       }
 
-      // Ngày tham gia (ưu tiên Firestore.createdAt, fallback metadata.creationTime)
-      const created = (await getDoc(uref)).data()?.createdAt || u.metadata?.creationTime || null;
+      // Ngày tham gia: ưu tiên users.createdAt, fallback metadata.creationTime
+      const refresh = await getDoc(uref);
+      const created = refresh.data()?.createdAt || u.metadata?.creationTime || null;
       setJoinedAt(created ? formatRelAbs(created) : null);
 
-      // Trạng thái hoạt động (ưu tiên lastSignInTime, fallback bình luận gần nhất)
+      // Trạng thái: từ lastSignInTime (tự mình)
       const lastSign = u.metadata?.lastSignInTime ? formatRelAbs(u.metadata.lastSignInTime) : null;
       setLastActive(lastSign);
     });
     return () => unsub();
   }, []);
 
-  /* ===== Load thống kê & hoạt động gần đây từ collection comments ===== */
+  /* ===== Thống kê & hoạt động gần đây (dựa Comments) ===== */
   useEffect(() => {
     if (!user) return;
+
     (async () => {
+      const myUid = user.uid;
+
+      // Đếm bình luận
+      const qCount = query(collection(db, 'comments'), where('authorId', '==', myUid));
+      const cnt = await getCountFromServer(qCount);
+      let totalLikes = 0;
+
+      // Tổng likeCount theo comments (đúng schema Comments.js)  [oai_citation:3‡Comments.js](file-service://file-1NtjmQujqLt7u9XVnktpUs)
+      const allDocs = await getDocs(qCount);
+      allDocs.forEach(d => {
+        const v = d.data()?.likeCount || 0;
+        totalLikes += Number.isFinite(v) ? v : 0;
+      });
+
+      // Huy hiệu trong users
+      const uDoc = await getDoc(doc(db, 'users', myUid));
+      const badges = (uDoc.exists() && Array.isArray(uDoc.data().badges)) ? uDoc.data().badges : [];
+
+      // Hoạt động gần đây: thử orderBy createdAt desc; nếu lỗi index → fallback
+      let recent = [];
       try {
-        // Đếm bình luận
-        const qCount = query(collection(db, 'comments'), where('authorId', '==', user.uid));
-        const cnt = await getCountFromServer(qCount);
-        let totalLikes = 0;
-
-        // Cộng tổng likeCount theo comments (đúng schema ở Comments.js)   [oai_citation:3‡Comments.js](file-service://file-1NtjmQujqLt7u9XVnktpUs)
-        const allDocs = await getDocs(qCount);
-        allDocs.forEach(d => {
-          const v = d.data()?.likeCount || 0;
-          totalLikes += Number.isFinite(v) ? v : 0;
-        });
-
-        // Huy hiệu (nếu có) trong users
-        const uDoc = await getDoc(doc(db, 'users', user.uid));
-        const badges = (uDoc.exists() && Array.isArray(uDoc.data().badges)) ? uDoc.data().badges : [];
-
-        // Hoạt động gần đây: 10 bình luận mới nhất của chính user
         const qRecent = query(
           collection(db, 'comments'),
-          where('authorId', '==', user.uid),
+          where('authorId', '==', myUid),
           orderBy('createdAt', 'desc'),
           limit(10)
         );
         const rSnap = await getDocs(qRecent);
-        const recent = rSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        recent = rSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      } catch (e) {
+        // Fallback: không orderBy (không cần index), rồi sort client
+        const qRecent2 = query(
+          collection(db, 'comments'),
+          where('authorId', '==', myUid),
+          limit(50)
+        );
+        const rSnap2 = await getDocs(qRecent2);
+        recent = rSnap2.docs.map(d => ({ id: d.id, ...d.data() }));
+        recent.sort((a, b) => (toDateLike(b.createdAt)?.getTime() || 0) - (toDateLike(a.createdAt)?.getTime() || 0));
+        recent = recent.slice(0, 10);
+      }
 
-        setStats({ comments: cnt.data().count || 0, likes: totalLikes, badges });
-        setRecentComments(recent);
+      setStats({ comments: cnt.data().count || 0, likes: totalLikes, badges });
+      setRecentComments(recent);
 
-        // Nếu chưa có lastActive (VD không có lastSignInTime), lấy theo comment mới nhất
-        if (!lastActive && recent.length > 0) {
-          const latest = recent[0]?.createdAt || null;
-          setLastActive(latest ? formatRelAbs(latest) : null);
-        }
-      } catch {
-        // im lặng
+      // Nếu chưa có lastActive thì lấy theo bình luận mới nhất
+      if (!lastActive && recent.length > 0) {
+        const latest = recent[0]?.createdAt || null;
+        setLastActive(latest ? formatRelAbs(latest) : null);
       }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -289,7 +308,6 @@ export default function ProfilePage() {
     }
   };
 
-  const [newEmailInput, setNewEmailInput] = useState('');
   const onChangeEmail = async () => {
     const email = newEmailInput.trim();
     if (!email) return showToast('error', 'Vui lòng nhập email mới.');
@@ -471,7 +489,7 @@ export default function ProfilePage() {
               </div>
               {uploading && <div className="mt-2 text-xs text-gray-500">Đang xử lý & tải ảnh…</div>}
 
-              {/* Ngày tham gia & Trạng thái hoạt động */}
+              {/* Ngày tham gia & Trạng thái */}
               <div className="mt-4 text-sm text-gray-600 dark:text-gray-300 space-y-1">
                 <div><span className="text-gray-500">Ngày tham gia:</span> <span className="font-medium">{joinedStr}</span></div>
                 <div><span className="text-gray-500">Trạng thái:</span> <span className="font-medium">{lastActiveStr}</span></div>
@@ -533,7 +551,7 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Bảo mật nhanh: đổi email & reset pass */}
+          {/* Bảo mật nhanh */}
           <div className="px-6 pb-6">
             <h2 className="text-lg font-semibold mb-3">Bảo mật nhanh</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -575,7 +593,7 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Providers */}
+          {/* Providers + Xoá tài khoản */}
           <div className="px-6 pb-6">
             <h2 className="text-lg font-semibold mb-3">Đăng nhập liên kết</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -672,7 +690,6 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* Huy hiệu */}
             {Array.isArray(stats.badges) && stats.badges.length > 0 ? (
               <div className="mt-4 flex flex-wrap gap-2">
                 {stats.badges.map((b, i) => (
@@ -690,7 +707,7 @@ export default function ProfilePage() {
             )}
           </div>
 
-          {/* Hoạt động gần đây (từ comments của bạn) */}
+          {/* Hoạt động gần đây (từ comments) */}
           <div className="lg:col-span-2 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow p-6">
             <h3 className="text-lg font-semibold mb-4">Hoạt động gần đây</h3>
             {recentComments.length === 0 ? (
