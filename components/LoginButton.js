@@ -49,6 +49,12 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     const unsub = auth.onAuthStateChanged(setUser);
     return () => unsub();
   }, []);
+  
+  useEffect(() => {
+  const onOpenAuth = () => setOpenAuth(true);
+  window.addEventListener('open-auth', onOpenAuth);
+  return () => window.removeEventListener('open-auth', onOpenAuth);
+}, []);
 
   useEffect(() => {
     const onClick = (e) => {
