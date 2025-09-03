@@ -188,14 +188,22 @@ export default function Comments({ postId, postTitle }) {
     setModalOpen(true);
   };
     const openHeaderLoginPopup = () => {
-    try {
-      if (typeof window !== 'undefined') {
-        if (typeof window.openLogin === 'function') window.openLogin();
-        else window.dispatchEvent(new Event('open-login')); 
-        try { window.dispatchEvent(new Event('open-auth')); } catch {}
-      }
-    } catch {}
+  if (typeof window === 'undefined') return;
+
+  const fireOpenAuth = () => {
+    try { window.dispatchEvent(new Event('open-auth')); } catch {}
   };
+
+  try {
+    if (typeof window.openLogin === 'function') {
+      window.openLogin();               // mở popup login của Layout
+      setTimeout(fireOpenAuth, 0);      // rồi mở thẳng form đăng nhập
+    } else {
+      window.dispatchEvent(new Event('open-login')); // fallback nếu không có window.openLogin
+      setTimeout(fireOpenAuth, 0);
+    }
+  } catch {}
+};
 
   const openLoginPrompt = () => {
     setModalTitle('Cần đăng nhập');
