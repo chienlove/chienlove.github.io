@@ -3,15 +3,15 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { auth, db } from '../lib/firebase-client';
 import {
-  addDoc, collection, deleteDoc, doc, getDoc, setDoc,
+  addDoc, collection, deleteDoc, doc, getDoc, setDoc, updateDoc,
   limit, onSnapshot, orderBy, query, runTransaction,
-  serverTimestamp, updateDoc, where,
+  serverTimestamp, where,
   arrayUnion, arrayRemove, increment
 } from 'firebase/firestore';
 import { sendEmailVerification } from 'firebase/auth';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faPaperPlane, faReply, faTrash, faUserCircle, faCheckCircle, faQuoteLeft, faHeart
+  faPaperPlane, faReply, faTrash, faUserCircle, faQuoteLeft, faHeart
 } from '@fortawesome/free-solid-svg-icons';
 
 /* ========= Helpers ========= */
@@ -60,7 +60,7 @@ async function createNotification(payload = {}) {
     isRead: false,
     createdAt: serverTimestamp(),
     fromUserId,
-    ...extra,       // fromUserName, fromUserPhoto, postTitle, commentText, ...
+    ...extra,
   });
 }
 async function bumpCounter(uid, delta) {
@@ -72,20 +72,29 @@ async function bumpCounter(uid, delta) {
   });
 }
 
-/* ========= Đảm bảo có users/{uid} khi có hoạt động ========= */
+/* ========= Đảm bảo có users/{uid} & KHÔNG ghi đè createdAt ========= */
 async function ensureUserDoc(u) {
   if (!u) return;
-  try {
-    await setDoc(doc(db, 'users', u.uid), {
-      uid: u.uid,
-      email: u.email || '',
-      displayName: preferredName(u),
-      photoURL: preferredPhoto(u),
-      updatedAt: serverTimestamp(),
-      // createdAt chỉ set khi chưa có
-      createdAt: serverTimestamp(),
+  const uref = doc(db, 'users', u.uid);
+  const snap = await getDoc(uref);
+  const base = {
+    uid: u.uid,
+    email: u.email || '',
+    displayName: preferredName(u),
+    photoURL: preferredPhoto(u),
+    updatedAt: serverTimestamp(),
+  };
+  if (!snap.exists()) {
+    // Tạo mới: có createdAt + khởi tạo stats
+    await setDoc(uref, {
+      ...base,
+      createdAt: serverTimestamp(),   // <-- chỉ set lần đầu
+      stats: { comments: 0, likesReceived: 0 },
     }, { merge: true });
-  } catch {}
+  } else {
+    // Đã tồn tại: chỉ cập nhật thông tin cơ bản, không đụng createdAt
+    await setDoc(uref, base, { merge: true });
+  }
 }
 
 /* ========= Modal trung tâm (alert + confirm) ========= */
@@ -110,14 +119,9 @@ function CenterModal({ open, title, children, onClose, actions, tone = 'info' })
   );
 }
 
-/* ========= Twitter Verified Badge - Chính thức ========= */
+/* ========= Verified badge dạng X ========= */
 const VerifiedBadgeX = ({ className = '' }) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    className={`inline-block ${className}`}
-    fill="#1d9bf0"
-  >
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className={`inline-block ${className}`} fill="#1d9bf0">
     <path d="M22.25 12c0-1.43-.88-2.67-2.19-3.34.46-1.39.2-2.9-.81-3.91s-2.52-1.27-3.91-.81c-.66-1.31-1.91-2.19-3.34-2.19s-2.67.88-3.33 2.19c-1.4-.46-2.91-.2-3.92.81s-1.26 2.52-.8 3.91c-1.31.67-2.2 1.91-2.2 3.34s.89 2.67 2.2 3.34c-.46 1.39-.21 2.9.8 3.91s2.52 1.26 3.91.81c.67 1.31 1.91 2.19 3.34 2.19s2.68-.88 3.34-2.19c1.39.45 2.9.2 3.91-.81s1.27-2.52.81-3.91c1.31-.67 2.19-1.91 2.19-3.34zm-11.71 4.2L6.8 12.46l1.41-1.42 2.26 2.26 4.8-5.23 1.47 1.36-6.2 6.77z"/>
   </svg>
 );
@@ -144,18 +148,8 @@ export default function Comments({ postId, postTitle }) {
     setModalTone('warning');
     setModalActions(
       <>
-        <button
-          onClick={() => setModalOpen(false)}
-          className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-white"
-        >
-          Huỷ
-        </button>
-        <button
-          onClick={async () => { setModalOpen(false); await onConfirm(); }}
-          className="px-3 py-2 text-sm rounded-lg bg-rose-600 text-white hover:bg-rose-700"
-        >
-          Xoá
-        </button>
+        <button onClick={() => setModalOpen(false)} className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-white">Huỷ</button>
+        <button onClick={async () => { setModalOpen(false); await onConfirm(); }} className="px-3 py-2 text-sm rounded-lg bg-rose-600 text-white hover:bg-rose-700">Xoá</button>
       </>
     );
     setModalOpen(true);
@@ -180,20 +174,15 @@ export default function Comments({ postId, postTitle }) {
                 setModalTone('success');
               }
             } catch {
-                setModalContent(<p>Không gửi được email xác minh. Vui lòng thử lại sau.</p>);
-                setModalTone('error');
+              setModalContent(<p>Không gửi được email xác minh. Vui lòng thử lại sau.</p>);
+              setModalTone('error');
             }
           }}
           className="px-3 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700"
         >
           Gửi lại email xác minh
         </button>
-        <button
-          onClick={() => setModalOpen(false)}
-          className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-white"
-        >
-          Để sau
-        </button>
+        <button onClick={() => setModalOpen(false)} className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-white">Để sau</button>
       </>
     );
     setModalOpen(true);
@@ -204,18 +193,8 @@ export default function Comments({ postId, postTitle }) {
     setModalTone('info');
     setModalActions(
       <>
-        <a
-          href="/login"
-          className="px-3 py-2 text-sm rounded-lg bg-gray-900 text-white hover:opacity-90"
-        >
-          Đăng nhập
-        </a>
-        <button
-          onClick={() => setModalOpen(false)}
-          className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-white"
-        >
-          Để sau
-        </button>
+        <a href="/login" className="px-3 py-2 text-sm rounded-lg bg-gray-900 text-white hover:opacity-90">Đăng nhập</a>
+        <button onClick={() => setModalOpen(false)} className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-white">Để sau</button>
       </>
     );
     setModalOpen(true);
@@ -267,7 +246,6 @@ export default function Comments({ postId, postTitle }) {
     if (fixes.length) Promise.all(fixes).catch(()=>{});
   }, [me, items]);
 
-  // Admin helper
   const isAdmin = useMemo(() => (uid) => adminUids.includes(uid), [adminUids]);
 
   // ===== Submit bình luận (chỉ chặn nếu chưa verify)
@@ -277,8 +255,7 @@ export default function Comments({ postId, postTitle }) {
     if (!me.emailVerified) { openVerifyPrompt(); return; }
     if (!content.trim()) return;
 
-    // đảm bảo users/{uid} tồn tại/sync trước khi ghi comment
-    await ensureUserDoc(me);
+    await ensureUserDoc(me); // tạo user doc nếu chưa có (không ghi đè createdAt)
 
     const payload = {
       postId: String(postId),
@@ -294,6 +271,9 @@ export default function Comments({ postId, postTitle }) {
     };
     const ref = await addDoc(collection(db, 'comments'), payload);
     setContent('');
+
+    // Cập nhật thống kê: +1 bình luận
+    await updateDoc(doc(db, 'users', me.uid), { 'stats.comments': increment(1) });
 
     // Gửi noti cho admin khác (tránh tự notify chính mình)
     const targetAdmins = adminUids.filter(u => u !== me.uid);
@@ -313,7 +293,7 @@ export default function Comments({ postId, postTitle }) {
     }));
   };
 
-  // ===== Toggle ❤️ like + notification khi like
+  // ===== Toggle ❤️ like + cập nhật likesReceived
   const toggleLike = async (c) => {
     if (!me) { openLoginPrompt(); return; }
     const cid = c.id;
@@ -324,6 +304,15 @@ export default function Comments({ postId, postTitle }) {
         likedBy: hasLiked ? arrayRemove(me.uid) : arrayUnion(me.uid),
         likeCount: increment(hasLiked ? -1 : +1),
       });
+
+      // cập nhật tổng likesReceived cho TÁC GIẢ bình luận
+      if (c.authorId) {
+        await updateDoc(doc(db, 'users', c.authorId), {
+          'stats.likesReceived': increment(hasLiked ? -1 : +1)
+        });
+      }
+
+      // tạo noti khi LIKE (không phải bỏ like) & không notify khi tự-like
       if (!hasLiked && me.uid !== c.authorId) {
         await createNotification({
           toUserId: c.authorId,
@@ -408,17 +397,21 @@ export default function Comments({ postId, postTitle }) {
                     me={me}
                     isAdminFn={(uid)=>adminUids.includes(uid)}
                     canDelete={!!me && (me.uid === c.authorId || adminUids.includes(me.uid))}
-                    onDelete={() => {
+                    onDelete={async () => {
                       openConfirm('Xoá bình luận này và toàn bộ phản hồi của nó?', async () => {
-                        const r = repliesByParent[c.id] || [];
-                        await Promise.all(r.map(rr => deleteDoc(doc(db, 'comments', rr.id))));
-                        await deleteDoc(doc(db, 'comments', c.id));
+                        const toDelete = [c, ...(repliesByParent[c.id] || [])];
+                        // trừ thống kê cho từng author ứng với comment bị xoá
+                        await Promise.all(toDelete.map(async (it) => {
+                          if (it.authorId) {
+                            try { await updateDoc(doc(db, 'users', it.authorId), { 'stats.comments': increment(-1) }); } catch {}
+                          }
+                          try { await deleteDoc(doc(db, 'comments', it.id)); } catch {}
+                        }));
                       });
                     }}
                     onToggleLike={()=>toggleLike(c)}
                   />
 
-                  {/* Khung trả lời */}
                   <ReplyBox
                     me={me}
                     postId={postId}
@@ -449,7 +442,12 @@ export default function Comments({ postId, postTitle }) {
                           canDelete={!!me && (me.uid === r.authorId || adminUids.includes(me.uid))}
                           onDelete={() => {
                             openConfirm('Bạn có chắc muốn xoá phản hồi này?', async () => {
-                              await deleteDoc(doc(db, 'comments', r.id));
+                              try {
+                                await deleteDoc(doc(db, 'comments', r.id));
+                                if (r.authorId) {
+                                  await updateDoc(doc(db, 'users', r.authorId), { 'stats.comments': increment(-1) });
+                                }
+                              } catch {}
                             });
                           }}
                           onToggleLike={()=>toggleLike(r)}
@@ -477,7 +475,7 @@ export default function Comments({ postId, postTitle }) {
   );
 }
 
-/* ========= Component CommentRow ========= */
+/* ========= CommentRow ========= */
 function CommentRow({ c, me, small = false, isAdminFn, quoteFrom, canDelete, onDelete, onToggleLike }) {
   const isAdmin = isAdminFn?.(c.authorId);
   const hasLiked = Array.isArray(c.likedBy) && c.likedBy.includes(me?.uid);
@@ -485,6 +483,21 @@ function CommentRow({ c, me, small = false, isAdminFn, quoteFrom, canDelete, onD
   const dt = formatDate(c.createdAt);
   const avatar = c.userPhoto || '';
   const userName = c.userName || 'Người dùng';
+  const isSelf = !!me && c.authorId === me.uid;
+
+  const NameLink = ({ uid, children }) => {
+    if (!uid) return <span className="font-semibold text-gray-900 dark:text-gray-100">{children}</span>;
+    // chính mình → /profile ; người khác → /users/[uid]
+    const href = isSelf ? '/profile' : `/users/${uid}`;
+    return (
+      <Link
+        href={href}
+        className="font-semibold text-gray-900 dark:text-gray-100 hover:text-sky-600 dark:hover:text-sky-400 hover:underline transition-colors"
+      >
+        {children}
+      </Link>
+    );
+  };
 
   return (
     <div className="flex gap-3">
@@ -498,31 +511,18 @@ function CommentRow({ c, me, small = false, isAdminFn, quoteFrom, canDelete, onD
 
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          {/* TÊN NGƯỜI DÙNG (link hồ sơ) */}
-          {c.authorId ? (
-            <Link 
-              href={`/users/${c.authorId}`}
-              className="font-semibold text-gray-900 dark:text-gray-100 hover:text-sky-600 dark:hover:text-sky-400 hover:underline transition-colors"
-            >
-              {userName}
-            </Link>
-          ) : (
-            <span className="font-semibold text-gray-900 dark:text-gray-100">{userName}</span>
-          )}
-          
+          <NameLink uid={c.authorId}>{userName}</NameLink>
+
           {isAdmin && (
-            <span
-              className="inline-flex items-center justify-center translate-y-[0.5px]"
-              title="Quản trị viên đã xác minh"
-            >
+            <span className="inline-flex items-center justify-center translate-y-[0.5px]" title="Quản trị viên đã xác minh">
               <VerifiedBadgeX className="w-4 h-4 shrink-0" />
             </span>
           )}
-          
+
           <span className="text-xs text-gray-500 dark:text-gray-400" title={dt?.abs}>
             {dt?.rel}
           </span>
-          
+
           {canDelete && (
             <button
               onClick={onDelete}
@@ -535,14 +535,14 @@ function CommentRow({ c, me, small = false, isAdminFn, quoteFrom, canDelete, onD
           )}
         </div>
 
-        {/* Quote mục tiêu (nếu là reply) */}
+        {/* Quote (nếu là reply) */}
         {quoteFrom && quoteFrom.id !== c.id && (
           <div className="mt-2 text-[13px] text-gray-700 dark:text-gray-300 bg-gradient-to-r from-sky-50 to-rose-50 dark:from-sky-900/20 dark:to-rose-900/20 border border-sky-100 dark:border-sky-800 rounded-xl p-2">
             <div className="flex items-center gap-2 mb-1 opacity-80">
               <FontAwesomeIcon icon={faQuoteLeft} className="w-3.5 h-3.5 text-sky-500" />
               {quoteFrom.authorId ? (
-                <Link 
-                  href={`/users/${quoteFrom.authorId}`}
+                <Link
+                  href={me && quoteFrom.authorId === me.uid ? '/profile' : `/users/${quoteFrom.authorId}`}
                   className="font-medium hover:text-sky-600 dark:hover:text-sky-400 hover:underline transition-colors"
                 >
                   {quoteFrom.userName || 'Người dùng'}
@@ -591,8 +591,7 @@ function ReplyBox({ me, postId, parent, replyingTo=null, adminUids, postTitle, o
     if (!me.emailVerified) { onNeedVerify?.(); return; }
     if (!canReply || !text.trim()) return;
 
-    // đảm bảo users/{uid} tồn tại/sync trước khi ghi reply
-    await ensureUserDoc(me);
+    await ensureUserDoc(me); // tạo user doc nếu chưa có
 
     const ref = await addDoc(collection(db, 'comments'), {
       postId: String(postId),
@@ -608,6 +607,9 @@ function ReplyBox({ me, postId, parent, replyingTo=null, adminUids, postTitle, o
     });
     setText('');
     setOpen(false);
+
+    // +1 bình luận cho người trả lời
+    await updateDoc(doc(db, 'users', me.uid), { 'stats.comments': increment(1) });
 
     // Notify người bị trả lời
     if (target.authorId && target.authorId !== me.uid) {
@@ -645,7 +647,7 @@ function ReplyBox({ me, postId, parent, replyingTo=null, adminUids, postTitle, o
   if (!me) {
     return (
       <div className="mt-2">
-        <button onClick={() => onNeedLogin?.()} className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 hover:underline">
+        <button onClick={() => onNeedLogin?.()} className="inline-flex items-center gap-2 text-sm text-sky-700 dark:text-sky-300 hover:underline">
           <FontAwesomeIcon icon={faReply} />
           Trả lời
         </button>
@@ -670,8 +672,8 @@ function ReplyBox({ me, postId, parent, replyingTo=null, adminUids, postTitle, o
           {target && (
             <div className="text-[12px] text-gray-700 dark:text-gray-300 bg-gradient-to-r from-sky-50 to-indigo-50 dark:from-sky-900/20 dark:to-indigo-900/20 border border-sky-100 dark:border-sky-800 rounded-xl p-2">
               {target.authorId ? (
-                <Link 
-                  href={`/users/${target.authorId}`}
+                <Link
+                  href={me && target.authorId === me.uid ? '/profile' : `/users/${target.authorId}`}
                   className="font-medium hover:text-sky-600 dark:hover:text-sky-400 hover:underline transition-colors"
                 >
                   {target.userName || 'Người dùng'}
@@ -685,7 +687,7 @@ function ReplyBox({ me, postId, parent, replyingTo=null, adminUids, postTitle, o
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
-            // iOS zoom fix: font-size >= 16px
+            // iOS zoom fix
             className="w-full min-h-[72px] border border-indigo-200 dark:border-indigo-900 rounded-xl px-3 py-2 text-[16px] leading-6 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500/40 outline-none shadow-[0_0_0_1px_rgba(129,140,248,0.25)]"
             placeholder={`Phản hồi ${replyingTo ? (replyingTo.userName || 'người dùng') : (parent.userName || 'người dùng')}…`}
             maxLength={2000}
