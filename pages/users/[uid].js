@@ -272,7 +272,7 @@ export default function PublicUserProfile() {
                 <ul className="space-y-4">
                   {recentComments.map(c => {
                     // Ưu tiên đường dẫn đã lưu (nếu có), fallback về /tools/:id
-                    const postHref = c.postUrl || `/tools/${c.postSlug || c.postId}#c-${c.id}`;
+                    const postHref = c.postUrl || `/${c.postSlug || c.postId}#c-${c.id}`;
                     return (
                       <li key={c.id} className="p-4 rounded-lg bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700">
                         <p className="text-sm whitespace-pre-wrap break-words italic">"{c.content}"</p>
