@@ -187,13 +187,28 @@ export default function Comments({ postId, postTitle }) {
     );
     setModalOpen(true);
   };
+    const openHeaderLoginPopup = () => {
+    try {
+      if (typeof window !== 'undefined') {
+        if (typeof window.openLogin === 'function') window.openLogin();
+        else window.dispatchEvent(new Event('open-login')); 
+        try { window.dispatchEvent(new Event('open-auth')); } catch {}
+      }
+    } catch {}
+  };
+
   const openLoginPrompt = () => {
     setModalTitle('Cần đăng nhập');
     setModalContent(<p>Bạn cần <b>đăng nhập</b> để thực hiện thao tác này.</p>);
     setModalTone('info');
     setModalActions(
       <>
-        <a href="/login" className="px-3 py-2 text-sm rounded-lg bg-gray-900 text-white hover:opacity-90">Đăng nhập</a>
+        <button
+          onClick={() => { setModalOpen(false); openHeaderLoginPopup(); }}
+          className="px-3 py-2 text-sm rounded-lg bg-gray-900 text-white hover:opacity-90"
+        >
+          Đăng nhập
+        </button>
         <button onClick={() => setModalOpen(false)} className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-white">Để sau</button>
       </>
     );
