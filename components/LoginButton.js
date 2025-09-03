@@ -1,6 +1,6 @@
 // components/LoginButton.js
 import { useEffect, useState, useRef } from 'react';
-import { auth } from '../lib/firebase-client';
+import { auth, db } from '../lib/firebase-client'; // NEW
 import {
   GoogleAuthProvider,
   GithubAuthProvider,
@@ -12,6 +12,7 @@ import {
   linkWithCredential,
   fetchSignInMethodsForEmail,
 } from 'firebase/auth';
+import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore'; // NEW
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faUserCircle,
@@ -24,7 +25,7 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { faGoogle, faGithub } from '@fortawesome/free-brands-svg-icons';
 
-const ENFORCE_EMAIL_VERIFICATION = true; // gửi mail verify sau signup; KHÔNG chặn login
+const ENFORCE_EMAIL_VERIFICATION = true;
 
 export default function LoginButton({ onToggleTheme, isDark }) {
   const [user, setUser] = useState(null);
@@ -45,8 +46,45 @@ export default function LoginButton({ onToggleTheme, isDark }) {
   const menuRef = useRef(null);
   const guestMenuRef = useRef(null);
 
+  // === NEW: đảm bảo tạo users/{uid} một lần, đúng ngày tạo từ Firebase Auth ===
+  const ensureUserDocOnceRef = useRef(false);
+  const ensureUserDoc = async (u) => {
+    if (!u || ensureUserDocOnceRef.current) return;
+    try {
+      const ref = doc(db, 'users', u.uid);
+      const snap = await getDoc(ref);
+      const createdFromAuth = u.metadata?.creationTime ? new Date(u.metadata.creationTime) : null; // lấy "Ngày tham gia" thực sự
+      if (!snap.exists()) {
+        await setDoc(ref, {
+          uid: u.uid,
+          email: u.email || '',
+          displayName: u.displayName || '',
+          photoURL: u.photoURL || '',
+          // Dùng creationTime của Auth nếu có; fallback serverTimestamp
+          createdAt: createdFromAuth || serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          // có thể khởi tạo stats rỗng để tránh undefined phía đọc
+          stats: { comments: 0, likesReceived: 0 },
+        }, { merge: true });
+      } else {
+        // Không ghi đè createdAt cũ
+        await setDoc(ref, {
+          email: u.email || '',
+          displayName: u.displayName || '',
+          photoURL: u.photoURL || '',
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+      }
+    } finally {
+      ensureUserDocOnceRef.current = true;
+    }
+  };
+
   useEffect(() => {
-    const unsub = auth.onAuthStateChanged(setUser);
+    const unsub = auth.onAuthStateChanged(async (u) => {
+      setUser(u);
+      if (u) await ensureUserDoc(u); // NEW: tạo/làm mới hồ sơ ngay khi có user
+    });
     return () => unsub();
   }, []);
 
@@ -65,25 +103,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     showToast._t = window.setTimeout(() => setToast(null), ms);
   };
 
-  // Toast giữa màn hình + màu theo loại
-  const Toast = () => {
-    if (!toast) return null;
-    const tone =
-      toast.type === 'success' ? 'bg-emerald-600' :
-      toast.type === 'error'   ? 'bg-rose-600' :
-      toast.type === 'info'    ? 'bg-sky-600' :
-      toast.type === 'warning' ? 'bg-amber-600' :
-                                 'bg-gray-800';
-    return (
-      <div className="fixed inset-0 z-[120] flex items-center justify-center">
-        <div className="absolute inset-0 bg-black/20" />
-        <div className={`relative rounded-xl px-4 py-2 text-sm shadow-xl text-white ${tone}`}>
-          {toast.text}
-        </div>
-      </div>
-    );
-  };
-
   const handleAccountExists = async (error, provider) => {
     const emailFromError = error?.customData?.email;
     if (!emailFromError) return setMsg('Tài khoản đã tồn tại với nhà cung cấp khác.');
@@ -94,16 +113,12 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     setPendingCred(cred);
 
     if (methods.includes('google.com')) {
-      setHint('google');
-      setMsg('Email này đã đăng ký bằng Google. Vui lòng đăng nhập Google để liên kết.');
+      setHint('google'); setMsg('Email này đã đăng ký bằng Google. Vui lòng đăng nhập Google để liên kết.');
       await loginGoogle(true);
       return;
     }
     if (methods.includes('password')) {
-      setHint('password');
-      setOpenAuth(true);
-      setMode('login');
-      setEmail(emailFromError);
+      setHint('password'); setOpenAuth(true); setMode('login'); setEmail(emailFromError);
       setMsg('Email này đã đăng ký bằng mật khẩu. Hãy đăng nhập để liên kết.');
       return;
     }
@@ -113,20 +128,17 @@ export default function LoginButton({ onToggleTheme, isDark }) {
   const doLinkIfNeeded = async () => {
     if (pendingCred && auth.currentUser) {
       await linkWithCredential(auth.currentUser, pendingCred);
-      setPendingCred(null);
-      setHint('');
-      showToast('success', 'Đã liên kết tài khoản!');
-      setOpenAuth(false);
+      setPendingCred(null); setHint(''); showToast('success', 'Đã liên kết tài khoản!'); setOpenAuth(false);
     }
   };
 
   const loginGoogle = async (isLinking = false) => {
     setLoading(true); setMsg('');
     try {
-      await signInWithPopup(auth, new GoogleAuthProvider());
+      const res = await signInWithPopup(auth, new GoogleAuthProvider());
+      await ensureUserDoc(res.user); // NEW
       if (isLinking) await doLinkIfNeeded();
-      setOpenAuth(false);
-      showToast('success', 'Đăng nhập Google thành công!');
+      setOpenAuth(false); showToast('success', 'Đăng nhập Google thành công!');
     } catch (e) {
       if (e.code === 'auth/account-exists-with-different-credential') await handleAccountExists(e, 'google');
       else setMsg(e.message);
@@ -136,16 +148,15 @@ export default function LoginButton({ onToggleTheme, isDark }) {
   const loginGithub = async () => {
     setLoading(true); setMsg('');
     try {
-      await signInWithPopup(auth, new GithubAuthProvider());
-      setOpenAuth(false);
-      showToast('success', 'Đăng nhập GitHub thành công!');
+      const res = await signInWithPopup(auth, new GithubAuthProvider());
+      await ensureUserDoc(res.user); // NEW
+      setOpenAuth(false); showToast('success', 'Đăng nhập GitHub thành công!');
     } catch (e) {
       if (e.code === 'auth/account-exists-with-different-credential') await handleAccountExists(e, 'github');
       else setMsg(e.message);
     } finally { setLoading(false); }
   };
 
-  // Kiểm tra độ mạnh & trùng khớp (đăng ký)
   const pwdStrong = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(password);
   const pwdMatch  = password && confirmPwd && password === confirmPwd;
 
@@ -156,20 +167,16 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       if (mode === 'signup') {
         if (!pwdStrong) { setMsg('Mật khẩu phải ≥8 ký tự và có chữ, số, ký tự đặc biệt.'); setLoading(false); return; }
         if (!pwdMatch)  { setMsg('Xác nhận mật khẩu không khớp.'); setLoading(false); return; }
-
         const { user: created } = await createUserWithEmailAndPassword(auth, email, password);
         if (ENFORCE_EMAIL_VERIFICATION) { try { await sendEmailVerification(created); } catch {} }
+        await ensureUserDoc(created); // NEW
         showToast('success', 'Đăng ký thành công! Hãy kiểm tra email để xác minh.');
-        setMode('login');
-        setOpenAuth(false);
-        setEmail(''); setPassword(''); setConfirmPwd('');
-        // KHÔNG signOut cưỡng bức -- chỉ chặn khi bình luận
+        setMode('login'); setOpenAuth(false); setEmail(''); setPassword(''); setConfirmPwd('');
       } else {
-        await signInWithEmailAndPassword(auth, email, password);
+        const { user: logged } = await signInWithEmailAndPassword(auth, email, password);
+        await ensureUserDoc(logged); // NEW
         if (pendingCred && hint === 'password') await doLinkIfNeeded();
-        setOpenAuth(false);
-        setEmail(''); setPassword('');
-        showToast('success', 'Đăng nhập thành công!');
+        setOpenAuth(false); setEmail(''); setPassword(''); showToast('success', 'Đăng nhập thành công!');
       }
     } catch (e) {
       if (e.code === 'auth/email-already-in-use') { setMode('login'); setMsg('Email đã tồn tại. Vui lòng đăng nhập.'); }
