@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { auth, db } from '../lib/firebase-client';
 import {
-  addDoc, collection, deleteDoc, doc, getDoc,
+  addDoc, collection, deleteDoc, doc, getDoc, setDoc,
   limit, onSnapshot, orderBy, query, runTransaction,
   serverTimestamp, updateDoc, where,
   arrayUnion, arrayRemove, increment
@@ -72,6 +72,22 @@ async function bumpCounter(uid, delta) {
   });
 }
 
+/* ========= Đảm bảo có users/{uid} khi có hoạt động ========= */
+async function ensureUserDoc(u) {
+  if (!u) return;
+  try {
+    await setDoc(doc(db, 'users', u.uid), {
+      uid: u.uid,
+      email: u.email || '',
+      displayName: preferredName(u),
+      photoURL: preferredPhoto(u),
+      updatedAt: serverTimestamp(),
+      // createdAt chỉ set khi chưa có
+      createdAt: serverTimestamp(),
+    }, { merge: true });
+  } catch {}
+}
+
 /* ========= Modal trung tâm (alert + confirm) ========= */
 function CenterModal({ open, title, children, onClose, actions, tone = 'info' }) {
   if (!open) return null;
@@ -102,7 +118,6 @@ const VerifiedBadgeX = ({ className = '' }) => (
     className={`inline-block ${className}`}
     fill="#1d9bf0"
   >
-    {/* Official Twitter verified badge path */}
     <path d="M22.25 12c0-1.43-.88-2.67-2.19-3.34.46-1.39.2-2.9-.81-3.91s-2.52-1.27-3.91-.81c-.66-1.31-1.91-2.19-3.34-2.19s-2.67.88-3.33 2.19c-1.4-.46-2.91-.2-3.92.81s-1.26 2.52-.8 3.91c-1.31.67-2.2 1.91-2.2 3.34s.89 2.67 2.2 3.34c-.46 1.39-.21 2.9.8 3.91s2.52 1.26 3.91.81c.67 1.31 1.91 2.19 3.34 2.19s2.68-.88 3.34-2.19c1.39.45 2.9.2 3.91-.81s1.27-2.52.81-3.91c1.31-.67 2.19-1.91 2.19-3.34zm-11.71 4.2L6.8 12.46l1.41-1.42 2.26 2.26 4.8-5.23 1.47 1.36-6.2 6.77z"/>
   </svg>
 );
@@ -252,6 +267,7 @@ export default function Comments({ postId, postTitle }) {
     if (fixes.length) Promise.all(fixes).catch(()=>{});
   }, [me, items]);
 
+  // Admin helper
   const isAdmin = useMemo(() => (uid) => adminUids.includes(uid), [adminUids]);
 
   // ===== Submit bình luận (chỉ chặn nếu chưa verify)
@@ -260,6 +276,9 @@ export default function Comments({ postId, postTitle }) {
     if (!me) { openLoginPrompt(); return; }
     if (!me.emailVerified) { openVerifyPrompt(); return; }
     if (!content.trim()) return;
+
+    // đảm bảo users/{uid} tồn tại/sync trước khi ghi comment
+    await ensureUserDoc(me);
 
     const payload = {
       postId: String(postId),
@@ -294,7 +313,7 @@ export default function Comments({ postId, postTitle }) {
     }));
   };
 
-  // ===== Toggle ❤️ like + tạo notification khi like (không thông báo khi bỏ like hoặc tự-like)
+  // ===== Toggle ❤️ like + notification khi like
   const toggleLike = async (c) => {
     if (!me) { openLoginPrompt(); return; }
     const cid = c.id;
@@ -305,7 +324,6 @@ export default function Comments({ postId, postTitle }) {
         likedBy: hasLiked ? arrayRemove(me.uid) : arrayUnion(me.uid),
         likeCount: increment(hasLiked ? -1 : +1),
       });
-      // tạo noti khi LIKE (không phải bỏ like) & không phải like chính mình
       if (!hasLiked && me.uid !== c.authorId) {
         await createNotification({
           toUserId: c.authorId,
@@ -349,7 +367,8 @@ export default function Comments({ postId, postTitle }) {
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            className="w-full min-h-[96px] border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-[15px] leading-6 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/40 outline-none"
+            // iOS zoom fix: font-size >= 16px
+            className="w-full min-h-[96px] border border-sky-200 dark:border-sky-900 rounded-xl px-3 py-2 text-[16px] leading-6 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-sky-500/40 outline-none shadow-[0_0_0_1px_rgba(56,189,248,0.25)]"
             placeholder="Viết bình luận..."
             maxLength={3000}
             onFocus={() => { if (me && !me.emailVerified) openVerifyPrompt(); }}
@@ -357,7 +376,7 @@ export default function Comments({ postId, postTitle }) {
           <div className="flex justify-end">
             <button
               type="submit"
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 active:scale-95 shadow-sm inline-flex items-center gap-2"
+              className="px-4 py-2 bg-gradient-to-r from-sky-600 to-blue-600 text-white rounded-xl hover:opacity-95 active:scale-95 shadow-sm inline-flex items-center gap-2"
             >
               <FontAwesomeIcon icon={faPaperPlane} />
               Gửi
@@ -376,7 +395,14 @@ export default function Comments({ postId, postTitle }) {
             {roots.map((c) => {
               const replies = repliesByParent[c.id] || [];
               return (
-                <li key={c.id} id={`c-${c.id}`} className="border border-gray-200 dark:border-gray-800 rounded-xl p-3 scroll-mt-24 bg-white dark:bg-gray-900">
+                <li
+                  key={c.id}
+                  id={`c-${c.id}`}
+                  className="scroll-mt-24 rounded-2xl p-3 bg-white/95 dark:bg-gray-900/95 border border-transparent 
+                             [background:linear-gradient(#fff,rgba(255,255,255,0.96))_padding-box,linear-gradient(135deg,#bae6fd,#fecaca)_border-box]
+                             dark:[background:linear-gradient(#0b0f19,#0b0f19)_padding-box,linear-gradient(135deg,#0ea5e9,#f43f5e)_border-box]
+                             hover:shadow-md transition-shadow"
+                >
                   <CommentRow
                     c={c}
                     me={me}
@@ -391,6 +417,8 @@ export default function Comments({ postId, postTitle }) {
                     }}
                     onToggleLike={()=>toggleLike(c)}
                   />
+
+                  {/* Khung trả lời */}
                   <ReplyBox
                     me={me}
                     postId={postId}
@@ -400,12 +428,18 @@ export default function Comments({ postId, postTitle }) {
                     onNeedVerify={openVerifyPrompt}
                     onNeedLogin={openLoginPrompt}
                   />
+
+                  {/* Danh sách phản hồi */}
                   {replies.map((r) => {
                     const target = r.replyToUserId === c.authorId
                       ? c
                       : replies.find(x => x.authorId === r.replyToUserId) || null;
                     return (
-                      <div key={r.id} id={`c-${r.id}`} className="mt-3 pl-4 border-l border-gray-200 dark:border-gray-800 scroll-mt-24">
+                      <div
+                        key={r.id}
+                        id={`c-${r.id}`}
+                        className="mt-3 pl-4 border-l-2 border-sky-200 dark:border-sky-800 scroll-mt-24"
+                      >
                         <CommentRow
                           c={r}
                           me={me}
@@ -443,7 +477,7 @@ export default function Comments({ postId, postTitle }) {
   );
 }
 
-/* ========= Component CommentRow (ĐÃ CẬP NHẬT) ========= */
+/* ========= Component CommentRow ========= */
 function CommentRow({ c, me, small = false, isAdminFn, quoteFrom, canDelete, onDelete, onToggleLike }) {
   const isAdmin = isAdminFn?.(c.authorId);
   const hasLiked = Array.isArray(c.likedBy) && c.likedBy.includes(me?.uid);
@@ -454,50 +488,62 @@ function CommentRow({ c, me, small = false, isAdminFn, quoteFrom, canDelete, onD
 
   return (
     <div className="flex gap-3">
-      <div className={`flex-shrink-0 ${small ? 'w-8 h-8' : 'w-10 h-10'} rounded-full border border-gray-300 dark:border-gray-600 flex items-center justify-center bg-gray-100 dark:bg-gray-800`}>
+      <div className={`flex-shrink-0 ${small ? 'w-8 h-8' : 'w-10 h-10'} rounded-full border border-sky-200 dark:border-sky-700 flex items-center justify-center bg-sky-50 dark:bg-sky-900/40`}>
         {avatar ? (
           <img src={avatar} alt="avatar" className="w-full h-full rounded-full object-cover" referrerPolicy="no-referrer" />
         ) : (
-          <FontAwesomeIcon icon={faUserCircle} className={`${small ? 'w-5 h-5' : 'w-6 h-6'} text-gray-400`} />
+          <FontAwesomeIcon icon={faUserCircle} className={`${small ? 'w-5 h-5' : 'w-6 h-6'} text-sky-500`} />
         )}
       </div>
+
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
-          {/* TÊN NGƯỜI DÙNG - ĐÃ THÊM LIÊN KẾT */}
+          {/* TÊN NGƯỜI DÙNG (link hồ sơ) */}
           {c.authorId ? (
             <Link 
               href={`/users/${c.authorId}`}
-              className="font-medium text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 hover:underline transition-colors"
+              className="font-semibold text-gray-900 dark:text-gray-100 hover:text-sky-600 dark:hover:text-sky-400 hover:underline transition-colors"
             >
               {userName}
             </Link>
           ) : (
-            <span className="font-medium text-gray-900 dark:text-gray-100">{userName}</span>
+            <span className="font-semibold text-gray-900 dark:text-gray-100">{userName}</span>
           )}
           
-          {isAdmin && <VerifiedBadgeX className="w-4 h-4" />}
+          {isAdmin && (
+            <span
+              className="inline-flex items-center justify-center translate-y-[0.5px]"
+              title="Quản trị viên đã xác minh"
+            >
+              <VerifiedBadgeX className="w-4 h-4 shrink-0" />
+            </span>
+          )}
           
           <span className="text-xs text-gray-500 dark:text-gray-400" title={dt?.abs}>
             {dt?.rel}
           </span>
           
           {canDelete && (
-            <button onClick={onDelete} className="text-xs text-rose-500 hover:text-rose-700 ml-auto" title="Xoá">
+            <button
+              onClick={onDelete}
+              className="text-xs text-rose-600 hover:text-rose-700 ml-auto inline-flex items-center gap-1"
+              title="Xoá"
+            >
               <FontAwesomeIcon icon={faTrash} />
+              Xoá
             </button>
           )}
         </div>
 
         {/* Quote mục tiêu (nếu là reply) */}
         {quoteFrom && quoteFrom.id !== c.id && (
-          <div className="mt-2 text-[13px] text-gray-700 dark:text-gray-300 bg-gray-50 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 rounded-lg p-2">
+          <div className="mt-2 text-[13px] text-gray-700 dark:text-gray-300 bg-gradient-to-r from-sky-50 to-rose-50 dark:from-sky-900/20 dark:to-rose-900/20 border border-sky-100 dark:border-sky-800 rounded-xl p-2">
             <div className="flex items-center gap-2 mb-1 opacity-80">
-              <FontAwesomeIcon icon={faQuoteLeft} className="w-3.5 h-3.5" />
-              {/* TÊN TRONG QUOTE CŨNG CÓ LIÊN KẾT */}
+              <FontAwesomeIcon icon={faQuoteLeft} className="w-3.5 h-3.5 text-sky-500" />
               {quoteFrom.authorId ? (
                 <Link 
                   href={`/users/${quoteFrom.authorId}`}
-                  className="font-medium hover:text-blue-600 dark:hover:text-blue-400 hover:underline transition-colors"
+                  className="font-medium hover:text-sky-600 dark:hover:text-sky-400 hover:underline transition-colors"
                 >
                   {quoteFrom.userName || 'Người dùng'}
                 </Link>
@@ -517,14 +563,14 @@ function CommentRow({ c, me, small = false, isAdminFn, quoteFrom, canDelete, onD
         <div className="mt-2 flex items-center gap-2">
           <button
             onClick={onToggleLike}
-            className={`inline-flex items-center gap-1 text-sm transition-colors ${
-              hasLiked 
-                ? 'text-rose-500 hover:text-rose-600' 
-                : 'text-gray-500 hover:text-rose-500 dark:text-gray-400 dark:hover:text-rose-400'
-            }`}
+            className={`inline-flex items-center gap-1 text-sm transition-colors rounded-lg px-2 py-1
+              ${hasLiked 
+                ? 'text-rose-600 bg-rose-50 hover:bg-rose-100 dark:text-rose-300 dark:bg-rose-900/30 dark:hover:bg-rose-900/40' 
+                : 'text-gray-500 hover:text-rose-600 hover:bg-rose-50 dark:text-gray-400 dark:hover:text-rose-300 dark:hover:bg-rose-900/20'
+              }`}
             title={hasLiked ? 'Bỏ thích' : 'Thích'}
           >
-            <FontAwesomeIcon icon={faHeart} className={hasLiked ? 'text-rose-500' : ''} />
+            <FontAwesomeIcon icon={faHeart} />
             {likeCount > 0 && <span>{likeCount}</span>}
           </button>
         </div>
@@ -544,6 +590,9 @@ function ReplyBox({ me, postId, parent, replyingTo=null, adminUids, postTitle, o
     if (!me) { onNeedLogin?.(); return; }
     if (!me.emailVerified) { onNeedVerify?.(); return; }
     if (!canReply || !text.trim()) return;
+
+    // đảm bảo users/{uid} tồn tại/sync trước khi ghi reply
+    await ensureUserDoc(me);
 
     const ref = await addDoc(collection(db, 'comments'), {
       postId: String(postId),
@@ -612,19 +661,18 @@ function ReplyBox({ me, postId, parent, replyingTo=null, adminUids, postTitle, o
           if (!me) { onNeedLogin?.(); return; }
           if (!me.emailVerified) { onNeedVerify?.(); return; }
           setOpen(true);
-        }} className="inline-flex items-center gap-2 text-sm text-gray-700 dark:text-gray-300 hover:underline">
+        }} className="inline-flex items-center gap-2 text-sm text-sky-700 dark:text-sky-300 hover:underline">
           <FontAwesomeIcon icon={faReply} />
           Trả lời
         </button>
       ) : (
         <form onSubmit={onReply} className="flex flex-col gap-2 mt-2">
           {target && (
-            <div className="text-[12px] text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800/40 border border-gray-200 dark:border-gray-700 rounded-lg p-2">
-              {/* TÊN TRONG REPLY BOX CŨNG CÓ LIÊN KẾT */}
+            <div className="text-[12px] text-gray-700 dark:text-gray-300 bg-gradient-to-r from-sky-50 to-indigo-50 dark:from-sky-900/20 dark:to-indigo-900/20 border border-sky-100 dark:border-sky-800 rounded-xl p-2">
               {target.authorId ? (
                 <Link 
                   href={`/users/${target.authorId}`}
-                  className="font-medium hover:text-blue-600 dark:hover:text-blue-400 hover:underline transition-colors"
+                  className="font-medium hover:text-sky-600 dark:hover:text-sky-400 hover:underline transition-colors"
                 >
                   {target.userName || 'Người dùng'}
                 </Link>
@@ -637,7 +685,8 @@ function ReplyBox({ me, postId, parent, replyingTo=null, adminUids, postTitle, o
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
-            className="w-full min-h-[72px] border border-gray-300 dark:border-gray-700 rounded-lg px-3 py-2 text-[15px] leading-6 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500/40 outline-none"
+            // iOS zoom fix: font-size >= 16px
+            className="w-full min-h-[72px] border border-indigo-200 dark:border-indigo-900 rounded-xl px-3 py-2 text-[16px] leading-6 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500/40 outline-none shadow-[0_0_0_1px_rgba(129,140,248,0.25)]"
             placeholder={`Phản hồi ${replyingTo ? (replyingTo.userName || 'người dùng') : (parent.userName || 'người dùng')}…`}
             maxLength={2000}
             onFocus={() => { if (me && !me.emailVerified) onNeedVerify?.(); }}
@@ -646,13 +695,13 @@ function ReplyBox({ me, postId, parent, replyingTo=null, adminUids, postTitle, o
             <button
               type="button"
               onClick={() => { setOpen(false); setText(''); }}
-              className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+              className="px-3 py-2 text-sm rounded-xl border border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
             >
               Huỷ
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-sm rounded-lg bg-gray-900 text-white dark:bg-white dark:text-gray-900 hover:opacity-90 inline-flex items-center gap-2"
+              className="px-4 py-2 text-sm rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:opacity-95 inline-flex items-center gap-2"
             >
               Gửi
             </button>
@@ -662,4 +711,3 @@ function ReplyBox({ me, postId, parent, replyingTo=null, adminUids, postTitle, o
     </div>
   );
 }
-
