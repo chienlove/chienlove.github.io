@@ -221,6 +221,7 @@ function CrumbFirst({ href, children }) {
       href={href}
       className="relative inline-flex h-10 items-center px-5 text-sm font-semibold text-white bg-sky-500 hover:bg-sky-600"
       style={{
+        // Mũi tên hướng PHẢI
         clipPath: `polygon(0 0, calc(100% - ${BC_ARROW}px) 0, 100% 50%, calc(100% - ${BC_ARROW}px) 100%, 0 100%)`,
         borderRadius: RADIUS,
       }}
@@ -236,7 +237,8 @@ function CrumbMiddle({ href, children }) {
       href={href}
       className="relative inline-flex h-10 items-center px-5 text-sm font-semibold text-white bg-sky-500 hover:bg-sky-600"
       style={{
-        clipPath: `polygon(${BC_ARROW}px 0, calc(100% - ${BC_ARROW}px) 0, 100% 50%, calc(100% - ${BC_ARROW}px) 100%, ${BC_ARROW}px 100%, 0 50%)`,
+        // ✅ Sửa lại: cũng là mũi tên hướng PHẢI (giống CrumbFirst)
+        clipPath: `polygon(0 0, calc(100% - ${BC_ARROW}px) 0, 100% 50%, calc(100% - ${BC_ARROW}px) 100%, 0 100%)`,
         borderRadius: RADIUS,
       }}
     >
@@ -246,24 +248,34 @@ function CrumbMiddle({ href, children }) {
 }
 
 function CrumbLast({ children }) {
-  const path = `polygon(${LAST_INSET + BC_ARROW}px 0, 100% 0, 100% 100%, ${LAST_INSET + BC_ARROW}px 100%, ${LAST_INSET}px 50%)`;
+  // ✅ Khuyết chữ V HƯỚNG PHẢI, chừa lề trái LAST_INSET để không "ăn" vào khoảng cách
+  const path = `polygon(${LAST_INSET + BC_ARROW}px 0,
+                        100% 0,
+                        100% 100%,
+                        ${LAST_INSET + BC_ARROW}px 100%,
+                        ${LAST_INSET}px 50%)`;
   return (
-    <span className="relative inline-block align-top" style={{ borderRadius: RADIUS, paddingLeft: LAST_INSET }}>
+    <span
+      className="relative inline-block align-top"
+      style={{ borderRadius: RADIUS, paddingLeft: LAST_INSET }}
+    >
+      {/* Lớp ngoài: tạo viền xanh theo đúng biên dạng */}
       <span
         aria-hidden
         className="absolute inset-0"
         style={{
           clipPath: path,
           borderRadius: RADIUS,
-          background: '#0ea5e9',
+          background: '#0ea5e9', // sky-500
         }}
       />
+      {/* Lớp trong: nền trắng + viền xanh MỎNG để không đậm hơn các nút khác */}
       <span
         className="relative inline-flex h-10 items-center px-5 text-sm font-semibold text-sky-600 bg-white"
         style={{
           clipPath: path,
           borderRadius: RADIUS,
-          boxShadow: 'inset 0 0 0 2px #0ea5e9',
+          boxShadow: 'inset 0 0 0 1.5px #0ea5e9',
         }}
       >
         <span className="truncate">{children}</span>
