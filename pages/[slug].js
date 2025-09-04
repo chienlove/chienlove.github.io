@@ -209,67 +209,75 @@ function PrettyBlockquote({ children }) {
   );
 }
 
-/* ===================== Breadcrumb – mũi tên NHỌN SANG TRÁI, bo góc, viền liền mạch ===================== */
-/* 
-  Lý do thay đổi:
-  - Đảo hướng nhọn (sang TRÁI).
-  - Bo nhẹ góc (rounded).
-  - Nút CUỐI có phần cắt nhọn nhưng vẫn phải có đường viền liền mạch → dùng kỹ thuật "gradient border".
-*/
-const ARROW = 14; // độ sâu mũi tên/khuyết
+// ====== Breadcrumb components (giống hệt ảnh mẫu) ======
+const BC_ARROW = 14; // độ sâu mũi tên
+const RADIUS  = 10;  // bo góc
 
 function CrumbFirst({ href, children }) {
-  // Nền xanh, mũi nhọn ở TRÁI
+  // Nút đầu: nền xanh, nhọn bên PHẢI
   return (
     <Link
       href={href}
-      className="relative inline-flex h-10 px-5 items-center text-sm font-semibold text-white bg-sky-500 hover:bg-sky-600"
+      className="relative inline-flex h-10 items-center px-5 text-sm font-semibold text-white bg-sky-500 hover:bg-sky-600"
       style={{
-        clipPath: `polygon(0% 50%, ${ARROW}px 0, 100% 0, 100% 100%, ${ARROW}px 100%)`,
-        borderRadius: 10,
+        clipPath: `polygon(0 0, calc(100% - ${BC_ARROW}px) 0, 100% 50%, calc(100% - ${BC_ARROW}px) 100%, 0 100%)`,
+        borderRadius: RADIUS,
       }}
       title={typeof children === 'string' ? children : undefined}
     >
-      <span className="truncate max-w-[42vw] md:max-w-[28vw]">{children}</span>
+      <span className="truncate">{children}</span>
     </Link>
   );
 }
 
 function CrumbMiddle({ href, children }) {
-  // Nền xanh, nhọn 2 đầu (trái + phải)
+  // Nút giữa: nền xanh, nhọn HAI đầu
   return (
     <Link
       href={href}
-      className="relative inline-flex h-10 px-5 items-center text-sm font-semibold text-white bg-sky-500 hover:bg-sky-600"
+      className="relative inline-flex h-10 items-center px-5 text-sm font-semibold text-white bg-sky-500 hover:bg-sky-600"
       style={{
-        clipPath: `polygon(0% 50%, ${ARROW}px 0, calc(100% - ${ARROW}px) 0, 100% 50%, calc(100% - ${ARROW}px) 100%, ${ARROW}px 100%)`,
-        borderRadius: 10,
+        clipPath: `polygon(${BC_ARROW}px 0, calc(100% - ${BC_ARROW}px) 0, 100% 50%, calc(100% - ${BC_ARROW}px) 100%, ${BC_ARROW}px 100%, 0 50%)`,
+        borderRadius: RADIUS,
       }}
       title={typeof children === 'string' ? children : undefined}
     >
-      <span className="truncate max-w-[42vw] md:max-w-[28vw]">{children}</span>
+      <span className="truncate">{children}</span>
     </Link>
   );
 }
 
 function CrumbLast({ children }) {
-  // Nút cuối nền trắng, VIỀN liền mạch theo biên dạng có KHẤU (nhọn ở PHẢI)
+  // Nút cuối: nền trắng, VIỀN xanh liền mạch, khuyết bên TRÁI
+  const path = `polygon(${BC_ARROW}px 0, 100% 0, 100% 100%, ${BC_ARROW}px 100%, 0 50%)`;
   return (
-    <span
-      className="relative inline-flex h-10 px-5 items-center text-sm font-semibold text-sky-600"
-      style={{
-        clipPath: `polygon(0 0, calc(100% - ${ARROW}px) 0, 100% 50%, calc(100% - ${ARROW}px) 100%, 0 100%)`,
-        borderRadius: 10,
-        border: '2px solid transparent',
-        background:
-          'linear-gradient(#fff,#fff) padding-box, linear-gradient(90deg,#0ea5e9,#0ea5e9) border-box',
-      }}
-      title={typeof children === 'string' ? children : undefined}
-    >
-      <span className="truncate max-w-[42vw] md:max-w-[28vw]">{children}</span>
+    <span className="relative inline-block align-top" style={{ borderRadius: RADIUS }}>
+      {/* Lớp ngoài tạo viền xanh theo đúng biên dạng */}
+      <span
+        aria-hidden
+        className="absolute inset-0"
+        style={{
+          clipPath: path,
+          borderRadius: RADIUS,
+          background: '#0ea5e9', // tailwind sky-500
+        }}
+      />
+      {/* Lớp trong là nền trắng + viền trong 2px để mép sắc nét, không bị đứt ở chỗ khuyết */}
+      <span
+        className="relative inline-flex h-10 items-center px-5 text-sm font-semibold text-sky-600 bg-white"
+        style={{
+          clipPath: path,
+          borderRadius: RADIUS,
+          boxShadow: 'inset 0 0 0 2px #0ea5e9',
+        }}
+        title={typeof children === 'string' ? children : undefined}
+      >
+        <span className="truncate">{children}</span>
+      </span>
     </span>
   );
 }
+// ====== /Breadcrumb components ======
 
 /* ===================== InfoRow ===================== */
 const InfoRow = memo(({ label, value, expandable = false, expanded = false, onToggle }) => {
