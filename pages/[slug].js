@@ -209,129 +209,92 @@ function PrettyBlockquote({ children }) {
   );
 }
 
-// ====== BREADCRUMB – phiên bản "tam giác bên trong", dứt điểm đúng hình học ======
-const H = 40;               // h-10
-const A = 14;               // độ nhọn mũi/khuyết
-const R = 10;               // bo góc
-const BORDER = 1.5;         // độ dày viền nút cuối
-const SKY = '#0ea5e9';      // sky-500
-const CRUMB_GAP_BG = '#f3f4f6'; // màu nền thanh breadcrumb (bg-gray-100)
+// ===== SVG Breadcrumb (chuẩn như ảnh mẫu) =====
+const H = 40;              // chiều cao nút (h-10)
+const SKY = '#0ea5e9';     // tailwind sky-500
+const STROKE = 2;          // độ dày viền
+const AR = 18;             // độ nhọn/độ khoét (theo viewBox 160x40)
 
-function CrumbFirst({ href, children }) {
-  // Trái thẳng, phải mũi tên (>) – mũi VẼ BÊN TRONG, không tràn ra ngoài
+function CrumbBase({ children, svg, className = '' }) {
   return (
-    <Link
-      href={href}
-      className="relative inline-flex items-center h-10 text-sm font-semibold text-white bg-sky-500 hover:bg-sky-600"
-      style={{ borderRadius: R, padding: `0 ${A + 20}px 0 20px`, lineHeight: `${H}px` }}
-      title={typeof children === 'string' ? children : undefined}
-    >
-      <span className="truncate">{children}</span>
-
-      {/* Mũi tên bên phải (tam giác cùng màu nền) */}
-      <span
+    <span className={`relative inline-flex items-center h-10 px-6 text-sm font-semibold ${className}`}>
+      {/* Hình nền bằng SVG */}
+      <svg
+        className="absolute inset-0 w-full h-full"
+        viewBox="0 0 160 40"
+        preserveAspectRatio="none"
         aria-hidden
-        className="absolute top-1/2 right-0"
-        style={{
-          transform: 'translateY(-50%)',
-          width: 0, height: 0,
-          borderTop: `${H/2}px solid transparent`,
-          borderBottom: `${H/2}px solid transparent`,
-          borderLeft: `${A}px solid ${SKY}`,
-          borderTopLeftRadius: `${R}px`,
-          borderBottomLeftRadius: `${R}px`,
-        }}
-      />
-    </Link>
-  );
-}
+      >
+        {svg}
+      </svg>
 
-function CrumbMiddle({ href, children }) {
-  // Trái KHOÉT V hướng phải, phải mũi tên (>) – tất cả vẽ BÊN TRONG
-  return (
-    <Link
-      href={href}
-      className="relative inline-flex items-center h-10 text-sm font-semibold text-white bg-sky-500 hover:bg-sky-600"
-      style={{ borderRadius: R, padding: `0 ${A + 20}px 0 ${A + 20}px`, lineHeight: `${H}px` }}
-      title={typeof children === 'string' ? children : undefined}
-    >
-      <span className="truncate">{children}</span>
-
-      {/* Khoét V bên trái (tam giác màu nền thanh breadcrumb) */}
-      <span
-        aria-hidden
-        className="absolute top-1/2 left-0"
-        style={{
-          transform: 'translateY(-50%)',
-          width: 0, height: 0,
-          borderTop: `${H/2}px solid transparent`,
-          borderBottom: `${H/2}px solid transparent`,
-          borderRight: `${A}px solid ${CRUMB_GAP_BG}`,
-          borderTopRightRadius: `${R}px`,
-          borderBottomRightRadius: `${R}px`,
-        }}
-      />
-
-      {/* Mũi tên bên phải */}
-      <span
-        aria-hidden
-        className="absolute top-1/2 right-0"
-        style={{
-          transform: 'translateY(-50%)',
-          width: 0, height: 0,
-          borderTop: `${H/2}px solid transparent`,
-          borderBottom: `${H/2}px solid transparent`,
-          borderLeft: `${A}px solid ${SKY}`,
-          borderTopLeftRadius: `${R}px`,
-          borderBottomLeftRadius: `${R}px`,
-        }}
-      />
-    </Link>
-  );
-}
-
-function CrumbLast({ children }) {
-  // Trái KHOÉT V hướng phải, phải THẲNG – nền trắng, viền xanh mảnh
-  return (
-    <span
-      className="relative inline-flex items-center h-10 text-sm font-semibold text-sky-600 bg-white"
-      style={{
-        borderRadius: R,
-        padding: `0 20px 0 ${A + 20}px`, // chừa chỗ cho khuyết V bên trái
-        lineHeight: `${H}px`,
-        boxShadow: `inset 0 0 0 ${BORDER}px ${SKY}`,
-      }}
-      title={typeof children === 'string' ? children : undefined}
-    >
-      <span className="truncate">{children}</span>
-
-      {/* Khoét V bên trái (tam giác màu nền thanh breadcrumb) */}
-      <span
-        aria-hidden
-        className="absolute top-1/2 left-0"
-        style={{
-          transform: 'translateY(-50%)',
-          width: 0, height: 0,
-          borderTop: `${H/2 - BORDER}px solid transparent`,
-          borderBottom: `${H/2 - BORDER}px solid transparent`,
-          borderRight: `${A}px solid ${CRUMB_GAP_BG}`,
-        }}
-      />
-
-      {/* Đường viền dọc mép khuyết V để liền mạch với viền hộp (độ dày = BORDER) */}
-      <span
-        aria-hidden
-        className="absolute top-1/2 left-0 pointer-events-none"
-        style={{
-          transform: 'translateY(-50%)',
-          width: 0, height: 0,
-          borderTop: `${H/2 - BORDER}px solid transparent`,
-          borderBottom: `${H/2 - BORDER}px solid transparent`,
-          borderRight: `${A}px solid transparent`,
-          filter: `drop-shadow(${BORDER}px 0 0 ${SKY})`,
-        }}
-      />
+      {/* Nội dung */}
+      <span className="relative z-10 truncate">{children}</span>
     </span>
+  );
+}
+
+// [ Home > ] -- trái thẳng, phải mũi tên >
+function CrumbFirst({ href, children }) {
+  return (
+    <Link href={href} className="inline-block">
+      <CrumbBase
+        className="text-white"
+        svg={
+          <polygon
+            points={`0,0 ${160-AR},0 160,20 ${160-AR},40 0,40`}
+            fill={SKY}
+            stroke={SKY}
+            strokeWidth={STROKE}
+            strokeLinejoin="round"
+          />
+        }
+      >
+        {children}
+      </CrumbBase>
+    </Link>
+  );
+}
+
+// [  > Chuyên mục > ] -- trái khoét V hướng phải, phải mũi tên >
+function CrumbMiddle({ href, children }) {
+  return (
+    <Link href={href} className="inline-block">
+      <CrumbBase
+        className="text-white"
+        svg={
+          <polygon
+            points={`${AR},0 ${160-AR},0 160,20 ${160-AR},40 ${AR},40 0,20`}
+            fill={SKY}
+            stroke={SKY}
+            strokeWidth={STROKE}
+            strokeLinejoin="round"
+          />
+        }
+      >
+        {children}
+      </CrumbBase>
+    </Link>
+  );
+}
+
+// [  > Bài viết ] -- trái khoét V hướng phải, phải thẳng, nền trắng viền xanh
+function CrumbLast({ children }) {
+  return (
+    <CrumbBase
+      className="bg-white text-sky-600"
+      svg={
+        <polygon
+          points={`${AR},0 160,0 160,40 ${AR},40 0,20`}
+          fill="#ffffff"
+          stroke={SKY}
+          strokeWidth={STROKE}
+          strokeLinejoin="round"
+        />
+      }
+    >
+      {children}
+    </CrumbBase>
   );
 }
 
