@@ -209,87 +209,122 @@ function PrettyBlockquote({ children }) {
   );
 }
 
-const BC_ARROW = 14; // độ nhọn
-const RADIUS = 10;   // bo góc
+const ARROW = 14;          // độ nhọn mũi / chữ V
+const HEIGHT = 40;         // 10 * 4px = h-10
+const RADIUS = 10;         // bo góc thân
+const BORDER = 1.5;        // viền mảnh cho nút cuối
+const CRUMB_GAP_BG = '#f3f4f6'; // màu nền khe giữa (bg-gray-100)
 
-// ✅ Nút đầu: trái thẳng, phải nhọn >
 function CrumbFirst({ href, children }) {
+  // Trái thẳng, phải mũi tên >
   return (
     <Link
       href={href}
-      className="relative inline-flex h-10 items-center px-5 text-sm font-semibold text-white bg-sky-500 hover:bg-sky-600"
-      style={{
-        clipPath: `polygon(
-          0 0,
-          calc(100% - ${BC_ARROW}px) 0,
-          100% 50%,
-          calc(100% - ${BC_ARROW}px) 100%,
-          0 100%
-        )`,
-        borderRadius: RADIUS,
-      }}
+      className="relative inline-flex items-center h-10 px-5 text-sm font-semibold text-white bg-sky-500 hover:bg-sky-600"
+      style={{ borderRadius: RADIUS, lineHeight: `${HEIGHT}px` }}
     >
       <span className="truncate">{children}</span>
-    </Link>
-  );
-}
 
-// ✅ Nút giữa: trái KHOÉT chữ V hướng phải, phải nhọn >
-function CrumbMiddle({ href, children }) {
-  return (
-    <Link
-      href={href}
-      className="relative inline-flex h-10 items-center px-5 text-sm font-semibold text-white bg-sky-500 hover:bg-sky-600"
-      style={{
-        clipPath: `polygon(
-          ${BC_ARROW}px 0,
-          calc(100% - ${BC_ARROW}px) 0,
-          100% 50%,
-          calc(100% - ${BC_ARROW}px) 100%,
-          ${BC_ARROW}px 100%,
-          0 50%
-        )`,
-        borderRadius: RADIUS,
-      }}
-    >
-      <span className="truncate">{children}</span>
-    </Link>
-  );
-}
-
-// ✅ Nút cuối: trái KHOÉT chữ V hướng phải, phải THẲNG, nền trắng, viền xanh
-function CrumbLast({ children }) {
-  const path = `polygon(
-    ${BC_ARROW}px 0,
-    100% 0,
-    100% 100%,
-    ${BC_ARROW}px 100%,
-    0 50%
-  )`;
-
-  return (
-    <span className="relative inline-block align-top" style={{ borderRadius: RADIUS }}>
-      {/* Viền xanh ngoài */}
+      {/* mũi tên phải */}
       <span
         aria-hidden
-        className="absolute inset-0"
+        className="absolute top-1/2 -right-[14px]"
         style={{
-          clipPath: path,
-          borderRadius: RADIUS,
-          background: '#0ea5e9',
+          marginTop: `-${HEIGHT/2}px`,
+          width: 0, height: 0,
+          borderTop: `${HEIGHT/2}px solid transparent`,
+          borderBottom: `${HEIGHT/2}px solid transparent`,
+          borderLeft: `${ARROW}px solid #0ea5e9`, // sky-500
+          borderTopLeftRadius: `${RADIUS}px`,
+          borderBottomLeftRadius: `${RADIUS}px`,
         }}
       />
-      {/* Lớp trắng bên trong có viền xanh mảnh */}
+    </Link>
+  );
+}
+
+function CrumbMiddle({ href, children }) {
+  // Trái khoét chữ V (>) bằng tam giác nền ngoài, phải mũi tên >
+  return (
+    <Link
+      href={href}
+      className="relative inline-flex items-center h-10 px-5 text-sm font-semibold text-white bg-sky-500 hover:bg-sky-600"
+      style={{ borderRadius: RADIUS, lineHeight: `${HEIGHT}px` }}
+    >
+      <span className="truncate">{children}</span>
+
+      {/* khoét V bên trái (tam giác màu nền ngoài) */}
       <span
-        className="relative inline-flex h-10 items-center px-5 text-sm font-semibold text-sky-600 bg-white"
+        aria-hidden
+        className="absolute top-1/2 -left-[14px]"
         style={{
-          clipPath: path,
-          borderRadius: RADIUS,
-          boxShadow: 'inset 0 0 0 1.5px #0ea5e9',
+          marginTop: `-${HEIGHT/2}px`,
+          width: 0, height: 0,
+          borderTop: `${HEIGHT/2}px solid transparent`,
+          borderBottom: `${HEIGHT/2}px solid transparent`,
+          borderRight: `${ARROW}px solid ${CRUMB_GAP_BG}`, // cắt V hướng phải
         }}
-      >
-        <span className="truncate">{children}</span>
-      </span>
+      />
+
+      {/* mũi tên phải */}
+      <span
+        aria-hidden
+        className="absolute top-1/2 -right-[14px]"
+        style={{
+          marginTop: `-${HEIGHT/2}px`,
+          width: 0, height: 0,
+          borderTop: `${HEIGHT/2}px solid transparent`,
+          borderBottom: `${HEIGHT/2}px solid transparent`,
+          borderLeft: `${ARROW}px solid #0ea5e9`, // sky-500
+          borderTopLeftRadius: `${RADIUS}px`,
+          borderBottomLeftRadius: `${RADIUS}px`,
+        }}
+      />
+    </Link>
+  );
+}
+
+function CrumbLast({ children }) {
+  // Trái khoét chữ V (>) -- phải thẳng; nền trắng + viền xanh mảnh
+  return (
+    <span
+      className="relative inline-flex items-center h-10 px-5 text-sm font-semibold text-sky-600 bg-white"
+      style={{
+        borderRadius: RADIUS,
+        lineHeight: `${HEIGHT}px`,
+        boxShadow: `inset 0 0 0 ${BORDER}px #0ea5e9`, // viền xanh mảnh, liền mạch
+      }}
+      title={typeof children === 'string' ? children : undefined}
+    >
+      <span className="truncate">{children}</span>
+
+      {/* khoét V bên trái (tam giác màu nền ngoài) */}
+      <span
+        aria-hidden
+        className="absolute top-1/2 -left-[14px]"
+        style={{
+          marginTop: `-${HEIGHT/2}px`,
+          width: 0, height: 0,
+          borderTop: `${HEIGHT/2}px solid transparent`,
+          borderBottom: `${HEIGHT/2}px solid transparent`,
+          borderRight: `${ARROW}px solid ${CRUMB_GAP_BG}`,
+        }}
+      />
+
+      {/* vẽ mép viền xanh dọc theo cạnh khoét V (nhẹ, khớp BORDER) */}
+      <span
+        aria-hidden
+        className="absolute top-1/2 -left-[14px] pointer-events-none"
+        style={{
+          marginTop: `-${HEIGHT/2}px`,
+          width: 0, height: 0,
+          borderTop: `${HEIGHT/2 - BORDER}px solid transparent`,
+          borderBottom: `${HEIGHT/2 - BORDER}px solid transparent`,
+          borderRight: `${ARROW}px solid transparent`,
+          // tạo "đường mép" bằng filter drop-shadow dọc cạnh V
+          filter: `drop-shadow(${BORDER}px 0 0 #0ea5e9)`,
+        }}
+      />
     </span>
   );
 }
