@@ -209,44 +209,38 @@ function PrettyBlockquote({ children }) {
   );
 }
 
-// ===== SVG Breadcrumb (chuẩn như ảnh mẫu) =====
-const H = 40;              // chiều cao nút (h-10)
-const SKY = '#0ea5e9';     // tailwind sky-500
-const STROKE = 2;          // độ dày viền
-const AR = 18;             // độ nhọn/độ khoét (theo viewBox 160x40)
+// ===== SVG Breadcrumb – đúng hình mẫu =====
+const SKY    = '#0ea5e9';  // tailwind sky-500
+const AR     = 18;         // độ nhọn / độ khoét (px trong viewBox 160x40)
+const STROKE = 2;          // viền cho nút cuối
 
 function CrumbBase({ children, svg, className = '' }) {
   return (
     <span className={`relative inline-flex items-center h-10 px-6 text-sm font-semibold ${className}`}>
-      {/* Hình nền bằng SVG */}
       <svg
         className="absolute inset-0 w-full h-full"
         viewBox="0 0 160 40"
         preserveAspectRatio="none"
+        shapeRendering="geometricPrecision"
         aria-hidden
       >
         {svg}
       </svg>
-
-      {/* Nội dung */}
       <span className="relative z-10 truncate">{children}</span>
     </span>
   );
 }
 
-// [ Home > ] -- trái thẳng, phải mũi tên >
+/* 1) Home: trái thẳng, phải mũi tên '>' */
 function CrumbFirst({ href, children }) {
   return (
     <Link href={href} className="inline-block">
       <CrumbBase
         className="text-white"
         svg={
-          <polygon
-            points={`0,0 ${160-AR},0 160,20 ${160-AR},40 0,40`}
+          <path
+            d={`M0,0 H${160-AR} L160,20 L${160-AR},40 H0 Z`}
             fill={SKY}
-            stroke={SKY}
-            strokeWidth={STROKE}
-            strokeLinejoin="round"
           />
         }
       >
@@ -256,19 +250,17 @@ function CrumbFirst({ href, children }) {
   );
 }
 
-// [  > Chuyên mục > ] -- trái khoét V hướng phải, phải mũi tên >
+/* 2) Chuyên mục: TRÁI KHOÉT 'V' HƯỚNG PHẢI, phải '>' */
 function CrumbMiddle({ href, children }) {
   return (
     <Link href={href} className="inline-block">
       <CrumbBase
         className="text-white"
         svg={
-          <polygon
-            points={`${AR},0 ${160-AR},0 160,20 ${160-AR},40 ${AR},40 0,20`}
+          <path
+            // M AR,0 -> (160-AR),0 -> 160,20 -> (160-AR),40 -> AR,40 -> 0,20 -> close
+            d={`M${AR},0 H${160-AR} L160,20 L${160-AR},40 H${AR} L0,20 Z`}
             fill={SKY}
-            stroke={SKY}
-            strokeWidth={STROKE}
-            strokeLinejoin="round"
           />
         }
       >
@@ -278,18 +270,20 @@ function CrumbMiddle({ href, children }) {
   );
 }
 
-// [  > Bài viết ] -- trái khoét V hướng phải, phải thẳng, nền trắng viền xanh
+/* 3) Bài viết: TRÁI KHOÉT 'V' HƯỚNG PHẢI, PHẢI THẲNG (nền trắng, viền xanh mảnh) */
 function CrumbLast({ children }) {
   return (
     <CrumbBase
       className="bg-white text-sky-600"
       svg={
-        <polygon
-          points={`${AR},0 160,0 160,40 ${AR},40 0,20`}
+        <path
+          // M AR,0 -> 160,0 -> 160,40 -> AR,40 -> 0,20 -> close
+          d={`M${AR},0 H160 V40 H${AR} L0,20 Z`}
           fill="#ffffff"
           stroke={SKY}
           strokeWidth={STROKE}
-          strokeLinejoin="round"
+          strokeLinejoin="miter"
+          strokeMiterlimit="10"
         />
       }
     >
