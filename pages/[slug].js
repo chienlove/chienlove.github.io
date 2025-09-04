@@ -210,11 +210,12 @@ function PrettyBlockquote({ children }) {
 }
 
 // ====== Breadcrumb components (giống hệt ảnh mẫu) ======
-const BC_ARROW = 14; // độ sâu mũi tên
-const RADIUS  = 10;  // bo góc
+{/* ========== BREADCRUMB (giống ảnh bạn gửi) ========== */}
+const BC_ARROW = 14;
+const RADIUS = 10;
+const LAST_INSET = 6;
 
 function CrumbFirst({ href, children }) {
-  // Nút đầu: nền xanh, nhọn bên PHẢI
   return (
     <Link
       href={href}
@@ -223,7 +224,6 @@ function CrumbFirst({ href, children }) {
         clipPath: `polygon(0 0, calc(100% - ${BC_ARROW}px) 0, 100% 50%, calc(100% - ${BC_ARROW}px) 100%, 0 100%)`,
         borderRadius: RADIUS,
       }}
-      title={typeof children === 'string' ? children : undefined}
     >
       <span className="truncate">{children}</span>
     </Link>
@@ -231,7 +231,6 @@ function CrumbFirst({ href, children }) {
 }
 
 function CrumbMiddle({ href, children }) {
-  // Nút giữa: nền xanh, nhọn HAI đầu
   return (
     <Link
       href={href}
@@ -240,7 +239,6 @@ function CrumbMiddle({ href, children }) {
         clipPath: `polygon(${BC_ARROW}px 0, calc(100% - ${BC_ARROW}px) 0, 100% 50%, calc(100% - ${BC_ARROW}px) 100%, ${BC_ARROW}px 100%, 0 50%)`,
         borderRadius: RADIUS,
       }}
-      title={typeof children === 'string' ? children : undefined}
     >
       <span className="truncate">{children}</span>
     </Link>
@@ -248,21 +246,18 @@ function CrumbMiddle({ href, children }) {
 }
 
 function CrumbLast({ children }) {
-  // Nút cuối: nền trắng, VIỀN xanh liền mạch, khuyết bên TRÁI
-  const path = `polygon(${BC_ARROW}px 0, 100% 0, 100% 100%, ${BC_ARROW}px 100%, 0 50%)`;
+  const path = `polygon(${LAST_INSET + BC_ARROW}px 0, 100% 0, 100% 100%, ${LAST_INSET + BC_ARROW}px 100%, ${LAST_INSET}px 50%)`;
   return (
-    <span className="relative inline-block align-top" style={{ borderRadius: RADIUS }}>
-      {/* Lớp ngoài tạo viền xanh theo đúng biên dạng */}
+    <span className="relative inline-block align-top" style={{ borderRadius: RADIUS, paddingLeft: LAST_INSET }}>
       <span
         aria-hidden
         className="absolute inset-0"
         style={{
           clipPath: path,
           borderRadius: RADIUS,
-          background: '#0ea5e9', // tailwind sky-500
+          background: '#0ea5e9',
         }}
       />
-      {/* Lớp trong là nền trắng + viền trong 2px để mép sắc nét, không bị đứt ở chỗ khuyết */}
       <span
         className="relative inline-flex h-10 items-center px-5 text-sm font-semibold text-sky-600 bg-white"
         style={{
@@ -270,14 +265,12 @@ function CrumbLast({ children }) {
           borderRadius: RADIUS,
           boxShadow: 'inset 0 0 0 2px #0ea5e9',
         }}
-        title={typeof children === 'string' ? children : undefined}
       >
         <span className="truncate">{children}</span>
       </span>
     </span>
   );
 }
-// ====== /Breadcrumb components ======
 
 /* ===================== InfoRow ===================== */
 const InfoRow = memo(({ label, value, expandable = false, expanded = false, onToggle }) => {
