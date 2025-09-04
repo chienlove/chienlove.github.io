@@ -209,8 +209,6 @@ function PrettyBlockquote({ children }) {
   );
 }
 
-// ====== Breadcrumb components (giống hệt 
-// ===== Breadcrumb (đúng như: [ Home >     > Chuyên mục >     > Bài viết ]) =====
 const BC_ARROW = 14; // độ nhọn
 const RADIUS = 10;   // bo góc
 
