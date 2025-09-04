@@ -212,50 +212,52 @@ function PrettyBlockquote({ children }) {
 const BC_ARROW = 14; // độ nhọn
 const RADIUS = 10;   // bo góc
 
-// ==== 1. CrumbFirst: trái thẳng, phải nhọn (>) ====
+// ✅ Nút đầu: trái thẳng, phải nhọn >
 function CrumbFirst({ href, children }) {
   return (
     <Link
       href={href}
       className="relative inline-flex h-10 items-center px-5 text-sm font-semibold text-white bg-sky-500 hover:bg-sky-600"
       style={{
-        clipPath: `polygon(0 0, calc(100% - ${BC_ARROW}px) 0, 100% 50%, calc(100% - ${BC_ARROW}px) 100%, 0 100%)`,
+        clipPath: `polygon(
+          0 0,
+          calc(100% - ${BC_ARROW}px) 0,
+          100% 50%,
+          calc(100% - ${BC_ARROW}px) 100%,
+          0 100%
+        )`,
         borderRadius: RADIUS,
       }}
-      title={typeof children === 'string' ? children : undefined}
     >
       <span className="truncate">{children}</span>
     </Link>
   );
 }
 
-// ==== 2. CrumbMiddle: trái KHOÉT V hướng phải, phải nhọn (>) ====
+// ✅ Nút giữa: trái KHOÉT chữ V hướng phải, phải nhọn >
 function CrumbMiddle({ href, children }) {
-  const path = `polygon(
-    ${BC_ARROW}px 0,
-    calc(100% - ${BC_ARROW}px) 0,
-    100% 50%,
-    calc(100% - ${BC_ARROW}px) 100%,
-    ${BC_ARROW}px 100%,
-    0 50%
-  )`;
-
   return (
     <Link
       href={href}
       className="relative inline-flex h-10 items-center px-5 text-sm font-semibold text-white bg-sky-500 hover:bg-sky-600"
       style={{
-        clipPath: path,
+        clipPath: `polygon(
+          ${BC_ARROW}px 0,
+          calc(100% - ${BC_ARROW}px) 0,
+          100% 50%,
+          calc(100% - ${BC_ARROW}px) 100%,
+          ${BC_ARROW}px 100%,
+          0 50%
+        )`,
         borderRadius: RADIUS,
       }}
-      title={typeof children === 'string' ? children : undefined}
     >
       <span className="truncate">{children}</span>
     </Link>
   );
 }
 
-// ==== 3. CrumbLast: trái KHOÉT V hướng phải, phải THẲNG, nền trắng, viền xanh ====
+// ✅ Nút cuối: trái KHOÉT chữ V hướng phải, phải THẲNG, nền trắng, viền xanh
 function CrumbLast({ children }) {
   const path = `polygon(
     ${BC_ARROW}px 0,
@@ -267,7 +269,7 @@ function CrumbLast({ children }) {
 
   return (
     <span className="relative inline-block align-top" style={{ borderRadius: RADIUS }}>
-      {/* Lớp viền ngoài xanh */}
+      {/* Viền xanh ngoài */}
       <span
         aria-hidden
         className="absolute inset-0"
@@ -277,7 +279,7 @@ function CrumbLast({ children }) {
           background: '#0ea5e9',
         }}
       />
-      {/* Lớp nền trắng có viền xanh mảnh */}
+      {/* Lớp trắng bên trong có viền xanh mảnh */}
       <span
         className="relative inline-flex h-10 items-center px-5 text-sm font-semibold text-sky-600 bg-white"
         style={{
@@ -285,7 +287,6 @@ function CrumbLast({ children }) {
           borderRadius: RADIUS,
           boxShadow: 'inset 0 0 0 1.5px #0ea5e9',
         }}
-        title={typeof children === 'string' ? children : undefined}
       >
         <span className="truncate">{children}</span>
       </span>
