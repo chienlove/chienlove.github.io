@@ -42,6 +42,10 @@ export default function LoginButton({ onToggleTheme, isDark }) {
   const [toast, setToast] = useState(null);
   const [pendingCred, setPendingCred] = useState(null);
   const [hint, setHint] = useState('');
+
+  // ⬇️ Cooldown chống ghost‑click sau khi đóng Auth modal
+  const [authClosedAt, setAuthClosedAt] = useState(0);
+
   const menuRef = useRef(null);
   const guestMenuRef = useRef(null);
 
@@ -49,16 +53,17 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     const unsub = auth.onAuthStateChanged(setUser);
     return () => unsub();
   }, []);
-  
+
+  // Nghe sự kiện open-auth từ nơi khác (Comments.js…)
   useEffect(() => {
-  const onOpenAuth = () => {
-    setGuestMenuOpen(false);
-    setMenuOpen(false);
-    setOpenAuth(true);
-  };
-  window.addEventListener('open-auth', onOpenAuth);
-  return () => window.removeEventListener('open-auth', onOpenAuth);
-}, []);
+    const onOpenAuth = () => {
+      setGuestMenuOpen(false);
+      setMenuOpen(false);
+      setOpenAuth(true);
+    };
+    window.addEventListener('open-auth', onOpenAuth);
+    return () => window.removeEventListener('open-auth', onOpenAuth);
+  }, []);
 
   useEffect(() => {
     const onClick = (e) => {
@@ -75,7 +80,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     showToast._t = window.setTimeout(() => setToast(null), ms);
   };
 
-  // Toast giữa màn hình + màu theo loại
   const Toast = () => {
     if (!toast) return null;
     const tone =
@@ -173,7 +177,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
         setMode('login');
         setOpenAuth(false);
         setEmail(''); setPassword(''); setConfirmPwd('');
-        // KHÔNG signOut cưỡng bức -- chỉ chặn khi bình luận
       } else {
         await signInWithEmailAndPassword(auth, email, password);
         if (pendingCred && hint === 'password') await doLinkIfNeeded();
@@ -255,7 +258,15 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       <Toast />
       <div className="relative" ref={guestMenuRef}>
         <button
-          onClick={() => setGuestMenuOpen(v => !v)}
+          onClick={(e) => {
+            // Cooldown 400ms sau khi đóng Auth modal để chặn ghost-click iOS
+            if (Date.now() - authClosedAt < 400) {
+              e.preventDefault();
+              e.stopPropagation();
+              return;
+            }
+            setGuestMenuOpen(v => !v);
+          }}
           className="relative w-9 h-9 inline-flex items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 border border-gray-200 dark:border-gray-700"
           aria-label="Mở menu"
           title="Tài khoản"
@@ -287,11 +298,23 @@ export default function LoginButton({ onToggleTheme, isDark }) {
 
       {/* Auth Modal */}
       {openAuth && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4">
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4"
+          onClick={(e) => e.stopPropagation()} // chặn click lọt xuống phần tử phía dưới
+        >
           <div className="w-full max-w-md rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-2xl">
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-800">
               <h3 className="text-lg font-semibold">{mode==='signup' ? 'Tạo tài khoản' : 'Đăng nhập'}</h3>
-              <button onClick={() => setOpenAuth(false)} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="Close">
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();      // chặn sự kiện dội xuống avatar
+                  setOpenAuth(false);
+                  setAuthClosedAt(Date.now()); // bật cooldown
+                }}
+                className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                aria-label="Close"
+              >
                 <svg className="w-5 h-5" viewBox="0 0 20 20"><path d="M6 6l8 8M14 6l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
               </button>
             </div>
@@ -338,7 +361,8 @@ export default function LoginButton({ onToggleTheme, isDark }) {
                     required
                   />
                   <button type="button" onClick={() => setShowPwd(v => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-600">
-                    <FontAwesomeIcon icon={showPwd ? faEyeSlash : faEye} />
+                    <FontAwesomeIcon icon={faEyeSlash} style={{ display: showPwd ? 'block' : 'none' }} />
+                    <FontAwesomeIcon icon={faEye} style={{ display: showPwd ? 'none' : 'block' }} />
                   </button>
                 </div>
 
