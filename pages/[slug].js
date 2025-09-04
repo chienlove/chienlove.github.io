@@ -9,9 +9,7 @@ import dynamic from 'next/dynamic';
 import { useEffect, useState, useMemo, memo } from 'react';
 import { FastAverageColor } from 'fast-average-color';
 import { auth } from '../lib/firebase-client';
-import {
-  sendEmailVerification,
-} from 'firebase/auth';
+import { sendEmailVerification } from 'firebase/auth';
 import Head from 'next/head';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -77,7 +75,7 @@ export async function getServerSideProps(context) {
     if (cat) appData = { ...appData, category: cat };
   }
 
-  // 4) Related apps (lấy rộng để phân trang client)
+  // 4) Related apps
   const { data: relatedApps } = await supabase
     .from('apps')
     .select('id, name, slug, icon_url, author, version, category_id')
@@ -96,7 +94,6 @@ export async function getServerSideProps(context) {
 
 /* ===================== Helpers ===================== */
 
-// Tách danh sách từ chuỗi: "iOS 14, iPadOS" → ["iOS 14", "iPadOS"]
 function parseList(input) {
   if (!input) return [];
   if (Array.isArray(input)) return input;
@@ -106,19 +103,16 @@ function parseList(input) {
     .filter(Boolean);
 }
 
-// Xoá thẻ [tag=...] hoặc [tag]...[/tag]
 function stripSimpleTagAll(str, tag) {
   let s = String(str);
   const open = `[${tag}`;
   const close = `[/${tag}]`;
 
-  // remove stray close
   while (true) {
     const idx = s.toLowerCase().indexOf(close);
     if (idx === -1) break;
     s = s.slice(0, idx) + s.slice(idx + close.length);
   }
-  // paired open/close
   while (true) {
     const lower = s.toLowerCase();
     const iOpen = lower.indexOf(open);
@@ -136,7 +130,6 @@ function stripSimpleTagAll(str, tag) {
   return s;
 }
 
-// Chuyển [list][*]...[/list] → Markdown
 function processListBlocks(str) {
   let output = '';
   let remaining = String(str);
@@ -165,7 +158,6 @@ function processListBlocks(str) {
   return output;
 }
 
-// BBCode → Markdown (an toàn, ít regex)
 function bbcodeToMarkdownLite(input = '') {
   let s = String(input);
 
@@ -217,41 +209,61 @@ function PrettyBlockquote({ children }) {
   );
 }
 
-/* ===================== Breadcrumb – kiểu mũi tên như ảnh ===================== */
+/* ===================== Breadcrumb – mũi tên NHỌN SANG TRÁI, bo góc, viền liền mạch ===================== */
 /* 
-  - First: Left square, right arrow (solid sky)
-  - Middle: Arrow both sides (solid sky)
-  - Last: Left inward notch, right square (white bg + sky border)
+  Lý do thay đổi:
+  - Đảo hướng nhọn (sang TRÁI).
+  - Bo nhẹ góc (rounded).
+  - Nút CUỐI có phần cắt nhọn nhưng vẫn phải có đường viền liền mạch → dùng kỹ thuật "gradient border".
 */
+const ARROW = 14; // độ sâu mũi tên/khuyết
+
 function CrumbFirst({ href, children }) {
+  // Nền xanh, mũi nhọn ở TRÁI
   return (
     <Link
       href={href}
       className="relative inline-flex h-10 px-5 items-center text-sm font-semibold text-white bg-sky-500 hover:bg-sky-600"
-      style={{ clipPath: 'polygon(0 0, 100% 0, calc(100% - 14px) 50%, 100% 100%, 0 100%)' }}
+      style={{
+        clipPath: `polygon(0% 50%, ${ARROW}px 0, 100% 0, 100% 100%, ${ARROW}px 100%)`,
+        borderRadius: 10,
+      }}
       title={typeof children === 'string' ? children : undefined}
     >
       <span className="truncate max-w-[42vw] md:max-w-[28vw]">{children}</span>
     </Link>
   );
 }
+
 function CrumbMiddle({ href, children }) {
+  // Nền xanh, nhọn 2 đầu (trái + phải)
   return (
     <Link
       href={href}
       className="relative inline-flex h-10 px-5 items-center text-sm font-semibold text-white bg-sky-500 hover:bg-sky-600"
-      style={{ clipPath: 'polygon(14px 0, 100% 0, calc(100% - 14px) 50%, 100% 100%, 14px 100%, 0 50%)' }}
+      style={{
+        clipPath: `polygon(0% 50%, ${ARROW}px 0, calc(100% - ${ARROW}px) 0, 100% 50%, calc(100% - ${ARROW}px) 100%, ${ARROW}px 100%)`,
+        borderRadius: 10,
+      }}
       title={typeof children === 'string' ? children : undefined}
     >
       <span className="truncate max-w-[42vw] md:max-w-[28vw]">{children}</span>
     </Link>
   );
 }
+
 function CrumbLast({ children }) {
+  // Nút cuối nền trắng, VIỀN liền mạch theo biên dạng có KHẤU (nhọn ở PHẢI)
   return (
     <span
-      className="relative inline-flex h-10 px-5 items-center text-sm font-semibold text-sky-600 bg-white border-2 border-sky-500"
-      style={{ clipPath: 'polygon(14px 0, 100% 0, 100% 100%, 14px 100%, 0 50%)' }}
+      className="relative inline-flex h-10 px-5 items-center text-sm font-semibold text-sky-600"
+      style={{
+        clipPath: `polygon(0 0, calc(100% - ${ARROW}px) 0, 100% 50%, calc(100% - ${ARROW}px) 100%, 0 100%)`,
+        borderRadius: 10,
+        border: '2px solid transparent',
+        background:
+          'linear-gradient(#fff,#fff) padding-box, linear-gradient(90deg,#0ea5e9,#0ea5e9) border-box',
+      }}
       title={typeof children === 'string' ? children : undefined}
     >
       <span className="truncate max-w-[42vw] md:max-w-[28vw]">{children}</span>
@@ -318,7 +330,6 @@ export default function Detail({ serverApp, serverRelated }) {
   const [showAllDevices, setShowAllDevices] = useState(false);
   const [showAllLanguages, setShowAllLanguages] = useState(false);
 
-  // Phân trang Related
   const PAGE_SIZE = 5;
   const [relPage, setRelPage] = useState(1);
   const relTotalPages = Math.max(1, Math.ceil((related?.length || 0) / PAGE_SIZE));
@@ -327,7 +338,6 @@ export default function Detail({ serverApp, serverRelated }) {
     return (related || []).slice(start, start + PAGE_SIZE);
   }, [related, relPage]);
 
-  // Markdown lazy
   const [remarkGfm, setRemarkGfm] = useState(null);
   const [ReactMarkdown, setReactMarkdown] = useState(null);
   useEffect(() => {
@@ -353,7 +363,7 @@ export default function Detail({ serverApp, serverRelated }) {
     return () => unsub();
   }, []);
 
-  // Reset state khi đổi slug
+  // Reset khi đổi slug
   useEffect(() => {
     setApp(serverApp);
     setRelated(serverRelated);
@@ -364,7 +374,7 @@ export default function Detail({ serverApp, serverRelated }) {
     setRelPage(1);
   }, [router.query.slug, serverApp, serverRelated]);
 
-  // View/testflight + màu nền từ icon
+  // View/TestFlight + màu nền
   useEffect(() => {
     if (!app?.id) return;
 
@@ -418,7 +428,7 @@ export default function Detail({ serverApp, serverRelated }) {
     return { list, remain };
   }, [devicesArray]);
 
-  /* ======= Thông báo "Cần đăng nhập" – mở đúng popup LoginButton của Layout ======= */
+  /* ======= Thông báo "Cần đăng nhập" – mở ĐÚNG popup LoginButton của HEADER ======= */
   const requireLogin = () => {
     setModal({
       open: true,
@@ -434,10 +444,11 @@ export default function Detail({ serverApp, serverRelated }) {
             onClick={() => {
               setModal(s => ({ ...s, open: false }));
               try {
-                // Layout gắn window.openLogin & event 'open-login' (xem Layout/LoginButton)
+                // ✅ Dùng flow mới: chỉ phát 'open-auth' (LoginButton đã lắng nghe)
+                //    Đồng thời phát 'close-login' để tắt overlay cũ nếu còn sót
                 if (typeof window !== 'undefined') {
-                  window.dispatchEvent(new Event('open-login')); // Ưu tiên event
-                  if (typeof window.openLogin === 'function') window.openLogin(); // fallback
+                  window.dispatchEvent(new Event('close-login'));
+                  window.dispatchEvent(new Event('open-auth'));
                 }
               } catch {}
             }}
@@ -454,9 +465,9 @@ export default function Detail({ serverApp, serverRelated }) {
         </>
       ),
     });
-  };
+  }; //  [oai_citation:2‡[slug].js](file-service://file-2ZD8CeSC82hfHsyJDP6Mwm)
 
-  /* ======= Thông báo "Cần xác minh email" – KHÔNG có nút đăng nhập ======= */
+  /* ======= Thông báo "Cần xác minh email" ======= */
   const requireVerified = () => {
     setModal({
       open: true,
@@ -521,16 +532,8 @@ export default function Detail({ serverApp, serverRelated }) {
     e.preventDefault();
     if (!app?.id || !isInstallable) return;
 
-    // 1) Chưa đăng nhập ⇒ hiện modal đăng nhập, DỪNG luồng
-    if (!me) {
-      requireLogin();
-      return;
-    }
-    // 2) Đã đăng nhập nhưng chưa xác minh ⇒ hiện modal verify, DỪNG luồng
-    if (!me.emailVerified) {
-      requireVerified();
-      return;
-    }
+    if (!me) { requireLogin(); return; }           // ✅ mở đúng popup đăng nhập
+    if (!me.emailVerified) { requireVerified(); return; }
 
     setIsFetchingIpa(true);
 
@@ -544,10 +547,7 @@ export default function Detail({ serverApp, serverRelated }) {
       const { token } = await tokRes.json();
       if (!token) throw new Error('Thiếu token');
 
-      // Tải qua proxy
       window.location.href = `/api/download-ipa?slug=${encodeURIComponent(app.slug)}&token=${encodeURIComponent(token)}`;
-
-      // Ghi log tải phụ
       fetch(`/api/admin/add-download?id=${app.id}`, { method: 'POST' }).catch(() => {});
     } catch (err) {
       alert('Không thể tạo link tải IPA. Vui lòng thử lại.');
@@ -557,13 +557,13 @@ export default function Detail({ serverApp, serverRelated }) {
     }
   };
 
-  // ======= Auto-scroll & highlight theo ?comment= (đợi element mount) =======
+  // Auto-scroll highlight ?comment=
   useEffect(() => {
     const id = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('comment') : null;
     if (!id) return;
 
     let tried = 0;
-    const maxTries = 40; // ~2s
+    const maxTries = 40;
     const iv = setInterval(() => {
       const el = document.getElementById(`c-${id}`);
       tried++;
@@ -618,7 +618,7 @@ export default function Detail({ serverApp, serverRelated }) {
       {/* Modal thông báo */}
       <CenterModal open={modal.open} title={modal.title} body={modal.body} actions={modal.actions} />
 
-      {/* ===== Breadcrumb mũi tên ===== */}
+      {/* ===== Breadcrumb mũi tên (đã đảo hướng + bo góc + viền liền mạch) ===== */}
       <div className="bg-gray-100">
         <div className="w-full flex justify-center px-2 sm:px-4 md:px-6">
           <nav className="w-full max-w-screen-2xl py-3 overflow-hidden">
@@ -671,6 +671,7 @@ export default function Detail({ serverApp, serverRelated }) {
                 {app.author && <p className="text-gray-700 text-sm">{app.author}</p>}
 
                 <div className="mt-4 flex flex-wrap justify-center gap-2">
+                  {/* TestFlight */}
                   {isTestflight && app.testflight_url && (
                     <>
                       <a
@@ -705,6 +706,7 @@ export default function Detail({ serverApp, serverRelated }) {
                     </>
                   )}
 
+                  {/* Install / IPA */}
                   {isInstallable && (
                     <>
                       <button
@@ -959,7 +961,7 @@ export default function Detail({ serverApp, serverRelated }) {
                 <div className="text-sm text-gray-600">Trang {relPage}/{relTotalPages}</div>
                 <button
                   onClick={() => setRelPage(p => Math.min(relTotalPages, p + 1))}
-                  disabled={relPage === relTotalPages}
+                  disabled={relTotalPages === relPage}
                   className="px-3 py-2 rounded border text-sm disabled:opacity-50"
                 >
                   Trang sau
