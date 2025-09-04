@@ -211,55 +211,54 @@ function PrettyBlockquote({ children }) {
 
 // ====== Breadcrumb components (giống hệt ảnh mẫu) ======
 {/* ========== BREADCRUMB (giống ảnh bạn gửi) ========== */}
-const BC_ARROW = 14;
-const RADIUS = 10;
-const LAST_INSET = 6;
+// ===== Breadcrumb (đúng như: [ Home >     > Chuyên mục >     > Bài viết ]) =====
+const BC_ARROW = 14; // độ nhọn mũi/khuyết
+const RADIUS  = 10;  // độ bo góc
 
+// Nút đầu: trái thẳng, phải mũi tên >
 function CrumbFirst({ href, children }) {
   return (
     <Link
       href={href}
       className="relative inline-flex h-10 items-center px-5 text-sm font-semibold text-white bg-sky-500 hover:bg-sky-600"
       style={{
-        // Mũi tên hướng PHẢI
+        // 0..(100%-A) top, -> tip, -> (100%-A) bottom, -> 0 bottom
         clipPath: `polygon(0 0, calc(100% - ${BC_ARROW}px) 0, 100% 50%, calc(100% - ${BC_ARROW}px) 100%, 0 100%)`,
         borderRadius: RADIUS,
       }}
+      title={typeof children === 'string' ? children : undefined}
     >
       <span className="truncate">{children}</span>
     </Link>
   );
 }
 
+// Nút giữa: trái KHOÉT V hướng phải, phải mũi tên >
 function CrumbMiddle({ href, children }) {
   return (
     <Link
       href={href}
       className="relative inline-flex h-10 items-center px-5 text-sm font-semibold text-white bg-sky-500 hover:bg-sky-600"
       style={{
-        // ✅ Sửa lại: cũng là mũi tên hướng PHẢI (giống CrumbFirst)
-        clipPath: `polygon(0 0, calc(100% - ${BC_ARROW}px) 0, 100% 50%, calc(100% - ${BC_ARROW}px) 100%, 0 100%)`,
+        // trái khoét V: A,0 -> ... -> A,100% -> 0,50% (điểm khoét) -> A,0
+        // phải mũi tên như CrumbFirst
+        clipPath: `polygon(${BC_ARROW}px 0, calc(100% - ${BC_ARROW}px) 0, 100% 50%, calc(100% - ${BC_ARROW}px) 100%, ${BC_ARROW}px 100%, 0 50%)`,
         borderRadius: RADIUS,
       }}
+      title={typeof children === 'string' ? children : undefined}
     >
       <span className="truncate">{children}</span>
     </Link>
   );
 }
 
+// Nút cuối: trái KHOÉT V hướng phải, phải THẲNG (nền trắng, viền xanh mảnh)
 function CrumbLast({ children }) {
-  // ✅ Khuyết chữ V HƯỚNG PHẢI, chừa lề trái LAST_INSET để không "ăn" vào khoảng cách
-  const path = `polygon(${LAST_INSET + BC_ARROW}px 0,
-                        100% 0,
-                        100% 100%,
-                        ${LAST_INSET + BC_ARROW}px 100%,
-                        ${LAST_INSET}px 50%)`;
+  // hình: A,0 -> 100%,0 -> 100%,100% -> A,100% -> 0,50% (khoét V bên trái)
+  const path = `polygon(${BC_ARROW}px 0, 100% 0, 100% 100%, ${BC_ARROW}px 100%, 0 50%)`;
   return (
-    <span
-      className="relative inline-block align-top"
-      style={{ borderRadius: RADIUS, paddingLeft: LAST_INSET }}
-    >
-      {/* Lớp ngoài: tạo viền xanh theo đúng biên dạng */}
+    <span className="relative inline-block align-top" style={{ borderRadius: RADIUS }}>
+      {/* lớp viền xanh theo hình (để viền liền mạch, mỏng) */}
       <span
         aria-hidden
         className="absolute inset-0"
@@ -269,7 +268,7 @@ function CrumbLast({ children }) {
           background: '#0ea5e9', // sky-500
         }}
       />
-      {/* Lớp trong: nền trắng + viền xanh MỎNG để không đậm hơn các nút khác */}
+      {/* lớp trong nền trắng + viền inset 1.5px để không bị dày quá */}
       <span
         className="relative inline-flex h-10 items-center px-5 text-sm font-semibold text-sky-600 bg-white"
         style={{
@@ -277,12 +276,14 @@ function CrumbLast({ children }) {
           borderRadius: RADIUS,
           boxShadow: 'inset 0 0 0 1.5px #0ea5e9',
         }}
+        title={typeof children === 'string' ? children : undefined}
       >
         <span className="truncate">{children}</span>
       </span>
     </span>
   );
 }
+// ===== /Breadcrumb =====
 
 /* ===================== InfoRow ===================== */
 const InfoRow = memo(({ label, value, expandable = false, expanded = false, onToggle }) => {
