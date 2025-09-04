@@ -209,34 +209,37 @@ function PrettyBlockquote({ children }) {
   );
 }
 
-const ARROW = 14;          // độ nhọn mũi / chữ V
-const HEIGHT = 40;         // 10 * 4px = h-10
-const RADIUS = 10;         // bo góc thân
-const BORDER = 1.5;        // viền mảnh cho nút cuối
-const CRUMB_GAP_BG = '#f3f4f6'; // màu nền khe giữa (bg-gray-100)
+// ====== BREADCRUMB – phiên bản "tam giác bên trong", dứt điểm đúng hình học ======
+const H = 40;               // h-10
+const A = 14;               // độ nhọn mũi/khuyết
+const R = 10;               // bo góc
+const BORDER = 1.5;         // độ dày viền nút cuối
+const SKY = '#0ea5e9';      // sky-500
+const CRUMB_GAP_BG = '#f3f4f6'; // màu nền thanh breadcrumb (bg-gray-100)
 
 function CrumbFirst({ href, children }) {
-  // Trái thẳng, phải mũi tên >
+  // Trái thẳng, phải mũi tên (>) – mũi VẼ BÊN TRONG, không tràn ra ngoài
   return (
     <Link
       href={href}
-      className="relative inline-flex items-center h-10 px-5 text-sm font-semibold text-white bg-sky-500 hover:bg-sky-600"
-      style={{ borderRadius: RADIUS, lineHeight: `${HEIGHT}px` }}
+      className="relative inline-flex items-center h-10 text-sm font-semibold text-white bg-sky-500 hover:bg-sky-600"
+      style={{ borderRadius: R, padding: `0 ${A + 20}px 0 20px`, lineHeight: `${H}px` }}
+      title={typeof children === 'string' ? children : undefined}
     >
       <span className="truncate">{children}</span>
 
-      {/* mũi tên phải */}
+      {/* Mũi tên bên phải (tam giác cùng màu nền) */}
       <span
         aria-hidden
-        className="absolute top-1/2 -right-[14px]"
+        className="absolute top-1/2 right-0"
         style={{
-          marginTop: `-${HEIGHT/2}px`,
+          transform: 'translateY(-50%)',
           width: 0, height: 0,
-          borderTop: `${HEIGHT/2}px solid transparent`,
-          borderBottom: `${HEIGHT/2}px solid transparent`,
-          borderLeft: `${ARROW}px solid #0ea5e9`, // sky-500
-          borderTopLeftRadius: `${RADIUS}px`,
-          borderBottomLeftRadius: `${RADIUS}px`,
+          borderTop: `${H/2}px solid transparent`,
+          borderBottom: `${H/2}px solid transparent`,
+          borderLeft: `${A}px solid ${SKY}`,
+          borderTopLeftRadius: `${R}px`,
+          borderBottomLeftRadius: `${R}px`,
         }}
       />
     </Link>
@@ -244,40 +247,43 @@ function CrumbFirst({ href, children }) {
 }
 
 function CrumbMiddle({ href, children }) {
-  // Trái khoét chữ V (>) bằng tam giác nền ngoài, phải mũi tên >
+  // Trái KHOÉT V hướng phải, phải mũi tên (>) – tất cả vẽ BÊN TRONG
   return (
     <Link
       href={href}
-      className="relative inline-flex items-center h-10 px-5 text-sm font-semibold text-white bg-sky-500 hover:bg-sky-600"
-      style={{ borderRadius: RADIUS, lineHeight: `${HEIGHT}px` }}
+      className="relative inline-flex items-center h-10 text-sm font-semibold text-white bg-sky-500 hover:bg-sky-600"
+      style={{ borderRadius: R, padding: `0 ${A + 20}px 0 ${A + 20}px`, lineHeight: `${H}px` }}
+      title={typeof children === 'string' ? children : undefined}
     >
       <span className="truncate">{children}</span>
 
-      {/* khoét V bên trái (tam giác màu nền ngoài) */}
+      {/* Khoét V bên trái (tam giác màu nền thanh breadcrumb) */}
       <span
         aria-hidden
-        className="absolute top-1/2 -left-[14px]"
+        className="absolute top-1/2 left-0"
         style={{
-          marginTop: `-${HEIGHT/2}px`,
+          transform: 'translateY(-50%)',
           width: 0, height: 0,
-          borderTop: `${HEIGHT/2}px solid transparent`,
-          borderBottom: `${HEIGHT/2}px solid transparent`,
-          borderRight: `${ARROW}px solid ${CRUMB_GAP_BG}`, // cắt V hướng phải
+          borderTop: `${H/2}px solid transparent`,
+          borderBottom: `${H/2}px solid transparent`,
+          borderRight: `${A}px solid ${CRUMB_GAP_BG}`,
+          borderTopRightRadius: `${R}px`,
+          borderBottomRightRadius: `${R}px`,
         }}
       />
 
-      {/* mũi tên phải */}
+      {/* Mũi tên bên phải */}
       <span
         aria-hidden
-        className="absolute top-1/2 -right-[14px]"
+        className="absolute top-1/2 right-0"
         style={{
-          marginTop: `-${HEIGHT/2}px`,
+          transform: 'translateY(-50%)',
           width: 0, height: 0,
-          borderTop: `${HEIGHT/2}px solid transparent`,
-          borderBottom: `${HEIGHT/2}px solid transparent`,
-          borderLeft: `${ARROW}px solid #0ea5e9`, // sky-500
-          borderTopLeftRadius: `${RADIUS}px`,
-          borderBottomLeftRadius: `${RADIUS}px`,
+          borderTop: `${H/2}px solid transparent`,
+          borderBottom: `${H/2}px solid transparent`,
+          borderLeft: `${A}px solid ${SKY}`,
+          borderTopLeftRadius: `${R}px`,
+          borderBottomLeftRadius: `${R}px`,
         }}
       />
     </Link>
@@ -285,44 +291,44 @@ function CrumbMiddle({ href, children }) {
 }
 
 function CrumbLast({ children }) {
-  // Trái khoét chữ V (>) -- phải thẳng; nền trắng + viền xanh mảnh
+  // Trái KHOÉT V hướng phải, phải THẲNG – nền trắng, viền xanh mảnh
   return (
     <span
-      className="relative inline-flex items-center h-10 px-5 text-sm font-semibold text-sky-600 bg-white"
+      className="relative inline-flex items-center h-10 text-sm font-semibold text-sky-600 bg-white"
       style={{
-        borderRadius: RADIUS,
-        lineHeight: `${HEIGHT}px`,
-        boxShadow: `inset 0 0 0 ${BORDER}px #0ea5e9`, // viền xanh mảnh, liền mạch
+        borderRadius: R,
+        padding: `0 20px 0 ${A + 20}px`, // chừa chỗ cho khuyết V bên trái
+        lineHeight: `${H}px`,
+        boxShadow: `inset 0 0 0 ${BORDER}px ${SKY}`,
       }}
       title={typeof children === 'string' ? children : undefined}
     >
       <span className="truncate">{children}</span>
 
-      {/* khoét V bên trái (tam giác màu nền ngoài) */}
+      {/* Khoét V bên trái (tam giác màu nền thanh breadcrumb) */}
       <span
         aria-hidden
-        className="absolute top-1/2 -left-[14px]"
+        className="absolute top-1/2 left-0"
         style={{
-          marginTop: `-${HEIGHT/2}px`,
+          transform: 'translateY(-50%)',
           width: 0, height: 0,
-          borderTop: `${HEIGHT/2}px solid transparent`,
-          borderBottom: `${HEIGHT/2}px solid transparent`,
-          borderRight: `${ARROW}px solid ${CRUMB_GAP_BG}`,
+          borderTop: `${H/2 - BORDER}px solid transparent`,
+          borderBottom: `${H/2 - BORDER}px solid transparent`,
+          borderRight: `${A}px solid ${CRUMB_GAP_BG}`,
         }}
       />
 
-      {/* vẽ mép viền xanh dọc theo cạnh khoét V (nhẹ, khớp BORDER) */}
+      {/* Đường viền dọc mép khuyết V để liền mạch với viền hộp (độ dày = BORDER) */}
       <span
         aria-hidden
-        className="absolute top-1/2 -left-[14px] pointer-events-none"
+        className="absolute top-1/2 left-0 pointer-events-none"
         style={{
-          marginTop: `-${HEIGHT/2}px`,
+          transform: 'translateY(-50%)',
           width: 0, height: 0,
-          borderTop: `${HEIGHT/2 - BORDER}px solid transparent`,
-          borderBottom: `${HEIGHT/2 - BORDER}px solid transparent`,
-          borderRight: `${ARROW}px solid transparent`,
-          // tạo "đường mép" bằng filter drop-shadow dọc cạnh V
-          filter: `drop-shadow(${BORDER}px 0 0 #0ea5e9)`,
+          borderTop: `${H/2 - BORDER}px solid transparent`,
+          borderBottom: `${H/2 - BORDER}px solid transparent`,
+          borderRight: `${A}px solid transparent`,
+          filter: `drop-shadow(${BORDER}px 0 0 ${SKY})`,
         }}
       />
     </span>
