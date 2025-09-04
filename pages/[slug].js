@@ -639,41 +639,47 @@ export default function Detail({ serverApp, serverRelated }) {
       {/* Modal thông báo */}
       <CenterModal open={modal.open} title={modal.title} body={modal.body} actions={modal.actions} />
 
-      {/* ===== BREADCRUMB -- phiên bản SVG inline, dán thẳng là chạy ===== */}
+      {/* ===== BREADCRUMB – V6 (FORCE INLINE SVG) ===== */}
 <div className="bg-gray-100">
   <div className="w-full flex justify-center px-2 sm:px-4 md:px-6">
-    <nav className="w-full max-w-screen-2xl py-3 overflow-hidden">
+    <nav id="bc-v6" className="w-full max-w-screen-2xl py-3 overflow-hidden">
       <div className="flex items-center whitespace-nowrap overflow-hidden gap-3">
 
         {/* [ Home > ] -- trái thẳng, phải mũi tên > */}
         <Link href="/" className="inline-block">
           <span className="relative inline-flex items-center h-10 px-6 text-sm font-semibold text-white">
             <svg className="absolute inset-0 w-full h-full" viewBox="0 0 160 40" preserveAspectRatio="none" aria-hidden>
-              <polygon points="0,0 142,0 160,20 142,40 0,40" fill="#0ea5e9" stroke="#0ea5e9" strokeWidth="2" />
+              {/* 0,0 → 142,0 → 160,20 → 142,40 → 0,40 */}
+              <polygon points="0,0 142,0 160,20 142,40 0,40"
+                       fill="#0ea5e9" stroke="#0ea5e9" strokeWidth="2" strokeLinejoin="round"/>
             </svg>
             <span className="relative z-10 truncate">
               <span className="hidden sm:inline">Home</span>
-              <span className="sm:hidden">🏠</span>
+              <span className="sm:hidden">Home</span>
             </span>
           </span>
         </Link>
 
-        {/* [  > Chuyên mục > ] -- trái khoét V hướng phải, phải mũi tên > */}
+        {/* [  > Chuyên mục > ] -- TRÁI KHOÉT V (hướng phải), PHẢI mũi tên > */}
         {app?.category?.slug && (
           <Link href={`/category/${app.category.slug}`} className="inline-block">
             <span className="relative inline-flex items-center h-10 px-6 text-sm font-semibold text-white">
               <svg className="absolute inset-0 w-full h-full" viewBox="0 0 160 40" preserveAspectRatio="none" aria-hidden>
-                <polygon points="18,0 142,0 160,20 142,40 18,40 0,20" fill="#0ea5e9" stroke="#0ea5e9" strokeWidth="2" />
+                {/* 18,0 → 142,0 → 160,20 → 142,40 → 18,40 → 0,20 */}
+                <polygon points="18,0 142,0 160,20 142,40 18,40 0,20"
+                         fill="#0ea5e9" stroke="#0ea5e9" strokeWidth="2" strokeLinejoin="round"/>
               </svg>
               <span className="relative z-10 truncate">{app.category.name || 'Chuyên mục'}</span>
             </span>
           </Link>
         )}
 
-        {/* [  > Bài viết ] -- trái khoét V hướng phải, phải thẳng, nền trắng viền xanh */}
+        {/* [  > Bài viết ] -- TRÁI KHOÉT V (hướng phải), PHẢI THẲNG, nền trắng viền xanh */}
         <span className="relative inline-flex items-center h-10 px-6 text-sm font-semibold text-sky-600">
           <svg className="absolute inset-0 w-full h-full" viewBox="0 0 160 40" preserveAspectRatio="none" aria-hidden>
-            <polygon points="18,0 160,0 160,40 18,40 0,20" fill="#ffffff" stroke="#0ea5e9" strokeWidth="2" />
+            {/* 18,0 → 160,0 → 160,40 → 18,40 → 0,20 */}
+            <polygon points="18,0 160,0 160,40 18,40 0,20"
+                     fill="#ffffff" stroke="#0ea5e9" strokeWidth="2" strokeLinejoin="round"/>
           </svg>
           <span className="relative z-10 truncate">{app.name}</span>
         </span>
