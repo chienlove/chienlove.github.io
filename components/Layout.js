@@ -11,7 +11,9 @@ import LoginButton from './LoginButton';
 import NotificationsPanel from './NotificationsPanel';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faBars, faTimes, faSearch, faBell, faWrench, faLayerGroup, faArrowUpRightFromSquare } from '@fortawesome/free-solid-svg-icons';
+import {
+  faBars, faTimes, faSearch, faBell, faWrench, faLayerGroup, faArrowUpRightFromSquare
+} from '@fortawesome/free-solid-svg-icons';
 
 export default function Layout({ children, fullWidth = false, hotApps }) {
   const [darkMode, setDarkMode] = useState(false);
@@ -26,9 +28,6 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
 
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifCount, setNotifCount] = useState(0);
-
-  // 🔴 Popup đăng nhập toàn cục (để trang con có thể gọi)
-  const [loginOpen, setLoginOpen] = useState(false);
 
   const drawerRef = useRef(null);
 
@@ -49,7 +48,9 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
   // Dark mode
   useEffect(() => {
     const stored = typeof window !== 'undefined' ? localStorage.getItem('darkMode') : null;
-    const prefers = typeof window !== 'undefined' ? window.matchMedia('(prefers-color-scheme: dark)').matches : false;
+    const prefers = typeof window !== 'undefined'
+      ? window.matchMedia('(prefers-color-scheme: dark)').matches
+      : false;
     setDarkMode(stored ? stored === 'true' : prefers);
   }, []);
   useEffect(() => {
@@ -60,7 +61,10 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
   // Lấy chuyên mục
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.from('categories').select('id, name, slug').order('name', { ascending: true });
+      const { data } = await supabase
+        .from('categories')
+        .select('id, name, slug')
+        .order('name', { ascending: true });
       setCategories(data || []);
     })();
   }, []);
@@ -68,18 +72,26 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
   // Search dataset
   const runSearch = async () => {
     setLoading(true);
-    let queryQ = supabase.from('apps').select('*').order(sortBy, { ascending: sortBy === 'name' });
-    if (q.trim()) queryQ = queryQ.or(`name.ilike.%${q.trim()}%,author.ilike.%${q.trim()}%`);
+    let queryQ = supabase
+      .from('apps')
+      .select('*')
+      .order(sortBy, { ascending: sortBy === 'name' });
+    if (q.trim())
+      queryQ = queryQ.or(`name.ilike.%${q.trim()}%,author.ilike.%${q.trim()}%`);
     if (activeCategory !== 'all') queryQ = queryQ.eq('category_id', activeCategory);
     const { data } = await queryQ;
     setApps(data || []);
     setLoading(false);
   };
-  useEffect(() => { if (searchOpen) runSearch(); }, [q, activeCategory, sortBy, searchOpen]);
+  useEffect(() => {
+    if (searchOpen) runSearch();
+  }, [q, activeCategory, sortBy, searchOpen]);
 
   // Đóng drawer khi click ngoài
   useEffect(() => {
-    const close = (e) => { if (drawerRef.current && !drawerRef.current.contains(e.target)) setMobileMenuOpen(false); };
+    const close = (e) => {
+      if (drawerRef.current && !drawerRef.current.contains(e.target)) setMobileMenuOpen(false);
+    };
     if (mobileMenuOpen) document.addEventListener('mousedown', close);
     return () => document.removeEventListener('mousedown', close);
   }, [mobileMenuOpen]);
@@ -95,31 +107,23 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
         where('toUserId', '==', u.uid),
         where('isRead', '==', false)
       );
-      unsubNoti = onSnapshot(qn, (snap) => setNotifCount(snap.size), () => setNotifCount(0));
+      unsubNoti = onSnapshot(
+        qn,
+        (snap) => setNotifCount(snap.size),
+        () => setNotifCount(0)
+      );
     });
     return () => { unsubAuth && unsubAuth(); unsubNoti && unsubNoti(); };
-  }, []);
-
-  // ⬇️ Cho phép trang con mở popup login của Layout (event & function)
-  useEffect(() => {
-    const open = () => setLoginOpen(true);
-    const close = () => setLoginOpen(false);
-    // Expose function & event
-    window.openLogin = open;
-    window.closeLogin = close;
-    window.addEventListener('open-login', open);
-    window.addEventListener('close-login', close);
-    return () => {
-      window.removeEventListener('open-login', open);
-      window.removeEventListener('close-login', close);
-    };
   }, []);
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       <Head>
         <title>StoreIOS – TestFlight & Jailbreak</title>
-        <meta name="description" content="Kho ứng dụng TestFlight beta & công cụ jailbreak cho iOS" />
+        <meta
+          name="description"
+          content="Kho ứng dụng TestFlight beta & công cụ jailbreak cho iOS"
+        />
       </Head>
 
       {/* HEADER */}
@@ -127,10 +131,17 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
         <div className="max-w-screen-2xl mx-auto px-4 h-16 flex items-center justify-between">
           {/* Left */}
           <div className="flex items-center gap-3">
-            <button onClick={() => setMobileMenuOpen(true)} className="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 md:hidden" aria-label="Menu">
+            <button
+              onClick={() => setMobileMenuOpen(true)}
+              className="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 md:hidden"
+              aria-label="Menu"
+            >
               <FontAwesomeIcon icon={faBars} className="w-5 h-5" />
             </button>
-            <Link href="/" className="text-xl md:text-2xl font-bold bg-gradient-to-r from-red-600 via-black to-red-600 dark:from-red-400 dark:via-white dark:to-red-400 bg-clip-text text-transparent">
+            <Link
+              href="/"
+              className="text-xl md:text-2xl font-bold bg-gradient-to-r from-red-600 via-black to-red-600 dark:from-red-400 dark:via-white dark:to-red-400 bg-clip-text text-transparent"
+            >
               StoreiOS
             </Link>
           </div>
@@ -147,7 +158,8 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
             <button
               onClick={() => setSearchOpen(true)}
               className="flex items-center justify-center w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
-              aria-label="Search" title="Tìm kiếm (/ hoặc Ctrl/⌘+K)"
+              aria-label="Search"
+              title="Tìm kiếm (/ hoặc Ctrl/⌘+K)"
             >
               <FontAwesomeIcon icon={faSearch} className="w-4 h-4" />
             </button>
@@ -156,7 +168,8 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
               <button
                 onClick={() => setNotifOpen(v => !v)}
                 className="relative flex items-center justify-center w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
-                aria-label="Notifications" title="Thông báo"
+                aria-label="Notifications"
+                title="Thông báo"
               >
                 <FontAwesomeIcon icon={faBell} className="w-4 h-4" />
                 {notifCount > 0 && (
@@ -171,34 +184,22 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
             <LoginButton onToggleTheme={() => setDarkMode(v => !v)} isDark={darkMode} />
           </div>
         </div>
-
-        {/* ⬇️ POPUP LOGIN toàn cục */}
-        {loginOpen && (
-          <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/40 p-4">
-            <div className="relative w-full max-w-md rounded-2xl border border-gray-200 bg-white dark:bg-gray-900 shadow-2xl p-4">
-              <button
-                onClick={() => setLoginOpen(false)}
-                className="absolute top-2 right-2 p-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
-                aria-label="Đóng"
-              >
-                <svg className="w-5 h-5" viewBox="0 0 20 20" fill="none" stroke="currentColor">
-                  <path d="M6 6l8 8M14 6l-8 8" strokeWidth="2" strokeLinecap="round"/>
-                </svg>
-              </button>
-              {/* Tận dụng component đăng nhập sẵn có */}
-              <LoginButton onToggleTheme={() => {}} isDark={false} />
-            </div>
-          </div>
-        )}
       </header>
 
       {/* MOBILE DRAWER */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 flex">
-          <div ref={drawerRef} className="w-80 max-w-[85%] bg-white dark:bg-gray-900 h-full p-6 shadow-2xl">
+          <div
+            ref={drawerRef}
+            className="w-80 max-w-[85%] bg-white dark:bg-gray-900 h-full p-6 shadow-2xl"
+          >
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-bold">Menu</h2>
-              <button onClick={() => setMobileMenuOpen(false)} className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700" aria-label="Close">
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
+                aria-label="Close"
+              >
                 <FontAwesomeIcon icon={faTimes} />
               </button>
             </div>
@@ -220,15 +221,19 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
               </div>
               <div className="space-y-1">
                 <a
-                  href="https://appinfo.storeios.net" target="_blank" rel="noopener noreferrer"
+                  href="https://appinfo.storeios.net"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="flex items-center justify-between px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
                 >
                   <span>App Info</span>
                   <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="w-3.5 h-3.5 opacity-70" />
                 </a>
                 <a
-                  href="https://ipadl.storeios.net" target="_blank" rel="noopener noreferrer"
-                  className="flex items-center justify-between px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                  href="https://ipadl.storeios.net"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between px-2 py-2 rounded hover:bg-gray-100 dark:hoverbg-gray-800"
                 >
                   <span>IPA Downloader</span>
                   <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="w-3.5 h-3.5 opacity-70" />
@@ -249,8 +254,12 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
                 {categories.map((c) => {
                   const href = c.slug ? `/categories/${c.slug}` : `/categories/${c.id}`;
                   return (
-                    <Link key={c.id} href={href} onClick={() => setMobileMenuOpen(false)}
-                          className="block px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800">
+                    <Link
+                      key={c.id}
+                      href={href}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="block px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                    >
                       {c.name}
                     </Link>
                   );
@@ -259,8 +268,20 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
             </div>
 
             <div className="mt-6 border-t border-gray-200 dark:border-gray-800 pt-4 space-y-2">
-              <Link href="/about" onClick={() => setMobileMenuOpen(false)} className="block px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800">Giới thiệu</Link>
-              <Link href="/privacy" onClick={() => setMobileMenuOpen(false)} className="block px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800">Bảo mật</Link>
+              <Link
+                href="/about"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                Giới thiệu
+              </Link>
+              <Link
+                href="/privacy"
+                onClick={() => setMobileMenuOpen(false)}
+                className="block px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+              >
+                Bảo mật
+              </Link>
             </div>
           </div>
         </div>
@@ -287,7 +308,9 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
         <div className="max-w-screen-2xl mx-auto px-4 py-10 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
           <div>
             <h3 className="text-white font-bold text-lg mb-3">StoreiOS</h3>
-            <p className="text-gray-400 text-sm">Kho ứng dụng TestFlight beta & công cụ jailbreak cho cộng đồng iOS.</p>
+            <p className="text-gray-400 text-sm">
+              Kho ứng dụng TestFlight beta & công cụ jailbreak cho cộng đồng iOS.
+            </p>
           </div>
           <div>
             <h4 className="font-semibold text-white mb-3">Điều hướng</h4>
@@ -307,7 +330,9 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
           </div>
           <div>
             <h4 className="font-semibold text-white mb-3">Cập nhật</h4>
-            <p className="text-sm text-gray-400">Theo dõi để không bỏ lỡ app TestFlight hot.</p>
+            <p className="text-sm text-gray-400">
+              Theo dõi để không bỏ lỡ app TestFlight hot.
+            </p>
           </div>
         </div>
         <div className="text-center text-xs text-gray-500 border-t border-gray-800 py-6">
