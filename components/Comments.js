@@ -190,19 +190,10 @@ export default function Comments({ postId, postTitle }) {
     const openHeaderLoginPopup = () => {
   if (typeof window === 'undefined') return;
 
-  const fireOpenAuth = () => {
-    try { window.dispatchEvent(new Event('open-auth')); } catch {}
-  };
-
-  try {
-    if (typeof window.openLogin === 'function') {
-      window.openLogin();               // mở popup login của Layout
-      setTimeout(fireOpenAuth, 0);      // rồi mở thẳng form đăng nhập
-    } else {
-      window.dispatchEvent(new Event('open-login')); // fallback nếu không có window.openLogin
-      setTimeout(fireOpenAuth, 0);
-    }
-  } catch {}
+  const openHeaderLoginPopup = () => {
+  if (typeof window === 'undefined') return;
+  try { window.dispatchEvent(new Event('close-login')); } catch {}
+  try { window.dispatchEvent(new Event('open-auth')); } catch {}
 };
 
   const openLoginPrompt = () => {
