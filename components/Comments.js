@@ -187,8 +187,6 @@ export default function Comments({ postId, postTitle }) {
     );
     setModalOpen(true);
   };
-    const openHeaderLoginPopup = () => {
-  if (typeof window === 'undefined') return;
 
   const openHeaderLoginPopup = () => {
   if (typeof window === 'undefined') return;
