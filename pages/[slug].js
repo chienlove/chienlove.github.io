@@ -640,83 +640,65 @@ export default function Detail({ serverApp, serverRelated }) {
       <CenterModal open={modal.open} title={modal.title} body={modal.body} actions={modal.actions} />
 
       {/* ===== BREADCRUMB // BC-FINAL ===== */}
-<div style={{ background: '#f3f4f6' }}>
+{/* ===== BREADCRUMB -- FINAL2 (INLINE SVG, TỰ VẼ V KHOÉT) ===== */}
+<div className="bg-gray-100">
   <div className="w-full flex justify-center px-2 sm:px-4 md:px-6">
-    <nav id="bc-final" className="w-full max-w-screen-2xl py-3 overflow-hidden">
+    <nav id="bc-final2" className="w-full max-w-screen-2xl py-3 overflow-hidden">
       <div className="flex items-center whitespace-nowrap overflow-hidden gap-3">
 
         {/* [ Home > ] -- trái thẳng, phải nhọn > */}
         <Link href="/" className="inline-block" style={{ isolation: 'isolate' }}>
           <span
             className="relative inline-flex items-center"
-            style={{
-              height: 40, padding: '0 24px', fontWeight: 600, fontSize: 14,
-              color: '#fff', position: 'relative',
-            }}
+            style={{ height: 40, padding: '0 24px', fontWeight: 600, fontSize: 14, color: '#fff' }}
           >
-            <svg
-              aria-hidden
-              viewBox="0 0 160 40"
-              preserveAspectRatio="none"
-              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
-            >
-              {/* 0,0 → 142,0 → 160,20 → 142,40 → 0,40 */}
+            <svg aria-hidden viewBox="0 0 160 40" preserveAspectRatio="none"
+                 style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
+              {/* mũi tên phải */}
               <polygon points="0,0 142,0 160,20 142,40 0,40"
-                       fill="#0ea5e9" stroke="#0ea5e9" strokeWidth="2" strokeLinejoin="round"/>
+                       fill="#0ea5e9" stroke="#0ea5e9" strokeWidth="2" strokeLinejoin="round" />
             </svg>
             <span className="relative z-10 truncate">
               <span className="hidden sm:inline">Home</span>
-              <span className="sm:hidden">Home</span>
+              <span className="sm:hidden"><FontAwesomeIcon icon={faHouse} /></span>
             </span>
           </span>
         </Link>
 
-        {/* [  > Chuyên mục > ] -- TRÁI KHOÉT V (hướng phải), PHẢI mũi tên > */}
+        {/* [  > Chuyên mục > ] -- trái KHOÉT V (hướng phải), phải nhọn > */}
         {app?.category?.slug && (
           <Link href={`/category/${app.category.slug}`} className="inline-block" style={{ isolation: 'isolate' }}>
             <span
               className="relative inline-flex items-center"
-              style={{
-                height: 40, padding: '0 24px', fontWeight: 600, fontSize: 14,
-                color: '#fff', position: 'relative',
-              }}
+              style={{ height: 40, padding: '0 24px', fontWeight: 600, fontSize: 14, color: '#fff' }}
             >
-              <svg
-                aria-hidden
-                viewBox="0 0 160 40"
-                preserveAspectRatio="none"
-                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
-              >
-                {/* 18,0 → 142,0 → 160,20 → 142,40 → 18,40 → 0,20 */}
-                <polygon points="18,0 142,0 160,20 142,40 18,40 0,20"
-                         fill="#0ea5e9" stroke="#0ea5e9" strokeWidth="2" strokeLinejoin="round"/>
+              <svg aria-hidden viewBox="0 0 160 40" preserveAspectRatio="none"
+                   style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
+                {/* nền mũi tên phải (giống Home) */}
+                <polygon points="0,0 142,0 160,20 142,40 0,40"
+                         fill="#0ea5e9" stroke="#0ea5e9" strokeWidth="2" strokeLinejoin="round" />
+                {/* tam giác KHOÉT V bên trái (màu nền thanh breadcrumb) */}
+                <polygon points="0,20 18,0 18,40" fill="#f3f4f6" />
               </svg>
               <span className="relative z-10 truncate">{app.category.name || 'Chuyên mục'}</span>
             </span>
           </Link>
         )}
 
-        {/* [  > Bài viết ] -- TRÁI KHOÉT V (hướng phải), PHẢI THẲNG */}
-        <span
-          className="inline-block"
-          style={{ isolation: 'isolate', position: 'relative' }}
-        >
+        {/* [  > Bài viết ] -- trái KHOÉT V (hướng phải), phải thẳng, nền trắng, viền xanh mảnh */}
+        <span className="inline-block" style={{ isolation: 'isolate' }}>
           <span
             className="relative inline-flex items-center"
-            style={{
-              height: 40, padding: '0 24px', fontWeight: 600, fontSize: 14,
-              color: '#0ea5e9', position: 'relative',
-            }}
+            style={{ height: 40, padding: '0 24px', fontWeight: 600, fontSize: 14, color: '#0ea5e9' }}
           >
-            <svg
-              aria-hidden
-              viewBox="0 0 160 40"
-              preserveAspectRatio="none"
-              style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}
-            >
-              {/* 18,0 → 160,0 → 160,40 → 18,40 → 0,20 */}
-              <polygon points="18,0 160,0 160,40 18,40 0,20"
-                       fill="#ffffff" stroke="#0ea5e9" strokeWidth="2" strokeLinejoin="round"/>
+            <svg aria-hidden viewBox="0 0 160 40" preserveAspectRatio="none"
+                 style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
+              {/* thân trắng, phải THẲNG, viền xanh mảnh */}
+              <rect x="0" y="0" width="160" height="40" rx="10" ry="10" fill="#ffffff" stroke="#0ea5e9" strokeWidth="2" />
+              {/* cắt V bên trái: tam giác màu nền thanh breadcrumb */}
+              <polygon points="0,20 18,0 18,40" fill="#f3f4f6" />
+              {/* vẽ ĐƯỜNG VIỀN xanh theo mép V để liền mạch với viền hộp */}
+              <path d="M18,0 L0,20 L18,40" stroke="#0ea5e9" strokeWidth="2" fill="none" strokeLinejoin="round" />
             </svg>
             <span className="relative z-10 truncate">{app.name}</span>
           </span>
