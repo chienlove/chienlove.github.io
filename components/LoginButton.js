@@ -4,6 +4,8 @@ import { auth } from '../lib/firebase-client';
 import {
   GoogleAuthProvider,
   GithubAuthProvider,
+  // >>> ADD: Twitter provider
+  TwitterAuthProvider,
   signInWithPopup,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -22,7 +24,7 @@ import {
   faEye,
   faEyeSlash,
 } from '@fortawesome/free-solid-svg-icons';
-import { faGoogle, faGithub } from '@fortawesome/free-brands-svg-icons';
+import { faGoogle, faGithub, /* >>> ADD: brand icon for X */ faXTwitter } from '@fortawesome/free-brands-svg-icons';
 
 const ENFORCE_EMAIL_VERIFICATION = true; // gửi mail verify sau signup; KHÔNG chặn login
 
@@ -102,9 +104,14 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     const emailFromError = error?.customData?.email;
     if (!emailFromError) return setMsg('Tài khoản đã tồn tại với nhà cung cấp khác.');
     const methods = await fetchSignInMethodsForEmail(auth, emailFromError);
-    const cred = provider === 'github'
-      ? GithubAuthProvider.credentialFromError(error)
-      : GoogleAuthProvider.credentialFromError(error);
+
+    // >>> UPDATE: lấy credential từ lỗi theo provider (github/google/twitter)
+    const cred =
+      provider === 'github'  ? GithubAuthProvider.credentialFromError(error)  :
+      provider === 'google'  ? GoogleAuthProvider.credentialFromError(error)  :
+      provider === 'twitter' ? TwitterAuthProvider.credentialFromError(error) :
+      null;
+
     setPendingCred(cred);
 
     if (methods.includes('google.com')) {
@@ -156,6 +163,22 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     } catch (e) {
       if (e.code === 'auth/account-exists-with-different-credential') await handleAccountExists(e, 'github');
       else setMsg(e.message);
+    } finally { setLoading(false); }
+  };
+
+  // >>> ADD: Login with X (Twitter)
+  const loginTwitter = async () => {
+    setLoading(true); setMsg('');
+    try {
+      await signInWithPopup(auth, new TwitterAuthProvider());
+      setOpenAuth(false);
+      showToast('success', 'Đăng nhập X (Twitter) thành công!');
+    } catch (e) {
+      if (e.code === 'auth/account-exists-with-different-credential') {
+        await handleAccountExists(e, 'twitter');
+      } else {
+        setMsg(e.message);
+      }
     } finally { setLoading(false); }
   };
 
@@ -331,6 +354,12 @@ export default function LoginButton({ onToggleTheme, isDark }) {
                         className="flex items-center justify-center gap-2 px-3 py-2 rounded bg-gray-900 text-white hover:bg-black disabled:opacity-60">
                   <FontAwesomeIcon icon={faGithub} />
                   GitHub
+                </button>
+                {/* >>> ADD: X (Twitter) */}
+                <button onClick={loginTwitter} disabled={loading}
+                        className="flex items-center justify-center gap-2 px-3 py-2 rounded bg-black text-white hover:opacity-90 disabled:opacity-60 col-span-1 sm:col-span-2">
+                  <FontAwesomeIcon icon={faXTwitter} />
+                  X (Twitter)
                 </button>
               </div>
 
