@@ -1,12 +1,13 @@
 // components/Comments.js
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { auth, db } from '../lib/firebase-client';
 import {
   addDoc, collection, deleteDoc, doc, getDoc, setDoc, updateDoc,
   limit, onSnapshot, orderBy, query, runTransaction,
   serverTimestamp, where,
-  arrayUnion, arrayRemove, increment
+  arrayUnion, arrayRemove, increment,
+  getDocs, startAfter, writeBatch
 } from 'firebase/firestore';
 import { sendEmailVerification } from 'firebase/auth';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -50,25 +51,66 @@ function excerpt(s, n = 140) {
 }
 
 /* ========= Notifications helper ========= */
-async function createNotification(payload = {}) {
-  const { toUserId, type, postId, commentId, fromUserId, ...extra } = payload;
-  await addDoc(collection(db, 'notifications'), {
-    toUserId,
-    type,           // 'comment' | 'reply' | 'like'
-    postId,
-    commentId,
-    isRead: false,
-    createdAt: serverTimestamp(),
-    fromUserId,
-    ...extra,
-  });
-}
 async function bumpCounter(uid, delta) {
   const ref = doc(db, 'user_counters', uid);
   await runTransaction(db, async (tx) => {
     const snap = await tx.get(ref);
     const cur = snap.exists() ? (snap.data().unreadCount || 0) : 0;
     tx.set(ref, { unreadCount: Math.max(0, cur + delta) }, { merge: true });
+  });
+}
+
+/** Idempotent + cooldown cho thông báo LIKE (chống spam)
+ * Mỗi (toUserId, commentId, fromUserId) có 1 doc duy nhất: notifications/like_{to}_{cmt}_{from}
+ * - Trong thời gian cooldown (mặc định 60s): chỉ cập nhật updatedAt, KHÔNG cộng unreadCounter
+ * - Hết cooldown: setDoc + bumpCounter(+1)
+ */
+async function upsertLikeNotification({ toUserId, postId, commentId, fromUser, cooldownSec = 60 }) {
+  if (!toUserId || !commentId || !fromUser) return;
+  if (toUserId === fromUser.uid) return; // không tự notify chính mình
+
+  const nid = `like_${toUserId}_${commentId}_${fromUser.uid}`;
+  const nref = doc(db, 'notifications', nid);
+
+  const snap = await getDoc(nref);
+  let shouldBumpCounter = true;
+
+  if (snap.exists()) {
+    const d = snap.data();
+    const updatedAt = d?.updatedAt?.seconds ? d.updatedAt.seconds * 1000 : 0;
+    const withinCooldown = Date.now() - updatedAt < cooldownSec * 1000;
+    if (withinCooldown) shouldBumpCounter = false;
+  }
+
+  await setDoc(nref, {
+    toUserId,
+    type: 'like',
+    postId: String(postId),
+    commentId,
+    fromUserId: fromUser.uid,
+    fromUserName: preferredName(fromUser),
+    fromUserPhoto: preferredPhoto(fromUser),
+    updatedAt: serverTimestamp(),
+    createdAt: snap?.exists() ? (snap.data().createdAt || serverTimestamp()) : serverTimestamp(),
+    isRead: false
+  }, { merge: true });
+
+  if (shouldBumpCounter) {
+    await bumpCounter(toUserId, +1);
+  }
+}
+
+async function createNotification(payload = {}) {
+  const { toUserId, type, postId, commentId, fromUserId, ...extra } = payload;
+  await addDoc(collection(db, 'notifications'), {
+    toUserId,
+    type,           // 'comment' | 'reply'
+    postId,
+    commentId,
+    isRead: false,
+    createdAt: serverTimestamp(),
+    fromUserId,
+    ...extra,
   });
 }
 
@@ -85,14 +127,12 @@ async function ensureUserDoc(u) {
     updatedAt: serverTimestamp(),
   };
   if (!snap.exists()) {
-    // Tạo mới: có createdAt + khởi tạo stats
     await setDoc(uref, {
       ...base,
-      createdAt: serverTimestamp(),   // <-- chỉ set lần đầu
+      createdAt: serverTimestamp(),
       stats: { comments: 0, likesReceived: 0 },
     }, { merge: true });
   } else {
-    // Đã tồn tại: chỉ cập nhật thông tin cơ bản, không đụng createdAt
     await setDoc(uref, base, { merge: true });
   }
 }
@@ -131,8 +171,17 @@ export default function Comments({ postId, postTitle }) {
   const [me, setMe] = useState(null);
   const [adminUids, setAdminUids] = useState([]);
   const [content, setContent] = useState('');
-  const [items, setItems] = useState([]);
+  const [submitting, setSubmitting] = useState(false);
+
+  // Realtime trang 1 + các trang cũ "Xem thêm"
+  const PAGE_SIZE = 50;
+  const [liveItems, setLiveItems] = useState([]);     // realtime page 1
+  const [olderItems, setOlderItems] = useState([]);   // các trang cũ
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const lastDocRef = useRef(null);
+  const unsubRef = useRef(null);
+  const [hasMore, setHasMore] = useState(false);
 
   // Modal center
   const [modalOpen, setModalOpen] = useState(false);
@@ -140,6 +189,9 @@ export default function Comments({ postId, postTitle }) {
   const [modalContent, setModalContent] = useState(null);
   const [modalActions, setModalActions] = useState(null);
   const [modalTone, setModalTone] = useState('info');
+
+  // Đang like comment nào để chặn double‑click
+  const [likingIds, setLikingIds] = useState(() => new Set());
 
   // ===== Helpers mở modal
   const openConfirm = (message, onConfirm) => {
@@ -187,13 +239,11 @@ export default function Comments({ postId, postTitle }) {
     );
     setModalOpen(true);
   };
-
   const openHeaderLoginPopup = () => {
-  if (typeof window === 'undefined') return;
-  try { window.dispatchEvent(new Event('close-login')); } catch {}
-  try { window.dispatchEvent(new Event('open-auth')); } catch {}
-};
-
+    if (typeof window === 'undefined') return;
+    try { window.dispatchEvent(new Event('close-login')); } catch {}
+    try { window.dispatchEvent(new Event('open-auth')); } catch {}
+  };
   const openLoginPrompt = () => {
     setModalTitle('Cần đăng nhập');
     setModalContent(<p>Bạn cần <b>đăng nhập</b> để thực hiện thao tác này.</p>);
@@ -229,34 +279,47 @@ export default function Comments({ postId, postTitle }) {
     })();
   }, []);
 
+  // Realtime trang 1
   useEffect(() => {
     if (!postId) return;
     setLoading(true);
+    setOlderItems([]);
+    setHasMore(false);
+    lastDocRef.current = null;
+    if (unsubRef.current) { unsubRef.current(); unsubRef.current = null; }
+
     const q = query(
       collection(db, 'comments'),
       where('postId', '==', String(postId)),
       orderBy('createdAt', 'desc'),
-      limit(100)
+      limit(PAGE_SIZE)
     );
     const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      setItems(list);
+      setLiveItems(list);
+
+      // cập nhật lastDoc cho "Xem thêm"
+      const lastVisible = snap.docs[snap.docs.length - 1] || null;
+      lastDocRef.current = lastVisible;
+      setHasMore(!!lastVisible); // có lastVisible thì có thể còn dữ liệu
       setLoading(false);
     });
-    return () => unsub();
+    unsubRef.current = unsub;
+
+    return () => { if (unsubRef.current) unsubRef.current(); unsubRef.current = null; };
   }, [postId]);
 
-  // vá comment cũ thiếu tên/ảnh của chính mình
+  // vá comment cũ thiếu tên/ảnh của chính mình (chỉ quét trong liveItems để nhẹ)
   useEffect(() => {
-    if (!me || items.length === 0) return;
-    const fixes = items
+    if (!me || liveItems.length === 0) return;
+    const fixes = liveItems
       .filter(c => c.authorId === me.uid && (!c.userName || !c.userPhoto))
       .map(c => updateDoc(doc(db, 'comments', c.id), {
         userName: c.userName || preferredName(me),
         userPhoto: c.userPhoto || preferredPhoto(me)
       }).catch(()=>{}));
     if (fixes.length) Promise.all(fixes).catch(()=>{});
-  }, [me, items]);
+  }, [me, liveItems]);
 
   const isAdmin = useMemo(() => (uid) => adminUids.includes(uid), [adminUids]);
 
@@ -266,48 +329,55 @@ export default function Comments({ postId, postTitle }) {
     if (!me) { openLoginPrompt(); return; }
     if (!me.emailVerified) { openVerifyPrompt(); return; }
     if (!content.trim()) return;
+    if (submitting) return;
 
-    await ensureUserDoc(me); // tạo user doc nếu chưa có (không ghi đè createdAt)
+    setSubmitting(true);
+    try {
+      await ensureUserDoc(me);
 
-    const payload = {
-      postId: String(postId),
-      parentId: null,
-      authorId: me.uid,
-      userName: preferredName(me),
-      userPhoto: preferredPhoto(me),
-      content: content.trim(),
-      createdAt: serverTimestamp(),
-      replyToUserId: null,
-      likeCount: 0,
-      likedBy: []
-    };
-    const ref = await addDoc(collection(db, 'comments'), payload);
-    setContent('');
-
-    // Cập nhật thống kê: +1 bình luận
-    await updateDoc(doc(db, 'users', me.uid), { 'stats.comments': increment(1) });
-
-    // Gửi noti cho admin khác (tránh tự notify chính mình)
-    const targetAdmins = adminUids.filter(u => u !== me.uid);
-    await Promise.all(targetAdmins.map(async (uid) => {
-      await createNotification({
-        toUserId: uid,
-        type: 'comment',
+      const payload = {
         postId: String(postId),
-        commentId: ref.id,
-        fromUserId: me.uid,
-        fromUserName: preferredName(me),
-        fromUserPhoto: preferredPhoto(me),
-        postTitle: postTitle || '',
-        commentText: excerpt(payload.content),
-      });
-      await bumpCounter(uid, +1);
-    }));
+        parentId: null,
+        authorId: me.uid,
+        userName: preferredName(me),
+        userPhoto: preferredPhoto(me),
+        content: content.trim(),
+        createdAt: serverTimestamp(),
+        replyToUserId: null,
+        likeCount: 0,
+        likedBy: []
+      };
+      const ref = await addDoc(collection(db, 'comments'), payload);
+      setContent('');
+
+      await updateDoc(doc(db, 'users', me.uid), { 'stats.comments': increment(1) });
+
+      const targetAdmins = adminUids.filter(u => u !== me.uid);
+      await Promise.all(targetAdmins.map(async (uid) => {
+        await createNotification({
+          toUserId: uid,
+          type: 'comment',
+          postId: String(postId),
+          commentId: ref.id,
+          fromUserId: me.uid,
+          fromUserName: preferredName(me),
+          fromUserPhoto: preferredPhoto(me),
+          postTitle: postTitle || '',
+          commentText: excerpt(payload.content),
+        });
+        await bumpCounter(uid, +1);
+      }));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
-  // ===== Toggle ❤️ like + cập nhật likesReceived
+  // ===== Toggle ❤️ like + cập nhật likesReceived + chống spam noti
   const toggleLike = async (c) => {
     if (!me) { openLoginPrompt(); return; }
+    if (likingIds.has(c.id)) return; // chặn double click trong lúc đang gọi mạng
+    const nextSet = new Set(likingIds); nextSet.add(c.id); setLikingIds(nextSet);
+
     const cid = c.id;
     const ref = doc(db, 'comments', cid);
     const hasLiked = Array.isArray(c.likedBy) && c.likedBy.includes(me.uid);
@@ -317,30 +387,55 @@ export default function Comments({ postId, postTitle }) {
         likeCount: increment(hasLiked ? -1 : +1),
       });
 
-      // cập nhật tổng likesReceived cho TÁC GIẢ bình luận
       if (c.authorId) {
         await updateDoc(doc(db, 'users', c.authorId), {
           'stats.likesReceived': increment(hasLiked ? -1 : +1)
         });
       }
 
-      // tạo noti khi LIKE (không phải bỏ like) & không notify khi tự-like
+      // chỉ tạo/refresh noti khi LIKE (không phải unlike) & không notify khi tự-like
       if (!hasLiked && me.uid !== c.authorId) {
-        await createNotification({
+        await upsertLikeNotification({
           toUserId: c.authorId,
-          type: 'like',
           postId: String(c.postId),
           commentId: c.id,
-          fromUserId: me.uid,
-          fromUserName: preferredName(me),
-          fromUserPhoto: preferredPhoto(me),
-          postTitle: c.postTitle || postTitle || '',
-          commentText: excerpt(c.content, 120),
+          fromUser: me,
+          cooldownSec: 60
         });
-        await bumpCounter(c.authorId, +1);
       }
     } catch {}
+    finally {
+      const out = new Set(likingIds); out.delete(c.id); setLikingIds(out);
+    }
   };
+
+  // ===== Xem thêm (nạp các trang cũ, không realtime để tiết kiệm băng thông)
+  const loadMore = async () => {
+    if (!postId || loadingMore || !lastDocRef.current) return;
+    setLoadingMore(true);
+    try {
+      const q = query(
+        collection(db, 'comments'),
+        where('postId', '==', String(postId)),
+        orderBy('createdAt', 'desc'),
+        startAfter(lastDocRef.current),
+        limit(PAGE_SIZE)
+      );
+      const snap = await getDocs(q);
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setOlderItems(prev => [...prev, ...list]);
+      const lastVisible = snap.docs[snap.docs.length - 1] || null;
+      lastDocRef.current = lastVisible;
+      setHasMore(!!lastVisible);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  const items = useMemo(() => {
+    // gộp realtime (trang 1) + các trang cũ, đã cùng thứ tự createdAt desc
+    return [...liveItems, ...olderItems];
+  }, [liveItems, olderItems]);
 
   const roots = items.filter(c => !c.parentId);
   const repliesByParent = useMemo(() => {
@@ -351,6 +446,19 @@ export default function Comments({ postId, postTitle }) {
     Object.values(m).forEach(arr => arr.sort((a,b) => (a.createdAt?.seconds||0) - (b.createdAt?.seconds||0)));
     return m;
   }, [items]);
+
+  // Xoá root + replies bằng batch để nhất quán hơn
+  const deleteThreadBatch = async (root) => {
+    const toDelete = [root, ...(repliesByParent[root.id] || [])];
+    const batch = writeBatch(db);
+    toDelete.forEach((it) => {
+      batch.delete(doc(db, 'comments', it.id));
+      if (it.authorId) {
+        batch.update(doc(db, 'users', it.authorId), { 'stats.comments': increment(-1) });
+      }
+    });
+    await batch.commit();
+  };
 
   return (
     <div className="mt-6">
@@ -372,15 +480,19 @@ export default function Comments({ postId, postTitle }) {
             className="w-full min-h-[96px] border border-sky-200 dark:border-sky-900 rounded-xl px-3 py-2 text-[16px] leading-6 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-sky-500/40 outline-none shadow-[0_0_0_1px_rgba(56,189,248,0.25)]"
             placeholder="Viết bình luận..."
             maxLength={3000}
-            onFocus={() => { if (me && !me.emailVerified) openVerifyPrompt(); }}
           />
           <div className="flex justify-end">
             <button
               type="submit"
-              className="px-4 py-2 bg-gradient-to-r from-sky-600 to-blue-600 text-white rounded-xl hover:opacity-95 active:scale-95 shadow-sm inline-flex items-center gap-2"
+              disabled={submitting || !content.trim()}
+              className={`px-4 py-2 rounded-xl inline-flex items-center gap-2 text-white shadow-sm
+                ${submitting || !content.trim()
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-sky-600 to-blue-600 hover:opacity-95 active:scale-95'
+                }`}
             >
               <FontAwesomeIcon icon={faPaperPlane} />
-              Gửi
+              {submitting ? 'Đang gửi…' : 'Gửi'}
             </button>
           </div>
         </form>
@@ -392,95 +504,107 @@ export default function Comments({ postId, postTitle }) {
         ) : roots.length === 0 ? (
           <div className="text-sm text-gray-500 dark:text-gray-400">Chưa có bình luận.</div>
         ) : (
-          <ul className="space-y-4">
-            {roots.map((c) => {
-              const replies = repliesByParent[c.id] || [];
-              return (
-                <li
-                  key={c.id}
-                  id={`c-${c.id}`}
-                  className="scroll-mt-24 rounded-2xl p-3 bg-white/95 dark:bg-gray-900/95 border border-transparent 
-                             [background:linear-gradient(#fff,rgba(255,255,255,0.96))_padding-box,linear-gradient(135deg,#bae6fd,#fecaca)_border-box]
-                             dark:[background:linear-gradient(#0b0f19,#0b0f19)_padding-box,linear-gradient(135deg,#0ea5e9,#f43f5e)_border-box]
-                             hover:shadow-md transition-shadow"
+          <>
+            <ul className="space-y-4">
+              {roots.map((c) => {
+                const replies = repliesByParent[c.id] || [];
+                return (
+                  <li
+                    key={c.id}
+                    id={`c-${c.id}`}
+                    className="scroll-mt-24 rounded-2xl p-3 bg-white/95 dark:bg-gray-900/95 border border-transparent 
+                               [background:linear-gradient(#fff,rgba(255,255,255,0.96))_padding-box,linear-gradient(135deg,#bae6fd,#fecaca)_border-box]
+                               dark:[background:linear-gradient(#0b0f19,#0b0f19)_padding-box,linear-gradient(135deg,#0ea5e9,#f43f5e)_border-box]
+                               hover:shadow-md transition-shadow"
+                  >
+                    <CommentRow
+                      c={c}
+                      me={me}
+                      isAdminFn={(uid)=>adminUids.includes(uid)}
+                      canDelete={!!me && (me.uid === c.authorId || adminUids.includes(me.uid))}
+                      onDelete={() => {
+                        openConfirm('Xoá bình luận này và toàn bộ phản hồi của nó?', async () => {
+                          try { await deleteThreadBatch(c); } catch {}
+                        });
+                      }}
+                      onToggleLike={() => toggleLike(c)}
+                    />
+
+                    <ReplyBox
+                      me={me}
+                      postId={postId}
+                      parent={c}
+                      adminUids={adminUids}
+                      postTitle={postTitle}
+                      onNeedVerify={openVerifyPrompt}
+                      onNeedLogin={openLoginPrompt}
+                    />
+
+                    {/* Danh sách phản hồi */}
+                    {replies.map((r) => {
+                      const target = r.replyToUserId === c.authorId
+                        ? c
+                        : replies.find(x => x.authorId === r.replyToUserId) || null;
+                      return (
+                        <div
+                          key={r.id}
+                          id={`c-${r.id}`}
+                          className="mt-3 pl-4 border-l-2 border-sky-200 dark:border-sky-800 scroll-mt-24"
+                        >
+                          <CommentRow
+                            c={r}
+                            me={me}
+                            small
+                            isAdminFn={(uid)=>adminUids.includes(uid)}
+                            quoteFrom={target}
+                            canDelete={!!me && (me.uid === r.authorId || adminUids.includes(me.uid))}
+                            onDelete={() => {
+                              openConfirm('Bạn có chắc muốn xoá phản hồi này?', async () => {
+                                try {
+                                  await deleteDoc(doc(db, 'comments', r.id));
+                                  if (r.authorId) {
+                                    await updateDoc(doc(db, 'users', r.authorId), { 'stats.comments': increment(-1) });
+                                  }
+                                } catch {}
+                              });
+                            }}
+                            onToggleLike={() => toggleLike(r)}
+                          />
+                          <ReplyBox
+                            me={me}
+                            postId={postId}
+                            parent={c}
+                            replyingTo={r}
+                            adminUids={adminUids}
+                            postTitle={postTitle}
+                            onNeedVerify={openVerifyPrompt}
+                            onNeedLogin={openLoginPrompt}
+                          />
+                        </div>
+                      );
+                    })}
+                  </li>
+                );
+              })}
+            </ul>
+
+            {/* Xem thêm */}
+            {hasMore && (
+              <div className="mt-4 flex justify-center">
+                <button
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                  className={`px-4 py-2 rounded-xl border inline-flex items-center justify-center
+                    ${loadingMore
+                      ? 'text-gray-500 border-gray-300 cursor-not-allowed'
+                      : 'text-sky-700 border-sky-200 hover:bg-sky-50'
+                    }`}
                 >
-                  <CommentRow
-                    c={c}
-                    me={me}
-                    isAdminFn={(uid)=>adminUids.includes(uid)}
-                    canDelete={!!me && (me.uid === c.authorId || adminUids.includes(me.uid))}
-                    onDelete={async () => {
-                      openConfirm('Xoá bình luận này và toàn bộ phản hồi của nó?', async () => {
-                        const toDelete = [c, ...(repliesByParent[c.id] || [])];
-                        // trừ thống kê cho từng author ứng với comment bị xoá
-                        await Promise.all(toDelete.map(async (it) => {
-                          if (it.authorId) {
-                            try { await updateDoc(doc(db, 'users', it.authorId), { 'stats.comments': increment(-1) }); } catch {}
-                          }
-                          try { await deleteDoc(doc(db, 'comments', it.id)); } catch {}
-                        }));
-                      });
-                    }}
-                    onToggleLike={()=>toggleLike(c)}
-                  />
-
-                  <ReplyBox
-                    me={me}
-                    postId={postId}
-                    parent={c}
-                    adminUids={adminUids}
-                    postTitle={postTitle}
-                    onNeedVerify={openVerifyPrompt}
-                    onNeedLogin={openLoginPrompt}
-                  />
-
-                  {/* Danh sách phản hồi */}
-                  {replies.map((r) => {
-                    const target = r.replyToUserId === c.authorId
-                      ? c
-                      : replies.find(x => x.authorId === r.replyToUserId) || null;
-                    return (
-                      <div
-                        key={r.id}
-                        id={`c-${r.id}`}
-                        className="mt-3 pl-4 border-l-2 border-sky-200 dark:border-sky-800 scroll-mt-24"
-                      >
-                        <CommentRow
-                          c={r}
-                          me={me}
-                          small
-                          isAdminFn={(uid)=>adminUids.includes(uid)}
-                          quoteFrom={target}
-                          canDelete={!!me && (me.uid === r.authorId || adminUids.includes(me.uid))}
-                          onDelete={() => {
-                            openConfirm('Bạn có chắc muốn xoá phản hồi này?', async () => {
-                              try {
-                                await deleteDoc(doc(db, 'comments', r.id));
-                                if (r.authorId) {
-                                  await updateDoc(doc(db, 'users', r.authorId), { 'stats.comments': increment(-1) });
-                                }
-                              } catch {}
-                            });
-                          }}
-                          onToggleLike={()=>toggleLike(r)}
-                        />
-                        <ReplyBox
-                          me={me}
-                          postId={postId}
-                          parent={c}
-                          replyingTo={r}
-                          adminUids={adminUids}
-                          postTitle={postTitle}
-                          onNeedVerify={openVerifyPrompt}
-                          onNeedLogin={openLoginPrompt}
-                        />
-                      </div>
-                    );
-                  })}
-                </li>
-              );
-            })}
-          </ul>
+                  {loadingMore ? 'Đang tải…' : 'Xem thêm bình luận cũ'}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
@@ -499,7 +623,6 @@ function CommentRow({ c, me, small = false, isAdminFn, quoteFrom, canDelete, onD
 
   const NameLink = ({ uid, children }) => {
     if (!uid) return <span className="font-semibold text-gray-900 dark:text-gray-100">{children}</span>;
-    // chính mình → /profile ; người khác → /users/[uid]
     const href = isSelf ? '/profile' : `/users/${uid}`;
     return (
       <Link
@@ -594,6 +717,7 @@ function CommentRow({ c, me, small = false, isAdminFn, quoteFrom, canDelete, onD
 function ReplyBox({ me, postId, parent, replyingTo=null, adminUids, postTitle, onNeedVerify, onNeedLogin }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
+  const [sending, setSending] = useState(false);
   const target = replyingTo || parent;
   const canReply = !!me && me.uid !== (target?.authorId ?? '');
 
@@ -601,59 +725,62 @@ function ReplyBox({ me, postId, parent, replyingTo=null, adminUids, postTitle, o
     e.preventDefault();
     if (!me) { onNeedLogin?.(); return; }
     if (!me.emailVerified) { onNeedVerify?.(); return; }
-    if (!canReply || !text.trim()) return;
+    if (!canReply || !text.trim() || sending) return;
 
-    await ensureUserDoc(me); // tạo user doc nếu chưa có
+    setSending(true);
+    try {
+      await ensureUserDoc(me);
 
-    const ref = await addDoc(collection(db, 'comments'), {
-      postId: String(postId),
-      parentId: parent.id,
-      authorId: me.uid,
-      userName: preferredName(me),
-      userPhoto: preferredPhoto(me),
-      content: text.trim(),
-      createdAt: serverTimestamp(),
-      replyToUserId: target.authorId || null,
-      likeCount: 0,
-      likedBy: []
-    });
-    setText('');
-    setOpen(false);
-
-    // +1 bình luận cho người trả lời
-    await updateDoc(doc(db, 'users', me.uid), { 'stats.comments': increment(1) });
-
-    // Notify người bị trả lời
-    if (target.authorId && target.authorId !== me.uid) {
-      await createNotification({
-        toUserId: target.authorId,
-        type: 'reply',
+      const ref = await addDoc(collection(db, 'comments'), {
         postId: String(postId),
-        commentId: ref.id,
-        fromUserId: me.uid,
-        fromUserName: preferredName(me),
-        fromUserPhoto: preferredPhoto(me),
-        postTitle: postTitle || '',
-        commentText: excerpt(text),
+        parentId: parent.id,
+        authorId: me.uid,
+        userName: preferredName(me),
+        userPhoto: preferredPhoto(me),
+        content: text.trim(),
+        createdAt: serverTimestamp(),
+        replyToUserId: target.authorId || null,
+        likeCount: 0,
+        likedBy: []
       });
-      await bumpCounter(target.authorId, +1);
+      setText('');
+      setOpen(false);
+
+      await updateDoc(doc(db, 'users', me.uid), { 'stats.comments': increment(1) });
+
+      if (target.authorId && target.authorId !== me.uid) {
+        await createNotification({
+          toUserId: target.authorId,
+          type: 'reply',
+          postId: String(postId),
+          commentId: ref.id,
+          fromUserId: me.uid,
+          fromUserName: preferredName(me),
+          fromUserPhoto: preferredPhoto(me),
+          postTitle: postTitle || '',
+          commentText: excerpt(text),
+        });
+        await bumpCounter(target.authorId, +1);
+      }
+
+      const targets = adminUids.filter(u => u !== me.uid && u !== target.authorId);
+      await Promise.all(targets.map(async (uid) => {
+        await createNotification({
+          toUserId: uid,
+          type: 'comment',
+          postId: String(postId),
+          commentId: ref.id,
+          fromUserId: me.uid,
+          fromUserName: preferredName(me),
+          fromUserPhoto: preferredPhoto(me),
+          postTitle: postTitle || '',
+          commentText: excerpt(text),
+        });
+        await bumpCounter(uid, +1);
+      }));
+    } finally {
+      setSending(false);
     }
-    // Notify admin khác
-    const targets = adminUids.filter(u => u !== me.uid && u !== target.authorId);
-    await Promise.all(targets.map(async (uid) => {
-      await createNotification({
-        toUserId: uid,
-        type: 'comment',
-        postId: String(postId),
-        commentId: ref.id,
-        fromUserId: me.uid,
-        fromUserName: preferredName(me),
-        fromUserPhoto: preferredPhoto(me),
-        postTitle: postTitle || '',
-        commentText: excerpt(text),
-      });
-      await bumpCounter(uid, +1);
-    }));
   };
 
   if (!me) {
@@ -699,11 +826,9 @@ function ReplyBox({ me, postId, parent, replyingTo=null, adminUids, postTitle, o
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
-            // iOS zoom fix
             className="w-full min-h-[72px] border border-indigo-200 dark:border-indigo-900 rounded-xl px-3 py-2 text-[16px] leading-6 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500/40 outline-none shadow-[0_0_0_1px_rgba(129,140,248,0.25)]"
             placeholder={`Phản hồi ${replyingTo ? (replyingTo.userName || 'người dùng') : (parent.userName || 'người dùng')}…`}
             maxLength={2000}
-            onFocus={() => { if (me && !me.emailVerified) onNeedVerify?.(); }}
           />
           <div className="flex gap-2 justify-end">
             <button
@@ -715,9 +840,14 @@ function ReplyBox({ me, postId, parent, replyingTo=null, adminUids, postTitle, o
             </button>
             <button
               type="submit"
-              className="px-4 py-2 text-sm rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white hover:opacity-95 inline-flex items-center gap-2"
+              disabled={!text.trim() || sending}
+              className={`px-4 py-2 text-sm rounded-xl inline-flex items-center gap-2 text-white
+                ${!text.trim() || sending
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-gradient-to-r from-indigo-600 to-violet-600 hover:opacity-95'
+                }`}
             >
-              Gửi
+              {sending ? 'Đang gửi…' : 'Gửi'}
             </button>
           </div>
         </form>
