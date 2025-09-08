@@ -1,4 +1,3 @@
-// components/Comments.js
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { auth, db } from '../lib/firebase-client';
@@ -7,7 +6,7 @@ import {
   limit, onSnapshot, orderBy, query, runTransaction,
   serverTimestamp, where,
   arrayUnion, arrayRemove, increment,
-  getDocs, startAfter, writeBatch
+  getDocs, startAfter
 } from 'firebase/firestore';
 import { sendEmailVerification } from 'firebase/auth';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -32,12 +31,19 @@ async function bumpCounter(uid, delta){
     tx.set(ref,{ unreadCount: Math.max(0, cur+delta), updatedAt: serverTimestamp() },{ merge:true });
   });
 }
+
 async function createNotification(payload={}){
   const {toUserId}=payload; if(!toUserId) return;
-  await addDoc(collection(db,'notifications'),{ ...payload, isRead:false, createdAt: serverTimestamp() });
+  await addDoc(collection(db,'notifications'),{
+    ...payload,
+    isRead:false,
+    createdAt: serverTimestamp(),
+    // sortAt để NotificationsPanel order theo hoạt động mới nhất (fallback nếu doc cũ chưa có sortAt)
+    sortAt: serverTimestamp()
+  });
 }
 
-/** Noti LIKE idempotent + cooldown + sortAt để nổi lên đầu panel */
+/** Noti LIKE idempotent + cooldown + sortAt (để item luôn nổi lên đầu) */
 async function upsertLikeNotification({ toUserId, postId, commentId, fromUser, cooldownSec=LIKE_COOLDOWN_SEC }){
   if(!toUserId || !commentId || !fromUser) return;
   if(toUserId===fromUser.uid) return; // chặn tự-notify
@@ -49,20 +55,15 @@ async function upsertLikeNotification({ toUserId, postId, commentId, fromUser, c
   let shouldBump=true;
   if(snap.exists()){
     const ms=snap.data()?.updatedAt?.seconds ? snap.data().updatedAt.seconds*1000 : 0;
-    const withinCooldown = Date.now()-ms < cooldownSec*1000;
-    if(withinCooldown) shouldBump=false;
+    if(Date.now()-ms < cooldownSec*1000) shouldBump=false;
   }
 
   await setDoc(nref,{
-    toUserId, type:'like',
-    postId: String(postId),
-    commentId,
-    fromUserId: fromUser.uid,
-    fromUserName: preferredName(fromUser),
-    fromUserPhoto: preferredPhoto(fromUser),
+    toUserId, type:'like', postId:String(postId), commentId,
+    fromUserId: fromUser.uid, fromUserName: preferredName(fromUser), fromUserPhoto: preferredPhoto(fromUser),
     createdAt: snap?.exists()? (snap.data().createdAt || serverTimestamp()) : serverTimestamp(),
     updatedAt: serverTimestamp(),
-    sortAt: serverTimestamp(),   // 👈 dùng để orderBy trong panel
+    sortAt: serverTimestamp(),
     isRead:false
   },{ merge:true });
 
@@ -303,10 +304,10 @@ export default function Comments({ postId, postTitle }){
     }finally{ setSubmitting(false); }
   };
 
-  // Toggle ❤️ like
+  // Toggle ❤️ like (chặn tự-like, sinh noti khi like)
   const toggleLike=async(c)=>{
     if(!me){ openLoginPrompt(); return; }
-    if(me.uid===c.authorId) return;            // 👈 chặn tự-like
+    if(me.uid===c.authorId) return;            // chặn tự-like
     if(likingIds.has(c.id)) return;            // chặn double click
     setLikingIds(prev=>{ const s=new Set(prev); s.add(c.id); return s; });
 
@@ -315,7 +316,6 @@ export default function Comments({ postId, postTitle }){
     try{
       await updateDoc(ref,{ likedBy: hasLiked? arrayRemove(me.uid): arrayUnion(me.uid), likeCount: increment(hasLiked? -1:+1) });
       if(c.authorId){ await updateDoc(doc(db,'users',c.authorId),{ 'stats.likesReceived': increment(hasLiked? -1:+1) }); }
-      // tạo noti chỉ khi LIKE (không phải unlike)
       if(!hasLiked && c.authorId){
         const pid = c.postId ?? postId; // fallback
         await upsertLikeNotification({ toUserId: c.authorId, postId: String(pid), commentId: c.id, fromUser: me });
@@ -325,10 +325,16 @@ export default function Comments({ postId, postTitle }){
     }
   };
 
-  // Xoá thread (root + replies)
-  const deleteThreadBatch=async(root)=>{ const toDelete=[root, ...(repliesByParent[root.id]||[])]; const batch=writeBatch(db);
-    toDelete.forEach(it=>{ batch.delete(doc(db,'comments',it.id)); if(it.authorId) batch.update(doc(db,'users',it.authorId),{ 'stats.comments': increment(-1) }); });
-    await batch.commit();
+  // Xoá thread (root + replies) -- xoá trước, cập nhật stats "best‑effort"
+  const deleteThreadSafe=async(root, replies=[])=>{
+    await Promise.all([
+      deleteDoc(doc(db,'comments',root.id)),
+      ...replies.map(r=>deleteDoc(doc(db,'comments',r.id)))
+    ]).catch(()=>{});
+    try{
+      if(root.authorId) await updateDoc(doc(db,'users',root.authorId),{ 'stats.comments': increment(-1) });
+      await Promise.all(replies.map(async r=>{ if(r.authorId) await updateDoc(doc(db,'users',r.authorId),{ 'stats.comments': increment(-1) }); }));
+    }catch{}
   };
 
   return (
@@ -373,7 +379,7 @@ export default function Comments({ postId, postTitle }){
                 const likeCount = c.likeCount||0;
                 return (
                   <li key={c.id} id={`c-${c.id}`} className="scroll-mt-24 rounded-2xl p-3 bg-white/95 dark:bg-gray-900/95 border border-transparent [background:linear-gradient(#fff,rgba(255,255,255,0.96))_padding-box,linear-gradient(135deg,#bae6fd,#fecaca)_border-box] dark:[background:linear-gradient(#0b0f19,#0b0f19)_padding-box,linear-gradient(135deg,#0ea5e9,#f43f5e)_border-box] hover:shadow-md transition-shadow">
-                    <CommentHeader c={c} me={me} isAdminFn={uid=>adminUids.includes(uid)} dt={dt} canDelete={!!me&&(me.uid===c.authorId||adminUids.includes(me.uid))} onDelete={()=>openConfirm('Xoá bình luận này và toàn bộ phản hồi của nó?', async()=>{ try{ await deleteThreadBatch(c); }catch{} })}/>
+                    <CommentHeader c={c} me={me} isAdminFn={uid=>adminUids.includes(uid)} dt={dt} canDelete={!!me&&(me.uid===c.authorId||adminUids.includes(me.uid))} onDelete={()=>openConfirm('Xoá bình luận này và toàn bộ phản hồi của nó?', async()=>{ try{ await deleteThreadSafe(c, replies); }catch{} })}/>
                     <div className="mt-2 whitespace-pre-wrap break-words text-gray-900 dark:text-gray-100 leading-6">{c.content}</div>
                     <ReplyBox me={me} postId={postId} parent={c} adminUids={adminUids} postTitle={postTitle||''} onNeedVerify={openVerifyPrompt} onNeedLogin={openLoginPrompt} renderTrigger={(openFn)=>(<ActionBar hasLiked={hasLiked} likeCount={likeCount} onToggleLike={()=>toggleLike(c)} renderReplyTrigger={()=> (me && me.uid!==c.authorId ? <button onClick={openFn} className="inline-flex items-center gap-2 text-sm text-sky-700 dark:text-sky-300 hover:underline"><FontAwesomeIcon icon={faReply}/> Trả lời</button> : null) }/>)}/>
                     {replies.map(r=>{
