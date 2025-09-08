@@ -1,46 +1,39 @@
+// components/NotificationsBell.js
 import { useEffect, useState } from 'react';
 import { auth, db } from '../lib/firebase-client';
-import { collection, doc, onSnapshot, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
 
-export default function NotificationsBell({ onClick }){
-  const [user,setUser]=useState(null);
-  const [unreadQ,setUnreadQ]=useState(0); // từ notifications query
-  const [unreadC,setUnreadC]=useState(0); // từ user_counters fallback
+export default function NotificationsBell({ onClick }) {
+  const [user, setUser] = useState(null);
+  const [unread, setUnread] = useState(0);
 
-  useEffect(()=>{ const unsub=auth.onAuthStateChanged(setUser); return ()=>unsub(); },[]);
+  useEffect(() => {
+    const unsub = auth.onAuthStateChanged(setUser);
+    return () => unsub();
+  }, []);
 
-  // Nguồn 1: notifications (toUserId & isRead==false)
-  useEffect(()=>{
-    if(!user) return;
-    let unsub=()=>{};
-    try{
-      const q=query(collection(db,'notifications'), where('toUserId','==',user.uid), where('isRead','==',false));
-      unsub=onSnapshot(q,(snap)=>setUnreadQ(snap.size), ()=>setUnreadQ(0));
-    }catch{ setUnreadQ(0); }
-    return ()=>unsub();
-  },[user]);
-
-  // Nguồn 2: user_counters/{uid}.unreadCount
-  useEffect(()=>{
-    if(!user) return;
-    const ref=doc(db,'user_counters',user.uid);
-    const unsub=onSnapshot(ref,(snap)=>{ const n=snap.exists()?(snap.data().unreadCount||0):0; setUnreadC(n); }, ()=>setUnreadC(0));
-    return ()=>unsub();
-  },[user]);
-
-  const unread=Math.max(unreadQ, unreadC);
-
-  const handleClick=()=>{
-    if(onClick) onClick();
-    try{ window.dispatchEvent(new CustomEvent('notifications:toggle')); }catch{}
-  };
+  useEffect(() => {
+    if (!user) return;
+    // ✅ Dùng đúng field: toUserId + isRead
+    const q = query(
+      collection(db, 'notifications'),
+      where('toUserId', '==', user.uid),
+      where('isRead', '==', false)
+    );
+    const unsub = onSnapshot(q, (snap) => setUnread(snap.size));
+    return () => unsub();
+  }, [user]);
 
   return (
-    <button onClick={handleClick} className="relative flex items-center justify-center w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700" aria-label="Notifications" title="Thông báo">
+    <button
+      onClick={onClick}
+      className="relative flex items-center justify-center w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
+      aria-label="Notifications" title="Thông báo"
+    >
       <span className="material-icons text-gray-900 dark:text-gray-100">notifications</span>
-      {unread>0 && (
+      {unread > 0 && (
         <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-white text-[10px] flex items-center justify-center">
-          {unread>99 ? '99+' : unread}
+          {unread > 99 ? '99+' : unread}
         </span>
       )}
     </button>
