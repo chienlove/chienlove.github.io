@@ -13,7 +13,20 @@ export default function NotificationsPanel({ open, onClose }){
   const [items,setItems]=useState([]);
 
   useEffect(()=>{ const unsub=auth.onAuthStateChanged(setUser); return ()=>unsub(); },[]);
-  useEffect(()=>{ if(!user||!open) return; const qn=query(collection(db,'notifications'), where('toUserId','==',user.uid), orderBy('createdAt','desc'), limit(30)); const unsub=onSnapshot(qn,(snap)=>{ setItems(snap.docs.map(d=>({id:d.id,...d.data()}))); }); return ()=>unsub(); },[user,open]);
+
+  useEffect(()=>{
+    if(!user||!open) return;
+    // Ưu tiên sortAt; nếu một vài doc cũ chưa có sortAt có thể thêm orderBy createdAt
+    const qn=query(
+      collection(db,'notifications'),
+      where('toUserId','==',user.uid),
+      orderBy('sortAt','desc'),
+      orderBy('createdAt','desc'),
+      limit(30)
+    );
+    const unsub=onSnapshot(qn,(snap)=>{ setItems(snap.docs.map(d=>({id:d.id,...d.data()}))); });
+    return ()=>unsub();
+  },[user,open]);
 
   useEffect(()=>{ if(!open) return; const onKey=(e)=>{ if(e.key==='Escape') onClose?.(); }; window.addEventListener('keydown',onKey); return ()=>window.removeEventListener('keydown',onKey); },[open,onClose]);
 
@@ -37,7 +50,7 @@ export default function NotificationsPanel({ open, onClose }){
         <ul className="space-y-2 max-h-[65vh] overflow-auto p-3">
           {items.length===0 && <li className="text-sm text-slate-600 dark:text-slate-400 py-4 text-center">Chưa có thông báo</li>}
           {items.map(n=>{
-            const t=formatDate(n.createdAt);
+            const t=formatDate(n.updatedAt || n.createdAt);
             const who=n.fromUserName||'Ai đó';
             const title=n.postTitle||`Bài viết ${n.postId}`;
             const content=n.commentText||'';

@@ -15,7 +15,6 @@ import { faPaperPlane, faReply, faTrash, faUserCircle, faQuoteLeft, faHeart } fr
 
 /* ===== Config ===== */
 const LIKE_COOLDOWN_SEC = 60;
-const ALLOW_SELF_LIKE_NOTIFY = false;
 
 /* ===== Helpers ===== */
 function preferredName(user){ if(!user) return 'Người dùng'; const p0=user.providerData?.[0]; return user.displayName||user.email||p0?.displayName||p0?.email||'Người dùng'; }
@@ -35,15 +34,13 @@ async function bumpCounter(uid, delta){
 }
 async function createNotification(payload={}){
   const {toUserId}=payload; if(!toUserId) return;
-  await addDoc(collection(db,'notifications'),{
-    ...payload, isRead:false, createdAt: serverTimestamp()
-  });
+  await addDoc(collection(db,'notifications'),{ ...payload, isRead:false, createdAt: serverTimestamp() });
 }
 
-/** Noti LIKE idempotent + cooldown (bảo đảm lần hợp lệ có cộng badge) */
+/** Noti LIKE idempotent + cooldown + sortAt để nổi lên đầu panel */
 async function upsertLikeNotification({ toUserId, postId, commentId, fromUser, cooldownSec=LIKE_COOLDOWN_SEC }){
   if(!toUserId || !commentId || !fromUser) return;
-  if(!ALLOW_SELF_LIKE_NOTIFY && toUserId===fromUser.uid) return; // không báo tự-like
+  if(toUserId===fromUser.uid) return; // chặn tự-notify
 
   const nid=`like_${toUserId}_${commentId}_${fromUser.uid}`;
   const nref=doc(db,'notifications',nid);
@@ -51,15 +48,21 @@ async function upsertLikeNotification({ toUserId, postId, commentId, fromUser, c
 
   let shouldBump=true;
   if(snap.exists()){
-    const ms=snap.data()?.updatedAt?.seconds? snap.data().updatedAt.seconds*1000 : 0;
+    const ms=snap.data()?.updatedAt?.seconds ? snap.data().updatedAt.seconds*1000 : 0;
     const withinCooldown = Date.now()-ms < cooldownSec*1000;
     if(withinCooldown) shouldBump=false;
   }
+
   await setDoc(nref,{
-    toUserId, type:'like', postId:String(postId), commentId,
-    fromUserId: fromUser.uid, fromUserName: preferredName(fromUser), fromUserPhoto: preferredPhoto(fromUser),
+    toUserId, type:'like',
+    postId: String(postId),
+    commentId,
+    fromUserId: fromUser.uid,
+    fromUserName: preferredName(fromUser),
+    fromUserPhoto: preferredPhoto(fromUser),
     createdAt: snap?.exists()? (snap.data().createdAt || serverTimestamp()) : serverTimestamp(),
     updatedAt: serverTimestamp(),
+    sortAt: serverTimestamp(),   // 👈 dùng để orderBy trong panel
     isRead:false
   },{ merge:true });
 
@@ -194,7 +197,8 @@ function ReplyBox({ me, postId, parent, replyingTo=null, adminUids, postTitle, o
 
   return (
     <>
-      {!open && (renderTrigger ? renderTrigger(tryOpen) : (
+      {/* ẨN nút trả lời nếu là của chính mình */}
+      {!open && canReply && (renderTrigger ? renderTrigger(tryOpen) : (
         <button onClick={tryOpen} className="inline-flex items-center gap-2 text-sm text-sky-700 dark:text-sky-300 hover:underline">
           <FontAwesomeIcon icon={faReply}/> Trả lời
         </button>
@@ -232,12 +236,11 @@ export default function Comments({ postId, postTitle }){
   const [loading,setLoading]=useState(true);
   const [loadingMore,setLoadingMore]=useState(false);
   const lastDocRef=useRef(null); const unsubRef=useRef(null); const [hasMore,setHasMore]=useState(false);
+  const [likingIds,setLikingIds]=useState(()=>new Set());
 
   const [modalOpen,setModalOpen]=useState(false);
   const [modalTitle,setModalTitle]=useState(''); const [modalContent,setModalContent]=useState(null);
   const [modalActions,setModalActions]=useState(null); const [modalTone,setModalTone]=useState('info');
-
-  const [likingIds,setLikingIds]=useState(()=>new Set());
 
   const openHeaderLoginPopup=()=>{ if(typeof window==='undefined') return; try{window.dispatchEvent(new Event('close-login'));}catch{} try{window.dispatchEvent(new Event('open-auth'));}catch{} };
   const openLoginPrompt=()=>{ setModalTitle('Cần đăng nhập'); setModalContent(<p>Bạn cần <b>đăng nhập</b> để thực hiện thao tác này.</p>); setModalTone('info'); setModalActions(<><button onClick={()=>{setModalOpen(false); openHeaderLoginPopup();}} className="px-3 py-2 text-sm rounded-lg bg-gray-900 text-white hover:opacity-90">Đăng nhập</button><button onClick={()=>setModalOpen(false)} className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-white">Để sau</button></>); setModalOpen(true); };
@@ -262,7 +265,7 @@ export default function Comments({ postId, postTitle }){
     unsubRef.current=unsub; return ()=>{ if(unsubRef.current) unsubRef.current(); unsubRef.current=null; };
   },[postId]);
 
-  // vá thiếu tên/ảnh (chỉ của chính mình) trong trang 1
+  // vá thiếu tên/ảnh (của chính mình) trong trang 1
   useEffect(()=>{ if(!me||!liveItems.length) return;
     const fixes=liveItems.filter(c=>c.authorId===me.uid && (!c.userName||!c.userPhoto))
       .map(c=>updateDoc(doc(db,'comments',c.id),{ userName:c.userName||preferredName(me), userPhoto:c.userPhoto||preferredPhoto(me) }).catch(()=>{}));
@@ -280,6 +283,7 @@ export default function Comments({ postId, postTitle }){
     }finally{ setLoadingMore(false); }
   };
 
+  // Submit bình luận (root)
   const [submitting,setSubmitting]=useState(false);
   const onSubmit=async(e)=>{ e.preventDefault();
     if(!me) return openLoginPrompt(); if(!me.emailVerified) return openVerifyPrompt();
@@ -293,26 +297,35 @@ export default function Comments({ postId, postTitle }){
       await updateDoc(doc(db,'users',me.uid),{ 'stats.comments': increment(1) });
       const targets=adminUids.filter(u=>u!==me.uid);
       await Promise.all(targets.map(async uid=>{
-        await createNotification({ toUserId: uid, type:'comment', postId:String(postId), commentId: ref.id, fromUserId: me.uid, fromUserName: preferredName(me), fromUserPhoto: preferredPhoto(me), postTitle:'', commentText: excerpt(payload.content) });
+        await createNotification({ toUserId: uid, type:'comment', postId:String(postId), commentId: ref.id, fromUserId: me.uid, fromUserName: preferredName(me), fromUserPhoto: preferredPhoto(me), postTitle: postTitle||'', commentText: excerpt(payload.content) });
         await bumpCounter(uid,+1);
       }));
     }finally{ setSubmitting(false); }
   };
 
-  const toggleLike=async(c)=>{ if(!me){ openLoginPrompt(); return; }
-    if(likingIds.has(c.id)) return;
+  // Toggle ❤️ like
+  const toggleLike=async(c)=>{
+    if(!me){ openLoginPrompt(); return; }
+    if(me.uid===c.authorId) return;            // 👈 chặn tự-like
+    if(likingIds.has(c.id)) return;            // chặn double click
     setLikingIds(prev=>{ const s=new Set(prev); s.add(c.id); return s; });
+
     const ref=doc(db,'comments',c.id);
     const hasLiked=Array.isArray(c.likedBy)&&c.likedBy.includes(me.uid);
     try{
       await updateDoc(ref,{ likedBy: hasLiked? arrayRemove(me.uid): arrayUnion(me.uid), likeCount: increment(hasLiked? -1:+1) });
       if(c.authorId){ await updateDoc(doc(db,'users',c.authorId),{ 'stats.likesReceived': increment(hasLiked? -1:+1) }); }
-      if(!hasLiked && c.authorId){ await upsertLikeNotification({ toUserId: c.authorId, postId: String(c.postId), commentId: c.id, fromUser: me }); }
+      // tạo noti chỉ khi LIKE (không phải unlike)
+      if(!hasLiked && c.authorId){
+        const pid = c.postId ?? postId; // fallback
+        await upsertLikeNotification({ toUserId: c.authorId, postId: String(pid), commentId: c.id, fromUser: me });
+      }
     }finally{
       setLikingIds(prev=>{ const s=new Set(prev); s.delete(c.id); return s; });
     }
   };
 
+  // Xoá thread (root + replies)
   const deleteThreadBatch=async(root)=>{ const toDelete=[root, ...(repliesByParent[root.id]||[])]; const batch=writeBatch(db);
     toDelete.forEach(it=>{ batch.delete(doc(db,'comments',it.id)); if(it.authorId) batch.update(doc(db,'users',it.authorId),{ 'stats.comments': increment(-1) }); });
     await batch.commit();
@@ -362,7 +375,7 @@ export default function Comments({ postId, postTitle }){
                   <li key={c.id} id={`c-${c.id}`} className="scroll-mt-24 rounded-2xl p-3 bg-white/95 dark:bg-gray-900/95 border border-transparent [background:linear-gradient(#fff,rgba(255,255,255,0.96))_padding-box,linear-gradient(135deg,#bae6fd,#fecaca)_border-box] dark:[background:linear-gradient(#0b0f19,#0b0f19)_padding-box,linear-gradient(135deg,#0ea5e9,#f43f5e)_border-box] hover:shadow-md transition-shadow">
                     <CommentHeader c={c} me={me} isAdminFn={uid=>adminUids.includes(uid)} dt={dt} canDelete={!!me&&(me.uid===c.authorId||adminUids.includes(me.uid))} onDelete={()=>openConfirm('Xoá bình luận này và toàn bộ phản hồi của nó?', async()=>{ try{ await deleteThreadBatch(c); }catch{} })}/>
                     <div className="mt-2 whitespace-pre-wrap break-words text-gray-900 dark:text-gray-100 leading-6">{c.content}</div>
-                    <ReplyBox me={me} postId={postId} parent={c} adminUids={adminUids} postTitle={''} onNeedVerify={openVerifyPrompt} onNeedLogin={openLoginPrompt} renderTrigger={(openFn)=>(<ActionBar hasLiked={hasLiked} likeCount={likeCount} onToggleLike={()=>toggleLike(c)} renderReplyTrigger={()=> (<button onClick={openFn} className="inline-flex items-center gap-2 text-sm text-sky-700 dark:text-sky-300 hover:underline"><FontAwesomeIcon icon={faReply}/> Trả lời</button>) }/>)}/>
+                    <ReplyBox me={me} postId={postId} parent={c} adminUids={adminUids} postTitle={postTitle||''} onNeedVerify={openVerifyPrompt} onNeedLogin={openLoginPrompt} renderTrigger={(openFn)=>(<ActionBar hasLiked={hasLiked} likeCount={likeCount} onToggleLike={()=>toggleLike(c)} renderReplyTrigger={()=> (me && me.uid!==c.authorId ? <button onClick={openFn} className="inline-flex items-center gap-2 text-sm text-sky-700 dark:text-sky-300 hover:underline"><FontAwesomeIcon icon={faReply}/> Trả lời</button> : null) }/>)}/>
                     {replies.map(r=>{
                       const target = r.replyToUserId===c.authorId ? c : (replies.find(x=>x.authorId===r.replyToUserId)||null);
                       const dt2 = formatDate(r.createdAt);
@@ -373,7 +386,7 @@ export default function Comments({ postId, postTitle }){
                           <CommentHeader c={r} me={me} isAdminFn={uid=>adminUids.includes(uid)} dt={dt2} canDelete={!!me&&(me.uid===r.authorId||adminUids.includes(me.uid))} onDelete={()=>openConfirm('Bạn có chắc muốn xoá phản hồi này?', async()=>{ try{ await deleteDoc(doc(db,'comments',r.id)); if(r.authorId) await updateDoc(doc(db,'users',r.authorId),{ 'stats.comments': increment(-1) }); }catch{} })}/>
                           {target && <Quote quoteFrom={target} me={me}/>}
                           <div className="mt-2 whitespace-pre-wrap break-words text-gray-900 dark:text-gray-100 leading-6">{r.content}</div>
-                          <ReplyBox me={me} postId={postId} parent={c} replyingTo={r} adminUids={adminUids} postTitle={''} onNeedVerify={openVerifyPrompt} onNeedLogin={openLoginPrompt} renderTrigger={(openFn)=>(<ActionBar hasLiked={rHasLiked} likeCount={rLikeCount} onToggleLike={()=>toggleLike(r)} renderReplyTrigger={()=> (<button onClick={openFn} className="inline-flex items-center gap-2 text-sm text-sky-700 dark:text-sky-300 hover:underline"><FontAwesomeIcon icon={faReply}/> Trả lời</button>) }/>)}/>
+                          <ReplyBox me={me} postId={postId} parent={c} replyingTo={r} adminUids={adminUids} postTitle={postTitle||''} onNeedVerify={openVerifyPrompt} onNeedLogin={openLoginPrompt} renderTrigger={(openFn)=>(<ActionBar hasLiked={rHasLiked} likeCount={rLikeCount} onToggleLike={()=>toggleLike(r)} renderReplyTrigger={()=> (me && me.uid!==r.authorId ? <button onClick={openFn} className="inline-flex items-center gap-2 text-sm text-sky-700 dark:text-sky-300 hover:underline"><FontAwesomeIcon icon={faReply}/> Trả lời</button> : null) }/>)}/>
                         </div>
                       );
                     })}
