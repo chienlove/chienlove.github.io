@@ -9,7 +9,7 @@ export default function NotificationsBell({ onClick }){
 
   useEffect(()=>{ const unsub=auth.onAuthStateChanged(setUser); return ()=>unsub(); },[]);
 
-  // Nguồn 1: notifications where toUserId & isRead==false
+  // Nguồn 1: notifications (toUserId & isRead==false)
   useEffect(()=>{
     if(!user) return;
     let unsub=()=>{};
@@ -20,7 +20,7 @@ export default function NotificationsBell({ onClick }){
     return ()=>unsub();
   },[user]);
 
-  // Nguồn 2: user_counters/{uid}.unreadCount (fallback nếu nguồn 1 lỗi index)
+  // Nguồn 2: user_counters/{uid}.unreadCount
   useEffect(()=>{
     if(!user) return;
     const ref=doc(db,'user_counters',user.uid);
@@ -32,7 +32,6 @@ export default function NotificationsBell({ onClick }){
 
   const handleClick=()=>{
     if(onClick) onClick();
-    // phát event để mở/đóng panel nếu component cha không truyền prop
     try{ window.dispatchEvent(new CustomEvent('notifications:toggle')); }catch{}
   };
 
