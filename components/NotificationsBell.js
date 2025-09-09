@@ -35,42 +35,51 @@ export default function NotificationsBell({ onClick }) {
   return (
     <button
       onClick={onClick}
-      className={`relative flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 hover:from-blue-100 hover:to-purple-100 dark:hover:from-blue-900/50 dark:hover:to-purple-900/50 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-105 ${
+      className={`relative flex items-center justify-center w-11 h-11 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 hover:from-orange-100 hover:to-red-100 dark:hover:from-orange-900/50 dark:hover:to-red-900/50 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:scale-110 ${
         isAnimating ? 'animate-bounce' : ''
-      }`}
+      } ${unread > 0 ? 'ring-2 ring-orange-300 dark:ring-orange-600' : ''}`}
       aria-label="Notifications" 
-      title="Thông báo"
+      title={`Thông báo${unread > 0 ? ` (${unread} chưa đọc)` : ''}`}
     >
       {/* Icon chuông với gradient */}
       <div className="relative">
         <svg 
-          className="w-5 h-5 text-gray-700 dark:text-gray-200" 
+          className={`w-6 h-6 transition-colors duration-300 ${
+            unread > 0 
+              ? 'text-orange-600 dark:text-orange-400' 
+              : 'text-gray-700 dark:text-gray-200'
+          }`}
           fill="currentColor" 
-          viewBox="0 0 20 20"
+          viewBox="0 0 24 24"
         >
-          <path d="M10 2C7.8 2 6 3.8 6 6v3.5L4.5 11v1h11v-1L14 9.5V6c0-2.2-1.8-4-4-4zm0 16c1.1 0 2-.9 2-2H8c0 1.1.9 2 2 2z"/>
+          <path d="M12 2C10.9 2 10 2.9 10 4v1.38c-2.83.48-5 2.94-5 5.87v3.75l-2 2v1h18v-1l-2-2V11.25c0-2.93-2.17-5.39-5-5.87V4c0-1.1-.9-2-2-2zm0 20c1.1 0 2-.9 2-2h-4c0 1.1.9 2 2 2z"/>
         </svg>
         
         {/* Hiệu ứng ring khi có thông báo mới */}
         {isAnimating && (
-          <div className="absolute inset-0 rounded-full border-2 border-blue-400 animate-ping"></div>
+          <div className="absolute inset-0 rounded-full border-2 border-orange-400 animate-ping"></div>
         )}
       </div>
 
       {/* Badge số lượng thông báo chưa đọc */}
       {unread > 0 && (
-        <div className="absolute -top-1 -right-1 min-w-[20px] h-[20px] px-1 rounded-full bg-gradient-to-br from-red-500 to-pink-500 text-white text-[10px] font-bold flex items-center justify-center shadow-lg animate-pulse">
+        <div className="absolute -top-1 -right-1 min-w-[22px] h-[22px] px-1 rounded-full bg-gradient-to-br from-orange-500 to-red-500 text-white text-[11px] font-bold flex items-center justify-center shadow-lg">
           <span className="relative z-10">
             {unread > 99 ? '99+' : unread}
           </span>
           
           {/* Hiệu ứng glow */}
-          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-red-400 to-pink-400 opacity-75 animate-ping"></div>
+          <div className="absolute inset-0 rounded-full bg-gradient-to-br from-orange-400 to-red-400 opacity-75 animate-pulse"></div>
         </div>
       )}
 
       {/* Hiệu ứng hover glow */}
-      <div className="absolute inset-0 rounded-full bg-gradient-to-br from-blue-400/0 to-purple-400/0 hover:from-blue-400/20 hover:to-purple-400/20 transition-all duration-300"></div>
+      <div className="absolute inset-0 rounded-full bg-gradient-to-br from-orange-400/0 to-red-400/0 hover:from-orange-400/20 hover:to-red-400/20 transition-all duration-300"></div>
+      
+      {/* Subtle pulse effect khi có thông báo */}
+      {unread > 0 && (
+        <div className="absolute inset-0 rounded-full bg-gradient-to-br from-orange-500/20 to-red-500/20 animate-pulse"></div>
+      )}
     </button>
   );
 }
