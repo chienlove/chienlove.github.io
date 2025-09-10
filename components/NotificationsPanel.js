@@ -9,7 +9,7 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faBell, faEllipsisVertical, faTrash, faCheckDouble, faTimes,
-  faArrowRight, faHeart, faComment, faReply, faEnvelopeOpen
+  faArrowRight, faHeart, faComment, faReply, faEnvelopeOpen, faCheck
 } from '@fortawesome/free-solid-svg-icons';
 
 /* ========== Helpers ========== */
@@ -85,7 +85,6 @@ function TypeBadge({ type }) {
       </span>
     );
   }
-  // default: comment
   return (
     <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
       <FontAwesomeIcon icon={faComment} />
@@ -94,7 +93,7 @@ function TypeBadge({ type }) {
   );
 }
 
-/* ========== Dialog đơn giản dùng lại cho Confirm & Info ========== */
+/* ========== Dialog gọn (Confirm & Info) ========== */
 function SimpleDialog({ open, onClose, onConfirm, title, message, confirmText = 'Xác nhận', mode = 'confirm' }) {
   if (!open) return null;
   return (
@@ -129,10 +128,12 @@ export default function NotificationsPanel({ open, onClose }) {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [items, setItems] = useState([]);
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
+  const [rowMenuId, setRowMenuId] = useState(null); // id thông báo đang mở menu 3 chấm
   const [confirm, setConfirm] = useState({ open: false, id: null, type: '' });
   const [info, setInfo] = useState({ open: false, title: '', message: '' });
-  const menuRef = useRef(null);
+  const headerMenuRef = useRef(null);
+  const rowMenuRef = useRef(null);
 
   useEffect(() => {
     const unsubAuth = auth.onAuthStateChanged(setUser);
@@ -151,17 +152,17 @@ export default function NotificationsPanel({ open, onClose }) {
       setItems(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
     });
     return () => unsub();
-  }, [user, open]); // dữ liệu & thứ tự thời gian giữ nguyên như panel trước đó [oai_citation:2‡NotificationsPanel.js](file-service://file-Hkb89EwbrJxCgH3w829BCM)
+  }, [user, open]); // giữ thứ tự thời gian; dữ liệu từ Comments.js chứa fromUserPhoto/fromUserName/postTitle/commentText/type… [oai_citation:2‡Comments.js](file-service://file-4NxPx7ahFiUcXYNL5wrzWd)
 
   // đóng menu khi click ra ngoài
   useEffect(() => {
     const handler = (e) => {
-      if (!menuRef.current) return;
-      if (!menuRef.current.contains(e.target)) setMenuOpen(false);
+      if (headerMenuRef.current && !headerMenuRef.current.contains(e.target)) setHeaderMenuOpen(false);
+      if (rowMenuRef.current && !rowMenuRef.current.contains(e.target)) setRowMenuId(null);
     };
-    if (menuOpen) document.addEventListener('mousedown', handler);
+    document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, [menuOpen]);
+  }, []);
 
   const readCount = items.filter(i => i.isRead).length;
   const unreadCount = items.length - readCount;
@@ -209,12 +210,9 @@ export default function NotificationsPanel({ open, onClose }) {
     await batch.commit();
   };
 
-  /* ---- mở chi tiết: kiểm tra comment còn tồn tại ---- */
+  /* ---- Xem chi tiết: kiểm tra comment còn không ---- */
   const handleOpenDetail = async (n) => {
-    try {
-      await markRead(n.id, n.isRead);
-    } catch {}
-    // nếu có commentId → kiểm tra tồn tại
+    try { await markRead(n.id, n.isRead); } catch {}
     if (n.commentId) {
       try {
         const snap = await getDoc(doc(db, 'comments', n.commentId));
@@ -222,12 +220,11 @@ export default function NotificationsPanel({ open, onClose }) {
           setInfo({
             open: true,
             title: 'Bình luận không còn tồn tại',
-            message: 'Có thể bình luận đã bị xoá bởi tác giả hoặc quản trị viên. Bạn vẫn có thể mở bài viết để xem các bình luận khác.'
+            message: 'Bình luận này đã bị xoá bởi tác giả hoặc quản trị viên. Bạn vẫn có thể mở bài viết để xem các bình luận khác.'
           });
           return; // không điều hướng
         }
       } catch {
-        // im lặng: coi như không tìm thấy
         setInfo({
           open: true,
           title: 'Không thể kiểm tra bình luận',
@@ -236,7 +233,6 @@ export default function NotificationsPanel({ open, onClose }) {
         return;
       }
     }
-    // điều hướng & đóng panel
     onClose?.();
     const href = n.commentId
       ? `/${n.postId}?comment=${n.commentId}#c-${n.commentId}`
@@ -253,7 +249,7 @@ export default function NotificationsPanel({ open, onClose }) {
         <div className="fixed inset-0 bg-black/30 -z-10" onClick={onClose} />
 
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl overflow-hidden">
-          {/* Header tối giản */}
+          {/* Header */}
           <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <FontAwesomeIcon icon={faBell} className="text-gray-700 dark:text-gray-200" />
@@ -265,27 +261,27 @@ export default function NotificationsPanel({ open, onClose }) {
               </div>
             </div>
 
-            {/* Menu 3 chấm */}
-            <div className="relative" ref={menuRef}>
+            {/* Menu 3 chấm (header) */}
+            <div className="relative" ref={headerMenuRef}>
               <button
-                onClick={() => setMenuOpen(v => !v)}
+                onClick={() => setHeaderMenuOpen(v => !v)}
                 className="w-9 h-9 inline-flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
                 aria-label="Mở menu"
                 title="Tùy chọn"
               >
                 <FontAwesomeIcon icon={faEllipsisVertical} />
               </button>
-              {menuOpen && (
+              {headerMenuOpen && (
                 <div className="absolute right-0 mt-2 w-56 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl">
                   <button
-                    onClick={() => { setMenuOpen(false); markAllRead(); }}
+                    onClick={() => { setHeaderMenuOpen(false); markAllRead(); }}
                     className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-800 inline-flex items-center gap-2"
                   >
                     <FontAwesomeIcon icon={faCheckDouble} />
                     Đánh dấu tất cả là đã đọc
                   </button>
                   <button
-                    onClick={() => { setMenuOpen(false); setConfirm({ open: true, type: 'allRead', id: null }); }}
+                    onClick={() => { setHeaderMenuOpen(false); setConfirm({ open: true, type: 'allRead', id: null }); }}
                     className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-800 inline-flex items-center gap-2"
                   >
                     <FontAwesomeIcon icon={faTrash} className="text-rose-600" />
@@ -304,12 +300,12 @@ export default function NotificationsPanel({ open, onClose }) {
             </div>
           </div>
 
-          {/* Danh sách: GIỮ THỨ TỰ THỜI GIAN, mỗi item có BADGE loại */}
+          {/* Danh sách dạng card: bo tròn & ngăn cách */}
           <div className="max-h-[70vh] overflow-auto">
             {items.length === 0 ? (
               <div className="py-16 text-center text-gray-500 dark:text-gray-400">Chưa có thông báo</div>
             ) : (
-              <ul className="divide-y divide-gray-200 dark:divide-gray-800">
+              <ul className="p-3 space-y-3">
                 {items.map((n) => {
                   const t = formatDate(n.createdAt);
                   const who = n.fromUserName || 'Ai đó';
@@ -317,73 +313,106 @@ export default function NotificationsPanel({ open, onClose }) {
                   const content = n.commentText || '';
 
                   return (
-                    <li key={n.id} className={`px-4 py-3 ${n.isRead ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-950'}`}>
-                      <div className="flex gap-3">
-                        {/* Avatar thực từ Comments.js */}
-                        <UserAvatar photo={n.fromUserPhoto} name={who} size={44} />
+                    <li key={n.id} className="relative">
+                      <div
+                        className={`relative rounded-xl border shadow-sm px-4 py-3
+                          ${n.isRead
+                            ? 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800'
+                            : 'bg-gray-50 dark:bg-gray-950 border-gray-200 dark:border-gray-800'
+                          }`}
+                      >
+                        {/* góc trên‑phải: thời gian + huy hiệu Mới */}
+                        <div className="absolute top-2 right-2 flex items-center gap-2">
+                          <span className="text-xs text-gray-500 dark:text-gray-400" title={t?.abs}>
+                            {t?.rel}
+                          </span>
+                          {!n.isRead && (
+                            <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-900">
+                              <FontAwesomeIcon icon={faEnvelopeOpen} />
+                              Mới
+                            </span>
+                          )}
+                        </div>
 
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start gap-2">
-                            <div className="flex-1 min-w-0">
-                              {/* Dòng đầu: A đã [badge] … */}
-                              <div className="flex items-center gap-2 flex-wrap">
-                                <span className="font-semibold text-gray-900 dark:text-gray-100">{who}</span>
-                                <span className="text-sm text-gray-700 dark:text-gray-300">đã</span>
-                                <TypeBadge type={n.type} />
-                                <span className="text-sm text-gray-700 dark:text-gray-300">trong</span>
-                                <span className="font-medium text-blue-600 dark:text-blue-400">
-                                  "{title}"
-                                </span>
+                        <div className="flex gap-3">
+                          {/* avatar */}
+                          <UserAvatar photo={n.fromUserPhoto} name={who} size={44} />
 
-                                <span className="ml-auto text-xs text-gray-500 dark:text-gray-400" title={t?.abs}>
-                                  {t?.rel}
-                                </span>
-
-                                {!n.isRead && (
-                                  <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
-                                    <FontAwesomeIcon icon={faEnvelopeOpen} />
-                                    Mới
+                          <div className="flex-1 min-w-0">
+                            {/* dòng người + badge loại + tiêu đề */}
+                            <div className="flex items-start gap-2">
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <span className="font-semibold text-gray-900 dark:text-gray-100">{who}</span>
+                                  <span className="text-sm text-gray-700 dark:text-gray-300">đã</span>
+                                  <TypeBadge type={n.type} />
+                                  <span className="text-sm text-gray-700 dark:text-gray-300">trong</span>
+                                  <span className="font-medium text-blue-600 dark:text-blue-400">
+                                    "{title}"
                                   </span>
+                                </div>
+
+                                {content && (
+                                  <div className="mt-2 text-[13px] text-gray-600 dark:text-gray-400 line-clamp-3">
+                                    "{content}"
+                                  </div>
                                 )}
                               </div>
 
-                              {/* Trích nội dung bình luận */}
-                              {content && (
-                                <div className="mt-2 text-[13px] text-gray-600 dark:text-gray-400 line-clamp-3">
-                                  "{content}"
-                                </div>
-                              )}
+                              {/* menu 3 chấm (item) */}
+                              <div className="relative" ref={rowMenuRef}>
+                                <button
+                                  onClick={() => setRowMenuId(v => v === n.id ? null : n.id)}
+                                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+                                  aria-label="Tác vụ"
+                                  title="Tác vụ"
+                                >
+                                  <FontAwesomeIcon icon={faEllipsisVertical} />
+                                </button>
+
+                                {rowMenuId === n.id && (
+                                  <div className="absolute right-0 mt-2 w-48 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl z-10">
+                                    {!n.isRead && (
+                                      <button
+                                        onClick={async () => { setRowMenuId(null); await markRead(n.id, n.isRead); }}
+                                        className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-800 inline-flex items-center gap-2"
+                                      >
+                                        <FontAwesomeIcon icon={faCheck} />
+                                        Đánh dấu đã đọc
+                                      </button>
+                                    )}
+                                    <button
+                                      onClick={() => { setRowMenuId(null); setConfirm({ open: true, id: n.id, type: 'single' }); }}
+                                      className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-800 inline-flex items-center gap-2"
+                                    >
+                                      <FontAwesomeIcon icon={faTrash} className="text-rose-600" />
+                                      Xoá
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
                             </div>
 
-                            {/* Xoá (luôn hiển thị) */}
-                            <button
-                              onClick={() => setConfirm({ open: true, id: n.id, type: 'single' })}
-                              title="Xoá thông báo"
-                              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
-                            >
-                              <FontAwesomeIcon icon={faTrash} className="text-rose-600" />
-                            </button>
-                          </div>
-
-                          {/* Hàng hành động */}
-                          <div className="mt-2 flex items-center justify-between">
-                            <button
-                              onClick={() => handleOpenDetail(n)}
-                              className="inline-flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:underline"
-                              title="Xem chi tiết"
-                            >
-                              <FontAwesomeIcon icon={faArrowRight} />
-                              Xem chi tiết
-                            </button>
-
-                            {!n.isRead && (
+                            {/* hàng hành động */}
+                            <div className="mt-2 flex items-center justify-between">
                               <button
-                                onClick={() => markRead(n.id, n.isRead)}
-                                className="text-sm px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+                                onClick={() => handleOpenDetail(n)}
+                                className="inline-flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                                title="Xem chi tiết"
                               >
-                                Đánh dấu đã đọc
+                                <FontAwesomeIcon icon={faArrowRight} />
+                                Xem chi tiết
                               </button>
-                            )}
+
+                              {!n.isRead && (
+                                <button
+                                  onClick={() => markRead(n.id, n.isRead)}
+                                  className="text-sm px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+                                >
+                                  Đánh dấu đã đọc
+                                </button>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -405,9 +434,9 @@ export default function NotificationsPanel({ open, onClose }) {
           if (confirm.type === 'allRead') await deleteAllRead();
           setConfirm({ open: false, id: null, type: '' });
         }}
-        title={confirm.type === 'allRead' ? 'Xoá tất cả thông báo đã đọc?' : 'Xoá thông báo này?'}
+        title={confirm.type === 'allRead' ? 'Xoá tất cả đã đọc?' : 'Xoá thông báo này?'}
         message={confirm.type === 'allRead'
-          ? `Bạn có chắc muốn xoá ${readCount} thông báo đã đọc? Hành động này không thể hoàn tác.`
+          ? `Bạn có chắc muốn xoá ${readCount} thông báo đã đọc?`
           : 'Bạn có chắc muốn xoá thông báo này? Hành động này không thể hoàn tác.'}
         mode="confirm"
       />
