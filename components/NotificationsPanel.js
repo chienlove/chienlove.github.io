@@ -67,7 +67,7 @@ function UserAvatar({ photo, name, size = 44 }) {
   return <InitialsAvatar name={name} size={size} />;
 }
 
-/* ========== Badge theo loại thông báo ========== */
+/* ========== Badge theo loại ========== */
 function TypeBadge({ type }) {
   if (type === 'like') {
     return (
@@ -132,8 +132,6 @@ export default function NotificationsPanel({ open, onClose }) {
   const [rowMenuId, setRowMenuId] = useState(null); // id thông báo đang mở menu 3 chấm
   const [confirm, setConfirm] = useState({ open: false, id: null, type: '' });
   const [info, setInfo] = useState({ open: false, title: '', message: '' });
-  const headerMenuRef = useRef(null);
-  const rowMenuRef = useRef(null);
 
   useEffect(() => {
     const unsubAuth = auth.onAuthStateChanged(setUser);
@@ -152,17 +150,25 @@ export default function NotificationsPanel({ open, onClose }) {
       setItems(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
     });
     return () => unsub();
-  }, [user, open]); // giữ thứ tự thời gian; dữ liệu từ Comments.js chứa fromUserPhoto/fromUserName/postTitle/commentText/type… [oai_citation:2‡Comments.js](file-service://file-4NxPx7ahFiUcXYNL5wrzWd)
+  }, [user, open]);
 
-  // đóng menu khi click ra ngoài
+  /* ---- OUTSIDE CLICK: dùng data-attribute để phân biệt header menu và row menu ---- */
   useEffect(() => {
-    const handler = (e) => {
-      if (headerMenuRef.current && !headerMenuRef.current.contains(e.target)) setHeaderMenuOpen(false);
-      if (rowMenuRef.current && !rowMenuRef.current.contains(e.target)) setRowMenuId(null);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
+    function onDocMouseDown(e) {
+      // Header menu
+      if (headerMenuOpen) {
+        const inside = e.target.closest?.('[data-header-menu]');
+        if (!inside) setHeaderMenuOpen(false);
+      }
+      // Row menu (item)
+      if (rowMenuId) {
+        const insideRow = e.target.closest?.(`[data-rowmenu-id="${rowMenuId}"]`);
+        if (!insideRow) setRowMenuId(null);
+      }
+    }
+    document.addEventListener('mousedown', onDocMouseDown);
+    return () => document.removeEventListener('mousedown', onDocMouseDown);
+  }, [headerMenuOpen, rowMenuId]);
 
   const readCount = items.filter(i => i.isRead).length;
   const unreadCount = items.length - readCount;
@@ -262,7 +268,7 @@ export default function NotificationsPanel({ open, onClose }) {
             </div>
 
             {/* Menu 3 chấm (header) */}
-            <div className="relative" ref={headerMenuRef}>
+            <div className="relative" data-header-menu>
               <button
                 onClick={() => setHeaderMenuOpen(v => !v)}
                 className="w-9 h-9 inline-flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
@@ -272,7 +278,7 @@ export default function NotificationsPanel({ open, onClose }) {
                 <FontAwesomeIcon icon={faEllipsisVertical} />
               </button>
               {headerMenuOpen && (
-                <div className="absolute right-0 mt-2 w-56 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl">
+                <div className="absolute right-0 mt-2 w-56 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl z-50">
                   <button
                     onClick={() => { setHeaderMenuOpen(false); markAllRead(); }}
                     className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-800 inline-flex items-center gap-2"
@@ -360,9 +366,9 @@ export default function NotificationsPanel({ open, onClose }) {
                               </div>
 
                               {/* menu 3 chấm (item) */}
-                              <div className="relative" ref={rowMenuRef}>
+                              <div className="relative" data-rowmenu-id={n.id}>
                                 <button
-                                  onClick={() => setRowMenuId(v => v === n.id ? null : n.id)}
+                                  onClick={() => setRowMenuId(prev => prev === n.id ? null : n.id)}
                                   className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
                                   aria-label="Tác vụ"
                                   title="Tác vụ"
@@ -371,10 +377,13 @@ export default function NotificationsPanel({ open, onClose }) {
                                 </button>
 
                                 {rowMenuId === n.id && (
-                                  <div className="absolute right-0 mt-2 w-48 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl z-10">
+                                  <div className="absolute right-0 mt-2 w-48 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl z-50">
                                     {!n.isRead && (
                                       <button
-                                        onClick={async () => { setRowMenuId(null); await markRead(n.id, n.isRead); }}
+                                        onClick={async () => {
+                                          setRowMenuId(null);
+                                          await markRead(n.id, n.isRead);
+                                        }}
                                         className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-800 inline-flex items-center gap-2"
                                       >
                                         <FontAwesomeIcon icon={faCheck} />
@@ -382,7 +391,10 @@ export default function NotificationsPanel({ open, onClose }) {
                                       </button>
                                     )}
                                     <button
-                                      onClick={() => { setRowMenuId(null); setConfirm({ open: true, id: n.id, type: 'single' }); }}
+                                      onClick={() => {
+                                        setRowMenuId(null);
+                                        setConfirm({ open: true, id: n.id, type: 'single' });
+                                      }}
                                       className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-800 inline-flex items-center gap-2"
                                     >
                                       <FontAwesomeIcon icon={faTrash} className="text-rose-600" />
