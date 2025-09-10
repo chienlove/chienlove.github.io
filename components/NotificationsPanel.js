@@ -1,15 +1,15 @@
 // components/NotificationsPanel.js
 import { useEffect, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { auth, db } from '../lib/firebase-client';
 import {
-  collection, deleteDoc, doc, limit, onSnapshot, orderBy, query,
+  collection, deleteDoc, doc, getDoc, limit, onSnapshot, orderBy, query,
   runTransaction, updateDoc, where, writeBatch
 } from 'firebase/firestore';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faBell, faEllipsisVertical, faTrash, faCheckDouble, faTimes,
-  faExternalLinkAlt, faHeart, faComment, faReply, faEnvelopeOpen
+  faArrowRight, faHeart, faComment, faReply, faEnvelopeOpen
 } from '@fortawesome/free-solid-svg-icons';
 
 /* ========== Helpers ========== */
@@ -35,7 +35,7 @@ function formatDate(ts) {
   } catch { return null; }
 }
 
-function InitialsAvatar({ name, size = 36 }) {
+function InitialsAvatar({ name, size = 40 }) {
   const initials = (name || '?')
     .split(' ')
     .map(s => s[0])
@@ -67,17 +67,36 @@ function UserAvatar({ photo, name, size = 44 }) {
   return <InitialsAvatar name={name} size={size} />;
 }
 
-/* ========== Nhóm theo type ========== */
-const TYPE_META = {
-  like:   { label: 'Lượt thích', icon: faHeart,   tone: 'text-rose-600 dark:text-rose-400' },
-  comment:{ label: 'Bình luận',  icon: faComment, tone: 'text-blue-600 dark:text-blue-400' },
-  reply:  { label: 'Phản hồi',   icon: faReply,   tone: 'text-amber-600 dark:text-amber-400' },
-};
-const ORDER = ['like', 'comment', 'reply']; // giống "code ban đầu" (like → bình luận → phản hồi)
+/* ========== Badge theo loại thông báo ========== */
+function TypeBadge({ type }) {
+  if (type === 'like') {
+    return (
+      <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300">
+        <FontAwesomeIcon icon={faHeart} />
+        Thích
+      </span>
+    );
+  }
+  if (type === 'reply') {
+    return (
+      <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+        <FontAwesomeIcon icon={faReply} />
+        Phản hồi
+      </span>
+    );
+  }
+  // default: comment
+  return (
+    <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+      <FontAwesomeIcon icon={faComment} />
+      Bình luận
+    </span>
+  );
+}
 
-/* ========== Confirm Dialog ========== */
-function ConfirmDialog({ isOpen, onClose, onConfirm, title, message }) {
-  if (!isOpen) return null;
+/* ========== Dialog đơn giản dùng lại cho Confirm & Info ========== */
+function SimpleDialog({ open, onClose, onConfirm, title, message, confirmText = 'Xác nhận', mode = 'confirm' }) {
+  if (!open) return null;
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
@@ -85,12 +104,20 @@ function ConfirmDialog({ isOpen, onClose, onConfirm, title, message }) {
         <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
         <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">{message}</p>
         <div className="mt-4 flex justify-end gap-2">
-          <button onClick={onClose} className="px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-            Hủy
-          </button>
-          <button onClick={onConfirm} className="px-3 py-2 text-sm rounded-lg bg-rose-600 text-white hover:bg-rose-700">
-            Xác nhận
-          </button>
+          {mode === 'confirm' ? (
+            <>
+              <button onClick={onClose} className="px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                Hủy
+              </button>
+              <button onClick={onConfirm} className="px-3 py-2 text-sm rounded-lg bg-rose-600 text-white hover:bg-rose-700">
+                {confirmText}
+              </button>
+            </>
+          ) : (
+            <button onClick={onClose} className="px-3 py-2 text-sm rounded-lg bg-gray-900 text-white hover:opacity-90">
+              Đóng
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -99,10 +126,12 @@ function ConfirmDialog({ isOpen, onClose, onConfirm, title, message }) {
 
 /* ========== Main ========== */
 export default function NotificationsPanel({ open, onClose }) {
+  const router = useRouter();
   const [user, setUser] = useState(null);
   const [items, setItems] = useState([]);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [confirm, setConfirm] = useState({ open: false, type: '', id: null });
+  const [confirm, setConfirm] = useState({ open: false, id: null, type: '' });
+  const [info, setInfo] = useState({ open: false, title: '', message: '' });
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -122,7 +151,7 @@ export default function NotificationsPanel({ open, onClose }) {
       setItems(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
     });
     return () => unsub();
-  }, [user, open]);
+  }, [user, open]); // dữ liệu & thứ tự thời gian giữ nguyên như panel trước đó [oai_citation:2‡NotificationsPanel.js](file-service://file-Hkb89EwbrJxCgH3w829BCM)
 
   // đóng menu khi click ra ngoài
   useEffect(() => {
@@ -180,15 +209,40 @@ export default function NotificationsPanel({ open, onClose }) {
     await batch.commit();
   };
 
-  /* ---- group by type ---- */
-  const groups = useMemo(() => {
-    const m = { like: [], comment: [], reply: [] };
-    for (const n of items) {
-      const t = (n.type === 'like' || n.type === 'reply' || n.type === 'comment') ? n.type : 'comment';
-      m[t].push(n);
+  /* ---- mở chi tiết: kiểm tra comment còn tồn tại ---- */
+  const handleOpenDetail = async (n) => {
+    try {
+      await markRead(n.id, n.isRead);
+    } catch {}
+    // nếu có commentId → kiểm tra tồn tại
+    if (n.commentId) {
+      try {
+        const snap = await getDoc(doc(db, 'comments', n.commentId));
+        if (!snap.exists()) {
+          setInfo({
+            open: true,
+            title: 'Bình luận không còn tồn tại',
+            message: 'Có thể bình luận đã bị xoá bởi tác giả hoặc quản trị viên. Bạn vẫn có thể mở bài viết để xem các bình luận khác.'
+          });
+          return; // không điều hướng
+        }
+      } catch {
+        // im lặng: coi như không tìm thấy
+        setInfo({
+          open: true,
+          title: 'Không thể kiểm tra bình luận',
+          message: 'Vui lòng thử lại sau hoặc mở bài viết để xem chi tiết.'
+        });
+        return;
+      }
     }
-    return m;
-  }, [items]);
+    // điều hướng & đóng panel
+    onClose?.();
+    const href = n.commentId
+      ? `/${n.postId}?comment=${n.commentId}#c-${n.commentId}`
+      : `/${n.postId}`;
+    router.push(href);
+  };
 
   if (!open) return null;
 
@@ -250,127 +304,121 @@ export default function NotificationsPanel({ open, onClose }) {
             </div>
           </div>
 
-          {/* Danh sách theo nhóm */}
+          {/* Danh sách: GIỮ THỨ TỰ THỜI GIAN, mỗi item có BADGE loại */}
           <div className="max-h-[70vh] overflow-auto">
             {items.length === 0 ? (
               <div className="py-16 text-center text-gray-500 dark:text-gray-400">Chưa có thông báo</div>
             ) : (
-              ORDER.map((typeKey) => {
-                const section = groups[typeKey];
-                if (!section || section.length === 0) return null;
-                const meta = TYPE_META[typeKey];
+              <ul className="divide-y divide-gray-200 dark:divide-gray-800">
+                {items.map((n) => {
+                  const t = formatDate(n.createdAt);
+                  const who = n.fromUserName || 'Ai đó';
+                  const title = n.postTitle || `Bài viết ${n.postId}`;
+                  const content = n.commentText || '';
 
-                return (
-                  <div key={typeKey} className="py-2">
-                    {/* Header nhóm */}
-                    <div className="px-4 py-2 flex items-center gap-2">
-                      <FontAwesomeIcon icon={meta.icon} className={`${meta.tone}`} />
-                      <span className={`text-sm font-semibold ${meta.tone}`}>{meta.label}</span>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">· {section.length}</span>
-                    </div>
+                  return (
+                    <li key={n.id} className={`px-4 py-3 ${n.isRead ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-950'}`}>
+                      <div className="flex gap-3">
+                        {/* Avatar thực từ Comments.js */}
+                        <UserAvatar photo={n.fromUserPhoto} name={who} size={44} />
 
-                    <ul className="divide-y divide-gray-200 dark:divide-gray-800">
-                      {section.map((n) => {
-                        const t = formatDate(n.createdAt);
-                        const who = n.fromUserName || 'Ai đó';
-                        const title = n.postTitle || `Bài viết ${n.postId}`;
-                        const content = n.commentText || '';
-                        const href = `/${n.postId}?comment=${n.commentId}#c-${n.commentId}`;
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start gap-2">
+                            <div className="flex-1 min-w-0">
+                              {/* Dòng đầu: A đã [badge] … */}
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className="font-semibold text-gray-900 dark:text-gray-100">{who}</span>
+                                <span className="text-sm text-gray-700 dark:text-gray-300">đã</span>
+                                <TypeBadge type={n.type} />
+                                <span className="text-sm text-gray-700 dark:text-gray-300">trong</span>
+                                <span className="font-medium text-blue-600 dark:text-blue-400">
+                                  "{title}"
+                                </span>
 
-                        return (
-                          <li key={n.id} className={`px-4 py-3 ${n.isRead ? 'bg-white dark:bg-gray-900' : 'bg-gray-50 dark:bg-gray-950'}`}>
-                            <div className="flex gap-3">
-                              {/* Avatar thực */}
-                              <UserAvatar photo={n.fromUserPhoto} name={who} size={44} />
+                                <span className="ml-auto text-xs text-gray-500 dark:text-gray-400" title={t?.abs}>
+                                  {t?.rel}
+                                </span>
 
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-start gap-2">
-                                  <div className="flex-1 min-w-0">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                      <span className="font-semibold text-gray-900 dark:text-gray-100">{who}</span>
-                                      <span className="text-xs text-gray-500 dark:text-gray-400" title={t?.abs}>
-                                        {t?.rel}
-                                      </span>
-                                      {!n.isRead && (
-                                        <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
-                                          <FontAwesomeIcon icon={faEnvelopeOpen} />
-                                          Mới
-                                        </span>
-                                      )}
-                                    </div>
-
-                                    {/* dòng nội dung: tên bài viết nổi bật hơn phần trích bình luận */}
-                                    <div className="mt-1 text-sm text-gray-700 dark:text-gray-300">
-                                      {typeKey === 'reply' ? 'đã phản hồi' : typeKey === 'like' ? 'đã thích bình luận của bạn' : 'đã bình luận'}
-                                      {' '}trong{' '}
-                                      <span className="font-medium text-blue-600 dark:text-blue-400">"{title}"</span>
-                                    </div>
-
-                                    {content && (
-                                      <div className="mt-2 text-[13px] text-gray-600 dark:text-gray-400 line-clamp-3">
-                                        "{content}"
-                                      </div>
-                                    )}
-                                  </div>
-
-                                  {/* Xoá (luôn hiển thị) */}
-                                  <button
-                                    onClick={() => setConfirm({ open: true, type: 'single', id: n.id })}
-                                    title="Xoá thông báo"
-                                    className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
-                                  >
-                                    <FontAwesomeIcon icon={faTrash} className="text-rose-600" />
-                                  </button>
-                                </div>
-
-                                {/* Hàng link + đánh dấu đã đọc */}
-                                <div className="mt-2 flex items-center justify-between">
-                                  <Link
-                                    href={href}
-                                    onClick={async () => { await markRead(n.id, n.isRead); onClose?.(); }}
-                                    className="inline-flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:underline"
-                                    title="Xem chi tiết"
-                                  >
-                                    <FontAwesomeIcon icon={faExternalLinkAlt} />
-                                    Xem chi tiết
-                                  </Link>
-
-                                  {!n.isRead && (
-                                    <button
-                                      onClick={() => markRead(n.id, n.isRead)}
-                                      className="text-sm px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
-                                    >
-                                      Đánh dấu đã đọc
-                                    </button>
-                                  )}
-                                </div>
+                                {!n.isRead && (
+                                  <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
+                                    <FontAwesomeIcon icon={faEnvelopeOpen} />
+                                    Mới
+                                  </span>
+                                )}
                               </div>
+
+                              {/* Trích nội dung bình luận */}
+                              {content && (
+                                <div className="mt-2 text-[13px] text-gray-600 dark:text-gray-400 line-clamp-3">
+                                  "{content}"
+                                </div>
+                              )}
                             </div>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </div>
-                );
-              })
+
+                            {/* Xoá (luôn hiển thị) */}
+                            <button
+                              onClick={() => setConfirm({ open: true, id: n.id, type: 'single' })}
+                              title="Xoá thông báo"
+                              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+                            >
+                              <FontAwesomeIcon icon={faTrash} className="text-rose-600" />
+                            </button>
+                          </div>
+
+                          {/* Hàng hành động */}
+                          <div className="mt-2 flex items-center justify-between">
+                            <button
+                              onClick={() => handleOpenDetail(n)}
+                              className="inline-flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:underline"
+                              title="Xem chi tiết"
+                            >
+                              <FontAwesomeIcon icon={faArrowRight} />
+                              Xem chi tiết
+                            </button>
+
+                            {!n.isRead && (
+                              <button
+                                onClick={() => markRead(n.id, n.isRead)}
+                                className="text-sm px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+                              >
+                                Đánh dấu đã đọc
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
             )}
           </div>
         </div>
       </div>
 
-      {/* Confirm */}
-      <ConfirmDialog
-        isOpen={confirm.open}
-        onClose={() => setConfirm({ open: false, type: '', id: null })}
+      {/* Confirm xoá */}
+      <SimpleDialog
+        open={confirm.open}
+        onClose={() => setConfirm({ open: false, id: null, type: '' })}
         onConfirm={async () => {
           if (confirm.type === 'single' && confirm.id) await deleteOne(confirm.id);
           if (confirm.type === 'allRead') await deleteAllRead();
-          setConfirm({ open: false, type: '', id: null });
+          setConfirm({ open: false, id: null, type: '' });
         }}
         title={confirm.type === 'allRead' ? 'Xoá tất cả thông báo đã đọc?' : 'Xoá thông báo này?'}
         message={confirm.type === 'allRead'
           ? `Bạn có chắc muốn xoá ${readCount} thông báo đã đọc? Hành động này không thể hoàn tác.`
           : 'Bạn có chắc muốn xoá thông báo này? Hành động này không thể hoàn tác.'}
+        mode="confirm"
+      />
+
+      {/* Info khi bình luận không còn tồn tại */}
+      <SimpleDialog
+        open={info.open}
+        onClose={() => setInfo({ open: false, title: '', message: '' })}
+        title={info.title}
+        message={info.message}
+        mode="info"
       />
     </>
   );
