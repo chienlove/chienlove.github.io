@@ -50,19 +50,6 @@ function excerpt(s, n = 140) {
   return t.length > n ? `${t.slice(0, n)}…` : t;
 }
 
-/* ================= Admin Helper Functions ================= */
-async function isUserAdmin(uid) {
-  if (!uid) return false;
-  try {
-    const userRef = doc(db, 'users', uid);
-    const userSnap = await getDoc(userRef);
-    return userSnap.exists() && userSnap.data().isAdmin === true;
-  } catch (error) {
-    console.error('Error checking admin status:', error);
-    return false;
-  }
-}
-
 /* ================= Notifications ================= */
 async function bumpCounter(uid, delta) {
   if (!uid || !Number.isFinite(delta)) return;
@@ -205,7 +192,7 @@ function ActionBar({ hasLiked, likeCount, onToggleLike, renderReplyTrigger }) {
   );
 }
 
-function CommentHeader({ c, me, isAdminFn, dt, canDelete, onDelete, userIsAdmin }) {
+function CommentHeader({ c, me, isAdminFn, dt, canDelete, onDelete }) {
   const isAdmin = isAdminFn?.(c.authorId);
   const isSelf = !!me && c.authorId === me.uid;
   const avatar = c.userPhoto || '';
@@ -252,7 +239,7 @@ function CommentHeader({ c, me, isAdminFn, dt, canDelete, onDelete, userIsAdmin 
             <button
               onClick={onDelete}
               className="text-xs text-rose-600 hover:text-rose-700 ml-auto inline-flex items-center gap-1"
-              title={isSelf ? "Xoá" : userIsAdmin ? "Xoá (Admin)" : "Xoá"}
+              title="Xoá"
             >
               <FontAwesomeIcon icon={faTrash} />
               Xoá
@@ -430,7 +417,6 @@ function ReplyBox({
 /* ================= Main ================= */
 export default function Comments({ postId, postTitle }) {
   const [me, setMe] = useState(null);
-  const [userIsAdmin, setUserIsAdmin] = useState(false);
   const [adminUids, setAdminUids] = useState([]);
   const [content, setContent] = useState('');
 
@@ -523,16 +509,7 @@ export default function Comments({ postId, postTitle }) {
   };
 
   useEffect(() => {
-    const unsub = auth.onAuthStateChanged(async (u) => {
-      setMe(u);
-      if (u) {
-        // Check if current user is admin
-        const adminStatus = await isUserAdmin(u.uid);
-        setUserIsAdmin(adminStatus);
-      } else {
-        setUserIsAdmin(false);
-      }
-    });
+    const unsub = auth.onAuthStateChanged(setMe);
     return () => unsub();
   }, []);
 
@@ -710,60 +687,17 @@ export default function Comments({ postId, postTitle }) {
     }
   };
 
-  // ===== Xoá thread bằng batch (Updated with admin check)
+  // ===== Xoá thread bằng batch
   const deleteThreadBatch = async (root) => {
     const toDelete = [root, ...(repliesByParent[root.id] || [])];
     const batch = writeBatch(db);
-    
     toDelete.forEach((it) => {
       batch.delete(doc(db, 'comments', it.id));
       if (it.authorId) {
         batch.update(doc(db, 'users', it.authorId), { 'stats.comments': increment(-1) });
       }
     });
-    
     await batch.commit();
-
-    // Delete related notifications
-    const notificationsQuery = query(
-      collection(db, 'notifications'),
-      where('commentId', 'in', toDelete.map(c => c.id))
-    );
-    const notificationSnaps = await getDocs(notificationsQuery);
-    
-    if (!notificationSnaps.empty) {
-      const notificationBatch = writeBatch(db);
-      notificationSnaps.forEach((doc) => {
-        notificationBatch.delete(doc.ref);
-      });
-      await notificationBatch.commit();
-    }
-  };
-
-  // ===== Delete single comment/reply (Updated with admin check)
-  const deleteSingleComment = async (comment) => {
-    await deleteDoc(doc(db, 'comments', comment.id));
-    
-    if (comment.authorId) {
-      await updateDoc(doc(db, 'users', comment.authorId), { 
-        'stats.comments': increment(-1) 
-      });
-    }
-
-    // Delete related notifications
-    const notificationsQuery = query(
-      collection(db, 'notifications'),
-      where('commentId', '==', comment.id)
-    );
-    const notificationSnaps = await getDocs(notificationsQuery);
-    
-    if (!notificationSnaps.empty) {
-      const batch = writeBatch(db);
-      notificationSnaps.forEach((doc) => {
-        batch.delete(doc.ref);
-      });
-      await batch.commit();
-    }
   };
 
   return (
@@ -831,8 +765,7 @@ export default function Comments({ postId, postTitle }) {
                       me={me}
                       isAdminFn={(uid)=>adminUids.includes(uid)}
                       dt={dt}
-                      canDelete={!!me && (me.uid === c.authorId || userIsAdmin || adminUids.includes(me.uid))}
-                      userIsAdmin={userIsAdmin}
+                      canDelete={!!me && (me.uid === c.authorId || adminUids.includes(me.uid))}
                       onDelete={() => {
                         openConfirm('Xoá bình luận này và toàn bộ phản hồi của nó?', async () => {
                           try { await deleteThreadBatch(c); } catch {}
@@ -888,12 +821,14 @@ export default function Comments({ postId, postTitle }) {
                             me={me}
                             isAdminFn={(uid)=>adminUids.includes(uid)}
                             dt={dt2}
-                            canDelete={!!me && (me.uid === r.authorId || userIsAdmin || adminUids.includes(me.uid))}
-                            userIsAdmin={userIsAdmin}
+                            canDelete={!!me && (me.uid === r.authorId || adminUids.includes(me.uid))}
                             onDelete={() => {
                               openConfirm('Bạn có chắc muốn xoá phản hồi này?', async () => {
                                 try {
-                                  await deleteSingleComment(r);
+                                  await deleteDoc(doc(db, 'comments', r.id));
+                                  if (r.authorId) {
+                                    await updateDoc(doc(db, 'users', r.authorId), { 'stats.comments': increment(-1) });
+                                  }
                                 } catch {}
                               });
                             }}
