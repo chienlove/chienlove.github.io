@@ -1,0 +1,234 @@
+name: IPA Ad SDK Audit
+
+on:
+  push:
+    paths:
+      - "**/*.ipa"
+      - ".github/workflows/ipa-ad-audit.yml"
+  workflow_dispatch:
+
+jobs:
+  scan-ipa:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y unzip zip plistutil
+          python -m pip install --upgrade pip
+          python -m pip install plistlib2
+
+      - name: Find IPAs
+        id: findipas
+        shell: bash
+        run: |
+          mapfile -t IPAS < <(find . -type f -name "*.ipa")
+          if [ "${#IPAS[@]}" -eq 0 ]; then
+            echo "No IPA files found."
+            exit 0
+          fi
+          printf '%s\n' "${IPAS[@]}" > ipa_list.txt
+          echo "found_count=${#IPAS[@]}" >> $GITHUB_OUTPUT
+
+      - name: Scan all IPAs
+        if: steps.findipas.outputs.found_count != '0'
+        shell: bash
+        run: |
+          mkdir -p scan_reports
+          while IFS= read -r ipa; do
+            echo "==> Scanning: $ipa"
+            workdir="$(mktemp -d)"
+            cp "$ipa" "$workdir/app.ipa"
+            (cd "$workdir" && unzip -qq app.ipa)
+            appdir="$(find "$workdir/Payload" -maxdepth 1 -type d -name "*.app" | head -n 1)"
+            if [ -z "$appdir" ]; then
+              echo "No .app found in $ipa" | tee -a "scan_reports/$(basename "$ipa").md"
+              continue
+            fi
+
+            # Dump Info.plist
+            if [ -f "$appdir/Info.plist" ]; then
+              plutil -p "$appdir/Info.plist" > "$workdir/Info.plist.txt" || true
+            fi
+
+            # Strings from binary(ies)
+            mkdir -p "$workdir/strings"
+            find "$appdir" -type f -perm -111 -o -name "*.framework" -o -name "*.dylib" | while read -r bin; do
+              file "$bin" >> "$workdir/files.txt" 2>/dev/null || true
+              strings "$bin" > "$workdir/strings/$(echo "$bin" | tr '/ .' '___').txt" 2>/dev/null || true
+            done
+
+            # Framework & bundle names
+            find "$appdir" -type d -name "*.framework" > "$workdir/frameworks.txt" || true
+            find "$appdir" -type d -name "*.bundle" > "$workdir/bundles.txt" || true
+
+            # Run Python analyzer
+            python << 'PY'
+import os, re, json, plistlib, glob, sys
+
+root = os.environ.get("WORKDIR", "")
+ipa_path = os.environ.get("IPA_PATH", "")
+appdir = os.environ.get("APPDIR", "")
+
+ad_sdks = {
+  "GoogleMobileAds": [r"GoogleMobileAds", r"GAD", r"com.google.android.gms.ads"],  # iOS may show GAD/GoogleMobileAds
+  "AppLovin": [r"AppLovin", r"ALSdk", r"al-event", r"applovin\.com"],
+  "UnityAds": [r"UnityAds", r"com\.unity3d\.ads", r"unity3d\.com/ads"],
+  "ironSource": [r"ironSource", r"ISDemandOnly", r"SupersonicAds", r"ironsrc\.com"],
+  "Vungle": [r"Vungle", r"vungle\.com"],
+  "Mintegral": [r"Mintegral", r"mbridge", r"mintegral\.com"],
+  "Chartboost": [r"Chartboost", r"chartboost\.com"],
+  "FacebookAudienceNetwork": [r"FBAudienceNetwork", r"AudienceNetwork", r"graph\.facebook\.com"],
+  "InMobi": [r"InMobi", r"inmobi\.com"],
+  "MoPub": [r"MoPub", r"mopub\.com"],
+  "Tapjoy": [r"Tapjoy", r"tapjoy\.com"],
+  "Pangle": [r"Pangle", r"bytedance", r"pangle\.cn", r"pangle\.io"],
+  "AdColony": [r"AdColony", r"adcolony\.com"],
+  "Fyber": [r"Fyber", r"inner-active", r"fyber\.com"],
+  "AmazonPublisherServices": [r"APS", r"amazon-adsystem", r"aps-.*"],
+}
+
+tracklike_domains = [
+  r"doubleclick\.net", r"googlesyndication\.com", r"adservice\.google\.com",
+  r"googletagservices\.com", r"googletagmanager\.com",
+  r"facebook\.com", r"fbcdn\.net", r"graph\.facebook\.com",
+  r"branch\.io", r"appsflyer\.com", r"adjust\.com", r"singular\.net",
+  r"sentry\.io", r"datadog\.com", r"newrelic\.com"
+]
+
+report = {
+  "ipa": ipa_path,
+  "appdir": appdir,
+  "detected_sdks": {},
+  "suspected_domains": [],
+  "info_plist": {
+    "SKAdNetworkItems": [],
+    "LSApplicationQueriesSchemes": [],
+    "URLTypes": []
+  },
+  "frameworks": [],
+  "bundles": []
+}
+
+# frameworks & bundles
+fw = os.path.join(root, "frameworks.txt")
+bd = os.path.join(root, "bundles.txt")
+if os.path.exists(fw): report["frameworks"] = [l.strip() for l in open(fw).read().splitlines() if l.strip()]
+if os.path.exists(bd): report["bundles"]   = [l.strip() for l in open(bd).read().splitlines() if l.strip()]
+
+# Info.plist fields
+info_txt = os.path.join(root, "Info.plist.txt")
+if os.path.exists(info_txt):
+    try:
+        # Try to parse binary/plist again for structured items
+        ppath = os.path.join(appdir, "Info.plist")
+        with open(ppath, "rb") as f:
+            p = plistlib.load(f)
+        if "SKAdNetworkItems" in p:
+            report["info_plist"]["SKAdNetworkItems"] = p.get("SKAdNetworkItems", [])
+        if "LSApplicationQueriesSchemes" in p:
+            report["info_plist"]["LSApplicationQueriesSchemes"] = p.get("LSApplicationQueriesSchemes", [])
+        if "CFBundleURLTypes" in p:
+            report["info_plist"]["URLTypes"] = p.get("CFBundleURLTypes", [])
+    except Exception as e:
+        pass
+
+# search strings
+strings_dir = os.path.join(root, "strings")
+sdk_hits = {k: [] for k in ad_sdks}
+domain_hits = []
+
+if os.path.isdir(strings_dir):
+    for f in glob.glob(os.path.join(strings_dir, "*.txt")):
+        content = ""
+        try:
+            with open(f, "r", errors="ignore") as fh:
+                content = fh.read()
+        except:
+            continue
+        for sdk, patterns in ad_sdks.items():
+            for pat in patterns:
+                if re.search(pat, content, flags=re.I):
+                    sdk_hits[sdk].append({"file": os.path.basename(f), "pattern": pat})
+        for dpat in tracklike_domains:
+            for m in re.findall(dpat, content, flags=re.I):
+                domain_hits.append({"file": os.path.basename(f), "match": m})
+
+report["detected_sdks"] = {k: v for k, v in sdk_hits.items() if v}
+report["suspected_domains"] = domain_hits
+
+# Emit Markdown report
+md = []
+md.append(f"# IPA Ad/Tracker Audit Report")
+md.append(f"- **IPA:** `{os.path.basename(ipa_path)}`")
+md.append(f"- **App dir:** `{appdir}`")
+md.append("")
+md.append("## Detected Ad SDKs")
+if report["detected_sdks"]:
+    for sdk, hits in report["detected_sdks"].items():
+        md.append(f"- **{sdk}** ({len(hits)} hits)")
+        for h in hits[:50]:
+            md.append(f"  - `{h['file']}` → pattern `{h['pattern']}`")
+else:
+    md.append("- None detected (by heuristic patterns).")
+
+md.append("")
+md.append("## Suspected Ad/Tracking Domains (heuristic)")
+if report["suspected_domains"]:
+    # Deduplicate for readability
+    uniq = {}
+    for h in report["suspected_domains"]:
+        key = (h["file"], h["match"])
+        if key not in uniq: uniq[key] = True
+    for (file, match) in uniq.keys():
+        md.append(f"- `{match}` (in `{file}`)")
+else:
+    md.append("- None detected.")
+
+md.append("")
+md.append("## Info.plist Signals")
+skad = report["info_plist"].get("SKAdNetworkItems") or []
+schemes = report["info_plist"].get("LSApplicationQueriesSchemes") or []
+urltypes = report["info_plist"].get("URLTypes") or []
+md.append(f"- **SKAdNetworkItems**: {len(skad)} item(s)")
+md.append(f"- **LSApplicationQueriesSchemes**: {len(schemes)} scheme(s)")
+md.append(f"- **CFBundleURLTypes**: {len(urltypes)} type(s)")
+
+md.append("")
+md.append("## Frameworks & Bundles")
+md.append(f"- Frameworks found: {len(report['frameworks'])}")
+md.append(f"- Bundles found: {len(report['bundles'])}")
+
+outdir = "scan_reports"
+os.makedirs(outdir, exist_ok=True)
+outfile = os.path.join(outdir, os.path.basename(ipa_path) + ".md")
+with open(outfile, "w", encoding="utf-8") as fh:
+    fh.write("\n".join(md))
+
+print(f"Wrote report: {outfile}")
+PY
+            # Export env for Python
+            IPA_PATH="$ipa" WORKDIR="$workdir" APPDIR="$appdir" python - <<'PY'
+# no-op to keep env sane (Python above already ran via heredoc)
+PY
+
+            # Clean temp dir
+            rm -rf "$workdir"
+          done < ipa_list.txt
+
+      - name: Upload audit reports
+        if: steps.findipas.outputs.found_count != '0'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ipa-ad-audit-reports
+          path: scan_reports/*.md
+          if-no-files-found: warn
