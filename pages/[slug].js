@@ -26,6 +26,7 @@ import {
   faChevronUp,
   faFileArrowDown,
   faHouse,
+  faChevronRight,
 } from '@fortawesome/free-solid-svg-icons';
 
 // Lazy-load Comments
@@ -216,69 +217,69 @@ function PrettyBlockquote({ children }) {
   );
 }
 
-/* ===================== Breadcrumb (mới, gọn, đúng hình mẫu) ===================== */
-function Breadcrumb({ category, appName }) {
-  const STRIP_BG = '#f3f4f6'; // bg-gray-100
-  const SKY = '#0ea5e9';      // sky-500
-  const H = 40;               // chiều cao
-  const AR = 18;              // độ khoét V
-  const PADX = 24;            // padding ngang
+/* ===================== BREADCRUMB MỚI (tối giản, hiện đại, 1 dòng, không scroll ngang) =====================
 
-  const Item = ({ children, svg, className }) => (
-    <span className="relative inline-flex items-center" style={{ height: H, padding: `0 ${PADX}px` }}>
-      <svg aria-hidden viewBox="0 0 160 40" preserveAspectRatio="none"
-           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
-        {svg}
-      </svg>
-      <span className={`relative z-10 truncate font-semibold text-sm ${className || ''}`}>{children}</span>
-    </span>
-  );
+   - Không dùng SVG hình phức tạp => tránh mọi rủi ro tràn/scroll ngang.
+   - Luôn là 1 hàng, không xuống dòng: whitespace-nowrap + flex + truncate.
+   - Mục cuối (tên app) có ellipsis "..." nếu quá dài.
+   - Tự co giãn trong khung max-w-screen-2xl, overflow-x-hidden an toàn.
 
-  const HomeShape =
-    <polygon points={`0,0 ${160-AR},0 160,20 ${160-AR},40 0,40`} fill={SKY} stroke={SKY} strokeWidth="2" strokeLinejoin="round" />;
-
-  const MiddleShape = (
-    <>
-      <polygon points={`0,0 ${160-AR},0 160,20 ${160-AR},40 0,40`} fill={SKY} stroke={SKY} strokeWidth="2" strokeLinejoin="round" />
-      <polygon points={`0,20 ${AR},0 ${AR},40`} fill={STRIP_BG} />
-    </>
-  );
-
-  const LastShape = (
-    <>
-      <rect x="0" y="0" width="160" height="40" fill="#ffffff" stroke={SKY} strokeWidth="2" />
-      <polygon points={`0,20 ${AR},0 ${AR},40`} fill={STRIP_BG} />
-      <path d={`M${AR},0 L0,20 L${AR},40`} stroke={SKY} strokeWidth="2" fill="none" strokeLinejoin="round" />
-    </>
-  );
-
+*/
+function BreadcrumbModern({ category, appName }) {
   return (
     <div className="bg-gray-100">
       <div className="w-full flex justify-center px-2 sm:px-4 md:px-6">
-        <nav className="w-full max-w-screen-2xl py-3 overflow-hidden">
-          <div className="flex items-center whitespace-nowrap overflow-hidden gap-3">
+        <nav
+          className="w-full max-w-screen-2xl py-3 overflow-x-hidden"
+          aria-label="Breadcrumb"
+        >
+          <ol className="flex items-center gap-1 text-sm text-slate-600 whitespace-nowrap">
             {/* Home */}
-            <Link href="/" className="inline-block" style={{ isolation: 'isolate', color: '#fff' }}>
-              <Item svg={HomeShape}>
-                <span className="hidden sm:inline">Home</span>
-                <span className="sm:hidden">
-                  <FontAwesomeIcon icon={faHouse} />
-                </span>
-              </Item>
-            </Link>
+            <li className="flex items-center">
+              <Link
+                href="/"
+                className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 bg-white border border-slate-200 shadow-sm hover:bg-slate-50 transition"
+                title="Trang chủ"
+              >
+                <FontAwesomeIcon icon={faHouse} className="w-4 h-4" />
+                <span className="hidden sm:inline font-semibold">Home</span>
+              </Link>
+            </li>
+
+            {/* Chevron */}
+            <li className="px-1 text-slate-400">
+              <FontAwesomeIcon icon={faChevronRight} className="w-3.5 h-3.5" />
+            </li>
 
             {/* Category */}
             {category?.slug && (
-              <Link href={`/category/${category.slug}`} className="inline-block" style={{ isolation: 'isolate', color: '#fff' }}>
-                <Item svg={MiddleShape}>{category.name || 'Chuyên mục'}</Item>
-              </Link>
+              <>
+                <li className="flex items-center">
+                  <Link
+                    href={`/category/${category.slug}`}
+                    className="inline-flex items-center rounded-full px-3 py-1.5 bg-white/70 border border-slate-200 hover:bg-white transition max-w-[40vw] sm:max-w-[30vw]"
+                    title={category.name || 'Chuyên mục'}
+                  >
+                    <span className="truncate font-semibold">{category.name || 'Chuyên mục'}</span>
+                  </Link>
+                </li>
+
+                <li className="px-1 text-slate-400">
+                  <FontAwesomeIcon icon={faChevronRight} className="w-3.5 h-3.5" />
+                </li>
+              </>
             )}
 
-            {/* Current */}
-            <span className="inline-block" style={{ isolation: 'isolate', color: SKY }}>
-              <Item svg={LastShape} className="text-sky-600">{appName}</Item>
-            </span>
-          </div>
+            {/* App (truncate, không xuống, không overflow) */}
+            <li className="flex items-center min-w-0">
+              <span
+                className="inline-flex items-center rounded-full px-3 py-1.5 bg-white text-sky-700 border border-sky-300 shadow-sm max-w-[55vw] sm:max-w-[45vw] md:max-w-[50%] lg:max-w-[60%]"
+                title={appName}
+              >
+                <span className="truncate font-semibold">{appName}</span>
+              </span>
+            </li>
+          </ol>
         </nav>
       </div>
     </div>
@@ -290,8 +291,8 @@ const InfoRow = memo(({ label, value, expandable = false, expanded = false, onTo
   return (
     <div className="px-4 py-3 flex items-start">
       <div className="w-40 min-w-[9rem] text-sm text-gray-500">{label}</div>
-      <div className="flex-1 text-sm text-gray-800">
-        <span className="align-top">{value}</span>
+      <div className="flex-1 text-sm text-gray-800 min-w-0">
+        <span className="align-top break-words">{value}</span>
         {expandable && (
           <button
             type="button"
@@ -636,10 +637,10 @@ export default function Detail({ serverApp, serverRelated }) {
       {/* Modal thông báo */}
       <CenterModal open={modal.open} title={modal.title} body={modal.body} actions={modal.actions} />
 
-      {/* ===== Breadcrumb mới ===== */}
-      <Breadcrumb category={app?.category} appName={app?.name} />
+      {/* ===== Breadcrumb mới hoàn toàn ===== */}
+      <BreadcrumbModern category={app?.category} appName={app?.name} />
 
-      <div className="bg-gray-100 min-h-screen pb-12">
+      <div className="bg-gray-100 min-h-screen pb-12 overflow-x-hidden">
         <div className="w-full flex justify-center mt-3 bg-gray-100">
           <div className="relative w-full max-w-screen-2xl px-2 sm:px-4 md:px-6 pb-8 bg-white rounded-none">
             <div
@@ -664,39 +665,46 @@ export default function Detail({ serverApp, serverRelated }) {
                     onError={(e) => { e.currentTarget.src = '/placeholder-icon.png'; }}
                   />
                 </div>
-                <h1 className="mt-4 text-2xl font-bold text-gray-900 drop-shadow truncate" title={app.name}>{app.name}</h1>
-                {app.author && <p className="text-gray-700 text-sm">{app.author}</p>}
 
-                {/* ====== Info cards phía trên: separator đặt giữa (không dính mép) ====== */}
-                <div className="mt-4 bg-white/70 backdrop-blur rounded-xl px-3 py-2 inline-flex items-stretch justify-center">
-                  {[
-                    { label: 'Tác giả', icon: faUser, text: app.author || 'Không rõ' },
-                    { label: 'Phiên bản', icon: faCodeBranch, text: app.version || 'Không rõ' },
-                    { label: 'Dung lượng', icon: faDatabase, text: displaySize },
-                    isTestflight
-                      ? { label: 'Lượt xem', icon: null, text: String(app.views ?? 0) }
-                      : { label: 'Lượt tải', icon: faDownload, text: String(app.downloads ?? 0) },
-                  ].map((item, idx, arr) => (
-                    <div key={idx} className="flex items-center">
-                      {/* cell */}
-                      <div className="px-2 sm:px-3 py-1 text-center">
-                        <p className="text-[11px] font-semibold text-gray-500 uppercase mb-0.5">{item.label}</p>
-                        {item.icon ? (
-                          <FontAwesomeIcon icon={item.icon} className="text-base text-gray-600 mb-0.5" />
-                        ) : (
-                          <span className="text-base text-gray-600 mb-0.5 font-medium">•</span>
-                        )}
-                        <p className="text-sm text-gray-800 min-w-[68px]">{item.text}</p>
-                      </div>
+                {/* Tiêu đề: luôn 1 dòng, ellipsis; KHÔNG gây cuộn ngang */}
+                <h1
+                  className="mt-4 text-2xl font-bold text-gray-900 drop-shadow truncate mx-auto max-w-[92vw] sm:max-w-[80vw]"
+                  title={app.name}
+                >
+                  {app.name}
+                </h1>
+                {app.author && (
+                  <p className="text-gray-700 text-sm truncate mx-auto max-w-[80vw]" title={app.author}>
+                    {app.author}
+                  </p>
+                )}
 
-                      {/* separator: chỉ hiện giữa các cell, cao 60%, căn giữa */}
-                      {idx < arr.length - 1 && (
-                        <div className="mx-1 sm:mx-2 flex items-center">
-                          <span className="block w-px h-8 sm:h-10 bg-gray-200 rounded-full" />
+                {/* ===== Info stripe (mới) -- không tràn, không scroll ngang ===== */}
+                <div className="mt-4 w-full flex justify-center">
+                  <div className="bg-white/70 backdrop-blur rounded-xl px-2 py-2 w-full max-w-xl">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-y-2">
+                      {[
+                        { label: 'Tác giả', icon: faUser, text: app.author || 'Không rõ' },
+                        { label: 'Phiên bản', icon: faCodeBranch, text: app.version || 'Không rõ' },
+                        { label: 'Dung lượng', icon: faDatabase, text: displaySize },
+                        isTestflight
+                          ? { label: 'Lượt xem', icon: null, text: String(app.views ?? 0) }
+                          : { label: 'Lượt tải', icon: faDownload, text: String(app.downloads ?? 0) },
+                      ].map((item, i) => (
+                        <div key={i} className="flex flex-col items-center min-w-0">
+                          <p className="text-[11px] font-semibold text-gray-500 uppercase">{item.label}</p>
+                          {item.icon ? (
+                            <FontAwesomeIcon icon={item.icon} className="text-base text-gray-600 my-0.5" />
+                          ) : (
+                            <span className="text-base text-gray-600 my-0.5 font-medium">•</span>
+                          )}
+                          <p className="text-sm text-gray-800 truncate max-w-[70vw] sm:max-w-[30vw]" title={item.text}>
+                            {item.text}
+                          </p>
                         </div>
-                      )}
+                      ))}
                     </div>
-                  ))}
+                  </div>
                 </div>
 
                 {/* ===== Buttons ===== */}
@@ -789,7 +797,8 @@ export default function Detail({ serverApp, serverRelated }) {
           </div>
         </div>
 
-        <div className="max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 mt-6 space-y-6">
+        {/* ===== Nội dung dưới: bỏ mọi overflow-x-auto, chống tràn ===== */}
+        <div className="max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 mt-6 space-y-6 overflow-x-hidden">
           {/* Mô tả */}
           <div className="bg-white rounded-xl p-4 shadow">
             <h2 className="text-lg font-bold text-gray-800 mb-3">Mô tả</h2>
@@ -802,11 +811,11 @@ export default function Detail({ serverApp, serverRelated }) {
                       h1: ({...props}) => <h3 className="text-xl font-bold mt-3 mb-2" {...props} />,
                       h2: ({...props}) => <h4 className="text-lg font-bold mt-3 mb-2" {...props} />,
                       h3: ({...props}) => <h5 className="text-base font-bold mt-3 mb-2" {...props} />,
-                      p: ({...props}) => <p className="text-gray-700 leading-7 mb-3" {...props} />,
+                      p: ({...props}) => <p className="text-gray-700 leading-7 mb-3 break-words" {...props} />,
                       ul: ({...props}) => <ul className="list-disc pl-5 space-y-1 mb-3" {...props} />,
                       ol: ({...props}) => <ol className="list-decimal pl-5 space-y-1 mb-3" {...props} />,
                       li: ({...props}) => <li className="marker:text-blue-500" {...props} />,
-                      a: ({...props}) => <a className="text-blue-600 hover:underline" target="_blank" rel="noopener noreferrer" {...props} />,
+                      a: ({...props}) => <a className="text-blue-600 hover:underline break-all" target="_blank" rel="noopener noreferrer" {...props} />,
                       code: ({inline, ...props}) =>
                         inline ? (
                           <code className="px-1 py-0.5 rounded bg-gray-100 text-pink-700" {...props} />
@@ -820,7 +829,7 @@ export default function Detail({ serverApp, serverRelated }) {
                     {mdDescription}
                   </ReactMarkdown>
                 ) : (
-                  <p className="text-gray-700 leading-7 mb-3 whitespace-pre-wrap">{mdDescription}</p>
+                  <p className="text-gray-700 leading-7 mb-3 whitespace-pre-wrap break-words">{mdDescription}</p>
                 )}
               </div>
               {!showFullDescription && (
@@ -841,7 +850,7 @@ export default function Detail({ serverApp, serverRelated }) {
           {Array.isArray(app.screenshots) && app.screenshots.length > 0 && (
             <div className="bg-white rounded-xl p-4 shadow">
               <h2 className="text-lg font-bold text-gray-800 mb-3">Ảnh màn hình</h2>
-              <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1">
+              <div className="flex gap-3 overflow-x-auto pb-1">
                 {app.screenshots.map((url, i) => (
                   <div key={i} className="flex-shrink-0 w-48 md:w-56 rounded-xl overflow-hidden border">
                     <img
@@ -856,10 +865,10 @@ export default function Detail({ serverApp, serverRelated }) {
             </div>
           )}
 
-          {/* Thông tin chi tiết */}
+          {/* Thông tin chi tiết (không tràn) */}
           <div className="bg-white rounded-xl shadow overflow-hidden">
             <h2 className="px-4 pt-4 text-lg font-bold text-gray-800">Thông tin</h2>
-            <div className="mt-3 divide-y divide-gray-200">
+            <div className="mt-3 divide-y divide-gray-200 overflow-x-hidden">
               <InfoRow label="Nhà phát triển" value={app.author || 'Không rõ'} />
               <InfoRow label="Phiên bản" value={app.version || 'Không rõ'} />
               <InfoRow label="Dung lượng" value={displaySize} />
@@ -910,7 +919,7 @@ export default function Detail({ serverApp, serverRelated }) {
 
           {/* Related + phân trang */}
           {related.length > 0 && (
-            <div className="bg-white rounded-xl p-4 shadow">
+            <div className="bg-white rounded-xl p-4 shadow overflow-x-hidden">
               <h2 className="text-lg font-bold text-gray-800 mb-4">Ứng dụng cùng chuyên mục</h2>
 
               <div className="divide-y divide-gray-200">
@@ -929,7 +938,7 @@ export default function Detail({ serverApp, serverRelated }) {
                       />
                       <div className="flex flex-col min-w-0">
                         <p className="text-sm font-semibold text-gray-800 truncate" title={item.name}>{item.name}</p>
-                        <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <div className="flex items-center gap-2 text-xs text-gray-500 min-w-0">
                           {item.author && <span className="truncate" title={item.author}>{item.author}</span>}
                           {item.version && (
                             <span className="bg-gray-200 text-gray-800 px-2 py-0.5 rounded text-xs font-medium flex-shrink-0">
@@ -966,7 +975,7 @@ export default function Detail({ serverApp, serverRelated }) {
           )}
 
           {/* Bình luận */}
-          <div className="bg-white rounded-xl p-4 shadow">
+          <div className="bg-white rounded-xl p-4 shadow overflow-x-hidden">
             <Comments postId={app.slug} postTitle={app.name} />
           </div>
 
