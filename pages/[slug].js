@@ -158,31 +158,38 @@ function processListBlocks(str) {
   return output;
 }
 
+/* ====== BBCode → Markdown (an toàn, tránh regex literal) ====== */
 function bbcodeToMarkdownLite(input = '') {
   let s = String(input);
+  const R = (p, f) => { s = s.replace(new RegExp(p, 'gi'), f); };
 
-  s = s.replace(/\[b\](.*?)\[\/b\]/gi, '**$1**');
-  s = s.replace(/\[i\](.*?)\[\/i\]/gi, '*$1*');
-  s = s.replace(/\[u\](.*?)\[\/u\]/gi, '__$1__');
+  // [b][i][u]
+  R('\\[b\\]([\\s\\S]*?)\\[/b\\]', (_m, g1) => `**${g1}**`);
+  R('\\[i\\]([\\s\\S]*?)\\[/i\\]', (_m, g1) => `*${g1}*`);
+  R('\\[u\\]([\\s\\S]*?)\\[/u\\]', (_m, g1) => `__${g1}__`);
 
-  s = s.replace(/\[url\](https?:\/\/[^\s\]]+)\[\/url\]/gi, '[$1]($1)');
-  s = s.replace(/\[url=(https?:\/\/[^\]\s]+)\](.*?)\[\/url\]/gi, '[$2]($1)');
+  // [url]...[/url] & [url=...]text[/url]
+  R('\\[url\\](https?:\\/\\/[^\\s\\]]+)\\[/url\\]', (_m, g1) => `[${g1}](${g1})`);
+  R('\\[url=([^\\]]+)\\]([\\s\\S]*?)\\[/url\\]', (_m, g1, g2) => `[${g2}](${g1})`);
 
-  s = s.replace(/\[img\](https?:\/\/[^\s\]]+)\[\/img\]/gi, '![]($1)');
+  // [img]...[/img]
+  R('\\[img\\](https?:\\/\\/[^\\s\\]]+)\\[/img\\]', (_m, g1) => `![](${g1})`);
 
+  // Loại [color], [size]
   s = stripSimpleTagAll(s, 'color');
   s = stripSimpleTagAll(s, 'size');
 
+  // [list][*]...[/list] (split-based)
   s = processListBlocks(s);
 
-  const quoteR = new RegExp('\\[quote\\]\\s*([\\s\\S]*?)\\s*\\[/quote\\]', 'gi');
-  s = s.replace(quoteR, (_m, p1) => {
-    return String(p1).trim().split(/\r?\n/).map(line => `> ${line}`).join('\n');
+  // [quote]...[/quote]
+  s = s.replace(new RegExp('\\[quote\\]\\s*([\\s\\S]*?)\\s*\\[/quote\\]', 'gi'), (_m, g1) => {
+    return String(g1).trim().split(/\r?\n/).map(line => `> ${line}`).join('\n');
   });
 
-  const codeR = new RegExp('\\[code\\]\\s*([\\s\\S]*?)\\s*\\[/code\\]', 'gi');
-  s = s.replace(codeR, (_m, p1) => {
-    const body = String(p1).replace(/```/g, '``');
+  // [code]...[/code]
+  s = s.replace(new RegExp('\\[code\\]\\s*([\\s\\S]*?)\\s*\\[/code\\]', 'gi'), (_m, g1) => {
+    const body = String(g1).replace(/```/g, '``');
     return `\n\`\`\`\n${body}\n\`\`\`\n`;
   });
 
@@ -209,86 +216,72 @@ function PrettyBlockquote({ children }) {
   );
 }
 
-// ===== SVG Breadcrumb – đúng hình mẫu =====
-const SKY    = '#0ea5e9';  // tailwind sky-500
-const AR     = 18;         // độ nhọn / độ khoét (px trong viewBox 160x40)
-const STROKE = 2;          // viền cho nút cuối
+/* ===================== Breadcrumb (mới, gọn, đúng hình mẫu) ===================== */
+function Breadcrumb({ category, appName }) {
+  const STRIP_BG = '#f3f4f6'; // bg-gray-100
+  const SKY = '#0ea5e9';      // sky-500
+  const H = 40;               // chiều cao
+  const AR = 18;              // độ khoét V
+  const PADX = 24;            // padding ngang
 
-function CrumbBase({ children, svg, className = '' }) {
-  return (
-    <span className={`relative inline-flex items-center h-10 px-6 text-sm font-semibold ${className}`}>
-      <svg
-        className="absolute inset-0 w-full h-full"
-        viewBox="0 0 160 40"
-        preserveAspectRatio="none"
-        shapeRendering="geometricPrecision"
-        aria-hidden
-      >
+  const Item = ({ children, svg, className }) => (
+    <span className="relative inline-flex items-center" style={{ height: H, padding: `0 ${PADX}px` }}>
+      <svg aria-hidden viewBox="0 0 160 40" preserveAspectRatio="none"
+           style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
         {svg}
       </svg>
-      <span className="relative z-10 truncate">{children}</span>
+      <span className={`relative z-10 truncate font-semibold text-sm ${className || ''}`}>{children}</span>
     </span>
   );
-}
 
-/* 1) Home: trái thẳng, phải mũi tên '>' */
-function CrumbFirst({ href, children }) {
-  return (
-    <Link href={href} className="inline-block">
-      <CrumbBase
-        className="text-white"
-        svg={
-          <path
-            d={`M0,0 H${160-AR} L160,20 L${160-AR},40 H0 Z`}
-            fill={SKY}
-          />
-        }
-      >
-        {children}
-      </CrumbBase>
-    </Link>
+  const HomeShape =
+    <polygon points={`0,0 ${160-AR},0 160,20 ${160-AR},40 0,40`} fill={SKY} stroke={SKY} strokeWidth="2" strokeLinejoin="round" />;
+
+  const MiddleShape = (
+    <>
+      <polygon points={`0,0 ${160-AR},0 160,20 ${160-AR},40 0,40`} fill={SKY} stroke={SKY} strokeWidth="2" strokeLinejoin="round" />
+      <polygon points={`0,20 ${AR},0 ${AR},40`} fill={STRIP_BG} />
+    </>
   );
-}
 
-/* 2) Chuyên mục: TRÁI KHOÉT 'V' HƯỚNG PHẢI, phải '>' */
-function CrumbMiddle({ href, children }) {
-  return (
-    <Link href={href} className="inline-block">
-      <CrumbBase
-        className="text-white"
-        svg={
-          <path
-            // M AR,0 -> (160-AR),0 -> 160,20 -> (160-AR),40 -> AR,40 -> 0,20 -> close
-            d={`M${AR},0 H${160-AR} L160,20 L${160-AR},40 H${AR} L0,20 Z`}
-            fill={SKY}
-          />
-        }
-      >
-        {children}
-      </CrumbBase>
-    </Link>
+  const LastShape = (
+    <>
+      <rect x="0" y="0" width="160" height="40" fill="#ffffff" stroke={SKY} strokeWidth="2" />
+      <polygon points={`0,20 ${AR},0 ${AR},40`} fill={STRIP_BG} />
+      <path d={`M${AR},0 L0,20 L${AR},40`} stroke={SKY} strokeWidth="2" fill="none" strokeLinejoin="round" />
+    </>
   );
-}
 
-/* 3) Bài viết: TRÁI KHOÉT 'V' HƯỚNG PHẢI, PHẢI THẲNG (nền trắng, viền xanh mảnh) */
-function CrumbLast({ children }) {
   return (
-    <CrumbBase
-      className="bg-white text-sky-600"
-      svg={
-        <path
-          // M AR,0 -> 160,0 -> 160,40 -> AR,40 -> 0,20 -> close
-          d={`M${AR},0 H160 V40 H${AR} L0,20 Z`}
-          fill="#ffffff"
-          stroke={SKY}
-          strokeWidth={STROKE}
-          strokeLinejoin="miter"
-          strokeMiterlimit="10"
-        />
-      }
-    >
-      {children}
-    </CrumbBase>
+    <div className="bg-gray-100">
+      <div className="w-full flex justify-center px-2 sm:px-4 md:px-6">
+        <nav className="w-full max-w-screen-2xl py-3 overflow-hidden">
+          <div className="flex items-center whitespace-nowrap overflow-hidden gap-3">
+            {/* Home */}
+            <Link href="/" className="inline-block" style={{ isolation: 'isolate', color: '#fff' }}>
+              <Item svg={HomeShape}>
+                <span className="hidden sm:inline">Home</span>
+                <span className="sm:hidden">
+                  <FontAwesomeIcon icon={faHouse} />
+                </span>
+              </Item>
+            </Link>
+
+            {/* Category */}
+            {category?.slug && (
+              <Link href={`/category/${category.slug}`} className="inline-block" style={{ isolation: 'isolate', color: '#fff' }}>
+                <Item svg={MiddleShape}>{category.name || 'Chuyên mục'}</Item>
+              </Link>
+            )}
+
+            {/* Current */}
+            <span className="inline-block" style={{ isolation: 'isolate', color: SKY }}>
+              <Item svg={LastShape} className="text-sky-600">{appName}</Item>
+            </span>
+          </div>
+        </nav>
+      </div>
+    </div>
   );
 }
 
@@ -359,6 +352,7 @@ export default function Detail({ serverApp, serverRelated }) {
     return (related || []).slice(start, start + PAGE_SIZE);
   }, [related, relPage]);
 
+  // Markdown lazy
   const [remarkGfm, setRemarkGfm] = useState(null);
   const [ReactMarkdown, setReactMarkdown] = useState(null);
   useEffect(() => {
@@ -370,6 +364,11 @@ export default function Detail({ serverApp, serverRelated }) {
       setRemarkGfm(() => gfm);
     });
   }, []);
+
+  const mdDescription = useMemo(
+    () => normalizeDescription(app?.description || ''),
+    [app?.description]
+  );
 
   const [me, setMe] = useState(null);
   const [modal, setModal] = useState({ open: false, title: '', body: null, actions: null });
@@ -449,7 +448,7 @@ export default function Detail({ serverApp, serverRelated }) {
     return { list, remain };
   }, [devicesArray]);
 
-  /* ======= Thông báo "Cần đăng nhập" – mở ĐÚNG popup LoginButton của HEADER ======= */
+  /* ======= Thông báo "Cần đăng nhập" – mở đúng popup LoginButton của HEADER ======= */
   const requireLogin = () => {
     setModal({
       open: true,
@@ -465,8 +464,6 @@ export default function Detail({ serverApp, serverRelated }) {
             onClick={() => {
               setModal(s => ({ ...s, open: false }));
               try {
-                // ✅ Dùng flow mới: chỉ phát 'open-auth' (LoginButton đã lắng nghe)
-                //    Đồng thời phát 'close-login' để tắt overlay cũ nếu còn sót
                 if (typeof window !== 'undefined') {
                   window.dispatchEvent(new Event('close-login'));
                   window.dispatchEvent(new Event('open-auth'));
@@ -486,7 +483,7 @@ export default function Detail({ serverApp, serverRelated }) {
         </>
       ),
     });
-  }; //  [oai_citation:2‡[slug].js](file-service://file-2ZD8CeSC82hfHsyJDP6Mwm)
+  };
 
   /* ======= Thông báo "Cần xác minh email" ======= */
   const requireVerified = () => {
@@ -553,7 +550,7 @@ export default function Detail({ serverApp, serverRelated }) {
     e.preventDefault();
     if (!app?.id || !isInstallable) return;
 
-    if (!me) { requireLogin(); return; }           // ✅ mở đúng popup đăng nhập
+    if (!me) { requireLogin(); return; }
     if (!me.emailVerified) { requireVerified(); return; }
 
     setIsFetchingIpa(true);
@@ -639,75 +636,8 @@ export default function Detail({ serverApp, serverRelated }) {
       {/* Modal thông báo */}
       <CenterModal open={modal.open} title={modal.title} body={modal.body} actions={modal.actions} />
 
-      {/* ===== BREADCRUMB // BC-FINAL ===== */}
-{/* ===== BREADCRUMB -- FINAL2 (INLINE SVG, TỰ VẼ V KHOÉT) ===== */}
-<div className="bg-gray-100">
-  <div className="w-full flex justify-center px-2 sm:px-4 md:px-6">
-    <nav id="bc-final2" className="w-full max-w-screen-2xl py-3 overflow-hidden">
-      <div className="flex items-center whitespace-nowrap overflow-hidden gap-3">
-
-        {/* [ Home > ] -- trái thẳng, phải nhọn > */}
-        <Link href="/" className="inline-block" style={{ isolation: 'isolate' }}>
-          <span
-            className="relative inline-flex items-center"
-            style={{ height: 40, padding: '0 24px', fontWeight: 600, fontSize: 14, color: '#fff' }}
-          >
-            <svg aria-hidden viewBox="0 0 160 40" preserveAspectRatio="none"
-                 style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
-              {/* mũi tên phải */}
-              <polygon points="0,0 142,0 160,20 142,40 0,40"
-                       fill="#0ea5e9" stroke="#0ea5e9" strokeWidth="2" strokeLinejoin="round" />
-            </svg>
-            <span className="relative z-10 truncate">
-              <span className="hidden sm:inline">Home</span>
-              <span className="sm:hidden"><FontAwesomeIcon icon={faHouse} /></span>
-            </span>
-          </span>
-        </Link>
-
-        {/* [  > Chuyên mục > ] -- trái KHOÉT V (hướng phải), phải nhọn > */}
-        {app?.category?.slug && (
-          <Link href={`/category/${app.category.slug}`} className="inline-block" style={{ isolation: 'isolate' }}>
-            <span
-              className="relative inline-flex items-center"
-              style={{ height: 40, padding: '0 24px', fontWeight: 600, fontSize: 14, color: '#fff' }}
-            >
-              <svg aria-hidden viewBox="0 0 160 40" preserveAspectRatio="none"
-                   style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
-                {/* nền mũi tên phải (giống Home) */}
-                <polygon points="0,0 142,0 160,20 142,40 0,40"
-                         fill="#0ea5e9" stroke="#0ea5e9" strokeWidth="2" strokeLinejoin="round" />
-                {/* tam giác KHOÉT V bên trái (màu nền thanh breadcrumb) */}
-                <polygon points="0,20 18,0 18,40" fill="#f3f4f6" />
-              </svg>
-              <span className="relative z-10 truncate">{app.category.name || 'Chuyên mục'}</span>
-            </span>
-          </Link>
-        )}
-
-        {/* [  > Bài viết ] -- trái KHOÉT V (hướng phải), phải thẳng, nền trắng, viền xanh mảnh */}
-        <span className="inline-block" style={{ isolation: 'isolate' }}>
-          <span
-            className="relative inline-flex items-center"
-            style={{ height: 40, padding: '0 24px', fontWeight: 600, fontSize: 14, color: '#0ea5e9' }}
-          >
-            <svg aria-hidden viewBox="0 0 160 40" preserveAspectRatio="none"
-                 style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
-              {/* thân trắng, phải THẲNG, viền xanh mảnh */}
-              <rect x="0" y="0" width="160" height="40" rx="10" ry="10" fill="#ffffff" stroke="#0ea5e9" strokeWidth="2" />
-              {/* cắt V bên trái: tam giác màu nền thanh breadcrumb */}
-              <polygon points="0,20 18,0 18,40" fill="#f3f4f6" />
-              {/* vẽ ĐƯỜNG VIỀN xanh theo mép V để liền mạch với viền hộp */}
-              <path d="M18,0 L0,20 L18,40" stroke="#0ea5e9" strokeWidth="2" fill="none" strokeLinejoin="round" />
-            </svg>
-            <span className="relative z-10 truncate">{app.name}</span>
-          </span>
-        </span>
-
-      </div>
-    </nav>
-  </div>
-</div>
+      {/* ===== Breadcrumb mới ===== */}
+      <Breadcrumb category={app?.category} appName={app?.name} />
 
       <div className="bg-gray-100 min-h-screen pb-12">
         <div className="w-full flex justify-center mt-3 bg-gray-100">
@@ -737,6 +667,39 @@ export default function Detail({ serverApp, serverRelated }) {
                 <h1 className="mt-4 text-2xl font-bold text-gray-900 drop-shadow truncate" title={app.name}>{app.name}</h1>
                 {app.author && <p className="text-gray-700 text-sm">{app.author}</p>}
 
+                {/* ====== Info cards phía trên: separator đặt giữa (không dính mép) ====== */}
+                <div className="mt-4 bg-white/70 backdrop-blur rounded-xl px-3 py-2 inline-flex items-stretch justify-center">
+                  {[
+                    { label: 'Tác giả', icon: faUser, text: app.author || 'Không rõ' },
+                    { label: 'Phiên bản', icon: faCodeBranch, text: app.version || 'Không rõ' },
+                    { label: 'Dung lượng', icon: faDatabase, text: displaySize },
+                    isTestflight
+                      ? { label: 'Lượt xem', icon: null, text: String(app.views ?? 0) }
+                      : { label: 'Lượt tải', icon: faDownload, text: String(app.downloads ?? 0) },
+                  ].map((item, idx, arr) => (
+                    <div key={idx} className="flex items-center">
+                      {/* cell */}
+                      <div className="px-2 sm:px-3 py-1 text-center">
+                        <p className="text-[11px] font-semibold text-gray-500 uppercase mb-0.5">{item.label}</p>
+                        {item.icon ? (
+                          <FontAwesomeIcon icon={item.icon} className="text-base text-gray-600 mb-0.5" />
+                        ) : (
+                          <span className="text-base text-gray-600 mb-0.5 font-medium">•</span>
+                        )}
+                        <p className="text-sm text-gray-800 min-w-[68px]">{item.text}</p>
+                      </div>
+
+                      {/* separator: chỉ hiện giữa các cell, cao 60%, căn giữa */}
+                      {idx < arr.length - 1 && (
+                        <div className="mx-1 sm:mx-2 flex items-center">
+                          <span className="block w-px h-8 sm:h-10 bg-gray-200 rounded-full" />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* ===== Buttons ===== */}
                 <div className="mt-4 flex flex-wrap justify-center gap-2">
                   {/* TestFlight */}
                   {isTestflight && app.testflight_url && (
@@ -774,7 +737,7 @@ export default function Detail({ serverApp, serverRelated }) {
                   )}
 
                   {/* Install / IPA */}
-                  {isInstallable && (
+                  {!isTestflight && (
                     <>
                       <button
                         onClick={handleInstall}
@@ -827,41 +790,6 @@ export default function Detail({ serverApp, serverRelated }) {
         </div>
 
         <div className="max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 mt-6 space-y-6">
-          {/* Info cards */}
-          <div className="bg-white rounded-xl p-4 shadow flex justify-between text-center overflow-x-auto divide-x divide-gray-200">
-            <div className="px-0.5 sm:px-1.5">
-              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Tác giả</p>
-              <FontAwesomeIcon icon={faUser} className="text-xl text-gray-600 mb-1" />
-              <p className="text-sm text-gray-800">{app.author || 'Không rõ'}</p>
-            </div>
-            <div className="px-1 sm:px-2">
-              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Phiên bản</p>
-              <FontAwesomeIcon icon={faCodeBranch} className="text-xl text-gray-600 mb-1" />
-              <p className="text-sm text-gray-800">{app.version || 'Không rõ'}</p>
-            </div>
-            <div className="px-1 sm:px-2">
-              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">Dung lượng</p>
-              <FontAwesomeIcon icon={faDatabase} className="text-xl text-gray-600 mb-1" />
-              <p className="text-sm text-gray-800">{displaySize}</p>
-            </div>
-            <div className="px-0.5 sm:px-1.5">
-              <p className="text-xs font-semibold text-gray-500 uppercase mb-1">
-                {isTestflight ? 'LƯỢT XEM' : 'Lượt tải'}
-              </p>
-              {isTestflight ? (
-                <div className="flex flex-col items-center">
-                  <span className="text-xl font-medium text-gray-600 mb-1">{app.views ?? 0}</span>
-                  <span className="text-xs text-gray-500">Lượt</span>
-                </div>
-              ) : (
-                <>
-                  <FontAwesomeIcon icon={faDownload} className="text-xl text-gray-600 mb-1" />
-                  <p className="text-sm text-gray-800">{app.downloads ?? 0}</p>
-                </>
-              )}
-            </div>
-          </div>
-
           {/* Mô tả */}
           <div className="bg-white rounded-xl p-4 shadow">
             <h2 className="text-lg font-bold text-gray-800 mb-3">Mô tả</h2>
@@ -889,10 +817,10 @@ export default function Detail({ serverApp, serverRelated }) {
                       hr: () => <hr className="my-4 border-gray-200" />,
                     }}
                   >
-                    {normalizeDescription(app.description)}
+                    {mdDescription}
                   </ReactMarkdown>
                 ) : (
-                  <p className="text-gray-700 leading-7 mb-3 whitespace-pre-wrap">{normalizeDescription(app.description)}</p>
+                  <p className="text-gray-700 leading-7 mb-3 whitespace-pre-wrap">{mdDescription}</p>
                 )}
               </div>
               {!showFullDescription && (
