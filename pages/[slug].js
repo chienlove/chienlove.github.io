@@ -32,7 +32,7 @@ import {
 // Lazy-load Comments
 const Comments = dynamic(() => import('../components/Comments'), {
   ssr: false,
-  loading: () => <div className="text-sm text-gray-500">Đang tải bình luận…</div>,
+  loading: () => <div className="text-sm text-gray-500 dark:text-gray-400">Đang tải bình luận…</div>,
 });
 
 /* ===================== SSR ===================== */
@@ -217,28 +217,18 @@ function PrettyBlockquote({ children }) {
   );
 }
 
-/* ===================== BREADCRUMB MỚI (tối giản, hiện đại, 1 dòng, không scroll ngang) =====================
-
-   - Không dùng SVG hình phức tạp => tránh mọi rủi ro tràn/scroll ngang.
-   - Luôn là 1 hàng, không xuống dòng: whitespace-nowrap + flex + truncate.
-   - Mục cuối (tên app) có ellipsis "..." nếu quá dài.
-   - Tự co giãn trong khung max-w-screen-2xl, overflow-x-hidden an toàn.
-
-*/
-function BreadcrumbModern({ category, appName }) {
+/* ===================== BREADCRUMB NEO (mới hoàn toàn, hiện đại, dark mode, no-scroll) ===================== */
+function BreadcrumbNeo({ category, appName }) {
   return (
-    <div className="bg-gray-100">
+    <div className="bg-gray-100 dark:bg-zinc-950">
       <div className="w-full flex justify-center px-2 sm:px-4 md:px-6">
-        <nav
-          className="w-full max-w-screen-2xl py-3 overflow-x-hidden"
-          aria-label="Breadcrumb"
-        >
-          <ol className="flex items-center gap-1 text-sm text-slate-600 whitespace-nowrap">
+        <nav className="w-full max-w-screen-2xl py-3 overflow-x-hidden" aria-label="Breadcrumb">
+          <ol className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 min-w-0">
             {/* Home */}
-            <li className="flex items-center">
+            <li className="flex items-center flex-shrink-0">
               <Link
                 href="/"
-                className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 bg-white border border-slate-200 shadow-sm hover:bg-slate-50 transition"
+                className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 bg-white/80 dark:bg-white/5 border border-slate-200/70 dark:border-white/10 shadow-sm hover:bg-white dark:hover:bg-white/10 transition"
                 title="Trang chủ"
               >
                 <FontAwesomeIcon icon={faHouse} className="w-4 h-4" />
@@ -247,33 +237,32 @@ function BreadcrumbModern({ category, appName }) {
             </li>
 
             {/* Chevron */}
-            <li className="px-1 text-slate-400">
+            <li className="flex-shrink-0 text-slate-400 dark:text-slate-500">
               <FontAwesomeIcon icon={faChevronRight} className="w-3.5 h-3.5" />
             </li>
 
             {/* Category */}
             {category?.slug && (
               <>
-                <li className="flex items-center">
+                <li className="flex items-center min-w-0">
                   <Link
                     href={`/category/${category.slug}`}
-                    className="inline-flex items-center rounded-full px-3 py-1.5 bg-white/70 border border-slate-200 hover:bg-white transition max-w-[40vw] sm:max-w-[30vw]"
+                    className="inline-flex items-center rounded-lg px-3 py-1.5 bg-white/70 dark:bg-white/5 border border-slate-200/70 dark:border-white/10 hover:bg-white dark:hover:bg-white/10 transition max-w-[40vw] sm:max-w-[30vw]"
                     title={category.name || 'Chuyên mục'}
                   >
                     <span className="truncate font-semibold">{category.name || 'Chuyên mục'}</span>
                   </Link>
                 </li>
-
-                <li className="px-1 text-slate-400">
+                <li className="flex-shrink-0 text-slate-400 dark:text-slate-500">
                   <FontAwesomeIcon icon={faChevronRight} className="w-3.5 h-3.5" />
                 </li>
               </>
             )}
 
-            {/* App (truncate, không xuống, không overflow) */}
-            <li className="flex items-center min-w-0">
+            {/* Current */}
+            <li className="min-w-0">
               <span
-                className="inline-flex items-center rounded-full px-3 py-1.5 bg-white text-sky-700 border border-sky-300 shadow-sm max-w-[55vw] sm:max-w-[45vw] md:max-w-[50%] lg:max-w-[60%]"
+                className="inline-flex items-center rounded-lg px-3 py-1.5 bg-sky-50 dark:bg-sky-400/10 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-500/30 shadow-sm max-w-[55vw] sm:max-w-[45vw] md:max-w-[55%] lg:max-w-[60%]"
                 title={appName}
               >
                 <span className="truncate font-semibold">{appName}</span>
@@ -290,14 +279,14 @@ function BreadcrumbModern({ category, appName }) {
 const InfoRow = memo(({ label, value, expandable = false, expanded = false, onToggle }) => {
   return (
     <div className="px-4 py-3 flex items-start">
-      <div className="w-40 min-w-[9rem] text-sm text-gray-500">{label}</div>
-      <div className="flex-1 text-sm text-gray-800 min-w-0">
+      <div className="w-40 min-w-[9rem] text-sm text-gray-500 dark:text-gray-400">{label}</div>
+      <div className="flex-1 text-sm text-gray-800 dark:text-gray-100 min-w-0">
         <span className="align-top break-words">{value}</span>
         {expandable && (
           <button
             type="button"
             onClick={onToggle}
-            className="ml-2 inline-flex items-center text-blue-600 hover:underline"
+            className="ml-2 inline-flex items-center text-blue-600 dark:text-blue-400 hover:underline"
           >
             {expanded ? (
               <>
@@ -322,9 +311,9 @@ function CenterModal({ open, title, body, actions }) {
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center">
       <div className="absolute inset-0 bg-black/40" />
-      <div className="relative w-[92vw] max-w-md rounded-2xl border border-gray-200 bg-white shadow-2xl p-4">
-        {title && <h3 className="text-lg font-semibold mb-2">{title}</h3>}
-        <div className="text-sm text-gray-800">{body}</div>
+      <div className="relative w-[92vw] max-w-md rounded-2xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xl p-4">
+        {title && <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">{title}</h3>}
+        <div className="text-sm text-gray-800 dark:text-gray-100">{body}</div>
         <div className="mt-4 flex justify-end gap-2">{actions}</div>
       </div>
     </div>
@@ -449,7 +438,7 @@ export default function Detail({ serverApp, serverRelated }) {
     return { list, remain };
   }, [devicesArray]);
 
-  /* ======= Thông báo "Cần đăng nhập" – mở đúng popup LoginButton của HEADER ======= */
+  /* ======= Thông báo "Cần đăng nhập" ======= */
   const requireLogin = () => {
     setModal({
       open: true,
@@ -494,9 +483,9 @@ export default function Detail({ serverApp, serverRelated }) {
       body: (
         <div className="text-sm">
           <p>Bạn cần <b>xác minh email</b> để tải IPA.</p>
-          <p className="mt-1 text-xs text-gray-500">
+          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
             Không thấy email xác minh? Kiểm tra thư rác hoặc gửi lại từ trang{' '}
-            <Link href="/profile" className="text-blue-600 underline">Hồ sơ</Link>.
+            <Link href="/profile" className="text-blue-600 dark:text-blue-400 underline">Hồ sơ</Link>.
           </p>
         </div>
       ),
@@ -603,9 +592,9 @@ export default function Detail({ serverApp, serverRelated }) {
   if (!app) {
     return (
       <Layout fullWidth>
-        <div className="min-h-screen flex items-center justify-center">
+        <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-zinc-950">
           <div className="text-center">
-            <h1 className="text-2xl font-bold mb-4">Không tìm thấy ứng dụng</h1>
+            <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">Không tìm thấy ứng dụng</h1>
             <button
               onClick={() => router.push('/')}
               className="px-4 py-2 bg-blue-600 text-white rounded font-bold"
@@ -637,16 +626,19 @@ export default function Detail({ serverApp, serverRelated }) {
       {/* Modal thông báo */}
       <CenterModal open={modal.open} title={modal.title} body={modal.body} actions={modal.actions} />
 
-      {/* ===== Breadcrumb mới hoàn toàn ===== */}
-      <BreadcrumbModern category={app?.category} appName={app?.name} />
+      {/* ===== Breadcrumb mới ===== */}
+      <BreadcrumbNeo category={app?.category} appName={app?.name} />
 
-      <div className="bg-gray-100 min-h-screen pb-12 overflow-x-hidden">
-        <div className="w-full flex justify-center mt-3 bg-gray-100">
-          <div className="relative w-full max-w-screen-2xl px-2 sm:px-4 md:px-6 pb-8 bg-white rounded-none">
+      <div className="bg-gray-100 dark:bg-zinc-950 min-h-screen pb-12 overflow-x-hidden">
+        <div className="w-full flex justify-center mt-3">
+          <div className="relative w-full max-w-screen-2xl px-2 sm:px-4 md:px-6 pb-8 bg-white dark:bg-zinc-900 rounded-none">
+            {/* Header gradient */}
             <div
-              className="w-full pb-6"
+              className="relative w-full pb-6"
               style={{ backgroundImage: `linear-gradient(to bottom, ${dominantColor}, #f0f2f5)` }}
             >
+              {/* Dimming layer for dark mode */}
+              <div className="absolute inset-0 pointer-events-none hidden dark:block bg-black/30" />
               <div className="absolute top-3 left-3 z-10">
                 <Link
                   href="/"
@@ -666,55 +658,27 @@ export default function Detail({ serverApp, serverRelated }) {
                   />
                 </div>
 
-                {/* Tiêu đề: luôn 1 dòng, ellipsis; KHÔNG gây cuộn ngang */}
+                {/* Title: 1 dòng, ellipsis "tên bài viế…" */}
                 <h1
-                  className="mt-4 text-2xl font-bold text-gray-900 drop-shadow truncate mx-auto max-w-[92vw] sm:max-w-[80vw]"
+                  className="mt-4 text-2xl font-bold text-gray-900 dark:text-gray-100 drop-shadow truncate mx-auto max-w-[92vw] sm:max-w-[80vw]"
                   title={app.name}
                 >
                   {app.name}
                 </h1>
                 {app.author && (
-                  <p className="text-gray-700 text-sm truncate mx-auto max-w-[80vw]" title={app.author}>
+                  <p className="text-gray-700 dark:text-gray-300 text-sm truncate mx-auto max-w-[80vw]" title={app.author}>
                     {app.author}
                   </p>
                 )}
 
-                {/* ===== Info stripe (mới) -- không tràn, không scroll ngang ===== */}
-                <div className="mt-4 w-full flex justify-center">
-                  <div className="bg-white/70 backdrop-blur rounded-xl px-2 py-2 w-full max-w-xl">
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-y-2">
-                      {[
-                        { label: 'Tác giả', icon: faUser, text: app.author || 'Không rõ' },
-                        { label: 'Phiên bản', icon: faCodeBranch, text: app.version || 'Không rõ' },
-                        { label: 'Dung lượng', icon: faDatabase, text: displaySize },
-                        isTestflight
-                          ? { label: 'Lượt xem', icon: null, text: String(app.views ?? 0) }
-                          : { label: 'Lượt tải', icon: faDownload, text: String(app.downloads ?? 0) },
-                      ].map((item, i) => (
-                        <div key={i} className="flex flex-col items-center min-w-0">
-                          <p className="text-[11px] font-semibold text-gray-500 uppercase">{item.label}</p>
-                          {item.icon ? (
-                            <FontAwesomeIcon icon={item.icon} className="text-base text-gray-600 my-0.5" />
-                          ) : (
-                            <span className="text-base text-gray-600 my-0.5 font-medium">•</span>
-                          )}
-                          <p className="text-sm text-gray-800 truncate max-w-[70vw] sm:max-w-[30vw]" title={item.text}>
-                            {item.text}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* ===== Buttons ===== */}
+                {/* Buttons */}
                 <div className="mt-4 flex flex-wrap justify-center gap-2">
                   {/* TestFlight */}
                   {isTestflight && app.testflight_url && (
                     <>
                       <a
                         href={app.testflight_url}
-                        className="inline-block border border-blue-500 text-blue-700 hover:bg-blue-100 transition px-4 py-2 rounded-full text-sm font-semibold"
+                        className="inline-block border border-blue-500 text-blue-700 dark:text-blue-400 dark:border-blue-400/60 hover:bg-blue-100 dark:hover:bg-blue-400/10 transition px-4 py-2 rounded-full text-sm font-semibold"
                         target="_blank"
                         rel="noopener noreferrer"
                       >
@@ -722,21 +686,21 @@ export default function Detail({ serverApp, serverRelated }) {
                         Tham gia TestFlight
                       </a>
                       {statusLoading || status === null ? (
-                        <span className="inline-block border border-gray-300 text-gray-500 bg-gray-50 px-4 py-2 rounded-full text-sm font-semibold">
+                        <span className="inline-block border border-gray-300 text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-white/5 px-4 py-2 rounded-full text-sm font-semibold">
                           Đang kiểm tra...
                         </span>
                       ) : status === 'Y' ? (
-                        <span className="inline-block border border-green-500 text-green-700 bg-green-50 px-4 py-2 rounded-full text-sm font-semibold">
+                        <span className="inline-block border border-green-500 text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-400/10 px-4 py-2 rounded-full text-sm font-semibold">
                           <FontAwesomeIcon icon={faCheckCircle} className="mr-1" />
                           Còn slot
                         </span>
                       ) : status === 'F' ? (
-                        <span className="inline-block border border-red-500 text-red-700 bg-red-50 px-4 py-2 rounded-full text-sm font-semibold">
+                        <span className="inline-block border border-red-500 text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-400/10 px-4 py-2 rounded-full text-sm font-semibold">
                           <FontAwesomeIcon icon={faExclamationTriangle} className="mr-1" />
                           Đã đầy
                         </span>
                       ) : (
-                        <span className="inline-block border border-yellow-500 text-yellow-700 bg-yellow-50 px-4 py-2 rounded-full text-sm font-semibold">
+                        <span className="inline-block border border-yellow-500 text-yellow-700 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-400/10 px-4 py-2 rounded-full text-sm font-semibold">
                           <FontAwesomeIcon icon={faTimesCircle} className="mr-1" />
                           Ngừng nhận
                         </span>
@@ -750,7 +714,7 @@ export default function Detail({ serverApp, serverRelated }) {
                       <button
                         onClick={handleInstall}
                         disabled={isInstalling}
-                        className={`inline-flex items-center border border-green-500 text-green-700 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-green-200 active:shadow-inner active:ring-2 active:ring-green-500 ${isInstalling ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-100'}`}
+                        className={`inline-flex items-center border border-green-500 text-green-700 dark:text-green-400 dark:border-green-400/60 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-green-200 dark:active:bg-green-400/10 active:shadow-inner active:ring-2 active:ring-green-500 ${isInstalling ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-100 dark:hover:bg-green-400/10'}`}
                       >
                         {isInstalling ? (
                           <>
@@ -771,7 +735,7 @@ export default function Detail({ serverApp, serverRelated }) {
                       <button
                         onClick={handleDownloadIpa}
                         disabled={isFetchingIpa}
-                        className={`inline-flex items-center border border-blue-500 text-blue-700 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-blue-200 active:shadow-inner active:ring-2 active:ring-blue-500 ${isFetchingIpa ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-100'}`}
+                        className={`inline-flex items-center border border-blue-500 text-blue-700 dark:text-blue-400 dark:border-blue-400/60 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-blue-200 dark:active:bg-blue-400/10 active:shadow-inner active:ring-2 active:ring-blue-500 ${isFetchingIpa ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-100 dark:hover:bg-blue-400/10'}`}
                         title="Tải file IPA (ẩn nguồn tải)"
                       >
                         {isFetchingIpa ? (
@@ -797,49 +761,85 @@ export default function Detail({ serverApp, serverRelated }) {
           </div>
         </div>
 
-        {/* ===== Nội dung dưới: bỏ mọi overflow-x-auto, chống tràn ===== */}
+        {/* ===== Nội dung dưới ===== */}
         <div className="max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 mt-6 space-y-6 overflow-x-hidden">
+          {/* Info cards -- GIỮ NGUYÊN GIAO DIỆN BẢN GỐC, CHỈ SỬA VẠCH NGĂN CÁCH Ở GIỮA */}
+          <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow text-center">
+            <div className="flex items-stretch justify-center overflow-x-auto px-1">
+              {[
+                { label: 'Tác giả', icon: faUser, text: app.author || 'Không rõ' },
+                { label: 'Phiên bản', icon: faCodeBranch, text: app.version || 'Không rõ' },
+                { label: 'Dung lượng', icon: faDatabase, text: displaySize },
+                isTestflight
+                  ? { label: 'Lượt xem', icon: null, text: String(app.views ?? 0) }
+                  : { label: 'Lượt tải', icon: faDownload, text: String(app.downloads ?? 0) },
+              ].map((item, idx, arr) => (
+                <div key={idx} className="flex items-center">
+                  {/* cell */}
+                  <div className="px-1 sm:px-2 min-w-[92px]">
+                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">{item.label}</p>
+                    {item.icon ? (
+                      <FontAwesomeIcon icon={item.icon} className="text-xl text-gray-600 dark:text-gray-300 mb-1" />
+                    ) : (
+                      <span className="text-xl text-gray-600 dark:text-gray-300 mb-1 font-medium">•</span>
+                    )}
+                    <p className="text-sm text-gray-800 dark:text-gray-100 truncate max-w-[36vw] sm:max-w-[18vw]" title={item.text}>
+                      {item.text}
+                    </p>
+                  </div>
+
+                  {/* separator: chỉ giữa các cell, cao ~70%, căn giữa */}
+                  {idx < arr.length - 1 && (
+                    <div className="mx-2 sm:mx-3 flex items-center">
+                      <span className="block w-px h-8 sm:h-10 bg-gray-200 dark:bg-zinc-700 rounded-full" />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Mô tả */}
-          <div className="bg-white rounded-xl p-4 shadow">
-            <h2 className="text-lg font-bold text-gray-800 mb-3">Mô tả</h2>
+          <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
+            <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-3">Mô tả</h2>
             <div className={`relative overflow-hidden transition-all duration-300 ${showFullDescription ? '' : 'max-h-72'}`}>
               <div className={`${showFullDescription ? '' : 'mask-gradient-bottom'}`}>
                 {ReactMarkdown ? (
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={{
-                      h1: ({...props}) => <h3 className="text-xl font-bold mt-3 mb-2" {...props} />,
-                      h2: ({...props}) => <h4 className="text-lg font-bold mt-3 mb-2" {...props} />,
-                      h3: ({...props}) => <h5 className="text-base font-bold mt-3 mb-2" {...props} />,
-                      p: ({...props}) => <p className="text-gray-700 leading-7 mb-3 break-words" {...props} />,
-                      ul: ({...props}) => <ul className="list-disc pl-5 space-y-1 mb-3" {...props} />,
-                      ol: ({...props}) => <ol className="list-decimal pl-5 space-y-1 mb-3" {...props} />,
+                      h1: ({...props}) => <h3 className="text-xl font-bold mt-3 mb-2 text-gray-900 dark:text-gray-100" {...props} />,
+                      h2: ({...props}) => <h4 className="text-lg font-bold mt-3 mb-2 text-gray-900 dark:text-gray-100" {...props} />,
+                      h3: ({...props}) => <h5 className="text-base font-bold mt-3 mb-2 text-gray-900 dark:text-gray-100" {...props} />,
+                      p: ({...props}) => <p className="text-gray-700 dark:text-gray-200 leading-7 mb-3 break-words" {...props} />,
+                      ul: ({...props}) => <ul className="list-disc pl-5 space-y-1 mb-3 text-gray-700 dark:text-gray-200" {...props} />,
+                      ol: ({...props}) => <ol className="list-decimal pl-5 space-y-1 mb-3 text-gray-700 dark:text-gray-200" {...props} />,
                       li: ({...props}) => <li className="marker:text-blue-500" {...props} />,
-                      a: ({...props}) => <a className="text-blue-600 hover:underline break-all" target="_blank" rel="noopener noreferrer" {...props} />,
+                      a: ({...props}) => <a className="text-blue-600 dark:text-blue-400 hover:underline break-all" target="_blank" rel="noopener noreferrer" {...props} />,
                       code: ({inline, ...props}) =>
                         inline ? (
-                          <code className="px-1 py-0.5 rounded bg-gray-100 text-pink-700" {...props} />
+                          <code className="px-1 py-0.5 rounded bg-gray-100 dark:bg-zinc-800 text-pink-700 dark:text-pink-300" {...props} />
                         ) : (
                           <pre className="p-3 rounded bg-gray-900 text-gray-100 overflow-auto mb-3"><code {...props} /></pre>
                         ),
                       blockquote: ({...props}) => <PrettyBlockquote {...props} />,
-                      hr: () => <hr className="my-4 border-gray-200" />,
+                      hr: () => <hr className="my-4 border-gray-200 dark:border-zinc-800" />,
                     }}
                   >
                     {mdDescription}
                   </ReactMarkdown>
                 ) : (
-                  <p className="text-gray-700 leading-7 mb-3 whitespace-pre-wrap break-words">{mdDescription}</p>
+                  <p className="text-gray-700 dark:text-gray-200 leading-7 mb-3 whitespace-pre-wrap break-words">{mdDescription}</p>
                 )}
               </div>
               {!showFullDescription && (
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white via-white to-transparent" />
+                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white via-white to-transparent dark:from-zinc-900 dark:via-zinc-900 dark:to-transparent" />
               )}
             </div>
             {app?.description && app.description.length > 300 && (
               <button
                 onClick={() => setShowFullDescription(v => !v)}
-                className="mt-3 text-sm text-blue-600 hover:underline font-bold"
+                className="mt-3 text-sm text-blue-600 dark:text-blue-400 hover:underline font-bold"
               >
                 {showFullDescription ? 'Thu gọn' : 'Xem thêm...'}
               </button>
@@ -848,11 +848,11 @@ export default function Detail({ serverApp, serverRelated }) {
 
           {/* Screenshots */}
           {Array.isArray(app.screenshots) && app.screenshots.length > 0 && (
-            <div className="bg-white rounded-xl p-4 shadow">
-              <h2 className="text-lg font-bold text-gray-800 mb-3">Ảnh màn hình</h2>
+            <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
+              <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-3">Ảnh màn hình</h2>
               <div className="flex gap-3 overflow-x-auto pb-1">
                 {app.screenshots.map((url, i) => (
-                  <div key={i} className="flex-shrink-0 w-48 md:w-56 rounded-xl overflow-hidden border">
+                  <div key={i} className="flex-shrink-0 w-48 md:w-56 rounded-xl overflow-hidden border border-gray-200 dark:border-zinc-800">
                     <img
                       src={url}
                       alt={`Screenshot ${i + 1}`}
@@ -865,10 +865,10 @@ export default function Detail({ serverApp, serverRelated }) {
             </div>
           )}
 
-          {/* Thông tin chi tiết (không tràn) */}
-          <div className="bg-white rounded-xl shadow overflow-hidden">
-            <h2 className="px-4 pt-4 text-lg font-bold text-gray-800">Thông tin</h2>
-            <div className="mt-3 divide-y divide-gray-200 overflow-x-hidden">
+          {/* Thông tin chi tiết */}
+          <div className="bg-white dark:bg-zinc-900 rounded-xl shadow overflow-hidden">
+            <h2 className="px-4 pt-4 text-lg font-bold text-gray-800 dark:text-gray-100">Thông tin</h2>
+            <div className="mt-3 divide-y divide-gray-200 dark:divide-zinc-800">
               <InfoRow label="Nhà phát triển" value={app.author || 'Không rõ'} />
               <InfoRow label="Phiên bản" value={app.version || 'Không rõ'} />
               <InfoRow label="Dung lượng" value={displaySize} />
@@ -919,15 +919,15 @@ export default function Detail({ serverApp, serverRelated }) {
 
           {/* Related + phân trang */}
           {related.length > 0 && (
-            <div className="bg-white rounded-xl p-4 shadow overflow-x-hidden">
-              <h2 className="text-lg font-bold text-gray-800 mb-4">Ứng dụng cùng chuyên mục</h2>
+            <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
+              <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4">Ứng dụng cùng chuyên mục</h2>
 
-              <div className="divide-y divide-gray-200">
+              <div className="divide-y divide-gray-200 dark:divide-zinc-800">
                 {relatedSlice.map((item) => (
                   <Link
                     href={`/${item.slug}`}
                     key={item.id}
-                    className="flex items-center justify-between py-4 hover:bg-gray-50 px-2 rounded-lg transition"
+                    className="flex items-center justify-between py-4 hover:bg-gray-50 dark:hover:bg-white/5 px-2 rounded-lg transition"
                   >
                     <div className="flex items-center gap-4 min-w-0">
                       <img
@@ -937,18 +937,18 @@ export default function Detail({ serverApp, serverRelated }) {
                         onError={(e) => { e.currentTarget.src = '/placeholder-icon.png'; }}
                       />
                       <div className="flex flex-col min-w-0">
-                        <p className="text-sm font-semibold text-gray-800 truncate" title={item.name}>{item.name}</p>
-                        <div className="flex items-center gap-2 text-xs text-gray-500 min-w-0">
+                        <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate" title={item.name}>{item.name}</p>
+                        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 min-w-0">
                           {item.author && <span className="truncate" title={item.author}>{item.author}</span>}
                           {item.version && (
-                            <span className="bg-gray-200 text-gray-800 px-2 py-0.5 rounded text-xs font-medium flex-shrink-0">
+                            <span className="bg-gray-200 dark:bg-zinc-800 text-gray-800 dark:text-gray-100 px-2 py-0.5 rounded text-xs font-medium flex-shrink-0">
                               {item.version}
                             </span>
                           )}
                         </div>
                       </div>
                     </div>
-                    <FontAwesomeIcon icon={faDownload} className="text-blue-500 text-lg flex-shrink-0" />
+                    <FontAwesomeIcon icon={faDownload} className="text-blue-500 dark:text-blue-400 text-lg flex-shrink-0" />
                   </Link>
                 ))}
               </div>
@@ -958,15 +958,15 @@ export default function Detail({ serverApp, serverRelated }) {
                 <button
                   onClick={() => setRelPage(p => Math.max(1, p - 1))}
                   disabled={relPage === 1}
-                  className="px-3 py-2 rounded border text-sm disabled:opacity-50"
+                  className="px-3 py-2 rounded border text-sm disabled:opacity-50 border-gray-200 dark:border-zinc-800 text-gray-700 dark:text-gray-100"
                 >
                   Trang trước
                 </button>
-                <div className="text-sm text-gray-600">Trang {relPage}/{relTotalPages}</div>
+                <div className="text-sm text-gray-600 dark:text-gray-300">Trang {relPage}/{relTotalPages}</div>
                 <button
                   onClick={() => setRelPage(p => Math.min(relTotalPages, p + 1))}
                   disabled={relTotalPages === relPage}
-                  className="px-3 py-2 rounded border text-sm disabled:opacity-50"
+                  className="px-3 py-2 rounded border text-sm disabled:opacity-50 border-gray-200 dark:border-zinc-800 text-gray-700 dark:text-gray-100"
                 >
                   Trang sau
                 </button>
@@ -975,10 +975,9 @@ export default function Detail({ serverApp, serverRelated }) {
           )}
 
           {/* Bình luận */}
-          <div className="bg-white rounded-xl p-4 shadow overflow-x-hidden">
+          <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
             <Comments postId={app.slug} postTitle={app.name} />
           </div>
-
         </div>
       </div>
     </Layout>
