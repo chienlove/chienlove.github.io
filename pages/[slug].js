@@ -27,6 +27,7 @@ import {
   faFileArrowDown,
   faHouse,
   faChevronRight,
+  faEye, // Thêm icon Lượt xem
 } from '@fortawesome/free-solid-svg-icons';
 
 // Lazy-load Comments
@@ -39,7 +40,7 @@ const Comments = dynamic(() => import('../components/Comments'), {
 export async function getServerSideProps(context) {
   const slug = context.params.slug?.toLowerCase();
 
-  // 1) App + JOIN category
+  // 1) Tìm kiếm chính
   let { data: appData, error } = await supabase
     .from('apps')
     .select(`
@@ -49,9 +50,9 @@ export async function getServerSideProps(context) {
     .ilike('slug', slug)
     .single();
 
-  // 2) Fallback bằng ID
-  if ((!appData || error) && slug) {
-    const fb = await supabase
+  // 2) Fallback bằng ID nếu không tìm thấy bằng slug
+  if (!appData || error) {
+    const { data: fbData } = await supabase
       .from('apps')
       .select(`
         *,
@@ -60,30 +61,20 @@ export async function getServerSideProps(context) {
       .eq('id', slug)
       .single();
 
-    if (fb.data) {
-      return { redirect: { destination: `/${fb.data.slug}`, permanent: false } };
+    if (fbData) {
+      return { redirect: { destination: `/${fbData.slug}`, permanent: false } };
     }
     return { notFound: true };
   }
 
-  // 3) Bổ sung category nếu thiếu
-  if (!appData?.category && appData?.category_id) {
-    const { data: cat } = await supabase
-      .from('categories')
-      .select('id, slug, name')
-      .eq('id', appData.category_id)
-      .single();
-    if (cat) appData = { ...appData, category: cat };
-  }
-
-  // 4) Related apps
+  // 3) Related apps - Giới hạn số lượng để tối ưu
   const { data: relatedApps } = await supabase
     .from('apps')
-    .select('id, name, slug, icon_url, author, version, category_id')
+    .select('id, name, slug, icon_url, author, version, category_id, downloads, views')
     .eq('category_id', appData.category_id)
     .neq('id', appData.id)
     .order('created_at', { ascending: false })
-    .limit(50);
+    .limit(20); // Giảm từ 50 xuống 20 để tối ưu
 
   return {
     props: {
@@ -217,22 +208,22 @@ function PrettyBlockquote({ children }) {
   );
 }
 
-/* ===================== BREADCRUMB NEO (mới hoàn toàn, hiện đại, dark mode, no-scroll) ===================== */
+/* ===================== BREADCRUMB MỚI (Modern, màu hài hòa) ===================== */
 function BreadcrumbNeo({ category, appName }) {
   return (
-    <div className="bg-gray-100 dark:bg-zinc-950">
+    <div className="bg-gray-100 dark:bg-zinc-950 border-b border-gray-200 dark:border-zinc-800">
       <div className="w-full flex justify-center px-2 sm:px-4 md:px-6">
-        <nav className="w-full max-w-screen-2xl py-3 overflow-x-hidden" aria-label="Breadcrumb">
+        <nav className="w-full max-w-screen-2xl py-3" aria-label="Breadcrumb">
           <ol className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 min-w-0">
             {/* Home */}
-            <li className="flex items-center flex-shrink-0">
+            <li className="flex-shrink-0">
               <Link
                 href="/"
-                className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 bg-white/80 dark:bg-white/5 border border-slate-200/70 dark:border-white/10 shadow-sm hover:bg-white dark:hover:bg-white/10 transition"
+                className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 bg-gray-200/50 dark:bg-white/5 border border-transparent dark:border-white/10 shadow-sm hover:bg-gray-200 dark:hover:bg-white/10 transition"
                 title="Trang chủ"
               >
-                <FontAwesomeIcon icon={faHouse} className="w-4 h-4" />
-                <span className="hidden sm:inline font-semibold">Home</span>
+                <FontAwesomeIcon icon={faHouse} className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+                <span className="hidden sm:inline font-semibold text-gray-700 dark:text-gray-200">Home</span>
               </Link>
             </li>
 
@@ -247,10 +238,10 @@ function BreadcrumbNeo({ category, appName }) {
                 <li className="flex items-center min-w-0">
                   <Link
                     href={`/category/${category.slug}`}
-                    className="inline-flex items-center rounded-lg px-3 py-1.5 bg-white/70 dark:bg-white/5 border border-slate-200/70 dark:border-white/10 hover:bg-white dark:hover:bg-white/10 transition max-w-[40vw] sm:max-w-[30vw]"
+                    className="inline-flex items-center rounded-lg px-3 py-1.5 bg-gray-200/50 dark:bg-white/5 border border-transparent dark:border-white/10 hover:bg-gray-200 dark:hover:bg-white/10 transition max-w-[40vw] sm:max-w-[30vw]"
                     title={category.name || 'Chuyên mục'}
                   >
-                    <span className="truncate font-semibold">{category.name || 'Chuyên mục'}</span>
+                    <span className="truncate font-semibold text-gray-700 dark:text-gray-200">{category.name || 'Chuyên mục'}</span>
                   </Link>
                 </li>
                 <li className="flex-shrink-0 text-slate-400 dark:text-slate-500">
@@ -323,8 +314,10 @@ function CenterModal({ open, title, body, actions }) {
 /* ===================== Page ===================== */
 export default function Detail({ serverApp, serverRelated }) {
   const router = useRouter();
-  const [app, setApp] = useState(serverApp);
-  const [related, setRelated] = useState(serverRelated);
+  const app = serverApp;
+  const related = serverRelated;
+
+  // States
   const [dominantColor, setDominantColor] = useState('#f0f2f5');
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [status, setStatus] = useState(null);
@@ -334,6 +327,7 @@ export default function Detail({ serverApp, serverRelated }) {
   const [showAllDevices, setShowAllDevices] = useState(false);
   const [showAllLanguages, setShowAllLanguages] = useState(false);
 
+  // Pagination cho Related apps
   const PAGE_SIZE = 5;
   const [relPage, setRelPage] = useState(1);
   const relTotalPages = Math.max(1, Math.ceil((related?.length || 0) / PAGE_SIZE));
@@ -372,17 +366,6 @@ export default function Detail({ serverApp, serverRelated }) {
     const unsub = auth.onAuthStateChanged(setMe);
     return () => unsub();
   }, []);
-
-  // Reset khi đổi slug
-  useEffect(() => {
-    setApp(serverApp);
-    setRelated(serverRelated);
-    setShowFullDescription(false);
-    setDominantColor('#f0f2f5');
-    setShowAllDevices(false);
-    setShowAllLanguages(false);
-    setRelPage(1);
-  }, [router.query.slug, serverApp, serverRelated]);
 
   // View/TestFlight + màu nền
   useEffect(() => {
@@ -496,10 +479,20 @@ export default function Detail({ serverApp, serverRelated }) {
               try {
                 if (auth.currentUser && !auth.currentUser.emailVerified) {
                   await sendEmailVerification(auth.currentUser);
-                  alert('Đã gửi lại email xác minh. Vui lòng kiểm tra hộp thư.');
+                  setModal({
+                    open: true,
+                    title: 'Đã gửi email',
+                    body: 'Đã gửi lại email xác minh. Vui lòng kiểm tra hộp thư.',
+                    actions: <button onClick={() => setModal(s => ({ ...s, open: false }))} className="px-3 py-2 text-sm rounded border">Đóng</button>
+                  });
                 }
               } catch (e) {
-                alert('Không thể gửi email xác minh. Vui lòng thử lại.');
+                setModal({
+                  open: true,
+                  title: 'Lỗi',
+                  body: 'Không thể gửi email xác minh. Vui lòng thử lại.',
+                  actions: <button onClick={() => setModal(s => ({ ...s, open: false }))} className="px-3 py-2 text-sm rounded border">Đóng</button>
+                });
               }
             }}
             className="px-3 py-2 text-sm rounded bg-gray-900 text-white"
@@ -558,7 +551,12 @@ export default function Detail({ serverApp, serverRelated }) {
       window.location.href = `/api/download-ipa?slug=${encodeURIComponent(app.slug)}&token=${encodeURIComponent(token)}`;
       fetch(`/api/admin/add-download?id=${app.id}`, { method: 'POST' }).catch(() => {});
     } catch (err) {
-      alert('Không thể tạo link tải IPA. Vui lòng thử lại.');
+      setModal({
+        open: true,
+        title: 'Lỗi',
+        body: 'Không thể tạo link tải IPA. Vui lòng thử lại.',
+        actions: <button onClick={() => setModal(s => ({ ...s, open: false }))} className="px-3 py-2 text-sm rounded border">Đóng</button>
+      });
       console.error('Download IPA error:', err);
     } finally {
       setIsFetchingIpa(false);
@@ -652,7 +650,7 @@ export default function Detail({ serverApp, serverRelated }) {
                 <div className="w-24 h-24 mx-auto overflow-hidden border-4 border-white rounded-2xl">
                   <img
                     src={app.icon_url || '/placeholder-icon.png'}
-                    alt={app.name}
+                    alt={`Icon của ứng dụng ${app.name}`}
                     className="w-full h-full object-cover"
                     onError={(e) => { e.currentTarget.src = '/placeholder-icon.png'; }}
                   />
@@ -718,7 +716,7 @@ export default function Detail({ serverApp, serverRelated }) {
                       >
                         {isInstalling ? (
                           <>
-                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" fill="none" viewBox="0 0 24 24">
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
@@ -740,7 +738,7 @@ export default function Detail({ serverApp, serverRelated }) {
                       >
                         {isFetchingIpa ? (
                           <>
-                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" fill="none" viewBox="0 0 24 24">
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
@@ -763,41 +761,69 @@ export default function Detail({ serverApp, serverRelated }) {
 
         {/* ===== Nội dung dưới ===== */}
         <div className="max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 mt-6 space-y-6 overflow-x-hidden">
-          {/* Info cards -- GIỮ NGUYÊN GIAO DIỆN BẢN GỐC, CHỈ SỬA VẠCH NGĂN CÁCH Ở GIỮA */}
+          {/* Info cards - Sửa lỗi cắt thông tin */}
           <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow text-center">
             <div className="flex items-stretch justify-center overflow-x-auto px-1">
-              {[
-                { label: 'Tác giả', icon: faUser, text: app.author || 'Không rõ' },
-                { label: 'Phiên bản', icon: faCodeBranch, text: app.version || 'Không rõ' },
-                { label: 'Dung lượng', icon: faDatabase, text: displaySize },
-                isTestflight
-                  ? { label: 'Lượt xem', icon: null, text: String(app.views ?? 0) }
-                  : { label: 'Lượt tải', icon: faDownload, text: String(app.downloads ?? 0) },
-              ].map((item, idx, arr) => (
-                <div key={idx} className="flex items-center">
-                  {/* cell */}
-                  <div className="px-1 sm:px-2 min-w-[92px]">
-                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">{item.label}</p>
-                    {item.icon ? (
-                      <FontAwesomeIcon icon={item.icon} className="text-xl text-gray-600 dark:text-gray-300 mb-1" />
-                    ) : (
-                      <span className="text-xl text-gray-600 dark:text-gray-300 mb-1 font-medium">•</span>
-                    )}
-                    <p className="text-sm text-gray-800 dark:text-gray-100 truncate max-w-[36vw] sm:max-w-[18vw]" title={item.text}>
-                      {item.text}
-                    </p>
-                  </div>
-
-                  {/* separator: chỉ giữa các cell, cao ~70%, căn giữa */}
-                  {idx < arr.length - 1 && (
-                    <div className="mx-2 sm:mx-3 flex items-center">
-                      <span className="block w-px h-8 sm:h-10 bg-gray-200 dark:bg-zinc-700 rounded-full" />
-                    </div>
-                  )}
+              {/* Tác giả */}
+              <div className="flex items-center">
+                <div className="px-1 sm:px-2 min-w-[92px] flex-shrink-0">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Tác giả</p>
+                  <FontAwesomeIcon icon={faUser} className="text-xl text-gray-600 dark:text-gray-300 mb-1" />
+                  <p className="text-sm text-gray-800 dark:text-gray-100 truncate" title={app.author || 'Không rõ'}>
+                    {app.author || 'Không rõ'}
+                  </p>
                 </div>
-              ))}
+                <div className="mx-2 sm:mx-3 flex items-center">
+                  <span className="block w-px h-8 sm:h-10 bg-gray-200 dark:bg-zinc-700 rounded-full" />
+                </div>
+              </div>
+
+              {/* Phiên bản */}
+              <div className="flex items-center">
+                <div className="px-1 sm:px-2 min-w-[92px] flex-shrink-0">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Phiên bản</p>
+                  <FontAwesomeIcon icon={faCodeBranch} className="text-xl text-gray-600 dark:text-gray-300 mb-1" />
+                  <p className="text-sm text-gray-800 dark:text-gray-100 truncate" title={app.version || 'Không rõ'}>
+                    {app.version || 'Không rõ'}
+                  </p>
+                </div>
+                <div className="mx-2 sm:mx-3 flex items-center">
+                  <span className="block w-px h-8 sm:h-10 bg-gray-200 dark:bg-zinc-700 rounded-full" />
+                </div>
+              </div>
+
+              {/* Dung lượng */}
+              <div className="flex items-center">
+                <div className="px-1 sm:px-2 min-w-[92px] flex-shrink-0">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Dung lượng</p>
+                  <FontAwesomeIcon icon={faDatabase} className="text-xl text-gray-600 dark:text-gray-300 mb-1" />
+                  <p className="text-sm text-gray-800 dark:text-gray-100 truncate" title={displaySize}>{displaySize}</p>
+                </div>
+                <div className="mx-2 sm:mx-3 flex items-center">
+                  <span className="block w-px h-8 sm:h-10 bg-gray-200 dark:bg-zinc-700 rounded-full" />
+                </div>
+              </div>
+
+              {/* Lượt tải / Lượt xem - Sửa lỗi giao diện */}
+              <div className="flex items-center">
+                <div className="px-1 sm:px-2 min-w-[92px] flex-shrink-0">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">
+                    {isTestflight ? 'Lượt xem' : 'Lượt tải'}
+                  </p>
+                  <div className="flex flex-col items-center">
+                    <FontAwesomeIcon
+                      icon={isTestflight ? faEye : faDownload}
+                      className="text-xl text-gray-600 dark:text-gray-300 mb-1"
+                    />
+                    <span className="text-sm text-gray-800 dark:text-gray-100 truncate" title={String(isTestflight ? app.views ?? 0 : app.downloads ?? 0)}>
+                      {isTestflight ? app.views ?? 0 : app.downloads ?? 0}
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
+
 
           {/* Mô tả */}
           <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
@@ -855,7 +881,7 @@ export default function Detail({ serverApp, serverRelated }) {
                   <div key={i} className="flex-shrink-0 w-48 md:w-56 rounded-xl overflow-hidden border border-gray-200 dark:border-zinc-800">
                     <img
                       src={url}
-                      alt={`Screenshot ${i + 1}`}
+                      alt={`Ảnh chụp màn hình ${i + 1} của ứng dụng ${app.name}`}
                       className="w-full h-auto object-cover"
                       onError={(e) => { e.currentTarget.src = '/placeholder-image.png'; }}
                     />
@@ -932,7 +958,7 @@ export default function Detail({ serverApp, serverRelated }) {
                     <div className="flex items-center gap-4 min-w-0">
                       <img
                         src={item.icon_url || '/placeholder-icon.png'}
-                        alt={item.name}
+                        alt={`Icon của ứng dụng liên quan ${item.name}`}
                         className="w-14 h-14 rounded-xl object-cover shadow-sm"
                         onError={(e) => { e.currentTarget.src = '/placeholder-icon.png'; }}
                       />
@@ -948,7 +974,10 @@ export default function Detail({ serverApp, serverRelated }) {
                         </div>
                       </div>
                     </div>
-                    <FontAwesomeIcon icon={faDownload} className="text-blue-500 dark:text-blue-400 text-lg flex-shrink-0" />
+                    <div className="flex flex-col items-center flex-shrink-0 min-w-[50px] text-center">
+                        <FontAwesomeIcon icon={faDownload} className="text-blue-500 dark:text-blue-400 text-lg flex-shrink-0 mb-1" />
+                        <span className="text-xs text-gray-600 dark:text-gray-300">{item.downloads ?? 0}</span>
+                    </div>
                   </Link>
                 ))}
               </div>
