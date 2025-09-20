@@ -208,17 +208,20 @@ function PrettyBlockquote({ children }) {
 }
 
 /* ===================== BREADCRUMB HOÀN TOÀN MỚI ===================== */
-function BreadcrumbNeo({ category, appName }) {
+function NewBreadcrumb({ category, appName }) {
+  const router = useRouter();
+  const pathParts = router.asPath.split('/').filter(Boolean);
+
   return (
-    <div className="bg-gray-100 dark:bg-zinc-950">
+    <div className="bg-gray-100 dark:bg-zinc-950 border-b border-gray-200 dark:border-zinc-800">
       <div className="w-full flex justify-center px-2 sm:px-4 md:px-6">
-        <nav className="w-full max-w-screen-2xl py-3 overflow-x-hidden" aria-label="Breadcrumb">
+        <nav className="w-full max-w-screen-2xl py-3" aria-label="Breadcrumb">
           <ol className="flex items-center flex-wrap gap-2 text-sm text-slate-600 dark:text-slate-300 min-w-0">
             {/* Home */}
             <li className="flex-shrink-0">
               <Link
                 href="/"
-                className="inline-flex items-center rounded-lg px-3 py-1.5 bg-gray-200/50 dark:bg-white/5 border border-transparent dark:border-white/10 shadow-sm hover:bg-gray-200 dark:hover:bg-white/10 transition"
+                className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 bg-gray-200/50 dark:bg-white/5 border border-transparent dark:border-white/10 shadow-sm hover:bg-gray-200 dark:hover:bg-white/10 transition"
                 title="Trang chủ"
               >
                 <FontAwesomeIcon icon={faHouse} className="w-4 h-4 text-slate-500 dark:text-slate-400" />
@@ -227,32 +230,34 @@ function BreadcrumbNeo({ category, appName }) {
             </li>
 
             {/* Chevron */}
-            <li className="flex-shrink-0 text-slate-400 dark:text-slate-500">
-              <FontAwesomeIcon icon={faChevronRight} className="w-3.5 h-3.5" />
-            </li>
+            {pathParts.length > 0 && (
+                <li className="flex-shrink-0 text-slate-400 dark:text-slate-500">
+                    <FontAwesomeIcon icon={faChevronRight} className="w-3.5 h-3.5" />
+                </li>
+            )}
 
             {/* Category */}
             {category?.slug && (
-              <>
-                <li className="flex-shrink-0 flex items-center min-w-0">
-                  <Link
-                    href={`/category/${category.slug}`}
-                    className="inline-flex items-center rounded-lg px-3 py-1.5 bg-gray-200/50 dark:bg-white/5 border border-transparent dark:border-white/10 hover:bg-gray-200 dark:hover:bg-white/10 transition max-w-[40vw] sm:max-w-[200px]"
-                    title={category.name || 'Chuyên mục'}
-                  >
-                    <span className="truncate font-semibold text-gray-700 dark:text-gray-200">{category.name || 'Chuyên mục'}</span>
-                  </Link>
-                </li>
-                <li className="flex-shrink-0 text-slate-400 dark:text-slate-500">
-                  <FontAwesomeIcon icon={faChevronRight} className="w-3.5 h-3.5" />
-                </li>
-              </>
+              <li className="flex-shrink-0 flex items-center min-w-0">
+                <Link
+                  href={`/category/${category.slug}`}
+                  className="inline-flex items-center rounded-full px-3 py-1.5 bg-gray-200/50 dark:bg-white/5 border border-transparent dark:border-white/10 hover:bg-gray-200 dark:hover:bg-white/10 transition max-w-[40vw] sm:max-w-[200px]"
+                  title={category.name || 'Chuyên mục'}
+                >
+                  <span className="truncate font-semibold text-gray-700 dark:text-gray-200">{category.name || 'Chuyên mục'}</span>
+                </Link>
+              </li>
             )}
+            
+            {/* Chevron */}
+            <li className="flex-shrink-0 text-slate-400 dark:text-slate-500">
+                <FontAwesomeIcon icon={faChevronRight} className="w-3.5 h-3.5" />
+            </li>
 
-            {/* Current */}
-            <li className="min-w-0 flex-1">
+            {/* Current App Name - Sử dụng flex-grow */}
+            <li className="min-w-0 flex-grow">
               <span
-                className="inline-flex items-center rounded-lg px-3 py-1.5 bg-sky-50 dark:bg-sky-400/10 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-500/30 shadow-sm w-full max-w-full md:max-w-2xl"
+                className="inline-flex items-center rounded-full px-3 py-1.5 bg-sky-50 dark:bg-sky-400/10 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-500/30 shadow-sm w-full max-w-full"
                 title={appName}
               >
                 <span className="truncate font-semibold">{appName}</span>
@@ -625,7 +630,7 @@ export default function Detail({ serverApp, serverRelated }) {
       <CenterModal open={modal.open} title={modal.title} body={modal.body} actions={modal.actions} />
 
       {/* ===== Breadcrumb mới đã sửa lỗi ===== */}
-      <BreadcrumbNeo category={app?.category} appName={app?.name} />
+      <NewBreadcrumb category={app?.category} appName={app?.name} />
 
       <div className="bg-gray-100 dark:bg-zinc-950 min-h-screen pb-12 overflow-x-hidden">
         <div className="w-full flex justify-center mt-3">
