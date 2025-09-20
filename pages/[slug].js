@@ -27,7 +27,7 @@ import {
   faFileArrowDown,
   faHouse,
   faChevronRight,
-  faEye, // Thêm icon Lượt xem
+  faEye,
 } from '@fortawesome/free-solid-svg-icons';
 
 // Lazy-load Comments
@@ -74,7 +74,7 @@ export async function getServerSideProps(context) {
     .eq('category_id', appData.category_id)
     .neq('id', appData.id)
     .order('created_at', { ascending: false })
-    .limit(20); // Giảm từ 50 xuống 20 để tối ưu
+    .limit(20);
 
   return {
     props: {
@@ -85,7 +85,6 @@ export async function getServerSideProps(context) {
 }
 
 /* ===================== Helpers ===================== */
-
 function parseList(input) {
   if (!input) return [];
   if (Array.isArray(input)) return input;
@@ -763,63 +762,45 @@ export default function Detail({ serverApp, serverRelated }) {
         <div className="max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 mt-6 space-y-6 overflow-x-hidden">
           {/* Info cards - Sửa lỗi cắt thông tin */}
           <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow text-center">
-            <div className="flex items-stretch justify-center overflow-x-auto px-1">
+            <div className="flex justify-center divide-x divide-gray-200 dark:divide-zinc-700">
+              
               {/* Tác giả */}
-              <div className="flex items-center">
-                <div className="px-1 sm:px-2 min-w-[92px] flex-shrink-0">
-                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Tác giả</p>
-                  <FontAwesomeIcon icon={faUser} className="text-xl text-gray-600 dark:text-gray-300 mb-1" />
-                  <p className="text-sm text-gray-800 dark:text-gray-100 truncate" title={app.author || 'Không rõ'}>
-                    {app.author || 'Không rõ'}
-                  </p>
-                </div>
-                <div className="mx-2 sm:mx-3 flex items-center">
-                  <span className="block w-px h-8 sm:h-10 bg-gray-200 dark:bg-zinc-700 rounded-full" />
-                </div>
+              <div className="flex-1 flex flex-col items-center min-w-0 px-2 sm:px-4">
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Tác giả</p>
+                <FontAwesomeIcon icon={faUser} className="text-xl text-gray-600 dark:text-gray-300 mb-1" />
+                <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate w-full" title={app.author || 'Không rõ'}>
+                  {app.author || 'Không rõ'}
+                </p>
               </div>
 
               {/* Phiên bản */}
-              <div className="flex items-center">
-                <div className="px-1 sm:px-2 min-w-[92px] flex-shrink-0">
-                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Phiên bản</p>
-                  <FontAwesomeIcon icon={faCodeBranch} className="text-xl text-gray-600 dark:text-gray-300 mb-1" />
-                  <p className="text-sm text-gray-800 dark:text-gray-100 truncate" title={app.version || 'Không rõ'}>
-                    {app.version || 'Không rõ'}
-                  </p>
-                </div>
-                <div className="mx-2 sm:mx-3 flex items-center">
-                  <span className="block w-px h-8 sm:h-10 bg-gray-200 dark:bg-zinc-700 rounded-full" />
-                </div>
+              <div className="flex-1 flex flex-col items-center min-w-0 px-2 sm:px-4">
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Phiên bản</p>
+                <FontAwesomeIcon icon={faCodeBranch} className="text-xl text-gray-600 dark:text-gray-300 mb-1" />
+                <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate w-full" title={app.version || 'Không rõ'}>
+                  {app.version || 'Không rõ'}
+                </p>
               </div>
 
               {/* Dung lượng */}
-              <div className="flex items-center">
-                <div className="px-1 sm:px-2 min-w-[92px] flex-shrink-0">
-                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Dung lượng</p>
-                  <FontAwesomeIcon icon={faDatabase} className="text-xl text-gray-600 dark:text-gray-300 mb-1" />
-                  <p className="text-sm text-gray-800 dark:text-gray-100 truncate" title={displaySize}>{displaySize}</p>
-                </div>
-                <div className="mx-2 sm:mx-3 flex items-center">
-                  <span className="block w-px h-8 sm:h-10 bg-gray-200 dark:bg-zinc-700 rounded-full" />
-                </div>
+              <div className="flex-1 flex flex-col items-center min-w-0 px-2 sm:px-4">
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Dung lượng</p>
+                <FontAwesomeIcon icon={faDatabase} className="text-xl text-gray-600 dark:text-gray-300 mb-1" />
+                <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate w-full" title={displaySize}>{displaySize}</p>
               </div>
 
-              {/* Lượt tải / Lượt xem - Sửa lỗi giao diện */}
-              <div className="flex items-center">
-                <div className="px-1 sm:px-2 min-w-[92px] flex-shrink-0">
-                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">
-                    {isTestflight ? 'Lượt xem' : 'Lượt tải'}
-                  </p>
-                  <div className="flex flex-col items-center">
-                    <FontAwesomeIcon
-                      icon={isTestflight ? faEye : faDownload}
-                      className="text-xl text-gray-600 dark:text-gray-300 mb-1"
-                    />
-                    <span className="text-sm text-gray-800 dark:text-gray-100 truncate" title={String(isTestflight ? app.views ?? 0 : app.downloads ?? 0)}>
-                      {isTestflight ? app.views ?? 0 : app.downloads ?? 0}
-                    </span>
-                  </div>
-                </div>
+              {/* Lượt tải / Lượt xem - Hiển thị ngang hàng */}
+              <div className="flex-1 flex flex-col items-center min-w-0 px-2 sm:px-4">
+                <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">
+                  {isTestflight ? 'Lượt xem' : 'Lượt tải'}
+                </p>
+                <FontAwesomeIcon
+                  icon={isTestflight ? faEye : faDownload}
+                  className="text-xl text-gray-600 dark:text-gray-300 mb-1"
+                />
+                <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate w-full" title={String(isTestflight ? app.views ?? 0 : app.downloads ?? 0)}>
+                  {isTestflight ? app.views ?? 0 : app.downloads ?? 0}
+                </p>
               </div>
             </div>
           </div>
@@ -974,10 +955,8 @@ export default function Detail({ serverApp, serverRelated }) {
                         </div>
                       </div>
                     </div>
-                    <div className="flex flex-col items-center flex-shrink-0 min-w-[50px] text-center">
-                        <FontAwesomeIcon icon={faDownload} className="text-blue-500 dark:text-blue-400 text-lg flex-shrink-0 mb-1" />
-                        <span className="text-xs text-gray-600 dark:text-gray-300">{item.downloads ?? 0}</span>
-                    </div>
+                    {/* Chỉ hiển thị icon Tải xuống, không có số đếm */}
+                    <FontAwesomeIcon icon={faDownload} className="text-blue-500 dark:text-blue-400 text-lg flex-shrink-0" />
                   </Link>
                 ))}
               </div>
