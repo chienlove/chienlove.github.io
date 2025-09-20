@@ -210,42 +210,53 @@ function PrettyBlockquote({ children }) {
 /* ===================== BREADCRUMB HOÀN TOÀN MỚI ===================== */
 function NewBreadcrumb({ category, appName }) {
   return (
-    <div className="bg-gray-100 dark:bg-zinc-950">
+    <div className="bg-gray-100 dark:bg-zinc-950 border-b border-gray-200 dark:border-zinc-800">
       <div className="w-full flex justify-center px-2 sm:px-4 md:px-6">
-        <nav className="w-full max-w-screen-2xl py-3 overflow-x-auto whitespace-nowrap" aria-label="Breadcrumb">
-          <ol className="inline-flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
-            {/* Home */}
-            <li className="inline-flex items-center">
+        <nav className="w-full max-w-screen-2xl py-3 overflow-x-hidden" aria-label="Breadcrumb">
+          <ol className="flex items-center flex-wrap gap-2 text-sm text-slate-600 dark:text-slate-300 min-w-0">
+            {/* Home - Với hiệu ứng và truncate */}
+            <li className="flex-shrink-0 min-w-0">
               <Link
                 href="/"
-                className="inline-flex items-center text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition"
+                className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 bg-gray-200/50 dark:bg-white/5 border border-transparent dark:border-white/10 shadow-sm hover:bg-gray-200 dark:hover:bg-white/10 transition-colors active:scale-95"
                 title="Trang chủ"
               >
-                <FontAwesomeIcon icon={faHouse} className="w-4 h-4 mr-2" />
-                Home
+                <FontAwesomeIcon icon={faHouse} className="w-4 h-4 text-slate-500 dark:text-slate-400" />
+                <span className="hidden sm:inline font-semibold text-gray-700 dark:text-gray-200">Home</span>
               </Link>
             </li>
 
-            {/* Category */}
-            {category?.slug && (
-              <>
-                <li className="flex-shrink-0 text-gray-400 dark:text-gray-500">/</li>
-                <li className="inline-flex items-center">
-                  <Link
-                    href={`/category/${category.slug}`}
-                    className="text-gray-700 dark:text-gray-200 hover:text-blue-600 dark:hover:text-blue-400 font-medium transition max-w-[150px] truncate"
-                    title={category.name || 'Chuyên mục'}
-                  >
-                    {category.name || 'Chuyên mục'}
-                  </Link>
-                </li>
-              </>
-            )}
+            {/* Chevron */}
+            <li className="flex-shrink-0 text-slate-400 dark:text-slate-500">
+                <FontAwesomeIcon icon={faChevronRight} className="w-3.5 h-3.5" />
+            </li>
 
-            {/* Current App Name */}
-            <li className="flex-shrink-0 text-gray-400 dark:text-gray-500">/</li>
-            <li className="text-blue-600 dark:text-blue-400 font-semibold max-w-[200px] sm:max-w-xs md:max-w-md truncate" title={appName}>
-                {appName}
+            {/* Category - Với hiệu ứng và truncate */}
+            {category?.slug && (
+              <li className="flex-shrink-0 min-w-0">
+                <Link
+                  href={`/category/${category.slug}`}
+                  className="inline-flex items-center rounded-full px-3 py-1.5 bg-gray-200/50 dark:bg-white/5 border border-transparent dark:border-white/10 hover:bg-gray-200 dark:hover:bg-white/10 transition-colors active:scale-95 max-w-[40vw] sm:max-w-[200px]"
+                  title={category.name || 'Chuyên mục'}
+                >
+                  <span className="truncate font-semibold text-gray-700 dark:text-gray-200">{category.name || 'Chuyên mục'}</span>
+                </Link>
+              </li>
+            )}
+            
+            {/* Chevron */}
+            <li className="flex-shrink-0 text-slate-400 dark:text-slate-500">
+                <FontAwesomeIcon icon={faChevronRight} className="w-3.5 h-3.5" />
+            </li>
+
+            {/* Current App Name - Sử dụng flex-grow */}
+            <li className="min-w-0 flex-grow">
+              <span
+                className="inline-flex items-center rounded-full px-3 py-1.5 bg-sky-50 dark:bg-sky-400/10 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-500/30 shadow-sm w-full"
+                title={appName}
+              >
+                <span className="truncate font-semibold">{appName}</span>
+              </span>
             </li>
           </ol>
         </nav>
@@ -396,7 +407,7 @@ export default function Detail({ serverApp, serverRelated }) {
   }, [app?.size]);
 
   const languagesArray = useMemo(() => parseList(app?.languages), [app?.languages]);
-  const devicesArray = useMemo(() => parseList(app?.supported_devices), [app?.supported_supported_devices]);
+  const devicesArray = useMemo(() => parseList(app?.supported_devices), [app?.supported_devices]);
 
   const languagesShort = useMemo(() => {
     const list = languagesArray.slice(0, 6);
