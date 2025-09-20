@@ -207,18 +207,18 @@ function PrettyBlockquote({ children }) {
   );
 }
 
-/* ===================== BREADCRUMB MỚI (Modern, màu hài hòa) ===================== */
+/* ===================== BREADCRUMB HOÀN TOÀN MỚI ===================== */
 function BreadcrumbNeo({ category, appName }) {
   return (
-    <div className="bg-gray-100 dark:bg-zinc-950 border-b border-gray-200 dark:border-zinc-800">
+    <div className="bg-gray-100 dark:bg-zinc-950">
       <div className="w-full flex justify-center px-2 sm:px-4 md:px-6">
-        <nav className="w-full max-w-screen-2xl py-3" aria-label="Breadcrumb">
-          <ol className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300 min-w-0">
+        <nav className="w-full max-w-screen-2xl py-3 overflow-x-hidden" aria-label="Breadcrumb">
+          <ol className="flex items-center flex-wrap gap-2 text-sm text-slate-600 dark:text-slate-300 min-w-0">
             {/* Home */}
             <li className="flex-shrink-0">
               <Link
                 href="/"
-                className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 bg-gray-200/50 dark:bg-white/5 border border-transparent dark:border-white/10 shadow-sm hover:bg-gray-200 dark:hover:bg-white/10 transition"
+                className="inline-flex items-center rounded-lg px-3 py-1.5 bg-gray-200/50 dark:bg-white/5 border border-transparent dark:border-white/10 shadow-sm hover:bg-gray-200 dark:hover:bg-white/10 transition"
                 title="Trang chủ"
               >
                 <FontAwesomeIcon icon={faHouse} className="w-4 h-4 text-slate-500 dark:text-slate-400" />
@@ -234,10 +234,10 @@ function BreadcrumbNeo({ category, appName }) {
             {/* Category */}
             {category?.slug && (
               <>
-                <li className="flex items-center min-w-0">
+                <li className="flex-shrink-0 flex items-center min-w-0">
                   <Link
                     href={`/category/${category.slug}`}
-                    className="inline-flex items-center rounded-lg px-3 py-1.5 bg-gray-200/50 dark:bg-white/5 border border-transparent dark:border-white/10 hover:bg-gray-200 dark:hover:bg-white/10 transition max-w-[40vw] sm:max-w-[30vw]"
+                    className="inline-flex items-center rounded-lg px-3 py-1.5 bg-gray-200/50 dark:bg-white/5 border border-transparent dark:border-white/10 hover:bg-gray-200 dark:hover:bg-white/10 transition max-w-[40vw] sm:max-w-[200px]"
                     title={category.name || 'Chuyên mục'}
                   >
                     <span className="truncate font-semibold text-gray-700 dark:text-gray-200">{category.name || 'Chuyên mục'}</span>
@@ -250,9 +250,9 @@ function BreadcrumbNeo({ category, appName }) {
             )}
 
             {/* Current */}
-            <li className="min-w-0">
+            <li className="min-w-0 flex-1">
               <span
-                className="inline-flex items-center rounded-lg px-3 py-1.5 bg-sky-50 dark:bg-sky-400/10 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-500/30 shadow-sm max-w-[55vw] sm:max-w-[45vw] md:max-w-[55%] lg:max-w-[60%]"
+                className="inline-flex items-center rounded-lg px-3 py-1.5 bg-sky-50 dark:bg-sky-400/10 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-500/30 shadow-sm w-full max-w-full md:max-w-2xl"
                 title={appName}
               >
                 <span className="truncate font-semibold">{appName}</span>
@@ -264,6 +264,7 @@ function BreadcrumbNeo({ category, appName }) {
     </div>
   );
 }
+
 
 /* ===================== InfoRow ===================== */
 const InfoRow = memo(({ label, value, expandable = false, expanded = false, onToggle }) => {
@@ -623,7 +624,7 @@ export default function Detail({ serverApp, serverRelated }) {
       {/* Modal thông báo */}
       <CenterModal open={modal.open} title={modal.title} body={modal.body} actions={modal.actions} />
 
-      {/* ===== Breadcrumb mới ===== */}
+      {/* ===== Breadcrumb mới đã sửa lỗi ===== */}
       <BreadcrumbNeo category={app?.category} appName={app?.name} />
 
       <div className="bg-gray-100 dark:bg-zinc-950 min-h-screen pb-12 overflow-x-hidden">
