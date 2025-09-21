@@ -69,7 +69,7 @@ async function createNotification(payload = {}) {
   if (!toUserId) return;
   await addDoc(collection(db, 'notifications'), {
     toUserId,
-    type, // 'comment' | 'reply'
+    type, // 'comment' | 'reply' | 'like'
     postId,
     commentId,
     isRead: false,
@@ -78,52 +78,6 @@ async function createNotification(payload = {}) {
     fromUserId,
     ...extra,
   });
-}
-async function upsertLikeNotification({ toUserId, postId, commentId, fromUser, postTitle = '', commentText = '', cooldownSec = 60 }) {
-  if (!toUserId || !commentId || !fromUser) return;
-  
-  // Tìm thông báo like gần nhất của người dùng này cho bình luận này
-  const q = query(
-    collection(db, 'notifications'),
-    where('toUserId', '==', toUserId),
-    where('commentId', '==', commentId),
-    where('fromUserId', '==', fromUser.uid),
-    where('type', '==', 'like'),
-    orderBy('createdAt', 'desc'),
-    limit(1)
-  );
-  const snap = await getDocs(q);
-
-  let shouldCreateNew = true;
-  if (!snap.empty) {
-    const d = snap.docs[0].data();
-    const updatedAt = d?.updatedAt?.seconds ? d.updatedAt.seconds * 1000 : 0;
-    const withinCooldown = Date.now() - updatedAt < cooldownSec * 1000;
-    if (withinCooldown) {
-      // Nếu có thông báo trong thời gian cooldown, chỉ cập nhật nó
-      // và không tạo thông báo mới hoặc bump counter
-      await updateDoc(doc(db, 'notifications', snap.docs[0].id), { updatedAt: serverTimestamp() });
-      shouldCreateNew = false;
-    }
-  }
-
-  if (shouldCreateNew) {
-    await addDoc(collection(db, 'notifications'), {
-      toUserId,
-      type: 'like',
-      postId: String(postId),
-      commentId,
-      fromUserId: fromUser.uid,
-      fromUserName: preferredName(fromUser),
-      fromUserPhoto: preferredPhoto(fromUser),
-      postTitle,
-      commentText,
-      updatedAt: serverTimestamp(),
-      createdAt: serverTimestamp(),
-      isRead: false
-    });
-    await bumpCounter(toUserId, +1);
-  }
 }
 
 /* ================= Users bootstrap ================= */
@@ -813,15 +767,18 @@ export default function Comments({ postId, postTitle }) {
       
       // Sửa logic: Chỉ tạo thông báo khi người dùng like
       if (!hasLiked && me.uid !== c.authorId) {
-        await upsertLikeNotification({
+        await createNotification({
           toUserId: c.authorId,
+          type: 'like',
           postId: String(c.postId),
           commentId: c.id,
-          fromUser: me,
-          postTitle: (typeof postTitle === 'string' ? postTitle : '') || '',
+          fromUserId: me.uid,
+          fromUserName: preferredName(me),
+          fromUserPhoto: preferredPhoto(me),
+          postTitle: postTitle || '',
           commentText: excerpt(c.content, 160),
-          cooldownSec: 60
         });
+        await bumpCounter(c.authorId, +1);
       }
     } finally {
       const out = new Set(likingIds); out.delete(c.id); setLikingIds(out);
