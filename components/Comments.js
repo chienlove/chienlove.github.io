@@ -13,7 +13,7 @@ import {
 import { sendEmailVerification } from 'firebase/auth';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faPaperPlane, faReply, faTrash, faUserCircle, faQuoteLeft, faHeart
+  faPaperPlane, faReply, faTrash, faUserCircle, faQuoteLeft, faHeart, faArrowUp
 } from '@fortawesome/free-solid-svg-icons';
 
 /* ================= Helpers ================= */
@@ -81,9 +81,8 @@ async function createNotification(payload = {}) {
 }
 async function upsertLikeNotification({ toUserId, postId, commentId, fromUser, postTitle = '', commentText = '', cooldownSec = 60 }) {
   if (!toUserId || !commentId || !fromUser) return;
-  if (toUserId === fromUser.uid) return;
-
-  const nid = `like_${toUserId}_${commentId}`;
+  
+  const nid = `like_${toUserId}_${commentId}_${fromUser.uid}`;
   const nref = doc(db, 'notifications', nid);
 
   const snap = await getDoc(nref);
@@ -254,21 +253,25 @@ function CommentHeader({ c, me, isAdminFn, dt, canDelete, onDelete }) {
 function Quote({ quoteFrom, me }) {
   if (!quoteFrom) return null;
   return (
-    <div className="relative mt-3 p-4 border-l-4 border-gray-300 dark:border-gray-600 text-[15px] text-gray-700 dark:text-gray-300">
-      <div className="flex items-center gap-2 mb-2 text-sm font-semibold text-orange-600 dark:text-orange-400">
+    <div className="mt-3 p-4 rounded-lg bg-gray-100 dark:bg-gray-800 border-l-4 border-gray-300 dark:border-gray-600">
+      <div className="flex items-center mb-1">
         {quoteFrom.authorId ? (
           <Link
             href={me && quoteFrom.authorId === me.uid ? '/profile' : `/users/${quoteFrom.authorId}`}
-            className="hover:text-orange-500 dark:hover:text-orange-300 hover:underline transition-colors"
+            className="flex items-center gap-1 text-sm font-semibold text-orange-600 dark:text-orange-400 hover:underline"
           >
-            {quoteFrom.userName || 'Người dùng'} said:
+            <span>{quoteFrom.userName || 'Người dùng'}</span>
+            <FontAwesomeIcon icon={faArrowUp} className="w-3 h-3 text-orange-600 dark:text-orange-400" />
           </Link>
         ) : (
-          <span>{quoteFrom.userName || 'Người dùng'} said:</span>
+          <span className="flex items-center gap-1 text-sm font-semibold text-orange-600 dark:text-orange-400">
+            <span>{quoteFrom.userName || 'Người dùng'}</span>
+            <FontAwesomeIcon icon={faArrowUp} className="w-3 h-3 text-orange-600 dark:text-orange-400" />
+          </span>
         )}
-        <FontAwesomeIcon icon={faReply} className="w-3.5 h-3.5 translate-y-[1px]" />
+        <span className="ml-1 text-gray-500 dark:text-gray-400">said:</span>
       </div>
-      <div className="whitespace-pre-wrap break-words">{excerpt(quoteFrom.content, 200)}</div>
+      <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words">{excerpt(quoteFrom.content, 200)}</div>
     </div>
   );
 }
@@ -365,21 +368,25 @@ function ReplyBox({
       {open && (
         <form onSubmit={onReply} className="flex flex-col gap-2 mt-2">
           {target && (
-            <div className="relative p-4 border-l-4 border-gray-300 dark:border-gray-600 text-[15px] text-gray-700 dark:text-gray-300">
-              <div className="flex items-center gap-2 mb-2 text-sm font-semibold text-orange-600 dark:text-orange-400">
+            <div className="p-4 rounded-lg bg-gray-100 dark:bg-gray-800 border-l-4 border-gray-300 dark:border-gray-600">
+              <div className="flex items-center mb-1">
                 {target.authorId ? (
                   <Link
                     href={me && target.authorId === me.uid ? '/profile' : `/users/${target.authorId}`}
-                    className="hover:text-orange-500 dark:hover:text-orange-300 hover:underline transition-colors"
+                    className="flex items-center gap-1 text-sm font-semibold text-orange-600 dark:text-orange-400 hover:underline"
                   >
-                    {target.userName || 'Người dùng'} said:
+                    <span>{target.userName || 'Người dùng'}</span>
+                    <FontAwesomeIcon icon={faArrowUp} className="w-3 h-3 text-orange-600 dark:text-orange-400" />
                   </Link>
                 ) : (
-                  <span>{target.userName || 'Người dùng'} said:</span>
+                  <span className="flex items-center gap-1 text-sm font-semibold text-orange-600 dark:text-orange-400">
+                    <span>{target.userName || 'Người dùng'}</span>
+                    <FontAwesomeIcon icon={faArrowUp} className="w-3 h-3 text-orange-600 dark:text-orange-400" />
+                  </span>
                 )}
-                <FontAwesomeIcon icon={faReply} className="w-3.5 h-3.5 translate-y-[1px]" />
+                <span className="ml-1 text-gray-500 dark:text-gray-400">said:</span>
               </div>
-              <div className="whitespace-pre-wrap break-words">{excerpt(target.content, 200)}</div>
+              <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words">{excerpt(target.content, 200)}</div>
             </div>
           )}
           <textarea
@@ -788,7 +795,11 @@ export default function Comments({ postId, postTitle }) {
           'stats.likesReceived': increment(hasLiked ? -1 : +1)
         });
       }
-      if (!hasLiked && me.uid !== c.authorId) {
+      
+      // Sửa logic: Luôn gọi upsertLikeNotification khi like
+      // và để hàm này tự xử lý việc tạo/cập nhật thông báo
+      // dựa trên điều kiện cooldown.
+      if (me.uid !== c.authorId) {
         await upsertLikeNotification({
           toUserId: c.authorId,
           postId: String(c.postId),
@@ -799,6 +810,7 @@ export default function Comments({ postId, postTitle }) {
           cooldownSec: 60
         });
       }
+
     } finally {
       const out = new Set(likingIds); out.delete(c.id); setLikingIds(out);
     }
