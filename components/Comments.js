@@ -79,51 +79,6 @@ async function createNotification(payload = {}) {
   });
 }
 
-/** ✅ Gộp thông báo LIKE theo (toUserId, postId, commentId) */
-async function upsertLikeNotification({
-  toUserId, postId, commentId,
-  fromUserId, fromUserName, fromUserPhoto,
-  postTitle = '', commentText = ''
-}) {
-  if (!toUserId || !postId || !commentId) return;
-  const nid = `like_${toUserId}_${postId}_${commentId}`;
-  const ref = doc(db, 'notifications', nid);
-
-  const docSnap = await getDoc(ref);
-
-  if (docSnap.exists()) {
-    // Tài liệu đã tồn tại, cập nhật nó
-    await updateDoc(ref, {
-      updatedAt: serverTimestamp(),
-      lastLikerName: fromUserName || 'Ai đó',
-      lastLikerPhoto: fromUserPhoto || '',
-      isRead: false, // Luôn đặt isRead thành false để thông báo mới được kích hoạt
-      count: increment(1),
-      likers: arrayUnion(fromUserId),
-    });
-  } else {
-    // Tài liệu chưa tồn tại, tạo mới
-    await setDoc(ref, {
-      toUserId,
-      type: 'like',
-      postId: String(postId),
-      commentId,
-      isRead: false,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-      fromUserId, fromUserName, fromUserPhoto,
-      lastLikerName: fromUserName || 'Ai đó',
-      lastLikerPhoto: fromUserPhoto || '',
-      count: 1,
-      likers: [fromUserId],
-      postTitle,
-      commentText,
-    });
-  }
-}
-
-
-
 /* ================= Users bootstrap ================= */
 async function ensureUserDoc(u) {
   if (!u) return;
@@ -780,10 +735,11 @@ export default function Comments({ postId, postTitle }) {
         await updateDoc(doc(db, 'users', c.authorId), { 'stats.likesReceived': increment(hasLiked ? -1 : +1) });
       }
 
-      // ✅ Chỉ khi LIKE (không phải UNLIKE) thì upsert thông báo gộp -- và KHÔNG bump counter chéo user
+            // ✅ Chỉ khi LIKE (không phải UNLIKE) thì tạo thông báo mới
       if (!hasLiked && me.uid !== c.authorId) {
-        await upsertLikeNotification({
+        await createNotification({
           toUserId: c.authorId,
+          type: 'like', // Đảm bảo loại là 'like'
           postId: String(c.postId),
           commentId: c.id,
           fromUserId: me.uid,
