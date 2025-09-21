@@ -69,8 +69,8 @@ async function createNotification(payload = {}) {
   await addDoc(collection(db, 'notifications'), {
     toUserId,
     type, // 'comment' | 'reply' | 'like'
-    postId,
-    commentId,
+    postId: String(postId || ''),
+    commentId: commentId || null,
     isRead: false,
     updatedAt: serverTimestamp(),
     createdAt: serverTimestamp(),
@@ -775,7 +775,7 @@ const toggleLike = async (c) => {
   try {
     const cref = doc(db, 'comments', c.id);
 
-    // Dùng transaction để đọc trạng thái mới nhất và cập nhật chuẩn xác
+    // Transaction chỉ chạm vào doc comment để tránh bị rules chặn
     const result = await runTransaction(db, async (tx) => {
       const snap = await tx.get(cref);
       if (!snap.exists()) return { didLike: false, data: null };
@@ -789,25 +789,17 @@ const toggleLike = async (c) => {
           likedBy: arrayRemove(me.uid),
           likeCount: Math.max(0, (data.likeCount || 0) - 1),
         });
-        // trừ điểm likeReceived của tác giả (nếu có)
-        if (data.authorId) {
-          tx.update(doc(db, 'users', data.authorId), { 'stats.likesReceived': increment(-1) });
-        }
         return { didLike: false, data };
       } else {
         tx.update(cref, {
           likedBy: arrayUnion(me.uid),
           likeCount: (data.likeCount || 0) + 1,
         });
-        // cộng điểm likeReceived của tác giả (nếu có)
-        if (data.authorId) {
-          tx.update(doc(db, 'users', data.authorId), { 'stats.likesReceived': increment(1) });
-        }
         return { didLike: true, data };
       }
     });
 
-    // Nếu là thao tác LIKE thì tạo/upsert thông báo gộp cho tác giả
+    // Nếu là LIKE thì upsert thông báo gộp cho tác giả bình luận
     if (result?.didLike) {
       const targetUid = result.data?.authorId;
       if (targetUid && targetUid !== me.uid) {
