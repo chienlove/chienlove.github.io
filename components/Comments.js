@@ -48,7 +48,7 @@ function formatDate(ts) {
 }
 function excerpt(s, n = 140) {
   const t = String(s || '').replace(/\s+/g, ' ').trim();
-  return t.length > n ? `${t.slice(0, n)}…`` : t;
+  return t.length > n ? `${t.slice(0, n)}…` : t;
 }
 
 /* ================= Notifications ================= */
