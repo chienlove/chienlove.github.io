@@ -334,9 +334,9 @@ export default function NotificationsPanel({ open, onClose }) {
                       <div
                         className={`relative rounded-xl border shadow-sm px-4 py-3
                           ${n.isRead
-                            ? 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800'
-                            : 'bg-gray-50 dark:bg-gray-950 border-gray-200 dark:border-gray-800'
-                          }`}
+  ? 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800'
+  : 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-300 dark:border-emerald-700'
+}
                       >
                         {/* Bỏ badge "Mới" & đưa thời gian xuống hàng hành động */}
 
