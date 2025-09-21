@@ -1,120 +1,258 @@
-// components/NotificationsPanel.js
+// components/Comments.js
 import { useEffect, useMemo, useRef, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/router';
 import { auth, db } from '../lib/firebase-client';
 import {
-  collection, deleteDoc, doc, getDoc, limit, onSnapshot, orderBy, query,
-  runTransaction, updateDoc, where, writeBatch
+  addDoc, collection, deleteDoc, doc, getDoc, setDoc, updateDoc,
+  limit, onSnapshot, orderBy, query, runTransaction,
+  serverTimestamp, where,
+  arrayUnion, arrayRemove, increment,
+  getDocs, startAfter, writeBatch
 } from 'firebase/firestore';
+import { sendEmailVerification } from 'firebase/auth';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faBell, faEllipsisVertical, faTrash, faCheckDouble, faTimes,
-  faArrowRight, faHeart, faComment, faReply, faEnvelopeOpen, faCheck
+  faPaperPlane, faReply, faTrash, faUserCircle, faQuoteLeft, faHeart, faArrowUp
 } from '@fortawesome/free-solid-svg-icons';
 
-/* ========== Helpers ========== */
+/* ================= Helpers ================= */
+function preferredName(user) {
+  if (!user) return 'Người dùng';
+  const p0 = user.providerData?.[0];
+  return user.displayName || user.email || p0?.displayName || p0?.email || 'Người dùng';
+}
+function preferredPhoto(user) {
+  return user?.photoURL || user?.providerData?.[0]?.photoURL || '';
+}
 function formatDate(ts) {
   try {
     let d = null;
-    if (!ts) return null;
+    if (!ts) return '';
     if (ts.seconds) d = new Date(ts.seconds * 1000);
     else if (typeof ts === 'number') d = new Date(ts);
     else if (typeof ts === 'string') d = new Date(ts);
     else if (ts instanceof Date) d = ts;
-    if (!d) return null;
-    const rel = new Intl.RelativeTimeFormat('vi', { numeric: 'auto' });
+    if (!d) return '';
     const diff = (Date.now() - d.getTime()) / 1000;
+    const rtf = new Intl.RelativeTimeFormat('vi', { numeric: 'auto' });
     const units = [['year',31536000],['month',2592000],['week',604800],['day',86400],['hour',3600],['minute',60],['second',1]];
     for (const [unit, sec] of units) {
       if (Math.abs(diff) >= sec || unit === 'second') {
         const val = Math.round(diff / sec * -1);
-        return { rel: rel.format(val, unit), abs: d.toLocaleString('vi-VN') };
+        return { rel: rtf.format(val, unit), abs: d.toLocaleString('vi-VN') };
       }
     }
     return { rel: '', abs: d.toLocaleString('vi-VN') };
-  } catch { return null; }
+  } catch { return ''; }
+}
+function excerpt(s, n = 140) {
+  const t = String(s || '').replace(/\s+/g, ' ').trim();
+  return t.length > n ? `${t.slice(0, n)}…`` : t;
 }
 
-function InitialsAvatar({ name, size = 40 }) {
-  const initials = (name || '?')
-    .split(' ')
-    .map(s => s[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2);
+/* ================= Notifications ================= */
+async function bumpCounter(uid, delta) {
+  if (!uid || !Number.isFinite(delta)) return;
+  const ref = doc(db, 'user_counters', uid);
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    const cur = snap.exists() ? (snap.data().unreadCount || 0) : 0;
+    tx.set(ref, {
+      unreadCount: Math.max(0, cur + delta),
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+  });
+}
+async function createNotification(payload = {}) {
+  const { toUserId, type, postId, commentId, fromUserId, ...extra } = payload;
+  if (!toUserId) return;
+  await addDoc(collection(db, 'notifications'), {
+    toUserId,
+    type, // 'comment' | 'reply'
+    postId,
+    commentId,
+    isRead: false,
+    updatedAt: serverTimestamp(),
+    createdAt: serverTimestamp(),
+    fromUserId,
+    ...extra,
+  });
+}
+async function upsertLikeNotification({ toUserId, postId, commentId, fromUser, postTitle = '', commentText = '', cooldownSec = 60 }) {
+  if (!toUserId || !commentId || !fromUser) return;
+  
+  // Tìm thông báo like gần nhất của người dùng này cho bình luận này
+  const q = query(
+    collection(db, 'notifications'),
+    where('toUserId', '==', toUserId),
+    where('commentId', '==', commentId),
+    where('fromUserId', '==', fromUser.uid),
+    where('type', '==', 'like'),
+    orderBy('createdAt', 'desc'),
+    limit(1)
+  );
+  const snap = await getDocs(q);
+
+  let shouldCreateNew = true;
+  if (!snap.empty) {
+    const d = snap.docs[0].data();
+    const updatedAt = d?.updatedAt?.seconds ? d.updatedAt.seconds * 1000 : 0;
+    const withinCooldown = Date.now() - updatedAt < cooldownSec * 1000;
+    if (withinCooldown) {
+      // Nếu có thông báo trong thời gian cooldown, chỉ cập nhật nó
+      // và không tạo thông báo mới hoặc bump counter
+      await updateDoc(doc(db, 'notifications', snap.docs[0].id), { updatedAt: serverTimestamp() });
+      shouldCreateNew = false;
+    }
+  }
+
+  if (shouldCreateNew) {
+    await addDoc(collection(db, 'notifications'), {
+      toUserId,
+      type: 'like',
+      postId: String(postId),
+      commentId,
+      fromUserId: fromUser.uid,
+      fromUserName: preferredName(fromUser),
+      fromUserPhoto: preferredPhoto(fromUser),
+      postTitle,
+      commentText,
+      updatedAt: serverTimestamp(),
+      createdAt: serverTimestamp(),
+      isRead: false
+    });
+    await bumpCounter(toUserId, +1);
+  }
+}
+
+/* ================= Users bootstrap ================= */
+async function ensureUserDoc(u) {
+  if (!u) return;
+  const uref = doc(db, 'users', u.uid);
+  const snap = await getDoc(uref);
+  const base = {
+    uid: u.uid,
+    email: u.email || '',
+    displayName: preferredName(u),
+    photoURL: preferredPhoto(u),
+    updatedAt: serverTimestamp(),
+  };
+  if (!snap.exists()) {
+    await setDoc(uref, {
+      ...base,
+      createdAt: serverTimestamp(),
+      stats: { comments: 0, likesReceived: 0 },
+    }, { merge: true });
+  } else {
+    await setDoc(uref, base, { merge: true });
+  }
+}
+
+/* ================= CenterModal (alert/confirm) ================= */
+function CenterModal({ open, title, children, onClose, actions, tone = 'info' }) {
+  if (!open) return null;
+  const toneClass =
+    tone === 'success' ? 'border-emerald-300 bg-emerald-50' :
+    tone === 'error'   ? 'border-rose-300 bg-rose-50' :
+    tone === 'warning' ? 'border-amber-300 bg-amber-50' :
+                         'border-sky-300 bg-sky-50';
   return (
-    <div
-      className="rounded-full bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-bold flex items-center justify-center"
-      style={{ width: size, height: size, fontSize: size * 0.42 }}
-    >
-      {initials}
+    <div className="fixed inset-0 z-[200] flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className={`relative w-[92vw] max-w-md rounded-2xl border shadow-2xl p-4 ${toneClass}`}>
+        {title && <h3 className="text-lg font-semibold mb-2">{title}</h3>}
+        <div className="text-sm text-gray-900">{children}</div>
+        <div className="mt-4 flex justify-end gap-2">{actions}</div>
+      </div>
     </div>
   );
 }
 
-function UserAvatar({ photo, name, size = 44 }) {
-  if (photo) {
-    return (
-      <img
-        src={photo}
-        referrerPolicy="no-referrer"
-        alt={name || 'avatar'}
-        className="rounded-full object-cover border border-gray-200 dark:border-gray-700"
-        style={{ width: size, height: size }}
-      />
-    );
-  }
-  return <InitialsAvatar name={name} size={size} />;
-}
+/* ================= Verified badge dạng X ================= */
+const VerifiedBadgeX = ({ className = '' }) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" className={`inline-block ${className}`} fill="#1d9bf0">
+    <path d="M22.25 12c0-1.43-.88-2.67-2.19-3.34.46-1.39.2-2.9-.81-3.91s-2.52-1.27-3.91-.81c-.66-1.31-1.91-2.19-3.34-2.19s-2.67.88-3.33 2.19c-1.4-.46-2.91-.2-3.92.81s-1.26 2.52-.8 3.91c-1.31.67-2.2 1.91-2.2 3.34s.89 2.67 2.2 3.34c-.46 1.39-.21 2.9.8 3.91s2.52 1.26 3.91.81c.67 1.31 1.91 2.19 3.34 2.19s2.68-.88 3.34-2.19c1.39.45 2.9.2 3.91-.81s1.27-2.52.81-3.91c1.31-.67 2.19-1.91 2.19-3.34zm-11.71 4.2L6.8 12.46l1.41-1.42 2.26 2.26 4.8-5.23 1.47 1.36-6.2 6.77z"/>
+  </svg>
+);
 
-/* ========== Badge theo loại ========== */
-function TypeBadge({ type }) {
-  if (type === 'like') {
-    return (
-      <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300">
-        <FontAwesomeIcon icon={faHeart} />
-        Thích
-      </span>
-    );
-  }
-  if (type === 'reply') {
-    return (
-      <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
-        <FontAwesomeIcon icon={faReply} />
-        Phản hồi
-      </span>
-    );
-  }
+/* ================= Sub‑components ================= */
+function ActionBar({ hasLiked, likeCount, onToggleLike, renderReplyTrigger }) {
   return (
-    <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
-      <FontAwesomeIcon icon={faComment} />
-      Bình luận
-    </span>
+    <div className="mt-2 flex items-center gap-4 text-sm text-gray-600 dark:text-gray-300">
+      <button
+        onClick={onToggleLike}
+        className={`inline-flex items-center gap-1 rounded-lg px-2 py-1 transition-colors
+          ${hasLiked 
+            ? 'text-rose-600 bg-rose-50 hover:bg-rose-100 dark:text-rose-300 dark:bg-rose-900/30 dark:hover:bg-rose-900/40' 
+            : 'text-gray-600 hover:text-rose-600 hover:bg-rose-50 dark:text-gray-300 dark:hover:text-rose-300 dark:hover:bg-rose-900/20'
+          }`}
+        title={hasLiked ? 'Bỏ thích' : 'Thích'}
+      >
+        <FontAwesomeIcon icon={faHeart} />
+        {likeCount > 0 && <span>{likeCount}</span>}
+      </button>
+
+      {renderReplyTrigger?.()}
+    </div>
   );
 }
 
-/* ========== Dialog gọn (Confirm & Info) ========== */
-function SimpleDialog({ open, onClose, onConfirm, title, message, confirmText = 'Xác nhận', mode = 'confirm' }) {
-  if (!open) return null;
+function CommentHeader({ c, me, isAdminFn, dt, canDelete, onDelete }) {
+  const isAdmin = isAdminFn?.(c.authorId);
+  const isSelf = !!me && c.authorId === me.uid;
+  const avatar = c.userPhoto || '';
+  const userName = c.userName || 'Người dùng';
+
+  const NameLink = ({ uid, children }) => {
+    if (!uid) return (
+      <span className="font-semibold text-sky-700 dark:text-sky-300">
+        {children}
+      </span>
+    );
+    const href = isSelf ? '/profile' : `/users/${uid}`;
+    return (
+      <Link
+        href={href}
+        className="font-semibold text-sky-700 dark:text-sky-300 hover:text-sky-600 dark:hover:text-sky-400 hover:underline transition-colors"
+      >
+        {children}
+      </Link>
+    );
+  };
+
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative w-[92vw] max-w-md rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 p-4 shadow-2xl">
-        <h3 className="text-base font-semibold text-gray-900 dark:text-gray-100">{title}</h3>
-        <p className="mt-2 text-sm text-gray-700 dark:text-gray-300">{message}</p>
-        <div className="mt-4 flex justify-end gap-2">
-          {mode === 'confirm' ? (
-            <>
-              <button onClick={onClose} className="px-3 py-2 text-sm rounded-lg border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
-                Hủy
-              </button>
-              <button onClick={onConfirm} className="px-3 py-2 text-sm rounded-lg bg-rose-600 text-white hover:bg-rose-700">
-                {confirmText}
-              </button>
-            </>
-          ) : (
-            <button onClick={onClose} className="px-3 py-2 text-sm rounded-lg bg-gray-900 text-white hover:opacity-90">
-              Đóng
+    <div className="flex gap-3">
+      <div className="flex-shrink-0 w-10 h-10 rounded-full border border-gray-200 dark:border-gray-700 flex items-center justify-center bg-gray-50 dark:bg-gray-900/40">
+        {avatar ? (
+          <img src={avatar} alt="avatar" className="w-full h-full rounded-full object-cover" referrerPolicy="no-referrer" />
+        ) : (
+          <FontAwesomeIcon icon={faUserCircle} className="w-6 h-6 text-sky-500" />
+        )}
+      </div>
+
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <NameLink uid={c.authorId}>{userName}</NameLink>
+
+          {isAdmin && (
+            <span className="inline-flex items-center justify-center translate-y-[0.5px]" title="Quản trị viên đã xác minh">
+              <VerifiedBadgeX className="w-4 h-4 shrink-0" />
+            </span>
+          )}
+
+          <span className="text-xs text-gray-500 dark:text-gray-400" title={dt?.abs}>
+            {dt?.rel}
+          </span>
+
+          {canDelete && (
+            <button
+              onClick={onDelete}
+              className="text-xs text-rose-600 hover:text-rose-700 ml-auto inline-flex items-center gap-1"
+              title="Xoá"
+            >
+              <FontAwesomeIcon icon={faTrash} />
+              Xoá
             </button>
           )}
         </div>
@@ -123,344 +261,718 @@ function SimpleDialog({ open, onClose, onConfirm, title, message, confirmText = 
   );
 }
 
-/* ========== Main ========== */
-export default function NotificationsPanel({ open, onClose }) {
-  const router = useRouter();
-  const [user, setUser] = useState(null);
-  const [items, setItems] = useState([]);
-  const [headerMenuOpen, setHeaderMenuOpen] = useState(false);
-  const [rowMenuId, setRowMenuId] = useState(null); // id thông báo đang mở menu 3 chấm
-  const [confirm, setConfirm] = useState({ open: false, id: null, type: '' });
-  const [info, setInfo] = useState({ open: false, title: '', message: '' });
+function Quote({ quoteFrom, me }) {
+  if (!quoteFrom) return null;
+  return (
+    <div className="mt-3 overflow-hidden rounded-lg border border-gray-300 dark:border-gray-600">
+      <div className="flex items-center gap-2 px-3 py-2 bg-gray-200 dark:bg-gray-700 text-sm font-semibold text-orange-600 dark:text-orange-400">
+        {quoteFrom.authorId ? (
+          <Link
+            href={me && quoteFrom.authorId === me.uid ? '/profile' : `/users/${quoteFrom.authorId}`}
+            className="flex items-center gap-1 hover:underline"
+          >
+            <span>{quoteFrom.userName || 'Người dùng'}</span>
+            <FontAwesomeIcon icon={faArrowUp} className="w-3 h-3 translate-y-[1px]" />
+          </Link>
+        ) : (
+          <span className="flex items-center gap-1">
+            <span>{quoteFrom.userName || 'Người dùng'}</span>
+            <FontAwesomeIcon icon={faArrowUp} className="w-3 h-3 translate-y-[1px]" />
+          </span>
+        )}
+        <span className="text-gray-600 dark:text-gray-300">said:</span>
+      </div>
+      <div className="p-3 text-sm text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 border-t border-gray-300 dark:border-gray-600 whitespace-pre-wrap break-words">
+        {excerpt(quoteFrom.content, 200)}
+      </div>
+    </div>
+  );
+}
 
-  useEffect(() => {
-    const unsubAuth = auth.onAuthStateChanged(setUser);
-    return () => unsubAuth();
-  }, []);
+/* ================= ReplyBox (render trigger tuỳ biến) ================= */
+function ReplyBox({
+  me, postId, parent, replyingTo = null, adminUids, postTitle,
+  onNeedVerify, onNeedLogin,
+  renderTrigger
+}) {
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState('');
+  const [sending, setSending] = useState(false);
+  const target = replyingTo || parent;
+  const canReply = !!me && me.uid !== (target?.authorId ?? '');
 
-  useEffect(() => {
-    if (!user || !open) return;
-    const qn = query(
-      collection(db, 'notifications'),
-      where('toUserId', '==', user.uid),
-      orderBy('createdAt', 'desc'),
-      limit(50)
-    );
-    const unsub = onSnapshot(qn, (snap) => {
-      setItems(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-    });
-    return () => unsub();
-  }, [user, open]);
-
-  /* ---- OUTSIDE CLICK: dùng data-attribute để phân biệt header menu và row menu ---- */
-  useEffect(() => {
-    function onDocMouseDown(e) {
-      // Header menu
-      if (headerMenuOpen) {
-        const inside = e.target.closest?.('[data-header-menu]');
-        if (!inside) setHeaderMenuOpen(false);
-      }
-      // Row menu (item)
-      if (rowMenuId) {
-        const insideRow = e.target.closest?.(`[data-rowmenu-id="${rowMenuId}"]`);
-        if (!insideRow) setRowMenuId(null);
-      }
-    }
-    document.addEventListener('mousedown', onDocMouseDown);
-    return () => document.removeEventListener('mousedown', onDocMouseDown);
-  }, [headerMenuOpen, rowMenuId]);
-
-  const readCount = items.filter(i => i.isRead).length;
-  const unreadCount = items.length - readCount;
-
-  /* ---- counters ---- */
-  const decCounter = async (uid, amount = 1) => {
-    const counterRef = doc(db, 'user_counters', uid);
-    await runTransaction(db, async (tx) => {
-      const snap = await tx.get(counterRef);
-      const cur = snap.exists() ? (snap.data().unreadCount || 0) : 0;
-      tx.set(counterRef, { unreadCount: Math.max(0, cur - amount) }, { merge: true });
-    });
+  const tryOpen = () => {
+    if (!me) { onNeedLogin?.(); return; }
+    if (!me.emailVerified) { onNeedVerify?.(); return; }
+    setOpen(true);
   };
 
-  /* ---- actions ---- */
-  const markRead = async (id, wasRead) => {
-    if (!user) return;
-    await updateDoc(doc(db, 'notifications', id), { isRead: true });
-    if (!wasRead) await decCounter(user.uid, 1);
-  };
+  const onReply = async (e) => {
+    e.preventDefault();
+    if (!me) { onNeedLogin?.(); return; }
+    if (!me.emailVerified) { onNeedVerify?.(); return; }
+    if (!canReply || !text.trim() || sending) return;
 
-  const markAllRead = async () => {
-    if (!user) return;
-    const unreadIds = items.filter(i => !i.isRead).map(i => i.id);
-    if (unreadIds.length === 0) return;
-    const batch = writeBatch(db);
-    unreadIds.forEach((nid) => batch.update(doc(db, 'notifications', nid), { isRead: true }));
-    await batch.commit();
-    await decCounter(user.uid, unreadIds.length);
-  };
+    setSending(true);
+    try {
+      await ensureUserDoc(me);
 
-  const deleteOne = async (id) => {
-    if (!user) return;
-    const n = items.find(x => x.id === id);
-    await deleteDoc(doc(db, 'notifications', id));
-    if (n && !n.isRead) await decCounter(user.uid, 1);
-  };
+      const ref = await addDoc(collection(db, 'comments'), {
+        postId: String(postId),
+        parentId: parent.id,
+        authorId: me.uid,
+        userName: preferredName(me),
+        userPhoto: preferredPhoto(me),
+        content: text.trim(),
+        createdAt: serverTimestamp(),
+        replyToUserId: target.authorId || null,
+        likeCount: 0,
+        likedBy: []
+      });
+      setText('');
+      setOpen(false);
 
-  const deleteAllRead = async () => {
-    if (!user) return;
-    const ids = items.filter(i => i.isRead).map(i => i.id);
-    if (ids.length === 0) return;
-    const batch = writeBatch(db);
-    ids.forEach((nid) => batch.delete(doc(db, 'notifications', nid)));
-    await batch.commit();
-  };
+      await updateDoc(doc(db, 'users', me.uid), { 'stats.comments': increment(1) });
 
-  /* ---- Xem chi tiết: kiểm tra comment còn không ---- */
-  const handleOpenDetail = async (n) => {
-    try { await markRead(n.id, n.isRead); } catch {}
-    if (n.commentId) {
-      try {
-        const snap = await getDoc(doc(db, 'comments', n.commentId));
-        if (!snap.exists()) {
-          setInfo({
-            open: true,
-            title: 'Bình luận không còn tồn tại',
-            message: 'Bình luận này đã bị xoá bởi tác giả hoặc quản trị viên. Bạn vẫn có thể mở bài viết để xem các bình luận khác.'
-          });
-          return; // không điều hướng
-        }
-      } catch {
-        setInfo({
-          open: true,
-          title: 'Không thể kiểm tra bình luận',
-          message: 'Vui lòng thử lại sau hoặc mở bài viết để xem chi tiết.'
+      if (target.authorId && target.authorId !== me.uid) {
+        await createNotification({
+          toUserId: target.authorId,
+          type: 'reply',
+          postId: String(postId),
+          commentId: ref.id,
+          fromUserId: me.uid,
+          fromUserName: preferredName(me),
+          fromUserPhoto: preferredPhoto(me),
+          postTitle: postTitle || '',
+          commentText: excerpt(text),
         });
-        return;
+        await bumpCounter(target.authorId, +1);
       }
-    }
-    onClose?.();
-    const href = n.commentId
-      ? `/${n.postId}?comment=${n.commentId}#c-${n.commentId}`
-      : `/${n.postId}`;
-    router.push(href);
-  };
 
-  if (!open) return null;
+      const targets = adminUids.filter(u => u !== me.uid && u !== target.authorId);
+      await Promise.all(targets.map(async (uid) => {
+        await createNotification({
+          toUserId: uid,
+          type: 'comment',
+          postId: String(postId),
+          commentId: ref.id,
+          fromUserId: me.uid,
+          fromUserName: preferredName(me),
+          fromUserPhoto: preferredPhoto(me),
+          postTitle: postTitle || '',
+          commentText: excerpt(text),
+        });
+        await bumpCounter(uid, +1);
+      }));
+    } finally {
+      setSending(false);
+    }
+  };
 
   return (
     <>
-      <div className="fixed right-3 top-14 z-50 w-[28rem] max-w-[95vw]">
-        {/* Backdrop */}
-        <div className="fixed inset-0 bg-black/30 -z-10" onClick={onClose} />
+      {!open && (renderTrigger ? renderTrigger(tryOpen) : (
+        <button onClick={tryOpen} className="inline-flex items-center gap-2 text-sm text-sky-700 dark:text-sky-300 hover:underline">
+          <FontAwesomeIcon icon={faReply} />
+          Trả lời
+        </button>
+      ))}
 
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl overflow-hidden">
-          {/* Header */}
-          <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <FontAwesomeIcon icon={faBell} className="text-gray-700 dark:text-gray-200" />
-              <div className="leading-tight">
-                <h4 className="font-semibold text-gray-900 dark:text-gray-100">Thông báo</h4>
-                <div className="text-xs text-gray-500 dark:text-gray-400">
-                  {items.length} tổng · {unreadCount} chưa đọc
-                </div>
+      {open && (
+        <form onSubmit={onReply} className="flex flex-col gap-2 mt-2">
+          {target && (
+            <div className="overflow-hidden rounded-lg border border-gray-300 dark:border-gray-600">
+              <div className="flex items-center gap-2 px-3 py-2 bg-gray-200 dark:bg-gray-700 text-sm font-semibold text-orange-600 dark:text-orange-400">
+                {target.authorId ? (
+                  <Link
+                    href={me && target.authorId === me.uid ? '/profile' : `/users/${target.authorId}`}
+                    className="flex items-center gap-1 hover:underline"
+                  >
+                    <span>{target.userName || 'Người dùng'}</span>
+                    <FontAwesomeIcon icon={faArrowUp} className="w-3 h-3 translate-y-[1px]" />
+                  </Link>
+                ) : (
+                  <span className="flex items-center gap-1">
+                    <span>{target.userName || 'Người dùng'}</span>
+                    <FontAwesomeIcon icon={faArrowUp} className="w-3 h-3 translate-y-[1px]" />
+                  </span>
+                )}
+                <span className="text-gray-600 dark:text-gray-300">said:</span>
+              </div>
+              <div className="p-3 text-sm text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 border-t border-gray-300 dark:border-gray-600 whitespace-pre-wrap break-words">
+                {excerpt(target.content, 200)}
               </div>
             </div>
-
-            {/* Menu 3 chấm (header) */}
-            <div className="relative" data-header-menu>
-              <button
-                onClick={() => setHeaderMenuOpen(v => !v)}
-                className="w-9 h-9 inline-flex items-center justify-center rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
-                aria-label="Mở menu"
-                title="Tùy chọn"
-              >
-                <FontAwesomeIcon icon={faEllipsisVertical} />
-              </button>
-              {headerMenuOpen && (
-                <div className="absolute right-0 mt-2 w-56 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl z-50">
-                  <button
-                    onClick={() => { setHeaderMenuOpen(false); markAllRead(); }}
-                    className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-800 inline-flex items-center gap-2"
-                  >
-                    <FontAwesomeIcon icon={faCheckDouble} />
-                    Đánh dấu tất cả là đã đọc
-                  </button>
-                  <button
-                    onClick={() => { setHeaderMenuOpen(false); setConfirm({ open: true, type: 'allRead', id: null }); }}
-                    className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-800 inline-flex items-center gap-2"
-                  >
-                    <FontAwesomeIcon icon={faTrash} className="text-rose-600" />
-                    Xoá tất cả đã đọc
-                  </button>
-                  <div className="my-1 border-t border-gray-200 dark:border-gray-700" />
-                  <button
-                    onClick={onClose}
-                    className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-800 inline-flex items-center gap-2"
-                  >
-                    <FontAwesomeIcon icon={faTimes} />
-                    Đóng
-                  </button>
-                </div>
-              )}
-            </div>
+          )}
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            className="w-full min-h-[72px] border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2 text-[16px] leading-6 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500/40 outline-none shadow-sm"
+            placeholder={`Phản hồi ${replyingTo ? (replyingTo.userName || 'người dùng') : (parent.userName || 'người dùng')}…`}
+            maxLength={2000}
+          />
+          <div className="flex gap-2 justify-end">
+            <button
+              type="button"
+              onClick={() => { setOpen(false); setText(''); }}
+              className="px-3 py-2 text-sm rounded-xl border border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800"
+            >
+              Huỷ
+            </button>
+            <button
+              type="submit"
+              disabled={!text.trim() || sending}
+              className={`px-4 py-2 text-sm rounded-xl inline-flex items-center gap-2 text-white
+                ${!text.trim() || sending
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-indigo-600 hover:bg-indigo-700'
+                }`}
+            >
+              {sending ? 'Đang gửi…' : 'Gửi'}
+            </button>
           </div>
+        </form>
+      )}
+    </>
+  );
+}
 
-          {/* Danh sách dạng card: bo tròn & ngăn cách */}
-          <div className="max-h-[70vh] overflow-auto">
-            {items.length === 0 ? (
-              <div className="py-16 text-center text-gray-500 dark:text-gray-400">Chưa có thông báo</div>
-            ) : (
-              <ul className="p-3 space-y-3">
-                {items.map((n) => {
-                  const t = formatDate(n.createdAt);
-                  const who = n.fromUserName || 'Ai đó';
-                  const title = n.postTitle || `Bài viết ${n.postId}`;
-                  const content = n.commentText || '';
+// Component con để render một bình luận gốc và các phản hồi của nó
+function RootComment({ c, replies, me, adminUids, postId, postTitle, onOpenConfirm, toggleLike, deleteSingleComment, deleteThreadBatch, initialShowReplies }) {
+  const [showReplies, setShowReplies] = useState(initialShowReplies);
+  const dt = formatDate(c.createdAt);
+  const hasLiked = !!me && Array.isArray(c.likedBy) && c.likedBy.includes(me.uid);
+  const likeCount = c.likeCount || 0;
 
-                  return (
-                    <li key={n.id} className="relative">
-                      <div
-                        className={`relative rounded-xl border shadow-sm px-4 py-3
-                          ${n.isRead
-                            ? 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800'
-                            : 'bg-gray-50 dark:bg-gray-950 border-gray-200 dark:border-gray-800'
-                          }`}
-                      >
-                        {/* góc trên‑phải: thời gian + huy hiệu Mới */}
-                        <div className="absolute top-2 right-2 flex items-center gap-2">
-                          <span className="text-xs text-gray-500 dark:text-gray-400" title={t?.abs}>
-                            {t?.rel}
-                          </span>
-                          {!n.isRead && (
-                            <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-900">
-                              <FontAwesomeIcon icon={faEnvelopeOpen} />
-                              Mới
-                            </span>
-                          )}
-                        </div>
+  return (
+    <li
+      key={c.id}
+      id={`c-${c.id}`}
+      className="scroll-mt-24 rounded-2xl p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 transition-shadow hover:shadow-md"
+    >
+      <CommentHeader
+        c={c}
+        me={me}
+        isAdminFn={(uid)=>adminUids.includes(uid)}
+        dt={dt}
+        canDelete={!!me && (me.uid === c.authorId || adminUids.includes(me.uid))}
+        onDelete={() => {
+          onOpenConfirm('Xoá bình luận này và toàn bộ phản hồi của nó?', async () => {
+            await deleteThreadBatch(c);
+          });
+        }}
+      />
 
-                        <div className="flex gap-3">
-                          {/* avatar */}
-                          <UserAvatar photo={n.fromUserPhoto} name={who} size={44} />
-
-                          <div className="flex-1 min-w-0">
-                            {/* dòng người + badge loại + tiêu đề */}
-                            <div className="flex items-start gap-2">
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <span className="font-semibold text-gray-900 dark:text-gray-100">{who}</span>
-                                  <span className="text-sm text-gray-700 dark:text-gray-300">đã</span>
-                                  <TypeBadge type={n.type} />
-                                  <span className="text-sm text-gray-700 dark:text-gray-300">trong</span>
-                                  <span className="font-medium text-blue-600 dark:text-blue-400">
-                                    "{title}"
-                                  </span>
-                                </div>
-
-                                {content && (
-                                  <div className="mt-2 text-[13px] text-gray-600 dark:text-gray-400 line-clamp-3">
-                                    "{content}"
-                                  </div>
-                                )}
-                              </div>
-
-                              {/* menu 3 chấm (item) */}
-                              <div className="relative" data-rowmenu-id={n.id}>
-                                <button
-                                  onClick={() => setRowMenuId(prev => prev === n.id ? null : n.id)}
-                                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
-                                  aria-label="Tác vụ"
-                                  title="Tác vụ"
-                                >
-                                  <FontAwesomeIcon icon={faEllipsisVertical} />
-                                </button>
-
-                                {rowMenuId === n.id && (
-                                  <div className="absolute right-0 mt-2 w-48 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl z-50">
-                                    {!n.isRead && (
-                                      <button
-                                        onClick={async () => {
-                                          setRowMenuId(null);
-                                          await markRead(n.id, n.isRead);
-                                        }}
-                                        className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-800 inline-flex items-center gap-2"
-                                      >
-                                        <FontAwesomeIcon icon={faCheck} />
-                                        Đánh dấu đã đọc
-                                      </button>
-                                    )}
-                                    <button
-                                      onClick={() => {
-                                        setRowMenuId(null);
-                                        setConfirm({ open: true, id: n.id, type: 'single' });
-                                      }}
-                                      className="w-full px-3 py-2 text-left text-sm hover:bg-gray-50 dark:hover:bg-gray-800 inline-flex items-center gap-2"
-                                    >
-                                      <FontAwesomeIcon icon={faTrash} className="text-rose-600" />
-                                      Xoá
-                                    </button>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* hàng hành động */}
-                            <div className="mt-2 flex items-center justify-between">
-                              <button
-                                onClick={() => handleOpenDetail(n)}
-                                className="inline-flex items-center gap-2 text-sm text-blue-600 dark:text-blue-400 hover:underline"
-                                title="Xem chi tiết"
-                              >
-                                <FontAwesomeIcon icon={faArrowRight} />
-                                Xem chi tiết
-                              </button>
-
-                              {!n.isRead && (
-                                <button
-                                  onClick={() => markRead(n.id, n.isRead)}
-                                  className="text-sm px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
-                                >
-                                  Đánh dấu đã đọc
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
-        </div>
+      <div className="mt-2 whitespace-pre-wrap break-words text-gray-900 dark:text-gray-100 leading-6">
+        {c.content}
       </div>
 
-      {/* Confirm xoá */}
-      <SimpleDialog
-        open={confirm.open}
-        onClose={() => setConfirm({ open: false, id: null, type: '' })}
-        onConfirm={async () => {
-          if (confirm.type === 'single' && confirm.id) await deleteOne(confirm.id);
-          if (confirm.type === 'allRead') await deleteAllRead();
-          setConfirm({ open: false, id: null, type: '' });
-        }}
-        title={confirm.type === 'allRead' ? 'Xoá tất cả đã đọc?' : 'Xoá thông báo này?'}
-        message={confirm.type === 'allRead'
-          ? `Bạn có chắc muốn xoá ${readCount} thông báo đã đọc?`
-          : 'Bạn có chắc muốn xoá thông báo này? Hành động này không thể hoàn tác.'}
-        mode="confirm"
+      <ReplyBox
+        me={me}
+        postId={postId}
+        parent={c}
+        adminUids={adminUids}
+        postTitle={postTitle}
+        onNeedVerify={() => {}}
+        onNeedLogin={() => {}}
+        renderTrigger={(openFn) => (
+          <ActionBar
+            hasLiked={hasLiked}
+            likeCount={likeCount}
+            onToggleLike={() => toggleLike(c)}
+            renderReplyTrigger={() => (
+              <button onClick={openFn} className="inline-flex items-center gap-2 text-sm text-sky-700 dark:text-sky-300 hover:underline">
+                <FontAwesomeIcon icon={faReply} />
+                Trả lời
+              </button>
+            )}
+          />
+        )}
       />
 
-      {/* Info khi bình luận không còn tồn tại */}
-      <SimpleDialog
-        open={info.open}
-        onClose={() => setInfo({ open: false, title: '', message: '' })}
-        title={info.title}
-        message={info.message}
-        mode="info"
-      />
-    </>
+      {replies.length > 0 && (
+        <div className="mt-3">
+          {showReplies ? (
+            <ul className="space-y-4">
+              {replies.map((r) => {
+                const target = r.replyToUserId === c.authorId
+                  ? c
+                  : replies.find(x => x.authorId === r.replyToUserId) || null;
+                const dt2 = formatDate(r.createdAt);
+                const rHasLiked = !!me && Array.isArray(r.likedBy) && r.likedBy.includes(me.uid);
+                const rLikeCount = r.likeCount || 0;
+
+                return (
+                  <li
+                    key={r.id}
+                    id={`c-${r.id}`}
+                    className="pl-4 border-l-2 border-gray-200 dark:border-gray-800 scroll-mt-24 bg-gray-50 dark:bg-gray-950 rounded-lg p-3"
+                  >
+                    <CommentHeader
+                      c={r}
+                      me={me}
+                      isAdminFn={(uid)=>adminUids.includes(uid)}
+                      dt={dt2}
+                      canDelete={!!me && (me.uid === r.authorId || adminUids.includes(me.uid))}
+                      onDelete={() => {
+                        onOpenConfirm('Bạn có chắc muốn xoá phản hồi này?', async () => {
+                          await deleteSingleComment(r);
+                        });
+                      }}
+                    />
+                    <Quote quoteFrom={target} me={me} />
+                    <div className="mt-2 whitespace-pre-wrap break-words text-gray-900 dark:text-gray-100 leading-6">
+                      {r.content}
+                    </div>
+                    <ReplyBox
+                      me={me}
+                      postId={postId}
+                      parent={c}
+                      replyingTo={r}
+                      adminUids={adminUids}
+                      postTitle={postTitle}
+                      onNeedVerify={() => {}}
+                      onNeedLogin={() => {}}
+                      renderTrigger={(openFn) => (
+                        <ActionBar
+                          hasLiked={rHasLiked}
+                          likeCount={rLikeCount}
+                          onToggleLike={() => toggleLike(r)}
+                          renderReplyTrigger={() => (
+                            <button onClick={openFn} className="inline-flex items-center gap-2 text-sm text-sky-700 dark:text-sky-300 hover:underline">
+                              <FontAwesomeIcon icon={faReply} />
+                              Trả lời
+                            </button>
+                          )}
+                        />
+                      )}
+                    />
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <button
+              onClick={() => setShowReplies(true)}
+              className="mt-3 text-sm font-semibold text-sky-600 dark:text-sky-400 hover:underline inline-flex items-center gap-2"
+            >
+              <FontAwesomeIcon icon={faReply} />
+              Xem {replies.length} câu trả lời
+            </button>
+          )}
+        </div>
+      )}
+    </li>
+  );
+}
+
+/* ================= Main ================= */
+export default function Comments({ postId, postTitle }) {
+  const router = useRouter();
+  const [me, setMe] = useState(null);
+  const [adminUids, setAdminUids] = useState([]);
+  const [content, setContent] = useState('');
+
+  const PAGE_SIZE = 50;
+  const [liveItems, setLiveItems] = useState([]);
+  const [olderItems, setOlderItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const lastDocRef = useRef(null);
+  const unsubRef = useRef(null);
+  const [hasMore, setHasMore] = useState(false);
+
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalTitle, setModalTitle] = useState('');
+  const [modalContent, setModalContent] = useState(null);
+  const [modalActions, setModalActions] = useState(null);
+  const [modalTone, setModalTone] = useState('info');
+
+  const [likingIds, setLikingIds] = useState(() => new Set());
+  const [threadsToExpand, setThreadsToExpand] = useState(new Set());
+
+  const openHeaderLoginPopup = () => {
+    if (typeof window === 'undefined') return;
+    try { window.dispatchEvent(new Event('close-login')); } catch {}
+    try { window.dispatchEvent(new Event('open-auth')); } catch {}
+  };
+  const openLoginPrompt = () => {
+    setModalTitle('Cần đăng nhập');
+    setModalContent(<p>Bạn cần <b>đăng nhập</b> để thực hiện thao tác này.</p>);
+    setModalTone('info');
+    setModalActions(
+      <>
+        <button
+          onClick={() => { setModalOpen(false); openHeaderLoginPopup(); }}
+          className="px-3 py-2 text-sm rounded-lg bg-gray-900 text-white hover:opacity-90"
+        >
+          Đăng nhập
+        </button>
+        <button onClick={() => setModalOpen(false)} className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-white">Để sau</button>
+      </>
+    );
+    setModalOpen(true);
+  };
+  const openConfirm = (message, onConfirm) => {
+    setModalTitle('Xác nhận xoá');
+    setModalContent(<p>{message}</p>);
+    setModalTone('warning');
+    setModalActions(
+      <>
+        <button onClick={() => setModalOpen(false)} className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-white">Huỷ</button>
+        <button onClick={async () => { setModalOpen(false); await onConfirm(); }} className="px-3 py-2 text-sm rounded-lg bg-rose-600 text-white hover:bg-rose-700">Xoá</button>
+      </>
+    );
+    setModalOpen(true);
+  };
+  const openVerifyPrompt = () => {
+    setModalTitle('Cần xác minh email');
+    setModalContent(
+      <div>
+        <p>Tài khoản của bạn <b>chưa được xác minh email</b>. Vui lòng xác minh để có thể bình luận.</p>
+        <p className="mt-2 text-xs text-gray-600">Không thấy email? Hãy kiểm tra thư rác hoặc gửi lại.</p>
+      </div>
+    );
+    setModalTone('info');
+    setModalActions(
+      <>
+        <button
+          onClick={async () => {
+            try {
+              if (auth.currentUser) {
+                await sendEmailVerification(auth.currentUser);
+                setModalContent(<p>Đã gửi lại email xác minh. Hãy kiểm tra hộp thư.</p>);
+                setModalTone('success');
+              }
+            } catch {
+              setModalContent(<p>Không gửi được email xác minh. Vui lòng thử lại sau.</p>);
+              setModalTone('error');
+            }
+          }}
+          className="px-3 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+        >
+          Gửi lại email xác minh
+        </button>
+        <button onClick={() => setModalOpen(false)} className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-white">Để sau</button>
+      </>
+    );
+    setModalOpen(true);
+  };
+
+  useEffect(() => {
+    const unsub = auth.onAuthStateChanged(setMe);
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const snap = await getDoc(doc(db, 'app_config', 'admins'));
+        if (snap.exists()) {
+          const arr = Array.isArray(snap.data().uids) ? snap.data().uids : [];
+          setAdminUids(arr);
+        }
+      } catch {}
+    })();
+  }, []);
+
+  useEffect(() => {
+    if (!postId) return;
+    setLoading(true);
+    setOlderItems([]);
+    setHasMore(false);
+    lastDocRef.current = null;
+    if (unsubRef.current) { unsubRef.current(); unsubRef.current = null; }
+
+    const q = query(
+      collection(db, 'comments'),
+      where('postId', '==', String(postId)),
+      orderBy('createdAt', 'desc'),
+      limit(PAGE_SIZE)
+    );
+    const unsub = onSnapshot(q, (snap) => {
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setLiveItems(list);
+      const lastVisible = snap.docs[snap.docs.length - 1] || null;
+      lastDocRef.current = lastVisible;
+      setHasMore(!!lastVisible);
+      setLoading(false);
+    });
+    unsubRef.current = unsub;
+    return () => { if (unsubRef.current) unsubRef.current(); unsubRef.current = null; };
+  }, [postId]);
+
+  useEffect(() => {
+    if (!me || liveItems.length === 0) return;
+    const fixes = liveItems
+      .filter(c => c.authorId === me.uid && (!c.userName || !c.userPhoto))
+      .map(c => updateDoc(doc(db, 'comments', c.id), {
+        userName: c.userName || preferredName(me),
+        userPhoto: c.userPhoto || preferredPhoto(me)
+      }).catch(()=>{}));
+    if (fixes.length) Promise.all(fixes).catch(()=>{});
+  }, [me, liveItems]);
+
+  const items = useMemo(() => [...liveItems, ...olderItems], [liveItems, olderItems]);
+
+  const roots = useMemo(() => items.filter(c => !c.parentId), [items]);
+  const repliesByParent = useMemo(() => {
+    const m = {};
+    items.forEach(c => {
+      if (c.parentId) (m[c.parentId] ||= []).push(c);
+    });
+    Object.values(m).forEach(arr =>
+      arr.sort((a,b) => (a.createdAt?.seconds||0) - (b.createdAt?.seconds||0))
+    );
+    return m;
+  }, [items]);
+  
+  const loadMore = async () => {
+    if (!postId || loadingMore || !lastDocRef.current) return;
+    setLoadingMore(true);
+    try {
+      const q = query(
+        collection(db, 'comments'),
+        where('postId', '==', String(postId)),
+        orderBy('createdAt', 'desc'),
+        startAfter(lastDocRef.current),
+        limit(PAGE_SIZE)
+      );
+      const snap = await getDocs(q);
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      setOlderItems(prev => [...prev, ...list]);
+      const lastVisible = snap.docs[snap.docs.length - 1] || null;
+      lastDocRef.current = lastVisible;
+      setHasMore(!!lastVisible);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
+
+  const [submitting, setSubmitting] = useState(false);
+  const onSubmit = async (e) => {
+    e.preventDefault();
+    if (!me) { openLoginPrompt(); return; }
+    if (!me.emailVerified) { openVerifyPrompt(); return; }
+    if (!content.trim() || submitting) return;
+
+    setSubmitting(true);
+    try {
+      await ensureUserDoc(me);
+      const payload = {
+        postId: String(postId),
+        parentId: null,
+        authorId: me.uid,
+        userName: preferredName(me),
+        userPhoto: preferredPhoto(me),
+        content: content.trim(),
+        createdAt: serverTimestamp(),
+        replyToUserId: null,
+        likeCount: 0,
+        likedBy: []
+      };
+      const ref = await addDoc(collection(db, 'comments'), payload);
+      setContent('');
+      await updateDoc(doc(db, 'users', me.uid), { 'stats.comments': increment(1) });
+      const targetAdmins = adminUids.filter(u => u !== me.uid);
+      await Promise.all(targetAdmins.map(async (uid) => {
+        await createNotification({
+          toUserId: uid,
+          type: 'comment',
+          postId: String(postId),
+          commentId: ref.id,
+          fromUserId: me.uid,
+          fromUserName: preferredName(me),
+          fromUserPhoto: preferredPhoto(me),
+          postTitle: postTitle || '',
+          commentText: excerpt(payload.content),
+        });
+        await bumpCounter(uid, +1);
+      }));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const toggleLike = async (c) => {
+    if (!me) { openLoginPrompt(); return; }
+    if (likingIds.has(c.id)) return;
+    const next = new Set(likingIds); next.add(c.id); setLikingIds(next);
+    const ref = doc(db, 'comments', c.id);
+    const hasLiked = Array.isArray(c.likedBy) && c.likedBy.includes(me.uid);
+    try {
+      await updateDoc(ref, {
+        likedBy: hasLiked ? arrayRemove(me.uid) : arrayUnion(me.uid),
+        likeCount: increment(hasLiked ? -1 : +1),
+      });
+      if (c.authorId) {
+        await updateDoc(doc(db, 'users', c.authorId), {
+          'stats.likesReceived': increment(hasLiked ? -1 : +1)
+        });
+      }
+      
+      // Sửa logic: Chỉ tạo thông báo khi người dùng like
+      if (!hasLiked && me.uid !== c.authorId) {
+        await upsertLikeNotification({
+          toUserId: c.authorId,
+          postId: String(c.postId),
+          commentId: c.id,
+          fromUser: me,
+          postTitle: (typeof postTitle === 'string' ? postTitle : '') || '',
+          commentText: excerpt(c.content, 160),
+          cooldownSec: 60
+        });
+      }
+    } finally {
+      const out = new Set(likingIds); out.delete(c.id); setLikingIds(out);
+    }
+  };
+
+  const deleteThreadBatch = async (root) => {
+    const toDelete = [root, ...(repliesByParent[root.id] || [])];
+    const batch = writeBatch(db);
+    const authorsToUpdate = new Set(toDelete.map(c => c.authorId).filter(Boolean));
+    const existingAuthorIds = new Set();
+    const authorPromises = [...authorsToUpdate].map(uid => getDoc(doc(db, 'users', uid)));
+    const authorSnaps = await Promise.all(authorPromises);
+    authorSnaps.forEach(snap => {
+      if (snap.exists()) {
+        existingAuthorIds.add(snap.id);
+      }
+    });
+
+    toDelete.forEach((it) => {
+      batch.delete(doc(db, 'comments', it.id));
+      if (it.authorId && existingAuthorIds.has(it.authorId)) {
+        batch.update(doc(db, 'users', it.authorId), { 'stats.comments': increment(-1) });
+      }
+    });
+    await batch.commit();
+  };
+
+  const deleteSingleComment = async (r) => {
+    try {
+      await deleteDoc(doc(db, 'comments', r.id));
+      const authorSnap = await getDoc(doc(db, 'users', r.authorId));
+      if (authorSnap.exists()) {
+        await updateDoc(doc(db, 'users', r.authorId), { 'stats.comments': increment(-1) });
+      }
+    } catch (error) {
+      console.error("Lỗi khi xóa bình luận:", error);
+    }
+  };
+
+  // Logic cuộn đến bình luận khi truy cập từ thông báo
+  useEffect(() => {
+    const scrollToComment = () => {
+      const targetId = router.query.comment;
+      if (targetId && items.length > 0) {
+        const targetComment = items.find(c => c.id === targetId);
+        if (targetComment) {
+          const rootParentId = targetComment.parentId || targetComment.id;
+          
+          setThreadsToExpand(prev => new Set(prev).add(rootParentId));
+          
+          setTimeout(() => {
+            const el = document.getElementById(`c-${targetId}`);
+            if (el) {
+              el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              el.style.transition = 'background-color 0.5s';
+              el.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
+              setTimeout(() => {
+                el.style.backgroundColor = '';
+              }, 2000);
+            }
+          }, 500);
+        }
+      }
+    };
+    
+    if (router.isReady && items.length > 0) {
+      scrollToComment();
+    }
+  }, [router.isReady, items, router.query.comment]);
+
+  return (
+    <div className="mt-6">
+      <CenterModal open={modalOpen} title={modalTitle} onClose={() => setModalOpen(false)} actions={modalActions} tone={modalTone}>
+        {modalContent}
+      </CenterModal>
+
+      <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-3">Bình luận</h3>
+
+      {!me ? (
+        <div className="text-sm text-gray-700 dark:text-gray-300">Hãy đăng nhập để bình luận.</div>
+      ) : (
+        <form onSubmit={onSubmit} className="flex flex-col gap-2">
+          <textarea
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
+            className="w-full min-h-[96px] border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2 text-[16px] leading-6 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-sky-500/40 outline-none shadow-sm"
+            placeholder="Viết bình luận..."
+            maxLength={3000}
+          />
+          <div className="flex justify-end">
+            <button
+              type="submit"
+              disabled={submitting || !content.trim()}
+              className={`px-4 py-2 rounded-xl inline-flex items-center gap-2 text-white shadow-sm
+                ${submitting || !content.trim()
+                  ? 'bg-gray-400 cursor-not-allowed'
+                  : 'bg-sky-600 hover:bg-sky-700 active:scale-95'
+                }`}
+            >
+              <FontAwesomeIcon icon={faPaperPlane} />
+              {submitting ? 'Đang gửi…' : 'Gửi'}
+            </button>
+          </div>
+        </form>
+      )}
+
+      <div className="mt-4">
+        {loading ? (
+          <div className="text-sm text-gray-500 dark:text-gray-400">Đang tải bình luận…</div>
+        ) : roots.length === 0 ? (
+          <div className="text-sm text-gray-500 dark:text-gray-400">Chưa có bình luận.</div>
+        ) : (
+          <>
+            <ul className="space-y-4">
+              {roots.map((c) => (
+                <RootComment
+                  key={c.id}
+                  c={c}
+                  replies={repliesByParent[c.id] || []}
+                  me={me}
+                  adminUids={adminUids}
+                  postId={postId}
+                  postTitle={postTitle}
+                  onOpenConfirm={openConfirm}
+                  toggleLike={toggleLike}
+                  deleteSingleComment={deleteSingleComment}
+                  deleteThreadBatch={deleteThreadBatch}
+                  initialShowReplies={threadsToExpand.has(c.id)}
+                />
+              ))}
+            </ul>
+
+            {hasMore && (
+              <div className="mt-4 flex justify-center">
+                <button
+                  onClick={loadMore}
+                  disabled={loadingMore}
+                  className={`px-4 py-2 rounded-xl border inline-flex items-center justify-center
+                    ${loadingMore
+                      ? 'text-gray-500 border-gray-300 cursor-not-allowed'
+                      : 'text-sky-700 border-sky-200 hover:bg-sky-50 dark:text-sky-300 dark:border-sky-700 dark:hover:bg-sky-900/20'
+                    }`}
+                >
+                  {loadingMore ? 'Đang tải…' : 'Xem thêm bình luận cũ'}
+                </button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
   );
 }
