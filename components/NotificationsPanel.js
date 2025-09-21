@@ -143,6 +143,7 @@ export default function NotificationsPanel({ open, onClose }) {
     const qn = query(
       collection(db, 'notifications'),
       where('toUserId', '==', user.uid),
+      // Giữ 'createdAt' để không cần index mới; upsert sẽ đặt isRead=false để "đánh thức".
       orderBy('createdAt', 'desc'),
       limit(50)
     );
@@ -314,7 +315,11 @@ export default function NotificationsPanel({ open, onClose }) {
               <ul className="p-3 space-y-3">
                 {items.map((n) => {
                   const t = formatDate(n.createdAt);
-                  const who = n.fromUserName || 'Ai đó';
+                  const isLike = n.type === 'like';
+                  const whoBase = n.fromUserName || 'Ai đó';
+                  const who = isLike && n.count > 1
+                    ? `${n.lastLikerName || whoBase} và ${n.count - 1} người khác`
+                    : (n.lastLikerName || whoBase);
                   const title = n.postTitle || `Bài viết ${n.postId}`;
                   const content = n.commentText || '';
 
@@ -342,7 +347,7 @@ export default function NotificationsPanel({ open, onClose }) {
 
                         <div className="flex gap-3">
                           {/* avatar */}
-                          <UserAvatar photo={n.fromUserPhoto} name={who} size={44} />
+                          <UserAvatar photo={n.lastLikerPhoto || n.fromUserPhoto} name={who} size={44} />
 
                           <div className="flex-1 min-w-0">
                             {/* dòng người + badge loại + tiêu đề */}

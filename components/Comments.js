@@ -52,8 +52,10 @@ function excerpt(s, n = 140) {
 }
 
 /* ================= Notifications ================= */
+// ❗️Chỉ được phép bump counter của CHÍNH MÌNH để tránh permission-denied
 async function bumpCounter(uid, delta) {
   if (!uid || !Number.isFinite(delta)) return;
+  if (auth.currentUser?.uid !== uid) return; // chặn bump chéo user
   const ref = doc(db, 'user_counters', uid);
   await runTransaction(db, async (tx) => {
     const snap = await tx.get(ref);
@@ -77,6 +79,57 @@ async function createNotification(payload = {}) {
     createdAt: serverTimestamp(),
     fromUserId,
     ...extra,
+  });
+}
+
+/** Gộp thông báo LIKE theo (toUserId, postId, commentId) */
+async function upsertLikeNotification({
+  toUserId, postId, commentId,
+  fromUserId, fromUserName, fromUserPhoto,
+  postTitle = '', commentText = ''
+}) {
+  if (!toUserId || !postId || !commentId) return;
+  const nid = `like_${toUserId}_${postId}_${commentId}`; // ID cố định để upsert
+  const ref = doc(db, 'notifications', nid);
+
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    if (snap.exists()) {
+      const data = snap.data() || {};
+      const nextCount = (data.count || 1) + 1;
+      const nextLikers = Array.from(new Set([...(data.likers || []), fromUserId])).slice(-5);
+      tx.set(ref, {
+        toUserId,
+        type: 'like',
+        postId: String(postId),
+        commentId,
+        isRead: false,                     // "đánh thức" khi có người mới like
+        updatedAt: serverTimestamp(),      // dùng cho sort nếu muốn
+        lastLikerName: fromUserName || 'Ai đó',
+        lastLikerPhoto: fromUserPhoto || '',
+        postTitle,
+        commentText,
+        count: nextCount,
+        likers: nextLikers,
+      }, { merge: true });
+    } else {
+      tx.set(ref, {
+        toUserId,
+        type: 'like',
+        postId: String(postId),
+        commentId,
+        isRead: false,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        fromUserId, fromUserName, fromUserPhoto,
+        lastLikerName: fromUserName || 'Ai đó',
+        lastLikerPhoto: fromUserPhoto || '',
+        postTitle,
+        commentText,
+        count: 1,
+        likers: [fromUserId],
+      });
+    }
   });
 }
 
@@ -300,7 +353,7 @@ function ReplyBox({
           postTitle: postTitle || '',
           commentText: excerpt(text),
         });
-        await bumpCounter(target.authorId, +1);
+        // Không bump counter của người khác
       }
 
       const targets = adminUids.filter(u => u !== me.uid && u !== target.authorId);
@@ -316,7 +369,7 @@ function ReplyBox({
           postTitle: postTitle || '',
           commentText: excerpt(text),
         });
-        await bumpCounter(uid, +1);
+        // Không bump counter của người khác
       }));
     } finally {
       setSending(false);
@@ -741,7 +794,7 @@ export default function Comments({ postId, postTitle }) {
           postTitle: postTitle || '',
           commentText: excerpt(payload.content),
         });
-        await bumpCounter(uid, +1);
+        // Không bump counter của người khác
       }));
     } finally {
       setSubmitting(false);
@@ -765,11 +818,10 @@ export default function Comments({ postId, postTitle }) {
         });
       }
       
-      // Sửa logic: Chỉ tạo thông báo khi người dùng like
+      // ✅ Sửa: chỉ khi LIKE (không phải UNLIKE) thì upsert thông báo gộp
       if (!hasLiked && me.uid !== c.authorId) {
-        await createNotification({
+        await upsertLikeNotification({
           toUserId: c.authorId,
-          type: 'like',
           postId: String(c.postId),
           commentId: c.id,
           fromUserId: me.uid,
@@ -778,7 +830,7 @@ export default function Comments({ postId, postTitle }) {
           postTitle: postTitle || '',
           commentText: excerpt(c.content, 160),
         });
-        await bumpCounter(c.authorId, +1);
+        // Không bump counter của người khác (đã chặn trong bumpCounter)
       }
     } finally {
       const out = new Set(likingIds); out.delete(c.id); setLikingIds(out);
