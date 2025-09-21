@@ -180,7 +180,6 @@ function ActionBar({ hasLiked, likeCount, onToggleLike, renderReplyTrigger }) {
         {likeCount > 0 && <span>{likeCount}</span>}
       </button>
 
-      {/* Trigger trả lời do ReplyBox cung cấp */}
       {renderReplyTrigger?.()}
     </div>
   );
@@ -207,7 +206,7 @@ function CommentHeader({ c, me, isAdminFn, dt, canDelete, onDelete }) {
 
   return (
     <div className="flex gap-3">
-      <div className="flex-shrink-0 w-10 h-10 rounded-full border border-sky-200 dark:border-sky-700 flex items-center justify-center bg-sky-50 dark:bg-sky-900/40">
+      <div className="flex-shrink-0 w-10 h-10 rounded-full border border-gray-200 dark:border-gray-700 flex items-center justify-center bg-gray-50 dark:bg-gray-900/40">
         {avatar ? (
           <img src={avatar} alt="avatar" className="w-full h-full rounded-full object-cover" referrerPolicy="no-referrer" />
         ) : (
@@ -248,9 +247,9 @@ function CommentHeader({ c, me, isAdminFn, dt, canDelete, onDelete }) {
 function Quote({ quoteFrom, me }) {
   if (!quoteFrom) return null;
   return (
-    <div className="mt-2 text-[13px] text-gray-700 dark:text-gray-300 bg-gradient-to-r from-sky-50 to-rose-50 dark:from-sky-900/20 dark:to-rose-900/20 border border-sky-100 dark:border-sky-800 rounded-xl p-2">
+    <div className="mt-2 text-[13px] text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-xl p-2 border border-gray-200 dark:border-gray-700">
       <div className="flex items-center gap-2 mb-1 opacity-80">
-        <FontAwesomeIcon icon={faQuoteLeft} className="w-3.5 h-3.5 text-sky-500" />
+        <FontAwesomeIcon icon={faQuoteLeft} className="w-3.5 h-3.5 text-gray-500" />
         {quoteFrom.authorId ? (
           <Link
             href={me && quoteFrom.authorId === me.uid ? '/profile' : `/users/${quoteFrom.authorId}`}
@@ -271,7 +270,7 @@ function Quote({ quoteFrom, me }) {
 function ReplyBox({
   me, postId, parent, replyingTo = null, adminUids, postTitle,
   onNeedVerify, onNeedLogin,
-  renderTrigger // (openFn) => ReactNode
+  renderTrigger
 }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
@@ -349,7 +348,6 @@ function ReplyBox({
 
   return (
     <>
-      {/* Trigger tuỳ biến để đặt cạnh nút Like */}
       {!open && (renderTrigger ? renderTrigger(tryOpen) : (
         <button onClick={tryOpen} className="inline-flex items-center gap-2 text-sm text-sky-700 dark:text-sky-300 hover:underline">
           <FontAwesomeIcon icon={faReply} />
@@ -357,11 +355,10 @@ function ReplyBox({
         </button>
       ))}
 
-      {/* Form trả lời */}
       {open && (
         <form onSubmit={onReply} className="flex flex-col gap-2 mt-2">
           {target && (
-            <div className="text-[12px] text-gray-700 dark:text-gray-300 bg-gradient-to-r from-sky-50 to-indigo-50 dark:from-sky-900/20 dark:to-indigo-900/20 border border-sky-100 dark:border-sky-800 rounded-xl p-2">
+            <div className="text-[12px] text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2">
               {target.authorId ? (
                 <Link
                   href={me && target.authorId === me.uid ? '/profile' : `/users/${target.authorId}`}
@@ -378,7 +375,7 @@ function ReplyBox({
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
-            className="w-full min-h-[72px] border border-indigo-200 dark:border-indigo-900 rounded-xl px-3 py-2 text-[16px] leading-6 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500/40 outline-none shadow-[0_0_0_1px_rgba(129,140,248,0.25)]"
+            className="w-full min-h-[72px] border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2 text-[16px] leading-6 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500/40 outline-none shadow-sm"
             placeholder={`Phản hồi ${replyingTo ? (replyingTo.userName || 'người dùng') : (parent.userName || 'người dùng')}…`}
             maxLength={2000}
           />
@@ -396,7 +393,7 @@ function ReplyBox({
               className={`px-4 py-2 text-sm rounded-xl inline-flex items-center gap-2 text-white
                 ${!text.trim() || sending
                   ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-indigo-600 to-violet-600 hover:opacity-95'
+                  : 'bg-indigo-600 hover:bg-indigo-700'
                 }`}
             >
               {sending ? 'Đang gửi…' : 'Gửi'}
@@ -419,10 +416,7 @@ function RootComment({ c, replies, me, adminUids, postId, postTitle, onOpenConfi
     <li
       key={c.id}
       id={`c-${c.id}`}
-      className="scroll-mt-24 rounded-2xl p-3 bg-white/95 dark:bg-gray-900/95 border border-transparent 
-                 [background:linear-gradient(#fff,rgba(255,255,255,0.96))_padding-box,linear-gradient(135deg,#bae6fd,#fecaca)_border-box]
-                 dark:[background:linear-gradient(#0b0f19,#0b0f19)_padding-box,linear-gradient(135deg,#0ea5e9,#f43f5e)_border-box]
-                 hover:shadow-md transition-shadow"
+      className="scroll-mt-24 rounded-2xl p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 transition-shadow hover:shadow-md"
     >
       <CommentHeader
         c={c}
@@ -447,7 +441,7 @@ function RootComment({ c, replies, me, adminUids, postId, postTitle, onOpenConfi
         parent={c}
         adminUids={adminUids}
         postTitle={postTitle}
-        onNeedVerify={() => {}} // Pass down relevant functions
+        onNeedVerify={() => {}}
         onNeedLogin={() => {}}
         renderTrigger={(openFn) => (
           <ActionBar
@@ -455,7 +449,7 @@ function RootComment({ c, replies, me, adminUids, postId, postTitle, onOpenConfi
             likeCount={likeCount}
             onToggleLike={() => toggleLike(c)}
             renderReplyTrigger={() => (
-              <button onClick={openFn} className="inline-flex items-center gap-2 text-sm text-sky-700 dark:text-sky-300 hover:underline">
+              <button onClick={openFn} className="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 hover:underline">
                 <FontAwesomeIcon icon={faReply} />
                 Trả lời
               </button>
@@ -467,7 +461,7 @@ function RootComment({ c, replies, me, adminUids, postId, postTitle, onOpenConfi
       {replies.length > 0 && (
         <div className="mt-3">
           {showReplies ? (
-            <ul className="space-y-3">
+            <ul className="space-y-4">
               {replies.map((r) => {
                 const target = r.replyToUserId === c.authorId
                   ? c
@@ -480,7 +474,7 @@ function RootComment({ c, replies, me, adminUids, postId, postTitle, onOpenConfi
                   <li
                     key={r.id}
                     id={`c-${r.id}`}
-                    className="pl-4 border-l-2 border-sky-200 dark:border-sky-800 scroll-mt-24"
+                    className="pl-4 border-l-2 border-gray-200 dark:border-gray-800 scroll-mt-24 bg-gray-50 dark:bg-gray-950 rounded-lg p-3"
                   >
                     <CommentHeader
                       c={r}
@@ -513,7 +507,7 @@ function RootComment({ c, replies, me, adminUids, postId, postTitle, onOpenConfi
                           likeCount={rLikeCount}
                           onToggleLike={() => toggleLike(r)}
                           renderReplyTrigger={() => (
-                            <button onClick={openFn} className="inline-flex items-center gap-2 text-sm text-sky-700 dark:text-sky-300 hover:underline">
+                            <button onClick={openFn} className="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 hover:underline">
                               <FontAwesomeIcon icon={faReply} />
                               Trả lời
                             </button>
@@ -528,7 +522,7 @@ function RootComment({ c, replies, me, adminUids, postId, postTitle, onOpenConfi
           ) : (
             <button
               onClick={() => setShowReplies(true)}
-              className="mt-3 text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-2"
+              className="mt-3 text-sm font-semibold text-sky-600 dark:text-sky-400 hover:underline inline-flex items-center gap-2"
             >
               <FontAwesomeIcon icon={faReply} />
               Xem {replies.length} câu trả lời
@@ -701,7 +695,6 @@ export default function Comments({ postId, postTitle }) {
     return m;
   }, [items]);
   
-  // Tối ưu hàm loadMore
   const loadMore = async () => {
     if (!postId || loadingMore || !lastDocRef.current) return;
     setLoadingMore(true);
@@ -842,10 +835,8 @@ export default function Comments({ postId, postTitle }) {
         if (targetComment) {
           const rootParentId = targetComment.parentId || targetComment.id;
           
-          // Mở rộng luồng bình luận
           setThreadsToExpand(prev => new Set(prev).add(rootParentId));
           
-          // Chờ cho DOM cập nhật rồi mới cuộn
           setTimeout(() => {
             const el = document.getElementById(`c-${targetId}`);
             if (el) {
@@ -864,8 +855,7 @@ export default function Comments({ postId, postTitle }) {
     if (router.isReady && items.length > 0) {
       scrollToComment();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router.isReady, items]);
+  }, [router.isReady, items, router.query.comment]);
 
   return (
     <div className="mt-6">
@@ -882,7 +872,7 @@ export default function Comments({ postId, postTitle }) {
           <textarea
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            className="w-full min-h-[96px] border border-sky-200 dark:border-sky-900 rounded-xl px-3 py-2 text-[16px] leading-6 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-sky-500/40 outline-none shadow-[0_0_0_1px_rgba(56,189,248,0.25)]"
+            className="w-full min-h-[96px] border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2 text-[16px] leading-6 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-sky-500/40 outline-none shadow-sm"
             placeholder="Viết bình luận..."
             maxLength={3000}
           />
@@ -893,7 +883,7 @@ export default function Comments({ postId, postTitle }) {
               className={`px-4 py-2 rounded-xl inline-flex items-center gap-2 text-white shadow-sm
                 ${submitting || !content.trim()
                   ? 'bg-gray-400 cursor-not-allowed'
-                  : 'bg-gradient-to-r from-sky-600 to-blue-600 hover:opacity-95 active:scale-95'
+                  : 'bg-sky-600 hover:bg-sky-700 active:scale-95'
                 }`}
             >
               <FontAwesomeIcon icon={faPaperPlane} />
@@ -937,7 +927,7 @@ export default function Comments({ postId, postTitle }) {
                   className={`px-4 py-2 rounded-xl border inline-flex items-center justify-center
                     ${loadingMore
                       ? 'text-gray-500 border-gray-300 cursor-not-allowed'
-                      : 'text-sky-700 border-sky-200 hover:bg-sky-50'
+                      : 'text-gray-700 border-gray-200 hover:bg-gray-100 dark:text-gray-300 dark:border-gray-700 dark:hover:bg-gray-800'
                     }`}
                 >
                   {loadingMore ? 'Đang tải…' : 'Xem thêm bình luận cũ'}
