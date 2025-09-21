@@ -1,6 +1,7 @@
 // components/Comments.js
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 import { auth, db } from '../lib/firebase-client';
 import {
   addDoc, collection, deleteDoc, doc, getDoc, setDoc, updateDoc,
@@ -408,8 +409,8 @@ function ReplyBox({
 }
 
 // Component con để render một bình luận gốc và các phản hồi của nó
-function RootComment({ c, replies, me, adminUids, postId, postTitle, onOpenConfirm, toggleLike, deleteSingleComment, deleteThreadBatch }) {
-  const [showReplies, setShowReplies] = useState(false);
+function RootComment({ c, replies, me, adminUids, postId, postTitle, onOpenConfirm, toggleLike, deleteSingleComment, deleteThreadBatch, initialShowReplies }) {
+  const [showReplies, setShowReplies] = useState(initialShowReplies);
   const dt = formatDate(c.createdAt);
   const hasLiked = !!me && Array.isArray(c.likedBy) && c.likedBy.includes(me.uid);
   const likeCount = c.likeCount || 0;
@@ -541,6 +542,7 @@ function RootComment({ c, replies, me, adminUids, postId, postTitle, onOpenConfi
 
 /* ================= Main ================= */
 export default function Comments({ postId, postTitle }) {
+  const router = useRouter();
   const [me, setMe] = useState(null);
   const [adminUids, setAdminUids] = useState([]);
   const [content, setContent] = useState('');
@@ -561,6 +563,7 @@ export default function Comments({ postId, postTitle }) {
   const [modalTone, setModalTone] = useState('info');
 
   const [likingIds, setLikingIds] = useState(() => new Set());
+  const [expandedThreads, setExpandedThreads] = useState({});
 
   const openHeaderLoginPopup = () => {
     if (typeof window === 'undefined') return;
@@ -672,6 +675,45 @@ export default function Comments({ postId, postTitle }) {
     unsubRef.current = unsub;
     return () => { if (unsubRef.current) unsubRef.current(); unsubRef.current = null; };
   }, [postId]);
+
+  // Handle URL hash for scrolling to comment
+  useEffect(() => {
+    if (loading || !router.isReady) return;
+
+    const hash = router.asPath.split('#')[1];
+    if (hash && hash.startsWith('c-')) {
+      const targetId = hash.replace('c-', '');
+      const targetComment = items.find(c => c.id === targetId);
+      if (targetComment) {
+        // Find the root parent of the target comment
+        let rootComment = targetComment;
+        while (rootComment.parentId) {
+          rootComment = items.find(c => c.id === rootComment.parentId);
+          if (!rootComment) break;
+        }
+
+        if (rootComment) {
+          // Expand the replies for the root comment
+          setExpandedThreads(prev => ({ ...prev, [rootComment.id]: true }));
+          
+          // Wait for the DOM to update and then scroll
+          setTimeout(() => {
+            const el = document.getElementById(hash);
+            if (el) {
+              el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              // Optional: highlight the comment
+              el.style.transition = 'background-color 0.5s';
+              el.style.backgroundColor = 'rgba(59, 130, 246, 0.1)'; // blue-50
+              setTimeout(() => {
+                el.style.backgroundColor = '';
+              }, 2000);
+            }
+          }, 500); // Small delay to ensure render
+        }
+      }
+    }
+  }, [loading, router.isReady, router.asPath, items]);
+
 
   useEffect(() => {
     if (!me || liveItems.length === 0) return;
@@ -886,6 +928,7 @@ export default function Comments({ postId, postTitle }) {
                   toggleLike={toggleLike}
                   deleteSingleComment={deleteSingleComment}
                   deleteThreadBatch={deleteThreadBatch}
+                  initialShowReplies={expandedThreads[c.id] || false}
                 />
               ))}
             </ul>
