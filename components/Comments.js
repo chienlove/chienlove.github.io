@@ -79,7 +79,7 @@ async function createNotification(payload = {}) {
   });
 }
 
-/** ✅ Gộp thông báo LIKE theo (toUserId, postId, commentId) -- KHÔNG đọc, KHÔNG transaction */
+/** ✅ Gộp thông báo LIKE theo (toUserId, postId, commentId) */
 async function upsertLikeNotification({
   toUserId, postId, commentId,
   fromUserId, fromUserName, fromUserPhoto,
@@ -89,45 +89,50 @@ async function upsertLikeNotification({
   const nid = `like_${toUserId}_${postId}_${commentId}`;
   const ref = doc(db, 'notifications', nid);
 
-  // 1) Thử UPDATE mù: nếu doc đã tồn tại thì tăng đếm, set awake
   try {
-    await updateDoc(ref, {
-      toUserId,
-      type: 'like',
-      postId: String(postId),
-      commentId,
-      isRead: false,                   // "đánh thức" thông báo
-      updatedAt: serverTimestamp(),
-      lastLikerName: fromUserName || 'Ai đó',
-      lastLikerPhoto: fromUserPhoto || '',
-      postTitle,
-      commentText,
-      count: increment(1),
-      likers: arrayUnion(fromUserId),
-    });
-    return;
-  } catch (e) {
-    // NOT_FOUND -> sẽ tạo mới bên dưới
-  }
+    // Sử dụng transaction để đảm bảo việc đọc-ghi nhất quán
+    await runTransaction(db, async (transaction) => {
+      const docSnap = await transaction.get(ref);
 
-  // 2) Tạo mới (không cần đọc trước)
-  await setDoc(ref, {
-    toUserId,
-    type: 'like',
-    postId: String(postId),
-    commentId,
-    isRead: false,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-    fromUserId, fromUserName, fromUserPhoto,
-    lastLikerName: fromUserName || 'Ai đó',
-    lastLikerPhoto: fromUserPhoto || '',
-    postTitle,
-    commentText,
-    count: 1,
-    likers: [fromUserId],
-  }, { merge: true });
+      if (docSnap.exists()) {
+        // Tài liệu đã tồn tại, cập nhật nó
+        const data = docSnap.data();
+        const newLikers = arrayUnion(fromUserId);
+        
+        transaction.update(ref, {
+          updatedAt: serverTimestamp(),
+          lastLikerName: fromUserName || 'Tài khoản đã bị xoá',
+          lastLikerPhoto: fromUserPhoto || '',
+          count: increment(1),
+          likers: newLikers,
+          isRead: false, // Luôn đặt isRead thành false để tạo thông báo mới
+        });
+        
+      } else {
+        // Tài liệu chưa tồn tại, tạo mới
+        transaction.set(ref, {
+          toUserId,
+          type: 'like',
+          postId: String(postId),
+          commentId,
+          isRead: false,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          fromUserId, fromUserName, fromUserPhoto,
+          lastLikerName: fromUserName || 'Ai đó',
+          lastLikerPhoto: fromUserPhoto || '',
+          count: 1,
+          likers: [fromUserId],
+          postTitle,
+          commentText,
+        }, { merge: true });
+      }
+    });
+  } catch (e) {
+    console.error('Lỗi khi cập nhật thông báo lượt thích:', e);
+  }
 }
+
 
 /* ================= Users bootstrap ================= */
 async function ensureUserDoc(u) {
