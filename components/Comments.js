@@ -685,7 +685,10 @@ export default function Comments({ postId, postTitle }) {
     const toDelete = [root, ...(repliesByParent[root.id] || [])];
     const batch = writeBatch(db);
     
+    // Lấy danh sách các UID tác giả cần cập nhật thống kê
     const authorsToUpdate = new Set(toDelete.map(c => c.authorId).filter(Boolean));
+
+    // Kiểm tra xem các tài liệu người dùng này có tồn tại không
     const existingAuthorIds = new Set();
     const authorPromises = [...authorsToUpdate].map(uid => getDoc(doc(db, 'users', uid)));
     const authorSnaps = await Promise.all(authorPromises);
@@ -704,6 +707,22 @@ export default function Comments({ postId, postTitle }) {
     
     await batch.commit();
   };
+  
+  // Hàm xóa riêng lẻ cho phản hồi (đã sửa lỗi)
+  const deleteSingleComment = async (r) => {
+    try {
+      await deleteDoc(doc(db, 'comments', r.id));
+      // Kiểm tra sự tồn tại của tài liệu người dùng trước khi cập nhật
+      const authorSnap = await getDoc(doc(db, 'users', r.authorId));
+      if (authorSnap.exists()) {
+        await updateDoc(doc(db, 'users', r.authorId), { 'stats.comments': increment(-1) });
+      }
+    } catch (error) {
+      console.error("Lỗi khi xóa bình luận:", error);
+      // Có thể thêm xử lý lỗi khác ở đây
+    }
+  };
+
 
   return (
     <div className="mt-6">
@@ -834,13 +853,7 @@ export default function Comments({ postId, postTitle }) {
                                     canDelete={!!me && (me.uid === r.authorId || adminUids.includes(me.uid))}
                                     onDelete={() => {
                                       openConfirm('Bạn có chắc muốn xoá phản hồi này?', async () => {
-                                        try {
-                                          await deleteDoc(doc(db, 'comments', r.id));
-                                          const authorSnap = await getDoc(doc(db, 'users', r.authorId));
-                                          if (authorSnap.exists()) {
-                                              await updateDoc(doc(db, 'users', r.authorId), { 'stats.comments': increment(-1) });
-                                          }
-                                        } catch {}
+                                        await deleteSingleComment(r);
                                       });
                                     }}
                                   />
