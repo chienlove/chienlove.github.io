@@ -45,15 +45,17 @@ export default function AppCard({ app, mode = 'card' }) {
       {/* Nội dung */}
       <div className="flex-1 min-w-0 border-t border-gray-200 dark:border-gray-700 pt-2">
         <div className="flex items-center justify-between">
-          {/* ✅ Link ở tên app */}
+          {/* ✅ Tên app có active:bg */}
           <Link
             href={`/${app.slug}`}
             prefetch={false}
             className="text-[16px] font-semibold text-gray-900 dark:text-white truncate
-                       hover:underline active:opacity-70 active:scale-[0.98]
+                       hover:underline active:bg-gray-200 dark:active:bg-gray-700
+                       active:opacity-80 active:scale-[0.98]
+                       px-1 py-0.5 rounded
                        focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500
                        focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-800
-                       transition-transform duration-100 ease-in-out"
+                       transition-all duration-150 ease-in-out"
             aria-label={`Xem chi tiết ${app.name}`}
           >
             {app.name}
@@ -72,15 +74,15 @@ export default function AppCard({ app, mode = 'card' }) {
         </div>
       </div>
 
-      {/* ✅ Icon download */}
+      {/* ✅ Icon tải có active:bg */}
       <Link
         href={`/${app.slug}`}
         prefetch={false}
         className="group flex items-center justify-center w-10 h-14 mt-1 rounded-md
-                   active:scale-95 active:opacity-70
+                   active:scale-95 active:opacity-80 active:bg-gray-200 dark:active:bg-gray-700
                    focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2
                    focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-800
-                   transition-transform duration-100 ease-in-out"
+                   transition-transform duration-150 ease-in-out"
         aria-label={`Tải ứng dụng ${app.name}`}
         title="Xem chi tiết"
       >
