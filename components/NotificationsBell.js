@@ -1,7 +1,7 @@
 // components/NotificationsBell.js
 import { useEffect, useState } from 'react';
 import { auth, db } from '../lib/firebase-client';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 
 export default function NotificationsBell({ onClick }) {
   const [user, setUser] = useState(null);
@@ -14,14 +14,13 @@ export default function NotificationsBell({ onClick }) {
   }, []);
 
   useEffect(() => {
-    if (!user) return;
-    const q = query(
-      collection(db, 'notifications'),
-      where('toUserId', '==', user.uid),
-      where('isRead', '==', false)
-    );
-    const unsub = onSnapshot(q, (snap) => {
-      const newUnread = snap.size;
+    if (!user) {
+      setUnread(0);
+      return;
+    }
+    // Lắng nghe trực tiếp tài liệu counter của người dùng
+    const unsub = onSnapshot(doc(db, 'user_counters', user.uid), (docSnap) => {
+      const newUnread = docSnap.exists() ? (docSnap.data().unreadCount || 0) : 0;
       if (newUnread > unread) {
         setIsAnimating(true);
         setTimeout(() => setIsAnimating(false), 1000);
@@ -29,7 +28,7 @@ export default function NotificationsBell({ onClick }) {
       setUnread(newUnread);
     });
     return () => unsub();
-  }, [user]); // tránh re-subscribe theo unread
+  }, [user, unread]);
 
   return (
     <button

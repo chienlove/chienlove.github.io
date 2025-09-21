@@ -79,7 +79,7 @@ async function createNotification(payload = {}) {
   });
 }
 
-/** ✅ Gộp thông báo LIKE theo (toUserId, postId, commentId) */
+/** Gộp thông báo LIKE theo (toUserId, postId, commentId) */
 async function upsertLikeNotification({
   toUserId, postId, commentId,
   fromUserId, fromUserName, fromUserPhoto,
@@ -92,17 +92,15 @@ async function upsertLikeNotification({
   const docSnap = await getDoc(ref);
   
   if (docSnap.exists()) {
-    // Tài liệu đã tồn tại, cập nhật nó
     await updateDoc(ref, {
       updatedAt: serverTimestamp(),
       lastLikerName: fromUserName || 'Ai đó',
       lastLikerPhoto: fromUserPhoto || '',
-      isRead: false, // Quan trọng: luôn đặt isRead thành false để chuông thông báo được kích hoạt
+      isRead: false,
       count: increment(1),
       likers: arrayUnion(fromUserId),
     });
   } else {
-    // Tài liệu chưa tồn tại, tạo mới
     await setDoc(ref, {
       toUserId,
       type: 'like',
@@ -122,7 +120,9 @@ async function upsertLikeNotification({
       commentText,
     });
   }
+  await bumpCounter(toUserId, 1);
 }
+
 
 /* ================= Users bootstrap ================= */
 async function ensureUserDoc(u) {
