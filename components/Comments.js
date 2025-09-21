@@ -92,6 +92,7 @@ async function upsertLikeNotification({
   const ref = doc(db, 'notifications', nid);
 
   try {
+    // Thử update nếu đã có doc
     await updateDoc(ref, {
       toUserId,
       type: 'like',
@@ -106,29 +107,29 @@ async function upsertLikeNotification({
       count: increment(1),
       likers: arrayUnion(fromUserId),
     });
-    return;
-  } catch (e) {
-    // Nếu chưa có doc -> sẽ tạo mới ở dưới
+  } catch (error) {
+    // Nếu chưa có (not-found), sẽ tạo mới notification like
+    await setDoc(ref, {
+      toUserId,
+      type: 'like',
+      postId: String(postId),
+      commentId,
+      isRead: false,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      fromUserId, fromUserName, fromUserPhoto,
+      lastLikerName: fromUserName || 'Ai đó',
+      lastLikerPhoto: fromUserPhoto || '',
+      postTitle,
+      commentText,
+      count: 1,
+      likers: [fromUserId],
+    }, { merge: true });
   }
-  await setDoc(ref, {
-    toUserId,
-    type: 'like',
-    postId: String(postId),
-    commentId,
-    isRead: false,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-    fromUserId, fromUserName, fromUserPhoto,
-    lastLikerName: fromUserName || 'Ai đó',
-    lastLikerPhoto: fromUserPhoto || '',
-    postTitle,
-    commentText,
-    count: 1,
-    likers: [fromUserId],
-  }, { merge: true });
 
-  // Không bump counter chéo người khác: chỉ cho phép nếu người nhận là chính currentUser
+  // Không bump counter chéo người khác: chỉ bump nếu user nhận là currentUser
   await bumpCounter(toUserId, +1);
+}
 }
 
 /* ================= Users bootstrap ================= */
