@@ -79,7 +79,6 @@ async function createNotification(payload = {}) {
   });
 }
 
-/** Gộp thông báo LIKE theo (toUserId, postId, commentId) */
 async function upsertLikeNotification({
   toUserId, postId, commentId,
   fromUserId, fromUserName, fromUserPhoto,
@@ -93,7 +92,7 @@ async function upsertLikeNotification({
   try {
     await updateDoc(ref, {
       toUserId,
-      fromUserId, // rất quan trọng để pass rule write
+      fromUserId,               // quan trọng để pass rule write
       type: 'like',
       postId: String(postId),
       commentId,
@@ -108,7 +107,7 @@ async function upsertLikeNotification({
       likers: arrayUnion(fromUserId),
     });
     return;
-  } catch (_) {
+  } catch {
     // NOT_FOUND -> setDoc tạo mới
   }
 
