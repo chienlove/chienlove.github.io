@@ -786,20 +786,19 @@ export default function Comments({ postId, postTitle }) {
         await updateDoc(doc(db, 'users', c.authorId), { 'stats.likesReceived': increment(hasLiked ? -1 : +1) });
       }
 
-            // ✅ Chỉ khi LIKE (không phải UNLIKE) thì tạo thông báo mới
-      if (!hasLiked && me.uid !== c.authorId) {
-        await createNotification({
-          toUserId: c.authorId,
-          type: 'like', // Đảm bảo loại là 'like'
-          postId: String(c.postId),
-          commentId: c.id,
-          fromUserId: me.uid,
-          fromUserName: preferredName(me),
-          fromUserPhoto: preferredPhoto(me),
-          postTitle: postTitle || '',
-          commentText: excerpt(c.content, 160),
-        });
-      }
+            // ✅ Chỉ khi LIKE (không phải UNLIKE) thì GỘP thông báo (1 doc duy nhất)
+if (!hasLiked && me.uid !== c.authorId) {
+  await upsertLikeNotification({
+    toUserId: c.authorId,
+    postId: String(c.postId),
+    commentId: c.id,
+    fromUserId: me.uid,
+    fromUserName: preferredName(me),
+    fromUserPhoto: preferredPhoto(me),
+    postTitle: postTitle || '',
+    commentText: excerpt(c.content, 160),
+  });
+}
     } finally {
       const out = new Set(likingIds); out.delete(c.id); setLikingIds(out);
     }
