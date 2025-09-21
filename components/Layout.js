@@ -31,6 +31,13 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
 
   const drawerRef = useRef(null);
 
+  // Mở NotificationsPanel khi nhận sự kiện từ LoginButton
+  useEffect(() => {
+    const onOpenNoti = () => setNotifOpen(true);
+    window.addEventListener('open-notifications', onOpenNoti);
+    return () => window.removeEventListener('open-notifications', onOpenNoti);
+  }, []);
+
   // Keyboard open search
   useEffect(() => {
     const onKey = (e) => {
@@ -138,9 +145,17 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
             >
               <FontAwesomeIcon icon={faBars} className="w-5 h-5" />
             </button>
+
+            {/* Logo có hiệu ứng nhấp rõ ràng */}
             <Link
               href="/"
-              className="text-xl md:text-2xl font-bold bg-gradient-to-r from-red-600 via-black to-red-600 dark:from-red-400 dark:via-white dark:to-red-400 bg-clip-text text-transparent"
+              className="text-xl md:text-2xl font-bold bg-gradient-to-r from-red-600 via-black to-red-600 dark:from-red-400 dark:via-white dark:to-red-400 bg-clip-text text-transparent
+                         px-1 rounded
+                         active:bg-gray-200 dark:active:bg-gray-800 active:scale-95
+                         focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900
+                         transition-all duration-150"
+              title="Về trang chủ"
+              aria-label="Trang chủ StoreiOS"
             >
               StoreiOS
             </Link>

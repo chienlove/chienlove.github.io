@@ -4,7 +4,6 @@ import { auth } from '../lib/firebase-client';
 import {
   GoogleAuthProvider,
   GithubAuthProvider,
-  // >>> ADD: Twitter provider
   TwitterAuthProvider,
   signInWithPopup,
   createUserWithEmailAndPassword,
@@ -24,7 +23,7 @@ import {
   faEye,
   faEyeSlash,
 } from '@fortawesome/free-solid-svg-icons';
-import { faGoogle, faGithub, /* >>> ADD: brand icon for X */ faXTwitter } from '@fortawesome/free-brands-svg-icons';
+import { faGoogle, faGithub, faXTwitter } from '@fortawesome/free-brands-svg-icons';
 
 const ENFORCE_EMAIL_VERIFICATION = true; // gửi mail verify sau signup; KHÔNG chặn login
 
@@ -44,8 +43,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
   const [toast, setToast] = useState(null);
   const [pendingCred, setPendingCred] = useState(null);
   const [hint, setHint] = useState('');
-
-  // ⬇️ Cooldown chống ghost‑click sau khi đóng Auth modal
   const [authClosedAt, setAuthClosedAt] = useState(0);
 
   const menuRef = useRef(null);
@@ -105,7 +102,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     if (!emailFromError) return setMsg('Tài khoản đã tồn tại với nhà cung cấp khác.');
     const methods = await fetchSignInMethodsForEmail(auth, emailFromError);
 
-    // >>> UPDATE: lấy credential từ lỗi theo provider (github/google/twitter)
     const cred =
       provider === 'github'  ? GithubAuthProvider.credentialFromError(error)  :
       provider === 'google'  ? GoogleAuthProvider.credentialFromError(error)  :
@@ -166,7 +162,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     } finally { setLoading(false); }
   };
 
-  // >>> ADD: Login with X (Twitter)
   const loginTwitter = async () => {
     setLoading(true); setMsg('');
     try {
@@ -182,7 +177,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     } finally { setLoading(false); }
   };
 
-  // Kiểm tra độ mạnh & trùng khớp (đăng ký)
   const pwdStrong = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(password);
   const pwdMatch  = password && confirmPwd && password === confirmPwd;
 
@@ -242,7 +236,8 @@ export default function LoginButton({ onToggleTheme, isDark }) {
             title={user.displayName || user.email}
           >
             {avatar ? (
-              <img src={avatar} alt="avatar" className="w-9 h-9 rounded-full" referrerPolicy="no-referrer" />
+              // ↓ Thu nhỏ avatar
+              <img src={avatar} alt="avatar" className="w-8 h-8 rounded-full" referrerPolicy="no-referrer" />
             ) : (
               <FontAwesomeIcon icon={faUserCircle} className="w-6 h-6" />
             )}
@@ -256,18 +251,41 @@ export default function LoginButton({ onToggleTheme, isDark }) {
                 <div className="text-gray-500 truncate">{user.email}</div>
               </div>
               <div className="h-px bg-gray-200 dark:bg-gray-700" />
-              <a href="/profile" className="block px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800">Hồ sơ</a>
-              <a href="/my-comments" className="block px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800">Bình luận của tôi</a>
-              <a href="/notifications" className="block px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800">Thông báo</a>
+              <a
+                href="/profile"
+                onClick={() => setMenuOpen(false)}
+                className="block px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800"
+              >
+                Hồ sơ
+              </a>
+              <a
+                href="/my-comments"
+                onClick={() => setMenuOpen(false)}
+                className="block px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800"
+              >
+                Bình luận của tôi
+              </a>
+              {/* 🔔 Thông báo: mở panel, KHÔNG điều hướng (tránh 404) */}
               <button
-                onClick={onToggleTheme}
+                onClick={() => { setMenuOpen(false); window.dispatchEvent(new Event('open-notifications')); }}
+                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800"
+              >
+                Thông báo
+              </button>
+              <button
+                onClick={() => { onToggleTheme(); setMenuOpen(false); }}
                 className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 flex items-center gap-2"
               >
                 <FontAwesomeIcon icon={isDark ? faSun : faMoon} className="w-4 h-4" />
                 {isDark ? 'Chế độ sáng' : 'Chế độ tối'}
               </button>
               <div className="h-px bg-gray-200 dark:bg-gray-700" />
-              <button onClick={logout} className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800">Đăng xuất</button>
+              <button
+                onClick={logout}
+                className="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800"
+              >
+                Đăng xuất
+              </button>
             </div>
           )}
         </div>
@@ -282,7 +300,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       <div className="relative" ref={guestMenuRef}>
         <button
           onClick={(e) => {
-            // Cooldown 400ms sau khi đóng Auth modal để chặn ghost-click iOS
             if (Date.now() - authClosedAt < 400) {
               e.preventDefault();
               e.stopPropagation();
@@ -323,7 +340,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       {openAuth && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4"
-          onClick={(e) => e.stopPropagation()} // chặn click lọt xuống phần tử phía dưới
+          onClick={(e) => e.stopPropagation()}
         >
           <div className="w-full max-w-md rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-2xl">
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-800">
@@ -331,9 +348,9 @@ export default function LoginButton({ onToggleTheme, isDark }) {
               <button
                 onClick={(e) => {
                   e.preventDefault();
-                  e.stopPropagation();      // chặn sự kiện dội xuống avatar
+                  e.stopPropagation();
                   setOpenAuth(false);
-                  setAuthClosedAt(Date.now()); // bật cooldown
+                  setAuthClosedAt(Date.now());
                 }}
                 className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
                 aria-label="Close"
@@ -355,7 +372,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
                   <FontAwesomeIcon icon={faGithub} />
                   GitHub
                 </button>
-                {/* >>> ADD: X (Twitter) */}
                 <button onClick={loginTwitter} disabled={loading}
                         className="flex items-center justify-center gap-2 px-3 py-2 rounded bg-black text-white hover:opacity-90 disabled:opacity-60 col-span-1 sm:col-span-2">
                   <FontAwesomeIcon icon={faXTwitter} />
