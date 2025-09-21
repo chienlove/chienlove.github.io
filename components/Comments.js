@@ -48,7 +48,7 @@ function formatDate(ts) {
 }
 function excerpt(s, n = 140) {
   const t = String(s || '').replace(/\s+/g, ' ').trim();
-  return t.length > n ? `${t.slice(0, n)}…` : t;
+  return t.length > n ? `${t.slice(0, n)}…`` : t;
 }
 
 /* ================= Notifications ================= */
@@ -775,7 +775,7 @@ export default function Comments({ postId, postTitle }) {
       setContent('');
       await updateDoc(doc(db, 'users', me.uid), { 'stats.comments': increment(1) });
       const targetAdmins = adminUids.filter(u => u !== me.uid);
-      await Promise.all(targets.map(async (uid) => {
+      await Promise.all(targetAdmins.map(async (uid) => {
         await createNotification({
           toUserId: uid,
           type: 'comment',
