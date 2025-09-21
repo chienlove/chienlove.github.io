@@ -409,17 +409,11 @@ function ReplyBox({
 }
 
 // Component con để render một bình luận gốc và các phản hồi của nó
-function RootComment({ c, replies, me, adminUids, postId, postTitle, onOpenConfirm, toggleLike, deleteSingleComment, deleteThreadBatch, initialShowReplies, onExpand }) {
+function RootComment({ c, replies, me, adminUids, postId, postTitle, onOpenConfirm, toggleLike, deleteSingleComment, deleteThreadBatch, initialShowReplies }) {
   const [showReplies, setShowReplies] = useState(initialShowReplies);
   const dt = formatDate(c.createdAt);
   const hasLiked = !!me && Array.isArray(c.likedBy) && c.likedBy.includes(me.uid);
   const likeCount = c.likeCount || 0;
-
-  useEffect(() => {
-    if (initialShowReplies && !showReplies) {
-      setShowReplies(true);
-    }
-  }, [initialShowReplies, showReplies]);
 
   return (
     <li
@@ -453,7 +447,7 @@ function RootComment({ c, replies, me, adminUids, postId, postTitle, onOpenConfi
         parent={c}
         adminUids={adminUids}
         postTitle={postTitle}
-        onNeedVerify={() => {}}
+        onNeedVerify={() => {}} // Pass down relevant functions
         onNeedLogin={() => {}}
         renderTrigger={(openFn) => (
           <ActionBar
@@ -533,10 +527,7 @@ function RootComment({ c, replies, me, adminUids, postId, postTitle, onOpenConfi
             </ul>
           ) : (
             <button
-              onClick={() => {
-                setShowReplies(true);
-                onExpand(c.id);
-              }}
+              onClick={() => setShowReplies(true)}
               className="mt-3 text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-2"
             >
               <FontAwesomeIcon icon={faReply} />
@@ -572,7 +563,7 @@ export default function Comments({ postId, postTitle }) {
   const [modalTone, setModalTone] = useState('info');
 
   const [likingIds, setLikingIds] = useState(() => new Set());
-  const [expandedThreads, setExpandedThreads] = useState({});
+  const [threadsToExpand, setThreadsToExpand] = useState(new Set());
 
   const openHeaderLoginPopup = () => {
     if (typeof window === 'undefined') return;
@@ -696,17 +687,9 @@ export default function Comments({ postId, postTitle }) {
     if (fixes.length) Promise.all(fixes).catch(()=>{});
   }, [me, liveItems]);
 
-  const items = useMemo(() => {
-    if (liveItems && olderItems) {
-      return [...liveItems, ...olderItems];
-    }
-    return [];
-  }, [liveItems, olderItems]);
+  const items = useMemo(() => [...liveItems, ...olderItems], [liveItems, olderItems]);
 
-  const roots = useMemo(() => {
-    return items.filter(c => !c.parentId);
-  }, [items]);
-
+  const roots = useMemo(() => items.filter(c => !c.parentId), [items]);
   const repliesByParent = useMemo(() => {
     const m = {};
     items.forEach(c => {
@@ -740,36 +723,6 @@ export default function Comments({ postId, postTitle }) {
       setLoadingMore(false);
     }
   };
-
-  // Logic cuộn đến bình luận phản hồi
-  useEffect(() => {
-    if (loading || !router.isReady || items.length === 0) return;
-
-    const hash = router.asPath.split('#')[1];
-    if (hash && hash.startsWith('c-')) {
-      const targetId = hash.replace('c-', '');
-      const targetComment = items.find(c => c.id === targetId);
-
-      if (targetComment && targetComment.parentId) {
-        setExpandedThreads(prev => ({ ...prev, [targetComment.parentId]: true }));
-
-        const checkAndScroll = () => {
-          const el = document.getElementById(hash);
-          if (el) {
-            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            el.style.transition = 'background-color 0.5s';
-            el.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
-            setTimeout(() => {
-              el.style.backgroundColor = '';
-            }, 2000);
-          } else {
-            setTimeout(checkAndScroll, 100);
-          }
-        };
-        checkAndScroll();
-      }
-    }
-  }, [loading, router.isReady, router.asPath, items, repliesByParent]);
 
   const [submitting, setSubmitting] = useState(false);
   const onSubmit = async (e) => {
@@ -879,10 +832,40 @@ export default function Comments({ postId, postTitle }) {
       console.error("Lỗi khi xóa bình luận:", error);
     }
   };
-  
-  const handleExpandThread = (rootCommentId) => {
-    setExpandedThreads(prev => ({ ...prev, [rootCommentId]: true }));
-  };
+
+  // Logic cuộn đến bình luận khi truy cập từ thông báo
+  useEffect(() => {
+    const scrollToComment = () => {
+      const targetId = router.query.comment;
+      if (targetId && items.length > 0) {
+        const targetComment = items.find(c => c.id === targetId);
+        if (targetComment) {
+          const rootParentId = targetComment.parentId || targetComment.id;
+          
+          // Mở rộng luồng bình luận
+          setThreadsToExpand(prev => new Set(prev).add(rootParentId));
+          
+          // Chờ cho DOM cập nhật rồi mới cuộn
+          setTimeout(() => {
+            const el = document.getElementById(`c-${targetId}`);
+            if (el) {
+              el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              el.style.transition = 'background-color 0.5s';
+              el.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
+              setTimeout(() => {
+                el.style.backgroundColor = '';
+              }, 2000);
+            }
+          }, 500);
+        }
+      }
+    };
+    
+    if (router.isReady && items.length > 0) {
+      scrollToComment();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.isReady, items]);
 
   return (
     <div className="mt-6">
@@ -942,7 +925,6 @@ export default function Comments({ postId, postTitle }) {
                   deleteSingleComment={deleteSingleComment}
                   deleteThreadBatch={deleteThreadBatch}
                   initialShowReplies={threadsToExpand.has(c.id)}
-                  onExpand={handleExpandThread}
                 />
               ))}
             </ul>
