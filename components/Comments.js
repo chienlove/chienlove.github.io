@@ -948,8 +948,6 @@ export default function Comments({ postId, postTitle }) {
     }
   };
 
-  // Logic cuộn đến bình luận khi truy cập từ thông báo
-  const items = useMemo(() => [...liveItems, ...olderItems], [liveItems, olderItems]); // (đã có bên trên, giữ nguyên)
   useEffect(() => {
     const scrollToComment = () => {
       const targetId = router.query.comment;
