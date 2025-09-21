@@ -46,7 +46,7 @@ function formatDate(ts) {
     return { rel: '', abs: d.toLocaleString('vi-VN') };
   } catch { return ''; }
 }
-function excerpt(s, n = 140) {
+function excerpt(s, n = 160) {
   const t = String(s || '').replace(/\s+/g, ' ').trim();
   return t.length > n ? `${t.slice(0, n)}…` : t;
 }
@@ -59,44 +59,45 @@ async function bumpCounter(uid, delta) {
   const ref = doc(db, 'user_counters', uid);
   await runTransaction(db, async (tx) => {
     const snap = await tx.get(ref);
-    const cur = snap.exists() ? (snap.data().unreadCount || 0) : 0;
-    tx.set(ref, { unreadCount: Math.max(0, cur + delta), updatedAt: serverTimestamp() }, { merge: true });
-  });
-}
-async function createNotification(payload = {}) {
-  const { toUserId, type, postId, commentId, fromUserId, ...extra } = payload;
-  if (!toUserId) return;
-  await addDoc(collection(db, 'notifications'), {
-    toUserId,
-    type, // 'comment' | 'reply' | 'like'
-    postId,
-    commentId,
-    isRead: false,
-    updatedAt: serverTimestamp(),
-    createdAt: serverTimestamp(),
-    fromUserId,
-    ...extra,
+    const cur = snap.exists() ? (snap.data()?.unreadCount || 0) : 0;
+    tx.set(ref, {
+      unreadCount: Math.max(0, cur + delta),
+      updatedAt: serverTimestamp(),
+    }, { merge: true });
   });
 }
 
-/** ✅ Gộp thông báo LIKE theo (toUserId, postId, commentId) -- KHÔNG đọc, KHÔNG transaction */
+// Tạo 1 thông báo đơn (không dùng cho like gộp)
+async function createNotification(data) {
+  const ref = doc(collection(db, 'notifications'));
+  await setDoc(ref, {
+    ...data,
+    isRead: false,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  }, { merge: true });
+
+  // bump counter CHÍNH MÌNH nếu người nhận = mình (rules chỉ cho chính chủ update user_counters/{uid})
+  await bumpCounter(data.toUserId, +1);
+}
+
+/** Gộp thông báo LIKE theo (toUserId, postId, commentId) */
 async function upsertLikeNotification({
   toUserId, postId, commentId,
   fromUserId, fromUserName, fromUserPhoto,
   postTitle = '', commentText = ''
 }) {
   if (!toUserId || !postId || !commentId) return;
-  const nid = `like_${toUserId}_${postId}_${commentId}`;
+  const nid = `like_${toUserId}_${postId}_${commentId}`; // ID cố định để upsert
   const ref = doc(db, 'notifications', nid);
 
-  // 1) Thử UPDATE mù: nếu doc đã tồn tại thì tăng đếm, set awake
   try {
     await updateDoc(ref, {
       toUserId,
       type: 'like',
       postId: String(postId),
       commentId,
-      isRead: false,                   // "đánh thức" thông báo
+      isRead: false,
       updatedAt: serverTimestamp(),
       lastLikerName: fromUserName || 'Ai đó',
       lastLikerPhoto: fromUserPhoto || '',
@@ -107,10 +108,8 @@ async function upsertLikeNotification({
     });
     return;
   } catch (e) {
-    // NOT_FOUND -> sẽ tạo mới bên dưới
+    // Nếu chưa có doc -> sẽ tạo mới ở dưới
   }
-
-  // 2) Tạo mới (không cần đọc trước)
   await setDoc(ref, {
     toUserId,
     type: 'like',
@@ -127,6 +126,9 @@ async function upsertLikeNotification({
     count: 1,
     likers: [fromUserId],
   }, { merge: true });
+
+  // Không bump counter chéo người khác: chỉ cho phép nếu người nhận là chính currentUser
+  await bumpCounter(toUserId, +1);
 }
 
 /* ================= Users bootstrap ================= */
@@ -142,7 +144,11 @@ async function ensureUserDoc(u) {
     updatedAt: serverTimestamp(),
   };
   if (!snap.exists()) {
-    await setDoc(uref, { ...base, createdAt: serverTimestamp(), stats: { comments: 0, likesReceived: 0 } }, { merge: true });
+    await setDoc(uref, {
+      ...base,
+      createdAt: serverTimestamp(),
+      stats: { comments: 0, likesReceived: 0 },
+    }, { merge: true });
   } else {
     await setDoc(uref, base, { merge: true });
   }
