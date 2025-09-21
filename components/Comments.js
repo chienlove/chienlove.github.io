@@ -82,35 +82,46 @@ async function createNotification(payload = {}) {
 async function upsertLikeNotification({ toUserId, postId, commentId, fromUser, postTitle = '', commentText = '', cooldownSec = 60 }) {
   if (!toUserId || !commentId || !fromUser) return;
   
-  const nid = `like_${toUserId}_${commentId}_${fromUser.uid}`;
-  const nref = doc(db, 'notifications', nid);
+  // Tìm thông báo like gần nhất của người dùng này cho bình luận này
+  const q = query(
+    collection(db, 'notifications'),
+    where('toUserId', '==', toUserId),
+    where('commentId', '==', commentId),
+    where('fromUserId', '==', fromUser.uid),
+    where('type', '==', 'like'),
+    orderBy('createdAt', 'desc'),
+    limit(1)
+  );
+  const snap = await getDocs(q);
 
-  const snap = await getDoc(nref);
-  let shouldBumpCounter = true;
-
-  if (snap.exists()) {
-    const d = snap.data();
+  let shouldCreateNew = true;
+  if (!snap.empty) {
+    const d = snap.docs[0].data();
     const updatedAt = d?.updatedAt?.seconds ? d.updatedAt.seconds * 1000 : 0;
     const withinCooldown = Date.now() - updatedAt < cooldownSec * 1000;
-    if (withinCooldown) shouldBumpCounter = false;
+    if (withinCooldown) {
+      // Nếu có thông báo trong thời gian cooldown, chỉ cập nhật nó
+      // và không tạo thông báo mới hoặc bump counter
+      await updateDoc(doc(db, 'notifications', snap.docs[0].id), { updatedAt: serverTimestamp() });
+      shouldCreateNew = false;
+    }
   }
 
-  await setDoc(nref, {
-    toUserId,
-    type: 'like',
-    postId: String(postId),
-    commentId,
-    fromUserId: fromUser.uid,
-    fromUserName: preferredName(fromUser),
-    fromUserPhoto: preferredPhoto(fromUser),
-    postTitle,
-    commentText,
-    updatedAt: serverTimestamp(),
-    createdAt: snap?.exists() ? (snap.data().createdAt || serverTimestamp()) : serverTimestamp(),
-    isRead: false
-  }, { merge: true });
-
-  if (shouldBumpCounter) {
+  if (shouldCreateNew) {
+    await addDoc(collection(db, 'notifications'), {
+      toUserId,
+      type: 'like',
+      postId: String(postId),
+      commentId,
+      fromUserId: fromUser.uid,
+      fromUserName: preferredName(fromUser),
+      fromUserPhoto: preferredPhoto(fromUser),
+      postTitle,
+      commentText,
+      updatedAt: serverTimestamp(),
+      createdAt: serverTimestamp(),
+      isRead: false
+    });
     await bumpCounter(toUserId, +1);
   }
 }
@@ -253,25 +264,27 @@ function CommentHeader({ c, me, isAdminFn, dt, canDelete, onDelete }) {
 function Quote({ quoteFrom, me }) {
   if (!quoteFrom) return null;
   return (
-    <div className="mt-3 p-4 rounded-lg bg-gray-100 dark:bg-gray-800 border-l-4 border-gray-300 dark:border-gray-600">
-      <div className="flex items-center mb-1">
+    <div className="mt-3 overflow-hidden rounded-lg border border-gray-300 dark:border-gray-600">
+      <div className="flex items-center gap-2 px-3 py-2 bg-gray-200 dark:bg-gray-700 text-sm font-semibold text-orange-600 dark:text-orange-400">
         {quoteFrom.authorId ? (
           <Link
             href={me && quoteFrom.authorId === me.uid ? '/profile' : `/users/${quoteFrom.authorId}`}
-            className="flex items-center gap-1 text-sm font-semibold text-orange-600 dark:text-orange-400 hover:underline"
+            className="flex items-center gap-1 hover:underline"
           >
             <span>{quoteFrom.userName || 'Người dùng'}</span>
-            <FontAwesomeIcon icon={faArrowUp} className="w-3 h-3 text-orange-600 dark:text-orange-400" />
+            <FontAwesomeIcon icon={faArrowUp} className="w-3 h-3 translate-y-[1px]" />
           </Link>
         ) : (
-          <span className="flex items-center gap-1 text-sm font-semibold text-orange-600 dark:text-orange-400">
+          <span className="flex items-center gap-1">
             <span>{quoteFrom.userName || 'Người dùng'}</span>
-            <FontAwesomeIcon icon={faArrowUp} className="w-3 h-3 text-orange-600 dark:text-orange-400" />
+            <FontAwesomeIcon icon={faArrowUp} className="w-3 h-3 translate-y-[1px]" />
           </span>
         )}
-        <span className="ml-1 text-gray-500 dark:text-gray-400">said:</span>
+        <span className="text-gray-600 dark:text-gray-300">said:</span>
       </div>
-      <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words">{excerpt(quoteFrom.content, 200)}</div>
+      <div className="p-3 text-sm text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 border-t border-gray-300 dark:border-gray-600 whitespace-pre-wrap break-words">
+        {excerpt(quoteFrom.content, 200)}
+      </div>
     </div>
   );
 }
@@ -368,25 +381,27 @@ function ReplyBox({
       {open && (
         <form onSubmit={onReply} className="flex flex-col gap-2 mt-2">
           {target && (
-            <div className="p-4 rounded-lg bg-gray-100 dark:bg-gray-800 border-l-4 border-gray-300 dark:border-gray-600">
-              <div className="flex items-center mb-1">
+            <div className="overflow-hidden rounded-lg border border-gray-300 dark:border-gray-600">
+              <div className="flex items-center gap-2 px-3 py-2 bg-gray-200 dark:bg-gray-700 text-sm font-semibold text-orange-600 dark:text-orange-400">
                 {target.authorId ? (
                   <Link
                     href={me && target.authorId === me.uid ? '/profile' : `/users/${target.authorId}`}
-                    className="flex items-center gap-1 text-sm font-semibold text-orange-600 dark:text-orange-400 hover:underline"
+                    className="flex items-center gap-1 hover:underline"
                   >
                     <span>{target.userName || 'Người dùng'}</span>
-                    <FontAwesomeIcon icon={faArrowUp} className="w-3 h-3 text-orange-600 dark:text-orange-400" />
+                    <FontAwesomeIcon icon={faArrowUp} className="w-3 h-3 translate-y-[1px]" />
                   </Link>
                 ) : (
-                  <span className="flex items-center gap-1 text-sm font-semibold text-orange-600 dark:text-orange-400">
+                  <span className="flex items-center gap-1">
                     <span>{target.userName || 'Người dùng'}</span>
-                    <FontAwesomeIcon icon={faArrowUp} className="w-3 h-3 text-orange-600 dark:text-orange-400" />
+                    <FontAwesomeIcon icon={faArrowUp} className="w-3 h-3 translate-y-[1px]" />
                   </span>
                 )}
-                <span className="ml-1 text-gray-500 dark:text-gray-400">said:</span>
+                <span className="text-gray-600 dark:text-gray-300">said:</span>
               </div>
-              <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap break-words">{excerpt(target.content, 200)}</div>
+              <div className="p-3 text-sm text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 border-t border-gray-300 dark:border-gray-600 whitespace-pre-wrap break-words">
+                {excerpt(target.content, 200)}
+              </div>
             </div>
           )}
           <textarea
@@ -760,7 +775,7 @@ export default function Comments({ postId, postTitle }) {
       setContent('');
       await updateDoc(doc(db, 'users', me.uid), { 'stats.comments': increment(1) });
       const targetAdmins = adminUids.filter(u => u !== me.uid);
-      await Promise.all(targetAdmins.map(async (uid) => {
+      await Promise.all(targets.map(async (uid) => {
         await createNotification({
           toUserId: uid,
           type: 'comment',
@@ -796,10 +811,8 @@ export default function Comments({ postId, postTitle }) {
         });
       }
       
-      // Sửa logic: Luôn gọi upsertLikeNotification khi like
-      // và để hàm này tự xử lý việc tạo/cập nhật thông báo
-      // dựa trên điều kiện cooldown.
-      if (me.uid !== c.authorId) {
+      // Sửa logic: Chỉ tạo thông báo khi người dùng like
+      if (!hasLiked && me.uid !== c.authorId) {
         await upsertLikeNotification({
           toUserId: c.authorId,
           postId: String(c.postId),
@@ -810,7 +823,6 @@ export default function Comments({ postId, postTitle }) {
           cooldownSec: 60
         });
       }
-
     } finally {
       const out = new Set(likingIds); out.delete(c.id); setLikingIds(out);
     }
