@@ -52,10 +52,10 @@ function excerpt(s, n = 140) {
 }
 
 /* ================= Notifications ================= */
-// ❗️Chỉ bump counter cho CHÍNH MÌNH (tránh permission-denied khi đụng doc của người khác)
+// Chỉ bump counter cho CHÍNH MÌNH (tránh permission-denied trên user_counters của người khác)
 async function bumpCounter(uid, delta) {
   if (!uid || !Number.isFinite(delta)) return;
-  if (auth.currentUser?.uid !== uid) return; // chặn bump chéo user
+  if (auth.currentUser?.uid !== uid) return;
   const ref = doc(db, 'user_counters', uid);
   await runTransaction(db, async (tx) => {
     const snap = await tx.get(ref);
@@ -79,8 +79,8 @@ async function createNotification(payload = {}) {
   });
 }
 
-/** ✅ Gộp thông báo LIKE theo (toUserId, postId, commentId) -- KHÔNG đọc, KHÔNG transaction.
- *  Luôn set fromUserId ở cả updateDoc và setDoc để qua Firestore Rules của bạn. */
+/** ✅ Upsert thông báo LIKE gộp theo (toUserId, postId, commentId).
+ * Luôn set fromUserId ở cả updateDoc & setDoc để pass Firestore Rules. */
 async function upsertLikeNotification({
   toUserId, postId, commentId,
   fromUserId, fromUserName, fromUserPhoto,
@@ -90,28 +90,26 @@ async function upsertLikeNotification({
   const nid = `like_${toUserId}_${postId}_${commentId}`;
   const ref = doc(db, 'notifications', nid);
 
-  // 1) Thử UPDATE mù
+  // 1) UPDATE mù (doc tồn tại) -- không đọc trước
   try {
     await updateDoc(ref, {
-      // 👇 Các field bảo đảm thỏa rules & giúp UI hiển thị đúng
       toUserId,
-      fromUserId,                      // quan trọng để rule "write" pass cho người like hiện tại
+      fromUserId, // 🔑 để rule "write" pass cho người like hiện tại
       type: 'like',
       postId: String(postId),
       commentId,
-      isRead: false,                   // "đánh thức" thông báo
+      isRead: false,                 // "đánh thức" khi có người mới like
       updatedAt: serverTimestamp(),
       lastLikerName: fromUserName || 'Ai đó',
       lastLikerPhoto: fromUserPhoto || '',
       postTitle,
       commentText,
-      // 👇 tăng/gộp
       count: increment(1),
       likers: arrayUnion(fromUserId),
     });
     return;
-  } catch (e) {
-    // NOT_FOUND -> tạo mới bên dưới
+  } catch {
+    // NOT_FOUND -> tạo mới
   }
 
   // 2) Tạo mới
@@ -165,7 +163,7 @@ function CenterModal({ open, title, children, onClose, actions, tone = 'info' })
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className={`relative w-[92vw] max-w-md rounded-2xl border shadow-2xl p-4 ${toneClass}`}>
         {title && <h3 className="text-lg font-semibold mb-2">{title}</h3>}
-        <div className="text-sm text-gray-900">{children}</div>
+        <div className="text-sm text-gray-900 dark:text-gray-100">{children}</div>
         <div className="mt-4 flex justify-end gap-2">{actions}</div>
       </div>
     </div>
@@ -311,6 +309,7 @@ function ReplyBox({
       setText(''); setOpen(false);
       await updateDoc(doc(db, 'users', me.uid), { 'stats.comments': increment(1) });
 
+      // Thông báo cho người bị reply (kể cả admin)
       if (target.authorId && target.authorId !== me.uid) {
         await createNotification({
           toUserId: target.authorId,
@@ -325,6 +324,7 @@ function ReplyBox({
         });
       }
 
+      // Thông báo cho các admin khác (tránh trùng chính chủ comment đang reply)
       const targets = adminUids.filter(u => u !== me.uid && u !== target.authorId);
       await Promise.all(targets.map(async (uid) => {
         await createNotification({
@@ -572,7 +572,6 @@ export default function Comments({ postId, postTitle }) {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [modalTitle, setModalTitle] = useState('');
-  theModal:
   const [modalContent, setModalContent] = useState(null);
   const [modalActions, setModalActions] = useState(null);
   const [modalTone, setModalTone] = useState('info');
@@ -755,7 +754,7 @@ export default function Comments({ postId, postTitle }) {
       setContent('');
       await updateDoc(doc(db, 'users', me.uid), { 'stats.comments': increment(1) });
 
-      // Thông báo cho admin (nếu có), không bump counter chéo user
+      // Thông báo cho admin (nếu có)
       const targetAdmins = adminUids.filter(u => u !== me.uid);
       await Promise.all(targetAdmins.map(async (uid) => {
         await createNotification({
@@ -773,6 +772,7 @@ export default function Comments({ postId, postTitle }) {
     } finally { setSubmitting(false); }
   };
 
+  const [likingIds, setLikingIds] = useState(() => new Set());
   const toggleLike = async (c) => {
     if (!me) { openLoginPrompt(); return; }
     if (likingIds.has(c.id)) return;
@@ -788,7 +788,7 @@ export default function Comments({ postId, postTitle }) {
         await updateDoc(doc(db, 'users', c.authorId), { 'stats.likesReceived': increment(hasLiked ? -1 : +1) });
       }
 
-      // ✅ Chỉ khi LIKE (không phải UNLIKE) thì upsert thông báo gộp -- KHÔNG bump counter chéo user
+      // Chỉ khi LIKE (không phải UNLIKE) thì upsert thông báo
       if (!hasLiked && me.uid !== c.authorId && c.authorId) {
         await upsertLikeNotification({
           toUserId: c.authorId,                 // admin hay user đều như nhau
