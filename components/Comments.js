@@ -50,7 +50,7 @@ function excerpt(s, n = 140) {
   return t.length > n ? `${t.slice(0, n)}…` : t;
 }
 
-/* ================= Notifications ================= */
+/* ================= Notifications (Đã loại bỏ logic like) ================= */
 async function bumpCounter(uid, delta) {
   if (!uid || !Number.isFinite(delta)) return;
   const ref = doc(db, 'user_counters', uid);
@@ -76,47 +76,6 @@ async function createNotification(payload = {}) {
     fromUserId,
     ...extra,
   });
-}
-
-/** Like notification: idempotent + cooldown.
- *  Một cặp (toUserId, commentId, fromUserId) chỉ có 1 doc:
- *  notifications/like_{to}_{cmt}_{from}
- *  - Trong cooldown (mặc định 60s): chỉ refresh updatedAt, KHÔNG tăng badge
- *  - Hết cooldown hoặc lần đầu: setDoc + bumpCounter(+1)
- */
-async function upsertLikeNotification({ toUserId, postId, commentId, fromUser, cooldownSec = 60 }) {
-  if (!toUserId || !commentId || !fromUser) return;
-  if (toUserId === fromUser.uid) return; // không tự notify chính mình
-
-  const nid = `like_${toUserId}_${commentId}_${fromUser.uid}`;
-  const nref = doc(db, 'notifications', nid);
-
-  const snap = await getDoc(nref);
-  let shouldBumpCounter = true;
-
-  if (snap.exists()) {
-    const d = snap.data();
-    const updatedAt = d?.updatedAt?.seconds ? d.updatedAt.seconds * 1000 : 0;
-    const withinCooldown = Date.now() - updatedAt < cooldownSec * 1000;
-    if (withinCooldown) shouldBumpCounter = false;
-  }
-
-  await setDoc(nref, {
-    toUserId,
-    type: 'like',
-    postId: String(postId),
-    commentId,
-    fromUserId: fromUser.uid,
-    fromUserName: preferredName(fromUser),
-    fromUserPhoto: preferredPhoto(fromUser),
-    updatedAt: serverTimestamp(),
-    createdAt: snap?.exists() ? (snap.data().createdAt || serverTimestamp()) : serverTimestamp(),
-    isRead: false
-  }, { merge: true });
-
-  if (shouldBumpCounter) {
-    await bumpCounter(toUserId, +1);
-  }
 }
 
 /* ================= Users bootstrap ================= */
@@ -667,19 +626,9 @@ export default function Comments({ postId, postTitle }) {
       });
 
       if (c.authorId) {
+        // Cập nhật thống kê người dùng, không tạo thông báo like
         await updateDoc(doc(db, 'users', c.authorId), {
           'stats.likesReceived': increment(hasLiked ? -1 : +1)
-        });
-      }
-
-      // Like (không phải unlike) → noti idempotent + cooldown, vẫn tăng badge ở lần hợp lệ
-      if (!hasLiked && me.uid !== c.authorId) {
-        await upsertLikeNotification({
-          toUserId: c.authorId,
-          postId: String(c.postId),
-          commentId: c.id,
-          fromUser: me,
-          cooldownSec: 60
         });
       }
     } finally {
@@ -687,16 +636,31 @@ export default function Comments({ postId, postTitle }) {
     }
   };
 
-  // ===== Xoá thread bằng batch
+  // ===== Xoá thread bằng batch (đã sửa lỗi)
   const deleteThreadBatch = async (root) => {
     const toDelete = [root, ...(repliesByParent[root.id] || [])];
     const batch = writeBatch(db);
+    
+    // Lấy danh sách các UID tác giả cần cập nhật thống kê
+    const authorsToUpdate = new Set(toDelete.map(c => c.authorId).filter(Boolean));
+
+    // Kiểm tra xem các tài liệu người dùng này có tồn tại không
+    const existingAuthorIds = new Set();
+    const authorPromises = [...authorsToUpdate].map(uid => getDoc(doc(db, 'users', uid)));
+    const authorSnaps = await Promise.all(authorPromises);
+    authorSnaps.forEach(snap => {
+      if (snap.exists()) {
+        existingAuthorIds.add(snap.id);
+      }
+    });
+
     toDelete.forEach((it) => {
       batch.delete(doc(db, 'comments', it.id));
-      if (it.authorId) {
+      if (it.authorId && existingAuthorIds.has(it.authorId)) {
         batch.update(doc(db, 'users', it.authorId), { 'stats.comments': increment(-1) });
       }
     });
+    
     await batch.commit();
   };
 
@@ -750,7 +714,8 @@ export default function Comments({ postId, postTitle }) {
                 const dt = formatDate(c.createdAt);
                 const hasLiked = !!me && Array.isArray(c.likedBy) && c.likedBy.includes(me.uid);
                 const likeCount = c.likeCount || 0;
-
+                const [showReplies, setShowReplies] = useState(false);
+                
                 return (
                   <li
                     key={c.id}
@@ -801,72 +766,90 @@ export default function Comments({ postId, postTitle }) {
                       )}
                     />
 
-                    {/* Replies */}
-                    {replies.map((r) => {
-                      const target = r.replyToUserId === c.authorId
-                        ? c
-                        : replies.find(x => x.authorId === r.replyToUserId) || null;
-                      const dt2 = formatDate(r.createdAt);
-                      const rHasLiked = !!me && Array.isArray(r.likedBy) && r.likedBy.includes(me.uid);
-                      const rLikeCount = r.likeCount || 0;
+                    {/* Giao diện "Xem N câu trả lời" */}
+                    {replies.length > 0 && (
+                      <div className="mt-3">
+                        {showReplies ? (
+                          <ul className="space-y-3">
+                            {replies.map((r) => {
+                              const target = r.replyToUserId === c.authorId
+                                ? c
+                                : replies.find(x => x.authorId === r.replyToUserId) || null;
+                              const dt2 = formatDate(r.createdAt);
+                              const rHasLiked = !!me && Array.isArray(r.likedBy) && r.likedBy.includes(me.uid);
+                              const rLikeCount = r.likeCount || 0;
 
-                      return (
-                        <div
-                          key={r.id}
-                          id={`c-${r.id}`}
-                          className="mt-3 pl-4 border-l-2 border-sky-200 dark:border-sky-800 scroll-mt-24"
-                        >
-                          <CommentHeader
-                            c={r}
-                            me={me}
-                            isAdminFn={(uid)=>adminUids.includes(uid)}
-                            dt={dt2}
-                            canDelete={!!me && (me.uid === r.authorId || adminUids.includes(me.uid))}
-                            onDelete={() => {
-                              openConfirm('Bạn có chắc muốn xoá phản hồi này?', async () => {
-                                try {
-                                  await deleteDoc(doc(db, 'comments', r.id));
-                                  if (r.authorId) {
-                                    await updateDoc(doc(db, 'users', r.authorId), { 'stats.comments': increment(-1) });
-                                  }
-                                } catch {}
-                              });
-                            }}
-                          />
+                              return (
+                                <li
+                                  key={r.id}
+                                  id={`c-${r.id}`}
+                                  className="pl-4 border-l-2 border-sky-200 dark:border-sky-800 scroll-mt-24"
+                                >
+                                  <CommentHeader
+                                    c={r}
+                                    me={me}
+                                    isAdminFn={(uid)=>adminUids.includes(uid)}
+                                    dt={dt2}
+                                    canDelete={!!me && (me.uid === r.authorId || adminUids.includes(me.uid))}
+                                    onDelete={() => {
+                                      openConfirm('Bạn có chắc muốn xoá phản hồi này?', async () => {
+                                        try {
+                                          await deleteDoc(doc(db, 'comments', r.id));
+                                          const authorSnap = await getDoc(doc(db, 'users', r.authorId));
+                                          if (authorSnap.exists()) {
+                                              await updateDoc(doc(db, 'users', r.authorId), { 'stats.comments': increment(-1) });
+                                          }
+                                        } catch {}
+                                      });
+                                    }}
+                                  />
 
-                          <Quote quoteFrom={target} me={me} />
+                                  <Quote quoteFrom={target} me={me} />
 
-                          <div className="mt-2 whitespace-pre-wrap break-words text-gray-900 dark:text-gray-100 leading-6">
-                            {r.content}
-                          </div>
+                                  <div className="mt-2 whitespace-pre-wrap break-words text-gray-900 dark:text-gray-100 leading-6">
+                                    {r.content}
+                                  </div>
 
-                          {/* Action bar cho reply */}
-                          <ReplyBox
-                            me={me}
-                            postId={postId}
-                            parent={c}
-                            replyingTo={r}
-                            adminUids={adminUids}
-                            postTitle={postTitle}
-                            onNeedVerify={openVerifyPrompt}
-                            onNeedLogin={openLoginPrompt}
-                            renderTrigger={(openFn) => (
-                              <ActionBar
-                                hasLiked={rHasLiked}
-                                likeCount={rLikeCount}
-                                onToggleLike={() => toggleLike(r)}
-                                renderReplyTrigger={() => (
-                                  <button onClick={openFn} className="inline-flex items-center gap-2 text-sm text-sky-700 dark:text-sky-300 hover:underline">
-                                    <FontAwesomeIcon icon={faReply} />
-                                    Trả lời
-                                  </button>
-                                )}
-                              />
-                            )}
-                          />
-                        </div>
-                      );
-                    })}
+                                  {/* Action bar cho reply */}
+                                  <ReplyBox
+                                    me={me}
+                                    postId={postId}
+                                    parent={c}
+                                    replyingTo={r}
+                                    adminUids={adminUids}
+                                    postTitle={postTitle}
+                                    onNeedVerify={openVerifyPrompt}
+                                    onNeedLogin={openLoginPrompt}
+                                    renderTrigger={(openFn) => (
+                                      <ActionBar
+                                        hasLiked={rHasLiked}
+                                        likeCount={rLikeCount}
+                                        onToggleLike={() => toggleLike(r)}
+                                        renderReplyTrigger={() => (
+                                          <button onClick={openFn} className="inline-flex items-center gap-2 text-sm text-sky-700 dark:text-sky-300 hover:underline">
+                                            <FontAwesomeIcon icon={faReply} />
+                                            Trả lời
+                                          </button>
+                                        )}
+                                      />
+                                    )}
+                                  />
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        ) : (
+                          // Nút "Xem N câu trả lời"
+                          <button
+                            onClick={() => setShowReplies(true)}
+                            className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-2"
+                          >
+                            <FontAwesomeIcon icon={faReply} />
+                            Xem {replies.length} câu trả lời
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </li>
                 );
               })}
@@ -894,3 +877,4 @@ export default function Comments({ postId, postTitle }) {
     </div>
   );
 }
+
