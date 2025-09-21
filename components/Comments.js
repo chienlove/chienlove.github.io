@@ -50,7 +50,7 @@ function excerpt(s, n = 140) {
   return t.length > n ? `${t.slice(0, n)}…` : t;
 }
 
-/* ================= Notifications (Đã loại bỏ logic like) ================= */
+/* ================= Notifications ================= */
 async function bumpCounter(uid, delta) {
   if (!uid || !Number.isFinite(delta)) return;
   const ref = doc(db, 'user_counters', uid);
@@ -76,6 +76,40 @@ async function createNotification(payload = {}) {
     fromUserId,
     ...extra,
   });
+}
+async function upsertLikeNotification({ toUserId, postId, commentId, fromUser, cooldownSec = 60 }) {
+  if (!toUserId || !commentId || !fromUser) return;
+  if (toUserId === fromUser.uid) return;
+
+  const nid = `like_${toUserId}_${commentId}_${fromUser.uid}`;
+  const nref = doc(db, 'notifications', nid);
+
+  const snap = await getDoc(nref);
+  let shouldBumpCounter = true;
+
+  if (snap.exists()) {
+    const d = snap.data();
+    const updatedAt = d?.updatedAt?.seconds ? d.updatedAt.seconds * 1000 : 0;
+    const withinCooldown = Date.now() - updatedAt < cooldownSec * 1000;
+    if (withinCooldown) shouldBumpCounter = false;
+  }
+
+  await setDoc(nref, {
+    toUserId,
+    type: 'like',
+    postId: String(postId),
+    commentId,
+    fromUserId: fromUser.uid,
+    fromUserName: preferredName(fromUser),
+    fromUserPhoto: preferredPhoto(fromUser),
+    updatedAt: serverTimestamp(),
+    createdAt: snap?.exists() ? (snap.data().createdAt || serverTimestamp()) : serverTimestamp(),
+    isRead: false
+  }, { merge: true });
+
+  if (shouldBumpCounter) {
+    await bumpCounter(toUserId, +1);
+  }
 }
 
 /* ================= Users bootstrap ================= */
@@ -381,8 +415,8 @@ export default function Comments({ postId, postTitle }) {
 
   // Realtime page1 + "Xem thêm" cho các trang cũ
   const PAGE_SIZE = 50;
-  const [liveItems, setLiveItems] = useState([]);   // realtime trang 1
-  const [olderItems, setOlderItems] = useState([]); // các trang cũ
+  const [liveItems, setLiveItems] = useState([]);
+  const [olderItems, setOlderItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const lastDocRef = useRef(null);
@@ -626,9 +660,19 @@ export default function Comments({ postId, postTitle }) {
       });
 
       if (c.authorId) {
-        // Cập nhật thống kê người dùng, không tạo thông báo like
         await updateDoc(doc(db, 'users', c.authorId), {
           'stats.likesReceived': increment(hasLiked ? -1 : +1)
+        });
+      }
+
+      // Like (không phải unlike) → noti idempotent + cooldown, vẫn tăng badge ở lần hợp lệ
+      if (!hasLiked && me.uid !== c.authorId) {
+        await upsertLikeNotification({
+          toUserId: c.authorId,
+          postId: String(c.postId),
+          commentId: c.id,
+          fromUser: me,
+          cooldownSec: 60
         });
       }
     } finally {
@@ -641,10 +685,7 @@ export default function Comments({ postId, postTitle }) {
     const toDelete = [root, ...(repliesByParent[root.id] || [])];
     const batch = writeBatch(db);
     
-    // Lấy danh sách các UID tác giả cần cập nhật thống kê
     const authorsToUpdate = new Set(toDelete.map(c => c.authorId).filter(Boolean));
-
-    // Kiểm tra xem các tài liệu người dùng này có tồn tại không
     const existingAuthorIds = new Set();
     const authorPromises = [...authorsToUpdate].map(uid => getDoc(doc(db, 'users', uid)));
     const authorSnaps = await Promise.all(authorPromises);
@@ -877,4 +918,3 @@ export default function Comments({ postId, postTitle }) {
     </div>
   );
 }
-
