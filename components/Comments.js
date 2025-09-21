@@ -85,44 +85,50 @@ async function upsertLikeNotification({
   fromUserId, fromUserName, fromUserPhoto,
   postTitle = '', commentText = ''
 }) {
-  if (!toUserId || !postId || !commentId) return;
+  if (!toUserId || !postId || !commentId || !fromUserId) return;
   const nid = `like_${toUserId}_${postId}_${commentId}`;
   const ref = doc(db, 'notifications', nid);
 
-  const docSnap = await getDoc(ref);
-  
-  if (docSnap.exists()) {
+  // Thử update mù (doc đã tồn tại)
+  try {
     await updateDoc(ref, {
-      updatedAt: serverTimestamp(),
-      lastLikerName: fromUserName || 'Ai đó',
-      lastLikerPhoto: fromUserPhoto || '',
-      isRead: false,
-      count: increment(1),
-      likers: arrayUnion(fromUserId),
-    });
-  } else {
-    await setDoc(ref, {
       toUserId,
+      fromUserId, // rất quan trọng để pass rule write
       type: 'like',
       postId: String(postId),
       commentId,
       isRead: false,
-      createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-      fromUserId,
-      fromUserName,
-      fromUserPhoto,
       lastLikerName: fromUserName || 'Ai đó',
       lastLikerPhoto: fromUserPhoto || '',
-      count: 1,
-      likers: [fromUserId],
       postTitle,
       commentText,
+      // gộp
+      count: increment(1),
+      likers: arrayUnion(fromUserId),
     });
+    return;
+  } catch (_) {
+    // NOT_FOUND -> setDoc tạo mới
   }
-  await bumpCounter(toUserId, 1);
-}
 
+  await setDoc(ref, {
+    toUserId,
+    fromUserId,
+    type: 'like',
+    postId: String(postId),
+    commentId,
+    isRead: false,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+    lastLikerName: fromUserName || 'Ai đó',
+    lastLikerPhoto: fromUserPhoto || '',
+    postTitle,
+    commentText,
+    count: 1,
+    likers: [fromUserId],
+  }, { merge: true });
+}
 
 /* ================= Users bootstrap ================= */
 async function ensureUserDoc(u) {
