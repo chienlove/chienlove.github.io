@@ -81,55 +81,58 @@ async function createNotification(data) {
   await bumpCounter(data.toUserId, +1);
 }
 
-/** Gộp thông báo LIKE theo (toUserId, postId, commentId) */
+// Upsert thông báo LIKE gộp theo (toUserId, postId, commentId).
+// LUÔN set fromUserId trong cả update lẫn set để thỏa Firestore Rules của bạn.
 async function upsertLikeNotification({
   toUserId, postId, commentId,
   fromUserId, fromUserName, fromUserPhoto,
   postTitle = '', commentText = ''
 }) {
-  if (!toUserId || !postId || !commentId) return;
-  const nid = `like_${toUserId}_${postId}_${commentId}`; // ID cố định để upsert
+  if (!toUserId || !postId || !commentId || !fromUserId) return;
+  const nid = `like_${toUserId}_${postId}_${commentId}`;
   const ref = doc(db, 'notifications', nid);
 
+  // 1) Thử update mù (doc đã tồn tại)
   try {
-    // Thử update nếu đã có doc
     await updateDoc(ref, {
+      // các field đảm bảo qua rules & giúp UI hiển thị đúng
       toUserId,
+      fromUserId, // QUAN TRỌNG: để người đang like được quyền ghi
       type: 'like',
       postId: String(postId),
       commentId,
-      isRead: false,
+      isRead: false,                   // đánh thức lại khi có người mới like
       updatedAt: serverTimestamp(),
       lastLikerName: fromUserName || 'Ai đó',
       lastLikerPhoto: fromUserPhoto || '',
       postTitle,
       commentText,
+      // gộp
       count: increment(1),
       likers: arrayUnion(fromUserId),
     });
-  } catch (error) {
-    // Nếu chưa có (not-found), sẽ tạo mới notification like
-    await setDoc(ref, {
-      toUserId,
-      type: 'like',
-      postId: String(postId),
-      commentId,
-      isRead: false,
-      createdAt: serverTimestamp(),
-      updatedAt: serverTimestamp(),
-      fromUserId, fromUserName, fromUserPhoto,
-      lastLikerName: fromUserName || 'Ai đó',
-      lastLikerPhoto: fromUserPhoto || '',
-      postTitle,
-      commentText,
-      count: 1,
-      likers: [fromUserId],
-    }, { merge: true });
+    return;
+  } catch (e) {
+    // NOT_FOUND -> tạo mới bên dưới
   }
 
-  // Không bump counter chéo người khác: chỉ bump nếu user nhận là currentUser
-  await bumpCounter(toUserId, +1);
-}
+  // 2) Tạo mới (lượt like đầu tiên)
+  await setDoc(ref, {
+    toUserId,
+    fromUserId, fromUserName, fromUserPhoto, // vẫn set để thỏa rules
+    type: 'like',
+    postId: String(postId),
+    commentId,
+    isRead: false,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+    lastLikerName: fromUserName || 'Ai đó',
+    lastLikerPhoto: fromUserPhoto || '',
+    postTitle,
+    commentText,
+    count: 1,
+    likers: [fromUserId],
+  }, { merge: true });
 }
 
 /* ================= Users bootstrap ================= */
