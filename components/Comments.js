@@ -833,6 +833,40 @@ export default function Comments({ postId, postTitle }) {
     }
   };
 
+  // Logic cuộn đến bình luận khi truy cập từ thông báo
+  useEffect(() => {
+    const scrollToComment = () => {
+      const targetId = router.query.comment;
+      if (targetId && items.length > 0) {
+        const targetComment = items.find(c => c.id === targetId);
+        if (targetComment) {
+          const rootParentId = targetComment.parentId || targetComment.id;
+          
+          // Mở rộng luồng bình luận
+          setThreadsToExpand(prev => new Set(prev).add(rootParentId));
+          
+          // Chờ cho DOM cập nhật rồi mới cuộn
+          setTimeout(() => {
+            const el = document.getElementById(`c-${targetId}`);
+            if (el) {
+              el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              el.style.transition = 'background-color 0.5s';
+              el.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
+              setTimeout(() => {
+                el.style.backgroundColor = '';
+              }, 2000);
+            }
+          }, 500);
+        }
+      }
+    };
+    
+    if (router.isReady && items.length > 0) {
+      scrollToComment();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router.isReady, items]);
+
   return (
     <div className="mt-6">
       <CenterModal open={modalOpen} title={modalTitle} onClose={() => setModalOpen(false)} actions={modalActions} tone={modalTone}>
