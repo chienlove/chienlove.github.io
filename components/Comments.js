@@ -73,7 +73,6 @@ async function createNotification(payload = {}) {
     postId,
     commentId,
     isRead: false,
-    // ✨ bổ sung updatedAt để đồng bộ với like-noti
     updatedAt: serverTimestamp(),
     createdAt: serverTimestamp(),
     fromUserId,
@@ -84,7 +83,7 @@ async function upsertLikeNotification({ toUserId, postId, commentId, fromUser, p
   if (!toUserId || !commentId || !fromUser) return;
   if (toUserId === fromUser.uid) return;
 
-  const nid = `like_${toUserId}_${commentId}_${fromUser.uid}`;
+  const nid = `like_${toUserId}_${commentId}`;
   const nref = doc(db, 'notifications', nid);
 
   const snap = await getDoc(nref);
@@ -105,11 +104,9 @@ async function upsertLikeNotification({ toUserId, postId, commentId, fromUser, p
     fromUserId: fromUser.uid,
     fromUserName: preferredName(fromUser),
     fromUserPhoto: preferredPhoto(fromUser),
-    // ✨ thêm dữ liệu hiển thị cho panel
     postTitle,
     commentText,
     updatedAt: serverTimestamp(),
-    // lần đầu có createdAt, các lần sau giữ nguyên
     createdAt: snap?.exists() ? (snap.data().createdAt || serverTimestamp()) : serverTimestamp(),
     isRead: false
   }, { merge: true });
@@ -257,19 +254,19 @@ function CommentHeader({ c, me, isAdminFn, dt, canDelete, onDelete }) {
 function Quote({ quoteFrom, me }) {
   if (!quoteFrom) return null;
   return (
-    <div className="mt-2 text-[13px] text-sky-900 dark:text-sky-200 bg-sky-50/70 dark:bg-sky-900/20 rounded-xl p-2 border border-sky-200/70 dark:border-sky-800/60">
-      <div className="flex items-center gap-2 mb-1 opacity-80">
-        <FontAwesomeIcon icon={faQuoteLeft} className="w-3.5 h-3.5 text-sky-600 dark:text-sky-300" />
+    <div className="relative mt-3 p-4 border-l-4 border-gray-300 dark:border-gray-600 text-[15px] text-gray-700 dark:text-gray-300">
+      <div className="flex items-center gap-2 mb-2 text-sm font-semibold text-orange-600 dark:text-orange-400">
         {quoteFrom.authorId ? (
           <Link
             href={me && quoteFrom.authorId === me.uid ? '/profile' : `/users/${quoteFrom.authorId}`}
-            className="font-medium text-sky-700 dark:text-sky-300 hover:text-sky-600 dark:hover:text-sky-400 hover:underline transition-colors"
+            className="hover:text-orange-500 dark:hover:text-orange-300 hover:underline transition-colors"
           >
-            {quoteFrom.userName || 'Người dùng'}
+            {quoteFrom.userName || 'Người dùng'} said:
           </Link>
         ) : (
-          <span className="font-medium text-sky-700 dark:text-sky-300">{quoteFrom.userName || 'Người dùng'}</span>
+          <span>{quoteFrom.userName || 'Người dùng'} said:</span>
         )}
+        <FontAwesomeIcon icon={faReply} className="w-3.5 h-3.5 translate-y-[1px]" />
       </div>
       <div className="whitespace-pre-wrap break-words">{excerpt(quoteFrom.content, 200)}</div>
     </div>
@@ -368,18 +365,21 @@ function ReplyBox({
       {open && (
         <form onSubmit={onReply} className="flex flex-col gap-2 mt-2">
           {target && (
-            <div className="text-[12px] text-sky-900 dark:text-sky-200 bg-sky-50/70 dark:bg-sky-900/20 border border-sky-200/70 dark:border-sky-800/60 rounded-xl p-2">
-              {target.authorId ? (
-                <Link
-                  href={me && target.authorId === me.uid ? '/profile' : `/users/${target.authorId}`}
-                  className="font-medium text-sky-700 dark:text-sky-300 hover:text-sky-600 dark:hover:text-sky-400 hover:underline transition-colors"
-                >
-                  {target.userName || 'Người dùng'}
-                </Link>
-              ) : (
-                <span className="font-medium text-sky-700 dark:text-sky-300">{target.userName || 'Người dùng'}</span>
-              )}
-              : {excerpt(target.content, 160)}
+            <div className="relative p-4 border-l-4 border-gray-300 dark:border-gray-600 text-[15px] text-gray-700 dark:text-gray-300">
+              <div className="flex items-center gap-2 mb-2 text-sm font-semibold text-orange-600 dark:text-orange-400">
+                {target.authorId ? (
+                  <Link
+                    href={me && target.authorId === me.uid ? '/profile' : `/users/${target.authorId}`}
+                    className="hover:text-orange-500 dark:hover:text-orange-300 hover:underline transition-colors"
+                  >
+                    {target.userName || 'Người dùng'} said:
+                  </Link>
+                ) : (
+                  <span>{target.userName || 'Người dùng'} said:</span>
+                )}
+                <FontAwesomeIcon icon={faReply} className="w-3.5 h-3.5 translate-y-[1px]" />
+              </div>
+              <div className="whitespace-pre-wrap break-words">{excerpt(target.content, 200)}</div>
             </div>
           )}
           <textarea
@@ -794,7 +794,6 @@ export default function Comments({ postId, postTitle }) {
           postId: String(c.postId),
           commentId: c.id,
           fromUser: me,
-          // ✨ truyền dữ liệu cho panel
           postTitle: (typeof postTitle === 'string' ? postTitle : '') || '',
           commentText: excerpt(c.content, 160),
           cooldownSec: 60
