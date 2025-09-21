@@ -407,13 +407,144 @@ function ReplyBox({
   );
 }
 
+// Component con để render một bình luận gốc và các phản hồi của nó
+function RootComment({ c, replies, me, adminUids, postId, postTitle, onOpenConfirm, toggleLike, deleteSingleComment, deleteThreadBatch }) {
+  const [showReplies, setShowReplies] = useState(false);
+  const dt = formatDate(c.createdAt);
+  const hasLiked = !!me && Array.isArray(c.likedBy) && c.likedBy.includes(me.uid);
+  const likeCount = c.likeCount || 0;
+
+  return (
+    <li
+      key={c.id}
+      id={`c-${c.id}`}
+      className="scroll-mt-24 rounded-2xl p-3 bg-white/95 dark:bg-gray-900/95 border border-transparent 
+                 [background:linear-gradient(#fff,rgba(255,255,255,0.96))_padding-box,linear-gradient(135deg,#bae6fd,#fecaca)_border-box]
+                 dark:[background:linear-gradient(#0b0f19,#0b0f19)_padding-box,linear-gradient(135deg,#0ea5e9,#f43f5e)_border-box]
+                 hover:shadow-md transition-shadow"
+    >
+      <CommentHeader
+        c={c}
+        me={me}
+        isAdminFn={(uid)=>adminUids.includes(uid)}
+        dt={dt}
+        canDelete={!!me && (me.uid === c.authorId || adminUids.includes(me.uid))}
+        onDelete={() => {
+          onOpenConfirm('Xoá bình luận này và toàn bộ phản hồi của nó?', async () => {
+            await deleteThreadBatch(c);
+          });
+        }}
+      />
+
+      <div className="mt-2 whitespace-pre-wrap break-words text-gray-900 dark:text-gray-100 leading-6">
+        {c.content}
+      </div>
+
+      <ReplyBox
+        me={me}
+        postId={postId}
+        parent={c}
+        adminUids={adminUids}
+        postTitle={postTitle}
+        onNeedVerify={() => {}} // Pass down relevant functions
+        onNeedLogin={() => {}}
+        renderTrigger={(openFn) => (
+          <ActionBar
+            hasLiked={hasLiked}
+            likeCount={likeCount}
+            onToggleLike={() => toggleLike(c)}
+            renderReplyTrigger={() => (
+              <button onClick={openFn} className="inline-flex items-center gap-2 text-sm text-sky-700 dark:text-sky-300 hover:underline">
+                <FontAwesomeIcon icon={faReply} />
+                Trả lời
+              </button>
+            )}
+          />
+        )}
+      />
+
+      {replies.length > 0 && (
+        <div className="mt-3">
+          {showReplies ? (
+            <ul className="space-y-3">
+              {replies.map((r) => {
+                const target = r.replyToUserId === c.authorId
+                  ? c
+                  : replies.find(x => x.authorId === r.replyToUserId) || null;
+                const dt2 = formatDate(r.createdAt);
+                const rHasLiked = !!me && Array.isArray(r.likedBy) && r.likedBy.includes(me.uid);
+                const rLikeCount = r.likeCount || 0;
+
+                return (
+                  <li
+                    key={r.id}
+                    id={`c-${r.id}`}
+                    className="pl-4 border-l-2 border-sky-200 dark:border-sky-800 scroll-mt-24"
+                  >
+                    <CommentHeader
+                      c={r}
+                      me={me}
+                      isAdminFn={(uid)=>adminUids.includes(uid)}
+                      dt={dt2}
+                      canDelete={!!me && (me.uid === r.authorId || adminUids.includes(me.uid))}
+                      onDelete={() => {
+                        onOpenConfirm('Bạn có chắc muốn xoá phản hồi này?', async () => {
+                          await deleteSingleComment(r);
+                        });
+                      }}
+                    />
+                    <Quote quoteFrom={target} me={me} />
+                    <div className="mt-2 whitespace-pre-wrap break-words text-gray-900 dark:text-gray-100 leading-6">
+                      {r.content}
+                    </div>
+                    <ReplyBox
+                      me={me}
+                      postId={postId}
+                      parent={c}
+                      replyingTo={r}
+                      adminUids={adminUids}
+                      postTitle={postTitle}
+                      onNeedVerify={() => {}}
+                      onNeedLogin={() => {}}
+                      renderTrigger={(openFn) => (
+                        <ActionBar
+                          hasLiked={rHasLiked}
+                          likeCount={rLikeCount}
+                          onToggleLike={() => toggleLike(r)}
+                          renderReplyTrigger={() => (
+                            <button onClick={openFn} className="inline-flex items-center gap-2 text-sm text-sky-700 dark:text-sky-300 hover:underline">
+                              <FontAwesomeIcon icon={faReply} />
+                              Trả lời
+                            </button>
+                          )}
+                        />
+                      )}
+                    />
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <button
+              onClick={() => setShowReplies(true)}
+              className="mt-3 text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-2"
+            >
+              <FontAwesomeIcon icon={faReply} />
+              Xem {replies.length} câu trả lời
+            </button>
+          )}
+        </div>
+      )}
+    </li>
+  );
+}
+
 /* ================= Main ================= */
 export default function Comments({ postId, postTitle }) {
   const [me, setMe] = useState(null);
   const [adminUids, setAdminUids] = useState([]);
   const [content, setContent] = useState('');
 
-  // Realtime page1 + "Xem thêm" cho các trang cũ
   const PAGE_SIZE = 50;
   const [liveItems, setLiveItems] = useState([]);
   const [olderItems, setOlderItems] = useState([]);
@@ -423,14 +554,12 @@ export default function Comments({ postId, postTitle }) {
   const unsubRef = useRef(null);
   const [hasMore, setHasMore] = useState(false);
 
-  // Modal
   const [modalOpen, setModalOpen] = useState(false);
   const [modalTitle, setModalTitle] = useState('');
   const [modalContent, setModalContent] = useState(null);
   const [modalActions, setModalActions] = useState(null);
   const [modalTone, setModalTone] = useState('info');
 
-  // chặn double-click like
   const [likingIds, setLikingIds] = useState(() => new Set());
 
   const openHeaderLoginPopup = () => {
@@ -518,7 +647,6 @@ export default function Comments({ postId, postTitle }) {
     })();
   }, []);
 
-  // Realtime trang 1
   useEffect(() => {
     if (!postId) return;
     setLoading(true);
@@ -536,18 +664,15 @@ export default function Comments({ postId, postTitle }) {
     const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       setLiveItems(list);
-
       const lastVisible = snap.docs[snap.docs.length - 1] || null;
       lastDocRef.current = lastVisible;
       setHasMore(!!lastVisible);
       setLoading(false);
     });
     unsubRef.current = unsub;
-
     return () => { if (unsubRef.current) unsubRef.current(); unsubRef.current = null; };
   }, [postId]);
 
-  // Vá comment cũ thiếu tên/ảnh cho chính mình (chỉ trong trang 1 để nhẹ)
   useEffect(() => {
     if (!me || liveItems.length === 0) return;
     const fixes = liveItems
@@ -561,7 +686,7 @@ export default function Comments({ postId, postTitle }) {
 
   const items = useMemo(() => [...liveItems, ...olderItems], [liveItems, olderItems]);
 
-  const roots = items.filter(c => !c.parentId);
+  const roots = useMemo(() => items.filter(c => !c.parentId), [items]);
   const repliesByParent = useMemo(() => {
     const m = {};
     items.forEach(c => {
@@ -595,7 +720,6 @@ export default function Comments({ postId, postTitle }) {
     }
   };
 
-  // ===== Submit bình luận (chỉ kiểm tra khi gửi -- không làm phiền lúc focus)
   const [submitting, setSubmitting] = useState(false);
   const onSubmit = async (e) => {
     e.preventDefault();
@@ -606,7 +730,6 @@ export default function Comments({ postId, postTitle }) {
     setSubmitting(true);
     try {
       await ensureUserDoc(me);
-
       const payload = {
         postId: String(postId),
         parentId: null,
@@ -621,9 +744,7 @@ export default function Comments({ postId, postTitle }) {
       };
       const ref = await addDoc(collection(db, 'comments'), payload);
       setContent('');
-
       await updateDoc(doc(db, 'users', me.uid), { 'stats.comments': increment(1) });
-
       const targetAdmins = adminUids.filter(u => u !== me.uid);
       await Promise.all(targetAdmins.map(async (uid) => {
         await createNotification({
@@ -637,35 +758,29 @@ export default function Comments({ postId, postTitle }) {
           postTitle: postTitle || '',
           commentText: excerpt(payload.content),
         });
-        await bumpCounter(uid, +1); // 🛎 đảm bảo tăng badge
+        await bumpCounter(uid, +1);
       }));
     } finally {
       setSubmitting(false);
     }
   };
 
-  // ===== Toggle ❤️ like + chống double‑click + idempotent noti/counter
   const toggleLike = async (c) => {
     if (!me) { openLoginPrompt(); return; }
     if (likingIds.has(c.id)) return;
     const next = new Set(likingIds); next.add(c.id); setLikingIds(next);
-
     const ref = doc(db, 'comments', c.id);
     const hasLiked = Array.isArray(c.likedBy) && c.likedBy.includes(me.uid);
-
     try {
       await updateDoc(ref, {
         likedBy: hasLiked ? arrayRemove(me.uid) : arrayUnion(me.uid),
         likeCount: increment(hasLiked ? -1 : +1),
       });
-
       if (c.authorId) {
         await updateDoc(doc(db, 'users', c.authorId), {
           'stats.likesReceived': increment(hasLiked ? -1 : +1)
         });
       }
-
-      // Like (không phải unlike) → noti idempotent + cooldown, vẫn tăng badge ở lần hợp lệ
       if (!hasLiked && me.uid !== c.authorId) {
         await upsertLikeNotification({
           toUserId: c.authorId,
@@ -680,15 +795,10 @@ export default function Comments({ postId, postTitle }) {
     }
   };
 
-  // ===== Xoá thread bằng batch (đã sửa lỗi)
   const deleteThreadBatch = async (root) => {
     const toDelete = [root, ...(repliesByParent[root.id] || [])];
     const batch = writeBatch(db);
-    
-    // Lấy danh sách các UID tác giả cần cập nhật thống kê
     const authorsToUpdate = new Set(toDelete.map(c => c.authorId).filter(Boolean));
-
-    // Kiểm tra xem các tài liệu người dùng này có tồn tại không
     const existingAuthorIds = new Set();
     const authorPromises = [...authorsToUpdate].map(uid => getDoc(doc(db, 'users', uid)));
     const authorSnaps = await Promise.all(authorPromises);
@@ -704,29 +814,23 @@ export default function Comments({ postId, postTitle }) {
         batch.update(doc(db, 'users', it.authorId), { 'stats.comments': increment(-1) });
       }
     });
-    
     await batch.commit();
   };
-  
-  // Hàm xóa riêng lẻ cho phản hồi (đã sửa lỗi)
+
   const deleteSingleComment = async (r) => {
     try {
       await deleteDoc(doc(db, 'comments', r.id));
-      // Kiểm tra sự tồn tại của tài liệu người dùng trước khi cập nhật
       const authorSnap = await getDoc(doc(db, 'users', r.authorId));
       if (authorSnap.exists()) {
         await updateDoc(doc(db, 'users', r.authorId), { 'stats.comments': increment(-1) });
       }
     } catch (error) {
       console.error("Lỗi khi xóa bình luận:", error);
-      // Có thể thêm xử lý lỗi khác ở đây
     }
   };
 
-
   return (
     <div className="mt-6">
-      {/* Modal */}
       <CenterModal open={modalOpen} title={modalTitle} onClose={() => setModalOpen(false)} actions={modalActions} tone={modalTone}>
         {modalContent}
       </CenterModal>
@@ -769,147 +873,23 @@ export default function Comments({ postId, postTitle }) {
         ) : (
           <>
             <ul className="space-y-4">
-              {roots.map((c) => {
-                const replies = repliesByParent[c.id] || [];
-                const dt = formatDate(c.createdAt);
-                const hasLiked = !!me && Array.isArray(c.likedBy) && c.likedBy.includes(me.uid);
-                const likeCount = c.likeCount || 0;
-                const [showReplies, setShowReplies] = useState(false);
-                
-                return (
-                  <li
-                    key={c.id}
-                    id={`c-${c.id}`}
-                    className="scroll-mt-24 rounded-2xl p-3 bg-white/95 dark:bg-gray-900/95 border border-transparent 
-                               [background:linear-gradient(#fff,rgba(255,255,255,0.96))_padding-box,linear-gradient(135deg,#bae6fd,#fecaca)_border-box]
-                               dark:[background:linear-gradient(#0b0f19,#0b0f19)_padding-box,linear-gradient(135deg,#0ea5e9,#f43f5e)_border-box]
-                               hover:shadow-md transition-shadow"
-                  >
-                    <CommentHeader
-                      c={c}
-                      me={me}
-                      isAdminFn={(uid)=>adminUids.includes(uid)}
-                      dt={dt}
-                      canDelete={!!me && (me.uid === c.authorId || adminUids.includes(me.uid))}
-                      onDelete={() => {
-                        openConfirm('Xoá bình luận này và toàn bộ phản hồi của nó?', async () => {
-                          try { await deleteThreadBatch(c); } catch {}
-                        });
-                      }}
-                    />
-
-                    <div className="mt-2 whitespace-pre-wrap break-words text-gray-900 dark:text-gray-100 leading-6">
-                      {c.content}
-                    </div>
-
-                    {/* Action bar: Like & Trả lời nằm cùng một hàng */}
-                    <ReplyBox
-                      me={me}
-                      postId={postId}
-                      parent={c}
-                      adminUids={adminUids}
-                      postTitle={postTitle}
-                      onNeedVerify={openVerifyPrompt}
-                      onNeedLogin={openLoginPrompt}
-                      renderTrigger={(openFn) => (
-                        <ActionBar
-                          hasLiked={hasLiked}
-                          likeCount={likeCount}
-                          onToggleLike={() => toggleLike(c)}
-                          renderReplyTrigger={() => (
-                            <button onClick={openFn} className="inline-flex items-center gap-2 text-sm text-sky-700 dark:text-sky-300 hover:underline">
-                              <FontAwesomeIcon icon={faReply} />
-                              Trả lời
-                            </button>
-                          )}
-                        />
-                      )}
-                    />
-
-                    {/* Giao diện "Xem N câu trả lời" */}
-                    {replies.length > 0 && (
-                      <div className="mt-3">
-                        {showReplies ? (
-                          <ul className="space-y-3">
-                            {replies.map((r) => {
-                              const target = r.replyToUserId === c.authorId
-                                ? c
-                                : replies.find(x => x.authorId === r.replyToUserId) || null;
-                              const dt2 = formatDate(r.createdAt);
-                              const rHasLiked = !!me && Array.isArray(r.likedBy) && r.likedBy.includes(me.uid);
-                              const rLikeCount = r.likeCount || 0;
-
-                              return (
-                                <li
-                                  key={r.id}
-                                  id={`c-${r.id}`}
-                                  className="pl-4 border-l-2 border-sky-200 dark:border-sky-800 scroll-mt-24"
-                                >
-                                  <CommentHeader
-                                    c={r}
-                                    me={me}
-                                    isAdminFn={(uid)=>adminUids.includes(uid)}
-                                    dt={dt2}
-                                    canDelete={!!me && (me.uid === r.authorId || adminUids.includes(me.uid))}
-                                    onDelete={() => {
-                                      openConfirm('Bạn có chắc muốn xoá phản hồi này?', async () => {
-                                        await deleteSingleComment(r);
-                                      });
-                                    }}
-                                  />
-
-                                  <Quote quoteFrom={target} me={me} />
-
-                                  <div className="mt-2 whitespace-pre-wrap break-words text-gray-900 dark:text-gray-100 leading-6">
-                                    {r.content}
-                                  </div>
-
-                                  {/* Action bar cho reply */}
-                                  <ReplyBox
-                                    me={me}
-                                    postId={postId}
-                                    parent={c}
-                                    replyingTo={r}
-                                    adminUids={adminUids}
-                                    postTitle={postTitle}
-                                    onNeedVerify={openVerifyPrompt}
-                                    onNeedLogin={openLoginPrompt}
-                                    renderTrigger={(openFn) => (
-                                      <ActionBar
-                                        hasLiked={rHasLiked}
-                                        likeCount={rLikeCount}
-                                        onToggleLike={() => toggleLike(r)}
-                                        renderReplyTrigger={() => (
-                                          <button onClick={openFn} className="inline-flex items-center gap-2 text-sm text-sky-700 dark:text-sky-300 hover:underline">
-                                            <FontAwesomeIcon icon={faReply} />
-                                            Trả lời
-                                          </button>
-                                        )}
-                                      />
-                                    )}
-                                  />
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        ) : (
-                          // Nút "Xem N câu trả lời"
-                          <button
-                            onClick={() => setShowReplies(true)}
-                            className="text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-2"
-                          >
-                            <FontAwesomeIcon icon={faReply} />
-                            Xem {replies.length} câu trả lời
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </li>
-                );
-              })}
+              {roots.map((c) => (
+                <RootComment
+                  key={c.id}
+                  c={c}
+                  replies={repliesByParent[c.id] || []}
+                  me={me}
+                  adminUids={adminUids}
+                  postId={postId}
+                  postTitle={postTitle}
+                  onOpenConfirm={openConfirm}
+                  toggleLike={toggleLike}
+                  deleteSingleComment={deleteSingleComment}
+                  deleteThreadBatch={deleteThreadBatch}
+                />
+              ))}
             </ul>
 
-            {/* Xem thêm */}
             {hasMore && (
               <div className="mt-4 flex justify-center">
                 <button
