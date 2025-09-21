@@ -79,23 +79,20 @@ async function createNotification(payload = {}) {
   });
 }
 
-/** ✅ Gộp thông báo LIKE theo (toUserId, postId, commentId) -- KHÔNG đọc, KHÔNG transaction.
- *  Luôn set fromUserId ở cả updateDoc và setDoc để qua Firestore Rules của bạn. */
+/** ✅ Gộp thông báo LIKE theo (toUserId, postId, commentId) -- KHÔNG đọc, KHÔNG transaction */
 async function upsertLikeNotification({
   toUserId, postId, commentId,
   fromUserId, fromUserName, fromUserPhoto,
   postTitle = '', commentText = ''
 }) {
-  if (!toUserId || !postId || !commentId || !fromUserId) return;
+  if (!toUserId || !postId || !commentId) return;
   const nid = `like_${toUserId}_${postId}_${commentId}`;
   const ref = doc(db, 'notifications', nid);
 
-  // 1) Thử UPDATE mù
+  // 1) Thử UPDATE mù: nếu doc đã tồn tại thì tăng đếm, set awake
   try {
     await updateDoc(ref, {
-      // 👇 Các field bảo đảm thỏa rules & giúp UI hiển thị đúng
       toUserId,
-      fromUserId,                      // quan trọng để rule "write" pass cho người like hiện tại
       type: 'like',
       postId: String(postId),
       commentId,
@@ -105,25 +102,24 @@ async function upsertLikeNotification({
       lastLikerPhoto: fromUserPhoto || '',
       postTitle,
       commentText,
-      // 👇 tăng/gộp
       count: increment(1),
       likers: arrayUnion(fromUserId),
     });
     return;
   } catch (e) {
-    // NOT_FOUND -> tạo mới bên dưới
+    // NOT_FOUND -> sẽ tạo mới bên dưới
   }
 
-  // 2) Tạo mới
+  // 2) Tạo mới (không cần đọc trước)
   await setDoc(ref, {
     toUserId,
-    fromUserId, fromUserName, fromUserPhoto,
     type: 'like',
     postId: String(postId),
     commentId,
     isRead: false,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
+    fromUserId, fromUserName, fromUserPhoto,
     lastLikerName: fromUserName || 'Ai đó',
     lastLikerPhoto: fromUserPhoto || '',
     postTitle,
@@ -323,6 +319,7 @@ function ReplyBox({
           postTitle: postTitle || '',
           commentText: excerpt(text),
         });
+        // Không bump counter của người khác
       }
 
       const targets = adminUids.filter(u => u !== me.uid && u !== target.authorId);
@@ -338,6 +335,7 @@ function ReplyBox({
           postTitle: postTitle || '',
           commentText: excerpt(text),
         });
+        // Không bump counter của người khác
       }));
     } finally {
       setSending(false);
@@ -572,7 +570,6 @@ export default function Comments({ postId, postTitle }) {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [modalTitle, setModalTitle] = useState('');
-  theModal:
   const [modalContent, setModalContent] = useState(null);
   const [modalActions, setModalActions] = useState(null);
   const [modalTone, setModalTone] = useState('info');
@@ -788,10 +785,10 @@ export default function Comments({ postId, postTitle }) {
         await updateDoc(doc(db, 'users', c.authorId), { 'stats.likesReceived': increment(hasLiked ? -1 : +1) });
       }
 
-      // ✅ Chỉ khi LIKE (không phải UNLIKE) thì upsert thông báo gộp -- KHÔNG bump counter chéo user
-      if (!hasLiked && me.uid !== c.authorId && c.authorId) {
+      // ✅ Chỉ khi LIKE (không phải UNLIKE) thì upsert thông báo gộp -- và KHÔNG bump counter chéo user
+      if (!hasLiked && me.uid !== c.authorId) {
         await upsertLikeNotification({
-          toUserId: c.authorId,                 // admin hay user đều như nhau
+          toUserId: c.authorId,
           postId: String(c.postId),
           commentId: c.id,
           fromUserId: me.uid,
@@ -801,8 +798,6 @@ export default function Comments({ postId, postTitle }) {
           commentText: excerpt(c.content, 160),
         });
       }
-    } catch (err) {
-      console.error('toggleLike failed:', err);
     } finally {
       const out = new Set(likingIds); out.delete(c.id); setLikingIds(out);
     }
