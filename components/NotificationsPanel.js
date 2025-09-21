@@ -144,7 +144,7 @@ export default function NotificationsPanel({ open, onClose }) {
       collection(db, 'notifications'),
       where('toUserId', '==', user.uid),
       // Giữ 'createdAt' để không cần index mới; upsert sẽ đặt isRead=false để "đánh thức".
-      orderBy('updatedAt', 'desc'),
+      orderBy('createdAt', 'desc'),
       limit(30)
     );
     const unsub = onSnapshot(qn, (snap) => {
