@@ -527,7 +527,6 @@ export default function Comments({ postId, postTitle }) {
     } finally { setSubmitting(false); }
   };
 
-  const [likingIds, setLikingIds] = useState(() => new Set());
   const toggleLike = async (c) => {
     if (!me) { setModalOpen(true); setModalTitle('Cần đăng nhập'); setModalContent(<p>Hãy đăng nhập để thích bình luận.</p>); setModalActions(null); return; }
     if (likingIds.has(c.id)) return;
