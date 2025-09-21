@@ -89,49 +89,39 @@ async function upsertLikeNotification({
   const nid = `like_${toUserId}_${postId}_${commentId}`;
   const ref = doc(db, 'notifications', nid);
 
-  try {
-    // Sử dụng transaction để đảm bảo việc đọc-ghi nhất quán
-    await runTransaction(db, async (transaction) => {
-      const docSnap = await transaction.get(ref);
+  const docSnap = await getDoc(ref);
 
-      if (docSnap.exists()) {
-        // Tài liệu đã tồn tại, cập nhật nó
-        const data = docSnap.data();
-        const newLikers = arrayUnion(fromUserId);
-        
-        transaction.update(ref, {
-          updatedAt: serverTimestamp(),
-          lastLikerName: fromUserName || 'Tài khoản đã bị xoá',
-          lastLikerPhoto: fromUserPhoto || '',
-          count: increment(1),
-          likers: newLikers,
-          isRead: false, // Luôn đặt isRead thành false để tạo thông báo mới
-        });
-        
-      } else {
-        // Tài liệu chưa tồn tại, tạo mới
-        transaction.set(ref, {
-          toUserId,
-          type: 'like',
-          postId: String(postId),
-          commentId,
-          isRead: false,
-          createdAt: serverTimestamp(),
-          updatedAt: serverTimestamp(),
-          fromUserId, fromUserName, fromUserPhoto,
-          lastLikerName: fromUserName || 'Ai đó',
-          lastLikerPhoto: fromUserPhoto || '',
-          count: 1,
-          likers: [fromUserId],
-          postTitle,
-          commentText,
-        }, { merge: true });
-      }
+  if (docSnap.exists()) {
+    // Tài liệu đã tồn tại, cập nhật nó
+    await updateDoc(ref, {
+      updatedAt: serverTimestamp(),
+      lastLikerName: fromUserName || 'Ai đó',
+      lastLikerPhoto: fromUserPhoto || '',
+      isRead: false, // Luôn đặt isRead thành false để thông báo mới được kích hoạt
+      count: increment(1),
+      likers: arrayUnion(fromUserId),
     });
-  } catch (e) {
-    console.error('Lỗi khi cập nhật thông báo lượt thích:', e);
+  } else {
+    // Tài liệu chưa tồn tại, tạo mới
+    await setDoc(ref, {
+      toUserId,
+      type: 'like',
+      postId: String(postId),
+      commentId,
+      isRead: false,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      fromUserId, fromUserName, fromUserPhoto,
+      lastLikerName: fromUserName || 'Ai đó',
+      lastLikerPhoto: fromUserPhoto || '',
+      count: 1,
+      likers: [fromUserId],
+      postTitle,
+      commentText,
+    });
   }
 }
+
 
 
 /* ================= Users bootstrap ================= */
