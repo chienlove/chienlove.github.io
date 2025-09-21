@@ -9,7 +9,7 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faBell, faEllipsisVertical, faTrash, faCheckDouble, faTimes,
-  faArrowRight, faHeart, faComment, faReply, faEnvelopeOpen, faCheck
+  faArrowRight, faHeart, faComment, faReply, faCheck
 } from '@fortawesome/free-solid-svg-icons';
 
 /* ========== Helpers ========== */
@@ -143,7 +143,6 @@ export default function NotificationsPanel({ open, onClose }) {
     const qn = query(
       collection(db, 'notifications'),
       where('toUserId', '==', user.uid),
-      // Giữ 'createdAt' để không cần index mới; upsert sẽ đặt isRead=false để "đánh thức".
       orderBy('createdAt', 'desc'),
       limit(30)
     );
@@ -262,8 +261,15 @@ export default function NotificationsPanel({ open, onClose }) {
               <FontAwesomeIcon icon={faBell} className="text-gray-700 dark:text-gray-200" />
               <div className="leading-tight">
                 <h4 className="font-semibold text-gray-900 dark:text-gray-100">Thông báo</h4>
-                <div className="text-xs text-gray-500 dark:text-gray-400">
-                  {items.length} tổng · {unreadCount} chưa đọc
+                <div className="mt-1 flex items-center gap-2">
+                  {/* Tổng (xanh lá) */}
+                  <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300">
+                    Tổng: {items.length}
+                  </span>
+                  {/* Chưa đọc (đỏ) */}
+                  <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300">
+                    Chưa đọc: {unreadCount}
+                  </span>
                 </div>
               </div>
             </div>
@@ -332,18 +338,7 @@ export default function NotificationsPanel({ open, onClose }) {
                             : 'bg-gray-50 dark:bg-gray-950 border-gray-200 dark:border-gray-800'
                           }`}
                       >
-                        {/* góc trên‑phải: thời gian + huy hiệu Mới */}
-                        <div className="absolute top-2 right-2 flex items-center gap-2">
-                          <span className="text-xs text-gray-500 dark:text-gray-400" title={t?.abs}>
-                            {t?.rel}
-                          </span>
-                          {!n.isRead && (
-                            <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-gray-800 text-white dark:bg-gray-200 dark:text-gray-900">
-                              <FontAwesomeIcon icon={faEnvelopeOpen} />
-                              Mới
-                            </span>
-                          )}
-                        </div>
+                        {/* Bỏ badge "Mới" & đưa thời gian xuống hàng hành động */}
 
                         <div className="flex gap-3">
                           {/* avatar */}
@@ -421,14 +416,10 @@ export default function NotificationsPanel({ open, onClose }) {
                                 Xem chi tiết
                               </button>
 
-                              {!n.isRead && (
-                                <button
-                                  onClick={() => markRead(n.id, n.isRead)}
-                                  className="text-sm px-3 py-1.5 rounded-lg border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
-                                >
-                                  Đánh dấu đã đọc
-                                </button>
-                              )}
+                              {/* Thời gian chuyển xuống đây, thay cho nút "Đánh dấu đã đọc" */}
+                              <span className="text-xs text-gray-500 dark:text-gray-400" title={t?.abs}>
+                                {t?.rel}
+                              </span>
                             </div>
                           </div>
                         </div>
