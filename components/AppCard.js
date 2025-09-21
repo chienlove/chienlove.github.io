@@ -14,20 +14,20 @@ export default function AppCard({ app, mode = 'card' }) {
     return diffHours <= 24;
   }
 
-  // ⚠️ KHÔNG bọc toàn bộ bằng Link nữa – chỉ link ở tiêu đề & icon download
+  // ⚠️ Container KHÔNG còn là Link, KHÔNG có hover nền
   return (
     <div
       className={
         isList
-          ? 'flex items-start justify-between gap-3 px-2 py-3 transition rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700'
-          : 'flex items-center gap-4 p-4 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition duration-200'
+          ? 'flex items-start justify-between gap-3 px-2 py-3 rounded-lg' // bỏ hover:bg-…
+          : 'flex items-center gap-4 p-4 bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 transition duration-200' // bỏ hover:shadow nếu muốn
       }
     >
-      {/* Icon app */}
+      {/* Icon app (không click) */}
       <div className="relative w-14 h-14 rounded-2xl overflow-hidden border border-gray-300 dark:border-gray-600 flex-shrink-0 mt-1">
         <img
           src={app.icon_url || '/placeholder-icon.png'}
-            alt={app.name}
+          alt={app.name}
           className="w-full h-full object-cover"
           onError={(e) => {
             e.target.onerror = null;
@@ -46,11 +46,14 @@ export default function AppCard({ app, mode = 'card' }) {
       {/* Nội dung */}
       <div className="flex-1 min-w-0 border-t border-gray-200 dark:border-gray-700 pt-2">
         <div className="flex items-center justify-between">
-          {/* Chỉ tiêu đề là Link */}
+          {/* ✅ Chỉ TIÊU ĐỀ là Link */}
           <Link
             href={`/${app.slug}`}
             prefetch={false}
-            className="text-[16px] font-semibold text-gray-900 dark:text-white truncate focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-800 hover:underline active:opacity-70"
+            className="text-[16px] font-semibold text-gray-900 dark:text-white truncate
+                       focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500
+                       focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-800
+                       hover:underline active:opacity-70"
             aria-label={`Mở trang chi tiết ${app.name}`}
           >
             {app.name}
@@ -69,11 +72,14 @@ export default function AppCard({ app, mode = 'card' }) {
         </div>
       </div>
 
-      {/* Icon download -- cũng là Link tới chi tiết */}
+      {/* ✅ Chỉ ICON DOWNLOAD là Link */}
       <Link
         href={`/${app.slug}`}
         prefetch={false}
-        className="group flex items-center justify-center w-10 h-14 mt-1 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-800 active:scale-[.98] transition"
+        className="group flex items-center justify-center w-10 h-14 mt-1 rounded-md
+                   focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500
+                   focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-800
+                   active:scale-[.98] transition"
         aria-label={`Tới trang chi tiết ${app.name}`}
         title="Xem chi tiết"
       >
