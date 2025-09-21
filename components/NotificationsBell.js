@@ -30,7 +30,8 @@ export default function NotificationsBell({ onClick }) {
       setUnread(newUnread);
     });
     return () => unsub();
-  }, [user, unread]);
+    // Bỏ 'unread' để tránh re-subscribe liên tục gây giật/nháy
+  }, [user]);
 
   return (
     <button
@@ -83,4 +84,3 @@ export default function NotificationsBell({ onClick }) {
     </button>
   );
 }
-

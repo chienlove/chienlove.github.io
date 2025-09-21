@@ -73,12 +73,14 @@ async function createNotification(payload = {}) {
     postId,
     commentId,
     isRead: false,
+    // ✨ bổ sung updatedAt để đồng bộ với like-noti
+    updatedAt: serverTimestamp(),
     createdAt: serverTimestamp(),
     fromUserId,
     ...extra,
   });
 }
-async function upsertLikeNotification({ toUserId, postId, commentId, fromUser, cooldownSec = 60 }) {
+async function upsertLikeNotification({ toUserId, postId, commentId, fromUser, postTitle = '', commentText = '', cooldownSec = 60 }) {
   if (!toUserId || !commentId || !fromUser) return;
   if (toUserId === fromUser.uid) return;
 
@@ -103,7 +105,11 @@ async function upsertLikeNotification({ toUserId, postId, commentId, fromUser, c
     fromUserId: fromUser.uid,
     fromUserName: preferredName(fromUser),
     fromUserPhoto: preferredPhoto(fromUser),
+    // ✨ thêm dữ liệu hiển thị cho panel
+    postTitle,
+    commentText,
     updatedAt: serverTimestamp(),
+    // lần đầu có createdAt, các lần sau giữ nguyên
     createdAt: snap?.exists() ? (snap.data().createdAt || serverTimestamp()) : serverTimestamp(),
     isRead: false
   }, { merge: true });
@@ -192,12 +198,16 @@ function CommentHeader({ c, me, isAdminFn, dt, canDelete, onDelete }) {
   const userName = c.userName || 'Người dùng';
 
   const NameLink = ({ uid, children }) => {
-    if (!uid) return <span className="font-semibold text-gray-900 dark:text-gray-100">{children}</span>;
+    if (!uid) return (
+      <span className="font-semibold text-sky-700 dark:text-sky-300">
+        {children}
+      </span>
+    );
     const href = isSelf ? '/profile' : `/users/${uid}`;
     return (
       <Link
         href={href}
-        className="font-semibold text-gray-900 dark:text-gray-100 hover:text-sky-600 dark:hover:text-sky-400 hover:underline transition-colors"
+        className="font-semibold text-sky-700 dark:text-sky-300 hover:text-sky-600 dark:hover:text-sky-400 hover:underline transition-colors"
       >
         {children}
       </Link>
@@ -247,18 +257,18 @@ function CommentHeader({ c, me, isAdminFn, dt, canDelete, onDelete }) {
 function Quote({ quoteFrom, me }) {
   if (!quoteFrom) return null;
   return (
-    <div className="mt-2 text-[13px] text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 rounded-xl p-2 border border-gray-200 dark:border-gray-700">
+    <div className="mt-2 text-[13px] text-sky-900 dark:text-sky-200 bg-sky-50/70 dark:bg-sky-900/20 rounded-xl p-2 border border-sky-200/70 dark:border-sky-800/60">
       <div className="flex items-center gap-2 mb-1 opacity-80">
-        <FontAwesomeIcon icon={faQuoteLeft} className="w-3.5 h-3.5 text-gray-500" />
+        <FontAwesomeIcon icon={faQuoteLeft} className="w-3.5 h-3.5 text-sky-600 dark:text-sky-300" />
         {quoteFrom.authorId ? (
           <Link
             href={me && quoteFrom.authorId === me.uid ? '/profile' : `/users/${quoteFrom.authorId}`}
-            className="font-medium hover:text-sky-600 dark:hover:text-sky-400 hover:underline transition-colors"
+            className="font-medium text-sky-700 dark:text-sky-300 hover:text-sky-600 dark:hover:text-sky-400 hover:underline transition-colors"
           >
             {quoteFrom.userName || 'Người dùng'}
           </Link>
         ) : (
-          <span className="font-medium">{quoteFrom.userName || 'Người dùng'}</span>
+          <span className="font-medium text-sky-700 dark:text-sky-300">{quoteFrom.userName || 'Người dùng'}</span>
         )}
       </div>
       <div className="whitespace-pre-wrap break-words">{excerpt(quoteFrom.content, 200)}</div>
@@ -358,16 +368,16 @@ function ReplyBox({
       {open && (
         <form onSubmit={onReply} className="flex flex-col gap-2 mt-2">
           {target && (
-            <div className="text-[12px] text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-2">
+            <div className="text-[12px] text-sky-900 dark:text-sky-200 bg-sky-50/70 dark:bg-sky-900/20 border border-sky-200/70 dark:border-sky-800/60 rounded-xl p-2">
               {target.authorId ? (
                 <Link
                   href={me && target.authorId === me.uid ? '/profile' : `/users/${target.authorId}`}
-                  className="font-medium hover:text-sky-600 dark:hover:text-sky-400 hover:underline transition-colors"
+                  className="font-medium text-sky-700 dark:text-sky-300 hover:text-sky-600 dark:hover:text-sky-400 hover:underline transition-colors"
                 >
                   {target.userName || 'Người dùng'}
                 </Link>
               ) : (
-                <span className="font-medium">{target.userName || 'Người dùng'}</span>
+                <span className="font-medium text-sky-700 dark:text-sky-300">{target.userName || 'Người dùng'}</span>
               )}
               : {excerpt(target.content, 160)}
             </div>
@@ -449,7 +459,7 @@ function RootComment({ c, replies, me, adminUids, postId, postTitle, onOpenConfi
             likeCount={likeCount}
             onToggleLike={() => toggleLike(c)}
             renderReplyTrigger={() => (
-              <button onClick={openFn} className="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 hover:underline">
+              <button onClick={openFn} className="inline-flex items-center gap-2 text-sm text-sky-700 dark:text-sky-300 hover:underline">
                 <FontAwesomeIcon icon={faReply} />
                 Trả lời
               </button>
@@ -507,7 +517,7 @@ function RootComment({ c, replies, me, adminUids, postId, postTitle, onOpenConfi
                           likeCount={rLikeCount}
                           onToggleLike={() => toggleLike(r)}
                           renderReplyTrigger={() => (
-                            <button onClick={openFn} className="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 hover:underline">
+                            <button onClick={openFn} className="inline-flex items-center gap-2 text-sm text-sky-700 dark:text-sky-300 hover:underline">
                               <FontAwesomeIcon icon={faReply} />
                               Trả lời
                             </button>
@@ -784,6 +794,9 @@ export default function Comments({ postId, postTitle }) {
           postId: String(c.postId),
           commentId: c.id,
           fromUser: me,
+          // ✨ truyền dữ liệu cho panel
+          postTitle: (typeof postTitle === 'string' ? postTitle : '') || '',
+          commentText: excerpt(c.content, 160),
           cooldownSec: 60
         });
       }
@@ -927,7 +940,7 @@ export default function Comments({ postId, postTitle }) {
                   className={`px-4 py-2 rounded-xl border inline-flex items-center justify-center
                     ${loadingMore
                       ? 'text-gray-500 border-gray-300 cursor-not-allowed'
-                      : 'text-gray-700 border-gray-200 hover:bg-gray-100 dark:text-gray-300 dark:border-gray-700 dark:hover:bg-gray-800'
+                      : 'text-sky-700 border-sky-200 hover:bg-sky-50 dark:text-sky-300 dark:border-sky-700 dark:hover:bg-sky-900/20'
                     }`}
                 >
                   {loadingMore ? 'Đang tải…' : 'Xem thêm bình luận cũ'}
