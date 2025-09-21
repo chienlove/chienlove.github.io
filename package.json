@@ -37,7 +37,7 @@
     "jsonwebtoken": "9.0.2",
     "framer-motion": "12.23.12",
     "lucide-react": "0.541.0",
-    "firebase": "^12.1.0",
+    "firebase": "^12.3.0",
     "react-markdown": "^10.1.0",
     "remark-gfm": "^4.0.1"
     
