@@ -143,7 +143,8 @@ export default function NotificationsPanel({ open, onClose }) {
     const qn = query(
       collection(db, 'notifications'),
       where('toUserId', '==', user.uid),
-      orderBy('createdAt', 'desc'),
+      // Đổi createdAt -> updatedAt để like luôn hiển thị đúng thứ tự mới nhất
+      orderBy('updatedAt', 'desc'),
       limit(50)
     );
     const unsub = onSnapshot(qn, (snap) => {
@@ -313,7 +314,7 @@ export default function NotificationsPanel({ open, onClose }) {
             ) : (
               <ul className="p-3 space-y-3">
                 {items.map((n) => {
-                  const t = formatDate(n.createdAt);
+                  const t = formatDate(n.updatedAt || n.createdAt);
                   const who = n.fromUserName || 'Ai đó';
                   const title = n.postTitle || `Bài viết ${n.postId}`;
                   const content = n.commentText || '';
@@ -327,9 +328,9 @@ export default function NotificationsPanel({ open, onClose }) {
                             : 'bg-gray-50 dark:bg-gray-950 border-gray-200 dark:border-gray-800'
                           }`}
                       >
-                        {/* góc trên‑phải: thời gian + huy hiệu Mới */}
-                        <div className="absolute top-2 right-2 flex items-center gap-2">
-                          <span className="text-xs text-gray-500 dark:text-gray-400" title={t?.abs}>
+                        {/* Hàng trên: thời gian + huy hiệu "Mới" để tránh chồng chéo */}
+                        <div className="flex items-center justify-end gap-2 text-xs">
+                          <span className="text-gray-500 dark:text-gray-400" title={t?.abs}>
                             {t?.rel}
                           </span>
                           {!n.isRead && (
@@ -340,7 +341,7 @@ export default function NotificationsPanel({ open, onClose }) {
                           )}
                         </div>
 
-                        <div className="flex gap-3">
+                        <div className="mt-2 flex gap-3">
                           {/* avatar */}
                           <UserAvatar photo={n.fromUserPhoto} name={who} size={44} />
 
@@ -359,7 +360,7 @@ export default function NotificationsPanel({ open, onClose }) {
                                 </div>
 
                                 {content && (
-                                  <div className="mt-2 text-[13px] text-gray-600 dark:text-gray-400 line-clamp-3">
+                                  <div className="mt-2 text-[13px] text-gray-700 dark:text-gray-300 bg-gray-100/70 dark:bg-gray-800/60 rounded-lg px-3 py-2 border border-gray-200/70 dark:border-gray-700/60">
                                     "{content}"
                                   </div>
                                 )}
