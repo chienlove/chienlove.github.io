@@ -252,7 +252,7 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
                   <div className="px-2 py-2 text-sm text-gray-500">Chưa có chuyên mục</div>
                 )}
                 {categories.map((c) => {
-                  const href = c.slug ? `/categories/${c.slug}` : `/categories/${c.id}`;
+                  const href = c.slug ? `/category/${c.slug}` : `/category/${c.id}`;
                   return (
                     <Link
                       key={c.id}
@@ -316,7 +316,7 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
             <h4 className="font-semibold text-white mb-3">Điều hướng</h4>
             <ul className="space-y-2 text-sm">
               <li><Link href="/tools" className="hover:text-white">Công cụ</Link></li>
-              <li><Link href="/categories" className="hover:text-white">Chuyên mục</Link></li>
+              <li><Link href="/category" className="hover:text-white">Chuyên mục</Link></li>
               <li><Link href="/about" className="hover:text-white">Giới thiệu</Link></li>
               <li><Link href="/privacy" className="hover:text-white">Bảo mật</Link></li>
             </ul>
@@ -325,7 +325,7 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
             <h4 className="font-semibold text-white mb-3">Liên hệ</h4>
             <ul className="space-y-2 text-sm">
               <li><Link href="/contact" className="hover:text-white">Liên hệ trực tiếp</Link></li>
-              <li><a href="mailto:support@storeios.net" className="hover:text-white">Email hỗ trợ</a></li>
+              <li><a href="mailto:admin@storeios.net" className="hover:text-white">Email hỗ trợ</a></li>
             </ul>
           </div>
           <div>
