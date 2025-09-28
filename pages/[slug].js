@@ -971,7 +971,7 @@ export default function Detail({ serverApp, serverRelated }) {
           )}
 
           {/* Bình luận */}
-          <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
+          <div className="mt-4">
             <Comments postId={app.slug} postTitle={app.name} />
           </div>
         </div>
