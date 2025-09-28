@@ -659,6 +659,7 @@ function RootComment({
     </div>{/* end full-bleed */}
   </li>
 );
+}
 
 /* ====== Reply item tách riêng để chứa state edit ====== */
 function ReplyItem({
