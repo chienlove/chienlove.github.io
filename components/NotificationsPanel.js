@@ -139,18 +139,19 @@ export default function NotificationsPanel({ open, onClose }) {
   }, []);
 
   useEffect(() => {
-    if (!user || !open) return;
-    const qn = query(
-      collection(db, 'notifications'),
-      where('toUserId', '==', user.uid),
-      orderBy('updatedAt', 'desc'),
-      limit(30)
-    );
-    const unsub = onSnapshot(qn, (snap) => {
-      setItems(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-    });
-    return () => unsub();
-  }, [user, open]);
+  if (!user || !open) return;
+  const qn = query(
+    collection(db, 'notifications'),
+    where('toUserId', '==', user.uid),
+    orderBy('updatedAt', 'desc'),
+    orderBy('createdAt', 'desc'),
+    limit(30)
+  );
+  const unsub = onSnapshot(qn, (snap) => {
+    setItems(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+  });
+  return () => unsub();
+}, [user, open]);
 
   /* ---- OUTSIDE CLICK: dùng data-attribute để phân biệt header menu và row menu ---- */
   useEffect(() => {
@@ -320,7 +321,7 @@ export default function NotificationsPanel({ open, onClose }) {
             ) : (
               <ul className="p-3 space-y-3">
                 {items.map((n) => {
-                  const t = formatDate(n.createdAt);
+                  const t = formatDate(n.updatedAt || n.createdAt);
                   const isLike = n.type === 'like';
                   const whoBase = n.fromUserName || 'Ai đó';
                   const who = isLike && n.count > 1
