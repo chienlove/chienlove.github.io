@@ -282,26 +282,38 @@ function CommentHeader({ c, me, isAdminFn, dt }) {
   );
 }
 
+/* ================= Quote (đổi style giống demo) ================= */
 function Quote({ quoteFrom, me }) {
   if (!quoteFrom) return null;
+  const authorId = quoteFrom.authorId;
+  const authorName = quoteFrom.userName || 'Người dùng';
+
+  const Name = () => (
+    authorId ? (
+      <Link
+        href={me && authorId === me.uid ? '/profile' : `/users/${authorId}`}
+        className="hover:underline"
+      >
+        {authorName}
+      </Link>
+    ) : <span>{authorName}</span>
+  );
+
   return (
-    <div className="mt-3 overflow-hidden rounded-lg border border-gray-300 dark:border-gray-600">
-      <div className="flex items-center gap-2 px-3 py-2 bg-gray-200 dark:bg-gray-700 text-sm font-semibold text-orange-600 dark:text-orange-400">
-        {quoteFrom.authorId ? (
-          <Link href={me && quoteFrom.authorId === me.uid ? '/profile' : `/users/${quoteFrom.authorId}`} className="flex items-center gap-1 hover:underline">
-            <span>{quoteFrom.userName || 'Người dùng'}</span>
-            <FontAwesomeIcon icon={faArrowUp} className="w-3 h-3 translate-y-[1px]" />
-          </Link>
-        ) : (
+    <div className="mt-3 mb-3 border-l-4 border-orange-200 bg-orange-50 rounded-r-lg">
+      <div className="p-3">
+        <div className="flex items-center gap-2 text-xs text-orange-600 font-medium mb-1">
+          {/* icon quote nhỏ */}
+          <svg viewBox="0 0 24 24" className="w-3 h-3" fill="currentColor" aria-hidden="true">
+            <path d="M7.17 6C5.97 6 5 6.97 5 8.17v3.66C5 13.03 5.97 14 7.17 14h2.16A1.67 1.67 0 0 0 11 12.33V8.17C11 6.97 10.03 6 8.83 6H7.17zm9 0C14.97 6 14 6.97 14 8.17v3.66C14 13.03 14.97 14 16.17 14h2.16A1.67 1.67 0 0 0 20 12.33V8.17C20 6.97 19.03 6 17.83 6h-1.66z"/>
+          </svg>
           <span className="flex items-center gap-1">
-            <span>{quoteFrom.userName || 'Người dùng'}</span>
-            <FontAwesomeIcon icon={faArrowUp} className="w-3 h-3 translate-y-[1px]" />
+            <Name /> <span>đã nói:</span>
           </span>
-        )}
-        <span className="text-gray-600 dark:text-gray-300">said:</span>
-      </div>
-      <div className="p-3 text-sm text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 border-t border-gray-300 dark:border-gray-600 whitespace-pre-wrap break-words">
-        {excerpt(quoteFrom.content, 200)}
+        </div>
+        <p className="text-sm text-gray-700 whitespace-pre-wrap break-words">
+          {excerpt(quoteFrom.content, 200)}
+        </p>
       </div>
     </div>
   );
@@ -475,25 +487,7 @@ function ReplyBox({
       {open && (
         <form onSubmit={onReply} className="flex flex-col gap-2 mt-2">
           {target && (
-            <div className="overflow-hidden rounded-lg border border-gray-300 dark:border-gray-600">
-              <div className="flex items-center gap-2 px-3 py-2 bg-gray-200 dark:bg-gray-700 text-sm font-semibold text-orange-600 dark:text-orange-400">
-                {target.authorId ? (
-                  <Link href={me && target.authorId === me.uid ? '/profile' : `/users/${target.authorId}`} className="flex items-center gap-1 hover:underline">
-                    <span>{target.userName || 'Người dùng'}</span>
-                    <FontAwesomeIcon icon={faArrowUp} className="w-3 h-3 translate-y-[1px]" />
-                  </Link>
-                ) : (
-                  <span className="flex items-center gap-1">
-                    <span>{target.userName || 'Người dùng'}</span>
-                    <FontAwesomeIcon icon={faArrowUp} className="w-3 h-3 translate-y-[1px]" />
-                  </span>
-                )}
-                <span className="text-gray-600 dark:text-gray-300">said:</span>
-              </div>
-              <div className="p-3 text-sm text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 border-t border-gray-300 dark:border-gray-600 whitespace-pre-wrap break-words">
-                {excerpt(target.content, 200)}
-              </div>
-            </div>
+            <Quote quoteFrom={target} me={me} />
           )}
           <textarea
             value={text}
@@ -710,18 +704,8 @@ function ReplyItem({
         />
       </div>
 
-      {/* quote mục tiêu (nếu có) */}
-      {target && (
-        <div className="mt-3 overflow-hidden rounded-lg border border-gray-300 dark:border-gray-600">
-          <div className="flex items-center gap-2 px-3 py-2 bg-gray-200 dark:bg-gray-700 text-sm font-semibold text-orange-600 dark:text-orange-400">
-            <span>{target.userName || 'Người dùng'}</span>
-            <span className="text-gray-600 dark:text-gray-300">said:</span>
-          </div>
-          <div className="p-3 text-sm text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 border-t border-gray-300 dark:border-gray-600 whitespace-pre-wrap break-words">
-            {excerpt(target.content, 200)}
-          </div>
-        </div>
-      )}
+      {/* quote mục tiêu (nếu có) -- đổi style */}
+      {target && <Quote quoteFrom={target} me={me} />}
 
       {/* nội dung reply */}
       <div className="mt-2">
