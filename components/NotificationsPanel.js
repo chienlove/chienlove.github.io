@@ -143,7 +143,7 @@ export default function NotificationsPanel({ open, onClose }) {
     const qn = query(
       collection(db, 'notifications'),
       where('toUserId', '==', user.uid),
-      orderBy('createdAt', 'desc'),
+      orderBy('updatedAt', 'desc'),
       limit(30)
     );
     const unsub = onSnapshot(qn, (snap) => {
