@@ -1059,16 +1059,6 @@ export default function Comments({ postId, postTitle }) {
     }
   };
 
-  const items = useMemo(() => [...liveItems, ...olderItems], [liveItems, olderItems]);
-
-  const roots = useMemo(() => items.filter(c => !c.parentId), [items]);
-  const repliesByParent = useMemo(() => {
-    const m = {};
-    items.forEach(c => { if (c.parentId) (m[c.parentId] ||= []).push(c); });
-    Object.values(m).forEach(arr => arr.sort((a,b) => (a.createdAt?.seconds||0) - (b.createdAt?.seconds||0)));
-    return m;
-  }, [items]);
-
   const deleteThreadBatch = async (root) => {
     const toDelete = [root, ...(repliesByParent[root.id] || [])];
     const batch = writeBatch(db);
