@@ -547,10 +547,10 @@ function RootComment({
     <li
       key={c.id}
       id={`c-${c.id}`}
-      className="scroll-mt-24 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden"
+      className="scroll-mt-24"
     >
-      {/* Title bar có màu nền: avatar + tên + thời gian + menu … */}
-      <div className="flex items-center gap-3 px-3 sm:px-4 py-2 bg-gradient-to-r from-sky-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 border-b border-sky-100 dark:border-gray-800">
+      {/* Title bar FULL LỀ (không card, không rounded cho root) */}
+      <div className="-mx-3 sm:-mx-4 px-3 sm:px-4 py-2 bg-gradient-to-r from-sky-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 border-y border-sky-100 dark:border-gray-800 flex items-center gap-3">
         <CommentHeader c={c} me={me} isAdminFn={(uid)=>adminUids.includes(uid)} dt={dt} />
         <DotMenu
           canEdit={canEditRoot}
@@ -568,7 +568,7 @@ function RootComment({
         />
       </div>
 
-      {/* Nội dung */}
+      {/* Nội dung root */}
       <div className="px-3 sm:px-4 py-3">
         {!editing ? (
           <div className="whitespace-pre-wrap break-words text-gray-900 dark:text-gray-100 leading-6">
@@ -591,33 +591,35 @@ function RootComment({
         )}
 
         {/* Action bar + Ẩn nút Trả lời khi chính mình */}
-        <ReplyBox
-          me={me}
-          postId={postId}
-          parent={c}
-          adminUids={adminUids}
-          postTitle={postTitle}
-          onNeedVerify={() => {}}
-          onNeedLogin={() => {}}
-          renderTrigger={(openFn, canReply) => (
-            <ActionBar
-              hasLiked={hasLiked}
-              likeCount={likeCount}
-              onToggleLike={() => toggleLike(c)}
-              renderLikersToggle={() => <LikersToggle comment={c} />}
-              renderReplyTrigger={() => (
-                canReplyRoot && canReply ? (
-                  <button
-                    onClick={openFn}
-                    className="inline-flex items-center gap-2 text-sm text-sky-700 dark:text-sky-300 hover:underline"
-                  >
-                    Trả lời
-                  </button>
-                ) : null
-              )}
-            />
-          )}
-        />
+        <div className="px-0">
+          <ReplyBox
+            me={me}
+            postId={postId}
+            parent={c}
+            adminUids={adminUids}
+            postTitle={postTitle}
+            onNeedVerify={() => {}}
+            onNeedLogin={() => {}}
+            renderTrigger={(openFn, canReply) => (
+              <ActionBar
+                hasLiked={hasLiked}
+                likeCount={likeCount}
+                onToggleLike={() => toggleLike(c)}
+                renderLikersToggle={() => <LikersToggle comment={c} />}
+                renderReplyTrigger={() => (
+                  canReplyRoot && canReply ? (
+                    <button
+                      onClick={openFn}
+                      className="inline-flex items-center gap-2 text-sm text-sky-700 dark:text-sky-300 hover:underline"
+                    >
+                      Trả lời
+                    </button>
+                  ) : null
+                )}
+              />
+            )}
+          />
+        </div>
 
         {/* Replies */}
         {replies.length > 0 && (
@@ -680,13 +682,12 @@ function ReplyItem({
   };
 
   // tìm người được trích (nếu có)
-  // (để giữ nguyên logic cũ: ưu tiên trích root nếu reply tới root)
   const target = r.replyToUserId === parent.authorId ? parent : null;
 
   return (
     <li id={`c-${r.id}`} className="pl-4 border-l-2 border-gray-200 dark:border-gray-800 scroll-mt-24 rounded-lg bg-white/0">
-      {/* title bar của reply */}
-      <div className="flex items-center gap-3 px-3 py-2 bg-slate-50 dark:bg-gray-900/60 border border-slate-100 dark:border-gray-800 rounded-lg">
+      {/* Header reply KHÔNG màu nền (chỉ text + avatar) */}
+      <div className="flex items-center gap-3 px-0 py-0">
         <CommentHeader c={r} me={me} isAdminFn={(uid)=>adminUids.includes(uid)} dt={dt2} />
         <DotMenu
           canEdit={canEditR}
@@ -1058,6 +1059,16 @@ export default function Comments({ postId, postTitle }) {
     }
   };
 
+  const items = useMemo(() => [...liveItems, ...olderItems], [liveItems, olderItems]);
+
+  const roots = useMemo(() => items.filter(c => !c.parentId), [items]);
+  const repliesByParent = useMemo(() => {
+    const m = {};
+    items.forEach(c => { if (c.parentId) (m[c.parentId] ||= []).push(c); });
+    Object.values(m).forEach(arr => arr.sort((a,b) => (a.createdAt?.seconds||0) - (b.createdAt?.seconds||0)));
+    return m;
+  }, [items]);
+
   const deleteThreadBatch = async (root) => {
     const toDelete = [root, ...(repliesByParent[root.id] || [])];
     const batch = writeBatch(db);
@@ -1118,11 +1129,11 @@ export default function Comments({ postId, postTitle }) {
         {modalContent}
       </CenterModal>
 
-      {/* Tiêu đề + icon + số lượng */}
-      <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-3 inline-flex items-center gap-2">
+      {/* Tiêu đề + icon + số lượng (số đậm + đen) */}
+      <h3 className="font-bold text-black dark:text-white mb-3 inline-flex items-center gap-2">
         <FontAwesomeIcon icon={faComments} className="text-sky-600" />
         Bình luận
-        <span className="text-sm font-medium text-gray-500 dark:text-gray-400">({totalCount})</span>
+        <span className="text-sm font-bold text-black dark:text-white">({totalCount})</span>
       </h3>
 
       {!me ? (
