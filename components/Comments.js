@@ -538,15 +538,14 @@ function RootComment({
   };
 
   return (
-  <li
-    key={c.id}
-    id={`c-${c.id}`}
-    className="scroll-mt-24"
-  >
-    {/* FULL‑BLEED WRAPPER + BORDER bao toàn khối (title + nội dung) */}
-    <div className="-mx-4 sm:-mx-6">
-      <div className="border-y border-sky-200/70 dark:border-gray-800">
-        {/* Title bar (có nền) */}
+    <li
+      key={c.id}
+      id={`c-${c.id}`}
+      className="scroll-mt-24 mb-4 last:mb-0"
+    >
+      {/* Mỗi bình luận là một card gọn: KHÔNG âm‑margin, có bo góc + viền quanh + shadow nhẹ */}
+      <div className="rounded-xl overflow-hidden border border-sky-200/70 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-sm">
+        {/* Title bar (có nền), tách rõ với bình luận khác */}
         <div className="px-4 sm:px-6 py-2 bg-gradient-to-r from-sky-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 border-b border-sky-100/80 dark:border-gray-800 flex items-center gap-3">
           <CommentHeader c={c} me={me} isAdminFn={(uid)=>adminUids.includes(uid)} dt={dt} />
           <DotMenu
@@ -565,7 +564,7 @@ function RootComment({
           />
         </div>
 
-        {/* Nội dung root (không nền) */}
+        {/* Nội dung root */}
         <div className="px-4 sm:px-6 py-3">
           {!editing ? (
             <div className="whitespace-pre-wrap break-words text-gray-900 dark:text-gray-100 leading-6">
@@ -587,7 +586,7 @@ function RootComment({
             </div>
           )}
 
-          {/* Action bar + Ẩn nút Trả lời khi chính mình */}
+          {/* Action bar + nút trả lời */}
           <div className="px-0">
             <ReplyBox
               me={me}
@@ -648,11 +647,10 @@ function RootComment({
               )}
             </div>
           )}
-        </div>{/* end content */}
-      </div>{/* end border box */}
-    </div>{/* end full-bleed */}
-  </li>
-);
+        </div>
+      </div>
+    </li>
+  );
 }
 
 /* ====== Reply item tách riêng để chứa state edit ====== */
