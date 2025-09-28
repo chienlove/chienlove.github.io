@@ -14,7 +14,7 @@ import { sendEmailVerification } from 'firebase/auth';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faPaperPlane, faReply, faTrash, faUserCircle, faHeart, faArrowUp,
-  faChevronDown, faComments
+  faChevronDown, faComments, faEllipsisVertical, faPenToSquare
 } from '@fortawesome/free-solid-svg-icons';
 
 /* ================= Helpers ================= */
@@ -173,6 +173,46 @@ const VerifiedBadgeX = ({ className = '' }) => (
   </svg>
 );
 
+/* ============ Nút menu ba chấm cho Sửa / Xoá ============ */
+function DotMenu({ canEdit, canDelete, onEdit, onDelete }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative ml-auto">
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        className="p-1.5 rounded-md hover:bg-black/5 dark:hover:bg-white/10"
+        aria-label="Mở menu"
+        title="Tuỳ chọn"
+      >
+        <FontAwesomeIcon icon={faEllipsisVertical} />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-2 w-40 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg overflow-hidden z-20">
+          {canEdit && (
+            <button
+              onClick={() => { setOpen(false); onEdit?.(); }}
+              className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 dark:hover:bg-gray-800 inline-flex items-center gap-2"
+            >
+              <FontAwesomeIcon icon={faPenToSquare} className="w-4 h-4" />
+              Sửa
+            </button>
+          )}
+          {canDelete && (
+            <button
+              onClick={() => { setOpen(false); onDelete?.(); }}
+              className="w-full text-left px-3 py-2 text-sm text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/30 inline-flex items-center gap-2"
+            >
+              <FontAwesomeIcon icon={faTrash} className="w-4 h-4" />
+              Xoá
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ================= Sub‑components ================= */
 function ActionBar({ hasLiked, likeCount, onToggleLike, renderReplyTrigger, renderLikersToggle }) {
   return (
@@ -201,44 +241,42 @@ function ActionBar({ hasLiked, likeCount, onToggleLike, renderReplyTrigger, rend
   );
 }
 
-function CommentHeader({ c, me, isAdminFn, dt, canDelete, onDelete }) {
+function CommentHeader({ c, me, isAdminFn, dt }) {
   const isAdmin = isAdminFn?.(c.authorId);
   const isSelf = !!me && c.authorId === me.uid;
   const avatar = c.userPhoto || '';
   const userName = c.userName || 'Người dùng';
 
   const NameLink = ({ uid, children }) => {
-    if (!uid) return <span className="font-semibold text-sky-700 dark:text-sky-300">{children}</span>;
+    if (!uid) return <span className="font-semibold text-sky-800 dark:text-sky-200">{children}</span>;
     const href = isSelf ? '/profile' : `/users/${uid}`;
     return (
-      <Link href={href} className="font-semibold text-sky-700 dark:text-sky-300 hover:text-sky-600 dark:hover:text-sky-400 hover:underline transition-colors">
+      <Link href={href} className="font-semibold text-sky-800 dark:text-sky-200 hover:text-sky-700 dark:hover:text-sky-300 hover:underline transition-colors">
         {children}
       </Link>
     );
   };
 
   return (
-    <div className="flex gap-3">
-      <div className="flex-shrink-0 w-10 h-10 rounded-full border border-gray-200 dark:border-gray-700 flex items-center justify-center bg-gray-50 dark:bg-gray-900/40">
+    <div className="flex items-center gap-3">
+      <div className="flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-sky-200/60 dark:border-sky-800/60 overflow-hidden bg-white/60 dark:bg-gray-900/40">
         {avatar ? (
-          <img src={avatar} alt="avatar" className="w-full h-full rounded-full object-cover" referrerPolicy="no-referrer" />
+          <img src={avatar} alt="avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
         ) : (
-          <FontAwesomeIcon icon={faUserCircle} className="w-6 h-6 text-sky-500" />
+          <div className="w-full h-full flex items-center justify-center">
+            <FontAwesomeIcon icon={faUserCircle} className="w-5 h-5 text-sky-600" />
+          </div>
         )}
       </div>
 
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 flex-wrap">
-          <NameLink uid={c.authorId}>{userName}</NameLink>
-          {isAdmin && <span className="inline-flex items-center justify-center translate-y-[0.5px]" title="Quản trị viên đã xác minh"><VerifiedBadgeX className="w-4 h-4 shrink-0" /></span>}
-          <span className="text-xs text-gray-500 dark:text-gray-400" title={dt?.abs}>{dt?.rel}</span>
-          {canDelete && (
-            <button onClick={onDelete} className="text-xs text-rose-600 hover:text-rose-700 ml-auto inline-flex items-center gap-1" title="Xoá">
-              <FontAwesomeIcon icon={faTrash} />
-              Xoá
-            </button>
-          )}
-        </div>
+      <div className="min-w-0 flex-1 flex items-center gap-2">
+        <NameLink uid={c.authorId}>{userName}</NameLink>
+        {isAdmin && (
+          <span className="inline-flex items-center justify-center translate-y-[0.5px]" title="Quản trị viên đã xác minh">
+            <VerifiedBadgeX className="w-4 h-4 shrink-0" />
+          </span>
+        )}
+        <span className="text-xs text-sky-900/70 dark:text-sky-200/70 truncate" title={dt?.abs}>{dt?.rel}</span>
       </div>
     </div>
   );
@@ -310,6 +348,7 @@ function LikersToggle({ comment }) {
         onClick={onToggle}
         className="inline-flex items-center px-1 py-1 hover:text-sky-700 dark:hover:text-sky-300"
         title="Xem ai đã thích"
+        aria-label="Xem ai đã thích"
       >
         <FontAwesomeIcon icon={faChevronDown} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
@@ -359,6 +398,7 @@ function ReplyBox({
   const tryOpen = () => {
     if (!me) { onNeedLogin?.(); return; }
     if (!me.emailVerified) { onNeedVerify?.(); return; }
+    if (!canReply) return; // Ẩn/không mở khi tự trả lời chính mình
     setOpen(true);
   };
 
@@ -423,11 +463,13 @@ function ReplyBox({
 
   return (
     <>
-      {!open && (renderTrigger ? renderTrigger(tryOpen) : (
-        <button onClick={tryOpen} className="inline-flex items-center gap-2 text-sm text-sky-700 dark:text-sky-300 hover:underline">
-          <FontAwesomeIcon icon={faReply} />
-          Trả lời
-        </button>
+      {!open && (renderTrigger ? renderTrigger(tryOpen, canReply) : (
+        canReply && (
+          <button onClick={tryOpen} className="inline-flex items-center gap-2 text-sm text-sky-700 dark:text-sky-300 hover:underline">
+            <FontAwesomeIcon icon={faReply} />
+            Trả lời
+          </button>
+        )
       ))}
 
       {open && (
@@ -475,163 +517,260 @@ function ReplyBox({
   );
 }
 
-// ====== RootComment: render bình luận gốc + các phản hồi ======
+/* ====== RootComment: render bình luận gốc + các phản hồi ====== */
 function RootComment({
   c, replies, me, adminUids, postId, postTitle,
   onOpenConfirm, toggleLike, deleteSingleComment, deleteThreadBatch,
   initialShowReplies
 }) {
   const [showReplies, setShowReplies] = useState(!!initialShowReplies);
+  const [editing, setEditing] = useState(false);
+  const [editText, setEditText] = useState(c.content || '');
   const dt = formatDate(c.createdAt);
   const hasLiked = !!me && Array.isArray(c.likedBy) && c.likedBy.includes(me.uid);
   const likeCount = c.likeCount || 0;
+  const canDeleteRoot = !!me && (me.uid === c.authorId || adminUids.includes(me.uid));
+  const canEditRoot = !!me && me.uid === c.authorId;
+  const canReplyRoot = !!me && me.uid !== c.authorId;
+
+  const onSaveEdit = async () => {
+    const txt = (editText || '').trim();
+    if (!txt) return;
+    await updateDoc(doc(db, 'comments', c.id), {
+      content: txt,
+      updatedAt: serverTimestamp(),
+    });
+    setEditing(false);
+  };
 
   return (
     <li
       key={c.id}
       id={`c-${c.id}`}
-      className="scroll-mt-24 rounded-2xl p-4 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 transition-shadow hover:shadow-md"
+      className="scroll-mt-24 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden"
     >
-      <CommentHeader
-        c={c}
-        me={me}
-        isAdminFn={(uid)=>adminUids.includes(uid)}
-        dt={dt}
-        canDelete={!!me && (me.uid === c.authorId || adminUids.includes(me.uid))}
-        onDelete={() => {
-          if (typeof onOpenConfirm === 'function') {
-            onOpenConfirm('Xoá bình luận này và toàn bộ phản hồi của nó?', async () => {
-              await deleteThreadBatch(c);
-            });
-          } else if (typeof window !== 'undefined' && window.confirm('Xoá bình luận này và toàn bộ phản hồi của nó?')) {
-            deleteThreadBatch(c);
-          }
-        }}
-      />
-
-      <div className="mt-2 whitespace-pre-wrap break-words text-gray-900 dark:text-gray-100 leading-6">
-        {c.content}
+      {/* Title bar có màu nền: avatar + tên + thời gian + menu … */}
+      <div className="flex items-center gap-3 px-3 sm:px-4 py-2 bg-gradient-to-r from-sky-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 border-b border-sky-100 dark:border-gray-800">
+        <CommentHeader c={c} me={me} isAdminFn={(uid)=>adminUids.includes(uid)} dt={dt} />
+        <DotMenu
+          canEdit={canEditRoot}
+          canDelete={canDeleteRoot}
+          onEdit={() => { setEditing(true); setEditText(c.content || ''); }}
+          onDelete={() => {
+            if (typeof onOpenConfirm === 'function') {
+              onOpenConfirm('Xoá bình luận này và toàn bộ phản hồi của nó?', async () => {
+                await deleteThreadBatch(c);
+              });
+            } else if (typeof window !== 'undefined' && window.confirm('Xoá bình luận này và toàn bộ phản hồi của nó?')) {
+              deleteThreadBatch(c);
+            }
+          }}
+        />
       </div>
 
-      <ReplyBox
-        me={me}
-        postId={postId}
-        parent={c}
-        adminUids={adminUids}
-        postTitle={postTitle}
-        onNeedVerify={() => {}}
-        onNeedLogin={() => {}}
-        renderTrigger={(openFn) => (
-          <ActionBar
-            hasLiked={hasLiked}
-            likeCount={likeCount}
-            onToggleLike={() => toggleLike(c)}
-            renderLikersToggle={() => <LikersToggle comment={c} />}
-            renderReplyTrigger={() => (
+      {/* Nội dung */}
+      <div className="px-3 sm:px-4 py-3">
+        {!editing ? (
+          <div className="whitespace-pre-wrap break-words text-gray-900 dark:text-gray-100 leading-6">
+            {c.content}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            <textarea
+              value={editText}
+              onChange={(e)=>setEditText(e.target.value)}
+              className="w-full min-h-[96px] border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2 text-[16px] leading-6 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500/40 outline-none"
+              maxLength={3000}
+            />
+            <div className="text-xs text-gray-500 dark:text-gray-400 text-right -mt-1">{editText.length}/3000</div>
+            <div className="flex gap-2 justify-end">
+              <button onClick={()=>{ setEditing(false); setEditText(c.content || ''); }} className="px-3 py-2 text-sm rounded-xl border border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800">Huỷ</button>
+              <button onClick={onSaveEdit} disabled={!editText.trim()} className={`px-4 py-2 text-sm rounded-xl text-white ${!editText.trim() ? 'bg-gray-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}>Lưu</button>
+            </div>
+          </div>
+        )}
+
+        {/* Action bar + Ẩn nút Trả lời khi chính mình */}
+        <ReplyBox
+          me={me}
+          postId={postId}
+          parent={c}
+          adminUids={adminUids}
+          postTitle={postTitle}
+          onNeedVerify={() => {}}
+          onNeedLogin={() => {}}
+          renderTrigger={(openFn, canReply) => (
+            <ActionBar
+              hasLiked={hasLiked}
+              likeCount={likeCount}
+              onToggleLike={() => toggleLike(c)}
+              renderLikersToggle={() => <LikersToggle comment={c} />}
+              renderReplyTrigger={() => (
+                canReplyRoot && canReply ? (
+                  <button
+                    onClick={openFn}
+                    className="inline-flex items-center gap-2 text-sm text-sky-700 dark:text-sky-300 hover:underline"
+                  >
+                    Trả lời
+                  </button>
+                ) : null
+              )}
+            />
+          )}
+        />
+
+        {/* Replies */}
+        {replies.length > 0 && (
+          <div className="mt-3">
+            {showReplies ? (
+              <ul className="space-y-4">
+                {replies.map((r) => (
+                  <ReplyItem
+                    key={r.id}
+                    r={r}
+                    parent={c}
+                    me={me}
+                    adminUids={adminUids}
+                    postId={postId}
+                    postTitle={postTitle}
+                    onOpenConfirm={onOpenConfirm}
+                    toggleLike={toggleLike}
+                    deleteSingleComment={deleteSingleComment}
+                  />
+                ))}
+              </ul>
+            ) : (
               <button
-                onClick={openFn}
-                className="inline-flex items-center gap-2 text-sm text-sky-700 dark:text-sky-300 hover:underline"
+                onClick={() => setShowReplies(true)}
+                className="text-sm font-semibold text-sky-600 dark:text-sky-400 hover:underline inline-flex items-center gap-2"
               >
-                Trả lời
+                Xem {replies.length} câu trả lời
               </button>
             )}
-          />
+          </div>
         )}
-      />
+      </div>
+    </li>
+  );
+}
 
-      {replies.length > 0 && (
-        <div className="mt-3">
-          {showReplies ? (
-            <ul className="space-y-4">
-              {replies.map((r) => {
-                const target =
-                  r.replyToUserId === c.authorId
-                    ? c
-                    : replies.find(x => x.authorId === r.replyToUserId) || null;
-                const dt2 = formatDate(r.createdAt);
-                const rHasLiked = !!me && Array.isArray(r.likedBy) && r.likedBy.includes(me.uid);
-                const rLikeCount = r.likeCount || 0;
+/* ====== Reply item tách riêng để chứa state edit ====== */
+function ReplyItem({
+  r, parent, me, adminUids, postId, postTitle,
+  onOpenConfirm, toggleLike, deleteSingleComment
+}) {
+  const dt2 = formatDate(r.createdAt);
+  const rHasLiked = !!me && Array.isArray(r.likedBy) && r.likedBy.includes(me.uid);
+  const rLikeCount = r.likeCount || 0;
+  const canDeleteR = !!me && (me.uid === r.authorId || adminUids.includes(me.uid));
+  const canEditR = !!me && me.uid === r.authorId;
+  const canReplyChild = !!me && me.uid !== r.authorId;
 
-                return (
-                  <li
-                    key={r.id}
-                    id={`c-${r.id}`}
-                    className="pl-4 border-l-2 border-gray-200 dark:border-gray-800 scroll-mt-24 bg-gray-50 dark:bg-gray-950 rounded-lg p-3"
-                  >
-                    <CommentHeader
-                      c={r}
-                      me={me}
-                      isAdminFn={(uid)=>adminUids.includes(uid)}
-                      dt={dt2}
-                      canDelete={!!me && (me.uid === r.authorId || adminUids.includes(me.uid))}
-                      onDelete={() => {
-                        if (typeof onOpenConfirm === 'function') {
-                          onOpenConfirm('Bạn có chắc muốn xoá phản hồi này?', async () => {
-                            await deleteSingleComment(r);
-                          });
-                        } else if (typeof window !== 'undefined' && window.confirm('Bạn có chắc muốn xoá phản hồi này?')) {
-                          deleteSingleComment(r);
-                        }
-                      }}
-                    />
+  const [editing, setEditing] = useState(false);
+  const [editText, setEditText] = useState(r.content || '');
 
-                    {/* Trích dẫn người được trả lời (nếu có) */}
-                    {target && (
-                      <div className="mt-3 overflow-hidden rounded-lg border border-gray-300 dark:border-gray-600">
-                        <div className="flex items-center gap-2 px-3 py-2 bg-gray-200 dark:bg-gray-700 text-sm font-semibold text-orange-600 dark:text-orange-400">
-                          <span>{target.userName || 'Người dùng'}</span>
-                          <span className="text-gray-600 dark:text-gray-300">said:</span>
-                        </div>
-                        <div className="p-3 text-sm text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 border-t border-gray-300 dark:border-gray-600 whitespace-pre-wrap break-words">
-                          {excerpt(target.content, 200)}
-                        </div>
-                      </div>
-                    )}
+  const onSaveEdit = async () => {
+    const txt = (editText || '').trim();
+    if (!txt) return;
+    await updateDoc(doc(db, 'comments', r.id), {
+      content: txt,
+      updatedAt: serverTimestamp(),
+    });
+    setEditing(false);
+  };
 
-                    <div className="mt-2 whitespace-pre-wrap break-words text-gray-900 dark:text-gray-100 leading-6">
-                      {r.content}
-                    </div>
+  // tìm người được trích (nếu có)
+  // (để giữ nguyên logic cũ: ưu tiên trích root nếu reply tới root)
+  const target = r.replyToUserId === parent.authorId ? parent : null;
 
-                    <ReplyBox
-                      me={me}
-                      postId={postId}
-                      parent={c}
-                      replyingTo={r}
-                      adminUids={adminUids}
-                      postTitle={postTitle}
-                      onNeedVerify={() => {}}
-                      onNeedLogin={() => {}}
-                      renderTrigger={(openFn) => (
-                        <ActionBar
-                          hasLiked={rHasLiked}
-                          likeCount={rLikeCount}
-                          onToggleLike={() => toggleLike(r)}
-                          renderLikersToggle={() => <LikersToggle comment={r} />}
-                          renderReplyTrigger={() => (
-                            <button
-                              onClick={openFn}
-                              className="inline-flex items-center gap-2 text-sm text-sky-700 dark:text-sky-300 hover:underline"
-                            >
-                              Trả lời
-                            </button>
-                          )}
-                        />
-                      )}
-                    />
-                  </li>
-                );
-              })}
-            </ul>
-          ) : (
-            <button
-              onClick={() => setShowReplies(true)}
-              className="mt-3 text-sm font-semibold text-sky-600 dark:text-sky-400 hover:underline inline-flex items-center gap-2"
-            >
-              Xem {replies.length} câu trả lời
-            </button>
-          )}
+  return (
+    <li id={`c-${r.id}`} className="pl-4 border-l-2 border-gray-200 dark:border-gray-800 scroll-mt-24 rounded-lg bg-white/0">
+      {/* title bar của reply */}
+      <div className="flex items-center gap-3 px-3 py-2 bg-slate-50 dark:bg-gray-900/60 border border-slate-100 dark:border-gray-800 rounded-lg">
+        <CommentHeader c={r} me={me} isAdminFn={(uid)=>adminUids.includes(uid)} dt={dt2} />
+        <DotMenu
+          canEdit={canEditR}
+          canDelete={canDeleteR}
+          onEdit={() => { setEditing(true); setEditText(r.content || ''); }}
+          onDelete={() => {
+            if (typeof onOpenConfirm === 'function') {
+              onOpenConfirm('Bạn có chắc muốn xoá phản hồi này?', async () => {
+                await deleteSingleComment(r);
+              });
+            } else if (typeof window !== 'undefined' && window.confirm('Bạn có chắc muốn xoá phản hồi này?')) {
+              deleteSingleComment(r);
+            }
+          }}
+        />
+      </div>
+
+      {/* quote mục tiêu (nếu có) */}
+      {target && (
+        <div className="mt-3 overflow-hidden rounded-lg border border-gray-300 dark:border-gray-600">
+          <div className="flex items-center gap-2 px-3 py-2 bg-gray-200 dark:bg-gray-700 text-sm font-semibold text-orange-600 dark:text-orange-400">
+            <span>{target.userName || 'Người dùng'}</span>
+            <span className="text-gray-600 dark:text-gray-300">said:</span>
+          </div>
+          <div className="p-3 text-sm text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-800 border-t border-gray-300 dark:border-gray-600 whitespace-pre-wrap break-words">
+            {excerpt(target.content, 200)}
+          </div>
         </div>
       )}
+
+      {/* nội dung reply */}
+      <div className="mt-2">
+        {!editing ? (
+          <div className="whitespace-pre-wrap break-words text-gray-900 dark:text-gray-100 leading-6">
+            {r.content}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            <textarea
+              value={editText}
+              onChange={(e)=>setEditText(e.target.value)}
+              className="w-full min-h-[80px] border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2 text-[16px] leading-6 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500/40 outline-none"
+              maxLength={3000}
+            />
+            <div className="text-xs text-gray-500 dark:text-gray-400 text-right -mt-1">{editText.length}/3000</div>
+            <div className="flex gap-2 justify-end">
+              <button onClick={()=>{ setEditing(false); setEditText(r.content || ''); }} className="px-3 py-2 text-sm rounded-xl border border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800">Huỷ</button>
+              <button onClick={onSaveEdit} disabled={!editText.trim()} className={`px-4 py-2 text-sm rounded-xl text-white ${!editText.trim() ? 'bg-gray-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}>Lưu</button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* action bar của reply (ẩn nút trả lời nếu là chính mình) */}
+      <div className="mt-2">
+        <ReplyBox
+          me={me}
+          postId={postId}
+          parent={parent}
+          replyingTo={r}
+          adminUids={adminUids}
+          postTitle={postTitle}
+          onNeedVerify={() => {}}
+          onNeedLogin={() => {}}
+          renderTrigger={(openFn, canReply) => (
+            <ActionBar
+              hasLiked={rHasLiked}
+              likeCount={rLikeCount}
+              onToggleLike={() => toggleLike(r)}
+              renderLikersToggle={() => <LikersToggle comment={r} />}
+              renderReplyTrigger={() => (
+                canReplyChild && canReply ? (
+                  <button
+                    onClick={openFn}
+                    className="inline-flex items-center gap-2 text-sm text-sky-700 dark:text-sky-300 hover:underline"
+                  >
+                    Trả lời
+                  </button>
+                ) : null
+              )}
+            />
+          )}
+        />
+      </div>
     </li>
   );
 }
@@ -971,16 +1110,19 @@ export default function Comments({ postId, postTitle }) {
     if (router.isReady && items.length > 0) scrollToComment();
   }, [router.isReady, items, router.query.comment]);
 
+  const totalCount = items.length;
+
   return (
     <div className="mt-6">
       <CenterModal open={modalOpen} title={modalTitle} onClose={() => setModalOpen(false)} actions={modalActions} tone={modalTone}>
         {modalContent}
       </CenterModal>
 
-      {/* Tiêu đề + icon */}
+      {/* Tiêu đề + icon + số lượng */}
       <h3 className="font-bold text-gray-900 dark:text-gray-100 mb-3 inline-flex items-center gap-2">
         <FontAwesomeIcon icon={faComments} className="text-sky-600" />
         Bình luận
+        <span className="text-sm font-medium text-gray-500 dark:text-gray-400">({totalCount})</span>
       </h3>
 
       {!me ? (
