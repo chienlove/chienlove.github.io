@@ -1111,7 +1111,7 @@ export default function Comments({ postId, postTitle }) {
     </CenterModal>
 
     {/* ===== CARD: tiêu đề + form nhập ===== */}
-    <div className="-mx-4 sm:mx-0 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-sm">
+    <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-sm">
       <div className="px-4 sm:px-5 py-4 border-b border-gray-100 dark:border-gray-800">
         <h3 className="font-bold text-black dark:text-white inline-flex items-center gap-2">
           <FontAwesomeIcon icon={faComments} className="text-sky-600" />
