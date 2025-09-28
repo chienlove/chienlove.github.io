@@ -551,7 +551,7 @@ function RootComment({
   >
     {/* FULL‑BLEED WRAPPER + BORDER bao toàn khối (title + nội dung) */}
     <div className="-mx-4 sm:-mx-6">
-      <div className="border border-sky-200/70 dark:border-gray-800">
+      <div className="border-y border-sky-200/70 dark:border-gray-800">
         {/* Title bar (có nền) */}
         <div className="px-4 sm:px-6 py-2 bg-gradient-to-r from-sky-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 border-b border-sky-100/80 dark:border-gray-800 flex items-center gap-3">
           <CommentHeader c={c} me={me} isAdminFn={(uid)=>adminUids.includes(uid)} dt={dt} />
