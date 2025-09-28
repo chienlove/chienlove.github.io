@@ -1106,90 +1106,101 @@ export default function Comments({ postId, postTitle }) {
   const totalCount = items.length;
 
   return (
-    <div className="mt-6">
-      <CenterModal open={modalOpen} title={modalTitle} onClose={() => setModalOpen(false)} actions={modalActions} tone={modalTone}>
-        {modalContent}
-      </CenterModal>
+  <div className="mt-6">
 
-      {/* Tiêu đề + icon + số lượng (số đậm + đen) */}
-      <h3 className="font-bold text-black dark:text-white mb-3 inline-flex items-center gap-2">
-        <FontAwesomeIcon icon={faComments} className="text-sky-600" />
-        Bình luận
-        <span className="text-sm font-bold text-black dark:text-white">({totalCount})</span>
-      </h3>
+    <CenterModal open={modalOpen} title={modalTitle} onClose={() => setModalOpen(false)} actions={modalActions} tone={modalTone}>
+      {modalContent}
+    </CenterModal>
 
-      {!me ? (
-        <div className="text-sm text-gray-700 dark:text-gray-300">Hãy đăng nhập để bình luận.</div>
-      ) : (
-        <form onSubmit={onSubmit} className="flex flex-col gap-2">
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            className="w-full min-h-[96px] border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2 text-[16px] leading-6 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-sky-500/40 outline-none shadow-sm"
-            placeholder="Viết bình luận..."
-            maxLength={3000}
-          />
-          {/* Đếm ký tự (giữ maxLength gốc 3000) */}
-          <div className="text-xs text-gray-500 dark:text-gray-400 text-right -mt-1">{content.length}/3000</div>
+    {/* ===== CARD: tiêu đề + form nhập ===== */}
+    <div className="-mx-4 sm:mx-0 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-sm">
+      <div className="px-4 sm:px-5 py-4 border-b border-gray-100 dark:border-gray-800">
+        <h3 className="font-bold text-black dark:text-white inline-flex items-center gap-2">
+          <FontAwesomeIcon icon={faComments} className="text-sky-600" />
+          Bình luận
+          <span className="text-sm font-bold text-black dark:text-white">({totalCount})</span>
+        </h3>
+      </div>
 
-          <div className="flex justify-end">
-            <button
-              type="submit"
-              disabled={submitting || !content.trim()}
-              className={`px-4 py-2 rounded-xl inline-flex items-center gap-2 text-white shadow-sm
-                ${submitting || !content.trim() ? 'bg-gray-400 cursor-not-allowed' : 'bg-sky-600 hover:bg-sky-700 active:scale-95'}`}
-            >
-              <FontAwesomeIcon icon={faPaperPlane} />
-              {submitting ? 'Đang gửi…' : 'Gửi'}
-            </button>
+      <div className="px-4 sm:px-5 py-4">
+        {!me ? (
+          <div className="text-sm text-gray-700 dark:text-gray-300">
+            Hãy đăng nhập để bình luận.
           </div>
-        </form>
-      )}
-
-      <div className="mt-4">
-        {loading ? (
-          <div className="text-sm text-gray-500 dark:text-gray-400">Đang tải bình luận…</div>
-        ) : roots.length === 0 ? (
-          <div className="text-sm text-gray-500 dark:text-gray-400">Chưa có bình luận.</div>
         ) : (
-          <>
-            <ul className="space-y-4">
-              {roots.map((c) => (
-                <RootComment
-                  key={c.id}
-                  c={c}
-                  replies={repliesByParent[c.id] || []}
-                  me={me}
-                  adminUids={adminUids}
-                  postId={postId}
-                  postTitle={postTitle}
-                  onOpenConfirm={openConfirm}
-                  toggleLike={toggleLike}
-                  deleteSingleComment={deleteSingleComment}
-                  deleteThreadBatch={deleteThreadBatch}
-                  initialShowReplies={threadsToExpand.has(c.id)}
-                />
-              ))}
-            </ul>
+          <form onSubmit={onSubmit} className="flex flex-col gap-2">
+            <textarea
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              className="w-full min-h-[96px] border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2 text-[16px] leading-6 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-sky-500/40 outline-none shadow-sm"
+              placeholder="Viết bình luận..."
+              maxLength={3000}
+            />
+            {/* Đếm ký tự (giữ maxLength gốc 3000) */}
+            <div className="text-xs text-gray-500 dark:text-gray-400 text-right -mt-1">
+              {content.length}/3000
+            </div>
 
-            {hasMore && (
-              <div className="mt-4 flex justify-center">
-                <button
-                  onClick={loadMore}
-                  disabled={loadingMore}
-                  className={`px-4 py-2 rounded-xl border inline-flex items-center justify-center
-                    ${loadingMore
-                      ? 'text-gray-500 border-gray-300 cursor-not-allowed'
-                      : 'text-sky-700 border-sky-200 hover:bg-sky-50 dark:text-sky-300 dark:border-sky-700 dark:hover:bg-sky-900/20'
-                    }`}
-                >
-                  {loadingMore ? 'Đang tải…' : 'Xem thêm bình luận cũ'}
-                </button>
-              </div>
-            )}
-          </>
+            <div className="flex justify-end">
+              <button
+                type="submit"
+                disabled={submitting || !content.trim()}
+                className={`px-4 py-2 rounded-xl inline-flex items-center gap-2 text-white shadow-sm
+                  ${submitting || !content.trim() ? 'bg-gray-400 cursor-not-allowed' : 'bg-sky-600 hover:bg-sky-700 active:scale-95'}`}
+              >
+                <FontAwesomeIcon icon={faPaperPlane} />
+                {submitting ? 'Đang gửi…' : 'Gửi'}
+              </button>
+            </div>
+          </form>
         )}
       </div>
     </div>
-  );
-}
+
+    {/* ===== DANH SÁCH BÌNH LUẬN (độc lập, không nằm trong card) ===== */}
+    <div className="mt-4">
+      {loading ? (
+        <div className="text-sm text-gray-500 dark:text-gray-400">Đang tải bình luận…</div>
+      ) : roots.length === 0 ? (
+        <div className="text-sm text-gray-500 dark:text-gray-400">Chưa có bình luận.</div>
+      ) : (
+        <>
+          <ul className="space-y-4">
+            {roots.map((c) => (
+              <RootComment
+                key={c.id}
+                c={c}
+                replies={repliesByParent[c.id] || []}
+                me={me}
+                adminUids={adminUids}
+                postId={postId}
+                postTitle={postTitle}
+                onOpenConfirm={openConfirm}
+                toggleLike={toggleLike}
+                deleteSingleComment={deleteSingleComment}
+                deleteThreadBatch={deleteThreadBatch}
+                initialShowReplies={threadsToExpand.has(c.id)}
+              />
+            ))}
+          </ul>
+
+          {hasMore && (
+            <div className="mt-4 flex justify-center">
+              <button
+                onClick={loadMore}
+                disabled={loadingMore}
+                className={`px-4 py-2 rounded-xl border inline-flex items-center justify-center
+                  ${loadingMore
+                    ? 'text-gray-500 border-gray-300 cursor-not-allowed'
+                    : 'text-sky-700 border-sky-200 hover:bg-sky-50 dark:text-sky-300 dark:border-sky-700 dark:hover:bg-sky-900/20'
+                  }`}
+              >
+                {loadingMore ? 'Đang tải…' : 'Xem thêm bình luận cũ'}
+              </button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  </div>
+);
