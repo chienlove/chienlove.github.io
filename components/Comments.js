@@ -1000,69 +1000,72 @@ export default function Comments({ postId, postTitle }) {
   };
 
   const toggleLike = async (c) => {
-    if (!me) { openLoginPrompt(); return; }
-    if (likingIds.has(c.id)) return;
+  if (!me) { openLoginPrompt(); return; }
+  if (likingIds.has(c.id)) return;
 
-    setLikingIds(prev => new Set(prev).add(c.id));
-    try {
-      const cref = doc(db, 'comments', c.id);
+  setLikingIds(prev => new Set(prev).add(c.id));
+  try {
+    const cref = doc(db, 'comments', c.id);
 
-      // Dùng transaction để đọc trạng thái mới nhất và cập nhật chuẩn xác
-      const result = await runTransaction(db, async (tx) => {
-        const snap = await tx.get(cref);
-        if (!snap.exists()) return { didLike: false, data: null };
+    // Chỉ cập nhật comment trong transaction (để không bị rules của users/* làm fail)
+    const result = await runTransaction(db, async (tx) => {
+      const snap = await tx.get(cref);
+      if (!snap.exists()) return { didLike: false, data: null, authorId: null };
 
-        const data = snap.data();
-        const likedBy = Array.isArray(data.likedBy) ? data.likedBy : [];
-        const hasLiked = likedBy.includes(me.uid);
+      const data = snap.data();
+      const likedBy = Array.isArray(data.likedBy) ? data.likedBy : [];
+      const hasLiked = likedBy.includes(me.uid);
 
-        if (hasLiked) {
-          tx.update(cref, {
-            likedBy: arrayRemove(me.uid),
-            likeCount: Math.max(0, (data.likeCount || 0) - 1),
-          });
-          // trừ điểm likeReceived của tác giả (nếu có)
-          if (data.authorId) {
-            tx.update(doc(db, 'users', data.authorId), { 'stats.likesReceived': increment(-1) });
-          }
-          return { didLike: false, data };
-        } else {
-          tx.update(cref, {
-            likedBy: arrayUnion(me.uid),
-            likeCount: (data.likeCount || 0) + 1,
-          });
-          // cộng điểm likeReceived của tác giả (nếu có)
-          if (data.authorId) {
-            tx.update(doc(db, 'users', data.authorId), { 'stats.likesReceived': increment(1) });
-          }
-          return { didLike: true, data };
-        }
-      });
-
-      // Nếu là thao tác LIKE thì tạo/upsert thông báo gộp cho tác giả
-      if (result?.didLike) {
-        const targetUid = result.data?.authorId;
-        if (targetUid && targetUid !== me.uid) {
-          await upsertLikeNotification({
-            toUserId: targetUid,
-            postId: String(result.data?.postId || c.postId || ''),
-            commentId: c.id,
-            fromUserId: me.uid,
-            fromUserName: preferredName(me),
-            fromUserPhoto: preferredPhoto(me),
-            postTitle: (typeof postTitle === 'string' ? postTitle : '') || '',
-            commentText: excerpt(result.data?.content ?? c.content, 160),
-          });
-        }
+      if (hasLiked) {
+        tx.update(cref, {
+          likedBy: arrayRemove(me.uid),
+          likeCount: Math.max(0, (data.likeCount || 0) - 1),
+        });
+        return { didLike: false, data, authorId: data.authorId || null };
+      } else {
+        tx.update(cref, {
+          likedBy: arrayUnion(me.uid),
+          likeCount: (data.likeCount || 0) + 1,
+        });
+        return { didLike: true, data, authorId: data.authorId || null };
       }
-    } finally {
-      setLikingIds(prev => {
-        const n = new Set(prev);
-        n.delete(c.id);
-        return n;
-      });
+    });
+
+    // Cập nhật điểm likesReceived cho tác giả (BEST-EFFORT, ngoài transaction)
+    if (result?.authorId && result.authorId !== me.uid) {
+      try {
+        await updateDoc(doc(db, 'users', result.authorId), {
+          'stats.likesReceived': increment(result.didLike ? 1 : -1),
+        });
+      } catch (e) {
+        // Bị chặn bởi security rules thì bỏ qua -- like vẫn đã thành công
+      }
     }
-  };
+
+    // Thông báo khi LIKE (giữ nguyên)
+    if (result?.didLike) {
+      const targetUid = result.authorId;
+      if (targetUid && targetUid !== me.uid) {
+        await upsertLikeNotification({
+          toUserId: targetUid,
+          postId: String(result.data?.postId || c.postId || ''),
+          commentId: c.id,
+          fromUserId: me.uid,
+          fromUserName: preferredName(me),
+          fromUserPhoto: preferredPhoto(me),
+          postTitle: (typeof postTitle === 'string' ? postTitle : '') || '',
+          commentText: excerpt(result.data?.content ?? c.content, 160),
+        });
+      }
+    }
+  } finally {
+    setLikingIds(prev => {
+      const n = new Set(prev);
+      n.delete(c.id);
+      return n;
+    });
+  }
+};
 
   const deleteThreadBatch = async (root) => {
     const toDelete = [root, ...(repliesByParent[root.id] || [])];
