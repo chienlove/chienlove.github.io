@@ -544,117 +544,121 @@ function RootComment({
   };
 
   return (
-    <li
-      key={c.id}
-      id={`c-${c.id}`}
-      className="scroll-mt-24"
-    >
-      {/* Title bar FULL LỀ (không card, không rounded cho root) */}
-      <div className="-mx-3 sm:-mx-4 px-3 sm:px-4 py-2 bg-gradient-to-r from-sky-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 border-y border-sky-100 dark:border-gray-800 flex items-center gap-3">
-        <CommentHeader c={c} me={me} isAdminFn={(uid)=>adminUids.includes(uid)} dt={dt} />
-        <DotMenu
-          canEdit={canEditRoot}
-          canDelete={canDeleteRoot}
-          onEdit={() => { setEditing(true); setEditText(c.content || ''); }}
-          onDelete={() => {
-            if (typeof onOpenConfirm === 'function') {
-              onOpenConfirm('Xoá bình luận này và toàn bộ phản hồi của nó?', async () => {
-                await deleteThreadBatch(c);
-              });
-            } else if (typeof window !== 'undefined' && window.confirm('Xoá bình luận này và toàn bộ phản hồi của nó?')) {
-              deleteThreadBatch(c);
-            }
-          }}
-        />
-      </div>
-
-      {/* Nội dung root */}
-      <div className="px-3 sm:px-4 py-3">
-        {!editing ? (
-          <div className="whitespace-pre-wrap break-words text-gray-900 dark:text-gray-100 leading-6">
-            {c.content}
-          </div>
-        ) : (
-          <div className="flex flex-col gap-2">
-            <textarea
-              value={editText}
-              onChange={(e)=>setEditText(e.target.value)}
-              className="w-full min-h-[96px] border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2 text-[16px] leading-6 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500/40 outline-none"
-              maxLength={3000}
-            />
-            <div className="text-xs text-gray-500 dark:text-gray-400 text-right -mt-1">{editText.length}/3000</div>
-            <div className="flex gap-2 justify-end">
-              <button onClick={()=>{ setEditing(false); setEditText(c.content || ''); }} className="px-3 py-2 text-sm rounded-xl border border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800">Huỷ</button>
-              <button onClick={onSaveEdit} disabled={!editText.trim()} className={`px-4 py-2 text-sm rounded-xl text-white ${!editText.trim() ? 'bg-gray-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}>Lưu</button>
-            </div>
-          </div>
-        )}
-
-        {/* Action bar + Ẩn nút Trả lời khi chính mình */}
-        <div className="px-0">
-          <ReplyBox
-            me={me}
-            postId={postId}
-            parent={c}
-            adminUids={adminUids}
-            postTitle={postTitle}
-            onNeedVerify={() => {}}
-            onNeedLogin={() => {}}
-            renderTrigger={(openFn, canReply) => (
-              <ActionBar
-                hasLiked={hasLiked}
-                likeCount={likeCount}
-                onToggleLike={() => toggleLike(c)}
-                renderLikersToggle={() => <LikersToggle comment={c} />}
-                renderReplyTrigger={() => (
-                  canReplyRoot && canReply ? (
-                    <button
-                      onClick={openFn}
-                      className="inline-flex items-center gap-2 text-sm text-sky-700 dark:text-sky-300 hover:underline"
-                    >
-                      Trả lời
-                    </button>
-                  ) : null
-                )}
-              />
-            )}
+  <li
+    key={c.id}
+    id={`c-${c.id}`}
+    className="scroll-mt-24"
+  >
+    {/* FULL‑BLEED WRAPPER + BORDER bao toàn khối (title + nội dung) */}
+    <div className="-mx-4 sm:-mx-6">
+      <div className="border border-sky-200/70 dark:border-gray-800">
+        {/* Title bar (có nền) */}
+        <div className="px-4 sm:px-6 py-2 bg-gradient-to-r from-sky-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 border-b border-sky-100/80 dark:border-gray-800 flex items-center gap-3">
+          <CommentHeader c={c} me={me} isAdminFn={(uid)=>adminUids.includes(uid)} dt={dt} />
+          <DotMenu
+            canEdit={canEditRoot}
+            canDelete={canDeleteRoot}
+            onEdit={() => { setEditing(true); setEditText(c.content || ''); }}
+            onDelete={() => {
+              if (typeof onOpenConfirm === 'function') {
+                onOpenConfirm('Xoá bình luận này và toàn bộ phản hồi của nó?', async () => {
+                  await deleteThreadBatch(c);
+                });
+              } else if (typeof window !== 'undefined' && window.confirm('Xoá bình luận này và toàn bộ phản hồi của nó?')) {
+                deleteThreadBatch(c);
+              }
+            }}
           />
         </div>
 
-        {/* Replies */}
-        {replies.length > 0 && (
-          <div className="mt-3">
-            {showReplies ? (
-              <ul className="space-y-4">
-                {replies.map((r) => (
-                  <ReplyItem
-                    key={r.id}
-                    r={r}
-                    parent={c}
-                    me={me}
-                    adminUids={adminUids}
-                    postId={postId}
-                    postTitle={postTitle}
-                    onOpenConfirm={onOpenConfirm}
-                    toggleLike={toggleLike}
-                    deleteSingleComment={deleteSingleComment}
-                  />
-                ))}
-              </ul>
-            ) : (
-              <button
-                onClick={() => setShowReplies(true)}
-                className="text-sm font-semibold text-sky-600 dark:text-sky-400 hover:underline inline-flex items-center gap-2"
-              >
-                Xem {replies.length} câu trả lời
-              </button>
-            )}
+        {/* Nội dung root (không nền) */}
+        <div className="px-4 sm:px-6 py-3">
+          {!editing ? (
+            <div className="whitespace-pre-wrap break-words text-gray-900 dark:text-gray-100 leading-6">
+              {c.content}
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              <textarea
+                value={editText}
+                onChange={(e)=>setEditText(e.target.value)}
+                className="w-full min-h-[96px] border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2 text-[16px] leading-6 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500/40 outline-none"
+                maxLength={3000}
+              />
+              <div className="text-xs text-gray-500 dark:text-gray-400 text-right -mt-1">{editText.length}/3000</div>
+              <div className="flex gap-2 justify-end">
+                <button onClick={()=>{ setEditing(false); setEditText(c.content || ''); }} className="px-3 py-2 text-sm rounded-xl border border-gray-300 hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-800">Huỷ</button>
+                <button onClick={onSaveEdit} disabled={!editText.trim()} className={`px-4 py-2 text-sm rounded-xl text-white ${!editText.trim() ? 'bg-gray-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}>Lưu</button>
+              </div>
+            </div>
+          )}
+
+          {/* Action bar + Ẩn nút Trả lời khi chính mình */}
+          <div className="px-0">
+            <ReplyBox
+              me={me}
+              postId={postId}
+              parent={c}
+              adminUids={adminUids}
+              postTitle={postTitle}
+              onNeedVerify={() => {}}
+              onNeedLogin={() => {}}
+              renderTrigger={(openFn, canReply) => (
+                <ActionBar
+                  hasLiked={hasLiked}
+                  likeCount={likeCount}
+                  onToggleLike={() => toggleLike(c)}
+                  renderLikersToggle={() => <LikersToggle comment={c} />}
+                  renderReplyTrigger={() => (
+                    canReplyRoot && canReply ? (
+                      <button
+                        onClick={openFn}
+                        className="inline-flex items-center gap-2 text-sm text-sky-700 dark:text-sky-300 hover:underline"
+                      >
+                        Trả lời
+                      </button>
+                    ) : null
+                  )}
+                />
+              )}
+            />
           </div>
-        )}
-      </div>
-    </li>
-  );
-}
+
+          {/* Replies */}
+          {replies.length > 0 && (
+            <div className="mt-3">
+              {showReplies ? (
+                <ul className="space-y-4">
+                  {replies.map((r) => (
+                    <ReplyItem
+                      key={r.id}
+                      r={r}
+                      parent={c}
+                      me={me}
+                      adminUids={adminUids}
+                      postId={postId}
+                      postTitle={postTitle}
+                      onOpenConfirm={onOpenConfirm}
+                      toggleLike={toggleLike}
+                      deleteSingleComment={deleteSingleComment}
+                    />
+                  ))}
+                </ul>
+              ) : (
+                <button
+                  onClick={() => setShowReplies(true)}
+                  className="text-sm font-semibold text-sky-600 dark:text-sky-400 hover:underline inline-flex items-center gap-2"
+                >
+                  Xem {replies.length} câu trả lời
+                </button>
+              )}
+            </div>
+          )}
+        </div>{/* end content */}
+      </div>{/* end border box */}
+    </div>{/* end full-bleed */}
+  </li>
+);
 
 /* ====== Reply item tách riêng để chứa state edit ====== */
 function ReplyItem({
