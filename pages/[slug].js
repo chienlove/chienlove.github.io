@@ -971,9 +971,7 @@ export default function Detail({ serverApp, serverRelated }) {
           )}
 
           {/* Bình luận */}
-          <div className="mt-4">
             <Comments postId={app.slug} postTitle={app.name} />
-          </div>
         </div>
       </div>
     </Layout>
