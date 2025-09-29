@@ -241,14 +241,41 @@ function ActionBar({ hasLiked, likeCount, onToggleLike, renderReplyTrigger, rend
   );
 }
 
-function CommentHeader({ c, me, isAdminFn, dt }) {
+/* ----------------- THÊM: authorMap để luôn lấy avatar/tên mới ----------------- */
+function useAuthorMap(allComments) {
+  const [authorMap, setAuthorMap] = useState({});
+  useEffect(() => {
+    const ids = Array.from(
+      new Set(allComments.map(c => c.authorId).filter(Boolean))
+    );
+    if (ids.length === 0) { setAuthorMap({}); return; }
+    (async () => {
+      const map = {};
+      for (let i = 0; i < ids.length; i += 10) {
+        const batch = ids.slice(i, i + 10);
+        const q = query(collection(db, 'users'), where(documentId(), 'in', batch));
+        const snap = await getDocs(q);
+        snap.forEach(d => { map[d.id] = d.data(); });
+      }
+      setAuthorMap(map);
+    })();
+  }, [allComments]);
+  return authorMap;
+}
+/* ----------------------------------------------------------------------------- */
+
+function CommentHeader({ c, me, isAdminFn, dt, authorMap }) {
+  const info = authorMap?.[c.authorId] || null;
+  const isDeletedUser = info?.status === 'deleted';
   const isAdmin = isAdminFn?.(c.authorId);
   const isSelf = !!me && c.authorId === me.uid;
-  const avatar = c.userPhoto || '';
-  const userName = c.userName || 'Người dùng';
+  const avatar = (info?.photoURL || c.userPhoto || '');
+  const userName = (info?.displayName || c.userName || 'Người dùng');
 
   const NameLink = ({ uid, children }) => {
-    if (!uid) return <span className="font-semibold text-sky-800 dark:text-sky-200">{children}</span>;
+    if (!uid || isDeletedUser) {
+      return <span className="font-semibold text-gray-500 dark:text-gray-400" title={isDeletedUser ? 'Tài khoản đã xoá' : ''}>{children}</span>;
+    }
     const href = isSelf ? '/profile' : `/users/${uid}`;
     return (
       <Link href={href} className="font-semibold text-sky-800 dark:text-sky-200 hover:text-sky-700 dark:hover:text-sky-300 hover:underline transition-colors">
@@ -260,7 +287,7 @@ function CommentHeader({ c, me, isAdminFn, dt }) {
   return (
     <div className="flex items-center gap-3">
       <div className="flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-sky-200/60 dark:border-sky-800/60 overflow-hidden bg-white/60 dark:bg-gray-900/40">
-        {avatar ? (
+        {avatar && !isDeletedUser ? (
           <img src={avatar} alt="avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
@@ -282,28 +309,31 @@ function CommentHeader({ c, me, isAdminFn, dt }) {
   );
 }
 
-/* ================= Quote (đổi style giống demo) ================= */
-function Quote({ quoteFrom, me }) {
+/* ================= Quote (hiển thị tên người bị trích) ================= */
+function Quote({ quoteFrom, me, authorMap }) {
   if (!quoteFrom) return null;
   const authorId = quoteFrom.authorId;
-  const authorName = quoteFrom.userName || 'Người dùng';
+  const info = authorMap?.[authorId] || null;
+  const isDeleted = info?.status === 'deleted';
+  const authorName = info?.displayName || quoteFrom.userName || 'Người dùng';
 
   const Name = () => (
-    authorId ? (
+    !authorId || isDeleted ? (
+      <span className="text-gray-500 dark:text-gray-400" title={isDeleted ? 'Tài khoản đã xoá' : ''}>{authorName}</span>
+    ) : (
       <Link
         href={me && authorId === me.uid ? '/profile' : `/users/${authorId}`}
         className="hover:underline"
       >
         {authorName}
       </Link>
-    ) : <span>{authorName}</span>
+    )
   );
 
   return (
     <div className="mt-3 mb-3 border-l-4 border-orange-200 bg-orange-50 rounded-r-lg">
       <div className="p-3">
         <div className="flex items-center gap-2 text-xs text-orange-600 font-medium mb-1">
-          {/* icon quote nhỏ */}
           <svg viewBox="0 0 24 24" className="w-3 h-3" fill="currentColor" aria-hidden="true">
             <path d="M7.17 6C5.97 6 5 6.97 5 8.17v3.66C5 13.03 5.97 14 7.17 14h2.16A1.67 1.67 0 0 0 11 12.33V8.17C11 6.97 10.03 6 8.83 6H7.17zm9 0C14.97 6 14 6.97 14 8.17v3.66C14 13.03 14.97 14 16.17 14h2.16A1.67 1.67 0 0 0 20 12.33V8.17C20 6.97 19.03 6 17.83 6h-1.66z"/>
           </svg>
@@ -399,7 +429,8 @@ function LikersToggle({ comment }) {
 function ReplyBox({
   me, postId, parent, replyingTo = null, adminUids, postTitle,
   onNeedVerify, onNeedLogin,
-  renderTrigger
+  renderTrigger,
+  /* THÊM */ authorMap
 }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
@@ -487,7 +518,7 @@ function ReplyBox({
       {open && (
         <form onSubmit={onReply} className="flex flex-col gap-2 mt-2">
           {target && (
-            <Quote quoteFrom={target} me={me} />
+            <Quote quoteFrom={target} me={me} authorMap={authorMap} />
           )}
           <textarea
             value={text}
@@ -515,7 +546,8 @@ function ReplyBox({
 function RootComment({
   c, replies, me, adminUids, postId, postTitle,
   onOpenConfirm, toggleLike, deleteSingleComment, deleteThreadBatch,
-  initialShowReplies
+  initialShowReplies,
+  /* THÊM */ authorMap
 }) {
   const [showReplies, setShowReplies] = useState(!!initialShowReplies);
   const [editing, setEditing] = useState(false);
@@ -543,11 +575,9 @@ function RootComment({
       id={`c-${c.id}`}
       className="scroll-mt-24 mb-4 last:mb-0"
     >
-      {/* Mỗi bình luận là một card gọn: KHÔNG âm‑margin, có bo góc + viền quanh + shadow nhẹ */}
       <div className="rounded-xl border border-sky-200/70 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-sm">
-        {/* Title bar (có nền), tách rõ với bình luận khác */}
         <div className="px-4 sm:px-6 py-2 bg-gradient-to-r from-sky-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 border-b border-sky-100/80 dark:border-gray-800 flex items-center gap-3">
-          <CommentHeader c={c} me={me} isAdminFn={(uid)=>adminUids.includes(uid)} dt={dt} />
+          <CommentHeader c={c} me={me} isAdminFn={(uid)=>adminUids.includes(uid)} dt={dt} authorMap={authorMap} />
           <DotMenu
             canEdit={canEditRoot}
             canDelete={canDeleteRoot}
@@ -564,7 +594,6 @@ function RootComment({
           />
         </div>
 
-        {/* Nội dung root */}
         <div className="px-4 sm:px-6 py-3">
           {!editing ? (
             <div className="whitespace-pre-wrap break-words text-gray-900 dark:text-gray-100 leading-6">
@@ -586,7 +615,6 @@ function RootComment({
             </div>
           )}
 
-          {/* Action bar + nút trả lời */}
           <div className="px-0">
             <ReplyBox
               me={me}
@@ -614,10 +642,10 @@ function RootComment({
                   )}
                 />
               )}
+              authorMap={authorMap}
             />
           </div>
 
-          {/* Replies */}
           {replies.length > 0 && (
             <div className="mt-3">
               {showReplies ? (
@@ -634,6 +662,7 @@ function RootComment({
                       onOpenConfirm={onOpenConfirm}
                       toggleLike={toggleLike}
                       deleteSingleComment={deleteSingleComment}
+                      authorMap={authorMap}
                     />
                   ))}
                 </ul>
@@ -653,10 +682,11 @@ function RootComment({
   );
 }
 
-/* ====== Reply item tách riêng để chứa state edit ====== */
+/* ====== Reply item ====== */
 function ReplyItem({
   r, parent, me, adminUids, postId, postTitle,
-  onOpenConfirm, toggleLike, deleteSingleComment
+  onOpenConfirm, toggleLike, deleteSingleComment,
+  /* THÊM */ authorMap
 }) {
   const dt2 = formatDate(r.createdAt);
   const rHasLiked = !!me && Array.isArray(r.likedBy) && r.likedBy.includes(me.uid);
@@ -678,14 +708,12 @@ function ReplyItem({
     setEditing(false);
   };
 
-  // tìm người được trích (nếu có)
   const target = r.replyToUserId === parent.authorId ? parent : null;
 
   return (
     <li id={`c-${r.id}`} className="pl-4 border-l-2 border-gray-200 dark:border-gray-800 scroll-mt-24 rounded-lg bg-white/0">
-      {/* Header reply KHÔNG màu nền (chỉ text + avatar) */}
       <div className="flex items-center gap-3 px-0 py-0">
-        <CommentHeader c={r} me={me} isAdminFn={(uid)=>adminUids.includes(uid)} dt={dt2} />
+        <CommentHeader c={r} me={me} isAdminFn={(uid)=>adminUids.includes(uid)} dt={dt2} authorMap={authorMap} />
         <DotMenu
           canEdit={canEditR}
           canDelete={canDeleteR}
@@ -702,10 +730,8 @@ function ReplyItem({
         />
       </div>
 
-      {/* quote mục tiêu (nếu có) -- đổi style */}
-      {target && <Quote quoteFrom={target} me={me} />}
+      {target && <Quote quoteFrom={target} me={me} authorMap={authorMap} />}
 
-      {/* nội dung reply */}
       <div className="mt-2">
         {!editing ? (
           <div className="whitespace-pre-wrap break-words text-gray-900 dark:text-gray-100 leading-6">
@@ -728,7 +754,6 @@ function ReplyItem({
         )}
       </div>
 
-      {/* action bar của reply (ẩn nút trả lời nếu là chính mình) */}
       <div className="mt-2">
         <ReplyBox
           me={me}
@@ -757,6 +782,7 @@ function ReplyItem({
               )}
             />
           )}
+          authorMap={authorMap}
         />
       </div>
     </li>
@@ -914,7 +940,11 @@ export default function Comments({ postId, postTitle }) {
     Object.values(m).forEach(arr => arr.sort((a,b) => (a.createdAt?.seconds||0) - (b.createdAt?.seconds||0)));
     return m;
   }, [items]);
-  
+
+  /* --------- THÊM: tải users một lần để luôn hiển thị avatar mới --------- */
+  const authorMap = useAuthorMap(items);
+  /* ---------------------------------------------------------------------- */
+
   const loadMore = async () => {
     if (!postId || loadingMore || !lastDocRef.current) return;
     setLoadingMore(true);
@@ -982,72 +1012,72 @@ export default function Comments({ postId, postTitle }) {
   };
 
   const toggleLike = async (c) => {
-  if (!me) { openLoginPrompt(); return; }
-  if (likingIds.has(c.id)) return;
+    if (!me) { openLoginPrompt(); return; }
+    if (likingIds.has(c.id)) return;
 
-  setLikingIds(prev => new Set(prev).add(c.id));
-  try {
-    const cref = doc(db, 'comments', c.id);
+    setLikingIds(prev => new Set(prev).add(c.id));
+    try {
+      const cref = doc(db, 'comments', c.id);
 
-    // Chỉ cập nhật comment trong transaction (để không bị rules của users/* làm fail)
-    const result = await runTransaction(db, async (tx) => {
-      const snap = await tx.get(cref);
-      if (!snap.exists()) return { didLike: false, data: null, authorId: null };
+      // Chỉ cập nhật comment trong transaction (để không bị rules của users/* làm fail)
+      const result = await runTransaction(db, async (tx) => {
+        const snap = await tx.get(cref);
+        if (!snap.exists()) return { didLike: false, data: null, authorId: null };
 
-      const data = snap.data();
-      const likedBy = Array.isArray(data.likedBy) ? data.likedBy : [];
-      const hasLiked = likedBy.includes(me.uid);
+        const data = snap.data();
+        const likedBy = Array.isArray(data.likedBy) ? data.likedBy : [];
+        const hasLiked = likedBy.includes(me.uid);
 
-      if (hasLiked) {
-        tx.update(cref, {
-          likedBy: arrayRemove(me.uid),
-          likeCount: Math.max(0, (data.likeCount || 0) - 1),
-        });
-        return { didLike: false, data, authorId: data.authorId || null };
-      } else {
-        tx.update(cref, {
-          likedBy: arrayUnion(me.uid),
-          likeCount: (data.likeCount || 0) + 1,
-        });
-        return { didLike: true, data, authorId: data.authorId || null };
+        if (hasLiked) {
+          tx.update(cref, {
+            likedBy: arrayRemove(me.uid),
+            likeCount: Math.max(0, (data.likeCount || 0) - 1),
+          });
+          return { didLike: false, data, authorId: data.authorId || null };
+        } else {
+          tx.update(cref, {
+            likedBy: arrayUnion(me.uid),
+            likeCount: (data.likeCount || 0) + 1,
+          });
+          return { didLike: true, data, authorId: data.authorId || null };
+        }
+      });
+
+      // Cập nhật điểm likesReceived cho tác giả (BEST-EFFORT, ngoài transaction)
+      if (result?.authorId && result.authorId !== me.uid) {
+        try {
+          await updateDoc(doc(db, 'users', result.authorId), {
+            'stats.likesReceived': increment(result.didLike ? 1 : -1),
+          });
+        } catch (e) {
+          // Bị chặn bởi security rules thì bỏ qua -- like vẫn đã thành công
+        }
       }
-    });
 
-    // Cập nhật điểm likesReceived cho tác giả (BEST-EFFORT, ngoài transaction)
-    if (result?.authorId && result.authorId !== me.uid) {
-      try {
-        await updateDoc(doc(db, 'users', result.authorId), {
-          'stats.likesReceived': increment(result.didLike ? 1 : -1),
-        });
-      } catch (e) {
-        // Bị chặn bởi security rules thì bỏ qua -- like vẫn đã thành công
+      // Thông báo khi LIKE (giữ nguyên)
+      if (result?.didLike) {
+        const targetUid = result.authorId;
+        if (targetUid && targetUid !== me.uid) {
+          await upsertLikeNotification({
+            toUserId: targetUid,
+            postId: String(result.data?.postId || c.postId || ''),
+            commentId: c.id,
+            fromUserId: me.uid,
+            fromUserName: preferredName(me),
+            fromUserPhoto: preferredPhoto(me),
+            postTitle: (typeof postTitle === 'string' ? postTitle : '') || '',
+            commentText: excerpt(result.data?.content ?? c.content, 160),
+          });
+        }
       }
+    } finally {
+      setLikingIds(prev => {
+        const n = new Set(prev);
+        n.delete(c.id);
+        return n;
+      });
     }
-
-    // Thông báo khi LIKE (giữ nguyên)
-    if (result?.didLike) {
-      const targetUid = result.authorId;
-      if (targetUid && targetUid !== me.uid) {
-        await upsertLikeNotification({
-          toUserId: targetUid,
-          postId: String(result.data?.postId || c.postId || ''),
-          commentId: c.id,
-          fromUserId: me.uid,
-          fromUserName: preferredName(me),
-          fromUserPhoto: preferredPhoto(me),
-          postTitle: (typeof postTitle === 'string' ? postTitle : '') || '',
-          commentText: excerpt(result.data?.content ?? c.content, 160),
-        });
-      }
-    }
-  } finally {
-    setLikingIds(prev => {
-      const n = new Set(prev);
-      n.delete(c.id);
-      return n;
-    });
-  }
-};
+  };
 
   // 🔧 SỬA: Xoá toàn bộ reply của root (kể cả chưa load) để tránh orphan replies
   const deleteThreadBatch = async (root) => {
@@ -1191,7 +1221,7 @@ export default function Comments({ postId, postTitle }) {
       </div>
     </div>
 
-    {/* ===== DANH SÁCH BÌNH LUẬN (độc lập, không nằm trong card) ===== */}
+    {/* ===== DANH SÁCH BÌNH LUẬN ===== */}
     <div className="mt-4">
       {loading ? (
         <div className="text-sm text-gray-500 dark:text-gray-400">Đang tải bình luận…</div>
@@ -1214,6 +1244,7 @@ export default function Comments({ postId, postTitle }) {
                 deleteSingleComment={deleteSingleComment}
                 deleteThreadBatch={deleteThreadBatch}
                 initialShowReplies={threadsToExpand.has(c.id)}
+                authorMap={authorMap}
               />
             ))}
           </ul>
