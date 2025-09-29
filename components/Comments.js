@@ -13,7 +13,7 @@ import {
 import { sendEmailVerification } from 'firebase/auth';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faPaperPlane, faReply, faTrash, faUserCircle, faHeart, faArrowUp,
+  faPaperPlane, faReply, faTrash, faUserCircle, faHeart,
   faChevronDown, faComments, faEllipsisVertical, faPenToSquare
 } from '@fortawesome/free-solid-svg-icons';
 
@@ -93,7 +93,7 @@ async function upsertLikeNotification({
   try {
     await updateDoc(ref, {
       toUserId,
-      fromUserId, // rất quan trọng để pass rule write
+      fromUserId,
       type: 'like',
       postId: String(postId),
       commentId,
@@ -230,10 +230,8 @@ function ActionBar({ hasLiked, likeCount, onToggleLike, renderReplyTrigger, rend
         {likeCount > 0 && <span>{likeCount}</span>}
       </button>
 
-      {/* Nút mũi tên xem danh sách người đã thích (tuỳ chọn) */}
       {renderLikersToggle?.()}
 
-      {/* Nút/trigger trả lời */}
       <div className="ml-2">
         {renderReplyTrigger?.()}
       </div>
@@ -241,13 +239,11 @@ function ActionBar({ hasLiked, likeCount, onToggleLike, renderReplyTrigger, rend
   );
 }
 
-/* ----------------- THÊM: authorMap để luôn lấy avatar/tên mới ----------------- */
+/* ----------------- Lấy avatar/tên mới & trạng thái xoá ----------------- */
 function useAuthorMap(allComments) {
   const [authorMap, setAuthorMap] = useState({});
   useEffect(() => {
-    const ids = Array.from(
-      new Set(allComments.map(c => c.authorId).filter(Boolean))
-    );
+    const ids = Array.from(new Set(allComments.map(c => c.authorId).filter(Boolean)));
     if (ids.length === 0) { setAuthorMap({}); return; }
     (async () => {
       const map = {};
@@ -262,15 +258,16 @@ function useAuthorMap(allComments) {
   }, [allComments]);
   return authorMap;
 }
-/* ----------------------------------------------------------------------------- */
 
+/* ================= Header người viết ================= */
 function CommentHeader({ c, me, isAdminFn, dt, authorMap }) {
   const info = authorMap?.[c.authorId] || null;
   const isDeletedUser = info?.status === 'deleted';
   const isAdmin = isAdminFn?.(c.authorId);
   const isSelf = !!me && c.authorId === me.uid;
-  const avatar = (info?.photoURL || c.userPhoto || '');
-  const userName = (info?.displayName || c.userName || 'Người dùng');
+
+  const avatar = info?.photoURL || c.userPhoto || '';
+  const userName = info?.displayName || c.userName || 'Người dùng';
 
   const NameLink = ({ uid, children }) => {
     if (!uid || isDeletedUser) {
@@ -309,7 +306,7 @@ function CommentHeader({ c, me, isAdminFn, dt, authorMap }) {
   );
 }
 
-/* ================= Quote (hiển thị tên người bị trích) ================= */
+/* ================= Quote ================= */
 function Quote({ quoteFrom, me, authorMap }) {
   if (!quoteFrom) return null;
   const authorId = quoteFrom.authorId;
@@ -349,7 +346,7 @@ function Quote({ quoteFrom, me, authorMap }) {
   );
 }
 
-/* ============ Likers dropdown (mới thêm) ============ */
+/* ============ Likers dropdown ============ */
 function LikersToggle({ comment }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -430,7 +427,7 @@ function ReplyBox({
   me, postId, parent, replyingTo = null, adminUids, postTitle,
   onNeedVerify, onNeedLogin,
   renderTrigger,
-  /* THÊM */ authorMap
+  authorMap
 }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
@@ -481,7 +478,6 @@ function ReplyBox({
           postTitle: postTitle || '',
           commentText: excerpt(text),
         });
-        // Không bump counter của người khác
       }
 
       const targets = adminUids.filter(u => u !== me.uid && u !== target.authorId);
@@ -492,12 +488,11 @@ function ReplyBox({
           postId: String(postId),
           commentId: ref.id,
           fromUserId: me.uid,
-          fromUserName: preferredName(me),
           fromUserPhoto: preferredPhoto(me),
+          fromUserName: preferredName(me),
           postTitle: postTitle || '',
           commentText: excerpt(text),
         });
-        // Không bump counter của người khác
       }));
     } finally {
       setSending(false);
@@ -517,9 +512,8 @@ function ReplyBox({
 
       {open && (
         <form onSubmit={onReply} className="flex flex-col gap-2 mt-2">
-          {target && (
-            <Quote quoteFrom={target} me={me} authorMap={authorMap} />
-          )}
+          {target && <Quote quoteFrom={target} me={me} authorMap={authorMap} />}
+
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
@@ -527,7 +521,6 @@ function ReplyBox({
             placeholder={`Phản hồi ${replyingTo ? (replyingTo.userName || 'người dùng') : (parent.userName || 'người dùng')}…`}
             maxLength={2000}
           />
-          {/* Đếm ký tự (giữ maxLength gốc 2000) */}
           <div className="text-xs text-gray-500 dark:text-gray-400 text-right -mt-1">{text.length}/2000</div>
 
           <div className="flex gap-2 justify-end">
@@ -542,12 +535,13 @@ function ReplyBox({
   );
 }
 
-/* ====== RootComment: render bình luận gốc + các phản hồi ====== */
+/* ====== RootComment ====== */
 function RootComment({
   c, replies, me, adminUids, postId, postTitle,
   onOpenConfirm, toggleLike, deleteSingleComment, deleteThreadBatch,
-  initialShowReplies,
-  /* THÊM */ authorMap
+  initialShowReplies, authorMap,
+  // nhận handler popup từ cha
+  onNeedVerify, onNeedLogin
 }) {
   const [showReplies, setShowReplies] = useState(!!initialShowReplies);
   const [editing, setEditing] = useState(false);
@@ -570,11 +564,7 @@ function RootComment({
   };
 
   return (
-    <li
-      key={c.id}
-      id={`c-${c.id}`}
-      className="scroll-mt-24 mb-4 last:mb-0"
-    >
+    <li key={c.id} id={`c-${c.id}`} className="scroll-mt-24 mb-4 last:mb-0">
       <div className="rounded-xl border border-sky-200/70 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-sm">
         <div className="px-4 sm:px-6 py-2 bg-gradient-to-r from-sky-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 border-b border-sky-100/80 dark:border-gray-800 flex items-center gap-3">
           <CommentHeader c={c} me={me} isAdminFn={(uid)=>adminUids.includes(uid)} dt={dt} authorMap={authorMap} />
@@ -584,9 +574,7 @@ function RootComment({
             onEdit={() => { setEditing(true); setEditText(c.content || ''); }}
             onDelete={() => {
               if (typeof onOpenConfirm === 'function') {
-                onOpenConfirm('Xoá bình luận này và toàn bộ phản hồi của nó?', async () => {
-                  await deleteThreadBatch(c);
-                });
+                onOpenConfirm('Xoá bình luận này và toàn bộ phản hồi của nó?', async () => { await deleteThreadBatch(c); });
               } else if (typeof window !== 'undefined' && window.confirm('Xoá bình luận này và toàn bộ phản hồi của nó?')) {
                 deleteThreadBatch(c);
               }
@@ -622,8 +610,8 @@ function RootComment({
               parent={c}
               adminUids={adminUids}
               postTitle={postTitle}
-              onNeedVerify={() => {}}
-              onNeedLogin={() => {}}
+              onNeedVerify={onNeedVerify}
+              onNeedLogin={onNeedLogin}
               renderTrigger={(openFn, canReply) => (
                 <ActionBar
                   hasLiked={hasLiked}
@@ -636,7 +624,8 @@ function RootComment({
                         onClick={openFn}
                         className="inline-flex items-center gap-2 text-sm text-sky-700 dark:text-sky-300 hover:underline"
                       >
-                        Trả lời
+                        <FontAwesomeIcon icon={faReply} />
+                        <span>Trả lời</span>
                       </button>
                     ) : null
                   )}
@@ -663,6 +652,8 @@ function RootComment({
                       toggleLike={toggleLike}
                       deleteSingleComment={deleteSingleComment}
                       authorMap={authorMap}
+                      onNeedVerify={onNeedVerify}
+                      onNeedLogin={onNeedLogin}
                     />
                   ))}
                 </ul>
@@ -686,7 +677,7 @@ function RootComment({
 function ReplyItem({
   r, parent, me, adminUids, postId, postTitle,
   onOpenConfirm, toggleLike, deleteSingleComment,
-  /* THÊM */ authorMap
+  authorMap, onNeedVerify, onNeedLogin
 }) {
   const dt2 = formatDate(r.createdAt);
   const rHasLiked = !!me && Array.isArray(r.likedBy) && r.likedBy.includes(me.uid);
@@ -720,9 +711,7 @@ function ReplyItem({
           onEdit={() => { setEditing(true); setEditText(r.content || ''); }}
           onDelete={() => {
             if (typeof onOpenConfirm === 'function') {
-              onOpenConfirm('Bạn có chắc muốn xoá phản hồi này?', async () => {
-                await deleteSingleComment(r);
-              });
+              onOpenConfirm('Bạn có chắc muốn xoá phản hồi này?', async () => { await deleteSingleComment(r); });
             } else if (typeof window !== 'undefined' && window.confirm('Bạn có chắc muốn xoá phản hồi này?')) {
               deleteSingleComment(r);
             }
@@ -762,8 +751,8 @@ function ReplyItem({
           replyingTo={r}
           adminUids={adminUids}
           postTitle={postTitle}
-          onNeedVerify={() => {}}
-          onNeedLogin={() => {}}
+          onNeedVerify={onNeedVerify}
+          onNeedLogin={onNeedLogin}
           renderTrigger={(openFn, canReply) => (
             <ActionBar
               hasLiked={rHasLiked}
@@ -776,7 +765,8 @@ function ReplyItem({
                     onClick={openFn}
                     className="inline-flex items-center gap-2 text-sm text-sky-700 dark:text-sky-300 hover:underline"
                   >
-                    Trả lời
+                    <FontAwesomeIcon icon={faReply} />
+                    <span>Trả lời</span>
                   </button>
                 ) : null
               )}
@@ -807,9 +797,12 @@ export default function Comments({ postId, postTitle }) {
 
   const [modalOpen, setModalOpen] = useState(false);
   const [modalTitle, setModalTitle] = useState('');
-  const [modalContent, setModalContent] = useState(null);
+  theModalContentHackRef.current = null;
   const [modalActions, setModalActions] = useState(null);
   const [modalTone, setModalTone] = useState('info');
+
+  // nhỏ trick để thay nội dung modal sau khi gửi email xác minh
+  const theModalContentHackRef = useRef(null);
 
   const [likingIds, setLikingIds] = useState(() => new Set());
   const [threadsToExpand, setThreadsToExpand] = useState(new Set());
@@ -821,7 +814,9 @@ export default function Comments({ postId, postTitle }) {
   };
   const openLoginPrompt = () => {
     setModalTitle('Cần đăng nhập');
-    setModalContent(<p>Bạn cần <b>đăng nhập</b> để thực hiện thao tác này.</p>);
+    theModalContentHackRef.current = (
+      <p>Bạn cần <b>đăng nhập</b> để thực hiện thao tác này.</p>
+    );
     setModalTone('info');
     setModalActions(
       <>
@@ -833,7 +828,7 @@ export default function Comments({ postId, postTitle }) {
   };
   const openConfirm = (message, onConfirm) => {
     setModalTitle('Xác nhận xoá');
-    setModalContent(<p>{message}</p>);
+    theModalContentHackRef.current = (<p>{message}</p>);
     setModalTone('warning');
     setModalActions(
       <>
@@ -845,7 +840,7 @@ export default function Comments({ postId, postTitle }) {
   };
   const openVerifyPrompt = () => {
     setModalTitle('Cần xác minh email');
-    setModalContent(
+    theModalContentHackRef.current = (
       <div>
         <p>Tài khoản của bạn <b>chưa được xác minh email</b>. Vui lòng xác minh để có thể bình luận.</p>
         <p className="mt-2 text-xs text-gray-600">Không thấy email? Hãy kiểm tra thư rác hoặc gửi lại.</p>
@@ -859,12 +854,20 @@ export default function Comments({ postId, postTitle }) {
             try {
               if (auth.currentUser) {
                 await sendEmailVerification(auth.currentUser);
-                setModalContent(<p>Đã gửi lại email xác minh. Hãy kiểm tra hộp thư.</p>);
+                setModalTitle('Đã gửi lại email xác minh');
+                theModalContentHackRef.current = (<p>Vui lòng kiểm tra hộp thư của bạn.</p>);
                 setModalTone('success');
+                setModalActions(
+                  <button onClick={() => setModalOpen(false)} className="px-3 py-2 text-sm rounded-lg bg-emerald-600 text-white hover:bg-emerald-700">Đóng</button>
+                );
               }
             } catch {
-              setModalContent(<p>Không gửi được email xác minh. Vui lòng thử lại sau.</p>);
+              setModalTitle('Lỗi');
+              theModalContentHackRef.current = (<p>Không gửi được email xác minh. Vui lòng thử lại sau.</p>);
               setModalTone('error');
+              setModalActions(
+                <button onClick={() => setModalOpen(false)} className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-white">Đóng</button>
+              );
             }
           }}
           className="px-3 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700"
@@ -932,7 +935,6 @@ export default function Comments({ postId, postTitle }) {
   }, [me, liveItems]);
 
   const items = useMemo(() => [...liveItems, ...olderItems], [liveItems, olderItems]);
-
   const roots = useMemo(() => items.filter(c => !c.parentId), [items]);
   const repliesByParent = useMemo(() => {
     const m = {};
@@ -941,9 +943,8 @@ export default function Comments({ postId, postTitle }) {
     return m;
   }, [items]);
 
-  /* --------- THÊM: tải users một lần để luôn hiển thị avatar mới --------- */
+  // Lấy thông tin người dùng cho avatar/tên & kiểm tra đã bị xoá chưa
   const authorMap = useAuthorMap(items);
-  /* ---------------------------------------------------------------------- */
 
   const loadMore = async () => {
     if (!postId || loadingMore || !lastDocRef.current) return;
@@ -993,7 +994,6 @@ export default function Comments({ postId, postTitle }) {
       setContent('');
       await updateDoc(doc(db, 'users', me.uid), { 'stats.comments': increment(1) });
 
-      // Thông báo cho admin (nếu có), không bump counter chéo user
       const targetAdmins = adminUids.filter(u => u !== me.uid);
       await Promise.all(targetAdmins.map(async (uid) => {
         await createNotification({
@@ -1019,7 +1019,6 @@ export default function Comments({ postId, postTitle }) {
     try {
       const cref = doc(db, 'comments', c.id);
 
-      // Chỉ cập nhật comment trong transaction (để không bị rules của users/* làm fail)
       const result = await runTransaction(db, async (tx) => {
         const snap = await tx.get(cref);
         if (!snap.exists()) return { didLike: false, data: null, authorId: null };
@@ -1043,18 +1042,14 @@ export default function Comments({ postId, postTitle }) {
         }
       });
 
-      // Cập nhật điểm likesReceived cho tác giả (BEST-EFFORT, ngoài transaction)
       if (result?.authorId && result.authorId !== me.uid) {
         try {
           await updateDoc(doc(db, 'users', result.authorId), {
             'stats.likesReceived': increment(result.didLike ? 1 : -1),
           });
-        } catch (e) {
-          // Bị chặn bởi security rules thì bỏ qua -- like vẫn đã thành công
-        }
+        } catch {}
       }
 
-      // Thông báo khi LIKE (giữ nguyên)
       if (result?.didLike) {
         const targetUid = result.authorId;
         if (targetUid && targetUid !== me.uid) {
@@ -1071,35 +1066,17 @@ export default function Comments({ postId, postTitle }) {
         }
       }
     } finally {
-      setLikingIds(prev => {
-        const n = new Set(prev);
-        n.delete(c.id);
-        return n;
-      });
+      setLikingIds(prev => { const n = new Set(prev); n.delete(c.id); return n; });
     }
   };
 
-  // 🔧 SỬA: Xoá toàn bộ reply của root (kể cả chưa load) để tránh orphan replies
   const deleteThreadBatch = async (root) => {
-    // 1) Lấy tất cả reply theo parentId, phân trang an toàn
     const toDelete = [root];
-    const pageSize = 200;
-    let cursor = null;
+    const pageSize = 200; let cursor = null;
     while (true) {
       const qn = cursor
-        ? query(
-            collection(db, 'comments'),
-            where('parentId', '==', root.id),
-            orderBy('createdAt', 'desc'),
-            startAfter(cursor),
-            limit(pageSize)
-          )
-        : query(
-            collection(db, 'comments'),
-            where('parentId', '==', root.id),
-            orderBy('createdAt', 'desc'),
-            limit(pageSize)
-          );
+        ? query(collection(db,'comments'), where('parentId','==',root.id), orderBy('createdAt','desc'), startAfter(cursor), limit(pageSize))
+        : query(collection(db,'comments'), where('parentId','==',root.id), orderBy('createdAt','desc'), limit(pageSize));
       const snap = await getDocs(qn);
       if (snap.empty) break;
       snap.docs.forEach(d => toDelete.push({ id: d.id, ...d.data() }));
@@ -1107,19 +1084,16 @@ export default function Comments({ postId, postTitle }) {
       cursor = snap.docs[snap.docs.length - 1];
     }
 
-    // 2) Xoá theo batch (chia lô để an toàn)
     const chunk = 400;
     for (let i = 0; i < toDelete.length; i += chunk) {
       const slice = toDelete.slice(i, i + chunk);
       const batch = writeBatch(db);
 
-      // Chuẩn bị danh sách tác giả để trừ stats.comments (nếu có)
       const authors = new Set(slice.map(c => c.authorId).filter(Boolean));
       const exist = new Set();
       const snaps = await Promise.all([...authors].map(uid => getDoc(doc(db, 'users', uid))));
       snaps.forEach(s => { if (s.exists()) exist.add(s.id); });
 
-      // Xoá comment + cập nhật thống kê
       slice.forEach(it => {
         batch.delete(doc(db, 'comments', it.id));
         if (it.authorId && exist.has(it.authorId)) {
@@ -1166,14 +1140,18 @@ export default function Comments({ postId, postTitle }) {
     if (router.isReady && items.length > 0) scrollToComment();
   }, [router.isReady, items, router.query.comment]);
 
-  // 🔧 SỬA: Đếm số bình luận gốc để khớp với danh sách hiển thị
   const totalCount = roots.length;
 
   return (
   <div className="mt-6">
-
-    <CenterModal open={modalOpen} title={modalTitle} onClose={() => setModalOpen(false)} actions={modalActions} tone={modalTone}>
-      {modalContent}
+    <CenterModal
+      open={modalOpen}
+      title={modalTitle}
+      onClose={() => setModalOpen(false)}
+      actions={modalActions}
+      tone={modalTone}
+    >
+      {theModalContentHackRef.current}
     </CenterModal>
 
     {/* ===== CARD: tiêu đề + form nhập ===== */}
@@ -1188,23 +1166,17 @@ export default function Comments({ postId, postTitle }) {
 
       <div className="px-4 sm:px-5 py-4">
         {!me ? (
-          <div className="text-sm text-gray-700 dark:text-gray-300">
-            Hãy đăng nhập để bình luận.
-          </div>
+          <div className="text-sm text-gray-700 dark:text-gray-300">Hãy đăng nhập để bình luận.</div>
         ) : (
           <form onSubmit={onSubmit} className="flex flex-col gap-2">
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              className="w-full min-h-[96px] border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2 text-[16px] leading-6 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-sky-500/40 outline-none shadow-sm"
+              className="w/full min-h-[96px] border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2 text-[16px] leading-6 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-sky-500/40 outline-none shadow-sm"
               placeholder="Viết bình luận..."
               maxLength={3000}
             />
-            {/* Đếm ký tự (giữ maxLength gốc 3000) */}
-            <div className="text-xs text-gray-500 dark:text-gray-400 text-right -mt-1">
-              {content.length}/3000
-            </div>
-
+            <div className="text-xs text-gray-500 dark:text-gray-400 text-right -mt-1">{content.length}/3000</div>
             <div className="flex justify-end">
               <button
                 type="submit"
@@ -1245,6 +1217,8 @@ export default function Comments({ postId, postTitle }) {
                 deleteThreadBatch={deleteThreadBatch}
                 initialShowReplies={threadsToExpand.has(c.id)}
                 authorMap={authorMap}
+                onNeedVerify={openVerifyPrompt}
+                onNeedLogin={openLoginPrompt}
               />
             ))}
           </ul>
