@@ -96,10 +96,16 @@ export default function PublicUser() {
         setLoading(true); setErr('');
         const uref = doc(db, 'users', String(uid));
         const usnap = await getDoc(uref);
-        if (!usnap.exists()) { setErr('Không tìm thấy người dùng này.'); return; }
-        const udata = usnap.data(); setUser(udata);
+        // ✅ CHẶN hồ sơ đã xoá (status === 'deleted') hoặc không tồn tại
+        if (!usnap.exists() || usnap.data()?.status === 'deleted') {
+          setErr('Không tìm thấy người dùng này.');
+          setUser(null);
+          return;
+        }
+        const udata = usnap.data();
+        setUser(udata);
 
-        // bình luận gần đây (không bọc card lồng nhau để tránh 2 viền)
+        // Bình luận gần đây
         const rcSnap = await getDocs(
           query(collection(db,'comments'), where('authorId','==',String(uid)), orderBy('createdAt','desc'), limit(12))
         );
@@ -112,7 +118,8 @@ export default function PublicUser() {
         setMemberSince(join);
         setTotals({ comments: t.comments, likes: t.likes });
       } catch (e) {
-        console.error(e); setErr('Đã xảy ra lỗi khi tải dữ liệu người dùng.');
+        console.error(e);
+        setErr('Đã xảy ra lỗi khi tải dữ liệu người dùng.');
       } finally { setLoading(false); }
     })();
   }, [uid]);
@@ -127,9 +134,15 @@ export default function PublicUser() {
       </Layout>
     );
   }
+
   if (err) {
     return (
       <Layout fullWidth>
+        <Head>
+          {/* Không index trang lỗi hồ sơ */}
+          <meta name="robots" content="noindex" />
+          <title>Lỗi – Hồ sơ người dùng</title>
+        </Head>
         <div className="text-center py-20">
           <h1 className="text-xl font-bold text-rose-500">Lỗi</h1>
           <p className="text-gray-600 dark:text-gray-300 mt-2">{err}</p>
@@ -137,6 +150,7 @@ export default function PublicUser() {
       </Layout>
     );
   }
+
   if (!user) return null;
 
   const { displayName, photoURL, bio, socialLinks } = user || {};
@@ -185,7 +199,7 @@ export default function PublicUser() {
                 </div>
               </div>
 
-              { (socialLinks?.github || socialLinks?.twitter) && (
+              {(socialLinks?.github || socialLinks?.twitter) && (
                 <div className="mt-4 flex items-center gap-4 text-sm">
                   {socialLinks.github && (
                     <a className="hover:underline" href={`https://github.com/${socialLinks.github}`} target="_blank" rel="noreferrer">GitHub</a>
@@ -199,35 +213,28 @@ export default function PublicUser() {
           </div>
         </section>
 
-        {/* Recent comments: chỉ 1 card cha, các item không viền, chỉ ngăn cách bằng divider ⇒ KHÔNG còn "2 viền lồng nhau" */}
-        <section className="mt-6 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
-          <div className="p-6 md:p-8">
-            <h2 className="text-lg md:text-xl font-semibold">Bình luận gần đây</h2>
-          </div>
-          {recent.length === 0 ? (
-            <div className="px-6 md:px-8 pb-8 text-sm text-gray-500">Chưa có bình luận nào.</div>
-          ) : (
-            <ul className="divide-y divide-gray-200 dark:divide-gray-800">
-              {recent.map((c) => {
-                // Ưu tiên URL đã lưu lúc comment; fallback /tools/:slugOrId#c-id
-                const postHref =
-                  c.postUrl ||
-                  (c.postSlug ? `/${c.postSlug}#c-${c.id}` : `/${c.postId}#c-${c.id}`);
-
-                return (
-                  <li key={c.id} className="px-6 md:px-8 py-5">
-                    <p className="text-sm whitespace-pre-wrap break-words">{c.content}</p>
-                    <div className="mt-2 text-xs text-gray-500">
-                      <Link href={postHref} className="text-blue-600 hover:underline">Xem trong bài viết</Link>
-                      <span className="mx-1">&middot;</span>
-                      {fmtRel(c.createdAt)}
+        {/* Bình luận gần đây */}
+        {recent.length > 0 && (
+          <section className="mt-8">
+            <h2 className="text-lg font-semibold mb-3">Bình luận gần đây</h2>
+            <ul className="grid md:grid-cols-2 gap-3">
+              {recent.map(c => (
+                <li key={c.id} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
+                  <div className="text-sm text-gray-600 dark:text-gray-300">{fmtRel(c.createdAt)}</div>
+                  <p className="mt-1 text-gray-800 dark:text-gray-100 whitespace-pre-wrap break-words">
+                    {String(c.content || '').slice(0, 200)}
+                    {String(c.content || '').length > 200 ? '…' : ''}
+                  </p>
+                  {c.postId && (
+                    <div className="mt-2 text-sm">
+                      <Link href={`/posts/${c.postId}`} className="text-sky-700 hover:underline">Xem bài viết</Link>
                     </div>
-                  </li>
-                );
-              })}
+                  )}
+                </li>
+              ))}
             </ul>
-          )}
-        </section>
+          </section>
+        )}
       </div>
     </Layout>
   );
