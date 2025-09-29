@@ -544,7 +544,7 @@ function RootComment({
       className="scroll-mt-24 mb-4 last:mb-0"
     >
       {/* Mỗi bình luận là một card gọn: KHÔNG âm‑margin, có bo góc + viền quanh + shadow nhẹ */}
-      <div className="rounded-xl overflow-hidden border border-sky-200/70 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-sm">
+      <div className="rounded-xl border border-sky-200/70 dark:border-gray-800 bg-white dark:bg-gray-950 shadow-sm">
         {/* Title bar (có nền), tách rõ với bình luận khác */}
         <div className="px-4 sm:px-6 py-2 bg-gradient-to-r from-sky-50 to-indigo-50 dark:from-gray-900 dark:to-gray-800 border-b border-sky-100/80 dark:border-gray-800 flex items-center gap-3">
           <CommentHeader c={c} me={me} isAdminFn={(uid)=>adminUids.includes(uid)} dt={dt} />
