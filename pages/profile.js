@@ -77,11 +77,8 @@ export default function ProfilePage() {
     showToast._t = setTimeout(() => setToast(null), ms);
   };
 
-  const onUploadAvatar = async (e) => {
-    if (isDeleted) {
-      showToast('error', 'Tài khoản đã bị xoá. Không thể cập nhật.');
-      return;
-    }
+    const onUploadAvatar = async (e) => {
+    if (isDeleted) { showToast('error', 'Tài khoản đã bị xoá. Không thể cập nhật.'); return; }
     const file = e.target.files?.[0];
     if (!file || !user) return;
 
@@ -99,7 +96,7 @@ export default function ProfilePage() {
       });
       const json = await resp.json();
       if (!resp.ok) throw new Error(json?.error || 'Upload thất bại');
-      const url = json.url;
+      const url = json.url; // đã có ?v=timestamp để phá cache
 
       await updateProfile(user, { photoURL: url });
       setUser({ ...user, photoURL: url });
