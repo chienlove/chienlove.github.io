@@ -365,7 +365,7 @@ function LikersToggle({ comment }) {
         <FontAwesomeIcon icon={faChevronDown} className={`transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
-        <div className="absolute left-0 top-full mt-2 w-72 max-h-64 overflow-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg p-2 z-30">
+        <div className="absolute left-0 top-full mt-2 w-72 max-h-64 overflow-auto rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg p-2 z-[60]">
           {loading ? (
             <div className="text-xs text-gray-500 px-2 py-2">Đang tải…</div>
           ) : err ? (
@@ -1049,21 +1049,56 @@ export default function Comments({ postId, postTitle }) {
   }
 };
 
+  // 🔧 SỬA: Xoá toàn bộ reply của root (kể cả chưa load) để tránh orphan replies
   const deleteThreadBatch = async (root) => {
-    const toDelete = [root, ...(repliesByParent[root.id] || [])];
-    const batch = writeBatch(db);
-    const authorsToUpdate = new Set(toDelete.map(c => c.authorId).filter(Boolean));
-    const existingAuthorIds = new Set();
-    const authorSnaps = await Promise.all([...authorsToUpdate].map(uid => getDoc(doc(db, 'users', uid))));
-    authorSnaps.forEach(snap => { if (snap.exists()) existingAuthorIds.add(snap.id); });
+    // 1) Lấy tất cả reply theo parentId, phân trang an toàn
+    const toDelete = [root];
+    const pageSize = 200;
+    let cursor = null;
+    while (true) {
+      const qn = cursor
+        ? query(
+            collection(db, 'comments'),
+            where('parentId', '==', root.id),
+            orderBy('createdAt', 'desc'),
+            startAfter(cursor),
+            limit(pageSize)
+          )
+        : query(
+            collection(db, 'comments'),
+            where('parentId', '==', root.id),
+            orderBy('createdAt', 'desc'),
+            limit(pageSize)
+          );
+      const snap = await getDocs(qn);
+      if (snap.empty) break;
+      snap.docs.forEach(d => toDelete.push({ id: d.id, ...d.data() }));
+      if (snap.size < pageSize) break;
+      cursor = snap.docs[snap.docs.length - 1];
+    }
 
-    toDelete.forEach((it) => {
-      batch.delete(doc(db, 'comments', it.id));
-      if (it.authorId && existingAuthorIds.has(it.authorId)) {
-        batch.update(doc(db, 'users', it.authorId), { 'stats.comments': increment(-1) });
-      }
-    });
-    await batch.commit();
+    // 2) Xoá theo batch (chia lô để an toàn)
+    const chunk = 400;
+    for (let i = 0; i < toDelete.length; i += chunk) {
+      const slice = toDelete.slice(i, i + chunk);
+      const batch = writeBatch(db);
+
+      // Chuẩn bị danh sách tác giả để trừ stats.comments (nếu có)
+      const authors = new Set(slice.map(c => c.authorId).filter(Boolean));
+      const exist = new Set();
+      const snaps = await Promise.all([...authors].map(uid => getDoc(doc(db, 'users', uid))));
+      snaps.forEach(s => { if (s.exists()) exist.add(s.id); });
+
+      // Xoá comment + cập nhật thống kê
+      slice.forEach(it => {
+        batch.delete(doc(db, 'comments', it.id));
+        if (it.authorId && exist.has(it.authorId)) {
+          batch.update(doc(db, 'users', it.authorId), { 'stats.comments': increment(-1) });
+        }
+      });
+
+      await batch.commit();
+    }
   };
 
   const deleteSingleComment = async (r) => {
@@ -1101,7 +1136,8 @@ export default function Comments({ postId, postTitle }) {
     if (router.isReady && items.length > 0) scrollToComment();
   }, [router.isReady, items, router.query.comment]);
 
-  const totalCount = items.length;
+  // 🔧 SỬA: Đếm số bình luận gốc để khớp với danh sách hiển thị
+  const totalCount = roots.length;
 
   return (
   <div className="mt-6">
@@ -1202,4 +1238,4 @@ export default function Comments({ postId, postTitle }) {
     </div>
   </div>
  );
-}  
+}
