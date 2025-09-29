@@ -53,10 +53,9 @@ function excerpt(s, n = 140) {
 }
 
 /* ================= Notifications ================= */
-// ❗️Chỉ bump counter cho CHÍNH MÌNH (tránh permission-denied khi đụng doc của người khác)
 async function bumpCounter(uid, delta) {
   if (!uid || !Number.isFinite(delta)) return;
-  if (auth.currentUser?.uid !== uid) return; // chặn bump chéo user
+  if (auth.currentUser?.uid !== uid) return;
   const ref = doc(db, 'user_counters', uid);
   await runTransaction(db, async (tx) => {
     const snap = await tx.get(ref);
@@ -79,8 +78,6 @@ async function createNotification(payload = {}) {
     ...extra,
   });
 }
-
-// Upsert thông báo LIKE gộp theo (toUserId, postId, commentId).
 async function upsertLikeNotification({
   toUserId, postId, commentId,
   fromUserId, fromUserName, fromUserPhoto,
@@ -89,7 +86,6 @@ async function upsertLikeNotification({
   if (!toUserId || !postId || !commentId || !fromUserId) return;
   const nid = `like_${toUserId}_${postId}_${commentId}`;
   const ref = doc(db, 'notifications', nid);
-
   try {
     await updateDoc(ref, {
       toUserId,
@@ -107,8 +103,7 @@ async function upsertLikeNotification({
       likers: arrayUnion(fromUserId),
     });
     return;
-  } catch { /* NOT_FOUND: sẽ setDoc */ }
-
+  } catch {}
   await setDoc(ref, {
     toUserId,
     fromUserId,
@@ -231,10 +226,7 @@ function ActionBar({ hasLiked, likeCount, onToggleLike, renderReplyTrigger, rend
       </button>
 
       {renderLikersToggle?.()}
-
-      <div className="ml-2">
-        {renderReplyTrigger?.()}
-      </div>
+      <div className="ml-2">{renderReplyTrigger?.()}</div>
     </div>
   );
 }
@@ -438,7 +430,7 @@ function ReplyBox({
   const tryOpen = () => {
     if (!me) { onNeedLogin?.(); return; }
     if (!me.emailVerified) { onNeedVerify?.(); return; }
-    if (!canReply) return; // Ẩn/không mở khi tự trả lời chính mình
+    if (!canReply) return;
     setOpen(true);
   };
 
@@ -540,7 +532,6 @@ function RootComment({
   c, replies, me, adminUids, postId, postTitle,
   onOpenConfirm, toggleLike, deleteSingleComment, deleteThreadBatch,
   initialShowReplies, authorMap,
-  // nhận handler popup từ cha
   onNeedVerify, onNeedLogin
 }) {
   const [showReplies, setShowReplies] = useState(!!initialShowReplies);
@@ -795,13 +786,12 @@ export default function Comments({ postId, postTitle }) {
   const unsubRef = useRef(null);
   const [hasMore, setHasMore] = useState(false);
 
+  // 🔧 Modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [modalTitle, setModalTitle] = useState('');
-  theModalContentHackRef.current = null;
   const [modalActions, setModalActions] = useState(null);
   const [modalTone, setModalTone] = useState('info');
-
-  // nhỏ trick để thay nội dung modal sau khi gửi email xác minh
+  // Dùng ref để thay nội dung modal động
   const theModalContentHackRef = useRef(null);
 
   const [likingIds, setLikingIds] = useState(() => new Set());
@@ -1172,7 +1162,7 @@ export default function Comments({ postId, postTitle }) {
             <textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              className="w/full min-h-[96px] border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2 text-[16px] leading-6 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-sky-500/40 outline-none shadow-sm"
+              className="w-full min-h-[96px] border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2 text-[16px] leading-6 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-sky-500/40 outline-none shadow-sm"
               placeholder="Viết bình luận..."
               maxLength={3000}
             />
@@ -1218,7 +1208,7 @@ export default function Comments({ postId, postTitle }) {
                 initialShowReplies={threadsToExpand.has(c.id)}
                 authorMap={authorMap}
                 onNeedVerify={openVerifyPrompt}
-                onNeedLogin={openLoginPrompt}
+                onNeedLogin={openHeaderLoginPopup ? openLoginPrompt : openLoginPrompt}
               />
             ))}
           </ul>
