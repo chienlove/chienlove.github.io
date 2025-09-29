@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
-import Layout from '../components/Layout';
+import Layout from '../components/Layout'; // Header + Footer
 import { auth, db } from '../lib/firebase-client';
 import {
   updateProfile,
@@ -37,12 +37,17 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
   const [uploading, setUploading] = useState(false);
-  const [userDoc, setUserDoc] = useState(null);
+  const [userDoc, setUserDoc] = useState(null); // đọc users/{uid} để biết status
+  const [hydrated, setHydrated] = useState(false); // 🔒 tránh SSR đụng vào user
   const fileInputRef = useRef(null);
 
+  // providers
   const providers = useMemo(() => (user?.providerData?.map(p => p.providerId) || []), [user]);
   const hasGoogle = providers.includes('google.com');
   const hasGithub = providers.includes('github.com');
+
+  // Hydration gate: chỉ render nội dung sau khi client hydrate xong
+  useEffect(() => { setHydrated(true); }, []);
 
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(async (u) => {
@@ -50,10 +55,13 @@ export default function ProfilePage() {
       if (!u) return;
 
       setDisplayName(u.displayName || '');
+
+      // 🔒 Lấy doc user để kiểm tra status trước khi ghi
       const uref = doc(db, 'users', u.uid);
       const snap = await getDoc(uref);
       setUserDoc(snap.exists() ? snap.data() : null);
 
+      // Chỉ tạo doc nếu CHƯA tồn tại; nếu đang deleted thì KHÔNG ghi đè
       if (!snap.exists()) {
         await setDoc(uref, {
           uid: u.uid,
@@ -77,7 +85,8 @@ export default function ProfilePage() {
     showToast._t = setTimeout(() => setToast(null), ms);
   };
 
-    const onUploadAvatar = async (e) => {
+  // ✅ Upload avatar qua API -> Supabase Storage, path cố định (ghi đè)
+  const onUploadAvatar = async (e) => {
     if (isDeleted) { showToast('error', 'Tài khoản đã bị xoá. Không thể cập nhật.'); return; }
     const file = e.target.files?.[0];
     if (!file || !user) return;
@@ -113,10 +122,7 @@ export default function ProfilePage() {
   };
 
   const onSave = async () => {
-    if (isDeleted) {
-      showToast('error', 'Tài khoản đã bị xoá. Không thể cập nhật.');
-      return;
-    }
+    if (isDeleted) { showToast('error', 'Tài khoản đã bị xoá. Không thể cập nhật.'); return; }
     if (!displayName.trim()) return showToast('error', 'Tên hiển thị không được để trống.');
     try {
       setSaving(true);
@@ -141,7 +147,7 @@ export default function ProfilePage() {
   };
 
   const onLink = async (type) => {
-    if (isDeleted) return showToast('error', 'Tài khoản đã bị xoá. Không thể liên kết.');
+    if (isDeleted) { showToast('error', 'Tài khoản đã bị xoá. Không thể liên kết.'); return; }
     try {
       const provider = type === 'google' ? new GoogleAuthProvider() : new GithubAuthProvider();
       await linkWithPopup(user, provider);
@@ -152,7 +158,7 @@ export default function ProfilePage() {
   };
 
   const onUnlink = async (providerId) => {
-    if (isDeleted) return showToast('error', 'Tài khoản đã bị xoá. Không thể huỷ liên kết.');
+    if (isDeleted) { showToast('error', 'Tài khoản đã bị xoá. Không thể huỷ liên kết.'); return; }
     try {
       await unlink(user, providerId);
       showToast('success', 'Đã huỷ liên kết!');
@@ -160,6 +166,54 @@ export default function ProfilePage() {
       showToast('error', err.message);
     }
   };
+
+  // 🛡️ Hydration gate: chặn toàn bộ khi SSR/SSG (tránh user=null ở server)
+  if (!hydrated) {
+    return (
+      <Layout fullWidth>
+        <Head><title>Hồ sơ – StoreiOS</title></Head>
+        <nav aria-label="breadcrumb" className="border-b border-gray-200 dark:border-gray-800 bg-white/60 dark:bg-gray-900/60 backdrop-blur">
+          <div className="max-w-screen-2xl mx-auto px-4 h-11 flex items-center gap-2 text-sm">
+            <Link href="/" className="inline-flex items-center gap-1 text-gray-700 dark:text-gray-300 hover:text-red-600">
+              <FontAwesomeIcon icon={faHome} />
+              Home
+            </Link>
+            <FontAwesomeIcon icon={faChevronRight} className="opacity-60 text-gray-500" />
+            <span className="text-gray-900 dark:text-gray-100 font-medium">Hồ sơ</span>
+          </div>
+        </nav>
+        <div className="w-full max-w-screen-md mx-auto px-4 py-16">
+          <h1 className="text-2xl font-bold mb-4">Hồ sơ</h1>
+          <p className="text-gray-600 dark:text-gray-300">Đang tải…</p>
+        </div>
+      </Layout>
+    );
+  }
+
+  // Khi đã hydrate: nếu chưa đăng nhập
+  if (!user) {
+    return (
+      <Layout fullWidth>
+        <Head><title>Hồ sơ – StoreiOS</title></Head>
+        {/* Breadcrumb */}
+        <nav aria-label="breadcrumb" className="border-b border-gray-200 dark:border-gray-800 bg-white/60 dark:bg-gray-900/60 backdrop-blur">
+          <div className="max-w-screen-2xl mx-auto px-4 h-11 flex items-center gap-2 text-sm">
+            <Link href="/" className="inline-flex items-center gap-1 text-gray-700 dark:text-gray-300 hover:text-red-600">
+              <FontAwesomeIcon icon={faHome} />
+              Home
+            </Link>
+            <FontAwesomeIcon icon={faChevronRight} className="opacity-60 text-gray-500" />
+            <span className="text-gray-900 dark:text-gray-100 font-medium">Hồ sơ</span>
+          </div>
+        </nav>
+
+        <div className="w-full max-w-screen-md mx-auto px-4 py-16">
+          <h1 className="text-2xl font-bold mb-4">Hồ sơ</h1>
+          <p className="text-gray-600 dark:text-gray-300">Bạn cần đăng nhập để xem trang này.</p>
+        </div>
+      </Layout>
+    );
+  }
 
   const avatar = user?.photoURL || null;
 
@@ -190,14 +244,17 @@ export default function ProfilePage() {
       <div className="w-full max-w-4xl mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold mb-6">Hồ sơ của bạn</h1>
 
+        {/* Nếu đã bị xoá mềm, hiển thị banner khóa chỉnh sửa */}
         {isDeleted && (
           <div className="mb-4 rounded-xl border border-rose-300 bg-rose-50 text-rose-800 dark:border-rose-700 dark:bg-rose-900/30 dark:text-rose-200 px-4 py-3">
             Tài khoản này đã bị xoá. Bạn không thể cập nhật thông tin hồ sơ.
           </div>
         )}
 
+        {/* Card hồ sơ */}
         <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow">
           <div className="p-6 grid grid-cols-1 md:grid-cols-[160px,1fr] gap-6">
+            {/* Avatar */}
             <div className="flex flex-col items-center md:items-start">
               <div className="relative">
                 {avatar ? (
@@ -233,6 +290,7 @@ export default function ProfilePage() {
               {uploading && <div className="mt-2 text-xs text-gray-500">Đang tải ảnh…</div>}
             </div>
 
+            {/* Info */}
             <div>
               <label className="block text-sm text-gray-600 dark:text-gray-300 mb-1">Tên hiển thị</label>
               <input
@@ -254,7 +312,7 @@ export default function ProfilePage() {
                 </button>
 
                 <span className="inline-flex items-center gap-2 text-sm">
-                  {user.emailVerified ? (
+                  {user?.emailVerified ? (
                     <span className="text-emerald-600 inline-flex items-center gap-1">
                       <FontAwesomeIcon icon={faCheckCircle} /> Email đã xác minh
                     </span>
@@ -274,14 +332,16 @@ export default function ProfilePage() {
                 </span>
               </div>
 
+              {/* Liên kết tài khoản */}
               <div className="mt-6">
                 <h2 className="text-base font-semibold mb-2">Liên kết tài khoản</h2>
                 <div className="flex flex-wrap gap-3">
+                  {/* Google */}
                   {hasGoogle ? (
                     <button
                       onClick={() => onUnlink('google.com')}
                       disabled={isDeleted}
-                      className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+                      className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border ${isDeleted ? 'border-gray-300 text-gray-400 cursor-not-allowed' : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
                     >
                       <FontAwesomeIcon icon={faGoogle} />
                       <FontAwesomeIcon icon={faUnlink} className="opacity-80" />
@@ -291,7 +351,7 @@ export default function ProfilePage() {
                     <button
                       onClick={() => onLink('google')}
                       disabled={isDeleted}
-                      className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+                      className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border ${isDeleted ? 'border-gray-300 text-gray-400 cursor-not-allowed' : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
                     >
                       <FontAwesomeIcon icon={faGoogle} />
                       <FontAwesomeIcon icon={faLink} className="opacity-80" />
@@ -299,11 +359,12 @@ export default function ProfilePage() {
                     </button>
                   )}
 
+                  {/* GitHub */}
                   {hasGithub ? (
                     <button
                       onClick={() => onUnlink('github.com')}
                       disabled={isDeleted}
-                      className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+                      className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border ${isDeleted ? 'border-gray-300 text-gray-400 cursor-not-allowed' : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
                     >
                       <FontAwesomeIcon icon={faGithub} />
                       <FontAwesomeIcon icon={faUnlink} className="opacity-80" />
@@ -313,7 +374,7 @@ export default function ProfilePage() {
                     <button
                       onClick={() => onLink('github')}
                       disabled={isDeleted}
-                      className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+                      className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg border ${isDeleted ? 'border-gray-300 text-gray-400 cursor-not-allowed' : 'border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800'}`}
                     >
                       <FontAwesomeIcon icon={faGithub} />
                       <FontAwesomeIcon icon={faLink} className="opacity-80" />
@@ -324,6 +385,9 @@ export default function ProfilePage() {
               </div>
             </div>
           </div>
+
+          {/* (Tùy chọn) Thông điệp bổ sung */}
+          {/* <div className="px-6 pb-6 text-sm text-rose-600 dark:text-rose-300">...</div> */}
         </div>
       </div>
     </Layout>
