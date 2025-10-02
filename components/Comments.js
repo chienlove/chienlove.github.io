@@ -255,23 +255,60 @@ function useAuthorMap(allComments) {
 function CommentHeader({ c, me, isAdminFn, dt, authorMap }) {
   const info = authorMap?.[c.authorId] || null;
   const isDeletedUser = info?.status === 'deleted';
+  const notFound = !info; // hồ sơ không tồn tại -> coi như đã xoá
   const isAdmin = isAdminFn?.(c.authorId);
   const isSelf = !!me && c.authorId === me.uid;
 
-  const avatar = info?.photoURL || c.userPhoto || '';
+  // Nếu đã xoá/không tồn tại hồ sơ thì KHÔNG dùng ảnh cũ trong comment
+  const avatar = (!notFound && !isDeletedUser) ? (info?.photoURL || c.userPhoto || '') : '';
   const userName = info?.displayName || c.userName || 'Người dùng';
 
   const NameLink = ({ uid, children }) => {
-    if (!uid || isDeletedUser) {
-      return <span className="font-semibold text-gray-500 dark:text-gray-400" title={isDeletedUser ? 'Tài khoản đã xoá' : ''}>{children}</span>;
-    }
+    if (!uid || isDeletedUser || notFound) {
+      return (
+        <span
+          className="font-semibold text-gray-500 dark:text-gray-400"
+          title={isDeletedUser ? 'Tài khoản đã xoá' : 'Hồ sơ không tồn tại'}
+        >
+          {children}
+        </span>
+      );
+    };
     const href = isSelf ? '/profile' : `/users/${uid}`;
     return (
-      <Link href={href} className="font-semibold text-sky-800 dark:text-sky-200 hover:text-sky-700 dark:hover:text-sky-300 hover:underline transition-colors">
+      <Link
+        href={href}
+        className="font-semibold text-sky-800 dark:text-sky-200 hover:text-sky-700 dark:hover:text-sky-300 hover:underline transition-colors"
+      >
         {children}
       </Link>
     );
   };
+
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-sky-200/60 dark:border-sky-800/60 overflow-hidden bg-white/60 dark:bg-gray-900/40">
+        {avatar ? (
+          <img src={avatar} alt="avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <FontAwesomeIcon icon={faUserCircle} className="w-5 h-5 text-sky-600" />
+          </div>
+        )}
+      </div>
+
+      <div className="min-w-0 flex-1 flex items-center gap-2">
+        <NameLink uid={c.authorId}>{userName}</NameLink>
+        {isAdmin && (
+          <span className="inline-flex items-center justify-center translate-y-[0.5px]" title="Quản trị viên đã xác minh">
+            <VerifiedBadgeX className="w-4 h-4 shrink-0" />
+          </span>
+        )}
+        <span className="text-xs text-sky-900/70 dark:text-sky-200/70 truncate" title={dt?.abs}>{dt?.rel}</span>
+      </div>
+    </div>
+  );
+}
 
   return (
     <div className="flex items-center gap-3">
