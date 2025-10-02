@@ -176,7 +176,7 @@ function DotMenu({ canEdit, canDelete, onEdit, onDelete }) {
       <button
         type="button"
         onClick={() => setOpen(v => !v)}
-        className="p-1.5 rounded-md hover:bg-black/5 dark:hover:bg:white/10"
+        className="p-1.5 rounded-md hover:bg-black/5 dark:hover:bg-white/10"
         aria-label="Mở menu"
         title="Tuỳ chọn"
       >
@@ -255,11 +255,11 @@ function useAuthorMap(allComments) {
 function CommentHeader({ c, me, isAdminFn, dt, authorMap }) {
   const info = authorMap?.[c.authorId] || null;
   const isDeletedUser = info?.status === 'deleted';
-  const notFound = !info; // hồ sơ không tồn tại -> coi như đã xoá
+  const notFound = !info; // ⟵ KHÔNG có doc users/{uid} → coi như đã xoá
   const isAdmin = isAdminFn?.(c.authorId);
   const isSelf = !!me && c.authorId === me.uid;
 
-  // Nếu đã xoá/không tồn tại hồ sơ thì KHÔNG dùng ảnh cũ trong comment
+  // Nếu đã xoá/không tồn tại hồ sơ thì KHÔNG dùng ảnh cũ
   const avatar = (!notFound && !isDeletedUser) ? (info?.photoURL || c.userPhoto || '') : '';
   const userName = info?.displayName || c.userName || 'Người dùng';
 
@@ -273,7 +273,7 @@ function CommentHeader({ c, me, isAdminFn, dt, authorMap }) {
           {children}
         </span>
       );
-    };
+    }
     const href = isSelf ? '/profile' : `/users/${uid}`;
     return (
       <Link
@@ -310,42 +310,23 @@ function CommentHeader({ c, me, isAdminFn, dt, authorMap }) {
   );
 }
 
-  return (
-    <div className="flex items-center gap-3">
-      <div className="flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-sky-200/60 dark:border-sky-800/60 overflow-hidden bg-white/60 dark:bg-gray-900/40">
-        {avatar && !isDeletedUser ? (
-          <img src={avatar} alt="avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <FontAwesomeIcon icon={faUserCircle} className="w-5 h-5 text-sky-600" />
-          </div>
-        )}
-      </div>
-
-      <div className="min-w-0 flex-1 flex items-center gap-2">
-        <NameLink uid={c.authorId}>{userName}</NameLink>
-        {isAdmin && (
-          <span className="inline-flex items-center justify-center translate-y-[0.5px]" title="Quản trị viên đã xác minh">
-            <VerifiedBadgeX className="w-4 h-4 shrink-0" />
-          </span>
-        )}
-        <span className="text-xs text-sky-900/70 dark:text-sky-200/70 truncate" title={dt?.abs}>{dt?.rel}</span>
-      </div>
-    </div>
-  );
-}
-
 /* ================= Quote ================= */
 function Quote({ quoteFrom, me, authorMap }) {
   if (!quoteFrom) return null;
   const authorId = quoteFrom.authorId;
   const info = authorMap?.[authorId] || null;
   const isDeleted = info?.status === 'deleted';
+  const notFound = !info;
   const authorName = info?.displayName || quoteFrom.userName || 'Người dùng';
 
   const Name = () => (
-    !authorId || isDeleted ? (
-      <span className="text-gray-500 dark:text-gray-400" title={isDeleted ? 'Tài khoản đã xoá' : ''}>{authorName}</span>
+    (!authorId || isDeleted || notFound) ? (
+      <span
+        className="text-gray-500 dark:text-gray-400"
+        title={isDeleted ? 'Tài khoản đã xoá' : 'Hồ sơ không tồn tại'}
+      >
+        {authorName}
+      </span>
     ) : (
       <Link
         href={me && authorId === me.uid ? '/profile' : `/users/${authorId}`}
@@ -460,6 +441,7 @@ function ReplyBox({
 }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
+  the_char_counter: null;
   const [sending, setSending] = useState(false);
   const target = replyingTo || parent;
   const canReply = !!me && me.uid !== (target?.authorId ?? '');
@@ -546,7 +528,7 @@ function ReplyBox({
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
-            className="w-full min-h-[72px] border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2 text-[16px] leading-6 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500/40 outline-none shadow-sm"
+            className="w-full min-h[72px] border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2 text-[16px] leading-6 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500/40 outline-none shadow-sm"
             placeholder={`Phản hồi ${replyingTo ? (replyingTo.userName || 'người dùng') : (parent.userName || 'người dùng')}…`}
             maxLength={2000}
           />
