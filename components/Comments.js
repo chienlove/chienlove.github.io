@@ -23,11 +23,9 @@ function preferredName(user) {
   const p0 = user.providerData?.[0];
   return user.displayName || user.email || p0?.displayName || p0?.email || 'Người dùng';
 }
-
 function preferredPhoto(user) {
   return user?.photoURL || user?.providerData?.[0]?.photoURL || '';
 }
-
 function formatDate(ts) {
   try {
     let d = null;
@@ -49,23 +47,9 @@ function formatDate(ts) {
     return { rel: '', abs: d.toLocaleString('vi-VN') };
   } catch { return ''; }
 }
-
 function excerpt(s, n = 140) {
   const t = String(s || '').replace(/\s+/g, ' ').trim();
   return t.length > n ? `${t.slice(0, n)}…` : t;
-}
-
-/* ================= User Helpers ================= */
-function isUserDeleted(userInfo) {
-  return !userInfo || userInfo.status === 'deleted';
-}
-
-function getUserDisplayName(userInfo, fallback = 'Người dùng') {
-  return isUserDeleted(userInfo) ? 'Người dùng đã xóa' : (userInfo?.displayName || fallback);
-}
-
-function getUserPhoto(userInfo, fallback = '') {
-  return isUserDeleted(userInfo) ? '' : (userInfo?.photoURL || fallback);
 }
 
 /* ================= Notifications ================= */
@@ -79,13 +63,12 @@ async function bumpCounter(uid, delta) {
     tx.set(ref, { unreadCount: Math.max(0, cur + delta), updatedAt: serverTimestamp() }, { merge: true });
   });
 }
-
 async function createNotification(payload = {}) {
   const { toUserId, type, postId, commentId, fromUserId, ...extra } = payload;
   if (!toUserId) return;
   await addDoc(collection(db, 'notifications'), {
     toUserId,
-    type,
+    type, // 'comment' | 'reply' | 'like'
     postId,
     commentId,
     isRead: false,
@@ -95,7 +78,6 @@ async function createNotification(payload = {}) {
     ...extra,
   });
 }
-
 async function upsertLikeNotification({
   toUserId, postId, commentId,
   fromUserId, fromUserName, fromUserPhoto,
@@ -255,28 +237,16 @@ function useAuthorMap(allComments) {
   useEffect(() => {
     const ids = Array.from(new Set(allComments.map(c => c.authorId).filter(Boolean)));
     if (ids.length === 0) { setAuthorMap({}); return; }
-    
-    // Chia nhỏ batch để tránh Firestore limits
-    const fetchUsers = async () => {
-      try {
-        const map = {};
-        for (let i = 0; i < ids.length; i += 10) {
-          const batch = ids.slice(i, i + 10);
-          const q = query(collection(db, 'users'), where(documentId(), 'in', batch));
-          const snap = await getDocs(q);
-          snap.forEach(d => { 
-            if (d.exists()) {
-              map[d.id] = d.data(); 
-            }
-          });
-        }
-        setAuthorMap(map);
-      } catch (error) {
-        console.error('Error fetching users:', error);
+    (async () => {
+      const map = {};
+      for (let i = 0; i < ids.length; i += 10) {
+        const batch = ids.slice(i, i + 10);
+        const q = query(collection(db, 'users'), where(documentId(), 'in', batch));
+        const snap = await getDocs(q);
+        snap.forEach(d => { map[d.id] = d.data(); });
       }
-    };
-
-    fetchUsers();
+      setAuthorMap(map);
+    })();
   }, [allComments]);
   return authorMap;
 }
@@ -284,15 +254,15 @@ function useAuthorMap(allComments) {
 /* ================= Header người viết ================= */
 function CommentHeader({ c, me, isAdminFn, dt, authorMap }) {
   const info = authorMap?.[c.authorId] || null;
-  const isDeletedUser = isUserDeleted(info);
+  const isDeletedUser = info?.status === 'deleted';
   const isAdmin = isAdminFn?.(c.authorId);
   const isSelf = !!me && c.authorId === me.uid;
 
-  const avatar = getUserPhoto(info, c.userPhoto);
-  const userName = getUserDisplayName(info, c.userName);
+  const avatar = info?.photoURL || c.userPhoto || '';
+  const userName = info?.displayName || c.userName || 'Người dùng';
 
   const NameLink = ({ uid, children }) => {
-    if (isDeletedUser || !uid) {
+    if (!uid || isDeletedUser) {
       return <span className="font-semibold text-gray-500 dark:text-gray-400" title={isDeletedUser ? 'Tài khoản đã xoá' : ''}>{children}</span>;
     }
     const href = isSelf ? '/profile' : `/users/${uid}`;
@@ -333,11 +303,11 @@ function Quote({ quoteFrom, me, authorMap }) {
   if (!quoteFrom) return null;
   const authorId = quoteFrom.authorId;
   const info = authorMap?.[authorId] || null;
-  const isDeleted = isUserDeleted(info);
-  const authorName = getUserDisplayName(info, quoteFrom.userName);
+  const isDeleted = info?.status === 'deleted';
+  const authorName = info?.displayName || quoteFrom.userName || 'Người dùng';
 
   const Name = () => (
-    isDeleted || !authorId ? (
+    !authorId || isDeleted ? (
       <span className="text-gray-500 dark:text-gray-400" title={isDeleted ? 'Tài khoản đã xoá' : ''}>{authorName}</span>
     ) : (
       <Link
@@ -387,11 +357,7 @@ function LikersToggle({ comment }) {
       for (const ids of chunks) {
         const q = query(collection(db, 'users'), where(documentId(), 'in', ids));
         const snap = await getDocs(q);
-        snap.forEach(d => {
-          if (d.exists() && !isUserDeleted(d.data())) {
-            acc.push({ uid: d.id, ...d.data() });
-          }
-        });
+        snap.forEach(d => acc.push({ uid: d.id, ...d.data() }));
       }
       acc.sort((a, b) => (a.displayName || '').localeCompare(b.displayName || ''));
       setPeople(acc);
@@ -520,8 +486,6 @@ function ReplyBox({
           commentText: excerpt(text),
         });
       }));
-    } catch (error) {
-      console.error('Error replying:', error);
     } finally {
       setSending(false);
     }
@@ -583,15 +547,11 @@ function RootComment({
   const onSaveEdit = async () => {
     const txt = (editText || '').trim();
     if (!txt) return;
-    try {
-      await updateDoc(doc(db, 'comments', c.id), {
-        content: txt,
-        updatedAt: serverTimestamp(),
-      });
-      setEditing(false);
-    } catch (error) {
-      console.error('Error updating comment:', error);
-    }
+    await updateDoc(doc(db, 'comments', c.id), {
+      content: txt,
+      updatedAt: serverTimestamp(),
+    });
+    setEditing(false);
   };
 
   return (
@@ -604,9 +564,11 @@ function RootComment({
             canDelete={canDeleteRoot}
             onEdit={() => { setEditing(true); setEditText(c.content || ''); }}
             onDelete={() => {
-              onOpenConfirm?.('Xoá bình luận này và toàn bộ phản hồi của nó?', async () => { 
-                await deleteThreadBatch(c); 
-              });
+              if (typeof onOpenConfirm === 'function') {
+                onOpenConfirm('Xoá bình luận này và toàn bộ phản hồi của nó?', async () => { await deleteThreadBatch(c); });
+              } else if (typeof window !== 'undefined' && window.confirm('Xoá bình luận này và toàn bộ phản hồi của nó?')) {
+                deleteThreadBatch(c);
+              }
             }}
           />
         </div>
@@ -721,15 +683,11 @@ function ReplyItem({
   const onSaveEdit = async () => {
     const txt = (editText || '').trim();
     if (!txt) return;
-    try {
-      await updateDoc(doc(db, 'comments', r.id), {
-        content: txt,
-        updatedAt: serverTimestamp(),
-      });
-      setEditing(false);
-    } catch (error) {
-      console.error('Error updating reply:', error);
-    }
+    await updateDoc(doc(db, 'comments', r.id), {
+      content: txt,
+      updatedAt: serverTimestamp(),
+    });
+    setEditing(false);
   };
 
   const target = r.replyToUserId === parent.authorId ? parent : null;
@@ -743,9 +701,11 @@ function ReplyItem({
           canDelete={canDeleteR}
           onEdit={() => { setEditing(true); setEditText(r.content || ''); }}
           onDelete={() => {
-            onOpenConfirm?.('Bạn có chắc muốn xoá phản hồi này?', async () => { 
-              await deleteSingleComment(r); 
-            });
+            if (typeof onOpenConfirm === 'function') {
+              onOpenConfirm('Bạn có chắc muốn xoá phản hồi này?', async () => { await deleteSingleComment(r); });
+            } else if (typeof window !== 'undefined' && window.confirm('Bạn có chắc muốn xoá phản hồi này?')) {
+              deleteSingleComment(r);
+            }
           }}
         />
       </div>
@@ -826,11 +786,12 @@ export default function Comments({ postId, postTitle }) {
   const unsubRef = useRef(null);
   const [hasMore, setHasMore] = useState(false);
 
-  // Modal state
+  // 🔧 Modal state
   const [modalOpen, setModalOpen] = useState(false);
   const [modalTitle, setModalTitle] = useState('');
   const [modalActions, setModalActions] = useState(null);
   const [modalTone, setModalTone] = useState('info');
+  // Dùng ref để thay nội dung modal động
   const theModalContentHackRef = useRef(null);
 
   const [likingIds, setLikingIds] = useState(() => new Set());
@@ -841,7 +802,6 @@ export default function Comments({ postId, postTitle }) {
     try { window.dispatchEvent(new Event('close-login')); } catch {}
     try { window.dispatchEvent(new Event('open-auth')); } catch {}
   };
-
   const openLoginPrompt = () => {
     setModalTitle('Cần đăng nhập');
     theModalContentHackRef.current = (
@@ -856,7 +816,6 @@ export default function Comments({ postId, postTitle }) {
     );
     setModalOpen(true);
   };
-
   const openConfirm = (message, onConfirm) => {
     setModalTitle('Xác nhận xoá');
     theModalContentHackRef.current = (<p>{message}</p>);
@@ -869,7 +828,6 @@ export default function Comments({ postId, postTitle }) {
     );
     setModalOpen(true);
   };
-
   const openVerifyPrompt = () => {
     setModalTitle('Cần xác minh email');
     theModalContentHackRef.current = (
@@ -925,9 +883,7 @@ export default function Comments({ postId, postTitle }) {
           const arr = Array.isArray(snap.data().uids) ? snap.data().uids : [];
           setAdminUids(arr);
         }
-      } catch (error) {
-        console.error('Error fetching admin UIDs:', error);
-      }
+      } catch {}
     })();
   }, []);
 
@@ -951,9 +907,6 @@ export default function Comments({ postId, postTitle }) {
       const lastVisible = snap.docs[snap.docs.length - 1] || null;
       lastDocRef.current = lastVisible;
       setHasMore(!!lastVisible);
-      setLoading(false);
-    }, (error) => {
-      console.error('Error fetching comments:', error);
       setLoading(false);
     });
     unsubRef.current = unsub;
@@ -980,6 +933,7 @@ export default function Comments({ postId, postTitle }) {
     return m;
   }, [items]);
 
+  // Lấy thông tin người dùng cho avatar/tên & kiểm tra đã bị xoá chưa
   const authorMap = useAuthorMap(items);
 
   const loadMore = async () => {
@@ -999,8 +953,6 @@ export default function Comments({ postId, postTitle }) {
       const lastVisible = snap.docs[snap.docs.length - 1] || null;
       lastDocRef.current = lastVisible;
       setHasMore(!!lastVisible);
-    } catch (error) {
-      console.error('Error loading more comments:', error);
     } finally {
       setLoadingMore(false);
     }
@@ -1046,11 +998,7 @@ export default function Comments({ postId, postTitle }) {
           commentText: excerpt(payload.content),
         });
       }));
-    } catch (error) {
-      console.error('Error submitting comment:', error);
-    } finally { 
-      setSubmitting(false); 
-    }
+    } finally { setSubmitting(false); }
   };
 
   const toggleLike = async (c) => {
@@ -1089,9 +1037,7 @@ export default function Comments({ postId, postTitle }) {
           await updateDoc(doc(db, 'users', result.authorId), {
             'stats.likesReceived': increment(result.didLike ? 1 : -1),
           });
-        } catch (error) {
-          console.error('Error updating user stats:', error);
-        }
+        } catch {}
       }
 
       if (result?.didLike) {
@@ -1109,52 +1055,43 @@ export default function Comments({ postId, postTitle }) {
           });
         }
       }
-    } catch (error) {
-      console.error('Error toggling like:', error);
     } finally {
       setLikingIds(prev => { const n = new Set(prev); n.delete(c.id); return n; });
     }
   };
 
   const deleteThreadBatch = async (root) => {
-    try {
-      const toDelete = [root];
-      const pageSize = 200; 
-      let cursor = null;
-      
-      while (true) {
-        const qn = cursor
-          ? query(collection(db,'comments'), where('parentId','==',root.id), orderBy('createdAt','desc'), startAfter(cursor), limit(pageSize))
-          : query(collection(db,'comments'), where('parentId','==',root.id), orderBy('createdAt','desc'), limit(pageSize));
-        const snap = await getDocs(qn);
-        if (snap.empty) break;
-        snap.docs.forEach(d => toDelete.push({ id: d.id, ...d.data() }));
-        if (snap.size < pageSize) break;
-        cursor = snap.docs[snap.docs.length - 1];
-      }
+    const toDelete = [root];
+    const pageSize = 200; let cursor = null;
+    while (true) {
+      const qn = cursor
+        ? query(collection(db,'comments'), where('parentId','==',root.id), orderBy('createdAt','desc'), startAfter(cursor), limit(pageSize))
+        : query(collection(db,'comments'), where('parentId','==',root.id), orderBy('createdAt','desc'), limit(pageSize));
+      const snap = await getDocs(qn);
+      if (snap.empty) break;
+      snap.docs.forEach(d => toDelete.push({ id: d.id, ...d.data() }));
+      if (snap.size < pageSize) break;
+      cursor = snap.docs[snap.docs.length - 1];
+    }
 
-      const chunk = 400;
-      for (let i = 0; i < toDelete.length; i += chunk) {
-        const slice = toDelete.slice(i, i + chunk);
-        const batch = writeBatch(db);
+    const chunk = 400;
+    for (let i = 0; i < toDelete.length; i += chunk) {
+      const slice = toDelete.slice(i, i + chunk);
+      const batch = writeBatch(db);
 
-        const authors = new Set(slice.map(c => c.authorId).filter(Boolean));
-        const exist = new Set();
-        const snaps = await Promise.all([...authors].map(uid => getDoc(doc(db, 'users', uid))));
-        snaps.forEach(s => { if (s.exists()) exist.add(s.id); });
+      const authors = new Set(slice.map(c => c.authorId).filter(Boolean));
+      const exist = new Set();
+      const snaps = await Promise.all([...authors].map(uid => getDoc(doc(db, 'users', uid))));
+      snaps.forEach(s => { if (s.exists()) exist.add(s.id); });
 
-        slice.forEach(it => {
-          batch.delete(doc(db, 'comments', it.id));
-          if (it.authorId && exist.has(it.authorId)) {
-            batch.update(doc(db, 'users', it.authorId), { 'stats.comments': increment(-1) });
-          }
-        });
+      slice.forEach(it => {
+        batch.delete(doc(db, 'comments', it.id));
+        if (it.authorId && exist.has(it.authorId)) {
+          batch.update(doc(db, 'users', it.authorId), { 'stats.comments': increment(-1) });
+        }
+      });
 
-        await batch.commit();
-      }
-    } catch (error) {
-      console.error('Error deleting thread:', error);
-      throw error;
+      await batch.commit();
     }
   };
 
@@ -1167,7 +1104,6 @@ export default function Comments({ postId, postTitle }) {
       }
     } catch (error) {
       console.error("Lỗi khi xóa bình luận:", error);
-      throw error;
     }
   };
 
