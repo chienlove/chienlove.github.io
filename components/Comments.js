@@ -255,31 +255,19 @@ function useAuthorMap(allComments) {
 function CommentHeader({ c, me, isAdminFn, dt, authorMap }) {
   const info = authorMap?.[c.authorId] || null;
   const isDeletedUser = info?.status === 'deleted';
-  const notFound = !info; // ⟵ KHÔNG có doc users/{uid} → coi như đã xoá
   const isAdmin = isAdminFn?.(c.authorId);
   const isSelf = !!me && c.authorId === me.uid;
 
-  // Nếu đã xoá/không tồn tại hồ sơ thì KHÔNG dùng ảnh cũ
-  const avatar = (!notFound && !isDeletedUser) ? (info?.photoURL || c.userPhoto || '') : '';
+  const avatar = info?.photoURL || c.userPhoto || '';
   const userName = info?.displayName || c.userName || 'Người dùng';
 
   const NameLink = ({ uid, children }) => {
-    if (!uid || isDeletedUser || notFound) {
-      return (
-        <span
-          className="font-semibold text-gray-500 dark:text-gray-400"
-          title={isDeletedUser ? 'Tài khoản đã xoá' : 'Hồ sơ không tồn tại'}
-        >
-          {children}
-        </span>
-      );
+    if (!uid || isDeletedUser) {
+      return <span className="font-semibold text-gray-500 dark:text-gray-400" title={isDeletedUser ? 'Tài khoản đã xoá' : ''}>{children}</span>;
     }
     const href = isSelf ? '/profile' : `/users/${uid}`;
     return (
-      <Link
-        href={href}
-        className="font-semibold text-sky-800 dark:text-sky-200 hover:text-sky-700 dark:hover:text-sky-300 hover:underline transition-colors"
-      >
+      <Link href={href} className="font-semibold text-sky-800 dark:text-sky-200 hover:text-sky-700 dark:hover:text-sky-300 hover:underline transition-colors">
         {children}
       </Link>
     );
@@ -288,7 +276,7 @@ function CommentHeader({ c, me, isAdminFn, dt, authorMap }) {
   return (
     <div className="flex items-center gap-3">
       <div className="flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-sky-200/60 dark:border-sky-800/60 overflow-hidden bg-white/60 dark:bg-gray-900/40">
-        {avatar ? (
+        {avatar && !isDeletedUser ? (
           <img src={avatar} alt="avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
@@ -316,17 +304,11 @@ function Quote({ quoteFrom, me, authorMap }) {
   const authorId = quoteFrom.authorId;
   const info = authorMap?.[authorId] || null;
   const isDeleted = info?.status === 'deleted';
-  const notFound = !info;
   const authorName = info?.displayName || quoteFrom.userName || 'Người dùng';
 
   const Name = () => (
-    (!authorId || isDeleted || notFound) ? (
-      <span
-        className="text-gray-500 dark:text-gray-400"
-        title={isDeleted ? 'Tài khoản đã xoá' : 'Hồ sơ không tồn tại'}
-      >
-        {authorName}
-      </span>
+    !authorId || isDeleted ? (
+      <span className="text-gray-500 dark:text-gray-400" title={isDeleted ? 'Tài khoản đã xoá' : ''}>{authorName}</span>
     ) : (
       <Link
         href={me && authorId === me.uid ? '/profile' : `/users/${authorId}`}
@@ -441,7 +423,6 @@ function ReplyBox({
 }) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
-  the_char_counter: null;
   const [sending, setSending] = useState(false);
   const target = replyingTo || parent;
   const canReply = !!me && me.uid !== (target?.authorId ?? '');
@@ -528,7 +509,7 @@ function ReplyBox({
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
-            className="w-full min-h[72px] border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2 text-[16px] leading-6 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500/40 outline-none shadow-sm"
+            className="w-full min-h-[72px] border border-gray-200 dark:border-gray-800 rounded-xl px-3 py-2 text-[16px] leading-6 bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500/40 outline-none shadow-sm"
             placeholder={`Phản hồi ${replyingTo ? (replyingTo.userName || 'người dùng') : (parent.userName || 'người dùng')}…`}
             maxLength={2000}
           />
@@ -830,7 +811,7 @@ export default function Comments({ postId, postTitle }) {
     setModalActions(
       <>
         <button onClick={() => { setModalOpen(false); openHeaderLoginPopup(); }} className="px-3 py-2 text-sm rounded-lg bg-gray-900 text-white hover:opacity-90">Đăng nhập</button>
-        <button onClick={() => setModalOpen(false)} className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg:white">Để sau</button>
+        <button onClick={() => setModalOpen(false)} className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-white">Để sau</button>
       </>
     );
     setModalOpen(true);
@@ -841,7 +822,7 @@ export default function Comments({ postId, postTitle }) {
     setModalTone('warning');
     setModalActions(
       <>
-        <button onClick={() => setModalOpen(false)} className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg:white">Huỷ</button>
+        <button onClick={() => setModalOpen(false)} className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-white">Huỷ</button>
         <button onClick={async () => { setModalOpen(false); await onConfirm(); }} className="px-3 py-2 text-sm rounded-lg bg-rose-600 text-white hover:bg-rose-700">Xoá</button>
       </>
     );
@@ -875,15 +856,15 @@ export default function Comments({ postId, postTitle }) {
               theModalContentHackRef.current = (<p>Không gửi được email xác minh. Vui lòng thử lại sau.</p>);
               setModalTone('error');
               setModalActions(
-                <button onClick={() => setModalOpen(false)} className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg:white">Đóng</button>
+                <button onClick={() => setModalOpen(false)} className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-white">Đóng</button>
               );
             }
           }}
-          className="px-3 py-2 text-sm rounded-lg bg-blue-600 text:white hover:bg-blue-700"
+          className="px-3 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700"
         >
           Gửi lại email xác minh
         </button>
-        <button onClick={() => setModalOpen(false)} className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg:white">Để sau</button>
+        <button onClick={() => setModalOpen(false)} className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-white">Để sau</button>
       </>
     );
     setModalOpen(true);
