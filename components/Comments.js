@@ -176,7 +176,7 @@ function DotMenu({ canEdit, canDelete, onEdit, onDelete }) {
       <button
         type="button"
         onClick={() => setOpen(v => !v)}
-        className="p-1.5 rounded-md hover:bg-black/5 dark:hover:bg-white/10"
+        className="p-1.5 rounded-md hover:bg-black/5 dark:hover:bg:white/10"
         aria-label="Mở menu"
         title="Tuỳ chọn"
       >
@@ -811,7 +811,7 @@ export default function Comments({ postId, postTitle }) {
     setModalActions(
       <>
         <button onClick={() => { setModalOpen(false); openHeaderLoginPopup(); }} className="px-3 py-2 text-sm rounded-lg bg-gray-900 text-white hover:opacity-90">Đăng nhập</button>
-        <button onClick={() => setModalOpen(false)} className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-white">Để sau</button>
+        <button onClick={() => setModalOpen(false)} className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg:white">Để sau</button>
       </>
     );
     setModalOpen(true);
@@ -822,7 +822,7 @@ export default function Comments({ postId, postTitle }) {
     setModalTone('warning');
     setModalActions(
       <>
-        <button onClick={() => setModalOpen(false)} className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-white">Huỷ</button>
+        <button onClick={() => setModalOpen(false)} className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg:white">Huỷ</button>
         <button onClick={async () => { setModalOpen(false); await onConfirm(); }} className="px-3 py-2 text-sm rounded-lg bg-rose-600 text-white hover:bg-rose-700">Xoá</button>
       </>
     );
@@ -856,15 +856,15 @@ export default function Comments({ postId, postTitle }) {
               theModalContentHackRef.current = (<p>Không gửi được email xác minh. Vui lòng thử lại sau.</p>);
               setModalTone('error');
               setModalActions(
-                <button onClick={() => setModalOpen(false)} className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-white">Đóng</button>
+                <button onClick={() => setModalOpen(false)} className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg:white">Đóng</button>
               );
             }
           }}
-          className="px-3 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+          className="px-3 py-2 text-sm rounded-lg bg-blue-600 text:white hover:bg-blue-700"
         >
           Gửi lại email xác minh
         </button>
-        <button onClick={() => setModalOpen(false)} className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg-white">Để sau</button>
+        <button onClick={() => setModalOpen(false)} className="px-3 py-2 text-sm rounded-lg border border-gray-300 hover:bg:white">Để sau</button>
       </>
     );
     setModalOpen(true);
