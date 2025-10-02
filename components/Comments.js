@@ -232,34 +232,42 @@ function ActionBar({ hasLiked, likeCount, onToggleLike, renderReplyTrigger, rend
 }
 
 /* ----------------- Lấy avatar/tên mới & trạng thái xoá ----------------- */
+function useAuthorMap(allComments) {
+  const [authorMap, setAuthorMap] = useState({});
+  useEffect(() => {
+    const ids = Array.from(new Set(allComments.map(c => c.authorId).filter(Boolean)));
+    if (ids.length === 0) { setAuthorMap({}); return; }
+    (async () => {
+      const map = {};
+      for (let i = 0; i < ids.length; i += 10) {
+        const batch = ids.slice(i, i + 10);
+        const q = query(collection(db, 'users'), where(documentId(), 'in', batch));
+        const snap = await getDocs(q);
+        snap.forEach(d => { map[d.id] = d.data(); });
+      }
+      setAuthorMap(map);
+    })();
+  }, [allComments]);
+  return authorMap;
+}
+
+/* ================= Header người viết ================= */
 function CommentHeader({ c, me, isAdminFn, dt, authorMap }) {
   const info = authorMap?.[c.authorId] || null;
   const isDeletedUser = info?.status === 'deleted';
-  const notFound = !info;              // ⟵ hồ sơ không tồn tại
   const isAdmin = isAdminFn?.(c.authorId);
   const isSelf = !!me && c.authorId === me.uid;
 
-  // nếu hồ sơ không tồn tại hoặc đã xoá, KHÔNG dùng ảnh cũ trong comment
-  const avatar = (!notFound && !isDeletedUser) ? (info?.photoURL || c.userPhoto || '') : '';
+  const avatar = info?.photoURL || c.userPhoto || '';
   const userName = info?.displayName || c.userName || 'Người dùng';
 
   const NameLink = ({ uid, children }) => {
-    if (!uid || isDeletedUser || notFound) {
-      return (
-        <span
-          className="font-semibold text-gray-500 dark:text-gray-400"
-          title={isDeletedUser ? 'Tài khoản đã xoá' : 'Hồ sơ không tồn tại'}
-        >
-          {children}
-        </span>
-      );
+    if (!uid || isDeletedUser) {
+      return <span className="font-semibold text-gray-500 dark:text-gray-400" title={isDeletedUser ? 'Tài khoản đã xoá' : ''}>{children}</span>;
     }
     const href = isSelf ? '/profile' : `/users/${uid}`;
     return (
-      <Link
-        href={href}
-        className="font-semibold text-sky-800 dark:text-sky-200 hover:text-sky-700 dark:hover:text-sky-300 hover:underline transition-colors"
-      >
+      <Link href={href} className="font-semibold text-sky-800 dark:text-sky-200 hover:text-sky-700 dark:hover:text-sky-300 hover:underline transition-colors">
         {children}
       </Link>
     );
