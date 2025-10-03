@@ -254,27 +254,38 @@ function useAuthorMap(allComments) {
 /* ================= Header người viết ================= */
 function CommentHeader({ c, me, isAdminFn, dt, authorMap }) {
   const info = authorMap?.[c.authorId] || null;
-  const isDeletedUser = info?.status === 'deleted';
+  const isDeletedUser = !info || info?.status === 'deleted';
   const isAdmin = isAdminFn?.(c.authorId);
   const isSelf = !!me && c.authorId === me.uid;
 
   const avatar = info?.photoURL || c.userPhoto || '';
   const userName = info?.displayName || c.userName || 'Người dùng';
 
-  const NameLink = ({ uid, children }) => {
-  const info = authorMap?.[uid];
-  const isDeletedUser = info?.status === 'deleted';
+    const NameLink = ({ uid, children }) => {
+    const info = authorMap?.[uid];
+    const isDeletedUser = !info || info?.status === 'deleted';
 
-  if (!uid || isDeletedUser) {
+    if (!uid || isDeletedUser) {
+      return (
+        <span
+          className="font-semibold text-gray-400 cursor-not-allowed"
+          title={isDeletedUser ? 'Tài khoản đã bị xóa' : ''}
+        >
+          {children}
+        </span>
+      );
+    }
+
+    const href = isSelf ? '/profile' : `/users/${uid}`;
     return (
-      <span
-        className="font-semibold text-gray-400 cursor-not-allowed"
-        title={isDeletedUser ? 'Tài khoản đã bị xóa' : ''}
+      <Link
+        href={href}
+        className="font-semibold text-sky-800 dark:text-sky-200 hover:underline"
       >
         {children}
-      </span>
+      </Link>
     );
-  }
+  };
 
   const href = isSelf ? '/profile' : `/users/${uid}`;
   return (
@@ -318,7 +329,7 @@ function Quote({ quoteFrom, me, authorMap }) {
   if (!quoteFrom) return null;
   const authorId = quoteFrom.authorId;
   const info = authorMap?.[authorId] || null;
-  const isDeleted = info?.status === 'deleted';
+  const isDeleted = !info || info?.status === 'deleted';
   const authorName = info?.displayName || quoteFrom.userName || 'Người dùng';
 
   const Name = () => (
