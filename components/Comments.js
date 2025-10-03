@@ -287,17 +287,6 @@ function CommentHeader({ c, me, isAdminFn, dt, authorMap }) {
     );
   };
 
-  const href = isSelf ? '/profile' : `/users/${uid}`;
-  return (
-    <Link
-      href={href}
-      className="font-semibold text-sky-800 dark:text-sky-200 hover:underline"
-    >
-      {children}
-    </Link>
-  );
-};
-
 
   return (
     <div className="flex items-center gap-3">
