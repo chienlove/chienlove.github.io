@@ -258,20 +258,32 @@ function CommentHeader({ c, me, isAdminFn, dt, authorMap }) {
   const isAdmin = isAdminFn?.(c.authorId);
   const isSelf = !!me && c.authorId === me.uid;
 
-  const avatar = info?.photoURL || c.userPhoto || '';
-  const userName = info?.displayName || c.userName || 'Người dùng';
-
   const NameLink = ({ uid, children }) => {
-    if (!uid || isDeletedUser) {
-      return <span className="font-semibold text-gray-500 dark:text-gray-400" title={isDeletedUser ? 'Tài khoản đã xoá' : ''}>{children}</span>;
-    }
-    const href = isSelf ? '/profile' : `/users/${uid}`;
+  const info = authorMap?.[uid];
+  const isDeletedUser = info?.status === 'deleted';
+
+  if (!uid || isDeletedUser) {
     return (
-      <Link href={href} className="font-semibold text-sky-800 dark:text-sky-200 hover:text-sky-700 dark:hover:text-sky-300 hover:underline transition-colors">
+      <span
+        className="font-semibold text-gray-400 cursor-not-allowed"
+        title={isDeletedUser ? 'Tài khoản đã bị xóa' : ''}
+      >
         {children}
-      </Link>
+      </span>
     );
-  };
+  }
+
+  const href = isSelf ? '/profile' : `/users/${uid}`;
+  return (
+    <Link
+      href={href}
+      className="font-semibold text-sky-800 dark:text-sky-200 hover:underline"
+    >
+      {children}
+    </Link>
+  );
+};
+
 
   return (
     <div className="flex items-center gap-3">
