@@ -282,7 +282,7 @@ function CommentHeader({ c, me, isAdminFn, dt, authorMap }) {
       {children}
     </Link>
   );
-};
+}
 
 
   return (
