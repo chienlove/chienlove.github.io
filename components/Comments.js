@@ -258,6 +258,9 @@ function CommentHeader({ c, me, isAdminFn, dt, authorMap }) {
   const isAdmin = isAdminFn?.(c.authorId);
   const isSelf = !!me && c.authorId === me.uid;
 
+  const avatar = info?.photoURL || c.userPhoto || '';
+  const userName = info?.displayName || c.userName || 'Người dùng';
+
   const NameLink = ({ uid, children }) => {
   const info = authorMap?.[uid];
   const isDeletedUser = info?.status === 'deleted';
@@ -282,7 +285,7 @@ function CommentHeader({ c, me, isAdminFn, dt, authorMap }) {
       {children}
     </Link>
   );
-}
+};
 
 
   return (
