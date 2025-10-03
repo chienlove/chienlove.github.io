@@ -1,4 +1,4 @@
-name: Deploy Firebase Hosting (manual, only 2 files)
+name: Deploy Firebase Functions (manual)
 
 on:
   workflow_dispatch:
@@ -7,24 +7,33 @@ jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: "Checkout (sparse: only 2 files)"
+      - name: Checkout (include functions + configs)
         uses: actions/checkout@v4
         with:
+          # LẤY THÊM firebase.json (và .firebaserc nếu có)
           sparse-checkout: |
+            functions/package.json
+            functions/index.js
             firebase.json
-            public/index.html
+            .firebaserc
           sparse-checkout-cone: false
 
-      - name: "Sanity check"
+      - name: Sanity check
         run: |
           ls -la
-          echo "----- public -----"
-          ls -la public
+          echo "----- functions -----"
+          ls -la functions
 
-      - name: "Deploy to Firebase Hosting"
-        uses: FirebaseExtended/action-hosting-deploy@v0
+      # KHÔNG BẮT BUỘC nhưng nên có: cài deps cho functions
+      - name: Install deps for functions
+        run: |
+          cd functions
+          npm i --omit=dev
+
+      # Deploy FUNCTIONS (không deploy Hosting)
+      - name: Deploy Functions only
+        uses: w9jds/firebase-action@v13
         with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
-          channelId: live
-          projectId: comments-storeios
+          args: deploy --only functions --project comments-storeios
+        env:
+          GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
