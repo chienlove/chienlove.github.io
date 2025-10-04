@@ -777,12 +777,21 @@ useEffect(() => {
 
         {/* ===== Nội dung dưới ===== */}
 <div className="max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 mt-6 space-y-6 overflow-x-hidden">
-  {/* Info cards - Sửa lỗi cắt thông tin */}
-  <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow text-center">
-    <div className="flex justify-center divide-x divide-gray-200 dark:divide-zinc-700">
-      
+  {/* Info cards - mobile: trượt 3 cột; desktop: 4 cột */}
+<div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow text-center">
+  <div className="-mx-2 overflow-x-auto sm:overflow-visible px-2">
+    <div
+      className="
+        flex sm:grid sm:grid-cols-4
+        divide-x divide-gray-200 dark:divide-zinc-700
+        snap-x snap-mandatory
+      "
+    >
+      {/* Helper format số (đặt ở component scope nếu bạn muốn) */}
+      {/* const nf = new Intl.NumberFormat('vi-VN'); */}
+
       {/* Tác giả */}
-      <div className="flex-1 flex flex-col items-center min-w-0 px-2 sm:px-4">
+      <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
         <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Tác giả</p>
         <FontAwesomeIcon icon={faUser} fixedWidth className="w-5 h-5 text-gray-600 dark:text-gray-300 mb-1" />
         <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate w-full" title={app.author || 'Không rõ'}>
@@ -791,7 +800,7 @@ useEffect(() => {
       </div>
 
       {/* Phiên bản */}
-      <div className="flex-1 flex flex-col items-center min-w-0 px-2 sm:px-4">
+      <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
         <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Phiên bản</p>
         <FontAwesomeIcon icon={faCodeBranch} fixedWidth className="w-5 h-5 text-gray-600 dark:text-gray-300 mb-1" />
         <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate w-full" title={app.version || 'Không rõ'}>
@@ -800,28 +809,32 @@ useEffect(() => {
       </div>
 
       {/* Dung lượng */}
-      <div className="flex-1 flex flex-col items-center min-w-0 px-2 sm:px-4">
+      <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
         <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Dung lượng</p>
         <FontAwesomeIcon icon={faDatabase} fixedWidth className="w-5 h-5 text-gray-600 dark:text-gray-300 mb-1" />
-        <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate w-full" title={displaySize}>{displaySize}</p>
+        <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate w-full" title={displaySize}>
+          {displaySize}
+        </p>
       </div>
 
-      {/* Lượt tải / Lượt xem */}
-      <div className="flex-1 flex flex-col items-center min-w-0 px-2 sm:px-4">
-        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">
-          {isTestflight ? 'Lượt xem' : 'Lượt tải'}
-        </p>
-        <FontAwesomeIcon
-          icon={isTestflight ? faEye : faDownload}
-          fixedWidth
-          className="w-5 h-5 text-gray-600 dark:text-gray-300 mb-1"
-        />
-        <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate w-full" title={String(isTestflight ? app.views ?? 0 : app.downloads ?? 0)}>
-          {isTestflight ? app.views ?? 0 : app.downloads ?? 0}
-        </p>
-      </div>
+      {/* Lượt xem – KHÔNG icon, hiển thị "Xem / [số] / Lượt" */}
+      {(() => {
+        const nf = new Intl.NumberFormat('vi-VN');
+        // Ưu tiên views; nếu không có và không phải testflight thì fallback downloads
+        const viewsCount = isTestflight
+          ? (app?.views ?? 0)
+          : (app?.views ?? app?.downloads ?? 0);
+        return (
+          <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
+            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Xem</p>
+            <div className="text-lg font-bold leading-none">{nf.format(viewsCount)}</div>
+            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">Lượt</p>
+          </div>
+        );
+      })()}
     </div>
   </div>
+</div>
 
 
           {/* Mô tả */}
