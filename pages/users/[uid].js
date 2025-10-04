@@ -1,19 +1,21 @@
 // pages/users/[uid].js
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import Layout from '../../components/Layout';
-import { db } from '../../lib/firebase-client';
+import { auth, db } from '../../lib/firebase-client';
 import {
   collection, doc, getDoc, getDocs,
   query, where, orderBy, limit, startAfter, getCountFromServer
 } from 'firebase/firestore';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faUserCircle, faCalendarAlt, faComment, faHeart, faSpinner
+  faUserCircle, faCalendarAlt, faComment, faHeart, faSpinner,
+  faShieldHalved, faUserSlash
 } from '@fortawesome/free-solid-svg-icons';
 
+/* ----------------- Helpers ----------------- */
 function toDate(ts) {
   try {
     if (!ts) return null;
@@ -38,9 +40,14 @@ const fmtRel = (ts) => {
   return '';
 };
 
+/* ----------------- Page ----------------- */
 export default function PublicUser() {
   const { query: q } = useRouter();
   const uid = q.uid;
+
+  const [me, setMe] = useState(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+
   const [user, setUser] = useState(null);
   const [memberSince, setMemberSince] = useState(null);
   const [totals, setTotals] = useState({ comments: 0, likes: 0 });
@@ -48,7 +55,21 @@ export default function PublicUser() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
 
-  // Tính "Ngày tham gia": ưu tiên user.createdAt, fallback bình luận sớm nhất
+  /* ---- Auth state + kiểm tra admin ---- */
+  useEffect(() => {
+    const unsub = auth.onAuthStateChanged(async (u) => {
+      setMe(u || null);
+      if (!u) { setIsAdmin(false); return; }
+      try {
+        const snap = await getDoc(doc(db, 'app_config', 'admins'));
+        const admins = Array.isArray(snap.data()?.uids) ? snap.data().uids : [];
+        setIsAdmin(admins.includes(u.uid));
+      } catch { setIsAdmin(false); }
+    });
+    return () => unsub();
+  }, []);
+
+  /* ---- Tính "Ngày tham gia": ưu tiên user.createdAt, fallback bình luận sớm nhất ---- */
   const resolveMemberSince = async (uid, udata) => {
     let join = udata?.createdAt || null;
     try {
@@ -69,7 +90,7 @@ export default function PublicUser() {
     return join;
   };
 
-  // Đếm tổng bình luận + tổng like nhận (cộng dồn likeCount)
+  /* ---- Đếm tổng bình luận + tổng like nhận (cộng dồn likeCount) ---- */
   const computeTotals = async (uid) => {
     const cSnap = await getCountFromServer(query(collection(db, 'comments'), where('authorId','==',String(uid))));
     const comments = cSnap.data().count || 0;
@@ -89,6 +110,7 @@ export default function PublicUser() {
     return { comments, likes };
   };
 
+  /* ---- Load dữ liệu hồ sơ ---- */
   useEffect(() => {
     if (!uid) return;
     (async () => {
@@ -124,6 +146,27 @@ export default function PublicUser() {
     })();
   }, [uid]);
 
+  /* ---- Hành động admin: xoá sạch dữ liệu người dùng ---- */
+  const onAdminDeleteAll = async () => {
+    if (!me || !isAdmin || !uid) return;
+    const ok = window.confirm('Xoá toàn bộ dữ liệu của người dùng này? Hành động không thể hoàn tác.');
+    if (!ok) return;
+    try {
+      const idToken = await me.getIdToken();
+      const resp = await fetch(`/api/admin/delete-user-data?uid=${encodeURIComponent(String(uid))}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${idToken}` }
+      });
+      const json = await resp.json();
+      if (!resp.ok || !json.ok) throw new Error(json?.error || 'Không xoá được dữ liệu.');
+      alert(`Đã xoá dữ liệu.\nComments: ${json.stats.commentsDeleted}\nGỡ like: ${json.stats.likesRemoved}\nNotifications: ${json.stats.notificationsDeleted}`);
+      location.reload(); // sau khi gắn cờ deleted, trang sẽ báo "Không tìm thấy người dùng này."
+    } catch (e) {
+      alert(e.message || 'Lỗi không xác định.');
+    }
+  };
+
+  /* ---- Render ---- */
   if (loading) {
     return (
       <Layout fullWidth>
@@ -164,7 +207,7 @@ export default function PublicUser() {
 
       {/* khung rộng hơn: 2xl + padding thoáng */}
       <div className="max-w-screen-2xl mx-auto px-6 md:px-8 py-8 md:py-10">
-        {/* Header profile, 1 đường viền duy nhất */}
+        {/* Header profile */}
         <section className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm p-6 md:p-8">
           <div className="flex flex-col md:flex-row md:items-center gap-6">
             <div className="w-28 h-28 md:w-32 md:h-32 rounded-full bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 flex items-center justify-center overflow-hidden">
@@ -212,6 +255,30 @@ export default function PublicUser() {
             </div>
           </div>
         </section>
+
+        {/* === KHU VỰC QUẢN TRỊ: chỉ hiển thị với admin đã đăng nhập === */}
+        {isAdmin && uid && (
+          <section className="mt-6 rounded-xl border border-rose-200 dark:border-rose-800 bg-rose-50/70 dark:bg-rose-900/20 p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="font-semibold text-rose-700 dark:text-rose-300 inline-flex items-center gap-2">
+                  <FontAwesomeIcon icon={faShieldHalved} />
+                  Công cụ quản trị
+                </h3>
+                <p className="text-sm text-rose-800/80 dark:text-rose-200/80 mt-1">
+                  Thao tác này sẽ <b>gắn cờ xoá</b> và dọn sạch dữ liệu liên quan của <b>{displayName || 'người dùng'}</b> (bình luận, thông báo, like…).
+                </p>
+              </div>
+              <button
+                onClick={onAdminDeleteAll}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-rose-600 text-white hover:bg-rose-700"
+              >
+                <FontAwesomeIcon icon={faUserSlash} />
+                Xoá dữ liệu người dùng
+              </button>
+            </div>
+          </section>
+        )}
 
         {/* Bình luận gần đây */}
         {recent.length > 0 && (
