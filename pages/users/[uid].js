@@ -1,5 +1,5 @@
 // pages/users/[uid].js
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
@@ -39,6 +39,156 @@ const fmtRel = (ts) => {
   for (const [u,s] of units) if (Math.abs(diff) >= s || u==='second') return rtf.format(Math.round(diff/s*-1), u);
   return '';
 };
+
+/* ----------------- AdminDangerZone ----------------- */
+function AdminDangerZone({ me, isAdmin, uid, displayName }) {
+  const [mode, setMode] = useState('all'); // 'auth' | 'data' | 'all'
+  const [confirmText, setConfirmText] = useState('');
+  const [busy, setBusy] = useState(false);
+
+  const needHard = useMemo(() => mode === 'data' || mode === 'all', [mode]);
+  const needDeleteAuth = useMemo(() => mode === 'auth' || mode === 'all', [mode]);
+
+  const canSubmit = useMemo(() => {
+    // Bắt buộc gõ đúng UID khi xoá dữ liệu (hard) để an toàn
+    if (needHard) return confirmText.trim() === String(uid);
+    return true;
+  }, [confirmText, needHard, uid]);
+
+  if (!isAdmin || !uid) return null;
+
+  const onSubmit = async () => {
+    if (!me) return;
+    if (!canSubmit) { alert('Vui lòng gõ đúng UID để xác nhận.'); return; }
+    const ok = window.confirm(
+      `Bạn chắc chắn muốn xoá ${mode === 'auth' ? 'TÀI KHOẢN (Auth)' : mode === 'data' ? 'DỮ LIỆU (Firestore)' : 'TẤT CẢ (Auth + Firestore)'} cho UID: ${uid}?`
+    );
+    if (!ok) return;
+
+    try {
+      setBusy(true);
+      const idToken = await me.getIdToken();
+
+      const params = new URLSearchParams({
+        uid: String(uid),
+        hard: needHard ? '1' : '0',
+        deleteAuth: needDeleteAuth ? '1' : '0',
+      });
+
+      const resp = await fetch(`/api/admin/delete-user-data?${params.toString()}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${idToken}` }
+      });
+
+      const json = await resp.json();
+      if (!resp.ok || !json.ok) throw new Error(json?.error || 'Không xoá được dữ liệu.');
+
+      alert(
+        `Thành công!\n` +
+        `Chế độ: ${json.mode}\n` +
+        `Xoá Auth: ${json.authDeleted}\n` +
+        `Xoá user doc: ${json.userDocDeleted}\n` +
+        `Comments xoá: ${json.stats?.commentsDeleted}\n` +
+        `Likes gỡ: ${json.stats?.likesRemoved}\n` +
+        `Thông báo xoá: ${json.stats?.notificationsDeleted}`
+      );
+
+      // Nếu đã hard-delete user doc, reload sẽ chuyển sang "Không tìm thấy người dùng này."
+      location.reload();
+    } catch (e) {
+      alert(e.message || 'Lỗi không xác định.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="mt-8 rounded-2xl border border-rose-200 dark:border-rose-800 bg-rose-50/70 dark:bg-rose-900/20 p-6">
+      <h3 className="font-semibold text-rose-700 dark:text-rose-300 flex items-center gap-2 text-lg">
+        <FontAwesomeIcon icon={faShieldHalved} aria-hidden="true" />
+        Khu vực nguy hiểm (Admin)
+      </h3>
+      <p className="text-sm text-rose-900/80 dark:text-rose-100/80 mt-1">
+        Chọn thao tác xoá cho <b>{displayName || 'người dùng'}</b> (UID: <code>{uid}</code>).
+      </p>
+
+      {/* Chọn chế độ */}
+      <div className="mt-4 grid gap-3">
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input type="radio" name="delete-mode" value="auth"
+            checked={mode === 'auth'} onChange={() => setMode('auth')} className="mt-1"/>
+          <div>
+            <div className="font-medium">Chỉ xoá Tài khoản (Auth)</div>
+            <div className="text-xs text-rose-900/70 dark:text-rose-100/70">
+              Xoá khỏi Firebase Authentication, GIỮ dữ liệu trong Firestore.
+            </div>
+          </div>
+        </label>
+
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input type="radio" name="delete-mode" value="data"
+            checked={mode === 'data'} onChange={() => setMode('data')} className="mt-1"/>
+          <div>
+            <div className="font-medium">Chỉ xoá Dữ liệu (Firestore)</div>
+            <div className="text-xs text-rose-900/70 dark:text-rose-100/70">
+              Xoá bình luận/thông báo/counters và <b>xoá hẳn</b> users/{{'{uid}'}} & subcollections. GIỮ Auth.
+            </div>
+          </div>
+        </label>
+
+        <label className="flex items-start gap-3 cursor-pointer">
+          <input type="radio" name="delete-mode" value="all"
+            checked={mode === 'all'} onChange={() => setMode('all')} className="mt-1"/>
+          <div>
+            <div className="font-medium">Xoá tất cả (Auth + Firestore)</div>
+            <div className="text-xs text-rose-900/70 dark:text-rose-100/70">
+              Xoá tài khoản Auth và <b>xoá hẳn</b> mọi dữ liệu Firestore liên quan.
+            </div>
+          </div>
+        </label>
+      </div>
+
+      {/* Xác nhận khi hard delete */}
+      {(mode === 'data' || mode === 'all') && (
+        <div className="mt-4">
+          <label className="text-sm font-medium">Xác nhận xoá dữ liệu</label>
+          <p className="text-xs text-rose-900/70 dark:text-rose-100/70">
+            Nhập chính xác UID <code>{uid}</code> để xác nhận:
+          </p>
+          <input
+            value={confirmText}
+            onChange={e => setConfirmText(e.target.value)}
+            placeholder={uid}
+            className="mt-2 w-full rounded-md border border-rose-200 dark:border-rose-700 bg-white/80 dark:bg-black/20 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-rose-400"
+          />
+        </div>
+      )}
+
+      <div className="mt-5 flex items-center gap-3">
+        <button
+          onClick={onSubmit}
+          disabled={busy || !canSubmit}
+          className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-white ${
+            busy || !canSubmit ? 'bg-rose-400 cursor-not-allowed' : 'bg-rose-600 hover:bg-rose-700'
+          }`}
+        >
+          {busy ? (
+            <>
+              <FontAwesomeIcon icon={faSpinner} className="animate-spin" aria-hidden="true" />
+              Đang xử lý…
+            </>
+          ) : (
+            <>
+              <FontAwesomeIcon icon={faUserSlash} aria-hidden="true" />
+              Thực hiện xoá
+            </>
+          )}
+        </button>
+        <span className="text-xs text-rose-700/80 dark:text-rose-300/80">Hành động không thể hoàn tác.</span>
+      </div>
+    </section>
+  );
+}
 
 /* ----------------- Page ----------------- */
 export default function PublicUser() {
@@ -127,7 +277,7 @@ export default function PublicUser() {
         const udata = usnap.data();
         setUser(udata);
 
-        // Bình luận gần đây
+        // Bình luận gần đây (giới hạn 12)
         const rcSnap = await getDocs(
           query(collection(db,'comments'), where('authorId','==',String(uid)), orderBy('createdAt','desc'), limit(12))
         );
@@ -145,43 +295,6 @@ export default function PublicUser() {
       } finally { setLoading(false); }
     })();
   }, [uid]);
-
-  /* ---- Hành động admin: xoá sạch dữ liệu người dùng ---- */
-  const onAdminDeleteAll = async () => {
-  if (!me || !isAdmin || !uid) return;
-  const ok = window.confirm('Xoá toàn bộ dữ liệu của người dùng này? Hành động không thể hoàn tác.');
-  if (!ok) return;
-
-  try {
-    const idToken = await me.getIdToken();
-
-    const params = new URLSearchParams({
-      uid: String(uid),
-      hard: '1',
-      deleteAuth: '1',
-    });
-
-    const resp = await fetch(`/api/admin/delete-user-data?${params.toString()}`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${idToken}` }
-    });
-
-    const json = await resp.json();
-    if (!resp.ok || !json.ok) throw new Error(json?.error || 'Không xoá được dữ liệu.');
-
-    alert(`Đã xoá dữ liệu:
-- Chế độ: ${json.mode}
-- Đã xoá user doc: ${json.userDocDeleted}
-- Đã xoá tài khoản Auth: ${json.authDeleted}
-- Bình luận xoá: ${json.stats?.commentsDeleted}
-- Like gỡ: ${json.stats?.likesRemoved}
-- Thông báo xoá: ${json.stats?.notificationsDeleted}`);
-
-    location.reload();
-  } catch (e) {
-    alert(e.message || 'Lỗi không xác định khi xoá.');
-  }
-};
 
   /* ---- Render ---- */
   if (loading) {
@@ -222,12 +335,12 @@ export default function PublicUser() {
         <title>Hồ sơ của {displayName || 'Người dùng'}</title>
       </Head>
 
-      {/* khung rộng hơn: 2xl + padding thoáng */}
-      <div className="max-w-screen-2xl mx-auto px-6 md:px-8 py-8 md:py-10">
+      {/* Container hẹp, tránh tràn ngang */}
+      <div className="max-w-3xl mx-auto px-5 md:px-6 py-8 md:py-10 overflow-x-hidden">
         {/* Header profile */}
         <section className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm p-6 md:p-8">
           <div className="flex flex-col md:flex-row md:items-center gap-6">
-            <div className="w-28 h-28 md:w-32 md:h-32 rounded-full bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 flex items-center justify-center overflow-hidden">
+            <div className="w-28 h-28 md:w-32 md:h-32 rounded-full bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 flex items-center justify-center overflow-hidden shrink-0">
               {avatar
                 ? <img src={avatar} alt="avatar" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                 : <FontAwesomeIcon icon={faUserCircle} className="w-16 h-16 text-gray-400" />
@@ -235,10 +348,15 @@ export default function PublicUser() {
             </div>
 
             <div className="flex-1 min-w-0">
-              <h1 className="text-2xl md:text-3xl font-bold">{displayName || 'Người dùng'}</h1>
-              {bio && <p className="mt-2 text-sm md:text-[15px] text-gray-600 dark:text-gray-400">{bio}</p>}
+              <h1 className="text-2xl md:text-3xl font-bold leading-tight break-words">{displayName || 'Người dùng'}</h1>
+              {bio && (
+                <p className="mt-2 text-sm md:text-[15px] text-gray-600 dark:text-gray-400 leading-relaxed break-words">
+                  {bio}
+                </p>
+              )}
 
-              <div className="mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {/* Stat chips */}
+              <div className="mt-4 grid grid-cols-3 gap-3">
                 <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3">
                   <div className="text-xs text-gray-500 flex items-center gap-2">
                     <FontAwesomeIcon icon={faCalendarAlt} /> Ngày tham gia
@@ -273,49 +391,41 @@ export default function PublicUser() {
           </div>
         </section>
 
-        {/* === KHU VỰC QUẢN TRỊ: chỉ hiển thị với admin đã đăng nhập === */}
-        {isAdmin && uid && (
-          <section className="mt-6 rounded-xl border border-rose-200 dark:border-rose-800 bg-rose-50/70 dark:bg-rose-900/20 p-4">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h3 className="font-semibold text-rose-700 dark:text-rose-300 inline-flex items-center gap-2">
-                  <FontAwesomeIcon icon={faShieldHalved} />
-                  Công cụ quản trị
-                </h3>
-                <p className="text-sm text-rose-800/80 dark:text-rose-200/80 mt-1">
-                  Thao tác này sẽ <b>gắn cờ xoá</b> và dọn sạch dữ liệu liên quan của <b>{displayName || 'người dùng'}</b> (bình luận, thông báo, like…).
-                </p>
-              </div>
-              <button
-                onClick={onAdminDeleteAll}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-rose-600 text-white hover:bg-rose-700"
-              >
-                <FontAwesomeIcon icon={faUserSlash} />
-                Xoá dữ liệu người dùng
-              </button>
-            </div>
-          </section>
-        )}
+        {/* Khu vực quản trị (đẹp & rõ ràng) */}
+        <AdminDangerZone me={me} isAdmin={isAdmin} uid={uid} displayName={displayName} />
 
         {/* Bình luận gần đây */}
         {recent.length > 0 && (
           <section className="mt-8">
             <h2 className="text-lg font-semibold mb-3">Bình luận gần đây</h2>
-            <ul className="grid md:grid-cols-2 gap-3">
-              {recent.map(c => (
-                <li key={c.id} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
-                  <div className="text-sm text-gray-600 dark:text-gray-300">{fmtRel(c.createdAt)}</div>
-                  <p className="mt-1 text-gray-800 dark:text-gray-100 whitespace-pre-wrap break-words">
-                    {String(c.content || '').slice(0, 200)}
-                    {String(c.content || '').length > 200 ? '…' : ''}
-                  </p>
-                  {c.postId && (
-                    <div className="mt-2 text-sm">
-                      <Link href={`/posts/${c.postId}`} className="text-sky-700 hover:underline">Xem bài viết</Link>
-                    </div>
-                  )}
-                </li>
-              ))}
+            <ul className="grid gap-3">
+              {recent.map(c => {
+                // Link đến post + anchor tới comment để trang bài viết có thể cuộn đúng vị trí
+                const anchorHref = `/posts/${c.postId}#comment-${c.id}`;
+                // Nếu dự án dùng route động kiểu [id]: có thể dùng <Link href={{ pathname:'/posts/[id]', query:{ id:c.postId }, hash:`comment-${c.id}` }} />
+                return (
+                  <li key={c.id} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 overflow-hidden">
+                    <div className="text-xs text-gray-500">{fmtRel(c.createdAt)}</div>
+
+                    {/* Văn bản bọc từ, không tràn ngang */}
+                    <p className="mt-2 text-gray-800 dark:text-gray-100 whitespace-pre-wrap break-words break-anywhere leading-relaxed">
+                      {String(c.content || '')}
+                    </p>
+
+                    {c.postId && (
+                      <div className="mt-3 text-sm">
+                        <Link
+                          href={anchorHref}
+                          className="text-sky-700 hover:underline"
+                          title="Mở bài viết và cuộn đến bình luận này"
+                        >
+                          Xem trong bài viết
+                        </Link>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </section>
         )}
