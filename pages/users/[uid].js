@@ -7,7 +7,7 @@ import Layout from '../../components/Layout';
 import { auth, db } from '../../lib/firebase-client';
 import {
   collection, doc, getDoc, getDocs,
-  query, where, orderBy, limit, startAfter, getCountFromServer
+  query, where, orderBy, limit, startAfter, getCountFromServer,
 } from 'firebase/firestore';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -15,7 +15,7 @@ import {
   faShieldHalved, faUserSlash
 } from '@fortawesome/free-solid-svg-icons';
 
-/* ----------------- Helpers ----------------- */
+/* ----------------- Helpers: time ----------------- */
 function toDate(ts) {
   try {
     if (!ts) return null;
@@ -48,12 +48,7 @@ function AdminDangerZone({ me, isAdmin, uid, displayName }) {
 
   const needHard = useMemo(() => mode === 'data' || mode === 'all', [mode]);
   const needDeleteAuth = useMemo(() => mode === 'auth' || mode === 'all', [mode]);
-
-  const canSubmit = useMemo(() => {
-    // Bắt buộc gõ đúng UID khi xoá dữ liệu (hard) để an toàn
-    if (needHard) return confirmText.trim() === String(uid);
-    return true;
-  }, [confirmText, needHard, uid]);
+  const canSubmit = useMemo(() => (needHard ? confirmText.trim() === String(uid) : true), [confirmText, needHard, uid]);
 
   if (!isAdmin || !uid) return null;
 
@@ -92,8 +87,6 @@ function AdminDangerZone({ me, isAdmin, uid, displayName }) {
         `Likes gỡ: ${json.stats?.likesRemoved}\n` +
         `Thông báo xoá: ${json.stats?.notificationsDeleted}`
       );
-
-      // Nếu đã hard-delete user doc, reload sẽ chuyển sang "Không tìm thấy người dùng này."
       location.reload();
     } catch (e) {
       alert(e.message || 'Lỗi không xác định.');
@@ -112,7 +105,6 @@ function AdminDangerZone({ me, isAdmin, uid, displayName }) {
         Chọn thao tác xoá cho <b>{displayName || 'người dùng'}</b> (UID: <code>{uid}</code>).
       </p>
 
-      {/* Chọn chế độ */}
       <div className="mt-4 grid gap-3">
         <label className="flex items-start gap-3 cursor-pointer">
           <input type="radio" name="delete-mode" value="auth"
@@ -131,8 +123,8 @@ function AdminDangerZone({ me, isAdmin, uid, displayName }) {
           <div>
             <div className="font-medium">Chỉ xoá Dữ liệu (Firestore)</div>
             <div className="text-xs text-rose-900/70 dark:text-rose-100/70">
-  Xoá bình luận/thông báo/counters và <b>xoá hẳn</b> <code>users/{'{'}uid{'}'}</code> &amp; subcollections. GIỮ Auth.
-</div>
+              Xoá bình luận/thông báo/counters và <b>xoá hẳn</b> <code>users/{'{' }uid{'}'}</code> &amp; subcollections. GIỮ Auth.
+            </div>
           </div>
         </label>
 
@@ -148,7 +140,6 @@ function AdminDangerZone({ me, isAdmin, uid, displayName }) {
         </label>
       </div>
 
-      {/* Xác nhận khi hard delete */}
       {(mode === 'data' || mode === 'all') && (
         <div className="mt-4">
           <label className="text-sm font-medium">Xác nhận xoá dữ liệu</label>
@@ -277,7 +268,7 @@ export default function PublicUser() {
         const udata = usnap.data();
         setUser(udata);
 
-        // Bình luận gần đây (giới hạn 12)
+        // Bình luận gần đây (giới hạn 12) -- sửa link slug gốc
         const rcSnap = await getDocs(
           query(collection(db,'comments'), where('authorId','==',String(uid)), orderBy('createdAt','desc'), limit(12))
         );
@@ -312,7 +303,6 @@ export default function PublicUser() {
     return (
       <Layout fullWidth>
         <Head>
-          {/* Không index trang lỗi hồ sơ */}
           <meta name="robots" content="noindex" />
           <title>Lỗi – Hồ sơ người dùng</title>
         </Head>
@@ -391,7 +381,7 @@ export default function PublicUser() {
           </div>
         </section>
 
-        {/* Khu vực quản trị (đẹp & rõ ràng) */}
+        {/* Khu vực quản trị */}
         <AdminDangerZone me={me} isAdmin={isAdmin} uid={uid} displayName={displayName} />
 
         {/* Bình luận gần đây */}
@@ -400,9 +390,11 @@ export default function PublicUser() {
             <h2 className="text-lg font-semibold mb-3">Bình luận gần đây</h2>
             <ul className="grid gap-3">
               {recent.map(c => {
-                // Link đến post + anchor tới comment để trang bài viết có thể cuộn đúng vị trí
-                const anchorHref = `/posts/${c.postId}#comment-${c.id}`;
-                // Nếu dự án dùng route động kiểu [id]: có thể dùng <Link href={{ pathname:'/posts/[id]', query:{ id:c.postId }, hash:`comment-${c.id}` }} />
+                // Link đúng: /<slug>#comment-<id> (không có /post hay /app)
+                const rawSlug = String(c.postSlug || c.postId || '').trim();
+                const slug = rawSlug.replace(/^\/+/, '');
+                const anchorHref = `/${encodeURI(slug)}#comment-${encodeURIComponent(c.id)}`;
+
                 return (
                   <li key={c.id} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4 overflow-hidden">
                     <div className="text-xs text-gray-500">{fmtRel(c.createdAt)}</div>
@@ -412,7 +404,7 @@ export default function PublicUser() {
                       {String(c.content || '')}
                     </p>
 
-                    {c.postId && (
+                    {slug && (
                       <div className="mt-3 text-sm">
                         <Link
                           href={anchorHref}
