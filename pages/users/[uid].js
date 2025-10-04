@@ -131,8 +131,8 @@ function AdminDangerZone({ me, isAdmin, uid, displayName }) {
           <div>
             <div className="font-medium">Chỉ xoá Dữ liệu (Firestore)</div>
             <div className="text-xs text-rose-900/70 dark:text-rose-100/70">
-              Xoá bình luận/thông báo/counters và <b>xoá hẳn</b> users/{{'{uid}'}} & subcollections. GIỮ Auth.
-            </div>
+  Xoá bình luận/thông báo/counters và <b>xoá hẳn</b> <code>users/{'{'}uid{'}'}</code> &amp; subcollections. GIỮ Auth.
+</div>
           </div>
         </label>
 
