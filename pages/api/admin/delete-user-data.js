@@ -1,4 +1,3 @@
-// pages/api/admin/delete-user-data.js
 import { admin, dbAdmin, FieldValue } from '../../../lib/firebase-admin';
 
 // ── helpers ───────────────────────────────────────────────────────────
@@ -53,12 +52,30 @@ async function updateLikesRemoveUser(uid, limitSize = 300) {
   return total;
 }
 
+// 👇 Xoá tất cả subcollections bên trong users/{uid}
+async function deleteUserSubcollections(userRef) {
+  const subs = await userRef.listCollections();
+  for (const sub of subs) {
+    let last = null;
+    for (;;) {
+      let q = sub.limit(300);
+      if (last) q = q.startAfter(last);
+      const snap = await q.get();
+      if (snap.empty) break;
+      const batch = dbAdmin.batch();
+      snap.docs.forEach(d => batch.delete(d.ref));
+      await batch.commit();
+      last = snap.docs[snap.docs.length - 1];
+      if (snap.size < 300) break;
+    }
+  }
+}
+
 // ── handler ───────────────────────────────────────────────────────────
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   try {
-    // Xác thực admin
     const idToken = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
     if (!idToken) return res.status(401).json({ error: 'Missing Authorization Bearer <ID_TOKEN>' });
 
@@ -66,7 +83,6 @@ export default async function handler(req, res) {
     if (!decoded?.uid) return res.status(401).json({ error: 'Invalid token' });
     if (!(await isAdmin(decoded.uid))) return res.status(403).json({ error: 'Not an admin' });
 
-    // Tham số
     const targetUid = String(req.query.uid || req.body?.uid || '').trim();
     const hard = (String(req.query.hard || req.body?.hard || '').toLowerCase() === 'true') ||
                  (String(req.query.hard || req.body?.hard || '') === '1');
@@ -75,15 +91,15 @@ export default async function handler(req, res) {
 
     if (!targetUid) return res.status(400).json({ error: 'Missing uid' });
 
-    // 1) Soft tombstone (đảm bảo chặn ngay lập tức)
     const userRef = dbAdmin.collection('users').doc(targetUid);
+
+    // 1) Gắn cờ deleted (để profile tự chặn ngay)
     await userRef.set({
       status: 'deleted',
       displayName: 'Đã xoá',
       photoURL: '',
       bio: '',
       socialLinks: {},
-      email: '', // nếu bạn đang lưu email trong user doc
       deletedAt: FieldValue.serverTimestamp(),
       updatedAt: FieldValue.serverTimestamp(),
     }, { merge: true });
@@ -93,24 +109,23 @@ export default async function handler(req, res) {
     const likesRemoved      = await updateLikesRemoveUser(targetUid);
     const notifToDeleted    = await deleteByQuery('notifications', 'toUserId',  '==', targetUid);
     const notifFromDeleted  = await deleteByQuery('notifications', 'fromUserId','==', targetUid);
-
-    // 3) Xoá counter (nếu có)
     await dbAdmin.collection('user_counters').doc(targetUid).delete().catch(() => {});
 
-    // (Tuỳ chọn) 4) Xoá auth user nếu còn trong Authentication
+    // 3) Xoá Auth
     let authDeleted = false;
     if (deleteAuth) {
       try {
         await admin.auth().deleteUser(targetUid);
         authDeleted = true;
       } catch (e) {
-        // nếu user auth đã bị xoá trước đó sẽ ném lỗi; bỏ qua
+        // đã xoá từ trước → ignore
       }
     }
 
-    // (Tuỳ chọn) 5) Hard delete user doc
+    // 4) Xoá hẳn doc users/{uid}
     let userDocDeleted = false;
     if (hard) {
+      await deleteUserSubcollections(userRef);
       await userRef.delete().then(() => { userDocDeleted = true; });
     }
 

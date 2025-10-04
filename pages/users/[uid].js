@@ -148,23 +148,40 @@ export default function PublicUser() {
 
   /* ---- Hành động admin: xoá sạch dữ liệu người dùng ---- */
   const onAdminDeleteAll = async () => {
-    if (!me || !isAdmin || !uid) return;
-    const ok = window.confirm('Xoá toàn bộ dữ liệu của người dùng này? Hành động không thể hoàn tác.');
-    if (!ok) return;
-    try {
-      const idToken = await me.getIdToken();
-      const resp = await fetch(`/api/admin/delete-user-data?uid=${encodeURIComponent(String(uid))}`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${idToken}` }
-      });
-      const json = await resp.json();
-      if (!resp.ok || !json.ok) throw new Error(json?.error || 'Không xoá được dữ liệu.');
-      alert(`Đã xoá dữ liệu.\nComments: ${json.stats.commentsDeleted}\nGỡ like: ${json.stats.likesRemoved}\nNotifications: ${json.stats.notificationsDeleted}`);
-      location.reload(); // sau khi gắn cờ deleted, trang sẽ báo "Không tìm thấy người dùng này."
-    } catch (e) {
-      alert(e.message || 'Lỗi không xác định.');
-    }
-  };
+  if (!me || !isAdmin || !uid) return;
+  const ok = window.confirm('Xoá toàn bộ dữ liệu của người dùng này? Hành động không thể hoàn tác.');
+  if (!ok) return;
+
+  try {
+    const idToken = await me.getIdToken();
+
+    const params = new URLSearchParams({
+      uid: String(uid),
+      hard: '1',
+      deleteAuth: '1',
+    });
+
+    const resp = await fetch(`/api/admin/delete-user-data?${params.toString()}`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${idToken}` }
+    });
+
+    const json = await resp.json();
+    if (!resp.ok || !json.ok) throw new Error(json?.error || 'Không xoá được dữ liệu.');
+
+    alert(`Đã xoá dữ liệu:
+- Chế độ: ${json.mode}
+- Đã xoá user doc: ${json.userDocDeleted}
+- Đã xoá tài khoản Auth: ${json.authDeleted}
+- Bình luận xoá: ${json.stats?.commentsDeleted}
+- Like gỡ: ${json.stats?.likesRemoved}
+- Thông báo xoá: ${json.stats?.notificationsDeleted}`);
+
+    location.reload();
+  } catch (e) {
+    alert(e.message || 'Lỗi không xác định khi xoá.');
+  }
+};
 
   /* ---- Render ---- */
   if (loading) {
