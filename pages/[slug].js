@@ -550,29 +550,43 @@ export default function Detail({ serverApp, serverRelated }) {
     }
   };
 
-  // Auto-scroll highlight ?comment=
-  useEffect(() => {
-    const id = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('comment') : null;
-    if (!id) return;
+// Cuộn đến bình luận từ ?comment= hoặc #comment-...
+useEffect(() => {
+  if (typeof window === 'undefined') return;
 
-    let tried = 0;
-    const maxTries = 40;
-    const iv = setInterval(() => {
-      const el = document.getElementById(`c-${id}`);
-      tried++;
-      if (el) {
-        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        el.classList.add('ring-2', 'ring-amber-400', 'bg-amber-50');
-        setTimeout(() => {
-          el.classList.remove('ring-2', 'ring-amber-400', 'bg-amber-50');
-        }, 3000);
-        clearInterval(iv);
-      } else if (tried >= maxTries) {
-        clearInterval(iv);
-      }
-    }, 50);
-    return () => clearInterval(iv);
-  }, [router.query?.slug]);
+  const getTargetId = () => {
+    const hash = window.location.hash?.slice(1); // lấy phần sau dấu #
+    const query = new URLSearchParams(window.location.search).get('comment');
+    if (hash) return hash;
+    if (query) return `comment-${query}`;
+    return null;
+  };
+
+  const tryScroll = () => {
+    const id = getTargetId();
+    if (!id) return false;
+    const el = document.getElementById(id) || document.getElementById(`c-${id}`) || document.querySelector(`[data-comment-id="${id}"]`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      el.classList.add('ring-2', 'ring-sky-400', 'bg-sky-50');
+      setTimeout(() => el.classList.remove('ring-2', 'ring-sky-400', 'bg-sky-50'), 3000);
+      return true;
+    }
+    return false;
+  };
+
+  let tries = 0;
+  const maxTries = 50;
+  const iv = setInterval(() => {
+    if (tryScroll() || ++tries >= maxTries) clearInterval(iv);
+  }, 100);
+
+  window.addEventListener('hashchange', tryScroll);
+  return () => {
+    clearInterval(iv);
+    window.removeEventListener('hashchange', tryScroll);
+  };
+}, [router.asPath]);
 
   if (!app) {
     return (
