@@ -554,20 +554,31 @@ export default function Detail({ serverApp, serverRelated }) {
 useEffect(() => {
   if (typeof window === 'undefined') return;
 
-  const getTargetId = () => {
-    const hash = window.location.hash?.slice(1); // lấy phần sau dấu #
-    const query = new URLSearchParams(window.location.search).get('comment');
-    if (hash) return hash;
-    if (query) return `comment-${query}`;
-    return null;
+  // Lấy id mục tiêu từ URL: ưu tiên hash, fallback query ?comment=
+  const getTarget = () => {
+    const hash = window.location.hash?.slice(1) || '';       // "comment-abc" hoặc "c-abc" hoặc "abc"
+    const q = new URLSearchParams(window.location.search).get('comment'); // "abc"
+    // Ưu tiên hash nếu có; nếu không có, build từ query
+    return hash || (q ? `comment-${q}` : '');
   };
 
+  // Chuẩn hóa về rawId và tìm element theo nhiều pattern
   const tryScroll = () => {
-    const id = getTargetId();
-    if (!id) return false;
-    const el = document.getElementById(id) || document.getElementById(`c-${id}`) || document.querySelector(`[data-comment-id="${id}"]`);
+    const target = getTarget();
+    if (!target) return false;
+
+    // rawId: bỏ prefix "comment-" hay "c-"
+    const rawId = target.replace(/^comment-/, '').replace(/^c-/, '');
+
+    // Thử đủ các biến thể phổ biến trong DOM của Comments:
+    const el =
+      document.getElementById(`comment-${rawId}`) ||       // id="comment-<id>"
+      document.getElementById(`c-${rawId}`) ||              // id="c-<id>"
+      document.querySelector(`[data-comment-id="${rawId}"]`); // data-comment-id="<id>"
+
     if (el) {
       el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // highlight nhẹ nếu đã có tailwind ring/bg
       el.classList.add('ring-2', 'ring-sky-400', 'bg-sky-50');
       setTimeout(() => el.classList.remove('ring-2', 'ring-sky-400', 'bg-sky-50'), 3000);
       return true;
@@ -575,16 +586,20 @@ useEffect(() => {
     return false;
   };
 
+  // Comments được load động => poll một chút đến khi phần tử xuất hiện
   let tries = 0;
-  const maxTries = 50;
+  const maxTries = 60; // ~6s (100ms * 60)
   const iv = setInterval(() => {
     if (tryScroll() || ++tries >= maxTries) clearInterval(iv);
   }, 100);
 
-  window.addEventListener('hashchange', tryScroll);
+  // Nếu hash thay đổi khi đang ở trang, thử lại
+  const onHash = () => setTimeout(tryScroll, 0);
+  window.addEventListener('hashchange', onHash);
+
   return () => {
     clearInterval(iv);
-    window.removeEventListener('hashchange', tryScroll);
+    window.removeEventListener('hashchange', onHash);
   };
 }, [router.asPath]);
 
