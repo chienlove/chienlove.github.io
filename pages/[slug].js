@@ -787,9 +787,6 @@ useEffect(() => {
         snap-x snap-mandatory
       "
     >
-      {/* Helper format số (đặt ở component scope nếu bạn muốn) */}
-      {/* const nf = new Intl.NumberFormat('vi-VN'); */}
-
       {/* Tác giả */}
       <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
         <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Tác giả</p>
@@ -817,17 +814,16 @@ useEffect(() => {
         </p>
       </div>
 
-      {/* Lượt xem – KHÔNG icon, hiển thị "Xem / [số] / Lượt" */}
+      {/* Lượt xem (TestFlight) / Lượt tải (Jailbreak) – không icon */}
       {(() => {
         const nf = new Intl.NumberFormat('vi-VN');
-        // Ưu tiên views; nếu không có và không phải testflight thì fallback downloads
-        const viewsCount = isTestflight
-          ? (app?.views ?? 0)
-          : (app?.views ?? app?.downloads ?? 0);
+        const isTF = Boolean(isTestflight); // biến sẵn có trong trang của bạn
+        const count = isTF ? (app?.views ?? 0) : (app?.downloads ?? 0);
+        const topLabel = isTF ? 'Xem' : 'Tải';
         return (
           <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
-            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Xem</p>
-            <div className="text-lg font-bold leading-none">{nf.format(viewsCount)}</div>
+            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">{topLabel}</p>
+            <div className="text-lg font-bold leading-none" title={String(count)}>{nf.format(count)}</div>
             <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">Lượt</p>
           </div>
         );
