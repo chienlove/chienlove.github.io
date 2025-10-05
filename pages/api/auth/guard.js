@@ -2,14 +2,16 @@
 import { admin, dbAdmin } from '../../../lib/firebase-admin';
 import crypto from 'crypto';
 
-const emailHash = (email) =>
-  crypto.createHash('sha256').update(String(email || '').trim().toLowerCase()).digest('hex');
+const stripZW = (s) => String(s || '').replace(/[\u200B-\u200D\uFEFF]/g, '');
+const normEmail = (s) => stripZW(String(s || '').trim().toLowerCase());
+const hash = (s) => crypto.createHash('sha256').update(normEmail(s)).digest('hex');
 
 export default async function handler(req, res) {
   try {
     if (req.method !== 'GET' && req.method !== 'POST') {
       return res.status(405).json({ ok: false, error: 'Method not allowed' });
     }
+    const debug = String(req.query.debug || '') === '1';
 
     const idToken = (req.headers.authorization || '').replace(/^Bearer\s+/i, '');
     if (!idToken) return res.status(401).json({ ok: false, error: 'Missing Authorization token' });
@@ -20,40 +22,51 @@ export default async function handler(req, res) {
     const authUser = await admin.auth().getUser(decoded.uid).catch(() => null);
     if (!authUser?.email) return res.status(200).json({ ok: true, allowed: true });
 
-    const emailLower = String(authUser.email).trim().toLowerCase();
-    const hash = emailHash(emailLower);
+    const email = normEmail(authUser.email);
 
-    // Ưu tiên doc theo hash
-    let banDoc = await dbAdmin.collection('banned_emails').doc(hash).get();
+    const col = dbAdmin.collection('banned_emails');
+    let found = await col.doc(hash(email)).get();
+    let foundBy = found.exists ? 'docId(hash)' : null;
 
-    // Fallback: query theo emailLower
-    if (!banDoc.exists) {
-      const q = await dbAdmin.collection('banned_emails')
-        .where('emailLower', '==', emailLower).limit(1).get();
-      if (!q.empty) banDoc = q.docs[0];
+    if (!found.exists) {
+      const q1 = await col.where('emailLower', '==', email).limit(1).get();
+      if (!q1.empty) { found = q1.docs[0]; foundBy = 'emailLower=='; }
     }
 
-    if (!banDoc.exists) {
-      return res.status(200).json({ ok: true, allowed: true });
+    if (!found.exists) {
+      const q2 = await col.where('email', '==', email).limit(1).get();
+      if (!q2.empty) { found = q2.docs[0]; foundBy = 'email=='; }
     }
 
-    const data = banDoc.data() || {};
-    const expiresAtMs = data.expiresAt?.toMillis ? data.expiresAt.toMillis() : null;
+    if (!found.exists) {
+      // range cuối cùng
+      const end = email + '\uf8ff';
+      const q3 = await col.where('emailLower', '>=', email).where('emailLower', '<=', end).limit(1).get();
+      if (!q3.empty) { found = q3.docs[0]; foundBy = 'emailLower range'; }
+    }
 
-    // Hết hạn -> tự gỡ ban
+    if (!found.exists) {
+      return res.status(200).json({ ok: true, allowed: true, ...(debug ? { debug: { email, tried: ['docId(hash)','emailLower==','email==','emailLower range'] } } : {}) });
+    }
+
+    const data = found.data() || {};
+    const expiresAtMs = data.expiresAt?.toMillis ? data.expiresAt.toMillis()
+                      : (data.expiresAt ? new Date(data.expiresAt).getTime() : null);
+
     if (expiresAtMs && expiresAtMs <= Date.now()) {
-      try { await dbAdmin.collection('banned_emails').doc(banDoc.id).delete(); } catch {}
+      try { await col.doc(found.id).delete(); } catch {}
       return res.status(200).json({ ok: true, allowed: true, unbanned: true });
     }
 
-    // Còn hiệu lực => trả chi tiết để frontend hiển thị
-    return res.status(403).json({
+    const payload = {
       ok: false,
       mode: expiresAtMs ? 'temporary' : 'permanent',
       reason: data.reason || null,
-      // trả ISO để frontend không phải đoán kiểu dữ liệu
       expiresAt: expiresAtMs ? new Date(expiresAtMs).toISOString() : null,
-    });
+    };
+    if (debug) payload.debug = { email, foundBy, docId: found.id };
+
+    return res.status(403).json(payload);
   } catch (e) {
     return res.status(500).json({ ok: false, error: e?.message || 'server error' });
   }
