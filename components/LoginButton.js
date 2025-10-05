@@ -45,6 +45,9 @@ export default function LoginButton({ onToggleTheme, isDark }) {
   const [hint, setHint] = useState('');
   const [authClosedAt, setAuthClosedAt] = useState(0);
 
+  // 🔴 Thông tin ban để hiển thị banner đẹp trong modal
+  const [banInfo, setBanInfo] = useState(null); // { mode: 'temporary'|'permanent', reason?, expiresAt?, remainingText? }
+
   const menuRef = useRef(null);
   const guestMenuRef = useRef(null);
 
@@ -152,14 +155,13 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     return `${s} giây`;
   };
 
-  // Mapping mã lỗi Firebase Auth -> thông điệp tiếng Việt
   const mapAuthError = (e) => {
     const code = e?.code || '';
     switch (code) {
       case 'auth/invalid-email':
         return 'Email không hợp lệ.';
       case 'auth/user-disabled':
-        return 'Tài khoản đã bị vô hiệu hoá.';
+        return 'Tài khoản đang bị BAN hoặc đã bị vô hiệu hoá.';
       case 'auth/user-not-found':
         return 'Không tìm thấy tài khoản với email này.';
       case 'auth/wrong-password':
@@ -178,12 +180,14 @@ export default function LoginButton({ onToggleTheme, isDark }) {
         return 'Thông tin đăng nhập này đang được dùng cho tài khoản khác.';
       case 'auth/email-already-in-use':
         return 'Email đã được sử dụng. Vui lòng đăng nhập.';
+      case 'auth/invalid-credential':
+        return 'Thông tin đăng nhập không hợp lệ.'; // sẽ được phân biệt chi tiết ở khối catch(email)
       default:
         return e?.message || 'Có lỗi xảy ra. Vui lòng thử lại.';
     }
   };
 
-  // ✅ Gọi guard sau khi đăng nhập; nếu bị ban thì signOut + báo lỗi chi tiết
+  // ✅ Gọi guard sau khi đăng nhập; nếu bị ban thì signOut + banner chi tiết trong modal
   const runGuardAfterSignIn = async () => {
     try {
       if (!auth.currentUser) return true;
@@ -195,24 +199,29 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       const json = await resp.json();
       if (json?.ok) return true;
 
-      // Bị ban -> sign out và báo lỗi
+      // Bị ban -> sign out và hiển thị banner
       await auth.signOut().catch(()=>{});
 
       const isTemp = json?.mode === 'temporary';
-      const reason = json?.reason ? ` Lý do: ${json.reason}.` : '';
-      let extra = '';
+      const reason = json?.reason || null;
+      let remainingText = '';
 
       if (isTemp && json?.expiresAt) {
         const remainMs = new Date(json.expiresAt).getTime() - Date.now();
         const remainTxt = formatRemaining(remainMs);
-        if (remainTxt) extra = ` Còn lại: ${remainTxt}.`;
+        if (remainTxt) remainingText = remainTxt;
       }
 
-      const message = isTemp
-        ? `Tài khoản bị BAN tạm thời.${reason}${extra}`
-        : `Tài khoản bị BAN vĩnh viễn.${reason}`;
-
-      showToast('error', message, 6000);
+      // Mở modal + gắn banner
+      setOpenAuth(true);
+      setMode('login');
+      setBanInfo({
+        mode: isTemp ? 'temporary' : 'permanent',
+        reason,
+        expiresAt: json?.expiresAt || null,
+        remainingText
+      });
+      setMsg(''); // xóa message cũ
       return false;
     } catch {
       // Nếu guard lỗi server, tạm cho qua (tuỳ policy)
@@ -223,7 +232,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
   /* ---------------- Actions: Đăng nhập ---------------- */
 
   const loginGoogle = async (isLinking = false) => {
-    setLoading(true); setMsg('');
+    setLoading(true); setMsg(''); setBanInfo(null);
     try {
       await signInWithPopup(auth, new GoogleAuthProvider());
       if (isLinking) await doLinkIfNeeded();
@@ -237,7 +246,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
   };
 
   const loginGithub = async () => {
-    setLoading(true); setMsg('');
+    setLoading(true); setMsg(''); setBanInfo(null);
     try {
       await signInWithPopup(auth, new GithubAuthProvider());
       if (!(await runGuardAfterSignIn())) return;
@@ -250,7 +259,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
   };
 
   const loginTwitter = async () => {
-    setLoading(true); setMsg('');
+    setLoading(true); setMsg(''); setBanInfo(null);
     try {
       await signInWithPopup(auth, new TwitterAuthProvider());
       if (!(await runGuardAfterSignIn())) return;
@@ -270,7 +279,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
 
   const onSubmitEmail = async (e) => {
     e.preventDefault();
-    setLoading(true); setMsg('');
+    setLoading(true); setMsg(''); setBanInfo(null);
     try {
       if (mode === 'signup') {
         if (!pwdStrong) { setMsg('Mật khẩu phải ≥8 ký tự và có chữ, số, ký tự đặc biệt.'); setLoading(false); return; }
@@ -291,8 +300,23 @@ export default function LoginButton({ onToggleTheme, isDark }) {
         showToast('success', 'Đăng nhập thành công!');
       }
     } catch (e) {
-      if (e.code === 'auth/email-already-in-use') { setMode('login'); setMsg('Email đã tồn tại. Vui lòng đăng nhập.'); }
-      else setMsg(mapAuthError(e));
+      if (e.code === 'auth/email-already-in-use') {
+        setMode('login');
+        setMsg('Email đã tồn tại. Vui lòng đăng nhập.');
+      } else if (e.code === 'auth/invalid-credential') {
+        // Phân biệt: chưa đăng ký vs. sai mật khẩu
+        try {
+          const methods = await fetchSignInMethodsForEmail(auth, email);
+          if (!methods || methods.length === 0) setMsg('Tài khoản chưa đăng ký hoặc email không tồn tại.');
+          else setMsg('Mật khẩu không đúng. Vui lòng thử lại.');
+        } catch {
+          setMsg(mapAuthError(e));
+        }
+      } else if (e.code === 'auth/user-disabled') {
+        setMsg('Tài khoản của bạn đang bị BAN hoặc đã bị vô hiệu hoá. Vui lòng liên hệ quản trị viên.');
+      } else {
+        setMsg(mapAuthError(e));
+      }
     } finally { setLoading(false); }
   };
 
@@ -451,6 +475,31 @@ export default function LoginButton({ onToggleTheme, isDark }) {
             </div>
 
             <div className="px-5 pt-5 pb-2">
+              {/* 🔴 BAN banner (nếu có) */}
+              {banInfo && (
+                <div className="mb-4 rounded-xl border border-rose-300 bg-rose-50 text-rose-900 p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="font-semibold">
+                        {banInfo.mode === 'permanent' ? 'Tài khoản của bạn bị BAN vĩnh viễn.' : 'Tài khoản của bạn đang bị BAN tạm thời.'}
+                      </div>
+                      {banInfo.reason && (
+                        <div className="text-sm mt-1"><b>Lý do:</b> {banInfo.reason}</div>
+                      )}
+                      {banInfo.mode === 'temporary' && banInfo.remainingText && (
+                        <div className="text-sm mt-1"><b>Thời gian còn lại:</b> {banInfo.remainingText}</div>
+                      )}
+                    </div>
+                    <button
+                      className="shrink-0 rounded px-2 py-1 text-xs bg-rose-100 hover:bg-rose-200"
+                      onClick={() => setBanInfo(null)}
+                    >
+                      Đã hiểu
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Social */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <button onClick={() => loginGoogle(false)} disabled={loading}
@@ -529,7 +578,11 @@ export default function LoginButton({ onToggleTheme, isDark }) {
                   </>
                 )}
 
-                {msg && <div className="text-sm text-red-600">{msg}</div>}
+                {msg && (
+                  <div className="rounded-lg border border-rose-300 bg-rose-50 text-rose-900 px-3 py-2 text-sm">
+                    {msg}
+                  </div>
+                )}
 
                 <div className="flex items-center justify-between">
                   <button
