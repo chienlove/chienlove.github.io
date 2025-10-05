@@ -29,20 +29,20 @@ export default function LoginButton({ onToggleTheme, isDark }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [guestMenuOpen, setGuestMenuOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState('login');
+  const [mode, setMode] = useState('login'); // 'login' | 'signup'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
   const [confirmPwd, setConfirmPwd] = useState('');
   const [showConfirm, setShowConfirm] = useState(false);
   const [msg, setMsg] = useState('');
-  const [toast, setToast] = useState(null);
+  const [toast, setToast] = useState(null); // { type: 'success'|'error'|'info'|'warning', text }
   const [pendingCred, setPendingCred] = useState(null);
   const [hint, setHint] = useState('');
   const [authClosedAt, setAuthClosedAt] = useState(0);
 
-  // 👇 Thông tin BAN để render banner
-  const [banInfo, setBanInfo] = useState(null); // {mode: 'temporary'|'permanent', reason?, expiresAt?, remainingText?}
+  // ==== BAN details để hiển thị banner trong modal ====
+  const [banInfo, setBanInfo] = useState(null); // { mode: 'temporary'|'permanent', reason?, expiresAt?, remainingText? }
 
   const menuRef = useRef(null);
   const guestMenuRef = useRef(null);
@@ -52,6 +52,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     return () => unsub();
   }, []);
 
+  // Cho phép nơi khác mở modal auth (ví dụ Comments.js)
   useEffect(() => {
     const onOpenAuth = () => {
       setGuestMenuOpen(false);
@@ -71,12 +72,14 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     return () => document.removeEventListener('mousedown', onClick);
   }, []);
 
-  /* ---------- Toast + Loading Overlay ---------- */
+  /* ================= Toast + Loading Overlay ================= */
+
   const showToast = (type, text, ms = 2800) => {
     setToast({ type, text });
     window.clearTimeout((showToast._t || 0));
     showToast._t = window.setTimeout(() => setToast(null), ms);
   };
+
   const Toast = () => {
     if (!toast) return null;
     const tone =
@@ -99,6 +102,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       </div>
     );
   };
+
   const LoadingOverlay = () => {
     if (!loading) return null;
     return (
@@ -111,7 +115,9 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     );
   };
 
-  /* ---------- Helpers ---------- */
+  /* ================= Helpers ================= */
+
+  // Chuyển mili-giây → "x ngày y giờ" / "x giờ y phút" / ...
   const formatRemaining = (ms) => {
     if (!Number.isFinite(ms) || ms <= 0) return '';
     const s = Math.floor(ms / 1000);
@@ -124,7 +130,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     return `${s} giây`;
   };
 
-  // lấy chi tiết BAN khi không có idToken (firebase chặn login -> user-disabled)
+  // Khi không có idToken (Firebase chặn login → user-disabled), gọi API public để lấy lý do/hạn
   const tryShowBanDetails = async (emailForLookup) => {
     if (!emailForLookup) return;
     try {
@@ -147,16 +153,19 @@ export default function LoginButton({ onToggleTheme, isDark }) {
         remainingText
       });
       showToast('error', isTemp ? 'Tài khoản đang bị BAN tạm thời.' : 'Tài khoản bị BAN vĩnh viễn.', 3600);
-    } catch {}
+    } catch {
+      /* ignore */
+    }
   };
 
+  // Ánh xạ mã lỗi Firebase → tiếng Việt dễ hiểu
   const mapAuthError = (e) => {
     const code = e?.code || '';
     switch (code) {
       case 'auth/invalid-email':
         return 'Email không hợp lệ.';
       case 'auth/user-disabled':
-        return 'Tài khoản đang bị BAN hoặc đã bị vô hiệu hoá.'; // chi tiết sẽ show qua tryShowBanDetails()
+        return 'Tài khoản đang bị BAN hoặc đã bị vô hiệu hoá.';
       case 'auth/user-not-found':
         return 'Không tìm thấy tài khoản với email này.';
       case 'auth/wrong-password':
@@ -182,6 +191,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     }
   };
 
+  // Nếu email đã tồn tại với provider khác → hướng dẫn liên kết
   const handleAccountExists = async (error, provider) => {
     const emailFromError = error?.customData?.email;
     if (!emailFromError) return setMsg('Tài khoản đã tồn tại với nhà cung cấp khác.');
@@ -205,6 +215,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     setMsg('Email đã tồn tại với nhà cung cấp khác. Hãy đăng nhập bằng nhà cung cấp cũ rồi thử lại.');
   };
 
+  // Liên kết credential treo (nếu có)
   const doLinkIfNeeded = async () => {
     if (pendingCred && auth.currentUser) {
       await linkWithCredential(auth.currentUser, pendingCred);
@@ -214,7 +225,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     }
   };
 
-  // Sau khi đăng nhập thành công -> hỏi guard (có idToken) để biết có bị ban không
+  // Sau khi login thành công → hỏi guard xem có đang bị ban không
   const runGuardAfterSignIn = async () => {
     try {
       if (!auth.currentUser) return true;
@@ -223,11 +234,12 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       const json = await resp.json();
       if (json?.ok) return true;
 
+      // Bị ban → signOut + mở banner chi tiết
       await auth.signOut().catch(()=>{});
       const isTemp = json?.mode === 'temporary';
       let remainingText = '';
       if (isTemp && json?.expiresAt) {
-        const ms = new Date(json.expiresAt).getTime() - Date.now();
+        const ms = Number(json.expiresAt) - Date.now();
         const txt = formatRemaining(ms);
         if (txt) remainingText = txt;
       }
@@ -236,8 +248,8 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       setBanInfo({
         mode: isTemp ? 'temporary' : 'permanent',
         reason: json?.reason || null,
-        expiresAt: json?.expiresAt || null,
-        remainingText
+        expiresAt: json?.expiresAt ? new Date(Number(json.expiresAt)).toISOString() : null,
+        remainingText,
       });
       setMsg('');
       showToast('error', isTemp ? 'Tài khoản đang bị BAN tạm thời.' : 'Tài khoản bị BAN vĩnh viễn.', 3600);
@@ -247,13 +259,14 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     }
   };
 
-  /* ---------- Actions: Social ---------- */
+  /* ================= Actions: Social ================= */
+
   const loginGoogle = async (isLinking = false) => {
     setLoading(true); setMsg(''); setBanInfo(null);
     try {
       await signInWithPopup(auth, new GoogleAuthProvider());
       if (isLinking) await doLinkIfNeeded();
-      if (!(await runGuardAfterSignIn())) return;
+      if (!(await runGuardAfterSignIn())) return; // nếu bị ban → đã hiển thị banner
       setOpenAuth(false);
       showToast('success', 'Đăng nhập Google thành công!');
     } catch (e) {
@@ -264,6 +277,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       }
     } finally { setLoading(false); }
   };
+
   const loginGithub = async () => {
     setLoading(true); setMsg(''); setBanInfo(null);
     try {
@@ -276,6 +290,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       if (e.code === 'auth/user-disabled') await tryShowBanDetails(e?.customData?.email);
     } finally { setLoading(false); }
   };
+
   const loginTwitter = async () => {
     setLoading(true); setMsg(''); setBanInfo(null);
     try {
@@ -289,9 +304,10 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     } finally { setLoading(false); }
   };
 
-  /* ---------- Actions: Email/Password ---------- */
+  /* ================= Actions: Email/Password ================= */
+
   const pwdStrong = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(password);
-  const pwdMatch = password && confirmPwd && password === confirmPwd;
+  const pwdMatch  = password && confirmPwd && password === confirmPwd;
 
   const onSubmitEmail = async (e) => {
     e.preventDefault();
@@ -299,13 +315,14 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     try {
       if (mode === 'signup') {
         if (!pwdStrong) { setMsg('Mật khẩu phải ≥8 ký tự và có chữ, số, ký tự đặc biệt.'); setLoading(false); return; }
-        if (!pwdMatch) { setMsg('Xác nhận mật khẩu không khớp.'); setLoading(false); return; }
+        if (!pwdMatch)  { setMsg('Xác nhận mật khẩu không khớp.'); setLoading(false); return; }
         const { user: created } = await createUserWithEmailAndPassword(auth, email, password);
         if (ENFORCE_EMAIL_VERIFICATION) { try { await sendEmailVerification(created); } catch {} }
         showToast('success', 'Đăng ký thành công! Hãy kiểm tra email để xác minh.', 3200);
         setMode('login'); setOpenAuth(false); setEmail(''); setPassword(''); setConfirmPwd('');
       } else {
         await signInWithEmailAndPassword(auth, email, password);
+        // Nếu invalid-credential → có thể là chưa đăng ký; xử lý ở catch
         if (!(await runGuardAfterSignIn())) return;
         if (pendingCred && hint === 'password') await doLinkIfNeeded();
         setOpenAuth(false); setEmail(''); setPassword('');
@@ -322,7 +339,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
         } catch { setMsg(mapAuthError(e)); }
       } else if (e.code === 'auth/user-disabled') {
         setMsg(mapAuthError(e));
-        await tryShowBanDetails(email); // 👈 lấy reason + expiresAt để hiển thị banner
+        await tryShowBanDetails(email); // lấy reason + expiresAt để hiển thị banner
       } else {
         setMsg(mapAuthError(e));
       }
@@ -349,7 +366,8 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     } finally { setLoading(false); }
   };
 
-  /* ---------- UI ---------- */
+  /* ================= UI Banners & Menus ================= */
+
   const BanBanner = () => {
     if (!banInfo) return null;
     return (
@@ -367,7 +385,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     );
   };
 
-  // ---- Logged-in
+  // ==== Logged-in ====
   if (user) {
     const avatar = user.photoURL || null;
     return (
@@ -412,11 +430,12 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     );
   }
 
-  // ---- Logged-out
+  // ==== Logged-out ====
   return (
     <>
       <Toast />
       <LoadingOverlay />
+
       <div className="relative" ref={guestMenuRef}>
         <button
           onClick={(e) => {
@@ -454,7 +473,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
             </div>
 
             <div className="px-5 pt-5 pb-2">
-              {/* 🔴 BAN banner */}
+              {/* 🔴 Banner chi tiết BAN */}
               <BanBanner />
 
               {/* Social */}
@@ -477,19 +496,39 @@ export default function LoginButton({ onToggleTheme, isDark }) {
               </div>
 
               <form onSubmit={onSubmitEmail} className="space-y-3">
-                <input type="email" className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} required />
+                <input
+                  type="email"
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2"
+                  placeholder="Email"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  required
+                />
                 <div className="relative">
-                  <input type={showPwd ? 'text' : 'password'} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 pr-10" placeholder="Mật khẩu" value={password} onChange={e => setPassword(e.target.value)} required />
+                  <input
+                    type={showPwd ? 'text' : 'password'}
+                    className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 pr-10"
+                    placeholder="Mật khẩu"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    required
+                  />
                   <button type="button" onClick={() => setShowPwd(v => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-600">
-                    <FontAwesomeIcon icon={faEyeSlash} style={{ display: showPwd ? 'block' : 'none' }} />
-                    <FontAwesomeIcon icon={faEye} style={{ display: showPwd ? 'none' : 'block' }} />
+                    <FontAwesomeIcon icon={showPwd ? faEyeSlash : faEye} />
                   </button>
                 </div>
 
                 {mode === 'signup' && (
                   <>
                     <div className="relative">
-                      <input type={showConfirm ? 'text' : 'password'} className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 pr-10" placeholder="Xác nhận mật khẩu" value={confirmPwd} onChange={e => setConfirmPwd(e.target.value)} required />
+                      <input
+                        type={showConfirm ? 'text' : 'password'}
+                        className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 pr-10"
+                        placeholder="Xác nhận mật khẩu"
+                        value={confirmPwd}
+                        onChange={e => setConfirmPwd(e.target.value)}
+                        required
+                      />
                       <button type="button" onClick={() => setShowConfirm(v => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-600">
                         <FontAwesomeIcon icon={showConfirm ? faEyeSlash : faEye} />
                       </button>
@@ -507,7 +546,11 @@ export default function LoginButton({ onToggleTheme, isDark }) {
                 {msg && <div className="rounded-lg border border-rose-200 bg-rose-50 text-rose-800 px-3 py-2 text-sm">{msg}</div>}
 
                 <div className="flex items-center justify-between">
-                  <button type="submit" disabled={loading || (mode==='signup' && (!pwdStrong || !pwdMatch))} className={`px-3 py-2 rounded-lg text-white ${mode==='signup' ? (pwdStrong && pwdMatch ? 'bg-gray-900 hover:opacity-90' : 'bg-gray-400 cursor-not-allowed') : 'bg-gray-900 hover:opacity-90'}`}>
+                  <button
+                    type="submit"
+                    disabled={loading || (mode==='signup' && (!pwdStrong || !pwdMatch))}
+                    className={`px-3 py-2 rounded-lg text-white ${mode==='signup' ? (pwdStrong && pwdMatch ? 'bg-gray-900 hover:opacity-90' : 'bg-gray-400 cursor-not-allowed') : 'bg-gray-900 hover:opacity-90'}`}
+                  >
                     {mode === 'signup' ? 'Đăng ký' : 'Đăng nhập'}
                   </button>
                   <div className="flex items-center gap-4 text-sm">
