@@ -18,35 +18,35 @@ export default async function handler(req, res) {
 
     const hash = emailHash(email);
 
-    // 1) Thử doc theo hash
+    // 1) Tra theo doc id = hash
     let banDoc = await db.collection('banned_emails').doc(hash).get();
 
-    // 2) Fallback: query theo emailLower nếu doc(hash) không tồn tại
+    // 2) Fallback: tra theo field emailLower
     if (!banDoc.exists) {
       const q = await db.collection('banned_emails').where('emailLower', '==', email).limit(1).get();
       if (!q.empty) banDoc = q.docs[0];
     }
 
-    if (banDoc.exists) {
-      const data = banDoc.data() || {};
-      const expiresAtISO =
-        data.expiresAt instanceof Timestamp
-          ? data.expiresAt.toDate().toISOString()
-          : data.expiresAt
-          ? new Date(data.expiresAt).toISOString()
-          : null;
-
-      return res.status(200).json({
-        banned: true,
-        mode: expiresAtISO ? 'temporary' : 'permanent',
-        reason: data.reason || null,
-        expiresAt: expiresAtISO, // ISO string hoặc null
-      });
+    if (!banDoc.exists) {
+      return res.status(200).json({ banned: false });
     }
 
-    // Không có ban
+    const data = banDoc.data() || {};
+    const expiresAtISO =
+      data.expiresAt instanceof Timestamp
+        ? data.expiresAt.toDate().toISOString()
+        : data.expiresAt
+        ? new Date(data.expiresAt).toISOString()
+        : null;
+
+    return res.status(200).json({
+      banned: true,
+      mode: expiresAtISO ? 'temporary' : 'permanent',
+      reason: data.reason || null,
+      expiresAt: expiresAtISO,
+    });
+  } catch {
+    // đừng lộ lỗi
     return res.status(200).json({ banned: false });
-  } catch (e) {
-    return res.status(200).json({ banned: false }); // đừng lộ lỗi thật ra ngoài
   }
 }
