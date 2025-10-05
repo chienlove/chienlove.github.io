@@ -15,7 +15,7 @@ import {
 } from 'firebase/auth';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faUserCircle, faChevronDown, faMoon, faSun, faPlus,
+  faUserCircle, faChevronDown, faMoon, faSun,
   faEye, faEyeSlash, faSpinner, faCircleCheck, faCircleXmark,
   faCircleInfo, faTriangleExclamation,
 } from '@fortawesome/free-solid-svg-icons';
@@ -131,8 +131,8 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     return `${s} giây`;
   };
 
-  // Khi không có idToken (Firebase chặn login → user-disabled), gọi API public để lấy lý do/hạn
-  const tryShowBanDetails = async (emailForLookup) => {
+  // Lấy chi tiết BAN theo email (khi Firebase chặn login -> user-disabled, không có idToken)
+  const fetchBanDetails = async (emailForLookup) => {
     if (!emailForLookup) return;
     try {
       const r = await fetch(`/api/auth/ban-info?email=${encodeURIComponent(emailForLookup)}`);
@@ -156,40 +156,27 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       });
       showToast('error', isTemp ? 'Tài khoản đang bị BAN tạm thời.' : 'Tài khoản bị BAN vĩnh viễn.', 3600);
     } catch {
-      /* ignore */
+      // ignore
     }
   };
 
-  // Ánh xạ mã lỗi Firebase → tiếng Việt dễ hiểu (thông điệp ngắn; chi tiết BAN sẽ lên banner)
+  // Ánh xạ mã lỗi Firebase → tiếng Việt
   const mapAuthError = (e) => {
     const code = e?.code || '';
     switch (code) {
-      case 'auth/invalid-email':
-        return 'Email không hợp lệ.';
-      case 'auth/user-disabled':
-        return 'Tài khoản đang bị BAN hoặc đã bị vô hiệu hoá.';
-      case 'auth/user-not-found':
-        return 'Không tìm thấy tài khoản với email này.';
-      case 'auth/wrong-password':
-        return 'Mật khẩu không đúng. Vui lòng thử lại.';
-      case 'auth/too-many-requests':
-        return 'Bạn đã thử quá nhiều lần. Vui lòng thử lại sau.';
-      case 'auth/network-request-failed':
-        return 'Lỗi mạng. Vui lòng kiểm tra kết nối internet.';
-      case 'auth/popup-closed-by-user':
-        return 'Bạn đã đóng cửa sổ đăng nhập trước khi hoàn tất.';
-      case 'auth/cancelled-popup-request':
-        return 'Yêu cầu đăng nhập trước đó đã bị huỷ.';
-      case 'auth/operation-not-allowed':
-        return 'Phương thức đăng nhập này đang bị tắt.';
-      case 'auth/credential-already-in-use':
-        return 'Thông tin đăng nhập này đang được dùng cho tài khoản khác.';
-      case 'auth/email-already-in-use':
-        return 'Email đã được sử dụng. Vui lòng đăng nhập.';
-      case 'auth/invalid-credential':
-        return 'Thông tin đăng nhập không hợp lệ.';
-      default:
-        return e?.message || 'Có lỗi xảy ra. Vui lòng thử lại.';
+      case 'auth/invalid-email': return 'Email không hợp lệ.';
+      case 'auth/user-disabled': return 'Tài khoản đang bị BAN hoặc đã bị vô hiệu hoá.';
+      case 'auth/user-not-found': return 'Không tìm thấy tài khoản với email này.';
+      case 'auth/wrong-password': return 'Mật khẩu không đúng. Vui lòng thử lại.';
+      case 'auth/too-many-requests': return 'Bạn đã thử quá nhiều lần. Vui lòng thử lại sau.';
+      case 'auth/network-request-failed': return 'Lỗi mạng. Vui lòng kiểm tra kết nối internet.';
+      case 'auth/popup-closed-by-user': return 'Bạn đã đóng cửa sổ đăng nhập trước khi hoàn tất.';
+      case 'auth/cancelled-popup-request': return 'Yêu cầu đăng nhập trước đó đã bị huỷ.';
+      case 'auth/operation-not-allowed': return 'Phương thức đăng nhập này đang bị tắt.';
+      case 'auth/credential-already-in-use': return 'Thông tin đăng nhập này đang được dùng cho tài khoản khác.';
+      case 'auth/email-already-in-use': return 'Email đã được sử dụng. Vui lòng đăng nhập.';
+      case 'auth/invalid-credential': return 'Thông tin đăng nhập không hợp lệ.';
+      default: return e?.message || 'Có lỗi xảy ra. Vui lòng thử lại.';
     }
   };
 
@@ -244,7 +231,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       const isTemp = json?.mode === 'temporary';
       let remainingText = '';
       if (isTemp && json?.expiresAt) {
-        const ms = Number(json.expiresAt) - Date.now();
+        const ms = new Date(json.expiresAt).getTime() - Date.now();
         const txt = formatRemaining(ms);
         if (txt) remainingText = txt;
       }
@@ -253,7 +240,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       setBanInfo({
         mode: isTemp ? 'temporary' : 'permanent',
         reason: json?.reason || null,
-        expiresAt: json?.expiresAt ? new Date(Number(json.expiresAt)).toISOString() : null,
+        expiresAt: json?.expiresAt || null,
         remainingText,
       });
       setMsg('');
@@ -278,7 +265,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       if (e.code === 'auth/account-exists-with-different-credential') await handleAccountExists(e, 'google');
       else {
         setMsg(mapAuthError(e));
-        if (e.code === 'auth/user-disabled') await tryShowBanDetails(e?.customData?.email);
+        if (e.code === 'auth/user-disabled') await fetchBanDetails(e?.customData?.email);
       }
     } finally { setLoading(false); }
   };
@@ -292,7 +279,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       showToast('success', 'Đăng nhập GitHub thành công!');
     } catch (e) {
       setMsg(mapAuthError(e));
-      if (e.code === 'auth/user-disabled') await tryShowBanDetails(e?.customData?.email);
+      if (e.code === 'auth/user-disabled') await fetchBanDetails(e?.customData?.email);
     } finally { setLoading(false); }
   };
 
@@ -305,7 +292,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       showToast('success', 'Đăng nhập X (Twitter) thành công!');
     } catch (e) {
       setMsg(mapAuthError(e));
-      if (e.code === 'auth/user-disabled') await tryShowBanDetails(e?.customData?.email);
+      if (e.code === 'auth/user-disabled') await fetchBanDetails(e?.customData?.email);
     } finally { setLoading(false); }
   };
 
@@ -343,7 +330,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
         } catch { setMsg(mapAuthError(e)); }
       } else if (e.code === 'auth/user-disabled') {
         setMsg(mapAuthError(e));
-        await tryShowBanDetails(email); // lấy reason + expiresAt để hiển thị banner
+        await fetchBanDetails(email); // lấy reason + expiresAt để hiển thị banner
       } else {
         setMsg(mapAuthError(e));
       }
@@ -408,7 +395,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
             ) : (
               <FontAwesomeIcon icon={faUserCircle} className="w-6 h-6" />
             )}
-            <FontAwesomeIcon icon={faChevronDown} className="w-3.5 h-3.5 opacity-75" />
+            <svg className="w-3.5 h-3.5 opacity-75" viewBox="0 0 20 20"><path d="M7 8l3 3 3-3" fill="currentColor"/></svg>
           </button>
 
           {menuOpen && (
