@@ -16,6 +16,7 @@ import {
   reauthenticateWithPopup,
   reauthenticateWithCredential,
   fetchSignInMethodsForEmail,
+  linkWithCredential, // ✅ thêm đúng API modular v9
 } from 'firebase/auth';
 import {
   doc,
@@ -354,31 +355,22 @@ export default function ProfilePage() {
     return null;
   };
 
+  // ✅ Sửa chuẩn v9: dùng linkWithCredential(user, cred)
   const onCreatePassword = async () => {
     if (!user?.email) return showToast('error', 'Không có email để gán mật khẩu.');
     if (!isStrong(pwdNew)) return showToast('error', 'Mật khẩu phải ≥8 ký tự & có chữ, số, ký tự đặc biệt.');
     if (pwdNew !== pwdNew2) return showToast('error', 'Xác nhận mật khẩu không khớp.');
+
     setSecLoading(true);
     try {
-      await reauthWithCurrentProvider().catch(() => null);
+      await reauthWithCurrentProvider()?.catch(() => null); // reauth (nếu có provider)
       const cred = EmailAuthProvider.credential(user.email, pwdNew);
-      // link phương thức password vào tài khoản OAuth-only
-      await linkWithPopup(user, new GoogleAuthProvider()).catch(()=>null); // optional: reauth popup nếu cần
-      await auth.currentUser.linkWithCredential(cred);
+      await linkWithCredential(user, cred); // <-- API đúng
       setHasPassword(true);
       setPwdNew(''); setPwdNew2('');
       showToast('success', 'Đã tạo mật khẩu cho tài khoản.');
     } catch (e) {
-      // Fallback nếu linkWithPopup ở trên bị từ chối: thử link trực tiếp
-      try {
-        const cred2 = EmailAuthProvider.credential(user.email, pwdNew);
-        await auth.currentUser.linkWithCredential(cred2);
-        setHasPassword(true);
-        setPwdNew(''); setPwdNew2('');
-        showToast('success', 'Đã tạo mật khẩu cho tài khoản.');
-      } catch (err2) {
-        showToast('error', err2?.message || 'Không thể tạo mật khẩu.');
-      }
+      showToast('error', e?.message || 'Không thể tạo mật khẩu.');
     } finally {
       setSecLoading(false);
     }
@@ -391,7 +383,6 @@ export default function ProfilePage() {
 
     setSecLoading(true);
     try {
-      // Thử reauth bằng provider; nếu thất bại, dùng old password
       try {
         await reauthWithCurrentProvider();
       } catch {
@@ -604,7 +595,7 @@ export default function ProfilePage() {
                   className={`px-4 py-2 rounded-lg font-semibold text-white ${
                     isDeleted
                       ? 'bg-gray-400 cursor-not-allowed'
-                      : 'bg-gray-900 hover:bg-black dark:bg-white dark:text-gray-900 dark:hover:opacity-90'
+                      : 'bg-gray-900 hover:bg-black dark:bg:white dark:text-gray-900 dark:hover:opacity-90'
                   }`}
                 >
                   {saving ? 'Đang lưu…' : 'Lưu thay đổi'}
