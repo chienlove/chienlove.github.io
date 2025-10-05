@@ -11,6 +11,11 @@ import {
   GithubAuthProvider,
   linkWithPopup,
   unlink,
+  EmailAuthProvider,
+  updatePassword,
+  reauthenticateWithPopup,
+  reauthenticateWithCredential,
+  fetchSignInMethodsForEmail,
 } from 'firebase/auth';
 import {
   doc,
@@ -39,12 +44,13 @@ import {
   faCalendarDays,
   faHeart,
   faSpinner,
+  faLock,
 } from '@fortawesome/free-solid-svg-icons';
 import { faGoogle, faGithub } from '@fortawesome/free-brands-svg-icons';
 
 /* ================= Utils ================= */
 
-// Nén ảnh thành WebP 512x512 ~82% chất lượng (giảm dung lượng trước khi upload)
+// Nén ảnh thành WebP 512x512 ~82% chất lượng
 async function compressImage(file, { maxW = 512, maxH = 512, quality = 0.82, mime = 'image/webp' } = {}) {
   try {
     const bitmap = await createImageBitmap(file);
@@ -60,7 +66,7 @@ async function compressImage(file, { maxW = 512, maxH = 512, quality = 0.82, mim
     const blob = await new Promise(res => canvas.toBlob(res, mime, quality));
     return blob || file;
   } catch {
-    return file; // fallback nếu trình duyệt không hỗ trợ
+    return file; // fallback
   }
 }
 
@@ -98,7 +104,10 @@ const fmtRel = (ts) => {
   return '';
 };
 
-/* ================= Page ================= */
+// Password strength
+const isStrong = (pwd) => /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(pwd);
+
+/* ================ Page ================ */
 
 export default function ProfilePage() {
   const [user, setUser] = useState(null);
@@ -126,6 +135,13 @@ export default function ProfilePage() {
   const [recentCursor, setRecentCursor] = useState(null);
   const [recentHasMore, setRecentHasMore] = useState(false);
   const [recentLoading, setRecentLoading] = useState(false);
+
+  // Security (password)
+  const [hasPassword, setHasPassword] = useState(false);
+  const [pwdOld, setPwdOld] = useState('');
+  const [pwdNew, setPwdNew] = useState('');
+  const [pwdNew2, setPwdNew2] = useState('');
+  const [secLoading, setSecLoading] = useState(false);
 
   // Hydration gate
   useEffect(() => { setHydrated(true); }, []);
@@ -157,6 +173,14 @@ export default function ProfilePage() {
         await setDoc(uref, base, { merge: true });
         setUserDoc(base);
       }
+
+      // Kiểm tra phương thức password
+      try {
+        if (u.email) {
+          const methods = await fetchSignInMethodsForEmail(auth, u.email);
+          setHasPassword(methods.includes('password'));
+        }
+      } catch {}
 
       // Stats + Recent
       void computeStats(u.uid, data);
@@ -321,6 +345,71 @@ export default function ProfilePage() {
     }
   };
 
+  // ===== Security: create/change password =====
+  const reauthWithCurrentProvider = async () => {
+    if (!auth.currentUser) return;
+    const ids = (auth.currentUser.providerData || []).map(p => p.providerId);
+    if (ids.includes('google.com')) return reauthenticateWithPopup(auth.currentUser, new GoogleAuthProvider());
+    if (ids.includes('github.com')) return reauthenticateWithPopup(auth.currentUser, new GithubAuthProvider());
+    return null;
+  };
+
+  const onCreatePassword = async () => {
+    if (!user?.email) return showToast('error', 'Không có email để gán mật khẩu.');
+    if (!isStrong(pwdNew)) return showToast('error', 'Mật khẩu phải ≥8 ký tự & có chữ, số, ký tự đặc biệt.');
+    if (pwdNew !== pwdNew2) return showToast('error', 'Xác nhận mật khẩu không khớp.');
+    setSecLoading(true);
+    try {
+      await reauthWithCurrentProvider().catch(() => null);
+      const cred = EmailAuthProvider.credential(user.email, pwdNew);
+      // link phương thức password vào tài khoản OAuth-only
+      await linkWithPopup(user, new GoogleAuthProvider()).catch(()=>null); // optional: reauth popup nếu cần
+      await auth.currentUser.linkWithCredential(cred);
+      setHasPassword(true);
+      setPwdNew(''); setPwdNew2('');
+      showToast('success', 'Đã tạo mật khẩu cho tài khoản.');
+    } catch (e) {
+      // Fallback nếu linkWithPopup ở trên bị từ chối: thử link trực tiếp
+      try {
+        const cred2 = EmailAuthProvider.credential(user.email, pwdNew);
+        await auth.currentUser.linkWithCredential(cred2);
+        setHasPassword(true);
+        setPwdNew(''); setPwdNew2('');
+        showToast('success', 'Đã tạo mật khẩu cho tài khoản.');
+      } catch (err2) {
+        showToast('error', err2?.message || 'Không thể tạo mật khẩu.');
+      }
+    } finally {
+      setSecLoading(false);
+    }
+  };
+
+  const onChangePassword = async () => {
+    if (!auth.currentUser) return showToast('error', 'Bạn cần đăng nhập.');
+    if (!isStrong(pwdNew)) return showToast('error', 'Mật khẩu mới phải ≥8 ký tự & có chữ, số, ký tự đặc biệt.');
+    if (pwdNew !== pwdNew2) return showToast('error', 'Xác nhận mật khẩu không khớp.');
+
+    setSecLoading(true);
+    try {
+      // Thử reauth bằng provider; nếu thất bại, dùng old password
+      try {
+        await reauthWithCurrentProvider();
+      } catch {
+        if (auth.currentUser.email && pwdOld) {
+          const cred = EmailAuthProvider.credential(auth.currentUser.email, pwdOld);
+          await reauthenticateWithCredential(auth.currentUser, cred);
+        }
+      }
+      await updatePassword(auth.currentUser, pwdNew);
+      setPwdOld(''); setPwdNew(''); setPwdNew2('');
+      showToast('success', 'Đã đổi mật khẩu.');
+    } catch (e) {
+      showToast('error', e?.message || 'Không thể đổi mật khẩu.');
+    } finally {
+      setSecLoading(false);
+    }
+  };
+
   // Toggle link provider (mỗi provider 1 nút)
   const onToggleLinkGoogle = async () => {
     if (isDeleted) return showToast('error', 'Tài khoản đã bị xoá. Không thể thao tác.');
@@ -355,7 +444,7 @@ export default function ProfilePage() {
     }
   };
 
-  /* ================= Render ================= */
+  /* ================ Render ================ */
 
   // Gate SSR
   if (!hydrated) {
@@ -411,24 +500,12 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* Breadcrumb */}
-      <nav aria-label="breadcrumb" className="border-b border-gray-200 dark:border-gray-800 bg-white/60 dark:bg-gray-900/60 backdrop-blur">
-        <div className="max-w-screen-2xl mx-auto px-4 h-11 flex items-center gap-2 text-sm">
-          <Link href="/" className="inline-flex items-center gap-1 text-gray-700 dark:text-gray-300 hover:text-red-600">
-            <FontAwesomeIcon icon={faHome} />
-            Home
-          </Link>
-          <FontAwesomeIcon icon={faChevronRight} className="opacity-60 text-gray-500" />
-          <span className="text-gray-900 dark:text-gray-100 font-medium">Hồ sơ</span>
-        </div>
-      </nav>
-
-      {/* Header đẹp mắt */}
+      {/* Header */}
       <header className="relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none bg-gradient-to-br from-rose-100/50 via-white to-emerald-100/40 dark:from-rose-900/10 dark:via-gray-900 dark:to-emerald-900/10" />
         <div className="max-w-5xl mx-auto px-4 pt-8 pb-6 relative">
           <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Hồ sơ của bạn</h1>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Quản lý thông tin cá nhân, liên kết tài khoản và hoạt động gần đây.</p>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Quản lý thông tin cá nhân, bảo mật và hoạt động gần đây.</p>
         </div>
       </header>
 
@@ -493,7 +570,7 @@ export default function ProfilePage() {
               <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
                 <FontAwesomeIcon icon={faCircleInfo} className="opacity-70" />
                 {canChangeName
-                  ? 'Bạn có thể đổi tên bây giờ. Sau khi đổi sẽ không thể đổi lại sau 30 ngày.'
+                  ? 'Bạn có thể đổi tên bây giờ. Sau khi đổi sẽ khoá 30 ngày.'
                   : `Bạn chỉ có thể đổi lại sau ${nameLockedDays} ngày.`}
               </div>
 
@@ -592,53 +669,150 @@ export default function ProfilePage() {
                   </button>
                 </div>
               </div>
+
+              {/* Bảo mật: tạo/đổi mật khẩu */}
+              <div className="mt-8">
+                <h2 className="text-base font-semibold mb-2 flex items-center gap-2">
+                  <FontAwesomeIcon icon={faLock} /> Bảo mật
+                </h2>
+
+                {!hasPassword ? (
+                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 dark:border-emerald-900/40 dark:bg-emerald-900/10 p-4">
+                    <div className="text-sm mb-3">
+                      Tài khoản của bạn chưa có mật khẩu (đang đăng nhập bằng Google/GitHub). Hãy tạo mật khẩu để có thể đăng nhập bằng email.
+                    </div>
+                    <div className="grid sm:grid-cols-2 gap-3">
+                      <input
+                        type="password"
+                        className="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2"
+                        placeholder="Mật khẩu mới"
+                        value={pwdNew}
+                        onChange={e=>setPwdNew(e.target.value)}
+                      />
+                      <input
+                        type="password"
+                        className="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2"
+                        placeholder="Xác nhận mật khẩu mới"
+                        value={pwdNew2}
+                        onChange={e=>setPwdNew2(e.target.value)}
+                      />
+                    </div>
+                    <div className="mt-3 flex items-center gap-2">
+                      <button
+                        onClick={onCreatePassword}
+                        disabled={secLoading}
+                        className="px-4 py-2 rounded-lg font-semibold text-white bg-gray-900 hover:bg-black dark:bg-white dark:text-gray-900 dark:hover:opacity-90"
+                      >
+                        {secLoading ? 'Đang tạo…' : 'Tạo mật khẩu'}
+                      </button>
+                    </div>
+                    <ul className="mt-2 text-xs text-gray-500 space-y-1">
+                      <li>• Ít nhất 8 ký tự</li>
+                      <li>• Có chữ, số và ký tự đặc biệt</li>
+                    </ul>
+                  </div>
+                ) : (
+                  <div className="rounded-xl border border-gray-200 dark:border-gray-800 p-4">
+                    <div className="text-sm mb-3">Đổi mật khẩu đăng nhập bằng email.</div>
+                    <div className="grid sm:grid-cols-3 gap-3">
+                      <input
+                        type="password"
+                        className="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2"
+                        placeholder="Mật khẩu hiện tại (nếu có)"
+                        value={pwdOld}
+                        onChange={e=>setPwdOld(e.target.value)}
+                      />
+                      <input
+                        type="password"
+                        className="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2"
+                        placeholder="Mật khẩu mới"
+                        value={pwdNew}
+                        onChange={e=>setPwdNew(e.target.value)}
+                      />
+                      <input
+                        type="password"
+                        className="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2"
+                        placeholder="Xác nhận mật khẩu mới"
+                        value={pwdNew2}
+                        onChange={e=>setPwdNew2(e.target.value)}
+                      />
+                    </div>
+                    <div className="mt-3 flex items-center gap-2">
+                      <button
+                        onClick={onChangePassword}
+                        disabled={secLoading}
+                        className="px-4 py-2 rounded-lg font-semibold text-white bg-gray-900 hover:bg-black dark:bg-white dark:text-gray-900 dark:hover:opacity-90"
+                      >
+                        {secLoading ? 'Đang đổi…' : 'Đổi mật khẩu'}
+                      </button>
+                    </div>
+                    <ul className="mt-2 text-xs text-gray-500 space-y-1">
+                      <li>• Ít nhất 8 ký tự</li>
+                      <li>• Có chữ, số và ký tự đặc biệt</li>
+                    </ul>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </section>
 
-        {/* ===== Bình luận gần đây ===== */}
+        {/* ===== Bình luận gần đây (layout hẹp mobile, ngăn cách bằng đường kẻ) ===== */}
         <section className="mt-8 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-md">
-          <div className="p-6">
-            <h2 className="text-lg font-semibold mb-3">Bình luận gần đây</h2>
+          <div className="p-0">
+            <div className="px-4 sm:px-6 pt-5 pb-3">
+              <h2 className="text-lg font-semibold">Bình luận gần đây</h2>
+            </div>
 
-            {recent.length === 0 && !recentLoading && (
-              <div className="text-sm text-gray-500 dark:text-gray-400">Bạn chưa có bình luận nào.</div>
-            )}
+            {/* Mobile hẹp: max-w-md, căn giữa; không dùng card lồng nhau */}
+            <div className="mx-auto w-full max-w-3xl sm:max-w-4xl px-4 sm:px-6 pb-4">
+              {recent.length === 0 && !recentLoading && (
+                <div className="text-sm text-gray-500 dark:text-gray-400 py-4">Bạn chưa có bình luận nào.</div>
+              )}
 
-            <ul className="grid md:grid-cols-2 gap-3">
-              {recent.map(c => {
-                const rawSlug = String(c.postSlug || c.postId || '').trim();
-                const slug = rawSlug.replace(/^\/+/, '');
-                const href = slug ? `/${encodeURI(slug)}#comment-${encodeURIComponent(c.id)}` : '#';
-                return (
-                  <li key={c.id} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
-                    <div className="text-xs text-gray-600 dark:text-gray-400">{fmtRel(c.createdAt)}</div>
-                    <p className="mt-2 text-gray-800 dark:text-gray-100 whitespace-pre-wrap break-words break-anywhere leading-relaxed">
-                      {String(c.content || '')}
-                    </p>
-                    {slug && (
-                      <div className="mt-3 text-sm">
-                        <Link href={href} className="text-sky-700 dark:text-sky-300 hover:underline" title="Xem trong bài viết & cuộn đến bình luận">
-                          Xem trong bài viết
-                        </Link>
+              <ul className="divide-y divide-gray-200 dark:divide-gray-800 rounded-xl overflow-hidden border border-transparent">
+                {recent.map((c) => {
+                  const rawSlug = String(c.postSlug || c.postId || '').trim();
+                  const slug = rawSlug.replace(/^\/+/, '');
+                  const href = slug ? `/${encodeURI(slug)}#comment-${encodeURIComponent(c.id)}` : '#';
+                  return (
+                    <li key={c.id} className="py-4">
+                      <div className="flex items-start gap-3">
+                        <div className="mt-[2px] text-xs text-gray-500 whitespace-nowrap">{fmtRel(c.createdAt)}</div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm text-gray-800 dark:text-gray-100 whitespace-pre-wrap break-words break-anywhere leading-relaxed">
+                            {String(c.content || '')}
+                          </p>
+                          {slug && (
+                            <div className="mt-2 text-sm">
+                              <Link
+                                href={href}
+                                className="text-sky-700 dark:text-sky-300 hover:underline"
+                                title="Xem trong bài viết & cuộn đến bình luận"
+                              >
+                                Xem trong bài viết
+                              </Link>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
+                    </li>
+                  );
+                })}
+              </ul>
 
-            {recentHasMore && (
-              <div className="mt-4">
-                <button
-                  onClick={() => loadRecent(user?.uid, false)}
-                  disabled={recentLoading}
-                  className="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
-                >
-                  {recentLoading ? 'Đang tải…' : 'Tải thêm'}
-                </button>
-              </div>
-            )}
+              {recentHasMore && (
+                <div className="mt-4 flex justify-center">
+                  <button
+                    onClick={() => loadRecent(user?.uid, false)}
+                    disabled={recentLoading}
+                    className="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+                  >
+                    {recentLoading ? 'Đang tải…' : 'Tải thêm'}
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </section>
       </div>
