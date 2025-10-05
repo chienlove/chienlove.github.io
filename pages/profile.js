@@ -16,7 +16,6 @@ import {
   reauthenticateWithPopup,
   reauthenticateWithCredential,
   fetchSignInMethodsForEmail,
-  linkWithCredential, // ✅ thêm đúng API modular v9
 } from 'firebase/auth';
 import {
   doc,
@@ -147,6 +146,29 @@ export default function ProfilePage() {
   // Hydration gate
   useEffect(() => { setHydrated(true); }, []);
 
+  // Helper: refresh lại thông tin auth (providers & methods)
+  const refreshAuthMeta = async () => {
+    try {
+      if (!auth.currentUser) return;
+      await auth.currentUser.reload();
+      const u = auth.currentUser;
+      setUser({ ...u });
+
+      // Ưu tiên kiểm tra từ providerData
+      const provs = (u.providerData || []).map(p => p.providerId);
+      let hasPwd = provs.includes('password');
+
+      // Thêm lớp kiểm tra dự phòng bằng fetchSignInMethodsForEmail
+      if (u.email) {
+        try {
+          const methods = await fetchSignInMethodsForEmail(auth, u.email);
+          if (methods?.includes('password')) hasPwd = true;
+        } catch {}
+      }
+      setHasPassword(!!hasPwd);
+    } catch {}
+  };
+
   // Auth & load user doc
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(async (u) => {
@@ -175,19 +197,21 @@ export default function ProfilePage() {
         setUserDoc(base);
       }
 
-      // Kiểm tra phương thức password
-      try {
-        if (u.email) {
-          const methods = await fetchSignInMethodsForEmail(auth, u.email);
-          setHasPassword(methods.includes('password'));
-        }
-      } catch {}
+      // Thiết lập hasPassword từ providers + methods
+      await refreshAuthMeta();
 
       // Stats + Recent
       void computeStats(u.uid, data);
       void loadRecent(u.uid, true);
     });
     return () => unsub();
+  }, []);
+
+  // Khi người dùng quay lại tab, refresh lại meta để tránh trạng thái sai sau verify email
+  useEffect(() => {
+    const onFocus = () => refreshAuthMeta();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
   }, []);
 
   const isDeleted = userDoc?.status === 'deleted';
@@ -346,34 +370,13 @@ export default function ProfilePage() {
     }
   };
 
-  // ===== Security: create/change password =====
+  // Reauth nhanh bằng provider hiện có (đổi mật khẩu có thể cần)
   const reauthWithCurrentProvider = async () => {
     if (!auth.currentUser) return;
     const ids = (auth.currentUser.providerData || []).map(p => p.providerId);
     if (ids.includes('google.com')) return reauthenticateWithPopup(auth.currentUser, new GoogleAuthProvider());
     if (ids.includes('github.com')) return reauthenticateWithPopup(auth.currentUser, new GithubAuthProvider());
     return null;
-  };
-
-  // ✅ Sửa chuẩn v9: dùng linkWithCredential(user, cred)
-  const onCreatePassword = async () => {
-    if (!user?.email) return showToast('error', 'Không có email để gán mật khẩu.');
-    if (!isStrong(pwdNew)) return showToast('error', 'Mật khẩu phải ≥8 ký tự & có chữ, số, ký tự đặc biệt.');
-    if (pwdNew !== pwdNew2) return showToast('error', 'Xác nhận mật khẩu không khớp.');
-
-    setSecLoading(true);
-    try {
-      await reauthWithCurrentProvider()?.catch(() => null); // reauth (nếu có provider)
-      const cred = EmailAuthProvider.credential(user.email, pwdNew);
-      await linkWithCredential(user, cred); // <-- API đúng
-      setHasPassword(true);
-      setPwdNew(''); setPwdNew2('');
-      showToast('success', 'Đã tạo mật khẩu cho tài khoản.');
-    } catch (e) {
-      showToast('error', e?.message || 'Không thể tạo mật khẩu.');
-    } finally {
-      setSecLoading(false);
-    }
   };
 
   const onChangePassword = async () => {
@@ -414,6 +417,8 @@ export default function ProfilePage() {
         await linkWithPopup(user, new GoogleAuthProvider());
         showToast('success', 'Đã liên kết Google!');
       }
+      // Sau khi liên kết/huỷ liên kết, refresh lại meta
+      refreshAuthMeta();
     } catch (err) {
       showToast('error', err.message || 'Thao tác thất bại.');
     }
@@ -430,6 +435,7 @@ export default function ProfilePage() {
         await linkWithPopup(user, new GithubAuthProvider());
         showToast('success', 'Đã liên kết GitHub!');
       }
+      refreshAuthMeta();
     } catch (err) {
       showToast('error', err.message || 'Thao tác thất bại.');
     }
@@ -595,7 +601,7 @@ export default function ProfilePage() {
                   className={`px-4 py-2 rounded-lg font-semibold text-white ${
                     isDeleted
                       ? 'bg-gray-400 cursor-not-allowed'
-                      : 'bg-gray-900 hover:bg-black dark:bg:white dark:text-gray-900 dark:hover:opacity-90'
+                      : 'bg-gray-900 hover:bg-black dark:bg-white dark:text-gray-900 dark:hover:opacity-90'
                   }`}
                 >
                   {saving ? 'Đang lưu…' : 'Lưu thay đổi'}
@@ -661,48 +667,13 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              {/* Bảo mật: tạo/đổi mật khẩu */}
-              <div className="mt-8">
-                <h2 className="text-base font-semibold mb-2 flex items-center gap-2">
-                  <FontAwesomeIcon icon={faLock} /> Bảo mật
-                </h2>
+              {/* Bảo mật: CHỈ hiển thị khi tài khoản có phương thức Email/Password */}
+              {hasPassword && (
+                <div className="mt-8">
+                  <h2 className="text-base font-semibold mb-2 flex items-center gap-2">
+                    <FontAwesomeIcon icon={faLock} /> Bảo mật
+                  </h2>
 
-                {!hasPassword ? (
-                  <div className="rounded-xl border border-emerald-200 bg-emerald-50 dark:border-emerald-900/40 dark:bg-emerald-900/10 p-4">
-                    <div className="text-sm mb-3">
-                      Tài khoản của bạn chưa có mật khẩu (đang đăng nhập bằng Google/GitHub). Hãy tạo mật khẩu để có thể đăng nhập bằng email.
-                    </div>
-                    <div className="grid sm:grid-cols-2 gap-3">
-                      <input
-                        type="password"
-                        className="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2"
-                        placeholder="Mật khẩu mới"
-                        value={pwdNew}
-                        onChange={e=>setPwdNew(e.target.value)}
-                      />
-                      <input
-                        type="password"
-                        className="rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2"
-                        placeholder="Xác nhận mật khẩu mới"
-                        value={pwdNew2}
-                        onChange={e=>setPwdNew2(e.target.value)}
-                      />
-                    </div>
-                    <div className="mt-3 flex items-center gap-2">
-                      <button
-                        onClick={onCreatePassword}
-                        disabled={secLoading}
-                        className="px-4 py-2 rounded-lg font-semibold text-white bg-gray-900 hover:bg-black dark:bg-white dark:text-gray-900 dark:hover:opacity-90"
-                      >
-                        {secLoading ? 'Đang tạo…' : 'Tạo mật khẩu'}
-                      </button>
-                    </div>
-                    <ul className="mt-2 text-xs text-gray-500 space-y-1">
-                      <li>• Ít nhất 8 ký tự</li>
-                      <li>• Có chữ, số và ký tự đặc biệt</li>
-                    </ul>
-                  </div>
-                ) : (
                   <div className="rounded-xl border border-gray-200 dark:border-gray-800 p-4">
                     <div className="text-sm mb-3">Đổi mật khẩu đăng nhập bằng email.</div>
                     <div className="grid sm:grid-cols-3 gap-3">
@@ -742,8 +713,8 @@ export default function ProfilePage() {
                       <li>• Có chữ, số và ký tự đặc biệt</li>
                     </ul>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
         </section>
