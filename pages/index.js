@@ -1,482 +1,333 @@
 // pages/index.js
-import Layout from '../components/Layout';
-import AppCard from '../components/AppCard';
-import AdUnit from '../components/Ads';
-import { createSupabaseServer } from '../lib/supabase';
-import { Fragment } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import Head from 'next/head';
 import Link from 'next/link';
+import Layout from '../components/Layout';
+import Image from 'next/image';
+import { createClient } from '@supabase/supabase-js';
 
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import {
-  faTimesCircle,
-  faCheckCircle,
-  faExclamationCircle,
-  faFire,
-  faChevronLeft,
-  faChevronRight,
-} from '@fortawesome/free-solid-svg-icons';
+/* ===================== SEO component (inline) ===================== */
+const SITE = {
+  name: 'StoreiOS',
+  url: 'https://storeios.net',
+  twitter: '@storeios' // cập nhật nếu khác
+};
 
-// Affiliate tĩnh
-import affiliateApps from '../lib/appads';
+function SEOIndexMeta({ page = 1, total = 0, pageSize = 24, supabaseOrigin, description }) {
+  const title =
+    page > 1
+      ? `StoreiOS – Ứng dụng iOS, TestFlight, Jailbreak (Trang ${page})`
+      : 'StoreiOS – Ứng dụng iOS, TestFlight, Jailbreak';
+  const desc =
+    description ||
+    'Tải ứng dụng iOS, TestFlight, jailbreak và hướng dẫn an toàn. Cập nhật hằng ngày.';
 
-/* =========================
-   Pagination components
-   ========================= */
+  const canonical = `${SITE.url}${page > 1 ? `/?page=${page}` : ''}`;
+  const totalPages = Math.max(1, Math.ceil((total || 0) / (pageSize || 24)));
+  const prevUrl = page > 1 ? `${SITE.url}/?page=${page - 1}` : null;
+  const nextUrl = page < totalPages ? `${SITE.url}/?page=${page + 1}` : null;
 
-// Full pagination (cho category đang active)
-function PaginationFull({ categorySlug, currentPage, totalPages }) {
-  if (!totalPages || totalPages <= 1) return null;
-
-  const windowSize = 2;
-  const pages = [];
-  const add = (p) => pages.push(p);
-
-  add(1);
-  const start = Math.max(2, currentPage - windowSize);
-  const end = Math.min(totalPages - 1, currentPage + windowSize);
-  if (start > 2) add('...');
-  for (let p = start; p <= end; p++) add(p);
-  if (end < totalPages - 1) add('...');
-  if (totalPages > 1) add(totalPages);
-
-  const PageBtn = ({ p, aria }) => {
-    if (p === '...') return <span className="px-2 text-gray-500 select-none">…</span>;
-    const active = p === currentPage;
-    return (
-      <Link
-        prefetch={false}
-        href={`/?category=${categorySlug}&page=${p}`}
-        scroll={false}
-        aria-label={aria || `Tới trang ${p}`}
-        className={[
-          'px-2.5 h-8 min-w-[2rem] inline-flex items-center justify-center rounded-md text-[13px] font-semibold transition-colors',
-          active
-            ? 'bg-red-600 text-white shadow'
-            : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100 hover:bg-red-500 hover:text-white'
-        ].join(' ')}
-      >
-        {p}
-      </Link>
-    );
+  const jsonLdWebsite = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: SITE.name,
+    url: SITE.url,
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: `${SITE.url}/search?q={query}`,
+      'query-input': 'required name=query'
+    }
   };
 
   return (
-    <nav className="flex items-center justify-center gap-1.5 mt-4 flex-wrap" aria-label="Phân trang">
-      {currentPage > 1 && (
-        <PageBtn p={1} aria="Về trang đầu" />
-      )}
-      {currentPage > 1 && (
-        <Link
-          prefetch={false}
-          href={`/?category=${categorySlug}&page=${currentPage - 1}`}
-          scroll={false}
-          aria-label="Trang trước"
-          className="px-2.5 h-8 inline-flex items-center justify-center rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-        >
-          <FontAwesomeIcon icon={faChevronLeft} />
-        </Link>
-      )}
+    <Head>
+      {/* Title & basic meta */}
+      <title>{title}</title>
+      <meta name="description" content={desc} />
+      <link rel="canonical" href={canonical} />
+      {prevUrl && <link rel="prev" href={prevUrl} />}
+      {nextUrl && <link rel="next" href={nextUrl} />}
+      <meta name="robots" content="index,follow,max-image-preview:large" />
+      <meta name="googlebot" content="index,follow" />
+      <meta name="theme-color" content="#111111" />
 
-      {pages.map((p, i) => <Fragment key={`${p}-${i}`}><PageBtn p={p} /></Fragment>)}
+      {/* Open Graph */}
+      <meta property="og:type" content="website" />
+      <meta property="og:site_name" content={SITE.name} />
+      <meta property="og:url" content={canonical} />
+      <meta property="og:title" content={title} />
+      <meta property="og:description" content={desc} />
+      <meta property="og:image" content={`${SITE.url}/og-default.jpg`} />
+      <meta property="og:image:width" content="1200" />
+      <meta property="og:image:height" content="630" />
 
-      {currentPage < totalPages && (
-        <Link
-          prefetch={false}
-          href={`/?category=${categorySlug}&page=${currentPage + 1}`}
-          scroll={false}
-          aria-label="Trang sau"
-          className="px-2.5 h-8 inline-flex items-center justify-center rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
-        >
-          <FontAwesomeIcon icon={faChevronRight} />
-        </Link>
-      )}
-      {currentPage < totalPages && (
-        <PageBtn p={totalPages} aria="Tới trang cuối" />
-      )}
-    </nav>
+      {/* Twitter */}
+      <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:site" content={SITE.twitter} />
+      <meta name="twitter:title" content={title} />
+      <meta name="twitter:description" content={desc} />
+      <meta name="twitter:image" content={`${SITE.url}/og-default.jpg`} />
+
+      {/* Hreflang */}
+      <link rel="alternate" hrefLang="vi" href={canonical} />
+      <link rel="alternate" hrefLang="x-default" href={canonical} />
+
+      {/* Performance hints */}
+      {supabaseOrigin && <link rel="dns-prefetch" href={supabaseOrigin} />}
+      {supabaseOrigin && <link rel="preconnect" href={supabaseOrigin} crossOrigin="" />}
+      <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+
+      {/* JSON‑LD */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdWebsite) }}
+      />
+    </Head>
   );
 }
 
-// Lite pagination (cho category không active)
-function PaginationLite({ categorySlug, hasNext }) {
-  if (!hasNext) return null;
-  return (
-    <nav className="flex items-center justify-center mt-4">
-      <Link
-        prefetch={false}
-        href={`/?category=${categorySlug}&page=2`}
-        scroll={false}
-        aria-label="Xem trang tiếp"
-        className="px-3 h-8 inline-flex items-center justify-center rounded-md text-[13px] font-semibold bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100 hover:bg-red-500 hover:text-white transition-colors"
-      >
-        Trang sau <FontAwesomeIcon icon={faChevronRight} className="ml-1" />
-      </Link>
-    </nav>
-  );
+/* ===================== Helpers ===================== */
+function classNames(...a) {
+  return a.filter(Boolean).join(' ');
 }
 
-/* =========================
-   Hot App Card (giữ nguyên)
-   ========================= */
-const HotAppCard = ({ app, rank }) => {
-  const rankColors = [
-    'from-red-600 to-orange-500',
-    'from-orange-500 to-amber-400',
-    'from-amber-400 to-yellow-300',
-    'from-blue-500 to-sky-400',
-    'from-sky-400 to-cyan-300',
-  ];
-  const rankColor = rankColors[rank - 1] || 'from-gray-500 to-gray-400';
+function shortNumber(n) {
+  if (n == null) return '0';
+  const x = Number(n);
+  if (x >= 1_000_000) return (x / 1_000_000).toFixed(1).replace(/\.0$/, '') + 'M';
+  if (x >= 1_000) return (x / 1_000).toFixed(1).replace(/\.0$/, '') + 'k';
+  return String(x);
+}
+
+/* ===================== Index Page ===================== */
+export default function Home({ apps, total, page, pageSize, supabaseOrigin }) {
+  // Trạng thái Signed/Revoked lazy fetch cho card đang hiện
+  const [certMap, setCertMap] = useState({}); // slug -> 'signed' | 'revoked' | 'error'
+  const ioRef = useRef(null);
+
+  // Tạo observer 1 lần
+  useEffect(() => {
+    if (typeof IntersectionObserver === 'undefined') return;
+
+    const controllerMap = new Map();
+
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        const el = entry.target;
+        const slug = el.getAttribute('data-app-slug');
+        if (!slug) return;
+        if (!entry.isIntersecting) return;
+
+        // Đã có rồi thì bỏ qua
+        if (certMap[slug] != null) return;
+
+        // Abort cũ (nếu có)
+        const prev = controllerMap.get(slug);
+        if (prev) prev.abort();
+
+        // Lazy fetch khi card đi vào viewport
+        const controller = new AbortController();
+        controllerMap.set(slug, controller);
+
+        // Timeout 1500ms để tránh treo
+        const to = setTimeout(() => controller.abort(), 1500);
+
+        const run = () => {
+          // Nhẹ nhàng hơn: chờ idle nếu rảnh
+          const doFetch = () => {
+            fetch(`/api/admin/check-slot?slug=${encodeURIComponent(slug)}`, {
+              method: 'GET',
+              signal: controller.signal,
+            })
+              .then((r) => r.ok ? r.json() : Promise.reject(new Error('bad status')))
+              .then((json) => {
+                const status = json?.status; // 'Y' | 'F' | others
+                setCertMap((m) => ({
+                  ...m,
+                  [slug]: status === 'Y' ? 'signed' : status === 'F' ? 'revoked' : 'unknown',
+                }));
+              })
+              .catch(() => {
+                setCertMap((m) => ({ ...m, [slug]: 'error' }));
+              })
+              .finally(() => {
+                clearTimeout(to);
+                controllerMap.delete(slug);
+              });
+          };
+
+          if ('requestIdleCallback' in window) {
+            window.requestIdleCallback(doFetch, { timeout: 800 });
+          } else {
+            doFetch();
+          }
+        };
+
+        run();
+      });
+    }, { rootMargin: '160px 0px 160px 0px' });
+
+    ioRef.current = io;
+
+    // Observe tất cả badges
+    document.querySelectorAll('[data-app-slug]').forEach((el) => io.observe(el));
+
+    return () => {
+      io.disconnect();
+      controllerMap.forEach((c) => c.abort());
+      controllerMap.clear();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apps]); // khi danh sách đổi mới gắn observer lại
+
+  const pageTitle = useMemo(() => (page > 1 ? `Trang ${page}` : 'Mới nhất'), [page]);
 
   return (
-    <div className="relative">
-      <AppCard app={app} mode="list" />
-      <div
-        className={`absolute top-2 -left-2 w-6 h-6 rounded-full flex items-center justify-center
-                   bg-gradient-to-br ${rankColor} text-white font-extrabold text-sm
-                   shadow-lg border-2 border-white dark:border-gray-800
-                   transform -rotate-12 z-10`}
-      >
-        {rank}
-      </div>
-    </div>
-  );
-};
+    <Layout>
+      <SEOIndexMeta
+        page={page}
+        total={total}
+        pageSize={pageSize}
+        supabaseOrigin={supabaseOrigin}
+      />
 
-/* =========================
-   Affiliate inline card
-   ========================= */
-const AffiliateInlineCard = ({ item, isFirst = false }) => {
-  const { name, author, icon_url, affiliate_url, payout_label } = item;
-  return (
-    <a
-      href={affiliate_url}
-      target="_blank"
-      rel="nofollow sponsored noopener"
-      className="flex items-start justify-between gap-3 px-2 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition rounded-lg"
-    >
-      <div className="relative w-14 h-14 rounded-2xl overflow-hidden border border-gray-300 dark:border-gray-600 flex-shrink-0 mt-1">
-        <img src={icon_url} alt={name} className="w-full h-full object-cover" loading="lazy" />
-        <div className="absolute top-0 left-0 w-16 h-16 overflow-hidden z-10 pointer-events-none">
-          <div className="absolute top-[6px] left-[-25px] w-[80px] rotate-[-45deg] bg-yellow-400 text-black text-[10px] font-bold text-center py-[0.5px] shadow-md">Ad</div>
-        </div>
-      </div>
-      <div className={`flex-1 min-w-0 ${isFirst ? '' : 'border-t border-gray-200 dark:border-gray-700 pt-2'}`}>
-        <div className="flex items-center justify-between">
-          <h3 className="text-[16px] font-semibold text-gray-900 dark:text-white truncate">{name}</h3>
-          {payout_label && (
-            <span className="ml-2 bg-gray-200 dark:bg-gray-700 dark:text-gray-100 text-gray-800 px-2 py-0.5 rounded text-xs font-medium">
-              {payout_label}
-            </span>
-          )}
-        </div>
-        <div className="flex items-center justify-between mt-1">
-          <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300 truncate">
-            <span>{author || 'Đối tác / Sponsored'}</span>
-          </div>
-        </div>
-      </div>
-      <div className="flex items-center justify-center w-10 h-14 mt-1" />
-    </a>
-  );
-};
-
-/* =========================
-   Home
-   ========================= */
-export default function Home({ categoriesWithApps, hotApps, paginationData, certStatus }) {
-  // Các chuyên mục có cài IPA → hiển thị badge ký/thu hồi
-  const INSTALLABLE_SLUGS = new Set(['jailbreak', 'app-clone']);
-
-  const multiplexIndices = new Set([1, 3]);
-  const contentCard = 'bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4';
-  const adCard = contentCard;
-
-  const AdLabel = () => (<div className="text-sm text-gray-500 dark:text-gray-400 font-semibold px-1">Quảng cáo</div>);
-
-  return (
-    <Layout hotApps={hotApps}>
-      <div className="container mx-auto px-1 md:px-2 py-6 space-y-10">
-        {/* Banner Ad */}
-        <div className="space-y-2">
-          <AdLabel />
-          <div className={adCard}><AdUnit className="my-0" mobileVariant="compact" /></div>
+      <main className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-6">
+        {/* Header */}
+        <div className="mb-4">
+          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
+            Ứng dụng iOS {pageTitle}
+          </h1>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+            Tổng {shortNumber(total)} ứng dụng – cập nhật hằng ngày.
+          </p>
         </div>
 
-        {/* Hot apps */}
-        {hotApps && hotApps.length > 0 && (
-          <div className={contentCard}>
-            <div className="flex items-center gap-3 mb-4">
-              <h2 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-green-500">Top download</h2>
-              <FontAwesomeIcon icon={faFire} className="text-xl text-red-500" />
-            </div>
-            <div className="space-y-1">
-              {hotApps.map((app, index) => (<HotAppCard key={app.id} app={app} rank={index + 1} />))}
-            </div>
-          </div>
-        )}
+        {/* Grid Apps */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+          {apps.map((app) => {
+            const slug = app.slug || app.id;
+            const cert = certMap[slug]; // undefined (chưa fetch), 'signed', 'revoked', 'error', 'unknown'
+            return (
+              <div
+                key={slug}
+                className="group rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 hover:shadow-sm transition-shadow overflow-hidden"
+              >
+                <Link href={`/${slug}`} className="block p-3 sm:p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="relative w-12 h-12 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex-shrink-0">
+                      {app.icon_url ? (
+                        <Image
+                          src={app.icon_url}
+                          alt={app.title || 'icon'}
+                          width={96}
+                          height={96}
+                          className="w-12 h-12 object-cover"
+                        />
+                      ) : (
+                        <div className="w-12 h-12" />
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 leading-snug line-clamp-2" title={app.title}>
+                        {app.title}
+                      </h3>
+                      <div className="mt-1 text-xs text-gray-600 dark:text-gray-400 truncate">
+                        {app.version ? `v${app.version}` : '--'} · {app.size || '--'}
+                      </div>
+                    </div>
+                  </div>
 
-        {/* Categories */}
-        {categoriesWithApps.map((category, index) => {
-          const pageInfo = paginationData?.[category.id];
-          const hasFullPager = !!pageInfo?.totalPages && pageInfo.totalPages > 1 && pageInfo.mode === 'full';
-          const hasLitePager = pageInfo?.mode === 'lite' && pageInfo?.hasNext === true;
+                  {/* Meta line */}
+                  <div className="mt-3 flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
+                    <span className="truncate">{app.category || 'Ứng dụng'}</span>
+                    <span className="whitespace-nowrap">
+                      {shortNumber(app.views ?? 0)} lượt xem
+                    </span>
+                  </div>
+                </Link>
 
-          return (
-            <Fragment key={category.id}>
-              <div className={contentCard}>
-                <div className="flex items-center justify-between mb-3">
-                  <h2 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-green-500">
-                    {category.name}
-                  </h2>
-
-                  {/* Badge trạng thái cert (server-side fetch) */}
-                  {INSTALLABLE_SLUGS.has((category.slug || '').toLowerCase()) && certStatus && (
+                {/* Badge Signed/Revoked – lazy fetch khi card vào viewport */}
+                <div className="px-3 sm:px-4 pb-3">
+                  <div className="mt-2 h-6">
                     <span
-                      className="flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300"
+                      data-app-slug={slug}
+                      className={classNames(
+                        'inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[11px] border',
+                        cert === 'signed' && 'bg-emerald-50 text-emerald-700 border-emerald-200',
+                        cert === 'revoked' && 'bg-rose-50 text-rose-700 border-rose-200',
+                        cert === 'error' && 'bg-yellow-50 text-yellow-700 border-yellow-200',
+                        (cert === undefined || cert === 'unknown') && 'bg-gray-50 text-gray-500 border-gray-200'
+                      )}
                       title={
-                        certStatus?.ocspStatus === 'successful'
-                          ? (certStatus.isRevoked ? 'Chứng chỉ đã bị thu hồi' : 'Chứng chỉ hợp lệ')
-                          : 'Không thể kiểm tra'
+                        cert === 'signed'
+                          ? 'Đã ký – cài đặt được'
+                          : cert === 'revoked'
+                          ? 'Đã bị thu hồi'
+                          : cert === 'error'
+                          ? 'Không kiểm tra được'
+                          : 'Đang kiểm tra…'
                       }
                     >
-                      {certStatus?.ocspStatus === 'successful' ? (
-                        certStatus.isRevoked ? (
-                          <>
-                            <span className="font-bold text-red-600">Revoked</span>
-                            <FontAwesomeIcon icon={faTimesCircle} className="text-red-500" />
-                          </>
-                        ) : (
-                          <>
-                            <span className="font-bold text-green-600">Signed</span>
-                            <FontAwesomeIcon icon={faCheckCircle} className="text-green-500" />
-                          </>
-                        )
-                      ) : (
-                        <>
-                          <span className="font-bold text-gray-500">Error</span>
-                          <FontAwesomeIcon icon={faExclamationCircle} className="text-gray-400" />
-                        </>
-                      )}
+                      {cert === 'signed' && <b>Signed</b>}
+                      {cert === 'revoked' && <b>Revoked</b>}
+                      {cert === 'error' && <b>Lỗi</b>}
+                      {(cert === undefined || cert === 'unknown') && <span>Đang kiểm tra…</span>}
                     </span>
-                  )}
-                </div>
-
-                {/* Thông tin trang (nếu có) */}
-                {hasFullPager && (
-                  <div className="text-[12px] text-gray-500 dark:text-gray-400 mb-2">
-                    Trang {pageInfo.currentPage} / {pageInfo.totalPages} ({pageInfo.totalApps} ứng dụng)
                   </div>
-                )}
-
-                <div>
-                  {(category.appsRendered || category.apps).map((item, idx) => {
-                    return item.__isAffiliate
-                      ? <AffiliateInlineCard key={`aff-${item.__affKey || item.id}`} item={item} isFirst={idx === 0} />
-                      : <AppCard key={item.id} app={item} mode="list" />;
-                  })}
                 </div>
-
-                {/* Phân trang */}
-                {hasFullPager && (
-                  <PaginationFull
-                    categorySlug={category.slug}
-                    currentPage={pageInfo.currentPage || 1}
-                    totalPages={pageInfo.totalPages || 1}
-                  />
-                )}
-                {hasLitePager && (
-                  <PaginationLite
-                    categorySlug={category.slug}
-                    hasNext={true}
-                  />
-                )}
               </div>
-
-              {multiplexIndices.has(index) && (
-                <div className="space-y-2">
-                  <AdLabel />
-                  <div className={adCard}><AdUnit className="my-0" mobileVariant="multiplex" /></div>
-                </div>
-              )}
-            </Fragment>
-          );
-        })}
-
-        {/* Footer Ad */}
-        <div className="space-y-2">
-          <AdLabel />
-          <div className={adCard}><AdUnit className="my-0" mobileVariant="compact" /></div>
+            );
+          })}
         </div>
-      </div>
+
+        {/* TODO: Pagination của bạn (giữ nguyên nếu đã có) */}
+        {/* <PaginationFull page={page} total={total} pageSize={pageSize} /> */}
+      </main>
     </Layout>
   );
 }
 
-/* =========================
-   Affiliate interleave (giữ)
-   ========================= */
-function interleaveAffiliate(apps, affiliatePool, category, {
-  ratioEvery = 5,
-  maxPerCategory = 2,
-}) {
-  const result = [...(apps || [])];
-  if (!affiliatePool || affiliatePool.length === 0) return result;
+/* ===================== Data (ISR) ===================== */
+export async function getStaticProps() {
+  const page = 1;
+  const pageSize = 24;
+  const from = 0;
+  const to = pageSize - 1;
 
-  const matched = affiliatePool.filter(a => {
-    const slug = (a.category_slug || '').toLowerCase();
-    return slug ? slug === (category.slug || '').toLowerCase() : true;
-  });
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const supabase = createClient(supabaseUrl, supabaseKey);
 
-  const want = Math.min(Math.max(0, Math.round((apps?.length || 0) / ratioEvery)), maxPerCategory);
-  const shuffled = [...matched].sort(() => Math.random() - 0.5).slice(0, want);
+  // Chỉ lấy field cần cho danh sách để giảm payload
+  const selectFields = 'id, slug, title, icon_url, version, size, category, views, downloads, created_at';
 
-  shuffled.forEach((aff, i) => {
-    const posMin = Math.min(apps.length, 2);
-    const posMax = Math.max(apps.length - 1, 0);
-    const insertAt = apps.length <= 2
-      ? apps.length
-      : Math.floor(Math.random() * (posMax - posMin + 1)) + posMin;
+  // Gom truy vấn song song (nếu sau này có thêm truy vấn khác, push vào mảng Promise.all)
+  const [{ data: apps, count, error }] = await Promise.all([
+    supabase
+      .from('apps')
+      .select(selectFields, { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(from, to),
+  ]);
 
-    result.splice(Math.min(insertAt + i, result.length), 0, {
-      ...aff,
-      __isAffiliate: true,
-      __affKey: `${aff.id || aff.affiliate_url}-${i}-${Math.random().toString(36).slice(2, 8)}`,
-      affiliate_url: (() => {
-        try {
-          const u = new URL(aff.affiliate_url);
-          if (!u.searchParams.get('utm_source')) u.searchParams.set('utm_source', 'storeios');
-          if (!u.searchParams.get('utm_medium')) u.searchParams.set('utm_medium', 'listing');
-          if (!u.searchParams.get('utm_campaign')) u.searchParams.set('utm_campaign', 'affiliate');
-          return u.toString();
-        } catch { return aff.affiliate_url; }
-      })(),
-    });
-  });
-
-  return result;
-}
-
-/* =========================
-   getServerSideProps (tối ưu)
-   ========================= */
-export async function getServerSideProps(ctx) {
-  const supabase = createSupabaseServer(ctx);
-  const userAgent = ctx.req.headers['user-agent'] || '';
-  const isGoogleBot = userAgent.toLowerCase().includes('googlebot');
-
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user && !isGoogleBot) {
-    return { redirect: { destination: '/under-construction', permanent: false } };
-  }
-
-  const { category: categorySlug, page: pageQuery } = ctx.query;
-  const activeSlug = typeof categorySlug === 'string' ? categorySlug.toLowerCase() : null;
-  const currentPage = parseInt(pageQuery || '1', 10);
-  const APPS_PER_PAGE = 10;
-
-  // Lấy danh sách categories
-  const { data: categories } = await supabase
-    .from('categories')
-    .select('id, name, slug');
-
-  const paginationData = {};
-  const affiliatePool = affiliateApps.map(a => ({ ...a }));
-
-  const categoriesWithApps = await Promise.all(
-    (categories || []).map(async (category) => {
-      const catSlug = (category.slug || '').toLowerCase();
-      const isActive = activeSlug && catSlug === activeSlug;
-
-      // Page của category đang xem; category khác luôn là 1
-      const pageForThisCategory = isActive ? currentPage : 1;
-      const startIndex = (pageForThisCategory - 1) * APPS_PER_PAGE;
-      const endIndex = startIndex + APPS_PER_PAGE - 1;
-
-      if (isActive) {
-        // 🔹 Category active: đếm 'estimated' để có tổng trang
-        const { count } = await supabase
-          .from('apps')
-          .select('*', { count: 'estimated', head: true })
-          .eq('category_id', category.id);
-
-        const totalApps = count || 0;
-        const totalPages = Math.max(1, Math.ceil(totalApps / APPS_PER_PAGE));
-        paginationData[category.id] = {
-          mode: 'full',
-          currentPage: pageForThisCategory,
-          totalPages,
-          totalApps,
-        };
-
-        const { data: apps } = await supabase
-          .from('apps')
-          .select('*')
-          .eq('category_id', category.id)
-          .order('created_at', { ascending: false })
-          .range(startIndex, endIndex);
-
-        const appsRendered = interleaveAffiliate(apps || [], affiliatePool, category, {
-          ratioEvery: 5,
-          maxPerCategory: 2,
-        });
-
-        return { ...category, apps: apps || [], appsRendered };
-      } else {
-        // 🔹 Category không active: KHÔNG đếm tổng -- chỉ lấy APPS_PER_PAGE + 1 để biết còn trang sau
-        const { data: appsPlusOne } = await supabase
-          .from('apps')
-          .select('*')
-          .eq('category_id', category.id)
-          .order('created_at', { ascending: false })
-          .range(0, APPS_PER_PAGE); // N + 1
-
-        const hasNext = (appsPlusOne?.length || 0) > APPS_PER_PAGE;
-        const apps = (appsPlusOne || []).slice(0, APPS_PER_PAGE);
-
-        paginationData[category.id] = {
-          mode: hasNext ? 'lite' : 'none',
-          currentPage: 1,
-          totalPages: hasNext ? 2 : 1,
-          totalApps: undefined,
-          hasNext,
-        };
-
-        const appsRendered = interleaveAffiliate(apps, affiliatePool, category, {
-          ratioEvery: 5,
-          maxPerCategory: 2,
-        });
-
-        return { ...category, apps, appsRendered };
-      }
-    })
-  );
-
-  // Hot apps (giữ)
-  const { data: hotAppsData } = await supabase
-    .from('apps')
-    .select('*')
-    .order('views', { ascending: false, nullsLast: true })
-    .limit(5);
-
-  const sortedHotApps = (hotAppsData || [])
-    .map(app => ({ ...app, hotScore: (app.views || 0) + (app.downloads || 0) }))
-    .sort((a, b) => b.hotScore - a.hotScore)
-    .slice(0, 5);
-
-  // 🔹 CHECK CERT: gọi server-side để ẩn khỏi Network tab của client
-  let certStatus = { ocspStatus: 'error' };
+  // Derive origin để preconnect/dns-prefetch
+  let supabaseOrigin = null;
   try {
-    const res = await fetch('https://ipadl.storeios.net/api/check-revocation', { method: 'GET' });
-    if (res.ok) certStatus = await res.json();
+    supabaseOrigin = new URL(supabaseUrl).origin;
   } catch {
-    certStatus = { ocspStatus: 'error' };
+    supabaseOrigin = null;
   }
 
-  return { props: { categoriesWithApps, hotApps: sortedHotApps, paginationData, certStatus } };
+  return {
+    props: {
+      apps: apps || [],
+      total: count || 0,
+      page,
+      pageSize,
+      supabaseOrigin,
+    },
+    // Tự làm mới mỗi 5 phút; khi có build lại, người dùng gần như vào là có HTML sẵn.
+    revalidate: 300,
+  };
 }
-
-/*
-Gợi ý index DB (chạy 1 lần ở Supabase):
-CREATE INDEX IF NOT EXISTS idx_apps_category_created_at ON apps (category_id, created_at DESC);
-*/
