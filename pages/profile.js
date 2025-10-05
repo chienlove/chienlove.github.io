@@ -17,7 +17,7 @@ import {
   getDoc,
   setDoc,
   serverTimestamp,
-  // 🔽 thêm các import dùng cho phần "Bình luận gần đây"
+  // ==== thêm cho phần bình luận gần đây ====
   collection,
   query,
   where,
@@ -33,14 +33,12 @@ import {
   faCheckCircle,
   faTimesCircle,
   faCloudArrowUp,
-  faLink,
-  faUnlink,
   faHome,
   faChevronRight,
   faCircleInfo,
   faComment,
   faCalendarDays,
-  faHeart,
+  faHeart
 } from '@fortawesome/free-solid-svg-icons';
 import { faGoogle, faGithub } from '@fortawesome/free-brands-svg-icons';
 
@@ -73,8 +71,8 @@ function daysUntil(date, addDays = 30) {
   return Math.max(0, diff);
 }
 
-// Helpers hiển thị ngày & thời gian tương đối
-const toDate = (ts) => {
+/* ---- Helpers thời gian ---- */
+function toDate(ts) {
   try {
     if (!ts) return null;
     if (ts.toDate) return ts.toDate();
@@ -83,7 +81,7 @@ const toDate = (ts) => {
     if (ts instanceof Date) return ts;
   } catch {}
   return null;
-};
+}
 const fmtDate = (ts) => {
   const d = toDate(ts);
   return d ? d.toLocaleDateString('vi-VN', { day:'2-digit', month:'2-digit', year:'numeric' }) : '';
@@ -108,6 +106,7 @@ export default function ProfilePage() {
   const [hydrated, setHydrated] = useState(false);
   const fileInputRef = useRef(null);
 
+  // ==== providers & trạng thái liên kết ====
   const providers = useMemo(() => (user?.providerData?.map(p => p.providerId) || []), [user]);
   const hasGoogle = providers.includes('google.com');
   const hasGithub = providers.includes('github.com');
@@ -115,7 +114,7 @@ export default function ProfilePage() {
   const nameLockedDays = daysUntil(userDoc?.lastNameChangeAt, 30);
   const canChangeName = nameLockedDays === 0;
 
-  // 🔽 state cho phần Bình luận gần đây
+  // ==== state cho phần Bình luận gần đây ====
   const [recent, setRecent] = useState([]);
   const [recentCursor, setRecentCursor] = useState(null);
   const [recentHasMore, setRecentHasMore] = useState(false);
@@ -152,7 +151,7 @@ export default function ProfilePage() {
         setUserDoc(base);
       }
 
-      // Sau khi có user → tính stats + load bình luận gần đây
+      // Stats & bình luận gần đây
       void computeStats(u.uid, data);
       void loadRecent(u.uid, true);
     });
@@ -167,7 +166,7 @@ export default function ProfilePage() {
     showToast._t = setTimeout(() => setToast(null), ms);
   };
 
-  // ====== Stats: tổng bình luận, tổng like nhận (cộng dồn likeCount), memberSince ======
+  // ====== Stats: tổng bình luận, tổng like nhận, memberSince ======
   const computeStats = async (uid, userData) => {
     try {
       // Tổng bình luận
@@ -316,26 +315,38 @@ export default function ProfilePage() {
     }
   };
 
-  const onLink = async (type) => {
-    if (isDeleted) return showToast('error', 'Tài khoản đã bị xoá. Không thể liên kết.');
+  // Gộp mỗi provider thành 1 nút: nếu đã liên kết → nút đỏ Huỷ liên kết; nếu chưa → nút xanh Liên kết
+  const onToggleLinkGoogle = async () => {
+    if (isDeleted) return showToast('error', 'Tài khoản đã bị xoá. Không thể thao tác.');
     try {
-      const provider = type === 'google' ? new GoogleAuthProvider() : new GithubAuthProvider();
-      await linkWithPopup(user, provider);
-      showToast('success', `Đã liên kết ${type === 'google' ? 'Google' : 'GitHub'}!`);
+      if (hasGoogle) {
+        const ok = window.confirm('Huỷ liên kết Google?');
+        if (!ok) return;
+        await unlink(user, 'google.com');
+        showToast('success', 'Đã huỷ liên kết Google.');
+      } else {
+        await linkWithPopup(user, new GoogleAuthProvider());
+        showToast('success', 'Đã liên kết Google!');
+      }
     } catch (err) {
-      showToast('error', err.message || 'Liên kết thất bại.');
+      showToast('error', err.message || 'Thao tác thất bại.');
     }
   };
 
-  const onUnlink = async (providerId, label) => {
-    if (isDeleted) return showToast('error', 'Tài khoản đã bị xoá. Không thể huỷ liên kết.');
-    const ok = window.confirm(`Huỷ liên kết ${label}?`);
-    if (!ok) return;
+  const onToggleLinkGithub = async () => {
+    if (isDeleted) return showToast('error', 'Tài khoản đã bị xoá. Không thể thao tác.');
     try {
-      await unlink(user, providerId);
-      showToast('success', `Đã huỷ liên kết ${label}.`);
+      if (hasGithub) {
+        const ok = window.confirm('Huỷ liên kết GitHub?');
+        if (!ok) return;
+        await unlink(user, 'github.com');
+        showToast('success', 'Đã huỷ liên kết GitHub.');
+      } else {
+        await linkWithPopup(user, new GithubAuthProvider());
+        showToast('success', 'Đã liên kết GitHub!');
+      }
     } catch (err) {
-      showToast('error', err.message || 'Huỷ liên kết thất bại.');
+      showToast('error', err.message || 'Thao tác thất bại.');
     }
   };
 
@@ -483,7 +494,7 @@ export default function ProfilePage() {
                   : `Bạn có thể đổi lại sau ${nameLockedDays} ngày.`}
               </div>
 
-              {/* quick stats */}
+              {/* Quick stats */}
               <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3">
                   <div className="text-xs text-gray-500 flex items-center gap-2">
@@ -505,102 +516,40 @@ export default function ProfilePage() {
                 </div>
               </div>
 
-              <div className="mt-4 flex flex-wrap items-center gap-3">
-                <button
-                  onClick={onSave}
-                  disabled={saving || isDeleted || !canChangeName}
-                  className={`px-4 py-2 rounded-lg font-semibold text-white ${
-                    (isDeleted || !canChangeName)
-                      ? 'bg-gray-400 cursor-not-allowed'
-                      : 'bg-gray-900 hover:bg-black dark:bg-white dark:text-gray-900 dark:hover:opacity-90'
-                  }`}
-                >
-                  {saving ? 'Đang lưu…' : 'Lưu thay đổi'}
-                </button>
-
-                <span className="inline-flex items-center gap-2 text-sm">
-                  {user?.emailVerified ? (
-                    <span className="text-emerald-600 inline-flex items-center gap-1">
-                      <FontAwesomeIcon icon={faCheckCircle} /> Email đã xác minh
-                    </span>
-                  ) : (
-                    <>
-                      <span className="text-amber-600 inline-flex items-center gap-1">
-                        <FontAwesomeIcon icon={faTimesCircle} /> Chưa xác minh email
-                      </span>
-                      <button
-                        onClick={onResendVerify}
-                        className="text-sky-700 dark:text-sky-300 hover:underline"
-                      >
-                        Gửi lại email xác minh
-                      </button>
-                    </>
-                  )}
-                </span>
-              </div>
-
-              {/* Liên kết tài khoản: trạng thái rõ ràng */}
+              {/* Liên kết tài khoản: MỖI PROVIDER 1 NÚT */}
               <div className="mt-6">
                 <h2 className="text-base font-semibold mb-2">Liên kết tài khoản</h2>
 
                 <div className="flex flex-col sm:flex-row gap-3">
-                  {/* GOOGLE */}
-                  <div className="flex items-center gap-2">
-                    {hasGoogle ? (
-                      <>
-                        <span className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-emerald-500 text-emerald-700 bg-emerald-50 dark:bg-emerald-900/20">
-                          <FontAwesomeIcon icon={faGoogle} />
-                          Đã liên kết Google
-                        </span>
-                        <button
-                          onClick={() => onUnlink('google.com', 'Google')}
-                          disabled={isDeleted}
-                          className="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
-                        >
-                          <FontAwesomeIcon icon={faUnlink} className="mr-1" />
-                          Huỷ liên kết
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        onClick={() => onLink('google')}
-                        disabled={isDeleted}
-                        className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
-                      >
-                        <FontAwesomeIcon icon={faGoogle} />
-                        Liên kết Google
-                      </button>
-                    )}
-                  </div>
+                  {/* GOOGLE: 1 nút duy nhất */}
+                  <button
+                    onClick={onToggleLinkGoogle}
+                    disabled={isDeleted}
+                    className={[
+                      "inline-flex items-center gap-2 px-3 py-2 rounded-lg border",
+                      hasGoogle
+                        ? "border-rose-300 text-rose-700 bg-rose-50 hover:bg-rose-100"
+                        : "border-emerald-300 text-emerald-700 bg-emerald-50 hover:bg-emerald-100"
+                    ].join(' ')}
+                  >
+                    <FontAwesomeIcon icon={faGoogle} />
+                    {hasGoogle ? 'Huỷ liên kết Google' : 'Liên kết Google'}
+                  </button>
 
-                  {/* GITHUB */}
-                  <div className="flex items-center gap-2">
-                    {hasGithub ? (
-                      <>
-                        <span className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-emerald-500 text-emerald-700 bg-emerald-50 dark:bg-emerald-900/20">
-                          <FontAwesomeIcon icon={faGithub} />
-                          Đã liên kết GitHub
-                        </span>
-                        <button
-                          onClick={() => onUnlink('github.com', 'GitHub')}
-                          disabled={isDeleted}
-                          className="px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
-                        >
-                          <FontAwesomeIcon icon={faUnlink} className="mr-1" />
-                          Huỷ liên kết
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        onClick={() => onLink('github')}
-                        disabled={isDeleted}
-                        className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
-                      >
-                        <FontAwesomeIcon icon={faGithub} />
-                        Liên kết GitHub
-                      </button>
-                    )}
-                  </div>
+                  {/* GITHUB: 1 nút duy nhất */}
+                  <button
+                    onClick={onToggleLinkGithub}
+                    disabled={isDeleted}
+                    className={[
+                      "inline-flex items-center gap-2 px-3 py-2 rounded-lg border",
+                      hasGithub
+                        ? "border-rose-300 text-rose-700 bg-rose-50 hover:bg-rose-100"
+                        : "border-emerald-300 text-emerald-700 bg-emerald-50 hover:bg-emerald-100"
+                    ].join(' ')}
+                  >
+                    <FontAwesomeIcon icon={faGithub} />
+                    {hasGithub ? 'Huỷ liên kết GitHub' : 'Liên kết GitHub'}
+                  </button>
                 </div>
               </div>
 
@@ -608,7 +557,7 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* ===== Bình luận gần đây ===== */}
+        {/* ===== Bình luận gần đây (cuộn tới bình luận giống [uid].js) ===== */}
         <div className="mt-8">
           <h2 className="text-lg font-semibold mb-3">Bình luận gần đây</h2>
 
@@ -618,24 +567,23 @@ export default function ProfilePage() {
 
           <ul className="grid md:grid-cols-2 gap-3">
             {recent.map(c => {
-              const slug = c.postSlug || c.postId || '';
-              const href = slug ? `/${slug}?c=${encodeURIComponent(c.id)}` : '#';
+              // Giống [uid].js: dùng hash #comment-<id>
+              const rawSlug = String(c.postSlug || c.postId || '').trim();
+              const slug = rawSlug.replace(/^\/+/, '');
+              const href = slug ? `/${encodeURI(slug)}#comment-${encodeURIComponent(c.id)}` : '#';
               return (
                 <li key={c.id} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
-                  <div className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-2">
-                    <span>{fmtRel(c.createdAt)}</span>
-                    {slug && (
-                      <>
-                        <span>•</span>
-                        <Link href={href} className="text-sky-700 dark:text-sky-300 hover:underline">
-                          Xem bài viết
-                        </Link>
-                      </>
-                    )}
-                  </div>
+                  <div className="text-xs text-gray-600 dark:text-gray-400">{fmtRel(c.createdAt)}</div>
                   <p className="mt-2 text-gray-800 dark:text-gray-100 whitespace-pre-wrap break-words overflow-hidden">
                     {String(c.content || '')}
                   </p>
+                  {slug && (
+                    <div className="mt-3 text-sm">
+                      <Link href={href} className="text-sky-700 dark:text-sky-300 hover:underline" title="Xem trong bài viết & cuộn đến bình luận">
+                        Xem trong bài viết
+                      </Link>
+                    </div>
+                  )}
                 </li>
               );
             })}
