@@ -97,6 +97,8 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     );
   };
 
+  /* ---------------- Helpers: Liên kết tài khoản & lỗi ---------------- */
+
   const handleAccountExists = async (error, provider) => {
     const emailFromError = error?.customData?.email;
     if (!emailFromError) return setMsg('Tài khoản đã tồn tại với nhà cung cấp khác.');
@@ -137,16 +139,100 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     }
   };
 
+  // Chuyển mili-giây -> "x ngày y giờ" / "x giờ y phút" / "x phút" / "x giây"
+  const formatRemaining = (ms) => {
+    if (!Number.isFinite(ms) || ms <= 0) return '';
+    const s = Math.floor(ms / 1000);
+    const d = Math.floor(s / 86400);
+    const h = Math.floor((s % 86400) / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    if (d > 0) return `${d} ngày ${h} giờ`;
+    if (h > 0) return `${h} giờ ${m} phút`;
+    if (m > 0) return `${m} phút`;
+    return `${s} giây`;
+  };
+
+  // Mapping mã lỗi Firebase Auth -> thông điệp tiếng Việt
+  const mapAuthError = (e) => {
+    const code = e?.code || '';
+    switch (code) {
+      case 'auth/invalid-email':
+        return 'Email không hợp lệ.';
+      case 'auth/user-disabled':
+        return 'Tài khoản đã bị vô hiệu hoá.';
+      case 'auth/user-not-found':
+        return 'Không tìm thấy tài khoản với email này.';
+      case 'auth/wrong-password':
+        return 'Mật khẩu không đúng. Vui lòng thử lại.';
+      case 'auth/too-many-requests':
+        return 'Bạn đã thử quá nhiều lần. Vui lòng thử lại sau.';
+      case 'auth/network-request-failed':
+        return 'Lỗi mạng. Vui lòng kiểm tra kết nối internet.';
+      case 'auth/popup-closed-by-user':
+        return 'Bạn đã đóng cửa sổ đăng nhập trước khi hoàn tất.';
+      case 'auth/cancelled-popup-request':
+        return 'Yêu cầu đăng nhập trước đó đã bị huỷ.';
+      case 'auth/operation-not-allowed':
+        return 'Phương thức đăng nhập này đang bị tắt.';
+      case 'auth/credential-already-in-use':
+        return 'Thông tin đăng nhập này đang được dùng cho tài khoản khác.';
+      case 'auth/email-already-in-use':
+        return 'Email đã được sử dụng. Vui lòng đăng nhập.';
+      default:
+        return e?.message || 'Có lỗi xảy ra. Vui lòng thử lại.';
+    }
+  };
+
+  // ✅ Gọi guard sau khi đăng nhập; nếu bị ban thì signOut + báo lỗi chi tiết
+  const runGuardAfterSignIn = async () => {
+    try {
+      if (!auth.currentUser) return true;
+      const idToken = await auth.currentUser.getIdToken();
+      const resp = await fetch('/api/auth/guard', {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${idToken}` }
+      });
+      const json = await resp.json();
+      if (json?.ok) return true;
+
+      // Bị ban -> sign out và báo lỗi
+      await auth.signOut().catch(()=>{});
+
+      const isTemp = json?.mode === 'temporary';
+      const reason = json?.reason ? ` Lý do: ${json.reason}.` : '';
+      let extra = '';
+
+      if (isTemp && json?.expiresAt) {
+        const remainMs = new Date(json.expiresAt).getTime() - Date.now();
+        const remainTxt = formatRemaining(remainMs);
+        if (remainTxt) extra = ` Còn lại: ${remainTxt}.`;
+      }
+
+      const message = isTemp
+        ? `Tài khoản bị BAN tạm thời.${reason}${extra}`
+        : `Tài khoản bị BAN vĩnh viễn.${reason}`;
+
+      showToast('error', message, 6000);
+      return false;
+    } catch {
+      // Nếu guard lỗi server, tạm cho qua (tuỳ policy)
+      return true;
+    }
+  };
+
+  /* ---------------- Actions: Đăng nhập ---------------- */
+
   const loginGoogle = async (isLinking = false) => {
     setLoading(true); setMsg('');
     try {
       await signInWithPopup(auth, new GoogleAuthProvider());
       if (isLinking) await doLinkIfNeeded();
+      if (!(await runGuardAfterSignIn())) return;
       setOpenAuth(false);
       showToast('success', 'Đăng nhập Google thành công!');
     } catch (e) {
       if (e.code === 'auth/account-exists-with-different-credential') await handleAccountExists(e, 'google');
-      else setMsg(e.message);
+      else setMsg(mapAuthError(e));
     } finally { setLoading(false); }
   };
 
@@ -154,11 +240,12 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     setLoading(true); setMsg('');
     try {
       await signInWithPopup(auth, new GithubAuthProvider());
+      if (!(await runGuardAfterSignIn())) return;
       setOpenAuth(false);
       showToast('success', 'Đăng nhập GitHub thành công!');
     } catch (e) {
       if (e.code === 'auth/account-exists-with-different-credential') await handleAccountExists(e, 'github');
-      else setMsg(e.message);
+      else setMsg(mapAuthError(e));
     } finally { setLoading(false); }
   };
 
@@ -166,13 +253,14 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     setLoading(true); setMsg('');
     try {
       await signInWithPopup(auth, new TwitterAuthProvider());
+      if (!(await runGuardAfterSignIn())) return;
       setOpenAuth(false);
       showToast('success', 'Đăng nhập X (Twitter) thành công!');
     } catch (e) {
       if (e.code === 'auth/account-exists-with-different-credential') {
         await handleAccountExists(e, 'twitter');
       } else {
-        setMsg(e.message);
+        setMsg(mapAuthError(e));
       }
     } finally { setLoading(false); }
   };
@@ -196,6 +284,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
         setEmail(''); setPassword(''); setConfirmPwd('');
       } else {
         await signInWithEmailAndPassword(auth, email, password);
+        if (!(await runGuardAfterSignIn())) return;
         if (pendingCred && hint === 'password') await doLinkIfNeeded();
         setOpenAuth(false);
         setEmail(''); setPassword('');
@@ -203,7 +292,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       }
     } catch (e) {
       if (e.code === 'auth/email-already-in-use') { setMode('login'); setMsg('Email đã tồn tại. Vui lòng đăng nhập.'); }
-      else setMsg(e.message);
+      else setMsg(mapAuthError(e));
     } finally { setLoading(false); }
   };
 
@@ -213,7 +302,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       const actionCodeSettings = { url: 'https://auth.storeios.net', handleCodeInApp: false };
       await sendPasswordResetEmail(auth, email, actionCodeSettings);
       showToast('info', 'Đã gửi email đặt lại mật khẩu.');
-    } catch (e) { setMsg(e.message); }
+    } catch (e) { setMsg(mapAuthError(e)); }
   };
 
   const logout = async () => {
@@ -221,6 +310,8 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     setMenuOpen(false);
     showToast('info', 'Bạn đã đăng xuất.');
   };
+
+  /* ---------------- UI ---------------- */
 
   // ==== Logged-in ====
   if (user) {
