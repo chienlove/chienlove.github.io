@@ -2,7 +2,7 @@
 import crypto from 'crypto';
 import { getFirestore, Timestamp } from 'firebase-admin/firestore';
 import { getAuth } from 'firebase-admin/auth';
-import { initAdminApp } from '../../../lib/firebase-admin'; // giữ nguyên đường dẫn lib của bạn
+import { initAdminApp } from '../../../lib/firebase-admin'; // dùng cùng lib admin
 
 const emailHash = (email) =>
   crypto.createHash('sha256').update(String(email || '').trim().toLowerCase()).digest('hex');
@@ -18,13 +18,11 @@ export default async function handler(req, res) {
     const db = getFirestore();
     const adminAuth = getAuth();
 
-    // --- Ưu tiên: tra bản ghi trong banned_emails (đồng bộ với guard.js) ---
+    // 1) ƯU TIÊN: kiểm tra trong banned_emails (đúng với guard.js)
     const hash = emailHash(email);
-    const banRef = db.collection('banned_emails').doc(hash);
-    const banSnap = await banRef.get();
-
-    if (banSnap.exists) {
-      const data = banSnap.data() || {};
+    const banDoc = await db.collection('banned_emails').doc(hash).get();
+    if (banDoc.exists) {
+      const data = banDoc.data() || {};
       const expiresAt =
         data.expiresAt instanceof Timestamp
           ? data.expiresAt.toDate().toISOString()
@@ -32,22 +30,21 @@ export default async function handler(req, res) {
           ? new Date(data.expiresAt).toISOString()
           : null;
 
-      const resp = {
+      return res.status(200).json({
         banned: true,
         mode: expiresAt ? 'temporary' : 'permanent',
         reason: data.reason || null,
         expiresAt, // ISO string hoặc null
-      };
-      return res.status(200).json(resp);
+      });
     }
 
-    // --- Fallback: kiểm tra users/{uid}.ban (nếu bạn vẫn lưu ở đây) ---
+    // 2) FALLBACK: kiểm tra users/{uid}.ban nếu bạn vẫn lưu thêm ở đây
     let uid = null;
     try {
       const u = await adminAuth.getUserByEmail(email);
       uid = u.uid;
     } catch {
-      /* không có trong Auth → bỏ qua */
+      /* không có trong Auth -> bỏ qua */
     }
 
     let userDoc = null;
@@ -79,8 +76,8 @@ export default async function handler(req, res) {
 
     // Không thấy BAN ở đâu cả
     return res.status(200).json({ banned: false });
-  } catch (e) {
-    // fail-safe: không lộ lỗi chi tiết cho endpoint public
+  } catch {
+    // an toàn: không lộ lỗi bên ngoài
     return res.status(200).json({ banned: false });
   }
 }
