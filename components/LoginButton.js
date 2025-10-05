@@ -21,28 +21,29 @@ import {
 } from '@fortawesome/free-solid-svg-icons';
 import { faGoogle, faGithub, faXTwitter } from '@fortawesome/free-brands-svg-icons';
 
-const ENFORCE_EMAIL_VERIFICATION = true;
+const ENFORCE_EMAIL_VERIFICATION = true; // gửi mail verify sau signup; KHÔNG chặn login
 
 export default function LoginButton({ onToggleTheme, isDark }) {
   const [user, setUser] = useState(null);
   const [openAuth, setOpenAuth] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [guestMenuOpen, setGuestMenuOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState('login'); // 'login' | 'signup'
+  const [loading, setLoading] = useState(false);      // overlay
+  const [mode, setMode] = useState('login');          // 'login' | 'signup'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
   const [confirmPwd, setConfirmPwd] = useState('');
   const [showConfirm, setShowConfirm] = useState(false);
   const [msg, setMsg] = useState('');
-  const [toast, setToast] = useState(null); // { type: 'success'|'error'|'info'|'warning', text }
+  const [toast, setToast] = useState(null);           // {type, text}
   const [pendingCred, setPendingCred] = useState(null);
   const [hint, setHint] = useState('');
   const [authClosedAt, setAuthClosedAt] = useState(0);
 
   // ==== BAN details để hiển thị banner trong modal ====
-  const [banInfo, setBanInfo] = useState(null); // { mode: 'temporary'|'permanent', reason?, expiresAt?, remainingText? }
+  // { mode: 'temporary'|'permanent', reason?, expiresAt?, remainingText? }
+  const [banInfo, setBanInfo] = useState(null);
 
   const menuRef = useRef(null);
   const guestMenuRef = useRef(null);
@@ -137,6 +138,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       const r = await fetch(`/api/auth/ban-info?email=${encodeURIComponent(emailForLookup)}`);
       const j = await r.json();
       if (!j || !j.banned) return;
+
       const isTemp = j.mode === 'temporary';
       let remainingText = '';
       if (isTemp && j.expiresAt) {
@@ -158,7 +160,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     }
   };
 
-  // Ánh xạ mã lỗi Firebase → tiếng Việt dễ hiểu
+  // Ánh xạ mã lỗi Firebase → tiếng Việt dễ hiểu (thông điệp ngắn; chi tiết BAN sẽ lên banner)
   const mapAuthError = (e) => {
     const code = e?.code || '';
     switch (code) {
@@ -230,7 +232,10 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     try {
       if (!auth.currentUser) return true;
       const idToken = await auth.currentUser.getIdToken();
-      const resp = await fetch('/api/auth/guard', { method: 'GET', headers: { Authorization: `Bearer ${idToken}` } });
+      const resp = await fetch('/api/auth/guard', {
+        method: 'GET',
+        headers: { Authorization: `Bearer ${idToken}` }
+      });
       const json = await resp.json();
       if (json?.ok) return true;
 
@@ -255,7 +260,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       showToast('error', isTemp ? 'Tài khoản đang bị BAN tạm thời.' : 'Tài khoản bị BAN vĩnh viễn.', 3600);
       return false;
     } catch {
-      return true;
+      return true; // nếu guard lỗi, đừng chặn login
     }
   };
 
@@ -322,7 +327,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
         setMode('login'); setOpenAuth(false); setEmail(''); setPassword(''); setConfirmPwd('');
       } else {
         await signInWithEmailAndPassword(auth, email, password);
-        // Nếu invalid-credential → có thể là chưa đăng ký; xử lý ở catch
         if (!(await runGuardAfterSignIn())) return;
         if (pendingCred && hint === 'password') await doLinkIfNeeded();
         setOpenAuth(false); setEmail(''); setPassword('');
