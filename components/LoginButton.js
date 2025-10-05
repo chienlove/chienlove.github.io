@@ -165,7 +165,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     const code = e?.code || '';
     switch (code) {
       case 'auth/invalid-email': return 'Email không hợp lệ.';
-      case 'auth/user-disabled': return 'Tài khoản đang bị BAN hoặc đã bị vô hiệu hoá.';
+      case 'auth/user-disabled': return ''; // KHÔNG hiện msg thứ hai – đã có BanBanner
       case 'auth/user-not-found': return 'Không tìm thấy tài khoản với email này.';
       case 'auth/wrong-password': return 'Mật khẩu không đúng. Vui lòng thử lại.';
       case 'auth/too-many-requests': return 'Bạn đã thử quá nhiều lần. Vui lòng thử lại sau.';
@@ -262,10 +262,13 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       setOpenAuth(false);
       showToast('success', 'Đăng nhập Google thành công!');
     } catch (e) {
-      if (e.code === 'auth/account-exists-with-different-credential') await handleAccountExists(e, 'google');
-      else {
+      if (e.code === 'auth/account-exists-with-different-credential') {
+        await handleAccountExists(e, 'google');
+      } else if (e.code === 'auth/user-disabled') {
+        setMsg(''); // không in ra dòng msg thứ hai
+        await fetchBanDetails(e?.customData?.email);
+      } else {
         setMsg(mapAuthError(e));
-        if (e.code === 'auth/user-disabled') await fetchBanDetails(e?.customData?.email);
       }
     } finally { setLoading(false); }
   };
@@ -278,8 +281,12 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       setOpenAuth(false);
       showToast('success', 'Đăng nhập GitHub thành công!');
     } catch (e) {
-      setMsg(mapAuthError(e));
-      if (e.code === 'auth/user-disabled') await fetchBanDetails(e?.customData?.email);
+      if (e.code === 'auth/user-disabled') {
+        setMsg('');
+        await fetchBanDetails(e?.customData?.email);
+      } else {
+        setMsg(mapAuthError(e));
+      }
     } finally { setLoading(false); }
   };
 
@@ -291,8 +298,12 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       setOpenAuth(false);
       showToast('success', 'Đăng nhập X (Twitter) thành công!');
     } catch (e) {
-      setMsg(mapAuthError(e));
-      if (e.code === 'auth/user-disabled') await fetchBanDetails(e?.customData?.email);
+      if (e.code === 'auth/user-disabled') {
+        setMsg('');
+        await fetchBanDetails(e?.customData?.email);
+      } else {
+        setMsg(mapAuthError(e));
+      }
     } finally { setLoading(false); }
   };
 
@@ -329,8 +340,8 @@ export default function LoginButton({ onToggleTheme, isDark }) {
           else setMsg('Mật khẩu không đúng. Vui lòng thử lại.');
         } catch { setMsg(mapAuthError(e)); }
       } else if (e.code === 'auth/user-disabled') {
-        setMsg(mapAuthError(e));
-        await fetchBanDetails(email); // lấy reason + expiresAt để hiển thị banner
+        setMsg('');              // không render msg thứ hai
+        await fetchBanDetails(email); // hiển thị BanBanner chi tiết
       } else {
         setMsg(mapAuthError(e));
       }
