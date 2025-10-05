@@ -17,6 +17,15 @@ import {
   getDoc,
   setDoc,
   serverTimestamp,
+  // 🔽 thêm các import dùng cho phần "Bình luận gần đây"
+  collection,
+  query,
+  where,
+  orderBy,
+  limit,
+  getDocs,
+  startAfter,
+  getCountFromServer,
 } from 'firebase/firestore';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -28,7 +37,10 @@ import {
   faUnlink,
   faHome,
   faChevronRight,
-  faCircleInfo
+  faCircleInfo,
+  faComment,
+  faCalendarDays,
+  faHeart,
 } from '@fortawesome/free-solid-svg-icons';
 import { faGoogle, faGithub } from '@fortawesome/free-brands-svg-icons';
 
@@ -61,6 +73,31 @@ function daysUntil(date, addDays = 30) {
   return Math.max(0, diff);
 }
 
+// Helpers hiển thị ngày & thời gian tương đối
+const toDate = (ts) => {
+  try {
+    if (!ts) return null;
+    if (ts.toDate) return ts.toDate();
+    if (ts.seconds) return new Date(ts.seconds * 1000);
+    if (typeof ts === 'number' || typeof ts === 'string') return new Date(ts);
+    if (ts instanceof Date) return ts;
+  } catch {}
+  return null;
+};
+const fmtDate = (ts) => {
+  const d = toDate(ts);
+  return d ? d.toLocaleDateString('vi-VN', { day:'2-digit', month:'2-digit', year:'numeric' }) : '';
+};
+const fmtRel = (ts) => {
+  const d = toDate(ts);
+  if (!d) return '';
+  const diff = (Date.now() - d.getTime())/1000;
+  const rtf = new Intl.RelativeTimeFormat('vi', { numeric:'auto' });
+  const units = [['year',31536000],['month',2592000],['week',604800],['day',86400],['hour',3600],['minute',60],['second',1]];
+  for (const [u,s] of units) if (Math.abs(diff) >= s || u==='second') return rtf.format(Math.round(diff/s*-1), u);
+  return '';
+};
+
 export default function ProfilePage() {
   const [user, setUser] = useState(null);
   const [displayName, setDisplayName] = useState('');
@@ -77,6 +114,13 @@ export default function ProfilePage() {
 
   const nameLockedDays = daysUntil(userDoc?.lastNameChangeAt, 30);
   const canChangeName = nameLockedDays === 0;
+
+  // 🔽 state cho phần Bình luận gần đây
+  const [recent, setRecent] = useState([]);
+  const [recentCursor, setRecentCursor] = useState(null);
+  const [recentHasMore, setRecentHasMore] = useState(false);
+  const [recentLoading, setRecentLoading] = useState(false);
+  const [stats, setStats] = useState({ comments: 0, likes: 0, memberSince: null });
 
   // Hydration gate
   useEffect(() => { setHydrated(true); }, []);
@@ -107,6 +151,10 @@ export default function ProfilePage() {
         await setDoc(uref, base, { merge: true });
         setUserDoc(base);
       }
+
+      // Sau khi có user → tính stats + load bình luận gần đây
+      void computeStats(u.uid, data);
+      void loadRecent(u.uid, true);
     });
     return () => unsub();
   }, []);
@@ -117,6 +165,78 @@ export default function ProfilePage() {
     setToast({ type, text });
     clearTimeout(showToast._t);
     showToast._t = setTimeout(() => setToast(null), ms);
+  };
+
+  // ====== Stats: tổng bình luận, tổng like nhận (cộng dồn likeCount), memberSince ======
+  const computeStats = async (uid, userData) => {
+    try {
+      // Tổng bình luận
+      const cSnap = await getCountFromServer(
+        query(collection(db, 'comments'), where('authorId','==',String(uid)))
+      );
+      const comments = cSnap.data().count || 0;
+
+      // Tổng likes (sum likeCount qua các comment của user) -- phân trang an toàn
+      let likes = 0, cursor = null, fetched = 0, page = 250;
+      while (true) {
+        const qPage = cursor
+          ? query(collection(db,'comments'), where('authorId','==',String(uid)), orderBy('createdAt','desc'), startAfter(cursor), limit(page))
+          : query(collection(db,'comments'), where('authorId','==',String(uid)), orderBy('createdAt','desc'), limit(page));
+        const s = await getDocs(qPage);
+        if (s.empty) break;
+        s.forEach(d => likes += Number(d.data().likeCount || 0));
+        fetched += s.size;
+        cursor = s.docs[s.docs.length - 1];
+        if (s.size < page) break;
+        if (fetched > 4000) break; // giới hạn an toàn
+      }
+
+      // memberSince: ưu tiên user.createdAt, fallback bình luận sớm nhất
+      let join = userData?.createdAt || null;
+      try {
+        const firstQ = query(
+          collection(db, 'comments'),
+          where('authorId', '==', String(uid)),
+          orderBy('createdAt', 'asc'),
+          limit(1)
+        );
+        const s = await getDocs(firstQ);
+        if (!s.empty) {
+          const earliest = s.docs[0].data().createdAt || null;
+          const j = toDate(join)?.getTime() ?? Infinity;
+          const e = toDate(earliest)?.getTime() ?? Infinity;
+          if (!join || (e && e < j)) join = earliest;
+        }
+      } catch {}
+
+      setStats({ comments, likes, memberSince: join });
+    } catch {
+      setStats({ comments: 0, likes: 0, memberSince: null });
+    }
+  };
+
+  // ====== Load bình luận gần đây của chính chủ (phân trang) ======
+  const loadRecent = async (uid, reset = false) => {
+    if (!uid) return;
+    try {
+      setRecentLoading(true);
+      const pageSize = 12;
+      const qBase = query(
+        collection(db, 'comments'),
+        where('authorId', '==', String(uid)),
+        orderBy('createdAt','desc'),
+        ...(reset || !recentCursor ? [limit(pageSize)] : [startAfter(recentCursor), limit(pageSize)])
+      );
+      const s = await getDocs(qBase);
+      const items = s.docs.map(d => ({ id: d.id, ...d.data() }));
+      setRecent(prev => reset ? items : [...prev, ...items]);
+      setRecentCursor(s.docs[s.docs.length - 1] || null);
+      setRecentHasMore(s.size >= pageSize);
+    } catch {
+      // noop
+    } finally {
+      setRecentLoading(false);
+    }
   };
 
   // Upload avatar -> API -> Supabase
@@ -296,7 +416,7 @@ export default function ProfilePage() {
         </div>
       </nav>
 
-      <div className="w-full max-w-4xl mx-auto px-4 py-8">
+      <div className="w-full max-w-5xl mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold mb-6">Hồ sơ của bạn</h1>
 
         {isDeleted && (
@@ -361,6 +481,28 @@ export default function ProfilePage() {
                 {canChangeName
                   ? 'Bạn có thể đổi tên bây giờ. Sau khi đổi sẽ khoá 30 ngày.'
                   : `Bạn có thể đổi lại sau ${nameLockedDays} ngày.`}
+              </div>
+
+              {/* quick stats */}
+              <div className="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3">
+                  <div className="text-xs text-gray-500 flex items-center gap-2">
+                    <FontAwesomeIcon icon={faCalendarDays} /> Ngày tham gia
+                  </div>
+                  <div className="mt-1 font-medium">{fmtDate(stats.memberSince)}</div>
+                </div>
+                <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3">
+                  <div className="text-xs text-gray-500 flex items-center gap-2">
+                    <FontAwesomeIcon icon={faComment} /> Tổng bình luận
+                  </div>
+                  <div className="mt-1 font-medium">{stats.comments}</div>
+                </div>
+                <div className="rounded-xl bg-gray-50 dark:bg-gray-800 p-3">
+                  <div className="text-xs text-gray-500 flex items-center gap-2">
+                    <FontAwesomeIcon icon={faHeart} /> Lượt thích nhận
+                  </div>
+                  <div className="mt-1 font-medium">{stats.likes}</div>
+                </div>
               </div>
 
               <div className="mt-4 flex flex-wrap items-center gap-3">
@@ -464,6 +606,52 @@ export default function ProfilePage() {
 
             </div>
           </div>
+        </div>
+
+        {/* ===== Bình luận gần đây ===== */}
+        <div className="mt-8">
+          <h2 className="text-lg font-semibold mb-3">Bình luận gần đây</h2>
+
+          {recent.length === 0 && !recentLoading && (
+            <div className="text-sm text-gray-500 dark:text-gray-400">Bạn chưa có bình luận nào.</div>
+          )}
+
+          <ul className="grid md:grid-cols-2 gap-3">
+            {recent.map(c => {
+              const slug = c.postSlug || c.postId || '';
+              const href = slug ? `/${slug}?c=${encodeURIComponent(c.id)}` : '#';
+              return (
+                <li key={c.id} className="rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-4">
+                  <div className="text-xs text-gray-600 dark:text-gray-400 flex items-center gap-2">
+                    <span>{fmtRel(c.createdAt)}</span>
+                    {slug && (
+                      <>
+                        <span>•</span>
+                        <Link href={href} className="text-sky-700 dark:text-sky-300 hover:underline">
+                          Xem bài viết
+                        </Link>
+                      </>
+                    )}
+                  </div>
+                  <p className="mt-2 text-gray-800 dark:text-gray-100 whitespace-pre-wrap break-words overflow-hidden">
+                    {String(c.content || '')}
+                  </p>
+                </li>
+              );
+            })}
+          </ul>
+
+          {recentHasMore && (
+            <div className="mt-4">
+              <button
+                onClick={() => loadRecent(user?.uid, false)}
+                disabled={recentLoading}
+                className="px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+              >
+                {recentLoading ? 'Đang tải…' : 'Tải thêm'}
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </Layout>
