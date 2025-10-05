@@ -22,6 +22,11 @@ import {
   faPlus,
   faEye,
   faEyeSlash,
+  faSpinner,
+  faCircleCheck,
+  faCircleXmark,
+  faCircleInfo,
+  faTriangleExclamation,
 } from '@fortawesome/free-solid-svg-icons';
 import { faGoogle, faGithub, faXTwitter } from '@fortawesome/free-brands-svg-icons';
 
@@ -32,7 +37,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
   const [openAuth, setOpenAuth] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [guestMenuOpen, setGuestMenuOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false);      // ⬅️ dùng cho overlay
   const [mode, setMode] = useState('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -40,7 +45,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
   const [confirmPwd, setConfirmPwd] = useState('');
   const [showConfirm, setShowConfirm] = useState(false);
   const [msg, setMsg] = useState('');
-  const [toast, setToast] = useState(null);
+  const [toast, setToast] = useState(null);           // {type, text}
   const [pendingCred, setPendingCred] = useState(null);
   const [hint, setHint] = useState('');
   const [authClosedAt, setAuthClosedAt] = useState(0);
@@ -76,7 +81,9 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     return () => document.removeEventListener('mousedown', onClick);
   }, []);
 
-  const showToast = (type, text, ms = 2000) => {
+  /* ---------------- Toast & Overlay ---------------- */
+
+  const showToast = (type, text, ms = 2500) => {
     setToast({ type, text });
     window.clearTimeout((showToast._t || 0));
     showToast._t = window.setTimeout(() => setToast(null), ms);
@@ -85,16 +92,34 @@ export default function LoginButton({ onToggleTheme, isDark }) {
   const Toast = () => {
     if (!toast) return null;
     const tone =
-      toast.type === 'success' ? 'bg-emerald-600' :
-      toast.type === 'error'   ? 'bg-rose-600' :
-      toast.type === 'info'    ? 'bg-sky-600' :
-      toast.type === 'warning' ? 'bg-amber-600' :
-                                 'bg-gray-800';
+      toast.type === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' :
+      toast.type === 'error'   ? 'border-rose-200 bg-rose-50 text-rose-800' :
+      toast.type === 'info'    ? 'border-sky-200 bg-sky-50 text-sky-800' :
+      toast.type === 'warning' ? 'border-amber-200 bg-amber-50 text-amber-800' :
+                                 'border-gray-200 bg-white text-gray-800';
+    const Icon =
+      toast.type === 'success' ? faCircleCheck :
+      toast.type === 'error'   ? faCircleXmark :
+      toast.type === 'warning' ? faTriangleExclamation :
+                                 faCircleInfo;
+
     return (
-      <div className="fixed inset-0 z-[120] flex items-center justify-center">
-        <div className="absolute inset-0 bg-black/20" />
-        <div className={`relative rounded-xl px-4 py-2 text-sm shadow-xl text-white ${tone}`}>
-          {toast.text}
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[140] px-4">
+        <div className={`flex items-center gap-2 rounded-xl border px-4 py-2 shadow-xl ${tone}`}>
+          <FontAwesomeIcon icon={Icon} className="shrink-0" />
+          <div className="text-sm">{toast.text}</div>
+        </div>
+      </div>
+    );
+  };
+
+  const LoadingOverlay = () => {
+    if (!loading) return null;
+    return (
+      <div className="fixed inset-0 z-[130] bg-black/30 backdrop-blur-[1px] flex items-center justify-center">
+        <div className="rounded-2xl bg-white/90 dark:bg-zinc-900/90 border border-gray-200 dark:border-zinc-800 px-5 py-4 shadow-2xl flex items-center gap-3">
+          <FontAwesomeIcon icon={faSpinner} className="animate-spin text-xl text-gray-700 dark:text-gray-200" />
+          <div className="text-sm font-medium text-gray-700 dark:text-gray-200">Đang xử lý…</div>
         </div>
       </div>
     );
@@ -155,6 +180,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     return `${s} giây`;
   };
 
+  // Mapping mã lỗi Firebase Auth -> thông điệp tiếng Việt
   const mapAuthError = (e) => {
     const code = e?.code || '';
     switch (code) {
@@ -181,7 +207,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       case 'auth/email-already-in-use':
         return 'Email đã được sử dụng. Vui lòng đăng nhập.';
       case 'auth/invalid-credential':
-        return 'Thông tin đăng nhập không hợp lệ.'; // sẽ được phân biệt chi tiết ở khối catch(email)
+        return 'Thông tin đăng nhập không hợp lệ.';
       default:
         return e?.message || 'Có lỗi xảy ra. Vui lòng thử lại.';
     }
@@ -222,6 +248,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
         remainingText
       });
       setMsg(''); // xóa message cũ
+      showToast('error', isTemp ? 'Tài khoản đang bị BAN tạm thời.' : 'Tài khoản bị BAN vĩnh viễn.', 3500);
       return false;
     } catch {
       // Nếu guard lỗi server, tạm cho qua (tuỳ policy)
@@ -287,7 +314,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
 
         const { user: created } = await createUserWithEmailAndPassword(auth, email, password);
         if (ENFORCE_EMAIL_VERIFICATION) { try { await sendEmailVerification(created); } catch {} }
-        showToast('success', 'Đăng ký thành công! Hãy kiểm tra email để xác minh.');
+        showToast('success', 'Đăng ký thành công! Hãy kiểm tra email để xác minh.', 3000);
         setMode('login');
         setOpenAuth(false);
         setEmail(''); setPassword(''); setConfirmPwd('');
@@ -322,17 +349,24 @@ export default function LoginButton({ onToggleTheme, isDark }) {
 
   const onReset = async () => {
     if (!email) return setMsg('Nhập email trước khi đặt lại mật khẩu.');
+    setLoading(true);
     try {
       const actionCodeSettings = { url: 'https://auth.storeios.net', handleCodeInApp: false };
       await sendPasswordResetEmail(auth, email, actionCodeSettings);
       showToast('info', 'Đã gửi email đặt lại mật khẩu.');
     } catch (e) { setMsg(mapAuthError(e)); }
+    finally { setLoading(false); }
   };
 
   const logout = async () => {
-    await auth.signOut();
-    setMenuOpen(false);
-    showToast('info', 'Bạn đã đăng xuất.');
+    setLoading(true);
+    try {
+      await auth.signOut();
+      setMenuOpen(false);
+      showToast('info', 'Bạn đã đăng xuất.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   /* ---------------- UI ---------------- */
@@ -343,6 +377,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     return (
       <>
         <Toast />
+        <LoadingOverlay />
         <div className="relative" ref={menuRef}>
           <button
             className="flex items-center gap-1 pl-2 pr-2 py-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 border border-gray-200 dark:border-gray-700"
@@ -412,6 +447,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
   return (
     <>
       <Toast />
+      <LoadingOverlay />
       <div className="relative" ref={guestMenuRef}>
         <button
           onClick={(e) => {
@@ -579,7 +615,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
                 )}
 
                 {msg && (
-                  <div className="rounded-lg border border-rose-300 bg-rose-50 text-rose-900 px-3 py-2 text-sm">
+                  <div className="rounded-lg border border-rose-200 bg-rose-50 text-rose-800 px-3 py-2 text-sm">
                     {msg}
                   </div>
                 )}
