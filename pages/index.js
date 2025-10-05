@@ -475,3 +475,8 @@ export async function getServerSideProps(ctx) {
 
   return { props: { categoriesWithApps, hotApps: sortedHotApps, paginationData, certStatus } };
 }
+
+/*
+Gợi ý index DB (chạy 1 lần ở Supabase):
+CREATE INDEX IF NOT EXISTS idx_apps_category_created_at ON apps (category_id, created_at DESC);
+*/
