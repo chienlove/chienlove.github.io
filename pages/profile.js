@@ -493,7 +493,7 @@ export default function ProfilePage() {
               <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
                 <FontAwesomeIcon icon={faCircleInfo} className="opacity-70" />
                 {canChangeName
-                  ? 'Bạn có thể đổi tên bây giờ. Sau khi đổi sẽ khoá 30 ngày.'
+                  ? 'Bạn có thể đổi tên bây giờ. Sau khi đổi sẽ không thể đổi lại sau 30 ngày.'
                   : `Bạn chỉ có thể đổi lại sau ${nameLockedDays} ngày.`}
               </div>
 
