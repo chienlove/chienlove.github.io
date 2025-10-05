@@ -12,7 +12,7 @@ import {
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faUserCircle, faCalendarAlt, faComment, faHeart, faSpinner,
-  faShieldHalved, faUserSlash
+  faShieldHalved, faUserSlash, faBan, faUnlock
 } from '@fortawesome/free-solid-svg-icons';
 
 /* ----------------- Helpers: time ----------------- */
@@ -39,6 +39,181 @@ const fmtRel = (ts) => {
   for (const [u,s] of units) if (Math.abs(diff) >= s || u==='second') return rtf.format(Math.round(diff/s*-1), u);
   return '';
 };
+
+/* ----------------- BanBox (BAN vĩnh viễn / tạm thời) ----------------- */
+function BanBox({ me, isAdmin, uid, banInfo, onChanged }) {
+  const [busy, setBusy] = useState(false);
+  const [mode, setMode] = useState('permanent'); // 'permanent' | 'temporary'
+  const [preset, setPreset] = useState('7d');    // '1d' | '7d' | '30d' | 'custom'
+  const [customISO, setCustomISO] = useState(''); // yyyy-mm-ddThh:mm (local)
+  const [reason, setReason] = useState('');
+
+  if (!isAdmin || !uid) return null;
+
+  const remainingText = (() => {
+    if (!banInfo?.banned || !banInfo?.remainingMs) return '';
+    const ms = banInfo.remainingMs;
+    const s = Math.floor(ms / 1000);
+    const d = Math.floor(s / 86400);
+    const h = Math.floor((s % 86400) / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    if (d > 0) return `${d} ngày ${h} giờ`;
+    if (h > 0) return `${h} giờ ${m} phút`;
+    if (m > 0) return `${m} phút`;
+    return `${s} giây`;
+  })();
+
+  const computeExpiresAtISO = () => {
+    if (mode !== 'temporary') return null;
+    if (preset === 'custom') {
+      return customISO ? new Date(customISO).toISOString() : null;
+    }
+    const map = { '1d': 1, '7d': 7, '30d': 30 };
+    const days = map[preset] || 7;
+    return new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+  };
+
+  const doAction = async (action) => {
+    const label = action === 'ban'
+      ? (mode === 'permanent' ? 'BAN VĨNH VIỄN tài khoản này?' : 'BAN TẠM THỜI tài khoản này?')
+      : 'GỠ BAN tài khoản này?';
+    if (!window.confirm(label)) return;
+
+    try {
+      setBusy(true);
+      const body = { uid, action, reason: reason || undefined };
+      if (action === 'ban') {
+        body.mode = mode;
+        if (mode === 'temporary') {
+          const iso = computeExpiresAtISO();
+          if (!iso) throw new Error('Vui lòng chọn thời hạn hợp lệ');
+          body.expiresAtISO = iso;
+        }
+      }
+      const idToken = await me.getIdToken();
+      const resp = await fetch('/api/admin/ban-user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+        body: JSON.stringify(body)
+      });
+      const json = await resp.json();
+      if (!resp.ok || !json.ok) throw new Error(json?.error || 'Thao tác thất bại');
+
+      onChanged?.(json.banned, json);
+      alert(action === 'ban' ? 'Đã BAN tài khoản.' : 'Đã gỡ BAN.');
+    } catch (e) {
+      alert(e.message || 'Lỗi không xác định');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="mt-6 rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/70 dark:bg-amber-900/20 p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h3 className="font-semibold text-amber-700 dark:text-amber-300 inline-flex items-center gap-2">
+            <FontAwesomeIcon icon={faBan} />
+            Quản lý BAN tài khoản
+          </h3>
+          <p className="text-sm text-amber-900/80 dark:text-amber-200/80 mt-1">
+            Trạng thái: {banInfo.loading ? 'Đang kiểm tra…' : (banInfo.banned ? 'ĐANG BỊ BAN' : 'Không bị ban')}
+            {!banInfo.loading && banInfo.banned && (
+              <>
+                {' • Kiểu: '}<b>{banInfo.mode === 'temporary' ? 'Tạm thời' : 'Vĩnh viễn'}</b>
+                {banInfo.mode === 'temporary' && banInfo.expiresAt && (
+                  <> • Hết hạn: {new Date(banInfo.expiresAt).toLocaleString('vi-VN')} ({remainingText} còn lại)</>
+                )}
+                {banInfo.authDisabled ? ' • (Auth: disabled)' : ''}
+              </>
+            )}
+          </p>
+        </div>
+
+        <div className="flex gap-2 shrink-0">
+          <button
+            onClick={() => doAction('ban')}
+            disabled={busy || banInfo.loading || banInfo.banned}
+            className={`px-3 py-2 rounded-lg text-white ${busy || banInfo.banned ? 'bg-amber-400 cursor-not-allowed' : 'bg-amber-600 hover:bg-amber-700'}`}
+            title="Ban tài khoản"
+          >
+            <FontAwesomeIcon icon={faBan} className="mr-2" />
+            Ban
+          </button>
+          <button
+            onClick={() => doAction('unban')}
+            disabled={busy || banInfo.loading || !banInfo.banned}
+            className={`px-3 py-2 rounded-lg ${busy || !banInfo.banned ? 'bg-gray-200 dark:bg-gray-700 text-gray-500 cursor-not-allowed' : 'bg-gray-900 text-white hover:bg-black'}`}
+            title="Gỡ ban"
+          >
+            <FontAwesomeIcon icon={faUnlock} className="mr-2" />
+            Unban
+          </button>
+        </div>
+      </div>
+
+      {/* Cấu hình trước khi BAN */}
+      <div className="mt-4 grid gap-3 sm:grid-cols-3">
+        <div className="rounded-md border border-amber-200 dark:border-amber-700 p-3">
+          <label className="text-sm font-medium">Chế độ BAN</label>
+          <div className="mt-2 flex flex-col gap-2 text-sm">
+            <label className="inline-flex items-center gap-2">
+              <input type="radio" name="ban-mode" value="permanent" checked={mode==='permanent'} onChange={()=>setMode('permanent')} />
+              Vĩnh viễn
+            </label>
+            <label className="inline-flex items-center gap-2">
+              <input type="radio" name="ban-mode" value="temporary" checked={mode==='temporary'} onChange={()=>setMode('temporary')} />
+              Tạm thời
+            </label>
+          </div>
+        </div>
+
+        {mode === 'temporary' && (
+          <>
+            <div className="rounded-md border border-amber-200 dark:border-amber-700 p-3">
+              <label className="text-sm font-medium">Thời lượng</label>
+              <select
+                className="mt-2 w-full rounded-md border border-amber-300 dark:border-amber-700 bg-white/80 dark:bg-black/20 px-2 py-2 text-sm"
+                value={preset}
+                onChange={e => setPreset(e.target.value)}
+              >
+                <option value="1d">1 ngày</option>
+                <option value="7d">7 ngày</option>
+                <option value="30d">30 ngày</option>
+                <option value="custom">Tự chọn ngày/giờ</option>
+              </select>
+            </div>
+
+            <div className="rounded-md border border-amber-200 dark:border-amber-700 p-3">
+              <label className="text-sm font-medium">Hết hạn (nếu tự chọn)</label>
+              <input
+                type="datetime-local"
+                className="mt-2 w-full rounded-md border border-amber-300 dark:border-amber-700 bg-white/80 dark:bg-black/20 px-2 py-2 text-sm"
+                value={customISO}
+                onChange={e => setCustomISO(e.target.value)}
+                disabled={preset !== 'custom'}
+              />
+              <p className="text-xs text-amber-800/80 dark:text-amber-200/70 mt-1">
+                Dùng múi giờ trình duyệt hiện tại của bạn.
+              </p>
+            </div>
+          </>
+        )}
+
+        <div className="rounded-md border border-amber-200 dark:border-amber-700 p-3 sm:col-span-3">
+          <label className="text-sm font-medium">Lý do (tuỳ chọn)</label>
+          <input
+            type="text"
+            className="mt-2 w-full rounded-md border border-amber-300 dark:border-amber-700 bg-white/80 dark:bg-black/20 px-3 py-2 text-sm"
+            placeholder="vd: spam, lạm dụng..."
+            value={reason}
+            onChange={e => setReason(e.target.value)}
+          />
+        </div>
+      </div>
+    </section>
+  );
+}
 
 /* ----------------- AdminDangerZone ----------------- */
 function AdminDangerZone({ me, isAdmin, uid, displayName }) {
@@ -196,6 +371,11 @@ export default function PublicUser() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
 
+  // trạng thái BAN
+  const [banInfo, setBanInfo] = useState({
+    loading: true, banned: false, authDisabled: false, reason: null, mode: null, expiresAt: null, remainingMs: null
+  });
+
   /* ---- Auth state + kiểm tra admin ---- */
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(async (u) => {
@@ -209,6 +389,35 @@ export default function PublicUser() {
     });
     return () => unsub();
   }, []);
+
+  /* ---- Load trạng thái BAN (và auto-unban khi hết hạn qua endpoint) ---- */
+  useEffect(() => {
+    (async () => {
+      if (!me || !isAdmin || !uid) { setBanInfo(s => ({ ...s, loading: false })); return; }
+      try {
+        const idToken = await me.getIdToken();
+        const resp = await fetch(`/api/admin/ban-status?uid=${encodeURIComponent(String(uid))}`, {
+          headers: { Authorization: `Bearer ${idToken}` }
+        });
+        const json = await resp.json();
+        if (json?.ok) {
+          setBanInfo({
+            loading: false,
+            banned: json.banned,
+            authDisabled: json.authDisabled,
+            reason: json.reason || null,
+            mode: json.mode || null,
+            expiresAt: json.expiresAt || null,
+            remainingMs: json.remainingMs || null,
+          });
+        } else {
+          setBanInfo({ loading: false, banned: false, authDisabled: false, reason: null, mode: null, expiresAt: null, remainingMs: null });
+        }
+      } catch {
+        setBanInfo({ loading: false, banned: false, authDisabled: false, reason: null, mode: null, expiresAt: null, remainingMs: null });
+      }
+    })();
+  }, [me, isAdmin, uid]);
 
   /* ---- Tính "Ngày tham gia": ưu tiên user.createdAt, fallback bình luận sớm nhất ---- */
   const resolveMemberSince = async (uid, udata) => {
@@ -381,7 +590,24 @@ export default function PublicUser() {
           </div>
         </section>
 
-        {/* Khu vực quản trị */}
+        {/* QUẢN LÝ BAN */}
+        <BanBox
+          me={me}
+          isAdmin={isAdmin}
+          uid={uid}
+          banInfo={banInfo}
+          onChanged={(isBanned, payload) =>
+            setBanInfo(s => ({
+              ...s,
+              banned: isBanned,
+              mode: payload?.mode || s.mode,
+              expiresAt: payload?.expiresAt || s.expiresAt,
+              remainingMs: payload?.expiresAt ? (new Date(payload.expiresAt).getTime() - Date.now()) : null
+            }))
+          }
+        />
+
+        {/* Khu vực xoá dữ liệu */}
         <AdminDangerZone me={me} isAdmin={isAdmin} uid={uid} displayName={displayName} />
 
         {/* Bình luận gần đây */}
