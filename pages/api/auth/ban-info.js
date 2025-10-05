@@ -1,8 +1,9 @@
 // pages/api/auth/ban-info.js
 import crypto from 'crypto';
-import { getFirestore, Timestamp } from 'firebase-admin/firestore';
-import { initAdminApp } from '../../../lib/firebase-admin';
+import { Timestamp } from 'firebase-admin/firestore';
+import { admin, dbAdmin } from '../../../lib/firebase-admin';
 
+// Chuẩn hoá email: hạ chữ, trim, loại bỏ ký tự zero-width (nếu có)
 const stripZW = (s) => String(s || '').replace(/[\u200B-\u200D\uFEFF]/g, '');
 const normEmail = (s) => stripZW(String(s || '').trim().toLowerCase());
 const hash = (s) => crypto.createHash('sha256').update(normEmail(s)).digest('hex');
@@ -15,30 +16,29 @@ export default async function handler(req, res) {
   if (!email) return res.status(400).json({ banned: false, error: 'missing email' });
 
   try {
-    initAdminApp();
-    const db = getFirestore();
-    const col = db.collection('banned_emails');
+    // dbAdmin là instance Firestore admin đã khởi tạo sẵn (theo cùng kiểu với guard.js)
+    const col = dbAdmin.collection('banned_emails');
 
     let found = null;
     let foundBy = null;
 
-    // 1) docId = sha256(email)
+    // 1) Tra theo docId = sha256(email)
     const byId = await col.doc(hash(email)).get();
     if (byId.exists) { found = byId; foundBy = 'docId(hash)'; }
 
-    // 2) where emailLower == email
+    // 2) Fallback: where emailLower == email
     if (!found) {
       const q1 = await col.where('emailLower', '==', email).limit(1).get();
       if (!q1.empty) { found = q1.docs[0]; foundBy = 'emailLower=='; }
     }
 
-    // 3) where email == email (nếu bạn dùng field 'email')
+    // 3) Fallback: where email == email (nếu lỡ dùng field 'email')
     if (!found) {
       const q2 = await col.where('email', '==', email).limit(1).get();
       if (!q2.empty) { found = q2.docs[0]; foundBy = 'email=='; }
     }
 
-    // 4) range query (bắt trường hợp có ký tự vô hình/khác biệt nhẹ)
+    // 4) Range query để bắt case "ký tự vô hình"/khác biệt nhẹ
     if (!found) {
       const end = email + '\uf8ff';
       const q3 = await col.where('emailLower', '>=', email).where('emailLower', '<=', end).limit(1).get();
@@ -68,6 +68,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json(payload);
   } catch (e) {
+    // Không lộ lỗi nội bộ ra ngoài
     return res.status(200).json({ banned: false, ...(debug ? { error: e?.message } : {}) });
   }
 }
