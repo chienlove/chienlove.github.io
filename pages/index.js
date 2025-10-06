@@ -1,11 +1,10 @@
 // pages/index.js
-import { useMemo } from 'react';
+import { useMemo, useEffect, useState, Fragment } from 'react';
 import Head from 'next/head';
 import Layout from '../components/Layout';
 import AppCard from '../components/AppCard';
 import AdUnit from '../components/Ads';
 import { createSupabaseServer } from '../lib/supabase';
-import { Fragment } from 'react';
 import Link from 'next/link';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -22,7 +21,7 @@ import {
 import affiliateApps from '../lib/appads';
 
 /* =========================
-   SEO component (chỉ bổ sung, không đổi UI)
+   SEO component (bổ sung, không đổi UI)
    ========================= */
 const SITE = {
   name: 'StoreiOS',
@@ -284,9 +283,35 @@ const AffiliateInlineCard = ({ item, isFirst = false }) => {
 /* =========================
    Home
    ========================= */
-export default function Home({ categoriesWithApps, hotApps, paginationData, certStatus, metaSEO }) {
-  // Các chuyên mục có cài IPA → hiển thị badge ký/thu hồi
+export default function Home({ categoriesWithApps, hotApps, paginationData, metaSEO }) {
+  // Chỉ 2 chuyên mục cài IPA → hiển thị badge ký/thu hồi
   const INSTALLABLE_SLUGS = new Set(['jailbreak', 'app-clone']);
+
+  // Trạng thái certificate (client-side, sau khi trang đã render)
+  const [certStatus, setCertStatus] = useState(null);
+
+  useEffect(() => {
+    let alive = true;
+    const ac = new AbortController();
+    const t = setTimeout(() => ac.abort(), 1200);
+
+    // Gọi API proxy có cache; nếu chưa có, fallback sang external
+    fetch('/api/check-revocation', { signal: ac.signal })
+      .then(r => r.ok ? r.json() : Promise.reject(new Error('proxy-failed')))
+      .then(json => { if (alive) setCertStatus(json); })
+      .catch(async () => {
+        try {
+          const r2 = await fetch('https://ipadl.storeios.net/api/check-revocation', { signal: ac.signal });
+          const j2 = r2.ok ? await r2.json() : { ocspStatus: 'error' };
+          if (alive) setCertStatus(j2);
+        } catch {
+          if (alive) setCertStatus({ ocspStatus: 'error' });
+        }
+      })
+      .finally(() => clearTimeout(t));
+
+    return () => { alive = false; ac.abort(); clearTimeout(t); };
+  }, []);
 
   const multiplexIndices = new Set([1, 3]);
   const contentCard = 'bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4';
@@ -295,7 +320,6 @@ export default function Home({ categoriesWithApps, hotApps, paginationData, cert
   const AdLabel = () => (<div className="text-sm text-gray-500 dark:text-gray-400 font-semibold px-1">Quảng cáo</div>);
 
   // ===== SEO (không đổi UI) =====
-  // Tận dụng meta được chuẩn bị ở SSR
   const seoData = useMemo(() => metaSEO || {}, [metaSEO]);
 
   return (
@@ -336,7 +360,7 @@ export default function Home({ categoriesWithApps, hotApps, paginationData, cert
                     {category.name}
                   </h2>
 
-                  {/* Badge trạng thái cert (server-side fetch) */}
+                  {/* Badge trạng thái cert – chỉ hiện cho jailbreak/app-clone, và chỉ sau khi có kết quả */}
                   {INSTALLABLE_SLUGS.has((category.slug || '').toLowerCase()) && certStatus && (
                     <span
                       className="flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300"
@@ -402,7 +426,7 @@ export default function Home({ categoriesWithApps, hotApps, paginationData, cert
               {new Set([1, 3]).has(index) && (
                 <div className="space-y-2">
                   <div className="text-sm text-gray-500 dark:text-gray-400 font-semibold px-1">Quảng cáo</div>
-                  <div className={adCard}><AdUnit className="my-0" mobileVariant="multiplex" /></div>
+                  <div className={contentCard}><AdUnit className="my-0" mobileVariant="multiplex" /></div>
                 </div>
               )}
             </Fragment>
@@ -412,7 +436,7 @@ export default function Home({ categoriesWithApps, hotApps, paginationData, cert
         {/* Footer Ad */}
         <div className="space-y-2">
           <div className="text-sm text-gray-500 dark:text-gray-400 font-semibold px-1">Quảng cáo</div>
-          <div className={adCard}><AdUnit className="my-0" mobileVariant="compact" /></div>
+          <div className={contentCard}><AdUnit className="my-0" mobileVariant="compact" /></div>
         </div>
       </div>
     </Layout>
@@ -464,14 +488,14 @@ function interleaveAffiliate(apps, affiliatePool, category, {
 }
 
 /* =========================
-   getServerSideProps (tối ưu)
+   getServerSideProps (tối ưu, bỏ check cert SSR)
    ========================= */
 export async function getServerSideProps(ctx) {
   const supabase = createSupabaseServer(ctx);
   const userAgent = ctx.req.headers['user-agent'] || '';
   const isGoogleBot = userAgent.toLowerCase().includes('googlebot');
 
-  // CDN caching ngắn hạn để vào trang nhanh hơn (không làm stale dữ liệu quá lâu)
+  // CDN caching ngắn hạn để vào trang nhanh hơn
   ctx.res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
 
   const { data: { user } } = await supabase.auth.getUser();
@@ -573,29 +597,8 @@ export async function getServerSideProps(ctx) {
     .sort((a, b) => b.hotScore - a.hotScore)
     .slice(0, 5);
 
-  // 🔹 CHECK CERT: đặt timeout để tránh treo SSR
-  let certStatus = { ocspStatus: 'error' };
-  try {
-    const controller = new AbortController();
-    const t = setTimeout(() => controller.abort(), 1200);
-    const res = await fetch('https://ipadl.storeios.net/api/check-revocation', {
-      method: 'GET',
-      signal: controller.signal
-    });
-    clearTimeout(t);
-    if (res.ok) certStatus = await res.json();
-  } catch {
-    certStatus = { ocspStatus: 'error' };
-  }
-
   // ====== Chuẩn bị meta SEO động cho Index ======
-  // Nếu đang xem category, meta theo category + page; ngược lại meta mặc định.
-  let metaSEO = {
-    page: 1,
-    totalPages: 1,
-    categorySlug: null,
-  };
-
+  let metaSEO = { page: 1, totalPages: 1, categorySlug: null };
   if (activeSlug) {
     const activeCat = (categories || []).find(c => (c.slug || '').toLowerCase() === activeSlug);
     const pageInfo = activeCat ? paginationData[activeCat.id] : null;
@@ -611,8 +614,12 @@ export async function getServerSideProps(ctx) {
       categoriesWithApps,
       hotApps: sortedHotApps,
       paginationData,
-      certStatus,
       metaSEO,
     }
   };
 }
+
+/*
+Gợi ý index DB (chạy 1 lần ở Supabase):
+CREATE INDEX IF NOT EXISTS idx_apps_category_created_at ON apps (category_id, created_at DESC);
+*/
