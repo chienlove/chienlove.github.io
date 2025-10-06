@@ -296,7 +296,7 @@ export default function Home({ categoriesWithApps, hotApps, paginationData, meta
     const t = setTimeout(() => ac.abort(), 1200);
 
     // Gọi API proxy có cache; nếu chưa có, fallback sang external
-    fetch('/api/check-revocation', { signal: ac.signal })
+    fetch('https://ipadl.storeios.net/api/check-revocation', { signal: ac.signal })
       .then(r => r.ok ? r.json() : Promise.reject(new Error('proxy-failed')))
       .then(json => { if (alive) setCertStatus(json); })
       .catch(async () => {
