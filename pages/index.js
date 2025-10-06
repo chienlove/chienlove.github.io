@@ -1,4 +1,6 @@
 // pages/index.js
+import { useMemo } from 'react';
+import Head from 'next/head';
 import Layout from '../components/Layout';
 import AppCard from '../components/AppCard';
 import AdUnit from '../components/Ads';
@@ -20,7 +22,105 @@ import {
 import affiliateApps from '../lib/appads';
 
 /* =========================
-   Pagination components
+   SEO component (chỉ bổ sung, không đổi UI)
+   ========================= */
+const SITE = {
+  name: 'StoreiOS',
+  url: 'https://storeios.net',
+  twitter: '@storeios' // chỉnh nếu khác
+};
+
+function SEOIndexMeta({ meta }) {
+  const {
+    page = 1,
+    totalPages = 1,
+    categorySlug = null,
+    description = 'Tải ứng dụng iOS, TestFlight, jailbreak và hướng dẫn an toàn. Cập nhật hằng ngày.',
+  } = meta || {};
+
+  const titleBase = categorySlug
+    ? `StoreiOS – ${categorySlug} cho iOS`
+    : 'StoreiOS – Ứng dụng iOS, TestFlight, Jailbreak';
+  const title = page > 1 ? `${titleBase} (Trang ${page})` : titleBase;
+
+  const canonical = `${SITE.url}${categorySlug ? `/?category=${encodeURIComponent(categorySlug)}` : ''}${page > 1 ? `${categorySlug ? '&' : '/?'}page=${page}` : ''}`;
+  const prevUrl = page > 1
+    ? `${SITE.url}${categorySlug ? `/?category=${encodeURIComponent(categorySlug)}&page=${page - 1}` : `/?page=${page - 1}`}`
+    : null;
+  const nextUrl = page < totalPages
+    ? `${SITE.url}${categorySlug ? `/?category=${encodeURIComponent(categorySlug)}&page=${page + 1}` : `/?page=${page + 1}`}`
+    : null;
+
+  // Supabase origin để preconnect (an toàn nếu biến môi trường chưa set)
+  let supabaseOrigin = null;
+  try {
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      supabaseOrigin = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).origin;
+    }
+  } catch {}
+
+  const jsonLdWebsite = {
+    '@context': 'https://schema.org',
+    '@type': 'WebSite',
+    name: SITE.name,
+    url: SITE.url,
+    potentialAction: {
+      '@type': 'SearchAction',
+      target: `${SITE.url}/search?q={query}`,
+      'query-input': 'required name=query'
+    }
+  };
+
+  return (
+    <Head>
+      {/* Title & basic meta */}
+      <title>{title}</title>
+      <meta name="description" content={description} />
+      <link rel="canonical" href={canonical} />
+      {prevUrl && <link rel="prev" href={prevUrl} />}
+      {nextUrl && <link rel="next" href={nextUrl} />}
+      <meta name="robots" content="index,follow,max-image-preview:large" />
+      <meta name="googlebot" content="index,follow" />
+      <meta name="theme-color" content="#111111" />
+
+      {/* Open Graph */}
+      <meta property="og:type" content="website" />
+      <meta property="og:site_name" content={SITE.name} />
+      <meta property="og:url" content={canonical} />
+      <meta property="og:title" content={title} />
+      <meta property="og:description" content={description} />
+      <meta property="og:image" content={`${SITE.url}/og-default.jpg`} />
+      <meta property="og:image:width" content="1200" />
+      <meta property="og:image:height" content="630" />
+
+      {/* Twitter */}
+      <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:site" content={SITE.twitter} />
+      <meta name="twitter:title" content={title} />
+      <meta name="twitter:description" content={description} />
+      <meta name="twitter:image" content={`${SITE.url}/og-default.jpg`} />
+
+      {/* Hreflang */}
+      <link rel="alternate" hrefLang="vi" href={canonical} />
+      <link rel="alternate" hrefLang="x-default" href={canonical} />
+
+      {/* Performance */}
+      {supabaseOrigin && <link rel="dns-prefetch" href={supabaseOrigin} />}
+      {supabaseOrigin && <link rel="preconnect" href={supabaseOrigin} crossOrigin="" />}
+      <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+
+      {/* JSON‑LD */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdWebsite) }}
+      />
+    </Head>
+  );
+}
+
+/* =========================
+   Pagination components (giữ nguyên)
    ========================= */
 
 // Full pagination (cho category đang active)
@@ -184,7 +284,7 @@ const AffiliateInlineCard = ({ item, isFirst = false }) => {
 /* =========================
    Home
    ========================= */
-export default function Home({ categoriesWithApps, hotApps, paginationData, certStatus }) {
+export default function Home({ categoriesWithApps, hotApps, paginationData, certStatus, metaSEO }) {
   // Các chuyên mục có cài IPA → hiển thị badge ký/thu hồi
   const INSTALLABLE_SLUGS = new Set(['jailbreak', 'app-clone']);
 
@@ -194,8 +294,14 @@ export default function Home({ categoriesWithApps, hotApps, paginationData, cert
 
   const AdLabel = () => (<div className="text-sm text-gray-500 dark:text-gray-400 font-semibold px-1">Quảng cáo</div>);
 
+  // ===== SEO (không đổi UI) =====
+  // Tận dụng meta được chuẩn bị ở SSR
+  const seoData = useMemo(() => metaSEO || {}, [metaSEO]);
+
   return (
     <Layout hotApps={hotApps}>
+      <SEOIndexMeta meta={seoData} />
+
       <div className="container mx-auto px-1 md:px-2 py-6 space-y-10">
         {/* Banner Ad */}
         <div className="space-y-2">
@@ -293,9 +399,9 @@ export default function Home({ categoriesWithApps, hotApps, paginationData, cert
                 )}
               </div>
 
-              {multiplexIndices.has(index) && (
+              {new Set([1, 3]).has(index) && (
                 <div className="space-y-2">
-                  <AdLabel />
+                  <div className="text-sm text-gray-500 dark:text-gray-400 font-semibold px-1">Quảng cáo</div>
                   <div className={adCard}><AdUnit className="my-0" mobileVariant="multiplex" /></div>
                 </div>
               )}
@@ -305,7 +411,7 @@ export default function Home({ categoriesWithApps, hotApps, paginationData, cert
 
         {/* Footer Ad */}
         <div className="space-y-2">
-          <AdLabel />
+          <div className="text-sm text-gray-500 dark:text-gray-400 font-semibold px-1">Quảng cáo</div>
           <div className={adCard}><AdUnit className="my-0" mobileVariant="compact" /></div>
         </div>
       </div>
@@ -364,6 +470,9 @@ export async function getServerSideProps(ctx) {
   const supabase = createSupabaseServer(ctx);
   const userAgent = ctx.req.headers['user-agent'] || '';
   const isGoogleBot = userAgent.toLowerCase().includes('googlebot');
+
+  // CDN caching ngắn hạn để vào trang nhanh hơn (không làm stale dữ liệu quá lâu)
+  ctx.res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
 
   const { data: { user } } = await supabase.auth.getUser();
   if (!user && !isGoogleBot) {
@@ -464,19 +573,46 @@ export async function getServerSideProps(ctx) {
     .sort((a, b) => b.hotScore - a.hotScore)
     .slice(0, 5);
 
-  // 🔹 CHECK CERT: gọi server-side để ẩn khỏi Network tab của client
+  // 🔹 CHECK CERT: đặt timeout để tránh treo SSR
   let certStatus = { ocspStatus: 'error' };
   try {
-    const res = await fetch('https://ipadl.storeios.net/api/check-revocation', { method: 'GET' });
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), 1200);
+    const res = await fetch('https://ipadl.storeios.net/api/check-revocation', {
+      method: 'GET',
+      signal: controller.signal
+    });
+    clearTimeout(t);
     if (res.ok) certStatus = await res.json();
   } catch {
     certStatus = { ocspStatus: 'error' };
   }
 
-  return { props: { categoriesWithApps, hotApps: sortedHotApps, paginationData, certStatus } };
-}
+  // ====== Chuẩn bị meta SEO động cho Index ======
+  // Nếu đang xem category, meta theo category + page; ngược lại meta mặc định.
+  let metaSEO = {
+    page: 1,
+    totalPages: 1,
+    categorySlug: null,
+  };
 
-/*
-Gợi ý index DB (chạy 1 lần ở Supabase):
-CREATE INDEX IF NOT EXISTS idx_apps_category_created_at ON apps (category_id, created_at DESC);
-*/
+  if (activeSlug) {
+    const activeCat = (categories || []).find(c => (c.slug || '').toLowerCase() === activeSlug);
+    const pageInfo = activeCat ? paginationData[activeCat.id] : null;
+    metaSEO = {
+      page: pageInfo?.currentPage || 1,
+      totalPages: pageInfo?.totalPages || 1,
+      categorySlug: activeSlug,
+    };
+  }
+
+  return {
+    props: {
+      categoriesWithApps,
+      hotApps: sortedHotApps,
+      paginationData,
+      certStatus,
+      metaSEO,
+    }
+  };
+}
