@@ -292,25 +292,32 @@ export default function Home({ categoriesWithApps, hotApps, paginationData, meta
 
   useEffect(() => {
     let alive = true;
-    const ac = new AbortController();
-    const t = setTimeout(() => ac.abort(), 1200);
+    const TIMEOUT_MS = 1500;
 
-    // Gọi API proxy có cache; nếu chưa có, fallback sang external
-    fetch('https://ipadl.storeios.net/api/check-revocation', { signal: ac.signal })
-      .then(r => r.ok ? r.json() : Promise.reject(new Error('proxy-failed')))
-      .then(json => { if (alive) setCertStatus(json); })
-      .catch(async () => {
-        try {
-          const r2 = await fetch('https://ipadl.storeios.net/api/check-revocation', { signal: ac.signal });
-          const j2 = r2.ok ? await r2.json() : { ocspStatus: 'error' };
-          if (alive) setCertStatus(j2);
-        } catch {
-          if (alive) setCertStatus({ ocspStatus: 'error' });
-        }
+    // ❌ Không Abort ở client (tránh DOMException Safari)
+    // Dùng race với setTimeout: nếu quá TIMEOUT_MS thì hiển thị trạng thái "Error" và vẫn để fetch chạy ngầm.
+    let settled = false;
+    const timer = setTimeout(() => {
+      if (!alive || settled) return;
+      settled = true;
+      setCertStatus({ ocspStatus: 'error' });
+    }, TIMEOUT_MS);
+
+    fetch('/api/check-revocation')
+      .then(r => (r.ok ? r.json() : Promise.reject()))
+      .then(json => {
+        if (!alive || settled) return;
+        settled = true;
+        setCertStatus(json);
       })
-      .finally(() => clearTimeout(t));
+      .catch(() => {
+        if (!alive || settled) return;
+        settled = true;
+        setCertStatus({ ocspStatus: 'error' });
+      })
+      .finally(() => clearTimeout(timer));
 
-    return () => { alive = false; ac.abort(); clearTimeout(t); };
+    return () => { alive = false; clearTimeout(timer); };
   }, []);
 
   const multiplexIndices = new Set([1, 3]);
@@ -618,8 +625,3 @@ export async function getServerSideProps(ctx) {
     }
   };
 }
-
-/*
-Gợi ý index DB (chạy 1 lần ở Supabase):
-CREATE INDEX IF NOT EXISTS idx_apps_category_created_at ON apps (category_id, created_at DESC);
-*/
