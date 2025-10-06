@@ -15,8 +15,9 @@ import {
   faFire,
   faChevronLeft,
   faChevronRight,
-  faEye,       // 👁️ views (TestFlight)
-  faDownload   // ⬇️ downloads (Jailbreak/App‑clone)
+  faEye,
+  faDownload,
+  faCircleDown;
 } from '@fortawesome/free-solid-svg-icons';
 
 // Affiliate tĩnh
@@ -294,7 +295,7 @@ function MetricInlineAbsolute({ categorySlug, app }) {
     icon = faEye;
     value = app?.views ?? 0;
   } else if (slug === 'jailbreak' || slug === 'app-clone') {
-    icon = fa-solid fa-circle-down;
+    icon = faCircleDown;
     value = app?.downloads ?? 0;
   } else {
     return null;
