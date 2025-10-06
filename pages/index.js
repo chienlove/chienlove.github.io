@@ -15,6 +15,8 @@ import {
   faFire,
   faChevronLeft,
   faChevronRight,
+  faEye,          // 👁️ views
+  faDownload      // ⬇️ downloads
 } from '@fortawesome/free-solid-svg-icons';
 
 // Affiliate tĩnh
@@ -50,13 +52,15 @@ function SEOIndexMeta({ meta }) {
     ? `${SITE.url}${categorySlug ? `/?category=${encodeURIComponent(categorySlug)}&page=${page + 1}` : `/?page=${page + 1}`}`
     : null;
 
-  // Supabase origin để preconnect (an toàn nếu biến môi trường chưa set)
+  // Supabase & API origin để preconnect (giảm "bắt đầu kết nối" 2-3s khi cold)
   let supabaseOrigin = null;
   try {
     if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
       supabaseOrigin = new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).origin;
     }
   } catch {}
+
+  const ipadlOrigin = 'https://ipadl.storeios.net'; // API check cert
 
   const jsonLdWebsite = {
     '@context': 'https://schema.org',
@@ -108,6 +112,9 @@ function SEOIndexMeta({ meta }) {
       {supabaseOrigin && <link rel="preconnect" href={supabaseOrigin} crossOrigin="" />}
       <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+      {/* Preconnect tới API chứng chỉ để giảm TTFB lần đầu */}
+      <link rel="dns-prefetch" href={ipadlOrigin} />
+      <link rel="preconnect" href={ipadlOrigin} crossOrigin="" />
 
       {/* JSON‑LD */}
       <script
@@ -281,6 +288,32 @@ const AffiliateInlineCard = ({ item, isFirst = false }) => {
 };
 
 /* =========================
+   Helper hiển thị metric theo chuyên mục
+   ========================= */
+function MetricLine({ categorySlug, app }) {
+  const slug = (categorySlug || '').toLowerCase();
+  if (slug === 'testflight') {
+    const views = app?.views ?? 0;
+    return (
+      <div className="mt-1 mb-2 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 pl-2">
+        <FontAwesomeIcon icon={faEye} />
+        <span>{views.toLocaleString('vi-VN')} lượt xem</span>
+      </div>
+    );
+  }
+  if (slug === 'jailbreak' || slug === 'app-clone') {
+    const downloads = app?.downloads ?? 0;
+    return (
+      <div className="mt-1 mb-2 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 pl-2">
+        <FontAwesomeIcon icon={faDownload} />
+        <span>{downloads.toLocaleString('vi-VN')} lượt tải</span>
+      </div>
+    );
+  }
+  return null;
+}
+
+/* =========================
    Home
    ========================= */
 export default function Home({ categoriesWithApps, hotApps, paginationData, metaSEO }) {
@@ -290,34 +323,58 @@ export default function Home({ categoriesWithApps, hotApps, paginationData, meta
   // Trạng thái certificate (client-side, sau khi trang đã render)
   const [certStatus, setCertStatus] = useState(null);
 
+  // ✅ Soft-timeout + cache + retry: không "khóa" kết quả đến muộn → tránh nhảy Error ngẫu nhiên.
   useEffect(() => {
     let alive = true;
     const TIMEOUT_MS = 1500;
 
-    // ❌ Không Abort ở client (tránh DOMException Safari)
-    // Dùng race với setTimeout: nếu quá TIMEOUT_MS thì hiển thị trạng thái "Error" và vẫn để fetch chạy ngầm.
-    let settled = false;
-    const timer = setTimeout(() => {
-      if (!alive || settled) return;
-      settled = true;
-      setCertStatus({ ocspStatus: 'error' });
+    // 1) Hydrate nhanh từ cache cục bộ (nếu < 5 phút)
+    try {
+      const cached = JSON.parse(localStorage.getItem('certStatusCache') || 'null');
+      if (cached && Date.now() - cached.ts < 5 * 60 * 1000) {
+        setCertStatus(cached.data);
+      }
+    } catch {}
+
+    // 2) Soft-timeout: quá 1.5s thì tạm báo "pending" nhưng VẪN chờ kết quả để cập nhật.
+    const pendingTimer = setTimeout(() => {
+      if (!alive) return;
+      if (!certStatus) setCertStatus({ ocspStatus: 'pending' });
     }, TIMEOUT_MS);
 
-    fetch('/api/check-revocation')
-      .then(r => (r.ok ? r.json() : Promise.reject()))
-      .then(json => {
-        if (!alive || settled) return;
-        settled = true;
-        setCertStatus(json);
-      })
-      .catch(() => {
-        if (!alive || settled) return;
-        settled = true;
-        setCertStatus({ ocspStatus: 'error' });
-      })
-      .finally(() => clearTimeout(timer));
+    const run = () =>
+      fetch('/api/check-revocation')
+        .then(r => (r.ok ? r.json() : Promise.reject()))
+        .then(json => {
+          if (!alive) return;
+          setCertStatus(json);
+          try {
+            localStorage.setItem(
+              'certStatusCache',
+              JSON.stringify({ ts: Date.now(), data: json })
+            );
+          } catch {}
+        })
+        .catch(() => {
+          if (!alive) return;
+          // Retry 1 lần sau 3s
+          setTimeout(() => alive && run(), 3000);
+        })
+        .finally(() => clearTimeout(pendingTimer));
 
-    return () => { alive = false; clearTimeout(timer); };
+    run();
+
+    // 3) Khi quay lại tab, thử refresh trạng thái 1 lần
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') run();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+
+    return () => {
+      alive = false;
+      clearTimeout(pendingTimer);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, []);
 
   const multiplexIndices = new Set([1, 3]);
@@ -367,17 +424,22 @@ export default function Home({ categoriesWithApps, hotApps, paginationData, meta
                     {category.name}
                   </h2>
 
-                  {/* Badge trạng thái cert – chỉ hiện cho jailbreak/app-clone, và chỉ sau khi có kết quả */}
+                  {/* Badge trạng thái cert – chỉ hiện cho jailbreak/app-clone */}
                   {INSTALLABLE_SLUGS.has((category.slug || '').toLowerCase()) && certStatus && (
                     <span
                       className="flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300"
                       title={
                         certStatus?.ocspStatus === 'successful'
                           ? (certStatus.isRevoked ? 'Chứng chỉ đã bị thu hồi' : 'Chứng chỉ hợp lệ')
-                          : 'Không thể kiểm tra'
+                          : (certStatus?.ocspStatus === 'pending' ? 'Đang kiểm tra...' : 'Không thể kiểm tra')
                       }
                     >
-                      {certStatus?.ocspStatus === 'successful' ? (
+                      {!certStatus || certStatus.ocspStatus === 'pending' ? (
+                        <>
+                          <span className="font-bold text-gray-500">Checking…</span>
+                          <FontAwesomeIcon icon={faExclamationCircle} className="text-gray-400" />
+                        </>
+                      ) : certStatus.ocspStatus === 'successful' ? (
                         certStatus.isRevoked ? (
                           <>
                             <span className="font-bold text-red-600">Revoked</span>
@@ -408,9 +470,15 @@ export default function Home({ categoriesWithApps, hotApps, paginationData, meta
 
                 <div>
                   {(category.appsRendered || category.apps).map((item, idx) => {
-                    return item.__isAffiliate
-                      ? <AffiliateInlineCard key={`aff-${item.__affKey || item.id}`} item={item} isFirst={idx === 0} />
-                      : <AppCard key={item.id} app={item} mode="list" />;
+                    if (item.__isAffiliate) {
+                      return <AffiliateInlineCard key={`aff-${item.__affKey || item.id}`} item={item} isFirst={idx === 0} />;
+                    }
+                    return (
+                      <div key={item.id}>
+                        <AppCard app={item} mode="list" />
+                        <MetricLine categorySlug={category.slug} app={item} />
+                      </div>
+                    );
                   })}
                 </div>
 
@@ -495,7 +563,7 @@ function interleaveAffiliate(apps, affiliatePool, category, {
 }
 
 /* =========================
-   getServerSideProps (tối ưu, bỏ check cert SSR)
+   getServerSideProps (giữ tối ưu, bỏ check cert SSR)
    ========================= */
 export async function getServerSideProps(ctx) {
   const supabase = createSupabaseServer(ctx);
@@ -534,7 +602,7 @@ export async function getServerSideProps(ctx) {
       const endIndex = startIndex + APPS_PER_PAGE - 1;
 
       if (isActive) {
-        // 🔹 Category active: đếm 'estimated' để có tổng trang
+        // 🔹 Category active: đếm 'estimated' để có tổng trang (nhẹ hơn đếm chính xác)
         const { count } = await supabase
           .from('apps')
           .select('*', { count: 'estimated', head: true })
@@ -592,7 +660,7 @@ export async function getServerSideProps(ctx) {
     })
   );
 
-  // Hot apps (giữ)
+  // Hot apps
   const { data: hotAppsData } = await supabase
     .from('apps')
     .select('*')
