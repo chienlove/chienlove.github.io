@@ -19,6 +19,7 @@ import {
   faDownload,
   faCircleDown
 } from '@fortawesome/free-solid-svg-icons';
+import { faCircleDown as faCircleDownRegular } from '@fortawesome/free-regular-svg-icons';
 
 // Affiliate tĩnh
 import affiliateApps from '../lib/appads';
@@ -295,7 +296,7 @@ function MetricInlineAbsolute({ categorySlug, app }) {
     icon = faEye;
     value = app?.views ?? 0;
   } else if (slug === 'jailbreak' || slug === 'app-clone') {
-    icon = faCircleDown;
+    icon = faCircleDownRegular;
     value = app?.downloads ?? 0;
   } else {
     return null;
