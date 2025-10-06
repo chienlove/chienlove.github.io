@@ -5,7 +5,7 @@ export default async function handler(req, res) {
 
   // Server-side có thể abort an toàn (DOM sẽ không log lỗi)
   const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), 1200);
+  const t = setTimeout(() => controller.abort(), 5000);
 
   try {
     const r = await fetch('https://ipadl.storeios.net/api/check-revocation', {
