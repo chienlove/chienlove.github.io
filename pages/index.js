@@ -305,7 +305,7 @@ function MetricInlineAbsolute({ categorySlug, app }) {
   // top-[52px]/md:top-[56px]: canh đúng hàng meta (author/version) trong AppCard
   // Nếu UI lệch 1–2px giữa các thiết bị, có thể tinh chỉnh 2 giá trị top này.
   return (
-    <div className="absolute right-3 md:right-4 top-[52px] md:top-[56px]">
+    <div className="absolute right-3 md:right-4 top-[56px] md:top-[60px]">
       <div className="flex items-center gap-1 text-[12px] text-gray-500 dark:text-gray-400">
         <FontAwesomeIcon icon={icon} />
         <span>{Number(value || 0).toLocaleString('vi-VN')}</span>
