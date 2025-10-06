@@ -17,7 +17,7 @@ import {
   faChevronRight,
   faEye,
   faDownload,
-  faCircleDown;
+  faCircleDown
 } from '@fortawesome/free-solid-svg-icons';
 
 // Affiliate tĩnh
