@@ -20,6 +20,7 @@ import {
   faCircleDown
 } from '@fortawesome/free-solid-svg-icons';
 import { faCircleDown as faCircleDownRegular } from '@fortawesome/free-regular-svg-icons';
+import { faEye as faEyeRegular } from '@fortawesome/free-regular-svg-icons';
 
 // Affiliate tĩnh
 import affiliateApps from '../lib/appads';
@@ -293,7 +294,7 @@ function MetricInlineAbsolute({ categorySlug, app }) {
   let icon = null;
   let value = 0;
   if (slug === 'testflight') {
-    icon = faEye;
+    icon = faEyeRegular;
     value = app?.views ?? 0;
   } else if (slug === 'jailbreak' || slug === 'app-clone') {
     icon = faCircleDownRegular;
