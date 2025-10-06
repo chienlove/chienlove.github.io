@@ -283,9 +283,9 @@ const AffiliateInlineCard = ({ item, isFirst = false }) => {
 };
 
 /* =========================
-   Metric (icon + số) -- đặt đè để nằm ngang hàng meta (author/version)
+   Metric (absolute) -- hiện ngay dưới icon tải & thẳng hàng dòng meta
    ========================= */
-function MetricInlineRow({ categorySlug, app }) {
+function MetricInlineAbsolute({ categorySlug, app }) {
   const slug = (categorySlug || '').toLowerCase();
 
   let icon = null;
@@ -300,11 +300,12 @@ function MetricInlineRow({ categorySlug, app }) {
     return null;
   }
 
-  // NOTE:
-  // -mt-4 / md:-mt-5 và pl-[88px] giúp đưa hàng icon + số "chui" vào đúng dòng meta của AppCard.
-  // Nếu trong UI thực tế lệch 1–2px, có thể chỉnh nhẹ 2 giá trị này.
+  // Vị trí:
+  // right-3/md:right-4: né sát nút tải
+  // top-[52px]/md:top-[56px]: canh đúng hàng meta (author/version) trong AppCard
+  // Nếu UI lệch 1–2px giữa các thiết bị, có thể tinh chỉnh 2 giá trị top này.
   return (
-    <div className="-mt-4 md:-mt-5 pl-[88px]">
+    <div className="absolute right-3 md:right-4 top-[52px] md:top-[56px]">
       <div className="flex items-center gap-1 text-[12px] text-gray-500 dark:text-gray-400">
         <FontAwesomeIcon icon={icon} />
         <span>{Number(value || 0).toLocaleString('vi-VN')}</span>
@@ -450,11 +451,11 @@ export default function Home({ categoriesWithApps, hotApps, paginationData, meta
                         />
                       );
                     }
+                    // ✅ Bọc AppCard trong relative & chèn Metric absolute (ngay dưới icon tải)
                     return (
                       <div key={item.id} className="relative">
                         <AppCard app={item} mode="list" />
-                        {/* 👇 Icon + số nằm ngang hàng meta (author/version) */}
-                        <MetricInlineRow categorySlug={category.slug} app={item} />
+                        <MetricInlineAbsolute categorySlug={category.slug} app={item} />
                       </div>
                     );
                   })}
