@@ -294,7 +294,7 @@ function MetricInlineAbsolute({ categorySlug, app }) {
     icon = faEye;
     value = app?.views ?? 0;
   } else if (slug === 'jailbreak' || slug === 'app-clone') {
-    icon = faDownload;
+    icon = fa-solid fa-circle-down;
     value = app?.downloads ?? 0;
   } else {
     return null;
