@@ -824,7 +824,7 @@ useEffect(() => {
           <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
             <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">{topLabel}</p>
             <div className="text-lg font-bold leading-none" title={String(count)}>{nf.format(count)}</div>
-            <p className="text-[11px] font-bold text-gray-700 dark:text-gray-300 mt-1">Lượt</p>
+            <p className="text-[11px] font-bold text-gray-500 dark:text-gray-400 mt-1">Lượt</p>
           </div>
         );
       })()}
