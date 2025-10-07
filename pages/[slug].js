@@ -790,7 +790,7 @@ useEffect(() => {
       {/* Tác giả */}
       <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
         <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Tác giả</p>
-        <FontAwesomeIcon icon={faUser} fixedWidth className="w-6 h-6 text-gray-600 dark:text-gray-300 mb-1" />
+        <FontAwesomeIcon icon={faUser} fixedWidth className="w-8 h-8 text-gray-600 dark:text-gray-300 mb-1" />
         <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate w-full" title={app.author || 'Không rõ'}>
           {app.author || 'Không rõ'}
         </p>
@@ -799,7 +799,7 @@ useEffect(() => {
       {/* Phiên bản */}
       <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
         <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Phiên bản</p>
-        <FontAwesomeIcon icon={faCodeBranch} fixedWidth className="w-6 h-6 text-gray-600 dark:text-gray-300 mb-1" />
+        <FontAwesomeIcon icon={faCodeBranch} fixedWidth className="w-8 h-8 text-gray-600 dark:text-gray-300 mb-1" />
         <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate w-full" title={app.version || 'Không rõ'}>
           {app.version || 'Không rõ'}
         </p>
@@ -808,7 +808,7 @@ useEffect(() => {
       {/* Dung lượng */}
       <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
         <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Dung lượng</p>
-        <FontAwesomeIcon icon={faDatabase} fixedWidth className="w-6 h-6 text-gray-600 dark:text-gray-300 mb-1" />
+        <FontAwesomeIcon icon={faDatabase} fixedWidth className="w-8 h-8 text-gray-600 dark:text-gray-300 mb-1" />
         <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate w-full" title={displaySize}>
           {displaySize}
         </p>
