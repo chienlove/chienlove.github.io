@@ -790,8 +790,8 @@ useEffect(() => {
       {/* Tác giả */}
       <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
         <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Tác giả</p>
-        <FontAwesomeIcon icon={faUser} fixedWidth className="w-8 h-8 text-gray-600 dark:text-gray-300 mb-1" />
-        <p className="text-sm font-bold text-gray-800 dark:text-gray-100 truncate w-full" title={app.author || 'Không rõ'}>
+        <FontAwesomeIcon icon={faUser} fixedWidth className="w-8 h-8 text-gray-500 dark:text-gray-400 mb-1" />
+        <p className="text-sm font-bold text-gray-500 dark:text-gray-400 truncate w-full" title={app.author || 'Không rõ'}>
           {app.author || 'Không rõ'}
         </p>
       </div>
@@ -799,8 +799,8 @@ useEffect(() => {
       {/* Phiên bản */}
       <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
         <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Phiên bản</p>
-        <FontAwesomeIcon icon={faCodeBranch} fixedWidth className="w-8 h-8 text-gray-600 dark:text-gray-300 mb-1" />
-        <p className="text-sm font-bold text-gray-800 dark:text-gray-100 truncate w-full" title={app.version || 'Không rõ'}>
+        <FontAwesomeIcon icon={faCodeBranch} fixedWidth className="w-8 h-8 text-gray-500 dark:text-gray-400 mb-1" />
+        <p className="text-sm font-bold text-gray-500 dark:text-gray-400 truncate w-full" title={app.version || 'Không rõ'}>
           {app.version || 'Không rõ'}
         </p>
       </div>
@@ -808,22 +808,24 @@ useEffect(() => {
       {/* Dung lượng */}
       <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
         <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Dung lượng</p>
-        <FontAwesomeIcon icon={faDatabase} fixedWidth className="w-8 h-8 text-gray-600 dark:text-gray-300 mb-1" />
-        <p className="text-sm font-bold text-gray-800 dark:text-gray-100 truncate w-full" title={displaySize}>
+        <FontAwesomeIcon icon={faDatabase} fixedWidth className="w-8 h-8 text-gray-500 dark:text-gray-400 mb-1" />
+        <p className="text-sm font-bold text-gray-500 dark:text-gray-400 truncate w-full" title={displaySize}>
           {displaySize}
         </p>
       </div>
 
-      {/* Lượt xem (TestFlight) / Lượt tải (Jailbreak) – không icon */}
+      {/* Lượt xem (TestFlight) / Lượt tải (Jailbreak) */}
       {(() => {
         const nf = new Intl.NumberFormat('vi-VN');
-        const isTF = Boolean(isTestflight); // biến sẵn có trong trang của bạn
+        const isTF = Boolean(isTestflight);
         const count = isTF ? (app?.views ?? 0) : (app?.downloads ?? 0);
         const topLabel = isTF ? 'Xem' : 'Tải';
         return (
           <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
             <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">{topLabel}</p>
-            <div className="text-lg font-bold leading-none" title={String(count)}>{nf.format(count)}</div>
+            <div className="text-lg font-bold text-gray-500 dark:text-gray-400 leading-none" title={String(count)}>
+              {nf.format(count)}
+            </div>
             <p className="text-[11px] font-bold text-gray-500 dark:text-gray-400 mt-1">Lượt</p>
           </div>
         );
