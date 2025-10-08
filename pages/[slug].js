@@ -789,27 +789,33 @@ useEffect(() => {
     >
       {/* Tác giả */}
       <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
-        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Tác giả</p>
-        <FontAwesomeIcon icon={faUser} fixedWidth className="w-8 h-8 text-gray-500 dark:text-gray-400 mb-1" />
-        <p className="text-sm font-bold text-gray-500 dark:text-gray-400 truncate w-full" title={app.author || 'Không rõ'}>
+        <p className="text-[11px] tracking-[.12em] font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">
+          Tác giả
+        </p>
+        <FontAwesomeIcon icon={faUser} fixedWidth className="w-6 h-6 text-gray-400 dark:text-gray-500 mb-1" />
+        <p className="text-[13px] font-medium text-gray-600 dark:text-gray-300 truncate w-full leading-tight" title={app.author || 'Không rõ'}>
           {app.author || 'Không rõ'}
         </p>
       </div>
 
       {/* Phiên bản */}
       <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
-        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Phiên bản</p>
-        <FontAwesomeIcon icon={faCodeBranch} fixedWidth className="w-8 h-8 text-gray-500 dark:text-gray-400 mb-1" />
-        <p className="text-sm font-bold text-gray-500 dark:text-gray-400 truncate w-full" title={app.version || 'Không rõ'}>
+        <p className="text-[11px] tracking-[.12em] font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">
+          Phiên bản
+        </p>
+        <FontAwesomeIcon icon={faCodeBranch} fixedWidth className="w-6 h-6 text-gray-400 dark:text-gray-500 mb-1" />
+        <p className="text-[22px] font-semibold text-gray-600 dark:text-gray-300 leading-tight truncate w-full" title={app.version || 'Không rõ'}>
           {app.version || 'Không rõ'}
         </p>
       </div>
 
       {/* Dung lượng */}
       <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
-        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Dung lượng</p>
-        <FontAwesomeIcon icon={faDatabase} fixedWidth className="w-8 h-8 text-gray-500 dark:text-gray-400 mb-1" />
-        <p className="text-sm font-bold text-gray-500 dark:text-gray-400 truncate w-full" title={displaySize}>
+        <p className="text-[11px] tracking-[.12em] font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">
+          Dung lượng
+        </p>
+        <FontAwesomeIcon icon={faDatabase} fixedWidth className="w-6 h-6 text-gray-400 dark:text-gray-500 mb-1" />
+        <p className="text-[13px] font-medium text-gray-600 dark:text-gray-300 truncate w-full leading-tight" title={displaySize}>
           {displaySize}
         </p>
       </div>
@@ -822,11 +828,13 @@ useEffect(() => {
         const topLabel = isTF ? 'Xem' : 'Tải';
         return (
           <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
-            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">{topLabel}</p>
-            <div className="text-lg font-bold text-gray-500 dark:text-gray-400 leading-none" title={String(count)}>
+            <p className="text-[11px] tracking-[.12em] font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">
+              {topLabel}
+            </p>
+            <p className="text-[22px] font-semibold text-gray-600 dark:text-gray-300 leading-tight truncate w-full" title={String(count)}>
               {nf.format(count)}
-            </div>
-            <p className="text-[11px] font-bold text-gray-500 dark:text-gray-400 mt-1">Lượt</p>
+            </p>
+            <p className="text-[13px] font-medium text-gray-500 dark:text-gray-400 mt-1 leading-tight">Lượt</p>
           </div>
         );
       })()}
