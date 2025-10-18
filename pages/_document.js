@@ -7,14 +7,19 @@ export default function Document() {
       <Head>
         <meta name="theme-color" content="#111827" />
         <meta name="color-scheme" content="dark light" />
-        <link rel="icon" href="/favicon.ico" />
+        
+        {/* Favicons */}
+        <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
 
-        {/* AdSense loader: chỉ nhúng 1 lần, dạng URL có ?client= */}
+        {/* AdSense */}
         <script
-  async
-  src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"
-  data-ad-client="ca-pub-3905625903416797"
-  crossOrigin="anonymous"
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"
+          data-ad-client="ca-pub-3905625903416797"
+          crossOrigin="anonymous"
         />
       </Head>
 
