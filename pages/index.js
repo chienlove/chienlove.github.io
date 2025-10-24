@@ -286,7 +286,7 @@ const AffiliateInlineCard = ({ item, isFirst = false }) => {
 };
 
 /* =========================
-   Metric (absolute) -- Đã sửa để nằm CHÍNH GIỮA icon download.
+   Metric (absolute) -- Sửa triệt để để nằm CHÍNH GIỮA icon download, bất kể số chữ số.
    ========================= */
 function MetricInlineAbsolute({ categorySlug, app }) {
   const slug = (categorySlug || '').toLowerCase();
@@ -300,25 +300,17 @@ function MetricInlineAbsolute({ categorySlug, app }) {
     return null;
   }
 
-  // Tối ưu vị trí để nằm CHÍNH GIỮA:
-  // right-[20px] là 20px từ mép phải. Vì nút tải là w-10 (40px) và có padding 2px.
-  // 20px chính là nửa chiều rộng của nút tải (40px / 2). Đặt nó ở 20px từ mép phải sẽ là tâm của nút tải.
-  // Cần dùng giá trị CSS thuần thay vì class Tailwind vì nó không cung cấp right-[20px].
-  // right-[20px] = 5rem. 1rem=16px. right-5 là 20px. right-4 (16px) thì không đúng tâm.
-  
-  // Dùng right-[20px] trực tiếp trong style và -translate-x-1/2 cho chữ số đếm.
+  // Tối ưu vị trí triệt để:
+  // right-4: Căn khối w-10 sang phải, tương ứng với vị trí nút tải xuống (w-10, 40px)
+  // w-10: Khối rộng 40px (bằng nút tải xuống).
+  // text-center: Đảm bảo số đếm luôn nằm chính giữa khối 40px này.
   return (
     <div 
-      // Vị trí: Đặt right: 20px để nó nằm ở trung tâm (center) của nút tải xuống 40px.
-      className="absolute top-[60px]" 
-      style={{ 
-        right: '20px', 
-        zIndex: 10 
-      }} 
+      className="absolute right-4 md:right-4 top-[60px] w-10 text-center" 
+      style={{ zIndex: 10 }} 
     >
-      {/* transform -translate-x-1/2: Dịch chuyển sang trái 50% chiều rộng của số đếm để căn giữa. */}
-      <div className="text-[12px] text-gray-500 dark:text-gray-400 whitespace-nowrap transform -translate-x-1/2">
-        {/* Số đếm in đậm */}
+      <div className="text-[12px] text-gray-500 dark:text-gray-400 whitespace-nowrap">
+        {/* Số đếm in đậm, căn giữa nhờ text-center trên khối cha w-10 */}
         <span className="font-bold">{Number(value || 0).toLocaleString('vi-VN')}</span>
       </div>
     </div>
