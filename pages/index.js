@@ -3,7 +3,9 @@ import { useMemo, useEffect, useState, Fragment } from 'react';
 import Head from 'next/head';
 import Layout from '../components/Layout';
 import AppCard from '../components/AppCard';
-import AdUnit from '../components/Ads';
+import dynamic from 'next/dynamic'; // ✅ Ads: dynamic import (ssr: false)
+const AdUnit = dynamic(() => import('../components/Ads'), { ssr: false });
+
 import { createSupabaseServer } from '../lib/supabase';
 import Link from 'next/link';
 
@@ -15,12 +17,7 @@ import {
   faFire,
   faChevronLeft,
   faChevronRight,
-  faEye,
-  faDownload,
-  faCircleDown
 } from '@fortawesome/free-solid-svg-icons';
-import { faCircleDown as faCircleDownRegular } from '@fortawesome/free-regular-svg-icons';
-import { faEye as faEyeRegular } from '@fortawesome/free-regular-svg-icons';
 
 // Affiliate tĩnh
 import affiliateApps from '../lib/appads';
@@ -114,7 +111,7 @@ function SEOIndexMeta({ meta }) {
       <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
 
-      {/* JSON‑LD */}
+      {/* JSON-LD */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdWebsite) }}
@@ -286,7 +283,7 @@ const AffiliateInlineCard = ({ item, isFirst = false }) => {
 };
 
 /* =========================
-   Metric (absolute) -- Sửa triệt để để nằm CHÍNH GIỮA icon download, bất kể số chữ số.
+   Metric (absolute) -- LUÔN ở giữa ô icon download 40×40
    ========================= */
 function MetricInlineAbsolute({ categorySlug, app }) {
   const slug = (categorySlug || '').toLowerCase();
@@ -300,20 +297,21 @@ function MetricInlineAbsolute({ categorySlug, app }) {
     return null;
   }
 
-  // Tối ưu vị trí triệt để:
-  // right-4: Căn khối w-10 sang phải, tương ứng với vị trí nút tải xuống (w-10, 40px)
-  // w-10: Khối rộng 40px (bằng nút tải xuống).
-  // text-center: Đảm bảo số đếm luôn nằm chính giữa khối 40px này.
-  // Đã xóa transform -translate-x-1/2 khỏi div.text
+  // Ghi đè đúng tâm khu vực icon: giả định nút download kích thước w-10 h-10, đặt tại right-4.
+  // pointer-events-none để không chắn click vào nút.
+  // Dùng flex center để dù 1–n chữ số vẫn chính giữa tuyệt đối.
   return (
-    <div 
-      className="absolute right-4 md:right-4 top-[60px] w-10 text-center" 
-      style={{ zIndex: 10 }} 
+    <div
+      className="absolute right-4 top-[60px] w-10 h-10 flex items-center justify-center pointer-events-none"
+      style={{ zIndex: 10 }}
+      aria-hidden="true"
     >
-      <div className="text-[12px] text-gray-500 dark:text-gray-400 whitespace-nowrap">
-        {/* Số đếm in đậm, căn giữa nhờ text-center trên khối cha w-10 */}
-        <span className="font-bold">{Number(value || 0).toLocaleString('vi-VN')}</span>
-      </div>
+      <span
+        className="text-[12px] leading-none font-bold text-gray-50 drop-shadow-[0_1px_1px_rgba(0,0,0,0.4)]"
+        suppressHydrationWarning
+      >
+        {Number(value || 0).toLocaleString('vi-VN')}
+      </span>
     </div>
   );
 }
@@ -330,8 +328,7 @@ export default function Home({ categoriesWithApps, hotApps, paginationData, meta
 
   useEffect(() => {
     let alive = true;
-    
-    // Tối ưu: Loại bỏ setTimeout và logic ép về 'error' sớm.
+
     fetch('/api/check-revocation')
       .then(r => (r.ok ? r.json() : Promise.reject()))
       .then(json => {
@@ -342,12 +339,10 @@ export default function Home({ categoriesWithApps, hotApps, paginationData, meta
         if (!alive) return;
         setCertStatus({ ocspStatus: 'error' });
       });
-      // Không cần .finally()
 
     return () => { alive = false; };
   }, []);
 
-  const multiplexIndices = new Set([1, 3]);
   const contentCard = 'bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4';
   const adCard = contentCard;
 
@@ -444,7 +439,7 @@ export default function Home({ categoriesWithApps, hotApps, paginationData, meta
                         />
                       );
                     }
-                    // ✅ Bọc AppCard trong relative & chèn Metric absolute (ngay dưới icon tải)
+                    // ✅ Bọc AppCard trong relative & chèn Metric absolute (đè giữa ô icon tải)
                     return (
                       <div key={item.id} className="relative">
                         <AppCard app={item} mode="list" />
@@ -535,44 +530,52 @@ function interleaveAffiliate(apps, affiliatePool, category, {
 }
 
 /* =========================
-   getServerSideProps (Tối ưu triệt để tốc độ: Tách auth để tránh chặn luồng chính)
+   getServerSideProps (Tối ưu tốc độ & cache)
    ========================= */
 export async function getServerSideProps(ctx) {
   const supabase = createSupabaseServer(ctx);
-  const userAgent = ctx.req.headers['user-agent'] || '';
-  const isGoogleBot = userAgent.toLowerCase().includes('googlebot');
+  const userAgent = (ctx.req.headers['user-agent'] || '').toLowerCase();
+  const isGoogleBot = userAgent.includes('googlebot');
 
-  // CDN caching ngắn hạn để vào trang nhanh hơn
+  // Auth: skip hoàn toàn cho Googlebot để giảm TTFB
+  if (!isGoogleBot) {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      // Không cache redirect công khai
+      ctx.res.setHeader('Cache-Control', 'private, no-store');
+      return { redirect: { destination: '/under-construction', permanent: false } };
+    }
+  }
+
+  // Cache bình thường cho trang hiển thị
   ctx.res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
+  ctx.res.setHeader('Vary', 'User-Agent, Cookie');
 
   const { category: categorySlug, page: pageQuery } = ctx.query;
   const activeSlug = typeof categorySlug === 'string' ? categorySlug.toLowerCase() : null;
   const currentPage = parseInt(pageQuery || '1', 10);
   const APPS_PER_PAGE = 10;
 
-  // 1. Kiểm tra User Auth (BLOCKING)
-  // Phải đợi kết quả để thực hiện redirect nếu cần.
-  const { data: { user } } = await supabase.auth.getUser(); 
-  if (!user && !isGoogleBot) {
-    return { redirect: { destination: '/under-construction', permanent: false } }; 
-  }
+  // Chỉ lấy cột cần thiết để render
+  const APP_FIELDS = 'id,name,slug,icon_url,category_id,views,downloads,created_at';
 
-  // 2. Khởi tạo tất cả các truy vấn DB còn lại song song
-  const [categoriesData, hotAppsData] = await Promise.all([ 
-    supabase.from('categories').select('id, name, slug'), 
-    supabase.from('apps') 
-      .select('*') 
-      .order('views', { ascending: false, nullsLast: true }) 
-      .limit(5) 
+  // Truy vấn song song
+  const [categoriesData, hotAppsData] = await Promise.all([
+    supabase.from('categories').select('id, name, slug'),
+    supabase
+      .from('apps')
+      .select('id,name,slug,icon_url,views,downloads')
+      .order('views', { ascending: false, nullsLast: true })
+      .limit(5)
   ]);
 
-  const categories = categoriesData.data; 
+  const categories = categoriesData.data || [];
 
   const paginationData = {};
   const affiliatePool = affiliateApps.map(a => ({ ...a }));
 
   const categoriesWithApps = await Promise.all(
-    (categories || []).map(async (category) => {
+    categories.map(async (category) => {
       const catSlug = (category.slug || '').toLowerCase();
       const isActive = activeSlug && catSlug === activeSlug;
 
@@ -581,13 +584,18 @@ export async function getServerSideProps(ctx) {
       const endIndex = startIndex + APPS_PER_PAGE - 1;
 
       if (isActive) {
-        // Gộp count và data apps cho category active thành song song
-        const [{ count }, { data: apps }] = await Promise.all([ 
-          supabase.from('apps').select('*', { count: 'estimated', head: true }).eq('category_id', category.id), 
-          supabase.from('apps').select('*') 
-            .eq('category_id', category.id) 
-            .order('created_at', { ascending: false }) 
-            .range(startIndex, endIndex) 
+        // Count + Data chạy song song
+        const [{ count }, { data: apps }] = await Promise.all([
+          supabase
+            .from('apps')
+            .select('id', { count: 'estimated', head: true })
+            .eq('category_id', category.id),
+          supabase
+            .from('apps')
+            .select(APP_FIELDS)
+            .eq('category_id', category.id)
+            .order('created_at', { ascending: false })
+            .range(startIndex, endIndex)
         ]);
 
         const totalApps = count || 0;
@@ -606,12 +614,12 @@ export async function getServerSideProps(ctx) {
 
         return { ...category, apps: apps || [], appsRendered };
       } else {
-        const { data: appsPlusOne } = await supabase 
-          .from('apps') 
-          .select('*') 
-          .eq('category_id', category.id) 
-          .order('created_at', { ascending: false }) 
-          .range(0, APPS_PER_PAGE); 
+        const { data: appsPlusOne } = await supabase
+          .from('apps')
+          .select(APP_FIELDS)
+          .eq('category_id', category.id)
+          .order('created_at', { ascending: false })
+          .range(0, APPS_PER_PAGE);
 
         const hasNext = (appsPlusOne?.length || 0) > APPS_PER_PAGE;
         const apps = (appsPlusOne || []).slice(0, APPS_PER_PAGE);
@@ -642,7 +650,7 @@ export async function getServerSideProps(ctx) {
   // ====== Chuẩn bị meta SEO động cho Index ======
   let metaSEO = { page: 1, totalPages: 1, categorySlug: null };
   if (activeSlug) {
-    const activeCat = (categories || []).find(c => (c.slug || '').toLowerCase() === activeSlug);
+    const activeCat = categories.find(c => (c.slug || '').toLowerCase() === activeSlug);
     const pageInfo = activeCat ? paginationData[activeCat.id] : null;
     metaSEO = {
       page: pageInfo?.currentPage || 1,
