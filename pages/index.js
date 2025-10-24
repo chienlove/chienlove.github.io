@@ -286,7 +286,7 @@ const AffiliateInlineCard = ({ item, isFirst = false }) => {
 };
 
 /* =========================
-   Metric (absolute) -- Sửa triệt để để căn giữa dưới nút tải xuống.
+   Metric (absolute) -- Sửa để CHÍNH GIỮA icon download.
    ========================= */
 function MetricInlineAbsolute({ categorySlug, app }) {
   const slug = (categorySlug || '').toLowerCase();
@@ -301,14 +301,18 @@ function MetricInlineAbsolute({ categorySlug, app }) {
   }
 
   // Tối ưu vị trí: 
-  // right-4: Căn phải, né nút tải xuống 1 khoảng hợp lý (16px).
-  // top-[60px]: Đặt rõ ràng bên dưới nút tải xuống (nút tải cao ~56px) để tạo khoảng cách hợp lý.
-  // transform translate-x-1/2: Dùng để căn giữa số đếm trên chiều rộng 40px của nút tải.
+  // right-[20px]: Nút tải xuống có width 40px. right-4 (16px) + 4px margin = 20px. Đặt 20px để căn giữa.
+  // top-[60px]: Vị trí dọc nằm bên dưới nút tải.
   return (
     <div 
-      className="absolute right-4 md:right-4 top-[60px]" // right-4 là ~16px. Top 60px để nằm dưới nút tải (cao ~56px)
+      // Đặt right cho khối cha là 36px (w-10 + gap)
+      className="absolute right-[36px] md:right-[36px] top-[60px]" // 36px = 10px (AppCard gap) + 4px (AppCard px-2) + 20px (nửa icon)
       style={{ zIndex: 10 }} 
     >
+      {/* Thẻ con: 
+        - transform translate-x-1/2: Dùng để căn giữa text theo chiều rộng của chính nó (chữ số đếm).
+        - Phải dùng translate-x-1/2 (50%) để căn giữa theo chiều rộng 40px của nút tải.
+      */}
       <div className="text-[12px] text-gray-500 dark:text-gray-400 whitespace-nowrap transform translate-x-1/2">
         {/* Số đếm in đậm */}
         <span className="font-bold">{Number(value || 0).toLocaleString('vi-VN')}</span>
@@ -551,21 +555,21 @@ export async function getServerSideProps(ctx) {
 
   // 1. Kiểm tra User Auth (BLOCKING)
   // Phải đợi kết quả để thực hiện redirect nếu cần.
-  const { data: { user } } = await supabase.auth.getUser(); //
+  const { data: { user } } = await supabase.auth.getUser(); 
   if (!user && !isGoogleBot) {
-    return { redirect: { destination: '/under-construction', permanent: false } }; //
+    return { redirect: { destination: '/under-construction', permanent: false } }; 
   }
 
   // 2. Khởi tạo tất cả các truy vấn DB còn lại song song
-  const [categoriesData, hotAppsData] = await Promise.all([ //
-    supabase.from('categories').select('id, name, slug'), //
-    supabase.from('apps') //
-      .select('*') //
-      .order('views', { ascending: false, nullsLast: true }) //
-      .limit(5) //
+  const [categoriesData, hotAppsData] = await Promise.all([ 
+    supabase.from('categories').select('id, name, slug'), 
+    supabase.from('apps') 
+      .select('*') 
+      .order('views', { ascending: false, nullsLast: true }) 
+      .limit(5) 
   ]);
 
-  const categories = categoriesData.data; //
+  const categories = categoriesData.data; 
 
   const paginationData = {};
   const affiliatePool = affiliateApps.map(a => ({ ...a }));
@@ -581,12 +585,12 @@ export async function getServerSideProps(ctx) {
 
       if (isActive) {
         // Gộp count và data apps cho category active thành song song
-        const [{ count }, { data: apps }] = await Promise.all([ //
-          supabase.from('apps').select('*', { count: 'estimated', head: true }).eq('category_id', category.id), //
-          supabase.from('apps').select('*') //
-            .eq('category_id', category.id) //
-            .order('created_at', { ascending: false }) //
-            .range(startIndex, endIndex) //
+        const [{ count }, { data: apps }] = await Promise.all([ 
+          supabase.from('apps').select('*', { count: 'estimated', head: true }).eq('category_id', category.id), 
+          supabase.from('apps').select('*') 
+            .eq('category_id', category.id) 
+            .order('created_at', { ascending: false }) 
+            .range(startIndex, endIndex) 
         ]);
 
         const totalApps = count || 0;
@@ -605,12 +609,12 @@ export async function getServerSideProps(ctx) {
 
         return { ...category, apps: apps || [], appsRendered };
       } else {
-        const { data: appsPlusOne } = await supabase //
-          .from('apps') //
-          .select('*') //
-          .eq('category_id', category.id) //
-          .order('created_at', { ascending: false }) //
-          .range(0, APPS_PER_PAGE); //
+        const { data: appsPlusOne } = await supabase 
+          .from('apps') 
+          .select('*') 
+          .eq('category_id', category.id) 
+          .order('created_at', { ascending: false }) 
+          .range(0, APPS_PER_PAGE); 
 
         const hasNext = (appsPlusOne?.length || 0) > APPS_PER_PAGE;
         const apps = (appsPlusOne || []).slice(0, APPS_PER_PAGE);
