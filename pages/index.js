@@ -310,7 +310,7 @@ function MetricInlineAbsolute({ categorySlug, app }) {
   return (
     <div className="absolute right-3 md:right-4 top-[56px] md:top-[60px]">
       <div className="flex items-center gap-1 text-[12px] text-gray-500 dark:text-gray-400">
-        <FontAwesomeIcon icon={icon} />
+        {/* Đã xóa icon, chỉ giữ lại số đếm */}
         <span>{Number(value || 0).toLocaleString('vi-VN')}</span>
       </div>
     </div>
@@ -329,32 +329,21 @@ export default function Home({ categoriesWithApps, hotApps, paginationData, meta
 
   useEffect(() => {
     let alive = true;
-    const TIMEOUT_MS = 1500;
-
-    // ❌ Không Abort ở client (tránh DOMException Safari)
-    // Dùng race với setTimeout: nếu quá TIMEOUT_MS thì hiển thị trạng thái "Error" và vẫn để fetch chạy ngầm.
-    let settled = false;
-    const timer = setTimeout(() => {
-      if (!alive || settled) return;
-      settled = true;
-      setCertStatus({ ocspStatus: 'error' });
-    }, TIMEOUT_MS);
-
+    
+    // Đã xóa TIMEOUT_MS và logic ép về 'error' sau 1.5s (tối ưu: không hiển thị lỗi giả)
     fetch('/api/check-revocation')
       .then(r => (r.ok ? r.json() : Promise.reject()))
       .then(json => {
-        if (!alive || settled) return;
-        settled = true;
+        if (!alive) return;
         setCertStatus(json);
       })
       .catch(() => {
-        if (!alive || settled) return;
-        settled = true;
+        if (!alive) return;
         setCertStatus({ ocspStatus: 'error' });
-      })
-      .finally(() => clearTimeout(timer));
+      });
+      // Không cần .finally()
 
-    return () => { alive = false; clearTimeout(timer); };
+    return () => { alive = false; };
   }, []);
 
   const multiplexIndices = new Set([1, 3]);
