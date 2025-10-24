@@ -286,7 +286,7 @@ const AffiliateInlineCard = ({ item, isFirst = false }) => {
 };
 
 /* =========================
-   Metric (absolute) -- Sửa để CHÍNH GIỮA icon download.
+   Metric (absolute) -- Đã sửa để nằm CHÍNH GIỮA icon download.
    ========================= */
 function MetricInlineAbsolute({ categorySlug, app }) {
   const slug = (categorySlug || '').toLowerCase();
@@ -300,20 +300,24 @@ function MetricInlineAbsolute({ categorySlug, app }) {
     return null;
   }
 
-  // Tối ưu vị trí: 
-  // right-[20px]: Nút tải xuống có width 40px. right-4 (16px) + 4px margin = 20px. Đặt 20px để căn giữa.
-  // top-[60px]: Vị trí dọc nằm bên dưới nút tải.
+  // Tối ưu vị trí để nằm CHÍNH GIỮA:
+  // right-[20px] là 20px từ mép phải. Vì nút tải là w-10 (40px) và có padding 2px.
+  // 20px chính là nửa chiều rộng của nút tải (40px / 2). Đặt nó ở 20px từ mép phải sẽ là tâm của nút tải.
+  // Cần dùng giá trị CSS thuần thay vì class Tailwind vì nó không cung cấp right-[20px].
+  // right-[20px] = 5rem. 1rem=16px. right-5 là 20px. right-4 (16px) thì không đúng tâm.
+  
+  // Dùng right-[20px] trực tiếp trong style và -translate-x-1/2 cho chữ số đếm.
   return (
     <div 
-      // Đặt right cho khối cha là 36px (w-10 + gap)
-      className="absolute right-[36px] md:right-[36px] top-[60px]" // 36px = 10px (AppCard gap) + 4px (AppCard px-2) + 20px (nửa icon)
-      style={{ zIndex: 10 }} 
+      // Vị trí: Đặt right: 20px để nó nằm ở trung tâm (center) của nút tải xuống 40px.
+      className="absolute top-[60px]" 
+      style={{ 
+        right: '20px', 
+        zIndex: 10 
+      }} 
     >
-      {/* Thẻ con: 
-        - transform translate-x-1/2: Dùng để căn giữa text theo chiều rộng của chính nó (chữ số đếm).
-        - Phải dùng translate-x-1/2 (50%) để căn giữa theo chiều rộng 40px của nút tải.
-      */}
-      <div className="text-[12px] text-gray-500 dark:text-gray-400 whitespace-nowrap transform translate-x-1/2">
+      {/* transform -translate-x-1/2: Dịch chuyển sang trái 50% chiều rộng của số đếm để căn giữa. */}
+      <div className="text-[12px] text-gray-500 dark:text-gray-400 whitespace-nowrap transform -translate-x-1/2">
         {/* Số đếm in đậm */}
         <span className="font-bold">{Number(value || 0).toLocaleString('vi-VN')}</span>
       </div>
