@@ -286,7 +286,7 @@ const AffiliateInlineCard = ({ item, isFirst = false }) => {
 };
 
 /* =========================
-   Metric (absolute) -- Tối ưu vị trí nằm chính giữa bên dưới icon tải
+   Metric (absolute) -- Đã sửa lỗi căn chỉnh để nằm bên dưới và chính giữa icon download.
    ========================= */
 function MetricInlineAbsolute({ categorySlug, app }) {
   const slug = (categorySlug || '').toLowerCase();
@@ -304,15 +304,14 @@ function MetricInlineAbsolute({ categorySlug, app }) {
   }
 
   // Tối ưu vị trí: 
-  // left-1/2 + -translate-x-1/2 để căn giữa theo chiều ngang của icon tải.
-  // top-[44px] để căn vị trí ngay dưới icon tải.
-  // mt-1 để tạo khoảng cách hợp lý (1px).
+  // right-3 md:right-4: Căn phải, né nút tải xuống.
+  // top-[44px]: Đặt ngay bên dưới nút tải xuống.
+  // mt-1: Khoảng cách hợp lý.
   return (
     <div 
-      className="absolute left-1/2 transform -translate-x-1/2 top-[44px] mt-1"
-      style={{ zIndex: 10 }} // Đảm bảo số đếm không bị che
+      className="absolute right-3 md:right-4 top-[44px] mt-1"
+      style={{ zIndex: 10, textAlign: 'right' }} // Căn phải text để tránh đè lên badge phiên bản.
     >
-      {/* Đã xóa 'flex items-center' */}
       <div className="text-[12px] text-gray-500 dark:text-gray-400 whitespace-nowrap">
         {/* Số đếm in đậm */}
         <span className="font-bold">{Number(value || 0).toLocaleString('vi-VN')}</span>
@@ -334,7 +333,7 @@ export default function Home({ categoriesWithApps, hotApps, paginationData, meta
   useEffect(() => {
     let alive = true;
     
-    // Đã xóa TIMEOUT_MS và logic ép về 'error' sau 1.5s (tối ưu: không hiển thị lỗi giả)
+    // Tối ưu: Loại bỏ setTimeout và logic ép về 'error' sớm.
     fetch('/api/check-revocation')
       .then(r => (r.ok ? r.json() : Promise.reject()))
       .then(json => {
