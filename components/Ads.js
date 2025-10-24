@@ -10,13 +10,17 @@ export default function AdUnit({
   mobileSlot2 = '7109430646',
   desktopMode = 'auto',
   desktopSlot = '4575220124',
+  
+  // === Thêm tham số cho Quảng cáo trong bài viết ===
+  inArticleSlot = '4276741180',
+  isArticleAd = false,
+  // ===============================================
 }) {
-  const adRef = useRef(null); // Mỗi instance AdUnit có một ref riêng
+  const adRef = useRef(null); 
 
   useEffect(() => {
     const pushAd = () => {
       try {
-        // Chỉ chạy push khi adsbygoogle đã được khởi tạo
         if (window.adsbygoogle) {
           window.adsbygoogle.push({});
         }
@@ -25,19 +29,19 @@ export default function AdUnit({
       }
     };
 
-    const currentAdRef = adRef.current; // Lưu tham chiếu DOM
+    const currentAdRef = adRef.current; 
 
-    // Sử dụng IntersectionObserver để chỉ tải quảng cáo khi nó sắp hiển thị
+    // IntersectionObserver chỉ tải quảng cáo khi nó sắp hiển thị
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) {
             pushAd();
-            observer.unobserve(entry.target); // Chạy 1 lần rồi ngưng
+            observer.unobserve(entry.target); 
           }
         });
       },
-      { rootMargin: '200px' } // Tải trước khi nó vào màn hình 200px
+      { rootMargin: '200px' } 
     );
 
     if (currentAdRef) {
@@ -45,14 +49,32 @@ export default function AdUnit({
     }
 
     return () => {
-      // Cleanup: Chỉ unobserve nếu ref còn tồn tại
       if (currentAdRef) {
         observer.unobserve(currentAdRef);
       }
     };
-  }, []); // useEffect chỉ chạy 1 lần khi mount
+  }, []); 
 
   const isCompact = mobileVariant === 'compact';
+
+  // === RENDER QUẢNG CÁO TRONG BÀI VIẾT (IN-ARTICLE AD) ===
+  if (isArticleAd) {
+    return (
+      <div className={`w-full ${className} flex justify-center py-2`}>
+        <ins
+          ref={adRef}
+          className="adsbygoogle"
+          // Sử dụng style display: block và format auto để tối ưu responsive
+          style={{ display: 'block', textAlign: 'center' }}
+          data-ad-client="ca-pub-3905625903416797"
+          data-ad-slot={inArticleSlot}
+          data-ad-format="fluid" // Hoặc "auto" nếu bạn không cần tùy biến In-article
+          data-full-width-responsive="true"
+        />
+      </div>
+    );
+  }
+  // ========================================================
 
   return (
     <div className={`w-full ${className}`}>
@@ -72,12 +94,11 @@ export default function AdUnit({
           </div>
         ) : (
           // Dạng Multiplex - Để Google tự quản lý kích thước
-          // Vùng chứa này sẽ không giới hạn chiều cao
           <div className="w-full">
             <ins
               ref={adRef}
               className="adsbygoogle"
-              style={{ display: 'block' }} // Quan trọng: để block
+              style={{ display: 'block' }} 
               data-ad-client="ca-pub-3905625903416797"
               data-ad-slot={mobileSlot2}
               data-ad-format="autorelaxed"
@@ -91,9 +112,9 @@ export default function AdUnit({
       {desktopMode === 'unit' && (
         <div className="hidden md:block w-full">
           <ins
-            ref={adRef} // Có thể dùng chung ref nếu chỉ 1 quảng cáo hiển thị tại 1 thời điểm
+            ref={adRef} 
             className="adsbygoogle"
-            style={{ display: 'block' }} // Để Google tự quyết định kích thước
+            style={{ display: 'block' }} 
             data-ad-client="ca-pub-3905625903416797"
             data-ad-slot={desktopSlot}
             data-ad-format="auto"
