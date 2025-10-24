@@ -286,32 +286,30 @@ const AffiliateInlineCard = ({ item, isFirst = false }) => {
 };
 
 /* =========================
-   Metric (absolute) -- Đã sửa lỗi căn chỉnh: Quay lại căn phải, dùng top mới để nằm bên dưới icon download.
+   Metric (absolute) -- Sửa triệt để để căn giữa dưới nút tải xuống.
    ========================= */
 function MetricInlineAbsolute({ categorySlug, app }) {
   const slug = (categorySlug || '').toLowerCase();
 
-  let icon = null;
   let value = 0;
   if (slug === 'testflight') {
-    icon = faEyeRegular;
     value = app?.views ?? 0;
   } else if (slug === 'jailbreak' || slug === 'app-clone') {
-    icon = faCircleDownRegular;
     value = app?.downloads ?? 0;
   } else {
     return null;
   }
 
   // Tối ưu vị trí: 
-  // right-3 md:right-4: Căn phải, né nút tải xuống.
-  // top-[50px] mt-1: Đặt ngay bên dưới nút tải xuống (khoảng 50px từ trên xuống) + 1px margin.
+  // right-4: Căn phải, né nút tải xuống 1 khoảng hợp lý (16px).
+  // top-[60px]: Đặt rõ ràng bên dưới nút tải xuống (nút tải cao ~56px) để tạo khoảng cách hợp lý.
+  // transform translate-x-1/2: Dùng để căn giữa số đếm trên chiều rộng 40px của nút tải.
   return (
     <div 
-      className="absolute right-3 md:right-4 top-[50px] mt-1"
-      style={{ zIndex: 10, textAlign: 'right' }} 
+      className="absolute right-4 md:right-4 top-[60px]" // right-4 là ~16px. Top 60px để nằm dưới nút tải (cao ~56px)
+      style={{ zIndex: 10 }} 
     >
-      <div className="text-[12px] text-gray-500 dark:text-gray-400 whitespace-nowrap">
+      <div className="text-[12px] text-gray-500 dark:text-gray-400 whitespace-nowrap transform translate-x-1/2">
         {/* Số đếm in đậm */}
         <span className="font-bold">{Number(value || 0).toLocaleString('vi-VN')}</span>
       </div>
@@ -536,7 +534,7 @@ function interleaveAffiliate(apps, affiliatePool, category, {
 }
 
 /* =========================
-   getServerSideProps (Tối ưu triệt để tốc độ: Gộp truy vấn DB song song)
+   getServerSideProps (Tối ưu triệt để tốc độ: Tách auth để tránh chặn luồng chính)
    ========================= */
 export async function getServerSideProps(ctx) {
   const supabase = createSupabaseServer(ctx);
@@ -551,22 +549,23 @@ export async function getServerSideProps(ctx) {
   const currentPage = parseInt(pageQuery || '1', 10);
   const APPS_PER_PAGE = 10;
 
-  // Khởi tạo tất cả các truy vấn DB song song
-  const [authData, categoriesData, hotAppsData] = await Promise.all([
-    supabase.auth.getUser(),
-    supabase.from('categories').select('id, name, slug'),
-    supabase.from('apps')
-      .select('*')
-      .order('views', { ascending: false, nullsLast: true })
-      .limit(5)
+  // 1. Kiểm tra User Auth (BLOCKING)
+  // Phải đợi kết quả để thực hiện redirect nếu cần.
+  const { data: { user } } = await supabase.auth.getUser(); //
+  if (!user && !isGoogleBot) {
+    return { redirect: { destination: '/under-construction', permanent: false } }; //
+  }
+
+  // 2. Khởi tạo tất cả các truy vấn DB còn lại song song
+  const [categoriesData, hotAppsData] = await Promise.all([ //
+    supabase.from('categories').select('id, name, slug'), //
+    supabase.from('apps') //
+      .select('*') //
+      .order('views', { ascending: false, nullsLast: true }) //
+      .limit(5) //
   ]);
 
-  const user = authData.data.user;
-  const categories = categoriesData.data;
-
-  if (!user && !isGoogleBot) {
-    return { redirect: { destination: '/under-construction', permanent: false } };
-  }
+  const categories = categoriesData.data; //
 
   const paginationData = {};
   const affiliatePool = affiliateApps.map(a => ({ ...a }));
@@ -581,12 +580,13 @@ export async function getServerSideProps(ctx) {
       const endIndex = startIndex + APPS_PER_PAGE - 1;
 
       if (isActive) {
-        const [{ count }, { data: apps }] = await Promise.all([
-          supabase.from('apps').select('*', { count: 'estimated', head: true }).eq('category_id', category.id),
-          supabase.from('apps').select('*')
-            .eq('category_id', category.id)
-            .order('created_at', { ascending: false })
-            .range(startIndex, endIndex)
+        // Gộp count và data apps cho category active thành song song
+        const [{ count }, { data: apps }] = await Promise.all([ //
+          supabase.from('apps').select('*', { count: 'estimated', head: true }).eq('category_id', category.id), //
+          supabase.from('apps').select('*') //
+            .eq('category_id', category.id) //
+            .order('created_at', { ascending: false }) //
+            .range(startIndex, endIndex) //
         ]);
 
         const totalApps = count || 0;
@@ -605,12 +605,12 @@ export async function getServerSideProps(ctx) {
 
         return { ...category, apps: apps || [], appsRendered };
       } else {
-        const { data: appsPlusOne } = await supabase
-          .from('apps')
-          .select('*')
-          .eq('category_id', category.id)
-          .order('created_at', { ascending: false })
-          .range(0, APPS_PER_PAGE); 
+        const { data: appsPlusOne } = await supabase //
+          .from('apps') //
+          .select('*') //
+          .eq('category_id', category.id) //
+          .order('created_at', { ascending: false }) //
+          .range(0, APPS_PER_PAGE); //
 
         const hasNext = (appsPlusOne?.length || 0) > APPS_PER_PAGE;
         const apps = (appsPlusOne || []).slice(0, APPS_PER_PAGE);
