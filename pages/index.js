@@ -286,7 +286,7 @@ const AffiliateInlineCard = ({ item, isFirst = false }) => {
 };
 
 /* =========================
-   Metric (absolute) -- Đã sửa lỗi căn chỉnh để nằm bên dưới và chính giữa icon download.
+   Metric (absolute) -- Đã sửa lỗi căn chỉnh: Quay lại căn phải, dùng top mới để nằm bên dưới icon download.
    ========================= */
 function MetricInlineAbsolute({ categorySlug, app }) {
   const slug = (categorySlug || '').toLowerCase();
@@ -305,12 +305,11 @@ function MetricInlineAbsolute({ categorySlug, app }) {
 
   // Tối ưu vị trí: 
   // right-3 md:right-4: Căn phải, né nút tải xuống.
-  // top-[44px]: Đặt ngay bên dưới nút tải xuống.
-  // mt-1: Khoảng cách hợp lý.
+  // top-[50px] mt-1: Đặt ngay bên dưới nút tải xuống (khoảng 50px từ trên xuống) + 1px margin.
   return (
     <div 
-      className="absolute right-3 md:right-4 top-[44px] mt-1"
-      style={{ zIndex: 10, textAlign: 'right' }} // Căn phải text để tránh đè lên badge phiên bản.
+      className="absolute right-3 md:right-4 top-[50px] mt-1"
+      style={{ zIndex: 10, textAlign: 'right' }} 
     >
       <div className="text-[12px] text-gray-500 dark:text-gray-400 whitespace-nowrap">
         {/* Số đếm in đậm */}
@@ -537,7 +536,7 @@ function interleaveAffiliate(apps, affiliatePool, category, {
 }
 
 /* =========================
-   getServerSideProps (tối ưu, bỏ check cert SSR)
+   getServerSideProps (Tối ưu triệt để tốc độ: Gộp truy vấn DB song song)
    ========================= */
 export async function getServerSideProps(ctx) {
   const supabase = createSupabaseServer(ctx);
@@ -547,20 +546,27 @@ export async function getServerSideProps(ctx) {
   // CDN caching ngắn hạn để vào trang nhanh hơn
   ctx.res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user && !isGoogleBot) {
-    return { redirect: { destination: '/under-construction', permanent: false } };
-  }
-
   const { category: categorySlug, page: pageQuery } = ctx.query;
   const activeSlug = typeof categorySlug === 'string' ? categorySlug.toLowerCase() : null;
   const currentPage = parseInt(pageQuery || '1', 10);
   const APPS_PER_PAGE = 10;
 
-  // Lấy danh sách categories
-  const { data: categories } = await supabase
-    .from('categories')
-    .select('id, name, slug');
+  // Khởi tạo tất cả các truy vấn DB song song
+  const [authData, categoriesData, hotAppsData] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.from('categories').select('id, name, slug'),
+    supabase.from('apps')
+      .select('*')
+      .order('views', { ascending: false, nullsLast: true })
+      .limit(5)
+  ]);
+
+  const user = authData.data.user;
+  const categories = categoriesData.data;
+
+  if (!user && !isGoogleBot) {
+    return { redirect: { destination: '/under-construction', permanent: false } };
+  }
 
   const paginationData = {};
   const affiliatePool = affiliateApps.map(a => ({ ...a }));
@@ -570,17 +576,18 @@ export async function getServerSideProps(ctx) {
       const catSlug = (category.slug || '').toLowerCase();
       const isActive = activeSlug && catSlug === activeSlug;
 
-      // Page của category đang xem; category khác luôn là 1
       const pageForThisCategory = isActive ? currentPage : 1;
       const startIndex = (pageForThisCategory - 1) * APPS_PER_PAGE;
       const endIndex = startIndex + APPS_PER_PAGE - 1;
 
       if (isActive) {
-        // 🔹 Category active: đếm 'estimated' để có tổng trang
-        const { count } = await supabase
-          .from('apps')
-          .select('*', { count: 'estimated', head: true })
-          .eq('category_id', category.id);
+        const [{ count }, { data: apps }] = await Promise.all([
+          supabase.from('apps').select('*', { count: 'estimated', head: true }).eq('category_id', category.id),
+          supabase.from('apps').select('*')
+            .eq('category_id', category.id)
+            .order('created_at', { ascending: false })
+            .range(startIndex, endIndex)
+        ]);
 
         const totalApps = count || 0;
         const totalPages = Math.max(1, Math.ceil(totalApps / APPS_PER_PAGE));
@@ -591,13 +598,6 @@ export async function getServerSideProps(ctx) {
           totalApps,
         };
 
-        const { data: apps } = await supabase
-          .from('apps')
-          .select('*')
-          .eq('category_id', category.id)
-          .order('created_at', { ascending: false })
-          .range(startIndex, endIndex);
-
         const appsRendered = interleaveAffiliate(apps || [], affiliatePool, category, {
           ratioEvery: 5,
           maxPerCategory: 2,
@@ -605,13 +605,12 @@ export async function getServerSideProps(ctx) {
 
         return { ...category, apps: apps || [], appsRendered };
       } else {
-        // 🔹 Category không active: KHÔNG đếm tổng -- chỉ lấy APPS_PER_PAGE + 1 để biết còn trang sau
         const { data: appsPlusOne } = await supabase
           .from('apps')
           .select('*')
           .eq('category_id', category.id)
           .order('created_at', { ascending: false })
-          .range(0, APPS_PER_PAGE); // N + 1
+          .range(0, APPS_PER_PAGE); 
 
         const hasNext = (appsPlusOne?.length || 0) > APPS_PER_PAGE;
         const apps = (appsPlusOne || []).slice(0, APPS_PER_PAGE);
@@ -634,14 +633,7 @@ export async function getServerSideProps(ctx) {
     })
   );
 
-  // Hot apps (giữ)
-  const { data: hotAppsData } = await supabase
-    .from('apps')
-    .select('*')
-    .order('views', { ascending: false, nullsLast: true })
-    .limit(5);
-
-  const sortedHotApps = (hotAppsData || [])
+  const sortedHotApps = (hotAppsData.data || [])
     .map(app => ({ ...app, hotScore: (app.views || 0) + (app.downloads || 0) }))
     .sort((a, b) => b.hotScore - a.hotScore)
     .slice(0, 5);
