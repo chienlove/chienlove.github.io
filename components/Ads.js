@@ -11,19 +11,23 @@ export default function AdUnit({
   desktopMode = 'auto',
   desktopSlot = '4575220124',
 }) {
-  const adRef = useRef(null); // Chỉ cần 1 ref là đủ
+  const adRef = useRef(null); // Mỗi instance AdUnit có một ref riêng
 
   useEffect(() => {
     const pushAd = () => {
       try {
-        (window.adsbygoogle = window.adsbygoogle || []).push({});
+        // Chỉ chạy push khi adsbygoogle đã được khởi tạo
+        if (window.adsbygoogle) {
+          window.adsbygoogle.push({});
+        }
       } catch (e) {
         console.error("Ad push error:", e);
       }
     };
 
+    const currentAdRef = adRef.current; // Lưu tham chiếu DOM
+
     // Sử dụng IntersectionObserver để chỉ tải quảng cáo khi nó sắp hiển thị
-    // Giúp cải thiện hiệu suất và tuân thủ chính sách của Google
     const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
@@ -36,16 +40,17 @@ export default function AdUnit({
       { rootMargin: '200px' } // Tải trước khi nó vào màn hình 200px
     );
 
-    if (adRef.current) {
-      observer.observe(adRef.current);
+    if (currentAdRef) {
+      observer.observe(currentAdRef);
     }
 
     return () => {
-      if (adRef.current) {
-        observer.unobserve(adRef.current);
+      // Cleanup: Chỉ unobserve nếu ref còn tồn tại
+      if (currentAdRef) {
+        observer.unobserve(currentAdRef);
       }
     };
-  }, []); // useEffect chỉ chạy 1 lần
+  }, []); // useEffect chỉ chạy 1 lần khi mount
 
   const isCompact = mobileVariant === 'compact';
 
