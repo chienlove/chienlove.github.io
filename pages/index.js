@@ -287,6 +287,7 @@ const AffiliateInlineCard = ({ item, isFirst = false }) => {
 
 /* =========================
    Metric (absolute) -- hiện ngay dưới icon tải & thẳng hàng dòng meta
+   (Đã xóa 'gap-1' để căn chỉnh lại số đếm sau khi xóa icon)
    ========================= */
 function MetricInlineAbsolute({ categorySlug, app }) {
   const slug = (categorySlug || '').toLowerCase();
@@ -309,7 +310,8 @@ function MetricInlineAbsolute({ categorySlug, app }) {
   // Nếu UI lệch 1–2px giữa các thiết bị, có thể tinh chỉnh 2 giá trị top này.
   return (
     <div className="absolute right-3 md:right-4 top-[56px] md:top-[60px]">
-      <div className="flex items-center gap-1 text-[12px] text-gray-500 dark:text-gray-400">
+      {/* Đã xóa 'gap-1' */}
+      <div className="flex items-center text-[12px] text-gray-500 dark:text-gray-400">
         {/* Đã xóa icon, chỉ giữ lại số đếm */}
         <span>{Number(value || 0).toLocaleString('vi-VN')}</span>
       </div>
