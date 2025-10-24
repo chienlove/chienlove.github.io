@@ -248,7 +248,7 @@ const HotAppCard = ({ app, rank }) => {
 };
 
 /* =========================
-   Affiliate inline card
+   Affiliate inline card (giữ nguyên)
    ========================= */
 const AffiliateInlineCard = ({ item, isFirst = false }) => {
   const { name, author, icon_url, affiliate_url, payout_label } = item;
@@ -286,7 +286,7 @@ const AffiliateInlineCard = ({ item, isFirst = false }) => {
 };
 
 /* =========================
-   Metric (absolute) -- Sửa triệt để: Dùng right-4 để khắc phục lỗi lệch trái.
+   Metric (absolute) -- Sửa triệt để: Dùng right-2 để khắc phục lỗi lệch trái.
    ========================= */
 function MetricInlineAbsolute({ categorySlug, app }) {
   const slug = (categorySlug || '').toLowerCase();
@@ -301,13 +301,13 @@ function MetricInlineAbsolute({ categorySlug, app }) {
   }
 
   // Tối ưu vị trí triệt để:
-  // right-4 (16px): Đây là giá trị padding mặc định của AppCard. Đặt khối w-10 ở đây sẽ căn chính xác
-  // dưới nút tải xuống (w-10) vì nút tải xuống cũng được căn chỉnh tương tự trong flex container.
+  // right-2 (8px): Giá trị này sẽ dịch chuyển khối số đếm thêm về bên phải,
+  // giúp tâm của khối w-10 (40px) khớp với tâm nút tải xuống.
   // w-10: Khối rộng 40px.
-  // text-center: Căn giữa nội dung bên trong khối 40px này.
+  // text-center: Căn giữa nội dung bên trong khối 40px này, bất kể số chữ số.
   return (
     <div 
-      className="absolute right-4 md:right-4 top-[62px] w-10 text-center" 
+      className="absolute right-2 md:right-2 top-[62px] w-10 text-center" 
       style={{ zIndex: 10 }} 
     >
       <div className="text-[12px] text-gray-500 dark:text-gray-400 whitespace-nowrap">
