@@ -304,6 +304,7 @@ function MetricInlineAbsolute({ categorySlug, app }) {
   // right-4: Căn khối w-10 sang phải, tương ứng với vị trí nút tải xuống (w-10, 40px)
   // w-10: Khối rộng 40px (bằng nút tải xuống).
   // text-center: Đảm bảo số đếm luôn nằm chính giữa khối 40px này.
+  // Đã xóa transform -translate-x-1/2 khỏi div.text
   return (
     <div 
       className="absolute right-4 md:right-4 top-[60px] w-10 text-center" 
