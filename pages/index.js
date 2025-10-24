@@ -286,8 +286,7 @@ const AffiliateInlineCard = ({ item, isFirst = false }) => {
 };
 
 /* =========================
-   Metric (absolute) -- hiện ngay dưới icon tải & thẳng hàng dòng meta
-   (Đã xóa 'gap-1' để căn chỉnh lại số đếm sau khi xóa icon)
+   Metric (absolute) -- Tối ưu vị trí nằm chính giữa bên dưới icon tải
    ========================= */
 function MetricInlineAbsolute({ categorySlug, app }) {
   const slug = (categorySlug || '').toLowerCase();
@@ -304,16 +303,19 @@ function MetricInlineAbsolute({ categorySlug, app }) {
     return null;
   }
 
-  // Vị trí:
-  // right-3/md:right-4: né sát nút tải
-  // top-[52px]/md:top-[56px]: canh đúng hàng meta (author/version) trong AppCard
-  // Nếu UI lệch 1–2px giữa các thiết bị, có thể tinh chỉnh 2 giá trị top này.
+  // Tối ưu vị trí: 
+  // left-1/2 + -translate-x-1/2 để căn giữa theo chiều ngang của icon tải.
+  // top-[44px] để căn vị trí ngay dưới icon tải.
+  // mt-1 để tạo khoảng cách hợp lý (1px).
   return (
-    <div className="absolute right-3 md:right-4 top-[56px] md:top-[60px]">
-      {/* Đã xóa 'gap-1' */}
-      <div className="flex items-center text-[12px] text-gray-500 dark:text-gray-400">
-        {/* Đã xóa icon, chỉ giữ lại số đếm */}
-        <span>{Number(value || 0).toLocaleString('vi-VN')}</span>
+    <div 
+      className="absolute left-1/2 transform -translate-x-1/2 top-[44px] mt-1"
+      style={{ zIndex: 10 }} // Đảm bảo số đếm không bị che
+    >
+      {/* Đã xóa 'flex items-center' */}
+      <div className="text-[12px] text-gray-500 dark:text-gray-400 whitespace-nowrap">
+        {/* Số đếm in đậm */}
+        <span className="font-bold">{Number(value || 0).toLocaleString('vi-VN')}</span>
       </div>
     </div>
   );
