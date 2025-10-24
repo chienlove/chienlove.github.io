@@ -286,7 +286,7 @@ const AffiliateInlineCard = ({ item, isFirst = false }) => {
 };
 
 /* =========================
-   Metric (absolute) -- Sửa triệt để để nằm CHÍNH GIỮA icon download.
+   Metric (absolute) -- Sửa triệt để: Dùng right-4 để khắc phục lỗi lệch trái.
    ========================= */
 function MetricInlineAbsolute({ categorySlug, app }) {
   const slug = (categorySlug || '').toLowerCase();
@@ -301,13 +301,13 @@ function MetricInlineAbsolute({ categorySlug, app }) {
   }
 
   // Tối ưu vị trí triệt để:
-  // right-5 (20px): Căn khối w-10 sang phải, đưa tâm của khối w-10 về đúng tâm nút tải xuống (40px).
+  // right-4 (16px): Đây là giá trị padding mặc định của AppCard. Đặt khối w-10 ở đây sẽ căn chính xác
+  // dưới nút tải xuống (w-10) vì nút tải xuống cũng được căn chỉnh tương tự trong flex container.
   // w-10: Khối rộng 40px.
   // text-center: Căn giữa nội dung bên trong khối 40px này.
-  // top-[62px] tạo khoảng cách hợp lý.
   return (
     <div 
-      className="absolute right-5 md:right-5 top-[62px] w-10 text-center" 
+      className="absolute right-4 md:right-4 top-[62px] w-10 text-center" 
       style={{ zIndex: 10 }} 
     >
       <div className="text-[12px] text-gray-500 dark:text-gray-400 whitespace-nowrap">
