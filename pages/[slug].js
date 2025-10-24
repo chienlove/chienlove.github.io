@@ -878,11 +878,11 @@ useEffect(() => {
                 {showFullDescription ? 'Thu gọn' : 'Xem thêm...'}
               </button>
             )}
+            </div>
             
             <div className="mt-6">
               <AdUnit isArticleAd={true} inArticleSlot="4276741180" className="max-w-full" />
-          </div>
-        </div>
+         </div>
 
           {/* Screenshots */}
           {Array.isArray(app.screenshots) && app.screenshots.length > 0 && (
