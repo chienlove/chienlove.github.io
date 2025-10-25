@@ -3,7 +3,18 @@
 import { useRouter } from 'next/router';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, X, ChevronDown, Flame } from 'lucide-react';
+
+// Import Font Awesome Icons
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import {
+  faSearch, // Thay thế Search
+  faTimes,  // Thay thế X
+  faChevronDown, // Thay thế ChevronDown
+  faFire,   // Thay thế Flame
+  faSort,   // Icon cho Sort By
+  faFilter, // Icon cho Category
+} from '@fortawesome/free-solid-svg-icons';
+
 import AppCard from './AppCard';
 
 // Component cho Hot App Item (icon_url + tooltip)
@@ -22,7 +33,7 @@ const HotAppItem = ({ app, onClick }) => {
         className="w-14 h-14 md:w-16 md:h-16 rounded-xl overflow-hidden
                    bg-gradient-to-br from-teal-400 via-purple-500 to-pink-500
                    flex items-center justify-center shadow-md
-                   group-hover:shadow-lg group-hover:ring-2 group-hover:ring-pink-300/40
+                   group-hover:shadow-lg group-hover:ring-4 group-hover:ring-pink-300/40
                    transition-all duration-300"
       >
         {iconSrc ? (
@@ -132,7 +143,7 @@ export default function SearchModal({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-gradient-to-br from-blue-900/40 via-purple-900/40 to-pink-900/40 backdrop-blur-lg"
+            className="absolute inset-0 bg-gradient-to-br from-blue-900/50 via-purple-900/50 to-pink-900/50 backdrop-blur-xl" // Hiệu ứng blur mạnh hơn
             onClick={() => setSearchOpen(false)}
           />
 
@@ -142,89 +153,92 @@ export default function SearchModal({
             animate={{ scale: 1, y: 0, opacity: 1 }}
             exit={{ scale: 0.9, y: -20, opacity: 0 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="relative w-full max-w-lg"
+            className="relative w-full max-w-xl" // Tăng kích thước modal một chút
           >
             <div
-              className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-2xl 
-                         rounded-3xl shadow-2xl border border-white/30 dark:border-gray-700/50
+              className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-2xl 
+                         rounded-3xl shadow-2xl border border-white/50 dark:border-gray-700/60
                          overflow-hidden"
             >
               {/* Header */}
-              <div className="p-6 bg-gradient-to-r from-blue-50/50 to-purple-50/50 dark:from-blue-900/20 dark:to-purple-900/20">
+              <div className="p-6 bg-gradient-to-r from-blue-100/70 to-purple-100/70 dark:from-blue-900/40 dark:to-purple-900/40">
                 <div className="flex items-center justify-between mb-4">
                   <h2
-                    className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 
+                    className="text-2xl font-extrabold bg-gradient-to-r from-blue-600 to-pink-600 
                                 bg-clip-text text-transparent"
                   >
-                    Tìm kiếm ứng dụng
+                    TÌM KIẾM ỨNG DỤNG
                   </h2>
                   <button
                     onClick={() => setSearchOpen(false)}
-                    className="p-2 rounded-full hover:bg-white/50 dark:hover:bg-gray-700/50
-                               transition-all duration-200"
+                    className="p-3 rounded-full bg-white/50 dark:bg-gray-800/50 hover:bg-red-500/20
+                               transition-all duration-200 ring-1 ring-gray-300 dark:ring-gray-700"
                   >
-                    <X className="w-5 h-5 text-gray-600 dark:text-gray-300" />
+                    <FontAwesomeIcon icon={faTimes} className="w-4 h-4 text-gray-700 dark:text-gray-300" />
                   </button>
                 </div>
 
                 {/* Search Input */}
                 <div className="relative">
                   <div className="absolute left-4 top-1/2 -translate-y-1/2">
-                    <Search className="w-5 h-5 text-teal-500" />
+                    <FontAwesomeIcon icon={faSearch} className="w-5 h-5 text-teal-500" />
                   </div>
                   <input
                     autoFocus
                     type="text"
                     value={q}
                     onChange={(e) => setQ(e.target.value)}
-                    placeholder="Search"
-                    className="w-full pl-12 pr-16 py-3 text-base rounded-2xl
-                             bg-white/70 dark:bg-gray-800/70 
-                             border-2 border-teal-200 dark:border-teal-700
-                             focus:border-teal-400 focus:ring-2 focus:ring-teal-200 
-                             focus:bg-white dark:focus:bg-gray-800
-                             transition-all duration-300 placeholder-gray-500"
+                    placeholder="Nhập tên ứng dụng, game hoặc từ khóa..."
+                    className="w-full pl-12 pr-6 py-3 text-base rounded-full
+                             bg-white dark:bg-gray-800 
+                             border-2 border-teal-400 dark:border-teal-600
+                             focus:border-pink-500 focus:ring-4 focus:ring-pink-200/50 
+                             transition-all duration-300 placeholder-gray-500 dark:placeholder-gray-400 font-medium shadow-lg"
                   />
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2">
-                    <div className="bg-teal-500 text-white p-2 rounded-xl">
-                      <Search className="w-4 h-4" />
-                    </div>
-                  </div>
                 </div>
               </div>
 
-              {/* Filters */}
-              <div className="px-6 py-3 bg-gray-50/50 dark:bg-gray-800/50 flex items-center justify-between">
-                <div className="flex items-center gap-3">
+              {/* Filters (Sử dụng style Dropdown tùy chỉnh) */}
+              <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800 flex flex-wrap items-center gap-4 border-t border-gray-200 dark:border-gray-700">
+                
+                {/* Category Dropdown */}
+                <div className="relative inline-block">
+                  <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400" />
                   <select
                     value={activeCategory}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="bg-white/80 dark:bg-gray-700/80 rounded-full px-4 py-2 text-sm
-                             border border-gray-200 dark:border-gray-600 
-                             focus:border-blue-400 focus:ring-1 focus:ring-blue-200
-                             appearance-none cursor-pointer"
+                    className="bg-white dark:bg-gray-700 rounded-lg pl-9 pr-10 py-2 text-sm
+                             border border-gray-300 dark:border-gray-600 
+                             focus:border-blue-500 focus:ring-2 focus:ring-blue-200
+                             cursor-pointer font-semibold text-gray-800 dark:text-gray-200"
                   >
-                    <option value="all">Category</option>
+                    <option value="all">Tất cả chuyên mục</option>
                     {categories.map((c) => (
                       <option key={c.id} value={c.id}>
                         {c.name}
                       </option>
                     ))}
                   </select>
+                  <FontAwesomeIcon icon={faChevronDown} className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
+                </div>
 
+                {/* Sort By Dropdown */}
+                <div className="relative inline-block">
+                  <FontAwesomeIcon icon={faSort} className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400" />
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
-                    className="bg-white/80 dark:bg-gray-700/80 rounded-full px-4 py-2 text-sm
-                             border border-gray-200 dark:border-gray-600 
-                             focus:border-blue-400 focus:ring-1 focus:ring-blue-200
-                             appearance-none cursor-pointer"
+                    className="bg-white dark:bg-gray-700 rounded-lg pl-9 pr-10 py-2 text-sm
+                             border border-gray-300 dark:border-gray-600 
+                             focus:border-blue-500 focus:ring-2 focus:ring-blue-200
+                             cursor-pointer font-semibold text-gray-800 dark:text-gray-200"
                   >
-                    <option value="created_at">Sort By</option>
+                    <option value="created_at">Mới nhất</option>
                     <option value="name">Tên A-Z</option>
                   </select>
+                  <FontAwesomeIcon icon={faChevronDown} className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
                 </div>
-                <ChevronDown className="w-4 h-4 text-gray-400" />
+
               </div>
 
               {/* Results */}
@@ -234,13 +248,13 @@ export default function SearchModal({
                     {hotApps && hotApps.length > 0 && (
                       <div className="mb-8">
                         <div className="flex items-center justify-center gap-2 mb-6">
-                          <Flame className="w-6 h-6 text-pink-500 animate-pulse" />
+                          <FontAwesomeIcon icon={faFire} className="w-6 h-6 text-pink-500 animate-pulse" />
                           <h3 className="text-xl font-extrabold bg-gradient-to-r from-teal-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">
                             Xu hướng tìm kiếm
                           </h3>
                         </div>
                         <div className="overflow-x-auto md:overflow-visible">
-                          <div className="flex md:grid md:grid-cols-5 gap-5 px-2 md:px-0">
+                          <div className="flex md:grid md:grid-cols-5 gap-5 px-2 md:px-0 justify-center">
                             {hotApps.slice(0, 10).map((app) => (
                               <HotAppItem
                                 key={app.id}
@@ -258,19 +272,19 @@ export default function SearchModal({
                 ) : apps.length === 0 ? (
                   <div className="text-center py-8">
                     <div className="text-gray-400 text-lg mb-2">😔</div>
-                    <p className="text-gray-500">
-                      Không có kết quả cho "{q}"
+                    <p className="text-gray-500 dark:text-gray-400">
+                      Không có kết quả nào phù hợp với "{q}"
                     </p>
                   </div>
                 ) : (
                   <>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                       Tìm thấy{' '}
-                      <span className="font-bold text-teal-600">
+                      <span className="font-extrabold text-pink-600 dark:text-pink-400">
                         {apps.length}
                       </span>{' '}
                       kết quả cho "
-                      <span className="font-bold text-gray-800 dark:text-gray-200">
+                      <span className="font-bold text-gray-900 dark:text-gray-100">
                         {q}
                       </span>
                       ":
@@ -289,6 +303,14 @@ export default function SearchModal({
                   </>
                 )}
               </div>
+              
+              {/* Footer hint */}
+              <div className="px-6 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Nhấn <span className="font-semibold text-gray-800 dark:text-gray-200">ESC</span> để đóng. Kết quả được sắp xếp theo tùy chọn lọc.
+                </p>
+              </div>
+
             </div>
           </motion.div>
         </motion.div>
