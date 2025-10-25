@@ -1,3 +1,4 @@
+// SearchModal.js
 'use client';
 
 import { useRouter } from 'next/router';
@@ -31,9 +32,9 @@ const HotAppItem = ({ app, onClick }) => {
     >
       <div
         className="w-14 h-14 md:w-16 md:h-16 rounded-xl overflow-hidden
-                   bg-gradient-to-br from-teal-400 via-purple-500 to-pink-500
+                   bg-gray-100 dark:bg-gray-700
                    flex items-center justify-center shadow-md
-                   group-hover:shadow-lg group-hover:ring-4 group-hover:ring-pink-300/40
+                   group-hover:shadow-lg group-hover:ring-4 group-hover:ring-blue-300/40
                    transition-all duration-300"
       >
         {iconSrc ? (
@@ -44,7 +45,7 @@ const HotAppItem = ({ app, onClick }) => {
             className="w-full h-full object-cover"
           />
         ) : (
-          <span className="text-white text-lg font-bold">
+          <span className="text-gray-500 dark:text-gray-300 text-lg font-bold">
             {app.name.charAt(0)}
           </span>
         )}
@@ -138,79 +139,83 @@ export default function SearchModal({
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-50 flex items-start justify-center pt-16 px-4"
         >
-          {/* Backdrop */}
+          {/* Backdrop (solid, dark, non-blur) */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="absolute inset-0 bg-gradient-to-br from-blue-900/50 via-purple-900/50 to-pink-900/50 backdrop-blur-xl" // Hiệu ứng blur mạnh hơn
+            className="absolute inset-0 bg-gray-900/80 dark:bg-gray-950/90"
             onClick={() => setSearchOpen(false)}
           />
 
           {/* Modal */}
           <motion.div
-            initial={{ scale: 0.9, y: -20, opacity: 0 }}
+            initial={{ scale: 0.95, y: -20, opacity: 0 }}
             animate={{ scale: 1, y: 0, opacity: 1 }}
-            exit={{ scale: 0.9, y: -20, opacity: 0 }}
+            exit={{ scale: 0.95, y: -20, opacity: 0 }}
             transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-            className="relative w-full max-w-xl" // Tăng kích thước modal một chút
+            className="relative w-full max-w-xl"
           >
             <div
-              className="bg-white/90 dark:bg-gray-900/90 backdrop-blur-2xl 
-                         rounded-3xl shadow-2xl border border-white/50 dark:border-gray-700/60
-                         overflow-hidden"
+              className="bg-white dark:bg-gray-900 
+                         rounded-xl shadow-2xl border border-gray-200 dark:border-gray-800
+                         overflow-hidden transition-colors duration-300"
             >
               {/* Header */}
-              <div className="p-6 bg-gradient-to-r from-blue-100/70 to-purple-100/70 dark:from-blue-900/40 dark:to-purple-900/40">
-                <div className="flex items-center justify-between mb-4">
+              <div className="p-5 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-850">
+                <div className="flex items-center justify-between">
                   <h2
-                    className="text-2xl font-extrabold bg-gradient-to-r from-blue-600 to-pink-600 
-                                bg-clip-text text-transparent"
+                    className="text-xl font-bold text-gray-800 dark:text-white"
                   >
-                    TÌM KIẾM ỨNG DỤNG
+                    Tìm kiếm
                   </h2>
                   <button
                     onClick={() => setSearchOpen(false)}
-                    className="p-3 rounded-full bg-white/50 dark:bg-gray-800/50 hover:bg-red-500/20
-                               transition-all duration-200 ring-1 ring-gray-300 dark:ring-gray-700"
+                    className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700
+                               transition-colors duration-200"
                   >
-                    <FontAwesomeIcon icon={faTimes} className="w-4 h-4 text-gray-700 dark:text-gray-300" />
+                    <FontAwesomeIcon icon={faTimes} className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                   </button>
                 </div>
+              </div>
 
-                {/* Search Input */}
+              {/* Search Input */}
+              <div className="p-5 border-b border-gray-200 dark:border-gray-800">
                 <div className="relative">
                   <div className="absolute left-4 top-1/2 -translate-y-1/2">
-                    <FontAwesomeIcon icon={faSearch} className="w-5 h-5 text-teal-500" />
+                    <FontAwesomeIcon icon={faSearch} className="w-5 h-5 text-blue-500" />
                   </div>
                   <input
                     autoFocus
                     type="text"
                     value={q}
                     onChange={(e) => setQ(e.target.value)}
-                    placeholder="Nhập tên ứng dụng, game hoặc từ khóa..."
-                    className="w-full pl-12 pr-6 py-3 text-base rounded-full
-                             bg-white dark:bg-gray-800 
-                             border-2 border-teal-400 dark:border-teal-600
-                             focus:border-pink-500 focus:ring-4 focus:ring-pink-200/50 
-                             transition-all duration-300 placeholder-gray-500 dark:placeholder-gray-400 font-medium shadow-lg"
+                    placeholder="Nhập tên ứng dụng hoặc từ khóa..."
+                    className="w-full pl-12 pr-6 py-3 text-base rounded-lg
+                             bg-gray-100 dark:bg-gray-800 
+                             border border-gray-300 dark:border-gray-700
+                             focus:border-blue-500 focus:ring-2 focus:ring-blue-200
+                             transition-all duration-200 placeholder-gray-500 dark:placeholder-gray-400 font-medium"
                   />
                 </div>
               </div>
 
-              {/* Filters (Sử dụng style Dropdown tùy chỉnh) */}
-              <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800 flex flex-wrap items-center gap-4 border-t border-gray-200 dark:border-gray-700">
+
+              {/* Filters */}
+              <div className="px-5 py-3 flex flex-wrap items-center gap-4 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-850">
                 
                 {/* Category Dropdown */}
                 <div className="relative inline-block">
-                  <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400" />
+                  {/* Icon được đặt cố định */}
+                  <FontAwesomeIcon icon={faFilter} className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400 pointer-events-none" />
                   <select
                     value={activeCategory}
                     onChange={(e) => setCategory(e.target.value)}
-                    className="bg-white dark:bg-gray-700 rounded-lg pl-9 pr-10 py-2 text-sm
+                    className="bg-white dark:bg-gray-700 rounded-lg pl-10 pr-10 py-2 text-sm
                              border border-gray-300 dark:border-gray-600 
                              focus:border-blue-500 focus:ring-2 focus:ring-blue-200
-                             cursor-pointer font-semibold text-gray-800 dark:text-gray-200"
+                             cursor-pointer font-semibold text-gray-800 dark:text-gray-200
+                             appearance-none" // Quan trọng: Tắt appearance-none để icon chevron tự nhiên hơn
                   >
                     <option value="all">Tất cả chuyên mục</option>
                     {categories.map((c) => (
@@ -219,19 +224,21 @@ export default function SearchModal({
                       </option>
                     ))}
                   </select>
+                  {/* Chevron được đặt ngoài <select> và căn chỉnh */}
                   <FontAwesomeIcon icon={faChevronDown} className="absolute right-3 top-1/2 -translate-y-1/2 w-3 h-3 text-gray-400 pointer-events-none" />
                 </div>
 
                 {/* Sort By Dropdown */}
                 <div className="relative inline-block">
-                  <FontAwesomeIcon icon={faSort} className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400" />
+                  <FontAwesomeIcon icon={faSort} className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400 pointer-events-none" />
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value)}
-                    className="bg-white dark:bg-gray-700 rounded-lg pl-9 pr-10 py-2 text-sm
+                    className="bg-white dark:bg-gray-700 rounded-lg pl-10 pr-10 py-2 text-sm
                              border border-gray-300 dark:border-gray-600 
                              focus:border-blue-500 focus:ring-2 focus:ring-blue-200
-                             cursor-pointer font-semibold text-gray-800 dark:text-gray-200"
+                             cursor-pointer font-semibold text-gray-800 dark:text-gray-200
+                             appearance-none"
                   >
                     <option value="created_at">Mới nhất</option>
                     <option value="name">Tên A-Z</option>
@@ -242,15 +249,15 @@ export default function SearchModal({
               </div>
 
               {/* Results */}
-              <div className="p-6 max-h-96 overflow-y-auto">
+              <div className="p-5 max-h-96 overflow-y-auto">
                 {q.trim() === '' ? (
                   <div className="text-center">
                     {hotApps && hotApps.length > 0 && (
                       <div className="mb-8">
                         <div className="flex items-center justify-center gap-2 mb-6">
-                          <FontAwesomeIcon icon={faFire} className="w-6 h-6 text-pink-500 animate-pulse" />
-                          <h3 className="text-xl font-extrabold bg-gradient-to-r from-teal-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">
-                            Xu hướng tìm kiếm
+                          <FontAwesomeIcon icon={faFire} className="w-6 h-6 text-red-500" />
+                          <h3 className="text-lg font-bold text-gray-800 dark:text-gray-200">
+                            Ứng dụng nổi bật
                           </h3>
                         </div>
                         <div className="overflow-x-auto md:overflow-visible">
@@ -271,23 +278,19 @@ export default function SearchModal({
                   <SearchSkeleton />
                 ) : apps.length === 0 ? (
                   <div className="text-center py-8">
-                    <div className="text-gray-400 text-lg mb-2">😔</div>
+                    <div className="text-gray-400 text-3xl mb-2">😔</div>
                     <p className="text-gray-500 dark:text-gray-400">
-                      Không có kết quả nào phù hợp với "{q}"
+                      Không có kết quả nào phù hợp với "<span className="font-semibold">{q}</span>"
                     </p>
                   </div>
                 ) : (
                   <>
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
                       Tìm thấy{' '}
-                      <span className="font-extrabold text-pink-600 dark:text-pink-400">
+                      <span className="font-bold text-blue-600 dark:text-blue-400">
                         {apps.length}
                       </span>{' '}
-                      kết quả cho "
-                      <span className="font-bold text-gray-900 dark:text-gray-100">
-                        {q}
-                      </span>
-                      ":
+                      kết quả:
                     </p>
                     <ul className="space-y-2">
                       <AnimatePresence>
@@ -305,9 +308,9 @@ export default function SearchModal({
               </div>
               
               {/* Footer hint */}
-              <div className="px-6 py-3 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+              <div className="px-5 py-3 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-850">
                 <p className="text-xs text-gray-500 dark:text-gray-400">
-                  Nhấn <span className="font-semibold text-gray-800 dark:text-gray-200">ESC</span> để đóng. Kết quả được sắp xếp theo tùy chọn lọc.
+                  Nhấn <kbd className="px-1 py-0.5 border rounded bg-gray-200 dark:bg-gray-700 font-mono text-gray-700 dark:text-gray-300">ESC</kbd> để đóng.
                 </p>
               </div>
 
