@@ -410,12 +410,12 @@ export default function Home({ categoriesWithApps, hotApps, paginationData, meta
                             <span className="font-bold text-red-600">Revoked</span>
                             <FontAwesomeIcon icon={faTimesCircle} className="text-red-500" />
                           </>
+                        ) : (
+                          <>
+                            <span className="font-bold text-green-600">Signed</span>
+                            <FontAwesomeIcon icon={faCheckCircle} className="text-green-500" />
+                          </>
                         )
-                      ) : (
-                        <>
-                          <span className="font-bold text-green-600">Signed</span>
-                          <FontAwesomeIcon icon={faCheckCircle} className="text-green-500" />
-                        </>
                       ) : (
                         <>
                           <span className="font-bold text-gray-500">Error</span>
@@ -535,7 +535,7 @@ function interleaveAffiliate(apps, affiliatePool, category, {
 }
 
 /* =========================
-   getServerSideProps (Tối ưu triệt để tốc độ: Tách auth để tránh chặn luồng chính)
+   getServerSideProps (ĐÃ DỌN DẸP SẠCH LOGIC KIỂM TRA ADMIN)
    ========================= */
 export async function getServerSideProps(ctx) {
   const supabase = createSupabaseServer(ctx);
@@ -550,14 +550,7 @@ export async function getServerSideProps(ctx) {
   const currentPage = parseInt(pageQuery || '1', 10);
   const APPS_PER_PAGE = 10;
 
-  // 1. Kiểm tra User Auth (PHẦN NÀY ĐÃ BỊ XÓA BỎ)
-  // Logic kiểm tra user và redirect đã bị xóa bỏ để trang trở nên public.
-  /*
-  const { data: { user } } = await supabase.auth.getUser(); 
-  if (!user && !isGoogleBot) {
-    return { redirect: { destination: '/under-construction', permanent: false } }; 
-  }
-  */
+  // 1. Kiểm tra User Auth: ĐÃ XÓA HOÀN TOÀN LOGIC KIỂM TRA ĐĂNG NHẬP ADMIN
 
   // 2. Khởi tạo tất cả các truy vấn DB còn lại song song
   const [categoriesData, hotAppsData] = await Promise.all([ 
