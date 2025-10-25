@@ -26,12 +26,12 @@ import { faEye as faEyeRegular } from '@fortawesome/free-regular-svg-icons';
 import affiliateApps from '../lib/appads';
 
 /* =========================
-   SEO component (giữ nguyên)
+   SEO component (bổ sung, không đổi UI)
    ========================= */
 const SITE = {
   name: 'StoreiOS',
   url: 'https://storeios.net',
-  twitter: '@storeios'
+  twitter: '@storeios' // chỉnh nếu khác
 };
 
 function SEOIndexMeta({ meta }) {
@@ -42,34 +42,20 @@ function SEOIndexMeta({ meta }) {
     description = 'Tải ứng dụng iOS, TestFlight, jailbreak và hướng dẫn an toàn. Cập nhật hằng ngày.',
   } = meta || {};
 
-  // Điều chỉnh Title và Canonical để phù hợp với việc xử lý params category/page
   const titleBase = categorySlug
     ? `StoreiOS – ${categorySlug} cho iOS`
     : 'StoreiOS – Ứng dụng iOS, TestFlight, Jailbreak';
   const title = page > 1 ? `${titleBase} (Trang ${page})` : titleBase;
 
-  // Xử lý Canonical URL: Chuyển path: /?category=slug&page=p thành path: /?category=slug&page=p
-  let canonical = SITE.url;
-  let params = new URLSearchParams();
-  if (categorySlug) params.set('category', encodeURIComponent(categorySlug));
-  if (page > 1) params.set('page', page);
+  const canonical = `${SITE.url}${categorySlug ? `/?category=${encodeURIComponent(categorySlug)}` : ''}${page > 1 ? `${categorySlug ? '&' : '/?'}page=${page}` : ''}`;
+  const prevUrl = page > 1
+    ? `${SITE.url}${categorySlug ? `/?category=${encodeURIComponent(categorySlug)}&page=${page - 1}` : `/?page=${page - 1}`}`
+    : null;
+  const nextUrl = page < totalPages
+    ? `${SITE.url}${categorySlug ? `/?category=${encodeURIComponent(categorySlug)}&page=${page + 1}` : `/?page=${page + 1}`}`
+    : null;
 
-  if (params.toString()) {
-    canonical = `${SITE.url}/?${params.toString()}`;
-  }
-
-  // Xử lý Prev/Next URL
-  const getUrl = (cat, p) => {
-    let pms = new URLSearchParams();
-    if (cat) pms.set('category', encodeURIComponent(cat));
-    if (p > 1) pms.set('page', p);
-    return pms.toString() ? `${SITE.url}/?${pms.toString()}` : SITE.url;
-  }
-
-  const prevUrl = page > 1 ? getUrl(categorySlug, page - 1) : null;
-  const nextUrl = page < totalPages ? getUrl(categorySlug, page + 1) : null;
-
-  // Supabase origin để preconnect (giữ nguyên)
+  // Supabase origin để preconnect (an toàn nếu biến môi trường chưa set)
   let supabaseOrigin = null;
   try {
     if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
@@ -234,9 +220,8 @@ function PaginationLite({ categorySlug, hasNext }) {
 }
 
 /* =========================
-   Hot App Card, Affiliate Inline Card, Metric Inline Absolute (giữ nguyên)
+   Hot App Card (giữ nguyên)
    ========================= */
-
 const HotAppCard = ({ app, rank }) => {
   const rankColors = [
     'from-red-600 to-orange-500',
@@ -262,6 +247,9 @@ const HotAppCard = ({ app, rank }) => {
   );
 };
 
+/* =========================
+   Affiliate inline card (giữ nguyên)
+   ========================= */
 const AffiliateInlineCard = ({ item, isFirst = false }) => {
   const { name, author, icon_url, affiliate_url, payout_label } = item;
   return (
@@ -297,6 +285,9 @@ const AffiliateInlineCard = ({ item, isFirst = false }) => {
   );
 };
 
+/* =========================
+   Metric (absolute) -- Sửa triệt để: Dùng right-2 để khắc phục lỗi lệch trái.
+   ========================= */
 function MetricInlineAbsolute({ categorySlug, app }) {
   const slug = (categorySlug || '').toLowerCase();
 
@@ -309,21 +300,26 @@ function MetricInlineAbsolute({ categorySlug, app }) {
     return null;
   }
 
+  // Tối ưu vị trí triệt để:
+  // right-2 (8px): Giá trị này sẽ dịch chuyển khối số đếm thêm về bên phải,
+  // giúp tâm của khối w-10 (40px) khớp với tâm nút tải xuống.
+  // w-10: Khối rộng 40px.
+  // text-center: Căn giữa nội dung bên trong khối 40px này, bất kể số chữ số.
   return (
     <div 
       className="absolute right-2 md:right-2 top-[62px] w-10 text-center" 
       style={{ zIndex: 10 }} 
     >
       <div className="text-[12px] text-gray-500 dark:text-gray-400 whitespace-nowrap">
+        {/* Số đếm in đậm, căn giữa nhờ text-center trên khối cha w-10 */}
         <span className="font-bold">{Number(value || 0).toLocaleString('vi-VN')}</span>
       </div>
     </div>
   );
 }
 
-
 /* =========================
-   Home component (giữ nguyên)
+   Home
    ========================= */
 export default function Home({ categoriesWithApps, hotApps, paginationData, metaSEO }) {
   // Chỉ 2 chuyên mục cài IPA → hiển thị badge ký/thu hồi
@@ -495,7 +491,7 @@ export default function Home({ categoriesWithApps, hotApps, paginationData, meta
 }
 
 /* =========================
-   Affiliate interleave (giữ nguyên)
+   Affiliate interleave (giữ)
    ========================= */
 function interleaveAffiliate(apps, affiliatePool, category, {
   ratioEvery = 5,
@@ -539,71 +535,24 @@ function interleaveAffiliate(apps, affiliatePool, category, {
 }
 
 /* =========================
-   getStaticPaths (MỚI) - Tối ưu cho Static Generation của Category và Page
+   getServerSideProps (ĐÃ DỌN DẸP SẠCH LOGIC KIỂM TRA ADMIN)
    ========================= */
-export async function getStaticPaths() {
-  const supabase = createSupabaseServer({ req: {}, res: {} }); // Cần context rỗng cho build
+export async function getServerSideProps(ctx) {
+  const supabase = createSupabaseServer(ctx);
+  const userAgent = ctx.req.headers['user-agent'] || '';
+  const isGoogleBot = userAgent.toLowerCase().includes('googlebot');
 
-  // Lấy danh sách tất cả categories
-  const { data: categories } = await supabase
-    .from('categories')
-    .select('id, slug');
+  // CDN caching ngắn hạn để vào trang nhanh hơn
+  ctx.res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
 
-  const APPS_PER_PAGE = 10;
-  let paths = [];
-
-  // 1. Path cho Trang Chủ (URL: /)
-  // params rỗng hoặc chỉ có page='1'
-  paths.push({ params: {} }); 
-
-  // 2. Paths cho Category và Phân trang (URL: /?category=slug&page=p)
-  await Promise.all((categories || []).map(async (category) => {
-    // Chỉ tạo paths cho category có slug
-    if (!category.slug) return; 
-    
-    // Đếm tổng số ứng dụng để tính totalPages
-    const { count } = await supabase
-      .from('apps')
-      .select('*', { count: 'estimated', head: true })
-      .eq('category_id', category.id);
-
-    const totalPages = Math.max(1, Math.ceil((count || 0) / APPS_PER_PAGE));
-
-    // Build trước trang 1 của mỗi category
-    paths.push({ params: { category: category.slug, page: '1' } });
-
-    // Build trước một số trang đầu (ví dụ: 5 trang) để cải thiện tốc độ ban đầu
-    for (let i = 2; i <= Math.min(totalPages, 5); i++) {
-      paths.push({ params: { category: category.slug, page: String(i) } });
-    }
-  }));
-
-  // fallback: 'blocking' là RẤT QUAN TRỌNG:
-  // Nếu người dùng truy cập trang chưa được build (vd: page=6), Next.js sẽ SSR nó 
-  // (phải đợi DB, nhưng chỉ 1 lần) rồi cache nó. Các lần sau sẽ tức thì.
-  // Paths là rỗng để không build quá nhiều page khi build time, phụ thuộc vào on-demand.
-  return { 
-    paths: [], 
-    fallback: 'blocking' 
-  };
-}
-
-
-/* =========================
-   getStaticProps (TỐI ƯU) - Thay thế getServerSideProps
-   ========================= */
-export async function getStaticProps({ params }) {
-  // Thay đổi cách lấy context do không còn là SSR
-  const supabase = createSupabaseServer({ req: {}, res: {} });
+  const { category: categorySlug, page: pageQuery } = ctx.query;
+  const activeSlug = typeof categorySlug === 'string' ? categorySlug.toLowerCase() : null;
+  const currentPage = parseInt(pageQuery || '1', 10);
   const APPS_PER_PAGE = 10;
 
-  // Lấy tham số từ URL (dạng /?category=slug&page=p)
-  // Nếu params.category tồn tại, nghĩa là chúng ta đang ở trang Category hoặc Phân trang
-  const categorySlug = params?.category || null;
-  const currentPage = parseInt(params?.page || '1', 10);
-  const activeSlug = categorySlug ? categorySlug.toLowerCase() : null;
+  // 1. Kiểm tra User Auth: ĐÃ XÓA HOÀN TOÀN LOGIC KIỂM TRA ĐĂNG NHẬP ADMIN
 
-  // 1. Khởi tạo tất cả các truy vấn DB còn lại song song (Giữ nguyên)
+  // 2. Khởi tạo tất cả các truy vấn DB còn lại song song
   const [categoriesData, hotAppsData] = await Promise.all([ 
     supabase.from('categories').select('id, name, slug'), 
     supabase.from('apps') 
@@ -620,15 +569,14 @@ export async function getStaticProps({ params }) {
   const categoriesWithApps = await Promise.all(
     (categories || []).map(async (category) => {
       const catSlug = (category.slug || '').toLowerCase();
-      // isActive chỉ true khi catSlug khớp với slug từ URL params VÀ page > 0
-      const isActive = activeSlug && catSlug === activeSlug && currentPage > 0;
+      const isActive = activeSlug && catSlug === activeSlug;
 
       const pageForThisCategory = isActive ? currentPage : 1;
       const startIndex = (pageForThisCategory - 1) * APPS_PER_PAGE;
       const endIndex = startIndex + APPS_PER_PAGE - 1;
 
       if (isActive) {
-        // Gộp count và data apps cho category active thành song song (Giữ nguyên)
+        // Gộp count và data apps cho category active thành song song
         const [{ count }, { data: apps }] = await Promise.all([ 
           supabase.from('apps').select('*', { count: 'estimated', head: true }).eq('category_id', category.id), 
           supabase.from('apps').select('*') 
@@ -651,21 +599,8 @@ export async function getStaticProps({ params }) {
           maxPerCategory: 2,
         });
 
-        // Nếu trang không hợp lệ (currentPage > totalPages) HOẶC không có apps
-        // Có thể redirect 404 hoặc trả về trang 1
-        if (pageForThisCategory > totalPages || apps.length === 0) {
-           // Nếu là trang không hợp lệ, trả về notFound: true
-           // Dùng logic riêng để tránh lỗi, ví dụ: 
-           // Nếu page > 1 và không có data, redirect 404 (chỉ có thể trong SSR)
-           // Trong ISR, ta chỉ có thể trả về notFound
-           if (pageForThisCategory > 1 && totalPages > 0) {
-               return { notFound: true };
-           }
-        }
-
         return { ...category, apps: apps || [], appsRendered };
       } else {
-        // Chế độ 'lite' cho các categories không active (Giữ nguyên)
         const { data: appsPlusOne } = await supabase 
           .from('apps') 
           .select('*') 
@@ -699,14 +634,6 @@ export async function getStaticProps({ params }) {
     .sort((a, b) => b.hotScore - a.hotScore)
     .slice(0, 5);
 
-  // Lọc ra các mục bị lỗi notFound nếu có
-  const filteredCategoriesWithApps = categoriesWithApps.filter(c => !c.notFound);
-  
-  // Kiểm tra nếu trang hiện tại bị notFound (chỉ xảy ra với isActive=true)
-  if (categoriesWithApps.some(c => c.notFound)) {
-      return { notFound: true, revalidate: 300 };
-  }
-
   // ====== Chuẩn bị meta SEO động cho Index ======
   let metaSEO = { page: 1, totalPages: 1, categorySlug: null };
   if (activeSlug) {
@@ -721,11 +648,10 @@ export async function getStaticProps({ params }) {
 
   return {
     props: {
-      categoriesWithApps: filteredCategoriesWithApps,
+      categoriesWithApps,
       hotApps: sortedHotApps,
       paginationData,
       metaSEO,
-    },
-    revalidate: 300,
+    }
   };
 }
