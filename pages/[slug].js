@@ -108,7 +108,7 @@ function stripSimpleTagAll(str, tag) {
     if (iOpen === -1) break;
     const iBracket = s.indexOf(']', iOpen);
     if (iBracket === -1) { s = s.slice(0, iOpen); break; }
-    const iClose = lower.indexOf(close, iBracket + 1);
+    const iClose = lower.toLowerCase().indexOf(close, iBracket + 1);
     if (iClose === -1) {
       s = s.slice(0, iOpen) + s.slice(iBracket + 1);
       continue;
@@ -309,9 +309,8 @@ export default function Detail({ serverApp, serverRelated }) {
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [status, setStatus] = useState(null);
   const [statusLoading, setStatusLoading] = useState(false);
-  // GIỮ LẠI CÁC STATE LOADING CHO GIAO DIỆN CŨ
-  const [isInstalling, setIsInstalling] = useState(false);
-  const [isFetchingIpa, setIsFetchingIpa] = useState(false);
+  const [isInstalling, setIsInstalling] = useState(false); // Giữ lại state loading
+  const [isFetchingIpa, setIsFetchingIpa] = useState(false); // Giữ lại state loading
   const [showAllDevices, setShowAllDevices] = useState(false);
   const [showAllLanguages, setShowAllLanguages] = useState(false);
 
@@ -499,37 +498,35 @@ export default function Detail({ serverApp, serverRelated }) {
   };
 
   /* =======================================================
-     SỬA ĐỔI HÀM CÀI ĐẶT: Tích hợp lại đếm lượt tải & Mở tab mới
+     SỬA ĐỔI HÀM CÀI ĐẶT: Mở tab mới & Gọi API tăng lượt tải
      ======================================================= */
   const handleInstall = async (e) => {
     e.preventDefault();
     if (!app?.id || isTestflight) return;
 
-    setIsInstalling(true); // Dùng lại state cũ
+    setIsInstalling(true);
     const installUrl = `/install/${app.slug}`;
+    
+    // Mở tab mới ngay lập tức
+    const newWindow = window.open(installUrl, '_blank'); 
 
     try {
-      // Tích hợp lại logic đếm lượt tải
+      // Gọi API tăng lượt tải (không cần await, gọi bất đồng bộ)
       await fetch(`/api/admin/add-download?id=${app.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         cache: 'no-store',
       });
-      
-      // Mở trang trung gian trong tab mới
-      window.open(installUrl, '_blank');
-      
     } catch (err) {
       console.error('Lỗi tăng lượt tải:', err);
-      // Fallback: Mở tab mới ngay cả khi tăng lượt tải lỗi
-      window.open(installUrl, '_blank'); 
     } finally {
-      setIsInstalling(false); // Dùng lại state cũ
+      // Giữ trạng thái loading ngắn để khớp với UI cũ
+      setTimeout(() => setIsInstalling(false), 500); 
     }
   };
 
   /* =======================================================
-     SỬA ĐỔI HÀM TẢI IPA: Chuyển hướng đến trang trung gian & Mở tab mới
+     SỬA ĐỔI HÀM TẢI IPA: Mở tab mới với query & Gọi API tăng lượt tải
      ======================================================= */
   const handleDownloadIpa = (e) => {
     e.preventDefault();
@@ -538,23 +535,21 @@ export default function Detail({ serverApp, serverRelated }) {
     if (!me) { requireLogin(); return; }
     if (!me.emailVerified) { requireVerified(); return; }
 
-    setIsFetchingIpa(true); // Dùng lại state cũ
+    setIsFetchingIpa(true); 
     const downloadUrl = `/install/${app.slug}?action=download`;
+    
+    // Mở tab mới ngay lập tức
+    const newWindow = window.open(downloadUrl, '_blank'); 
 
-    try {
-      // Logic tăng lượt tải sẽ được xử lý ở trang trung gian 
-      // hoặc bạn có thể tăng ngay tại đây (nhưng API /api/download-ipa cũng có thể tăng lần nữa)
-      // Để đơn giản và chính xác, ta chỉ chuyển hướng và dùng state loading cho giao diện
-      
-      // Mở trang trung gian trong tab mới
-      window.open(downloadUrl, '_blank');
+    // GỌI API TĂNG LƯỢT TẢI (như trong handleInstall, để đếm cả khi chọn IPA)
+    fetch(`/api/admin/add-download?id=${app.id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+    }).catch(console.error);
 
-    } catch (err) {
-      console.error('Lỗi tạo link IPA:', err);
-    } finally {
-      // Chỉ set timeout để tạo hiệu ứng loading ngắn cho UI cũ
-      setTimeout(() => setIsFetchingIpa(false), 500); 
-    }
+    // Giữ trạng thái loading ngắn để khớp với UI cũ
+    setTimeout(() => setIsFetchingIpa(false), 500);
   };
 
 // Cuộn đến bình luận từ ?comment= hoặc #comment-...
@@ -732,7 +727,7 @@ useEffect(() => {
                   {/* Install / IPA */}
                   {!isTestflight && (
                     <>
-                      {/* NÚT CÀI ĐẶT (GIỮ GIAO DIỆN VÀ LOGIC LOADING CŨ) */}
+                      {/* NÚT CÀI ĐẶT */}
                       <button
                         onClick={handleInstall}
                         disabled={isInstalling}
@@ -754,7 +749,7 @@ useEffect(() => {
                         )}
                       </button>
 
-                      {/* NÚT TẢI IPA (GIỮ GIAO DIỆN VÀ LOGIC LOADING CŨ) */}
+                      {/* NÚT TẢI IPA */}
                       <button
                         onClick={handleDownloadIpa}
                         disabled={isFetchingIpa}
