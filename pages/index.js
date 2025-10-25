@@ -726,7 +726,6 @@ export async function getStaticProps({ params }) {
       paginationData,
       metaSEO,
     },
-    // ✅ QUAN TRỌNG: Thiết lập ISR để cache trang và phục vụ tức thì
-    revalidate: 300, // Trang sẽ được build lại tối đa 5 phút/lần
+    revalidate: 300,
   };
 }
