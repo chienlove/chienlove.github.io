@@ -497,57 +497,38 @@ export default function Detail({ serverApp, serverRelated }) {
     });
   };
 
-  const handleInstall = async (e) => {
+  /* =======================================================
+     SỬA ĐỔI HÀM CÀI ĐẶT: Chuyển hướng đến trang trung gian, mở tab mới
+     ======================================================= */
+  const handleInstall = (e) => {
     e.preventDefault();
     if (!app?.id || isTestflight) return;
 
-    setIsInstalling(true);
-    try {
-      await fetch(`/api/admin/add-download?id=${app.id}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        cache: 'no-store',
-      });
-    } catch (err) {
-      console.error('Lỗi tăng lượt tải:', err);
-    } finally {
-      router.push(`/install/${app.slug}`);
-      setIsInstalling(false);
-    }
+    // Chỉ chuyển hướng, không cần setState loading trên trang này
+    const url = `/install/${app.slug}`;
+    window.open(url, '_blank'); // Mở trong tab mới
+
+    // Tăng lượt tải ngay khi click
+    fetch(`/api/admin/add-download?id=${app.id}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      cache: 'no-store',
+    }).catch(console.error);
   };
 
-  const handleDownloadIpa = async (e) => {
+  /* =======================================================
+     SỬA ĐỔI HÀM TẢI IPA: Chuyển hướng đến trang trung gian với query, mở tab mới
+     ======================================================= */
+  const handleDownloadIpa = (e) => {
     e.preventDefault();
     if (!app?.id || !isInstallable) return;
 
     if (!me) { requireLogin(); return; }
     if (!me.emailVerified) { requireVerified(); return; }
 
-    setIsFetchingIpa(true);
-
-    try {
-      const tokRes = await fetch('/api/generate-token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: app.id, ipa_name: app.download_link }),
-      });
-      if (!tokRes.ok) throw new Error(`HTTP ${tokRes.status}`);
-      const { token } = await tokRes.json();
-      if (!token) throw new Error('Thiếu token');
-
-      window.location.href = `/api/download-ipa?slug=${encodeURIComponent(app.slug)}&token=${encodeURIComponent(token)}`;
-      fetch(`/api/admin/add-download?id=${app.id}`, { method: 'POST' }).catch(() => {});
-    } catch (err) {
-      setModal({
-        open: true,
-        title: 'Lỗi',
-        body: 'Không thể tạo link tải IPA. Vui lòng thử lại.',
-        actions: <button onClick={() => setModal(s => ({ ...s, open: false }))} className="px-3 py-2 text-sm rounded border">Đóng</button>
-      });
-      console.error('Download IPA error:', err);
-    } finally {
-      setIsFetchingIpa(false);
-    }
+    // Chuyển hướng đến trang trung gian với query action=download
+    const url = `/install/${app.slug}?action=download`;
+    window.open(url, '_blank'); // Mở trong tab mới
   };
 
 // Cuộn đến bình luận từ ?comment= hoặc #comment-...
@@ -725,47 +706,23 @@ useEffect(() => {
                   {/* Install / IPA */}
                   {!isTestflight && (
                     <>
+                      {/* SỬA: handleInstall không còn cần isInstalling */}
                       <button
                         onClick={handleInstall}
-                        disabled={isInstalling}
-                        className={`inline-flex items-center border border-green-500 text-green-700 dark:text-green-400 dark:border-green-400/60 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-green-200 dark:active:bg-green-400/10 active:shadow-inner active:ring-2 active:ring-green-500 ${isInstalling ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-100 dark:hover:bg-green-400/10'}`}
+                        className={`inline-flex items-center border border-green-500 text-green-700 dark:text-green-400 dark:border-green-400/60 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-green-200 dark:active:bg-green-400/10 active:shadow-inner active:ring-2 active:ring-green-500 hover:bg-green-100 dark:hover:bg-green-400/10`}
                       >
-                        {isInstalling ? (
-                          <>
-                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Đang xử lý…
-                          </>
-                        ) : (
-                          <>
-                            <FontAwesomeIcon icon={faDownload} className="mr-2" />
-                            Cài đặt
-                          </>
-                        )}
+                          <FontAwesomeIcon icon={faDownload} className="mr-2" />
+                          Cài đặt
                       </button>
 
+                      {/* SỬA: handleDownloadIpa không còn cần isFetchingIpa */}
                       <button
                         onClick={handleDownloadIpa}
-                        disabled={isFetchingIpa}
-                        className={`inline-flex items-center border border-blue-500 text-blue-700 dark:text-blue-400 dark:border-blue-400/60 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-blue-200 dark:active:bg-blue-400/10 active:shadow-inner active:ring-2 active:ring-blue-500 ${isFetchingIpa ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-100 dark:hover:bg-blue-400/10'}`}
+                        className={`inline-flex items-center border border-blue-500 text-blue-700 dark:text-blue-400 dark:border-blue-400/60 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-blue-200 dark:active:bg-blue-400/10 active:shadow-inner active:ring-2 active:ring-blue-500 hover:bg-blue-100 dark:hover:bg-blue-400/10`}
                         title="Tải file IPA (ẩn nguồn tải)"
                       >
-                        {isFetchingIpa ? (
-                          <>
-                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Đang tạo…
-                          </>
-                        ) : (
-                          <>
-                            <FontAwesomeIcon icon={faFileArrowDown} className="mr-2" />
-                            Tải IPA
-                          </>
-                        )}
+                          <FontAwesomeIcon icon={faFileArrowDown} className="mr-2" />
+                          Tải IPA
                       </button>
                     </>
                   )}
