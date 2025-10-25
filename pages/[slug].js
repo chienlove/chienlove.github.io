@@ -309,6 +309,7 @@ export default function Detail({ serverApp, serverRelated }) {
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [status, setStatus] = useState(null);
   const [statusLoading, setStatusLoading] = useState(false);
+  // GIỮ LẠI CÁC STATE LOADING CHO GIAO DIỆN CŨ
   const [isInstalling, setIsInstalling] = useState(false);
   const [isFetchingIpa, setIsFetchingIpa] = useState(false);
   const [showAllDevices, setShowAllDevices] = useState(false);
@@ -498,26 +499,37 @@ export default function Detail({ serverApp, serverRelated }) {
   };
 
   /* =======================================================
-     SỬA ĐỔI HÀM CÀI ĐẶT: Chuyển hướng đến trang trung gian, mở tab mới
+     SỬA ĐỔI HÀM CÀI ĐẶT: Tích hợp lại đếm lượt tải & Mở tab mới
      ======================================================= */
-  const handleInstall = (e) => {
+  const handleInstall = async (e) => {
     e.preventDefault();
     if (!app?.id || isTestflight) return;
 
-    // Chỉ chuyển hướng, không cần setState loading trên trang này
-    const url = `/install/${app.slug}`;
-    window.open(url, '_blank'); // Mở trong tab mới
+    setIsInstalling(true); // Dùng lại state cũ
+    const installUrl = `/install/${app.slug}`;
 
-    // Tăng lượt tải ngay khi click
-    fetch(`/api/admin/add-download?id=${app.id}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      cache: 'no-store',
-    }).catch(console.error);
+    try {
+      // Tích hợp lại logic đếm lượt tải
+      await fetch(`/api/admin/add-download?id=${app.id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        cache: 'no-store',
+      });
+      
+      // Mở trang trung gian trong tab mới
+      window.open(installUrl, '_blank');
+      
+    } catch (err) {
+      console.error('Lỗi tăng lượt tải:', err);
+      // Fallback: Mở tab mới ngay cả khi tăng lượt tải lỗi
+      window.open(installUrl, '_blank'); 
+    } finally {
+      setIsInstalling(false); // Dùng lại state cũ
+    }
   };
 
   /* =======================================================
-     SỬA ĐỔI HÀM TẢI IPA: Chuyển hướng đến trang trung gian với query, mở tab mới
+     SỬA ĐỔI HÀM TẢI IPA: Chuyển hướng đến trang trung gian & Mở tab mới
      ======================================================= */
   const handleDownloadIpa = (e) => {
     e.preventDefault();
@@ -526,9 +538,23 @@ export default function Detail({ serverApp, serverRelated }) {
     if (!me) { requireLogin(); return; }
     if (!me.emailVerified) { requireVerified(); return; }
 
-    // Chuyển hướng đến trang trung gian với query action=download
-    const url = `/install/${app.slug}?action=download`;
-    window.open(url, '_blank'); // Mở trong tab mới
+    setIsFetchingIpa(true); // Dùng lại state cũ
+    const downloadUrl = `/install/${app.slug}?action=download`;
+
+    try {
+      // Logic tăng lượt tải sẽ được xử lý ở trang trung gian 
+      // hoặc bạn có thể tăng ngay tại đây (nhưng API /api/download-ipa cũng có thể tăng lần nữa)
+      // Để đơn giản và chính xác, ta chỉ chuyển hướng và dùng state loading cho giao diện
+      
+      // Mở trang trung gian trong tab mới
+      window.open(downloadUrl, '_blank');
+
+    } catch (err) {
+      console.error('Lỗi tạo link IPA:', err);
+    } finally {
+      // Chỉ set timeout để tạo hiệu ứng loading ngắn cho UI cũ
+      setTimeout(() => setIsFetchingIpa(false), 500); 
+    }
   };
 
 // Cuộn đến bình luận từ ?comment= hoặc #comment-...
@@ -706,23 +732,49 @@ useEffect(() => {
                   {/* Install / IPA */}
                   {!isTestflight && (
                     <>
-                      {/* SỬA: handleInstall không còn cần isInstalling */}
+                      {/* NÚT CÀI ĐẶT (GIỮ GIAO DIỆN VÀ LOGIC LOADING CŨ) */}
                       <button
                         onClick={handleInstall}
-                        className={`inline-flex items-center border border-green-500 text-green-700 dark:text-green-400 dark:border-green-400/60 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-green-200 dark:active:bg-green-400/10 active:shadow-inner active:ring-2 active:ring-green-500 hover:bg-green-100 dark:hover:bg-green-400/10`}
+                        disabled={isInstalling}
+                        className={`inline-flex items-center border border-green-500 text-green-700 dark:text-green-400 dark:border-green-400/60 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-green-200 dark:active:bg-green-400/10 active:shadow-inner active:ring-2 active:ring-green-500 ${isInstalling ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-100 dark:hover:bg-green-400/10'}`}
                       >
-                          <FontAwesomeIcon icon={faDownload} className="mr-2" />
-                          Cài đặt
+                        {isInstalling ? (
+                          <>
+                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Đang xử lý…
+                          </>
+                        ) : (
+                          <>
+                            <FontAwesomeIcon icon={faDownload} className="mr-2" />
+                            Cài đặt
+                          </>
+                        )}
                       </button>
 
-                      {/* SỬA: handleDownloadIpa không còn cần isFetchingIpa */}
+                      {/* NÚT TẢI IPA (GIỮ GIAO DIỆN VÀ LOGIC LOADING CŨ) */}
                       <button
                         onClick={handleDownloadIpa}
-                        className={`inline-flex items-center border border-blue-500 text-blue-700 dark:text-blue-400 dark:border-blue-400/60 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-blue-200 dark:active:bg-blue-400/10 active:shadow-inner active:ring-2 active:ring-blue-500 hover:bg-blue-100 dark:hover:bg-blue-400/10`}
+                        disabled={isFetchingIpa}
+                        className={`inline-flex items-center border border-blue-500 text-blue-700 dark:text-blue-400 dark:border-blue-400/60 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-blue-200 dark:active:bg-blue-400/10 active:shadow-inner active:ring-2 active:ring-blue-500 ${isFetchingIpa ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-100 dark:hover:bg-blue-400/10'}`}
                         title="Tải file IPA (ẩn nguồn tải)"
                       >
-                          <FontAwesomeIcon icon={faFileArrowDown} className="mr-2" />
-                          Tải IPA
+                        {isFetchingIpa ? (
+                          <>
+                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Đang tạo…
+                          </>
+                        ) : (
+                          <>
+                            <FontAwesomeIcon icon={faFileArrowDown} className="mr-2" />
+                            Tải IPA
+                          </>
+                        )}
                       </button>
                     </>
                   )}
