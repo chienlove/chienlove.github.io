@@ -348,6 +348,13 @@ export default function Detail({ serverApp, serverRelated }) {
   const isInstallable = ['jailbreak', 'app-clone'].includes(categorySlug);
 
   // ===================== DYNAMIC META TAGS =====================
+  const displaySize = useMemo(() => {
+    if (!app?.size) return 'Không rõ';
+    const s = String(app.size);
+    if (/\bMB\b/i.test(s)) return s;
+    const n = Number(s);
+    return !isNaN(n) ? `${n} MB` : s;
+  }, [app?.size]);
   const dynamicMetaTags = useMemo(() => {
     if (!app) return null;
     
@@ -452,14 +459,6 @@ export default function Detail({ serverApp, serverRelated }) {
       keywords: generateKeywords()
     };
   }, [app, isTestflight, categorySlug, displaySize]);
-
-  const displaySize = useMemo(() => {
-    if (!app?.size) return 'Không rõ';
-    const s = String(app.size);
-    if (/\bMB\b/i.test(s)) return s;
-    const n = Number(s);
-    return !isNaN(n) ? `${n} MB` : s;
-  }, [app?.size]);
 
   const languagesArray = useMemo(() => parseList(app?.languages), [app?.languages]);
   const devicesArray = useMemo(() => parseList(app?.supported_devices), [app?.supported_devices]);
