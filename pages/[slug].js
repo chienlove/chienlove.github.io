@@ -370,11 +370,11 @@ export default function Detail({ serverApp, serverRelated }) {
       
       // Logic cho từng loại app
       if (isTestflight) {
-        baseKeywords.push('Tham gia TestFlight', 'Beta', 'Slot');
+        baseKeywords.push('Tải', 'Beta', 'Slot');
       } else if (categorySlug === 'jailbreak') {
-        baseKeywords.push('Tải Jailbreak', 'Unlock iOS', 'Cài đặt');
+        baseKeywords.push('Tải', 'Unlock iOS', 'Cài đặt');
       } else if (categorySlug === 'app-clone') {
-        baseKeywords.push('Tải App Clone', 'MOD', 'Premium');
+        baseKeywords.push('Tải', 'nhân bản', 'cài đặt song song');
       } else {
         baseKeywords.push('Tải về', 'Download', 'Cài đặt');
       }
@@ -415,7 +415,7 @@ export default function Detail({ serverApp, serverRelated }) {
       } else if (categorySlug === 'jailbreak') {
         actionText = 'Hướng dẫn jailbreak chi tiết. Tải về an toàn, cài đặt dễ dàng. ';
       } else if (categorySlug === 'app-clone') {
-        actionText = 'Ứng dụng MOD premium miễn phí. Tính năng đặc biệt, hỗ trợ đa thiết bị. ';
+        actionText = 'Ứng dụng nhân bản cài song song miễn phí. Tính năng đặc biệt, hỗ trợ đa thiết bị. ';
       } else {
         actionText = 'Tải về miễn phí, cài đặt nhanh chóng. ';
       }
