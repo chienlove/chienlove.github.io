@@ -387,6 +387,12 @@ export default function Detail({ serverApp, serverRelated }) {
           const jailbreakKeywords = 'Jailbreak IPA, Tweak';
           return `${appName}${version} - ${jailbreakKeywords} cho ${os} | StoreiOS`;
       }
+      
+      // LOGIC MỚI CHO APP CLONE
+      if (categorySlug === 'app-clone') {
+          const cloneKeywords = 'App Clone IPA, Nhân bản';
+          return `${appName}${version} - ${cloneKeywords} cho ${os} | StoreiOS`;
+      }
 
       return baseTitle;
     };
@@ -402,6 +408,11 @@ export default function Detail({ serverApp, serverRelated }) {
       if (categorySlug === 'jailbreak') {
         return `${appName}${version}${catName} - Công cụ/ứng dụng jailbreak cho ${os}. Tải về an toàn${sizeText}${authorText}. Cập nhật ${currentYear}.`;
       }
+      // LOGIC CŨ CHO APP CLONE (được giữ nguyên theo yêu cầu gốc)
+      if (categorySlug === 'app-clone') {
+        return `${appName}${version}${catName} - Ứng dụng nhân bản, đa tài khoản cho ${os}. Tải về an toàn${sizeText}${authorText}. Cập nhật ${currentYear}.`;
+      }
+      
       return `${appName}${version}${catName} - Ứng dụng iOS miễn phí${sizeText}${authorText}. Cài đặt nhanh, cập nhật ${currentYear}.`;
     };
 
@@ -414,6 +425,8 @@ export default function Detail({ serverApp, serverRelated }) {
       if (author) keywords.push(author);
       if (isTestflight) keywords.push('testflight', 'tham gia');
       if (categorySlug === 'jailbreak') keywords.push('jailbreak', 'unc0ver', 'root', 'tweak');
+      // Thêm keywords cho App Clone
+      if (categorySlug === 'app-clone') keywords.push('app clone', 'nhân bản', 'đa tài khoản');
       return keywords.join(', ');
     };
 
@@ -953,25 +966,25 @@ export default function Detail({ serverApp, serverRelated }) {
                 {/* Tác giả */}
                 <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
                   <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Tác giả</p>
-                  <FontAwesomeIcon icon={faUser} fixedWidth className="w-8 h-8 text-gray-600 dark:text-gray-300 mb-1" />
+                  <FontAwesomeIcon icon={faUser} fixedWidth className="w-8 h-8 text-blue-600 dark:text-blue-400 mb-1" />
                   <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate w-full" title={app.author || 'Không rõ'}>
                     {app.author || 'Không rõ'}
                   </p>
                 </div>
 
-                {/* Phiên bản */}
+                {/* Phiên bản (Đã sửa) */}
                 <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
                   <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Phiên bản</p>
-                  <FontAwesomeIcon icon={faCodeBranch} fixedWidth className="w-8 h-8 text-gray-600 dark:text-gray-300 mb-1" />
-                  <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate w-full" title={app.version || 'Không rõ'}>
-                    {app.version || 'Không rõ'}
-                  </p>
+                  <div className="text-xl font-bold leading-none text-blue-600 dark:text-blue-400 my-1 h-8 flex items-center justify-center" title={app.version || 'Không rõ'}>
+                    {app.version || '--'}
+                  </div>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">&nbsp;</p>
                 </div>
 
                 {/* Dung lượng */}
                 <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
                   <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Dung lượng</p>
-                  <FontAwesomeIcon icon={faDatabase} fixedWidth className="w-8 h-8 text-gray-600 dark:text-gray-300 mb-1" />
+                  <FontAwesomeIcon icon={faDatabase} fixedWidth className="w-8 h-8 text-blue-600 dark:text-blue-400 mb-1" />
                   <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate w-full" title={displaySize}>
                     {displaySize}
                   </p>
@@ -986,7 +999,8 @@ export default function Detail({ serverApp, serverRelated }) {
                   return (
                     <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
                       <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">{topLabel}</p>
-                      <div className="text-lg font-bold leading-none" title={String(count)}>{nf.format(count)}</div>
+                      {/* Màu đồng bộ với các icon khác */}
+                      <div className="text-xl font-bold leading-none text-blue-600 dark:text-blue-400 my-1" title={String(count)}>{nf.format(count)}</div>
                       <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">Lượt</p>
                     </div>
                   );
