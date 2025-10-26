@@ -5,7 +5,6 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useEffect, useState, useMemo, memo } from 'react';
-import { FastAverageColor } from 'fast-average-color';
 import { auth } from '../lib/firebase-client';
 import { sendEmailVerification } from 'firebase/auth';
 import Head from 'next/head';
@@ -347,6 +346,22 @@ export default function Detail({ serverApp, serverRelated }) {
   const isTestflight = categorySlug === 'testflight';
   const isInstallable = ['jailbreak', 'app-clone'].includes(categorySlug);
 
+  // ===== Bạn đã thêm: languages/devices =====
+  const languagesArray = useMemo(() => parseList(app?.languages), [app?.languages]);
+  const devicesArray   = useMemo(() => parseList(app?.supported_devices), [app?.supported_devices]);
+
+  const languagesShort = useMemo(() => {
+    const list = languagesArray.slice(0, 6);
+    const remain = Math.max(languagesArray.length - 6, 0);
+    return { list, remain };
+  }, [languagesArray]);
+
+  const devicesShort = useMemo(() => {
+    const list = devicesArray.slice(0, 5);
+    const remain = Math.max(devicesArray.length - 5, 0);
+    return { list, remain };
+  }, [devicesArray]);
+
   // ===================== DYNAMIC META TAGS =====================
   const displaySize = useMemo(() => {
     if (!app?.size) return 'Không rõ';
@@ -355,60 +370,57 @@ export default function Detail({ serverApp, serverRelated }) {
     const n = Number(s);
     return !isNaN(n) ? `${n} MB` : s;
   }, [app?.size]);
+
   const dynamicMetaTags = useMemo(() => {
-  if (!app) return null;
+    if (!app) return null;
 
-  const appName     = app.name || '';
-  const version     = app.version ? ` ${app.version}` : '';
-  const author      = app.author || '';
-  const currentYear = '2025';
-  const os          = app.minimum_os_version ? `iOS ${app.minimum_os_version}+` : 'iOS';
+    const appName     = app.name || '';
+    const version     = app.version ? ` ${app.version}` : '';
+    const author      = app.author || '';
+    const currentYear = '2025';
+    const os          = app.minimum_os_version ? `iOS ${app.minimum_os_version}+` : 'iOS';
 
-  // ======= TITLE: luôn "Tải [tên ứng dụng] ..." (không thêm 'beta') =======
-  const generateTitle = () => {
-    return `Tải ${appName}${version} cho ${os} | ${currentYear} | StoreiOS`;
-  };
+    const generateTitle = () => {
+      return `Tải ${appName}${version} cho ${os} | ${currentYear} | StoreiOS`;
+    };
 
-  // ======= DESCRIPTION gọn, sát ý định tìm kiếm =======
-  const generateDescription = () => {
-    const sizeText   = displaySize !== 'Không rõ' ? ` • Dung lượng ${displaySize}` : '';
-    const authorText = author ? ` • Nhà phát triển ${author}` : '';
-    const catName    = app.category?.name ? ` (${app.category.name})` : '';
+    const generateDescription = () => {
+      const sizeText   = displaySize !== 'Không rõ' ? ` • Dung lượng ${displaySize}` : '';
+      const authorText = author ? ` • Nhà phát triển ${author}` : '';
+      const catName    = app.category?.name ? ` (${app.category.name})` : '';
 
-    if (isTestflight) {
-      // Không dùng chữ "beta" ở đây
-      return `${appName}${version}${catName} - Bản thử nghiệm TestFlight. Kiểm tra slot và tham gia ngay. Cập nhật ${currentYear}.`;
-    }
-    if (categorySlug === 'jailbreak') {
-      return `${appName}${version}${catName} - Công cụ/ứng dụng jailbreak cho ${os}. Tải về an toàn${sizeText}${authorText}. Cập nhật ${currentYear}.`;
-    }
-    return `${appName}${version}${catName} - Ứng dụng iOS miễn phí${sizeText}${authorText}. Cài đặt nhanh, cập nhật ${currentYear}.`;
-  };
+      if (isTestflight) {
+        return `${appName}${version}${catName} - Bản thử nghiệm TestFlight. Kiểm tra slot và tham gia ngay. Cập nhật ${currentYear}.`;
+      }
+      if (categorySlug === 'jailbreak') {
+        return `${appName}${version}${catName} - Công cụ/ứng dụng jailbreak cho ${os}. Tải về an toàn${sizeText}${authorText}. Cập nhật ${currentYear}.`;
+      }
+      return `${appName}${version}${catName} - Ứng dụng iOS miễn phí${sizeText}${authorText}. Cài đặt nhanh, cập nhật ${currentYear}.`;
+    };
 
-  // ======= KEYWORDS (không thêm 'beta') =======
-  const generateKeywords = () => {
-    const keywords = [
-      `Tải ${appName}`, appName, 'iOS', 'download', 'tải về', 'miễn phí',
-      currentYear, 'storeios', 'storeios.net'
-    ];
-    if (version) keywords.push(version.trim());
-    if (author) keywords.push(author);
-    if (isTestflight) keywords.push('testflight', 'tham gia'); // không 'beta'
-    if (categorySlug === 'jailbreak') keywords.push('jailbreak', 'unc0ver', 'root', 'tweak');
-    return keywords.join(', ');
-  };
+    const generateKeywords = () => {
+      const keywords = [
+        `Tải ${appName}`, appName, 'iOS', 'download', 'tải về', 'miễn phí',
+        currentYear, 'storeios', 'storeios.net'
+      ];
+      if (version) keywords.push(version.trim());
+      if (author) keywords.push(author);
+      if (isTestflight) keywords.push('testflight', 'tham gia');
+      if (categorySlug === 'jailbreak') keywords.push('jailbreak', 'unc0ver', 'root', 'tweak');
+      return keywords.join(', ');
+    };
 
-  return {
-    title: generateTitle(),
-    description: generateDescription(),
-    keywords: generateKeywords()
-  };
-}, [app, isTestflight, categorySlug, displaySize]);
+    return {
+      title: generateTitle(),
+      description: generateDescription(),
+      keywords: generateKeywords()
+    };
+  }, [app, isTestflight, categorySlug, displaySize]);
 
   // ===================== STRUCTURED DATA =====================
   const structuredData = useMemo(() => {
     if (!app) return null;
-    
+
     return {
       "@context": "https://schema.org",
       "@type": "SoftwareApplication",
@@ -435,7 +447,7 @@ export default function Detail({ serverApp, serverRelated }) {
   // ===================== BREADCRUMB STRUCTURED DATA =====================
   const breadcrumbStructuredData = useMemo(() => {
     if (!app) return null;
-    
+
     const itemListElement = [
       {
         "@type": "ListItem",
@@ -444,7 +456,7 @@ export default function Detail({ serverApp, serverRelated }) {
         "item": "https://storeios.net"
       }
     ];
-    
+
     if (app.category?.slug) {
       itemListElement.push({
         "@type": "ListItem",
@@ -453,13 +465,13 @@ export default function Detail({ serverApp, serverRelated }) {
         "item": `https://storeios.net/category/${app.category.slug}`
       });
     }
-    
+
     itemListElement.push({
       "@type": "ListItem",
       "position": itemListElement.length + 1,
       "name": app.name
     });
-    
+
     return {
       "@context": "https://schema.org",
       "@type": "BreadcrumbList",
@@ -495,12 +507,22 @@ export default function Detail({ serverApp, serverRelated }) {
         .finally(() => setStatusLoading(false));
     }
 
+    // ✅ Dynamic import FAC ở client để tránh SSR 500
     if (app.icon_url && typeof window !== 'undefined') {
-      const fac = new FastAverageColor();
-      fac.getColorAsync(app.icon_url)
-        .then(color => setDominantColor(color.hex))
-        .catch(console.error)
-        .finally(() => fac.destroy());
+      (async () => {
+        try {
+          const { FastAverageColor } = await import('fast-average-color');
+          const fac = new FastAverageColor();
+          try {
+            const color = await fac.getColorAsync(app.icon_url);
+            setDominantColor(color.hex);
+          } finally {
+            fac.destroy();
+          }
+        } catch (err) {
+          console.error('FAC error:', err);
+        }
+      })();
     }
   }, [app?.id, app?.icon_url, app?.testflight_url, isTestflight]);
 
@@ -602,12 +624,11 @@ export default function Detail({ serverApp, serverRelated }) {
 
     setIsInstalling(true);
     const installUrl = `/install/${app.slug}`;
-    
+
     // Mở tab mới ngay lập tức
-    const newWindow = window.open(installUrl, '_blank'); 
+    window.open(installUrl, '_blank');
 
     try {
-      // Gọi API tăng lượt tải (không cần await, gọi bất đồng bộ)
       await fetch(`/api/admin/add-download?id=${app.id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -616,8 +637,7 @@ export default function Detail({ serverApp, serverRelated }) {
     } catch (err) {
       console.error('Lỗi tăng lượt tải:', err);
     } finally {
-      // Giữ trạng thái loading ngắn để khớp với UI cũ
-      setTimeout(() => setIsInstalling(false), 500); 
+      setTimeout(() => setIsInstalling(false), 500);
     }
   };
 
@@ -631,75 +651,65 @@ export default function Detail({ serverApp, serverRelated }) {
     if (!me) { requireLogin(); return; }
     if (!me.emailVerified) { requireVerified(); return; }
 
-    setIsFetchingIpa(true); 
+    setIsFetchingIpa(true);
     const downloadUrl = `/install/${app.slug}?action=download`;
-    
-    // Mở tab mới ngay lập tức
-    const newWindow = window.open(downloadUrl, '_blank'); 
 
-    // GỌI API TĂNG LƯỢT TẢI (như trong handleInstall, để đếm cả khi chọn IPA)
+    // Mở tab mới ngay lập tức
+    window.open(downloadUrl, '_blank');
+
     fetch(`/api/admin/add-download?id=${app.id}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       cache: 'no-store',
     }).catch(console.error);
 
-    // Giữ trạng thái loading ngắn để khớp với UI cũ
     setTimeout(() => setIsFetchingIpa(false), 500);
   };
 
-// Cuộn đến bình luận từ ?comment= hoặc #comment-...
-useEffect(() => {
-  if (typeof window === 'undefined') return;
+  // Cuộn đến bình luận từ ?comment= hoặc #comment-...
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
 
-  // Lấy id mục tiêu từ URL: ưu tiên hash, fallback query ?comment=
-  const getTarget = () => {
-    const hash = window.location.hash?.slice(1) || '';       // "comment-abc" hoặc "c-abc" hoặc "abc"
-    const q = new URLSearchParams(window.location.search).get('comment'); // "abc"
-    // Ưu tiên hash nếu có; nếu không có, build từ query
-    return hash || (q ? `comment-${q}` : '');
-  };
+    const getTarget = () => {
+      const hash = window.location.hash?.slice(1) || '';
+      const q = new URLSearchParams(window.location.search).get('comment');
+      return hash || (q ? `comment-${q}` : '');
+    };
 
-  // Chuẩn hóa về rawId và tìm element theo nhiều pattern
-  const tryScroll = () => {
-    const target = getTarget();
-    if (!target) return false;
+    const tryScroll = () => {
+      const target = getTarget();
+      if (!target) return false;
 
-    // rawId: bỏ prefix "comment-" hay "c-"
-    const rawId = target.replace(/^comment-/, '').replace(/^c-/, '');
+      const rawId = target.replace(/^comment-/, '').replace(/^c-/, '');
 
-    // Thử đủ các biến thể phổ biến trong DOM của Comments:
-    const el =
-      document.getElementById(`comment-${rawId}`) ||       // id="comment-<id>"
-      document.getElementById(`c-${rawId}`) ||              // id="c-<id>"
-      document.querySelector(`[data-comment-id="${rawId}"]`); // data-comment-id="<id>"
+      const el =
+        document.getElementById(`comment-${rawId}`) ||
+        document.getElementById(`c-${rawId}`) ||
+        document.querySelector(`[data-comment-id="${rawId}"]`);
 
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      // highlight nhẹ nếu đã có tailwind ring/bg
-      el.classList.add('ring-2', 'ring-sky-400', 'bg-sky-50');
-      setTimeout(() => el.classList.remove('ring-2', 'ring-sky-400', 'bg-sky-50'), 3000);
-      return true;
-    }
-    return false;
-  };
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        el.classList.add('ring-2', 'ring-sky-400', 'bg-sky-50');
+        setTimeout(() => el.classList.remove('ring-2', 'ring-sky-400', 'bg-sky-50'), 3000);
+        return true;
+      }
+      return false;
+    };
 
-  // Comments được load động => poll một chút đến khi phần tử xuất hiện
-  let tries = 0;
-  const maxTries = 60; // ~6s (100ms * 60)
-  const iv = setInterval(() => {
-    if (tryScroll() || ++tries >= maxTries) clearInterval(iv);
-  }, 100);
+    let tries = 0;
+    const maxTries = 60;
+    const iv = setInterval(() => {
+      if (tryScroll() || ++tries >= maxTries) clearInterval(iv);
+    }, 100);
 
-  // Nếu hash thay đổi khi đang ở trang, thử lại
-  const onHash = () => setTimeout(tryScroll, 0);
-  window.addEventListener('hashchange', onHash);
+    const onHash = () => setTimeout(tryScroll, 0);
+    window.addEventListener('hashchange', onHash);
 
-  return () => {
-    clearInterval(iv);
-    window.removeEventListener('hashchange', onHash);
-  };
-}, [router.asPath]);
+    return () => {
+      clearInterval(iv);
+      window.removeEventListener('hashchange', onHash);
+    };
+  }, [router.asPath]);
 
   if (!app) {
     return (
@@ -733,7 +743,7 @@ useEffect(() => {
         <title>{dynamicMetaTags?.title || `${app.name} - StoreiOS`}</title>
         <meta name="description" content={dynamicMetaTags?.description} />
         <meta name="keywords" content={dynamicMetaTags?.keywords} />
-        
+
         {/* Open Graph */}
         <meta property="og:title" content={dynamicMetaTags?.title} />
         <meta property="og:description" content={dynamicMetaTags?.description} />
@@ -742,17 +752,17 @@ useEffect(() => {
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="StoreiOS" />
         <meta property="og:locale" content="vi_VN" />
-        
+
         {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={dynamicMetaTags?.title} />
         <meta name="twitter:description" content={dynamicMetaTags?.description} />
         <meta name="twitter:image" content={app.icon_url} />
         <meta name="twitter:site" content="@storeios" />
-        
+
         {/* Canonical */}
         <link rel="canonical" href={`https://storeios.net/${app.slug}`} />
-        
+
         {/* Preload critical images */}
         <link rel="preload" href={app.icon_url} as="image" />
         {app.screenshots?.[0] && (
@@ -769,7 +779,7 @@ useEffect(() => {
           }}
         />
       )}
-      
+
       {breadcrumbStructuredData && (
         <script
           type="application/ld+json"
@@ -816,7 +826,7 @@ useEffect(() => {
                   />
                 </div>
 
-                {/* Title: 1 dòng, ellipsis "tên bài viế…" */}
+                {/* Title: 1 dòng */}
                 <h1
                   className="mt-4 text-2xl font-bold text-gray-900 dark:text-gray-100 drop-shadow truncate mx-auto max-w-[92vw] sm:max-w-[80vw]"
                   title={app.name}
@@ -923,7 +933,7 @@ useEffect(() => {
 
         {/* ===== Nội dung dưới ===== */}
         <div className="max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 mt-6 space-y-6 overflow-x-hidden">
-          {/* Info cards - mobile: trượt 3 cột; desktop: 4 cột */}
+          {/* Info cards */}
           <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow text-center">
             <div className="-mx-2 overflow-x-auto sm:overflow-visible px-2">
               <div
@@ -960,7 +970,7 @@ useEffect(() => {
                   </p>
                 </div>
 
-                {/* Lượt xem (TestFlight) / Lượt tải (Jailbreak) – không icon */}
+                {/* Lượt xem / Lượt tải */}
                 {(() => {
                   const nf = new Intl.NumberFormat('vi-VN');
                   const isTF = Boolean(isTestflight);
@@ -1131,7 +1141,6 @@ useEffect(() => {
                         </div>
                       </div>
                     </div>
-                    {/* Chỉ hiển thị icon Tải xuống, không có số đếm */}
                     <FontAwesomeIcon icon={faDownload} className="text-blue-500 dark:text-blue-400 text-lg flex-shrink-0" />
                   </Link>
                 ))}
