@@ -988,32 +988,61 @@ export default function Detail({ serverApp, serverRelated }) {
 
         {/* ===== Nội dung dưới ===== */}
         <div className="max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 mt-6 space-y-6 overflow-x-hidden">
-          {/* Info cards (Đã sửa để dùng 4x3 và đồng bộ màu label) */}
-          <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
-            <div className="grid grid-cols-4 divide-x divide-gray-200 dark:divide-zinc-700">
-              {getInfoCardData.map((item, index) => (
-                <div key={index} className="flex flex-col items-center min-w-0 px-2 sm:px-4 py-2">
-                  {/* TIÊU ĐỀ/NHÃN (Đồng bộ màu xám 500/400) */}
-                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1 text-center truncate w-full" title={item.label}>
-                    {item.label}
-                  </p>
-                  
-                  {/* ICON (Giữ nguyên màu xanh lam cho điểm nhấn, ẩn icon nếu là ô trống) */}
-                  <div className="h-8 flex items-center justify-center mb-1">
-                      {item.icon && (
-                          <FontAwesomeIcon icon={item.icon} fixedWidth className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 dark:text-blue-400" />
-                      )}
-                  </div>
-                  
-                  {/* GIÁ TRỊ/META (Giữ nguyên màu xám đậm/trắng cho giá trị) */}
-                  <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate w-full text-center" title={item.fullValue || item.value}>
-                    {item.value}
+          {/* Info cards */}
+          <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow text-center">
+            <div className="-mx-2 overflow-x-auto sm:overflow-visible px-2">
+              <div
+                className="
+                  flex sm:grid sm:grid-cols-4
+                  divide-x divide-gray-200 dark:divide-zinc-700
+                  snap-x snap-mandatory
+                "
+              >
+                {/* Tác giả */}
+                <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Tác giả</p>
+                  <FontAwesomeIcon icon={faUser} fixedWidth className="w-8 h-8 text-gray-500 dark:text-gray-400 mb-1" />
+                  <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate w-full" title={app.author || 'Không rõ'}>
+                    {app.author || 'Không rõ'}
                   </p>
                 </div>
-              ))}
+
+                {/* Phiên bản (Đã sửa) */}
+                <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Phiên bản</p>
+                  <div className="text-xl font-bold leading-none text-gray-500 dark:text-gray-400 my-1 h-8 flex items-center justify-center" title={app.version || 'Không rõ'}>
+                    {app.version || '--'}
+                  </div>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">&nbsp;</p>
+                </div>
+
+                {/* Dung lượng */}
+                <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Dung lượng</p>
+                  <FontAwesomeIcon icon={faDatabase} fixedWidth className="w-8 h-8 text-gray-500 dark:text-gray-400 mb-1" />
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-100 truncate w-full" title={displaySize}>
+                    {displaySize}
+                  </p>
+                </div>
+
+                {/* Lượt xem / Lượt tải */}
+                {(() => {
+                  const nf = new Intl.NumberFormat('vi-VN');
+                  const isTF = Boolean(isTestflight);
+                  const count = isTF ? (app?.views ?? 0) : (app?.downloads ?? 0);
+                  const topLabel = isTF ? 'Xem' : 'Tải';
+                  return (
+                    <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
+                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">{topLabel}</p>
+                      {/* Màu đồng bộ với các icon khác */}
+                      <div className="text-xl font-bold leading-none text-gray-500 dark:text-gray-400 my-1" title={String(count)}>{nf.format(count)}</div>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-500 mt-1">Lượt</p>
+                    </div>
+                  );
+                })()}
+              </div>
             </div>
           </div>
-          {/* Hết Info cards */}
 
 
           {/* Mô tả */}
