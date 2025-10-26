@@ -356,124 +356,54 @@ export default function Detail({ serverApp, serverRelated }) {
     return !isNaN(n) ? `${n} MB` : s;
   }, [app?.size]);
   const dynamicMetaTags = useMemo(() => {
-    if (!app) return null;
-    
-    const appName = app.name || '';
-    const categoryName = app.category?.name || '';
-    const version = app.version ? ` ${app.version}` : '';
-    const author = app.author || '';
-    const currentYear = '2025';
-    
-    // Tạo title hấp dẫn cho CTR
-    const generateTitle = () => {
-      const baseKeywords = [];
-      
-      // Logic cho từng loại app
-      if (isTestflight) {
-        baseKeywords.push('Tải', 'Beta', 'Slot');
-      } else if (categorySlug === 'jailbreak') {
-        baseKeywords.push('Tải', 'Unlock iOS', 'Cài đặt');
-      } else if (categorySlug === 'app-clone') {
-        baseKeywords.push('Tải', 'nhân bản', 'cài đặt song song');
-      } else {
-        baseKeywords.push('Tải về', 'Download', 'Cài đặt');
-      }
-      
-      // Thêm từ khóa phiên bản và năm
-      if (version) {
-        baseKeywords.push(version);
-      }
-      baseKeywords.push(currentYear);
-      
-      const actionKeyword = baseKeywords[0];
-      const remainingKeywords = baseKeywords.slice(1).join(' ');
-      
-      return `${actionKeyword} ${appName}${version} iOS ${categoryName} FREE | ${remainingKeywords}`;
-    };
-    
-    // Tạo description hấp dẫn
-    const generateDescription = () => {
-      const features = [];
-      
-      if (app.minimum_os_version) {
-        features.push(`Hỗ trợ iOS ${app.minimum_os_version}+`);
-      }
-      
-      if (app.size) {
-        features.push(`Dung lượng ${displaySize}`);
-      }
-      
-      if (author) {
-        features.push(`Nhà phát triển ${author}`);
-      }
-      
-      const featureText = features.length > 0 ? features.join(' • ') + '. ' : '';
-      
-      let actionText = '';
-      if (isTestflight) {
-        actionText = 'Tham gia TestFlight beta ngay. Kiểm tra slot còn trống. ';
-      } else if (categorySlug === 'jailbreak') {
-        actionText = 'Hướng dẫn jailbreak chi tiết. Tải về an toàn, cài đặt dễ dàng. ';
-      } else if (categorySlug === 'app-clone') {
-        actionText = 'Ứng dụng nhân bản cài song song miễn phí. Tính năng đặc biệt, hỗ trợ đa thiết bị. ';
-      } else {
-        actionText = 'Tải về miễn phí, cài đặt nhanh chóng. ';
-      }
-      
-      return `${appName}${version} - ${categoryName} cho iOS. ${actionText}${featureText}Cập nhật mới nhất ${currentYear}. Hướng dẫn chi tiết từ StoreiOS.`;
-    };
-    
-    // Tạo keywords động
-    const generateKeywords = () => {
-      const keywords = [
-        appName,
-        categoryName,
-        'iOS',
-        'download',
-        'tải về',
-        'miễn phí',
-        currentYear,
-        'storeios',
-        'storeios.net'
-      ];
-      
-      if (version) keywords.push(version);
-      if (author) keywords.push(author);
-      if (app.minimum_os_version) keywords.push(`iOS ${app.minimum_os_version}`);
-      
-      // Thêm từ khóa đặc thù cho từng loại
-      if (isTestflight) {
-        keywords.push('testflight', 'beta', 'slot', 'tham gia');
-      } else if (categorySlug === 'jailbreak') {
-        keywords.push('jailbreak', 'unlock', 'root', 'tweak');
-      } else if (categorySlug === 'app-clone') {
-        keywords.push('clone', 'mod', 'premium', 'crack');
-      }
-      
-      return keywords.slice(0, 15).join(', ');
-    };
-    
-    return {
-      title: generateTitle(),
-      description: generateDescription(),
-      keywords: generateKeywords()
-    };
-  }, [app, isTestflight, categorySlug, displaySize]);
+  if (!app) return null;
 
-  const languagesArray = useMemo(() => parseList(app?.languages), [app?.languages]);
-  const devicesArray = useMemo(() => parseList(app?.supported_devices), [app?.supported_devices]);
+  const appName     = app.name || '';
+  const version     = app.version ? ` ${app.version}` : '';
+  const author      = app.author || '';
+  const currentYear = '2025';
+  const os          = app.minimum_os_version ? `iOS ${app.minimum_os_version}+` : 'iOS';
 
-  const languagesShort = useMemo(() => {
-    const list = languagesArray.slice(0, 6);
-    const remain = Math.max(languagesArray.length - 6, 0);
-    return { list, remain };
-  }, [languagesArray]);
+  // ======= TITLE: luôn "Tải [tên ứng dụng] ..." (không thêm 'beta') =======
+  const generateTitle = () => {
+    return `Tải ${appName}${version} cho ${os} | ${currentYear} | StoreiOS`;
+  };
 
-  const devicesShort = useMemo(() => {
-    const list = devicesArray.slice(0, 5);
-    const remain = Math.max(devicesArray.length - 5, 0);
-    return { list, remain };
-  }, [devicesArray]);
+  // ======= DESCRIPTION gọn, sát ý định tìm kiếm =======
+  const generateDescription = () => {
+    const sizeText   = displaySize !== 'Không rõ' ? ` • Dung lượng ${displaySize}` : '';
+    const authorText = author ? ` • Nhà phát triển ${author}` : '';
+    const catName    = app.category?.name ? ` (${app.category.name})` : '';
+
+    if (isTestflight) {
+      // Không dùng chữ "beta" ở đây
+      return `${appName}${version}${catName} - Bản thử nghiệm TestFlight. Kiểm tra slot và tham gia ngay. Cập nhật ${currentYear}.`;
+    }
+    if (categorySlug === 'jailbreak') {
+      return `${appName}${version}${catName} - Công cụ/ứng dụng jailbreak cho ${os}. Tải về an toàn${sizeText}${authorText}. Cập nhật ${currentYear}.`;
+    }
+    return `${appName}${version}${catName} - Ứng dụng iOS miễn phí${sizeText}${authorText}. Cài đặt nhanh, cập nhật ${currentYear}.`;
+  };
+
+  // ======= KEYWORDS (không thêm 'beta') =======
+  const generateKeywords = () => {
+    const keywords = [
+      `Tải ${appName}`, appName, 'iOS', 'download', 'tải về', 'miễn phí',
+      currentYear, 'storeios', 'storeios.net'
+    ];
+    if (version) keywords.push(version.trim());
+    if (author) keywords.push(author);
+    if (isTestflight) keywords.push('testflight', 'tham gia'); // không 'beta'
+    if (categorySlug === 'jailbreak') keywords.push('jailbreak', 'unc0ver', 'root', 'tweak');
+    return keywords.join(', ');
+  };
+
+  return {
+    title: generateTitle(),
+    description: generateDescription(),
+    keywords: generateKeywords()
+  };
+}, [app, isTestflight, categorySlug, displaySize]);
 
   // ===================== STRUCTURED DATA =====================
   const structuredData = useMemo(() => {
