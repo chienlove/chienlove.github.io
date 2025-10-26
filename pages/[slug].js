@@ -25,6 +25,12 @@ import {
   faHouse,
   faChevronRight,
   faEye,
+  faGlobe, // Ngôn ngữ
+  faMobileAlt, // Thiết bị
+  faCalendarDay, // Ngày phát hành
+  faShieldAlt, // Xếp hạng tuổi
+  faGaugeHigh, // Yêu cầu OS
+  faWeightHanging, // Thay icon cho Dung lượng (Database icon đã dùng cho Dung lượng)
 } from '@fortawesome/free-solid-svg-icons';
 
 // Lazy-load Comments
@@ -362,7 +368,7 @@ export default function Detail({ serverApp, serverRelated }) {
     return { list, remain };
   }, [devicesArray]);
 
-  // ===================== DYNAMIC META TAGS =====================
+  // ===================== DYNAMIC META TAGS (Đã sửa cho App Clone) =====================
   const displaySize = useMemo(() => {
     if (!app?.size) return 'Không rõ';
     const s = String(app.size);
@@ -388,9 +394,9 @@ export default function Detail({ serverApp, serverRelated }) {
           return `${appName}${version} - ${jailbreakKeywords} cho ${os} | StoreiOS`;
       }
       
-      // LOGIC MỚI CHO APP CLONE
+      // LOGIC MỚI CHO APP CLONE (Đảm bảo logic SEO)
       if (categorySlug === 'app-clone') {
-          const cloneKeywords = 'App Clone IPA, Nhân bản';
+          const cloneKeywords = 'App Clone IPA, Nhân bản, Đa tài khoản';
           return `${appName}${version} - ${cloneKeywords} cho ${os} | StoreiOS`;
       }
 
@@ -408,7 +414,7 @@ export default function Detail({ serverApp, serverRelated }) {
       if (categorySlug === 'jailbreak') {
         return `${appName}${version}${catName} - Công cụ/ứng dụng jailbreak cho ${os}. Tải về an toàn${sizeText}${authorText}. Cập nhật ${currentYear}.`;
       }
-      // LOGIC CŨ CHO APP CLONE (được giữ nguyên theo yêu cầu gốc)
+      // LOGIC MỚI CHO APP CLONE (Đảm bảo logic SEO)
       if (categorySlug === 'app-clone') {
         return `${appName}${version}${catName} - Ứng dụng nhân bản, đa tài khoản cho ${os}. Tải về an toàn${sizeText}${authorText}. Cập nhật ${currentYear}.`;
       }
@@ -426,7 +432,7 @@ export default function Detail({ serverApp, serverRelated }) {
       if (isTestflight) keywords.push('testflight', 'tham gia');
       if (categorySlug === 'jailbreak') keywords.push('jailbreak', 'unc0ver', 'root', 'tweak');
       // Thêm keywords cho App Clone
-      if (categorySlug === 'app-clone') keywords.push('app clone', 'nhân bản', 'đa tài khoản');
+      if (categorySlug === 'app-clone') keywords.push('app clone', 'nhân bản', 'đa tài khoản', 'dual app');
       return keywords.join(', ');
     };
 
@@ -754,6 +760,35 @@ export default function Detail({ serverApp, serverRelated }) {
       </Layout>
     );
   }
+  
+  // --- HÀM HELPER CHO INFO CARDS 4 CỘT X 3 DÒNG ---
+  const formatDownloadsOrViews = useMemo(() => {
+    const nf = new Intl.NumberFormat('vi-VN');
+    const isTF = Boolean(isTestflight);
+    const count = isTF ? (app?.views ?? 0) : (app?.downloads ?? 0);
+    const topLabel = isTF ? 'LƯỢT XEM' : 'LƯỢT TẢI';
+    return { countText: nf.format(count), topLabel, icon: isTF ? faEye : faDownload };
+  }, [app?.views, app?.downloads, isTestflight]);
+
+  const getInfoCardData = useMemo(() => [
+    // DÒNG 1: Tác giả | Phiên bản | Dung lượng | Tải
+    { label: 'Tác giả', value: app.author || 'Không rõ', icon: faUser },
+    { label: 'Phiên bản', value: app.version || '--', icon: faCodeBranch },
+    { label: 'Dung lượng', value: displaySize, icon: faDatabase },
+    { label: formatDownloadsOrViews.topLabel, value: formatDownloadsOrViews.countText, icon: formatDownloadsOrViews.icon },
+    // DÒNG 2: Yêu cầu iOS | Ngày phát hành | Xếp hạng tuổi | (Trống/Icon bổ sung)
+    { label: 'Yêu cầu iOS', value: app.minimum_os_version ? `iOS ${app.minimum_os_version}+` : 'Không rõ', icon: faGaugeHigh },
+    { label: 'Ngày phát hành', value: app.release_date ? new Date(app.release_date).toLocaleDateString('vi-VN') : 'Không rõ', icon: faCalendarDay },
+    { label: 'Xếp hạng tuổi', value: app.age_rating || 'Không rõ', icon: faShieldAlt },
+    { label: 'Danh mục', value: app.category?.name || 'Không rõ', icon: faChevronRight }, // Cột 4, Dòng 2
+    // DÒNG 3: Ngôn ngữ | Thiết bị hỗ trợ | (Trống) | (Trống)
+    { label: 'Ngôn ngữ', value: languagesArray.length > 0 ? languagesArray[0] : 'Không rõ', icon: faGlobe, fullValue: languagesArray.join(', ') },
+    { label: 'Thiết bị hỗ trợ', value: devicesArray.length > 0 ? devicesArray[0] : 'Không rõ', icon: faMobileAlt, fullValue: devicesArray.join(', ') },
+    { label: ' ', value: ' ', icon: null }, // Cột trống 3, Dòng 3
+    { label: ' ', value: ' ', icon: null }, // Cột trống 4, Dòng 3
+  ], [app, displaySize, languagesArray, devicesArray, formatDownloadsOrViews]);
+  // ------------------------------------
+
 
   return (
     <Layout fullWidth>
@@ -953,61 +988,33 @@ export default function Detail({ serverApp, serverRelated }) {
 
         {/* ===== Nội dung dưới ===== */}
         <div className="max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 mt-6 space-y-6 overflow-x-hidden">
-          {/* Info cards */}
-          <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow text-center">
-            <div className="-mx-2 overflow-x-auto sm:overflow-visible px-2">
-              <div
-                className="
-                  flex sm:grid sm:grid-cols-4
-                  divide-x divide-gray-200 dark:divide-zinc-700
-                  snap-x snap-mandatory
-                "
-              >
-                {/* Tác giả */}
-                <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
-                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Tác giả</p>
-                  <FontAwesomeIcon icon={faUser} fixedWidth className="w-8 h-8 text-blue-600 dark:text-blue-400 mb-1" />
-                  <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate w-full" title={app.author || 'Không rõ'}>
-                    {app.author || 'Không rõ'}
+          {/* Info cards (Đã sửa để dùng 4x3 và đồng bộ màu label) */}
+          <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
+            <div className="grid grid-cols-4 divide-x divide-gray-200 dark:divide-zinc-700">
+              {getInfoCardData.map((item, index) => (
+                <div key={index} className="flex flex-col items-center min-w-0 px-2 sm:px-4 py-2">
+                  {/* TIÊU ĐỀ/NHÃN (Đồng bộ màu xám 500/400) */}
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1 text-center truncate w-full" title={item.label}>
+                    {item.label}
                   </p>
-                </div>
-
-                {/* Phiên bản (Đã sửa) */}
-                <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
-                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Phiên bản</p>
-                  <div className="text-xl font-bold leading-none text-blue-600 dark:text-blue-400 my-1 h-8 flex items-center justify-center" title={app.version || 'Không rõ'}>
-                    {app.version || '--'}
+                  
+                  {/* ICON (Giữ nguyên màu xanh lam cho điểm nhấn, ẩn icon nếu là ô trống) */}
+                  <div className="h-8 flex items-center justify-center mb-1">
+                      {item.icon && (
+                          <FontAwesomeIcon icon={item.icon} fixedWidth className="w-6 h-6 sm:w-8 sm:h-8 text-blue-600 dark:text-blue-400" />
+                      )}
                   </div>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">&nbsp;</p>
-                </div>
-
-                {/* Dung lượng */}
-                <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
-                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Dung lượng</p>
-                  <FontAwesomeIcon icon={faDatabase} fixedWidth className="w-8 h-8 text-blue-600 dark:text-blue-400 mb-1" />
-                  <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate w-full" title={displaySize}>
-                    {displaySize}
+                  
+                  {/* GIÁ TRỊ/META (Giữ nguyên màu xám đậm/trắng cho giá trị) */}
+                  <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate w-full text-center" title={item.fullValue || item.value}>
+                    {item.value}
                   </p>
                 </div>
-
-                {/* Lượt xem / Lượt tải */}
-                {(() => {
-                  const nf = new Intl.NumberFormat('vi-VN');
-                  const isTF = Boolean(isTestflight);
-                  const count = isTF ? (app?.views ?? 0) : (app?.downloads ?? 0);
-                  const topLabel = isTF ? 'Xem' : 'Tải';
-                  return (
-                    <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
-                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">{topLabel}</p>
-                      {/* Màu đồng bộ với các icon khác */}
-                      <div className="text-xl font-bold leading-none text-blue-600 dark:text-blue-400 my-1" title={String(count)}>{nf.format(count)}</div>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">Lượt</p>
-                    </div>
-                  );
-                })()}
-              </div>
+              ))}
             </div>
           </div>
+          {/* Hết Info cards */}
+
 
           {/* Mô tả */}
           <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
@@ -1077,7 +1084,7 @@ export default function Detail({ serverApp, serverRelated }) {
             </div>
           )}
 
-          {/* Thông tin chi tiết */}
+          {/* Thông tin chi tiết (Giữ nguyên cấu trúc chi tiết hơn) */}
           <div className="bg-white dark:bg-zinc-900 rounded-xl shadow overflow-hidden">
             <h2 className="px-4 pt-4 text-lg font-bold text-gray-800 dark:text-gray-100">Thông tin</h2>
             <div className="mt-3 divide-y divide-gray-200 dark:divide-zinc-800">
