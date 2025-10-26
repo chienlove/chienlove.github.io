@@ -252,7 +252,6 @@ function NewBreadcrumb({ category, appName }) {
   );
 }
 
-
 /* ===================== InfoRow ===================== */
 const InfoRow = memo(({ label, value, expandable = false, expanded = false, onToggle }) => {
   return (
@@ -309,8 +308,8 @@ export default function Detail({ serverApp, serverRelated }) {
   const [showFullDescription, setShowFullDescription] = useState(false);
   const [status, setStatus] = useState(null);
   const [statusLoading, setStatusLoading] = useState(false);
-  const [isInstalling, setIsInstalling] = useState(false); // Giữ lại state loading
-  const [isFetchingIpa, setIsFetchingIpa] = useState(false); // Giữ lại state loading
+  const [isInstalling, setIsInstalling] = useState(false);
+  const [isFetchingIpa, setIsFetchingIpa] = useState(false);
   const [showAllDevices, setShowAllDevices] = useState(false);
   const [showAllLanguages, setShowAllLanguages] = useState(false);
 
@@ -348,6 +347,197 @@ export default function Detail({ serverApp, serverRelated }) {
   const isTestflight = categorySlug === 'testflight';
   const isInstallable = ['jailbreak', 'app-clone'].includes(categorySlug);
 
+  // ===================== DYNAMIC META TAGS =====================
+  const dynamicMetaTags = useMemo(() => {
+    if (!app) return null;
+    
+    const appName = app.name || '';
+    const categoryName = app.category?.name || '';
+    const version = app.version ? ` ${app.version}` : '';
+    const author = app.author || '';
+    const currentYear = '2025';
+    
+    // Tạo title hấp dẫn cho CTR
+    const generateTitle = () => {
+      const baseKeywords = [];
+      
+      // Logic cho từng loại app
+      if (isTestflight) {
+        baseKeywords.push('Tham gia TestFlight', 'Beta', 'Slot');
+      } else if (categorySlug === 'jailbreak') {
+        baseKeywords.push('Tải Jailbreak', 'Unlock iOS', 'Cài đặt');
+      } else if (categorySlug === 'app-clone') {
+        baseKeywords.push('Tải App Clone', 'MOD', 'Premium');
+      } else {
+        baseKeywords.push('Tải về', 'Download', 'Cài đặt');
+      }
+      
+      // Thêm từ khóa phiên bản và năm
+      if (version) {
+        baseKeywords.push(version);
+      }
+      baseKeywords.push(currentYear);
+      
+      const actionKeyword = baseKeywords[0];
+      const remainingKeywords = baseKeywords.slice(1).join(' ');
+      
+      return `${actionKeyword} ${appName}${version} iOS ${categoryName} FREE | ${remainingKeywords}`;
+    };
+    
+    // Tạo description hấp dẫn
+    const generateDescription = () => {
+      const features = [];
+      
+      if (app.minimum_os_version) {
+        features.push(`Hỗ trợ iOS ${app.minimum_os_version}+`);
+      }
+      
+      if (app.size) {
+        features.push(`Dung lượng ${displaySize}`);
+      }
+      
+      if (author) {
+        features.push(`Nhà phát triển ${author}`);
+      }
+      
+      const featureText = features.length > 0 ? features.join(' • ') + '. ' : '';
+      
+      let actionText = '';
+      if (isTestflight) {
+        actionText = 'Tham gia TestFlight beta ngay. Kiểm tra slot còn trống. ';
+      } else if (categorySlug === 'jailbreak') {
+        actionText = 'Hướng dẫn jailbreak chi tiết. Tải về an toàn, cài đặt dễ dàng. ';
+      } else if (categorySlug === 'app-clone') {
+        actionText = 'Ứng dụng MOD premium miễn phí. Tính năng đặc biệt, hỗ trợ đa thiết bị. ';
+      } else {
+        actionText = 'Tải về miễn phí, cài đặt nhanh chóng. ';
+      }
+      
+      return `${appName}${version} - ${categoryName} cho iOS. ${actionText}${featureText}Cập nhật mới nhất ${currentYear}. Hướng dẫn chi tiết từ StoreiOS.`;
+    };
+    
+    // Tạo keywords động
+    const generateKeywords = () => {
+      const keywords = [
+        appName,
+        categoryName,
+        'iOS',
+        'download',
+        'tải về',
+        'miễn phí',
+        currentYear,
+        'storeios',
+        'storeios.net'
+      ];
+      
+      if (version) keywords.push(version);
+      if (author) keywords.push(author);
+      if (app.minimum_os_version) keywords.push(`iOS ${app.minimum_os_version}`);
+      
+      // Thêm từ khóa đặc thù cho từng loại
+      if (isTestflight) {
+        keywords.push('testflight', 'beta', 'slot', 'tham gia');
+      } else if (categorySlug === 'jailbreak') {
+        keywords.push('jailbreak', 'unlock', 'root', 'tweak');
+      } else if (categorySlug === 'app-clone') {
+        keywords.push('clone', 'mod', 'premium', 'crack');
+      }
+      
+      return keywords.slice(0, 15).join(', ');
+    };
+    
+    return {
+      title: generateTitle(),
+      description: generateDescription(),
+      keywords: generateKeywords()
+    };
+  }, [app, isTestflight, categorySlug, displaySize]);
+
+  const displaySize = useMemo(() => {
+    if (!app?.size) return 'Không rõ';
+    const s = String(app.size);
+    if (/\bMB\b/i.test(s)) return s;
+    const n = Number(s);
+    return !isNaN(n) ? `${n} MB` : s;
+  }, [app?.size]);
+
+  const languagesArray = useMemo(() => parseList(app?.languages), [app?.languages]);
+  const devicesArray = useMemo(() => parseList(app?.supported_devices), [app?.supported_supported_devices]);
+
+  const languagesShort = useMemo(() => {
+    const list = languagesArray.slice(0, 6);
+    const remain = Math.max(languagesArray.length - 6, 0);
+    return { list, remain };
+  }, [languagesArray]);
+
+  const devicesShort = useMemo(() => {
+    const list = devicesArray.slice(0, 5);
+    const remain = Math.max(devicesArray.length - 5, 0);
+    return { list, remain };
+  }, [devicesArray]);
+
+  // ===================== STRUCTURED DATA =====================
+  const structuredData = useMemo(() => {
+    if (!app) return null;
+    
+    return {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": app.name,
+      "applicationCategory": "SoftwareApplication",
+      "operatingSystem": "iOS",
+      "description": dynamicMetaTags?.description || '',
+      "image": app.icon_url,
+      "author": {
+        "@type": "Organization",
+        "name": app.author
+      },
+      "datePublished": app.release_date,
+      "softwareVersion": app.version,
+      "fileSize": displaySize,
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      }
+    };
+  }, [app, dynamicMetaTags, displaySize]);
+
+  // ===================== BREADCRUMB STRUCTURED DATA =====================
+  const breadcrumbStructuredData = useMemo(() => {
+    if (!app) return null;
+    
+    const itemListElement = [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": "https://storeios.net"
+      }
+    ];
+    
+    if (app.category?.slug) {
+      itemListElement.push({
+        "@type": "ListItem",
+        "position": 2,
+        "name": app.category.name,
+        "item": `https://storeios.net/category/${app.category.slug}`
+      });
+    }
+    
+    itemListElement.push({
+      "@type": "ListItem",
+      "position": itemListElement.length + 1,
+      "name": app.name
+    });
+    
+    return {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      "itemListElement": itemListElement
+    };
+  }, [app]);
+
   // Theo dõi auth
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(setMe);
@@ -384,29 +574,6 @@ export default function Detail({ serverApp, serverRelated }) {
         .finally(() => fac.destroy());
     }
   }, [app?.id, app?.icon_url, app?.testflight_url, isTestflight]);
-
-  const displaySize = useMemo(() => {
-    if (!app?.size) return 'Không rõ';
-    const s = String(app.size);
-    if (/\bMB\b/i.test(s)) return s;
-    const n = Number(s);
-    return !isNaN(n) ? `${n} MB` : s;
-  }, [app?.size]);
-
-  const languagesArray = useMemo(() => parseList(app?.languages), [app?.languages]);
-  const devicesArray = useMemo(() => parseList(app?.supported_devices), [app?.supported_supported_devices]);
-
-  const languagesShort = useMemo(() => {
-    const list = languagesArray.slice(0, 6);
-    const remain = Math.max(languagesArray.length - 6, 0);
-    return { list, remain };
-  }, [languagesArray]);
-
-  const devicesShort = useMemo(() => {
-    const list = devicesArray.slice(0, 5);
-    const remain = Math.max(devicesArray.length - 5, 0);
-    return { list, remain };
-  }, [devicesArray]);
 
   /* ======= Thông báo "Cần đăng nhập" ======= */
   const requireLogin = () => {
@@ -608,6 +775,11 @@ useEffect(() => {
   if (!app) {
     return (
       <Layout fullWidth>
+        <Head>
+          <title>Không tìm thấy ứng dụng - StoreiOS</title>
+          <meta name="description" content="Ứng dụng bạn tìm kiếm không tồn tại. Khám phá hàng ngàn ứng dụng iOS miễn phí khác trên StoreiOS." />
+          <meta name="robots" content="noindex, nofollow" />
+        </Head>
         <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-zinc-950">
           <div className="text-center">
             <h1 className="text-2xl font-bold mb-4 text-gray-900 dark:text-gray-100">Không tìm thấy ứng dụng</h1>
@@ -624,25 +796,64 @@ useEffect(() => {
     );
   }
 
-  const title = `${app.name} - App Store`;
-  const description = app.description ? app.description.replace(/<\/?[^>]+(>|$)/g, '').slice(0, 160) : 'Ứng dụng iOS miễn phí, jailbreak, TestFlight';
-
   return (
     <Layout fullWidth>
+      {/* ===================== SEO META TAGS ĐẦY ĐỦ ===================== */}
       <Head>
-        <title>{title}</title>
-        <meta name="description" content={description} />
-        <meta property="og:title" content={title} />
-        <meta property="og:description" content={description} />
+        {/* Dynamic Meta Tags */}
+        <title>{dynamicMetaTags?.title || `${app.name} - StoreiOS`}</title>
+        <meta name="description" content={dynamicMetaTags?.description} />
+        <meta name="keywords" content={dynamicMetaTags?.keywords} />
+        
+        {/* Open Graph */}
+        <meta property="og:title" content={dynamicMetaTags?.title} />
+        <meta property="og:description" content={dynamicMetaTags?.description} />
         <meta property="og:image" content={app.icon_url} />
+        <meta property="og:url" content={`https://storeios.net/${app.slug}`} />
         <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="StoreiOS" />
+        <meta property="og:locale" content="vi_VN" />
+        
+        {/* Twitter Card */}
         <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={dynamicMetaTags?.title} />
+        <meta name="twitter:description" content={dynamicMetaTags?.description} />
+        <meta name="twitter:image" content={app.icon_url} />
+        <meta name="twitter:site" content="@storeios" />
+        
+        {/* Canonical */}
+        <link rel="canonical" href={`https://storeios.net/${app.slug}`} />
+        
+        {/* Preload critical images */}
+        <link rel="preload" href={app.icon_url} as="image" />
+        {app.screenshots?.[0] && (
+          <link rel="preload" href={app.screenshots[0]} as="image" />
+        )}
       </Head>
+
+      {/* ===================== STRUCTURED DATA ===================== */}
+      {structuredData && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(structuredData)
+          }}
+        />
+      )}
+      
+      {breadcrumbStructuredData && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(breadcrumbStructuredData)
+          }}
+        />
+      )}
 
       {/* Modal thông báo */}
       <CenterModal open={modal.open} title={modal.title} body={modal.body} actions={modal.actions} />
 
-      {/* ===== Breadcrumb mới đã sửa lỗi ===== */}
+      {/* ===== Breadcrumb ===== */}
       <NewBreadcrumb category={app?.category} appName={app?.name} />
 
       <div className="bg-gray-100 dark:bg-zinc-950 min-h-screen pb-12 overflow-x-hidden">
@@ -670,6 +881,8 @@ useEffect(() => {
                     src={app.icon_url || '/placeholder-icon.png'}
                     alt={`Icon của ứng dụng ${app.name}`}
                     className="w-full h-full object-cover"
+                    width={96}
+                    height={96}
                     onError={(e) => { e.currentTarget.src = '/placeholder-icon.png'; }}
                   />
                 </div>
@@ -735,7 +948,7 @@ useEffect(() => {
                       >
                         {isInstalling ? (
                           <>
-                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" fill="none" viewBox="0 0 24 24">
+                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
@@ -758,7 +971,7 @@ useEffect(() => {
                       >
                         {isFetchingIpa ? (
                           <>
-                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" fill="none" viewBox="0 0 24 24">
+                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
@@ -780,62 +993,61 @@ useEffect(() => {
         </div>
 
         {/* ===== Nội dung dưới ===== */}
-<div className="max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 mt-6 space-y-6 overflow-x-hidden">
-  {/* Info cards - mobile: trượt 3 cột; desktop: 4 cột */}
-<div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow text-center">
-  <div className="-mx-2 overflow-x-auto sm:overflow-visible px-2">
-    <div
-      className="
-        flex sm:grid sm:grid-cols-4
-        divide-x divide-gray-200 dark:divide-zinc-700
-        snap-x snap-mandatory
-      "
-    >
-      {/* Tác giả */}
-      <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
-        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Tác giả</p>
-        <FontAwesomeIcon icon={faUser} fixedWidth className="w-8 h-8 text-gray-600 dark:text-gray-300 mb-1" />
-        <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate w-full" title={app.author || 'Không rõ'}>
-          {app.author || 'Không rõ'}
-        </p>
-      </div>
+        <div className="max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 mt-6 space-y-6 overflow-x-hidden">
+          {/* Info cards - mobile: trượt 3 cột; desktop: 4 cột */}
+          <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow text-center">
+            <div className="-mx-2 overflow-x-auto sm:overflow-visible px-2">
+              <div
+                className="
+                  flex sm:grid sm:grid-cols-4
+                  divide-x divide-gray-200 dark:divide-zinc-700
+                  snap-x snap-mandatory
+                "
+              >
+                {/* Tác giả */}
+                <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Tác giả</p>
+                  <FontAwesomeIcon icon={faUser} fixedWidth className="w-8 h-8 text-gray-600 dark:text-gray-300 mb-1" />
+                  <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate w-full" title={app.author || 'Không rõ'}>
+                    {app.author || 'Không rõ'}
+                  </p>
+                </div>
 
-      {/* Phiên bản */}
-      <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
-        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Phiên bản</p>
-        <FontAwesomeIcon icon={faCodeBranch} fixedWidth className="w-8 h-8 text-gray-600 dark:text-gray-300 mb-1" />
-        <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate w-full" title={app.version || 'Không rõ'}>
-          {app.version || 'Không rõ'}
-        </p>
-      </div>
+                {/* Phiên bản */}
+                <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Phiên bản</p>
+                  <FontAwesomeIcon icon={faCodeBranch} fixedWidth className="w-8 h-8 text-gray-600 dark:text-gray-300 mb-1" />
+                  <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate w-full" title={app.version || 'Không rõ'}>
+                    {app.version || 'Không rõ'}
+                  </p>
+                </div>
 
-      {/* Dung lượng */}
-      <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
-        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Dung lượng</p>
-        <FontAwesomeIcon icon={faDatabase} fixedWidth className="w-8 h-8 text-gray-600 dark:text-gray-300 mb-1" />
-        <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate w-full" title={displaySize}>
-          {displaySize}
-        </p>
-      </div>
+                {/* Dung lượng */}
+                <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Dung lượng</p>
+                  <FontAwesomeIcon icon={faDatabase} fixedWidth className="w-8 h-8 text-gray-600 dark:text-gray-300 mb-1" />
+                  <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate w-full" title={displaySize}>
+                    {displaySize}
+                  </p>
+                </div>
 
-      {/* Lượt xem (TestFlight) / Lượt tải (Jailbreak) – không icon */}
-      {(() => {
-        const nf = new Intl.NumberFormat('vi-VN');
-        const isTF = Boolean(isTestflight); // biến sẵn có trong trang của bạn
-        const count = isTF ? (app?.views ?? 0) : (app?.downloads ?? 0);
-        const topLabel = isTF ? 'Xem' : 'Tải';
-        return (
-          <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
-            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">{topLabel}</p>
-            <div className="text-lg font-bold leading-none" title={String(count)}>{nf.format(count)}</div>
-            <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">Lượt</p>
+                {/* Lượt xem (TestFlight) / Lượt tải (Jailbreak) – không icon */}
+                {(() => {
+                  const nf = new Intl.NumberFormat('vi-VN');
+                  const isTF = Boolean(isTestflight);
+                  const count = isTF ? (app?.views ?? 0) : (app?.downloads ?? 0);
+                  const topLabel = isTF ? 'Xem' : 'Tải';
+                  return (
+                    <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
+                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">{topLabel}</p>
+                      <div className="text-lg font-bold leading-none" title={String(count)}>{nf.format(count)}</div>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">Lượt</p>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
           </div>
-        );
-      })()}
-    </div>
-  </div>
-</div>
-
 
           {/* Mô tả */}
           <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
@@ -895,6 +1107,8 @@ useEffect(() => {
                       src={url}
                       alt={`Ảnh chụp màn hình ${i + 1} của ứng dụng ${app.name}`}
                       className="w-full h-auto object-cover"
+                      width={224}
+                      height={400}
                       onError={(e) => { e.currentTarget.src = '/placeholder-image.png'; }}
                     />
                   </div>
@@ -972,6 +1186,8 @@ useEffect(() => {
                         src={item.icon_url || '/placeholder-icon.png'}
                         alt={`Icon của ứng dụng liên quan ${item.name}`}
                         className="w-14 h-14 rounded-xl object-cover shadow-sm"
+                        width={56}
+                        height={56}
                         onError={(e) => { e.currentTarget.src = '/placeholder-icon.png'; }}
                       />
                       <div className="flex flex-col min-w-0">
@@ -1014,7 +1230,7 @@ useEffect(() => {
           )}
 
           {/* Bình luận */}
-            <Comments postId={app.slug} postTitle={app.name} />
+          <Comments postId={app.slug} postTitle={app.name} />
         </div>
       </div>
     </Layout>
