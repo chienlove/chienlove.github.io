@@ -462,7 +462,7 @@ export default function Detail({ serverApp, serverRelated }) {
   }, [app?.size]);
 
   const languagesArray = useMemo(() => parseList(app?.languages), [app?.languages]);
-  const devicesArray = useMemo(() => parseList(app?.supported_devices), [app?.supported_supported_devices]);
+  const devicesArray = useMemo(() => parseList(app?.supported_devices), [app?.supported_devices]);
 
   const languagesShort = useMemo(() => {
     const list = languagesArray.slice(0, 6);
