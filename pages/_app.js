@@ -1,5 +1,6 @@
 // pages/_app.js
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import '../styles/globals.css';
@@ -9,12 +10,32 @@ config.autoAddCss = false;
 
 function MyApp({ Component, pageProps }) {
   const [darkMode, setDarkMode] = useState(false);
+  const router = useRouter();
 
+  // Khởi động dark mode theo localStorage
   useEffect(() => {
     const savedMode = localStorage.getItem('darkMode') === 'true';
     setDarkMode(savedMode);
     document.documentElement.classList.toggle('dark', savedMode);
   }, []);
+
+  // -------- FIX Safari/iOS: buộc reload <head> khi chuyển trang CSR --------
+  useEffect(() => {
+    const refreshHead = () => {
+      // Clone để kích hoạt lại mọi thẻ meta/title trong head (Safari đọc lại preview)
+      const head = document.querySelector('head');
+      if (!head || !head.parentNode) return;
+      const clone = head.cloneNode(true);
+      head.parentNode.replaceChild(clone, head);
+    };
+
+    router.events.on('routeChangeComplete', refreshHead);
+    // chạy một lần sau mount (phòng trường hợp vào từ client-side)
+    setTimeout(refreshHead, 0);
+
+    return () => router.events.off('routeChangeComplete', refreshHead);
+  }, [router.events]);
+  // -----------------------------------------------------------------------
 
   return (
     <>
