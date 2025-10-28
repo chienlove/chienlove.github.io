@@ -760,34 +760,6 @@ export default function Detail({ serverApp, serverRelated }) {
       </Layout>
     );
   }
-  
-  // --- HÀM HELPER CHO INFO CARDS 4 CỘT X 3 DÒNG ---
-  const formatDownloadsOrViews = useMemo(() => {
-    const nf = new Intl.NumberFormat('vi-VN');
-    const isTF = Boolean(isTestflight);
-    const count = isTF ? (app?.views ?? 0) : (app?.downloads ?? 0);
-    const topLabel = isTF ? 'LƯỢT XEM' : 'LƯỢT TẢI';
-    return { countText: nf.format(count), topLabel, icon: isTF ? faEye : faDownload };
-  }, [app?.views, app?.downloads, isTestflight]);
-
-  const getInfoCardData = useMemo(() => [
-    // DÒNG 1: Tác giả | Phiên bản | Dung lượng | Tải
-    { label: 'Tác giả', value: app.author || 'Không rõ', icon: faUser },
-    { label: 'Phiên bản', value: app.version || '--', icon: faCodeBranch },
-    { label: 'Dung lượng', value: displaySize, icon: faDatabase },
-    { label: formatDownloadsOrViews.topLabel, value: formatDownloadsOrViews.countText, icon: formatDownloadsOrViews.icon },
-    // DÒNG 2: Yêu cầu iOS | Ngày phát hành | Xếp hạng tuổi | (Trống/Icon bổ sung)
-    { label: 'Yêu cầu iOS', value: app.minimum_os_version ? `iOS ${app.minimum_os_version}+` : 'Không rõ', icon: faGaugeHigh },
-    { label: 'Ngày phát hành', value: app.release_date ? new Date(app.release_date).toLocaleDateString('vi-VN') : 'Không rõ', icon: faCalendarDay },
-    { label: 'Xếp hạng tuổi', value: app.age_rating || 'Không rõ', icon: faShieldAlt },
-    { label: 'Danh mục', value: app.category?.name || 'Không rõ', icon: faChevronRight }, // Cột 4, Dòng 2
-    // DÒNG 3: Ngôn ngữ | Thiết bị hỗ trợ | (Trống) | (Trống)
-    { label: 'Ngôn ngữ', value: languagesArray.length > 0 ? languagesArray[0] : 'Không rõ', icon: faGlobe, fullValue: languagesArray.join(', ') },
-    { label: 'Thiết bị hỗ trợ', value: devicesArray.length > 0 ? devicesArray[0] : 'Không rõ', icon: faMobileAlt, fullValue: devicesArray.join(', ') },
-    { label: ' ', value: ' ', icon: null }, // Cột trống 3, Dòng 3
-    { label: ' ', value: ' ', icon: null }, // Cột trống 4, Dòng 3
-  ], [app, displaySize, languagesArray, devicesArray, formatDownloadsOrViews]);
-  // ------------------------------------
 
 
   return (
