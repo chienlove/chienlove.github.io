@@ -5,66 +5,55 @@ import Head from 'next/head';
 import Layout from '../../components/Layout';
 import { supabase } from '../../lib/supabase';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faDownload, faHome, faFileArrowDown, faRocket } from '@fortawesome/free-solid-svg-icons';
+import { faDownload, faHome, faFileArrowDown } from '@fortawesome/free-solid-svg-icons';
 import jwt from 'jsonwebtoken';
 import { toast } from 'react-toastify';
 
-export async function getServerSideProps({ params, query }) { // THÊM query
-  const { data: app } = await supabase
-    .from('apps')
-    .select('*')
-    .eq('slug', params.appSlug)
-    .single();
+export async function getServerSideProps({ params, query, req }) {
+  const { data: app } = await supabase.from('apps').select('*').eq('slug', params.appSlug).single();
+  if (!app) return { notFound: true };
 
-  if (!app) {
-    return {
-      notFound: true,
-    };
-  }
-  
-  // KIỂM TRA ACTION
   const isIpaDownload = query.action === 'download';
   const secret = process.env.JWT_SECRET;
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://storeios.net';
 
-  // 1. Tùy chỉnh Payload và Thời gian sống (exp) của Token
+  // Xác định base từ header (ổn định trên Vercel)
+  const proto = req.headers['x-forwarded-proto'] || 'https';
+  const host  = req.headers['x-forwarded-host'] || req.headers.host;
+  const baseUrl = `${proto}://${host}`;
+
   const expiresIn = isIpaDownload ? '60s' : '40s';
-  const tokenExpiresInSeconds = parseInt(expiresIn, 10);
-  
-  const payload = isIpaDownload
-    ? { id: app.id, ipa_name: encodeURIComponent(app.download_link) } // Download Token
-    : { ipa_name: encodeURIComponent(app.download_link) };           // Plist Token (giữ nguyên logic cũ)
+  const token = jwt.sign(
+    isIpaDownload
+      ? { id: app.id, ipa_name: encodeURIComponent(app.download_link) } // token cho download-ipa
+      : { id: app.id, ipa_name: encodeURIComponent(app.download_link) }, // token cho plist
+    secret,
+    { expiresIn }
+  );
 
-  const token = jwt.sign(payload, secret, { expiresIn });
+  // itms-services: thêm install=1 để /api/plist biết đây là lần cài thực sự
+  const plistUrl = `${baseUrl}/api/plist?ipa_name=${encodeURIComponent(app.download_link)}&token=${encodeURIComponent(token)}&install=1`;
+  const installUrl = `itms-services://?action=download-manifest&url=${encodeURIComponent(plistUrl)}`;
 
-  // 2. Định nghĩa các URL
-  // Link Install (dùng cho itms-services)
-  const installUrl = `itms-services://?action=download-manifest&url=${
-    encodeURIComponent(`${baseUrl}/api/plist?ipa_name=${encodeURIComponent(app.download_link)}&token=${token}`)
-  }`;
-
-  // Link Download IPA (dùng cho /api/download-ipa)
+  // link tải IPA (server sẽ đếm downloads)
   const downloadIpaUrl = `/api/download-ipa?slug=${encodeURIComponent(app.slug)}&token=${encodeURIComponent(token)}`;
-  
-  // Raw Plist URL (dùng để kiểm tra HEAD trước khi cài đặt)
-  const rawPlistUrl = `${baseUrl}/api/plist?ipa_name=${encodeURIComponent(app.download_link)}&token=${token}`;
 
+  // HEAD check không có install=1 để tránh đếm
+  const rawPlistUrl = `${baseUrl}/api/plist?ipa_name=${encodeURIComponent(app.download_link)}&token=${encodeURIComponent(token)}`;
 
   return {
     props: {
       app,
       installUrl,
-      downloadIpaUrl, // THÊM downloadIpaUrl
+      downloadIpaUrl,
       rawPlistUrl,
-      tokenExpiresIn: tokenExpiresInSeconds, // THỜI GIAN SỐNG MỚI
-      isIpaDownload, // THÊM biến cờ
+      tokenExpiresIn: parseInt(expiresIn, 10),
+      isIpaDownload,
     },
   };
 }
 
-export default function InstallPage({ app, installUrl, downloadIpaUrl, rawPlistUrl, tokenExpiresIn, isIpaDownload }) { // NHẬN PROPS MỚI
-  // Giữ nguyên countdown = 10 giây để giữ giao diện cũ
-  const [countdown, setCountdown] = useState(10); 
+export default function InstallPage({ app, installUrl, downloadIpaUrl, rawPlistUrl, tokenExpiresIn, isIpaDownload }) {
+  const [countdown, setCountdown] = useState(10);
   const [tokenTimer, setTokenTimer] = useState(tokenExpiresIn);
   const [hasStartedTokenTimer, setHasStartedTokenTimer] = useState(false);
   const router = useRouter();
@@ -75,31 +64,27 @@ export default function InstallPage({ app, installUrl, downloadIpaUrl, rawPlistU
 
   useEffect(() => {
     if (countdown <= 0) return;
-    const timer = setInterval(() => setCountdown(prev => prev - 1), 1000);
-    return () => clearInterval(timer);
+    const t = setInterval(() => setCountdown(p => p - 1), 1000);
+    return () => clearInterval(t);
   }, [countdown]);
 
   useEffect(() => {
-    if (countdown === 0 && !hasStartedTokenTimer) {
-      setHasStartedTokenTimer(true);
-    }
+    if (countdown === 0 && !hasStartedTokenTimer) setHasStartedTokenTimer(true);
   }, [countdown, hasStartedTokenTimer]);
 
   useEffect(() => {
     if (!hasStartedTokenTimer) return;
-
-    const timer = setInterval(() => {
+    const t = setInterval(() => {
       setTokenTimer(prev => {
         if (prev <= 1) {
-          clearInterval(timer);
+          clearInterval(t);
           toast.warning('Liên kết đã hết hạn. Vui lòng tải lại trang.');
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
-
-    return () => clearInterval(timer);
+    return () => clearInterval(t);
   }, [hasStartedTokenTimer]);
 
   const handleDownload = async () => {
@@ -107,31 +92,23 @@ export default function InstallPage({ app, installUrl, downloadIpaUrl, rawPlistU
       toast.error('Liên kết đã hết hạn. Vui lòng tải lại trang.');
       return;
     }
-
     if (isIpaDownload) {
-      // LOGIC MỚI: TẢI FILE IPA
-      // Tăng lượt tải (tùy chọn)
-      fetch(`/api/admin/add-download?id=${app.id}`, { method: 'POST' }).catch(() => {});
+      // ✅ KHÔNG gọi add-download ở client -- server /api/download-ipa đã đếm
       window.location.href = downloadIpaUrl;
     } else {
-      // LOGIC CŨ: CÀI ĐẶT
+      // HEAD verify không đếm
       try {
         const verify = await fetch(rawPlistUrl, { method: 'HEAD' });
-
         if (!verify.ok) {
-          if (verify.status === 403) {
-            toast.error('Liên kết đã hết hạn. Vui lòng tải lại trang.');
-          } else if (verify.status === 404) {
-            toast.error('Không tìm thấy file cài đặt.');
-          } else {
-            toast.error('Không thể xác minh liên kết cài đặt.');
-          }
+          if (verify.status === 403) toast.error('Liên kết đã hết hạn. Vui lòng tải lại trang.');
+          else if (verify.status === 404) toast.error('Không tìm thấy file cài đặt.');
+          else toast.error('Không thể xác minh liên kết cài đặt.');
           return;
         }
-
+        // Mở itms-services (install=1): /api/plist sẽ cộng installs
         window.location.href = installUrl;
-      } catch (err) {
-        console.error('Lỗi khi kiểm tra liên kết:', err);
+      } catch (e) {
+        console.error('Verify error:', e);
         toast.error('Lỗi khi tải ứng dụng. Vui lòng thử lại.');
       }
     }
@@ -139,7 +116,6 @@ export default function InstallPage({ app, installUrl, downloadIpaUrl, rawPlistU
 
   const buttonText = isIpaDownload ? 'Tải file IPA ngay' : 'Tải xuống ngay';
   const headerIcon = isIpaDownload ? faFileArrowDown : faDownload;
-
 
   return (
     <Layout fullWidth>
@@ -173,16 +149,11 @@ export default function InstallPage({ app, installUrl, downloadIpaUrl, rawPlistU
 
           <p className="mb-2 text-gray-700 dark:text-gray-300">
             {countdown > 0
-              ? <>Vui lòng chờ <span className="font-bold">{countdown}</span> giây trước khi {isIpaDownload ? 'tải file IPA' : 'cài đặt ứng dụng'}...</> // CẬP NHẬT TEXT
-              : <>Nhấn nút bên dưới để {isIpaDownload ? 'tải file IPA' : 'tải ứng dụng'}.</> // CẬP NHẬT TEXT
-            }
+              ? <>Vui lòng chờ <span className="font-bold">{countdown}</span> giây trước khi {isIpaDownload ? 'tải file IPA' : 'cài đặt ứng dụng'}...</>
+              : <>Nhấn nút bên dưới để {isIpaDownload ? 'tải file IPA' : 'tải ứng dụng'}.</>}
           </p>
 
-          <div
-            className={`text-sm text-gray-500 dark:text-gray-300 mb-4 transition-all duration-500 ease-out transform ${
-              countdown === 0 ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'
-            }`}
-          >
+          <div className={`text-sm text-gray-500 dark:text-gray-300 mb-4 transition-all duration-500 ease-out transform ${countdown === 0 ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}`}>
             {tokenTimer > 0 ? (
               <>Liên kết sẽ hết hạn sau: <span className="font-semibold">{tokenTimer}s</span></>
             ) : (
@@ -196,11 +167,10 @@ export default function InstallPage({ app, installUrl, downloadIpaUrl, rawPlistU
                 onClick={handleDownload}
                 className="bg-gradient-to-r from-green-400 to-blue-500 hover:from-green-500 hover:to-blue-600 text-white font-bold py-3 px-6 rounded-lg transition-all hover:scale-105 active:scale-95 shadow-md flex items-center justify-center gap-2"
               >
-                <FontAwesomeIcon icon={headerIcon} /> {/* SỬ DỤNG ICON TÙY CHỈNH */}
-                <span>{buttonText}</span> {/* SỬ DỤNG TEXT TÙY CHỈNH */}
+                <FontAwesomeIcon icon={headerIcon} />
+                <span>{buttonText}</span>
               </button>
             )}
-
             <button
               onClick={() => router.push('/')}
               className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-semibold py-2 px-4 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-all flex justify-center items-center gap-2"
