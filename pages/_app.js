@@ -12,30 +12,61 @@ function MyApp({ Component, pageProps }) {
   const [darkMode, setDarkMode] = useState(false);
   const router = useRouter();
 
-  // Khởi động dark mode theo localStorage
+  // Dark mode init
   useEffect(() => {
     const savedMode = localStorage.getItem('darkMode') === 'true';
     setDarkMode(savedMode);
     document.documentElement.classList.toggle('dark', savedMode);
   }, []);
 
-  // -------- FIX Safari/iOS: buộc reload <head> khi chuyển trang CSR --------
+  // ✅ Centralized Browser Error Logger
+  useEffect(() => {
+    if (process.env.NODE_ENV !== 'production') return;
+
+    const sent = new WeakSet();
+
+    const sendLog = (errorObj) => {
+      try {
+        if (!errorObj || sent.has(errorObj)) return;
+        sent.add(errorObj);
+
+        fetch('/api/log-client-error', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            url: window.location.href,
+            userAgent: navigator.userAgent,
+            error: String(errorObj?.message || errorObj),
+            stack: String(errorObj?.stack || 'no stack'),
+          })
+        }).catch(() => {});
+      } catch {}
+    };
+
+    const onError = (event) => sendLog(event.error);
+    const onUnhandled = (event) => sendLog(event.reason);
+
+    window.addEventListener('error', onError);
+    window.addEventListener('unhandledrejection', onUnhandled);
+
+    return () => {
+      window.removeEventListener('error', onError);
+      window.removeEventListener('unhandledrejection', onUnhandled);
+    };
+  }, []);
+
+  // ✅ Fix Safari/iOS preview head refresh
   useEffect(() => {
     const refreshHead = () => {
-      // Clone để kích hoạt lại mọi thẻ meta/title trong head (Safari đọc lại preview)
       const head = document.querySelector('head');
-      if (!head || !head.parentNode) return;
+      if (!head?.parentNode) return;
       const clone = head.cloneNode(true);
       head.parentNode.replaceChild(clone, head);
     };
-
     router.events.on('routeChangeComplete', refreshHead);
-    // chạy một lần sau mount (phòng trường hợp vào từ client-side)
     setTimeout(refreshHead, 0);
-
     return () => router.events.off('routeChangeComplete', refreshHead);
   }, [router.events]);
-  // -----------------------------------------------------------------------
 
   return (
     <>
