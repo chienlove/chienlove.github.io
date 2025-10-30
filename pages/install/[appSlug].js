@@ -10,16 +10,21 @@ import jwt from 'jsonwebtoken';
 import { toast } from 'react-toastify';
 
 export async function getServerSideProps({ params, query, req }) {
-  const { data: app } = await supabase.from('apps').select('*').eq('slug', params.appSlug).single();
+  const { data: app } = await supabase
+    .from('apps')
+    .select('*')
+    .eq('slug', params.appSlug)
+    .single();
+
   if (!app) return { notFound: true };
 
   const isIpaDownload = query.action === 'download';
   const secret = process.env.JWT_SECRET;
-
   const proto = req.headers['x-forwarded-proto'] || 'https';
   const host  = req.headers['x-forwarded-host'] || req.headers.host;
   const baseUrl = `${proto}://${host}`;
 
+  // ✅ Token cho CẢ 2 nhánh đều chứa { id, ipa_name }
   const expiresIn = isIpaDownload ? '60s' : '40s';
   const token = jwt.sign(
     { id: app.id, ipa_name: encodeURIComponent(app.download_link) },
@@ -27,15 +32,16 @@ export async function getServerSideProps({ params, query, req }) {
     { expiresIn }
   );
 
-  // itms-services: có install=1 để /api/plist đếm installs
-  const plistUrl    = `${baseUrl}/api/plist?ipa_name=${encodeURIComponent(app.download_link)}&token=${encodeURIComponent(token)}&install=1`;
-  const installUrl  = `itms-services://?action=download-manifest&url=${encodeURIComponent(plistUrl)}`;
+  // itms-services (THÊM install=1 để đếm installs)
+  const installUrl = `itms-services://?action=download-manifest&url=${
+    encodeURIComponent(`${baseUrl}/api/plist?ipa_name=${encodeURIComponent(app.download_link)}&token=${token}&install=1`)
+  }`;
 
-  // link tải IPA (server đếm downloads)
+  // Dùng cho HEAD verify (KHÔNG có install=1 để tránh đếm)
+  const rawPlistUrl = `${baseUrl}/api/plist?ipa_name=${encodeURIComponent(app.download_link)}&token=${token}`;
+
+  // Download IPA (đếm downloads ở /api/download-ipa)
   const downloadIpaUrl = `/api/download-ipa?slug=${encodeURIComponent(app.slug)}&token=${encodeURIComponent(token)}`;
-
-  // HEAD verify: không có install=1, để không đếm
-  const rawPlistUrl = `${baseUrl}/api/plist?ipa_name=${encodeURIComponent(app.download_link)}&token=${encodeURIComponent(token)}`;
 
   return {
     props: {
@@ -61,7 +67,7 @@ export default function InstallPage({ app, installUrl, downloadIpaUrl, rawPlistU
 
   useEffect(() => {
     if (countdown <= 0) return;
-    const t = setInterval(() => setCountdown(p => p - 1), 1000);
+    const t = setInterval(() => setCountdown((v) => v - 1), 1000);
     return () => clearInterval(t);
   }, [countdown]);
 
@@ -72,13 +78,13 @@ export default function InstallPage({ app, installUrl, downloadIpaUrl, rawPlistU
   useEffect(() => {
     if (!hasStartedTokenTimer) return;
     const t = setInterval(() => {
-      setTokenTimer(prev => {
-        if (prev <= 1) {
+      setTokenTimer((v) => {
+        if (v <= 1) {
           clearInterval(t);
           toast.warning('Liên kết đã hết hạn. Vui lòng tải lại trang.');
           return 0;
         }
-        return prev - 1;
+        return v - 1;
       });
     }, 1000);
     return () => clearInterval(t);
@@ -91,10 +97,8 @@ export default function InstallPage({ app, installUrl, downloadIpaUrl, rawPlistU
     }
 
     if (isIpaDownload) {
-      // Server /api/download-ipa đã tự đếm
-      window.location.href = downloadIpaUrl;
+      window.location.href = downloadIpaUrl; // server tự đếm downloads
     } else {
-      // HEAD verify: không đếm
       try {
         const verify = await fetch(rawPlistUrl, { method: 'HEAD' });
         if (!verify.ok) {
@@ -103,10 +107,9 @@ export default function InstallPage({ app, installUrl, downloadIpaUrl, rawPlistU
           else toast.error('Không thể xác minh liên kết cài đặt.');
           return;
         }
-        // Mở itms-services: /api/plist sẽ đếm installs
-        window.location.href = installUrl;
-      } catch (e) {
-        console.error('Verify error:', e);
+        window.location.href = installUrl; // /api/plist?…&install=1 sẽ +1 installs
+      } catch (err) {
+        console.error('Lỗi khi kiểm tra liên kết:', err);
         toast.error('Lỗi khi tải ứng dụng. Vui lòng thử lại.');
       }
     }
@@ -151,7 +154,11 @@ export default function InstallPage({ app, installUrl, downloadIpaUrl, rawPlistU
               : <>Nhấn nút bên dưới để {isIpaDownload ? 'tải file IPA' : 'tải ứng dụng'}.</>}
           </p>
 
-          <div className={`text-sm text-gray-500 dark:text-gray-300 mb-4 transition-all duration-500 ease-out transform ${countdown === 0 ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'}`}>
+          <div
+            className={`text-sm text-gray-500 dark:text-gray-300 mb-4 transition-all duration-500 ease-out transform ${
+              countdown === 0 ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'
+            }`}
+          >
             {tokenTimer > 0 ? (
               <>Liên kết sẽ hết hạn sau: <span className="font-semibold">{tokenTimer}s</span></>
             ) : (
@@ -169,6 +176,7 @@ export default function InstallPage({ app, installUrl, downloadIpaUrl, rawPlistU
                 <span>{buttonText}</span>
               </button>
             )}
+
             <button
               onClick={() => router.push('/')}
               className="border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-gray-700 dark:text-gray-200 font-semibold py-2 px-4 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-600 transition-all flex justify-center items-center gap-2"
