@@ -959,7 +959,7 @@ export default function Detail({ serverApp, serverRelated }) {
         <div className="text-xl font-bold leading-none text-gray-500 dark:text-gray-400 h-[36px] flex items-center justify-center" title={app.version || 'Không rõ'}>
           {app.version || '--'}
         </div>
-        <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1.5">&nbsp;</p>
+        <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1.5">Đã cập nhật</p>
       </div>
 
       {/* Dung lượng */}
