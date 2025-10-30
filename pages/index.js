@@ -295,7 +295,7 @@ function MetricInlineAbsolute({ categorySlug, app }) {
   if (slug === 'testflight') {
     value = app?.views ?? 0;
   } else if (slug === 'jailbreak' || slug === 'app-clone') {
-    value = app?.downloads ?? 0;
+    value = app?.installs ?? 0;
   } else {
     return null;
   }
@@ -630,7 +630,7 @@ export async function getServerSideProps(ctx) {
   );
 
   const sortedHotApps = (hotAppsData.data || [])
-    .map(app => ({ ...app, hotScore: (app.views || 0) + (app.downloads || 0) }))
+    .map(app => ({ ...app, hotScore: (app.views || 0) + (app.installs || 0) }))
     .sort((a, b) => b.hotScore - a.hotScore)
     .slice(0, 5);
 
