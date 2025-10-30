@@ -975,7 +975,6 @@ export default function Detail({ serverApp, serverRelated }) {
         <p className="text-sm font-medium text-gray-500 dark:text-gray-100 truncate w-full mt-1.5" title={displaySize}>
           {displaySize}
         </p>
-        <p className="text-[11px] text-gray-500 dark:text-gray-500 mt-1.5">App Size</p>
       </div>
 
       {/* Chỉ số theo loại */}
