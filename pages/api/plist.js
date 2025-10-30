@@ -4,7 +4,12 @@ import fs from 'fs';
 import path from 'path';
 import { createClient } from '@supabase/supabase-js';
 
+export const config = { api: { responseLimit: false } };
+
 const secret = process.env.JWT_SECRET;
+if (!secret) {
+  throw new Error('Missing JWT_SECRET');
+}
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -13,49 +18,60 @@ const supabase = createClient(
 );
 
 export default async function handler(req, res) {
-  const { ipa_name: encodedIpaName, token, source, install } = req.query || {};
-
   try {
-    if (!encodedIpaName || !token) return res.status(400).send('Missing params');
+    const { ipa_name: encodedIpaName, token } = req.query || {};
+    const installFlag = req.query?.install === '1';
+    const source = req.query?.source || ''; // dùng 'proxy' để tránh double count nếu cần
 
-    // HEAD check: chỉ xác minh, không stream, không đếm
-    const isHEAD = req.method === 'HEAD';
+    if (!encodedIpaName || !token) {
+      return res.status(400).send('Missing params');
+    }
 
-    const decoded = jwt.verify(token, secret);
-    const requestedIpaName = decodeURIComponent(encodedIpaName);
-    const tokenIpaName = decodeURIComponent(decoded.ipa_name || '');
-
-    if (tokenIpaName !== requestedIpaName) {
-      console.error(`Tên IPA không khớp: ${tokenIpaName} (token) vs ${requestedIpaName} (request)`);
+    // 1) Verify token
+    let decoded;
+    try {
+      decoded = jwt.verify(token, secret);
+    } catch (e) {
       return res.status(403).send('Invalid token');
     }
 
-    // ✅ Đếm INSTalls: chỉ khi GET thật sự cài (install=1) và không phải proxy
-    if (!isHEAD && install === '1' && source !== 'proxy' && decoded.id) {
-      try {
-        const { error } = await supabase.rpc('increment_app_installs', { app_id: decoded.id });
-        if (error) console.error('increment_app_installs error:', error);
-      } catch (e) {
-        console.error('RPC installs try/catch:', e);
-      }
+    const requestedIpaName = decodeURIComponent(encodedIpaName);
+    const tokenIpaName = decodeURIComponent(decoded.ipa_name || '');
+    if (tokenIpaName !== requestedIpaName) {
+      return res.status(403).send('Invalid token payload');
     }
 
-    // Trả về file .plist
-    const plistPath = path.join(process.cwd(), 'secure', 'plist', `${requestedIpaName}.plist`);
+    // 2) Resolve plist path
+    const plistPath = path.join(process.cwd(), 'secure/plist', `${requestedIpaName}.plist`);
+    if (req.method === 'HEAD') {
+      // Chỉ kiểm tra tồn tại
+      return fs.existsSync(plistPath) ? res.status(200).end() : res.status(404).end();
+    }
+
     if (!fs.existsSync(plistPath)) {
-      console.error('Không tìm thấy file:', plistPath);
       return res.status(404).send(`Plist not found for ${requestedIpaName}`);
     }
 
+    // 3) Đếm installs nếu có id và đây là yêu cầu cài đặt thực sự
+    if (installFlag && source !== 'proxy' && decoded.id) {
+      try {
+        const { error } = await supabase.rpc('increment_app_installs', { app_id: decoded.id });
+        if (error) console.error('[RPC installs] error:', error, 'app_id:', decoded.id);
+      } catch (e) {
+        console.error('[RPC installs] try/catch:', e, 'app_id:', decoded.id);
+      }
+    }
+
+    // 4) Stream file .plist
     res.setHeader('Content-Type', 'application/x-plist');
-
-    // HEAD: đủ header là pass
-    if (isHEAD) return res.status(200).end();
-
-    fs.createReadStream(plistPath).pipe(res);
+    const stream = fs.createReadStream(plistPath);
+    stream.on('error', (e) => {
+      console.error('Plist stream error:', e);
+      res.status(500).end('Stream error');
+    });
+    stream.pipe(res);
   } catch (err) {
     console.error('plist error:', err);
-    const status = /expired|jwt|signature|token/i.test(String(err?.message)) ? 401 : 500;
-    res.status(status).send(status === 401 ? 'Unauthorized' : 'Internal Server Error');
+    res.status(500).send('Internal Server Error');
   }
 }

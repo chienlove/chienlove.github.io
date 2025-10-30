@@ -17,16 +17,24 @@ function verifyTokenOrThrow(token, ua) {
   const decoded = jwt.verify(token, secret);
   const uaHash = crypto.createHash('sha256').update(ua || '').digest('hex');
   if (decoded.ua && decoded.ua !== uaHash) throw new Error('UA mismatch');
-  return decoded;
+  return decoded; // { id, ipa_name, iat, exp, ... }
 }
 
-async function getApp({ slug, id }) {
+async function getAppBySlugOrId({ slug, id }) {
   if (slug) {
-    const { data, error } = await supabase.from('apps').select('*').ilike('slug', String(slug)).single();
+    const { data, error } = await supabase
+      .from('apps')
+      .select('*')
+      .ilike('slug', String(slug))
+      .single();
     if (!error && data) return data;
   }
   if (id) {
-    const { data } = await supabase.from('apps').select('*').eq('id', id).single();
+    const { data } = await supabase
+      .from('apps')
+      .select('*')
+      .eq('id', id)
+      .single();
     if (data) return data;
   }
   return null;
@@ -35,10 +43,10 @@ async function getApp({ slug, id }) {
 export default async function handler(req, res) {
   try {
     const { slug, token } = req.query || {};
-    if (!slug || !token) return res.status(400).json({ error: 'Missing params' });
+    if (!slug || !token) return res.status(400).json({ error: 'Missing slug or token' });
 
     const payload = verifyTokenOrThrow(token, req.headers['user-agent']);
-    const app = await getApp({ slug, id: payload.id });
+    const app = await getAppBySlugOrId({ slug, id: payload.id });
     if (!app) return res.status(404).json({ error: 'App not found' });
 
     const plistName = (app.download_link || '').trim();
@@ -48,39 +56,40 @@ export default async function handler(req, res) {
     const host  = req.headers['x-forwarded-host'] || req.headers.host;
     const base  = `${proto}://${host}`;
 
-    // Lấy token cho /api/plist
+    // Lấy token cho /api/plist (để đọc URL IPA từ manifest)
     const tRes = await fetch(`${base}/api/generate-token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ipa_name: plistName, id: app.id })
     });
-    if (!tRes.ok) return res.status(500).json({ error: 'Token error' });
+    if (!tRes.ok) return res.status(500).json({ error: `Cannot get plist token: HTTP ${tRes.status}` });
     const { token: plistToken } = await tRes.json();
+    if (!plistToken) return res.status(500).json({ error: 'Missing plist token' });
 
-    // source=proxy để /api/plist không cộng installs
-    const plistUrl = `${base}/api/plist?ipa_name=${encodeURIComponent(plistName)}&token=${encodeURIComponent(plistToken)}&source=proxy`;
+    // Lấy manifest và trích xuất URL IPA
+    const plistUrl = `${base}/api/plist?ipa_name=${encodeURIComponent(plistName)}&token=${encodeURIComponent(plistToken)}`;
     const pRes = await fetch(plistUrl);
-    if (!pRes.ok) return res.status(500).json({ error: 'Manifest fail' });
-
+    if (!pRes.ok) return res.status(500).json({ error: `Cannot fetch plist: HTTP ${pRes.status}` });
     const plistText = await pRes.text();
     const m = plistText.match(/<key>url<\/key>\s*<string>([^<]+\.ipa)<\/string>/i);
-    if (!m || !m[1]) return res.status(500).json({ error: 'IPA missing' });
+    if (!m || !m[1]) return res.status(500).json({ error: 'IPA url not found in plist' });
     const ipaUrl = m[1];
 
-    // Proxy stream IPA
-    const upstream = await fetch(ipaUrl);
+    // Tải IPA thật & stream về client
+    const upstream = await fetch(ipaUrl, { method: 'GET' });
     if (!upstream.ok) return res.status(upstream.status).end();
 
-    // ✅ Đếm DOWNLOADS bằng RPC (không chain .catch)
+    // ✅ Đếm downloads (server side)
     try {
       const { error } = await supabase.rpc('increment_app_downloads', { app_id: app.id });
-      if (error) console.error('increment_app_downloads error:', error);
+      if (error) console.error('[RPC downloads] error:', error, 'app_id:', app.id);
     } catch (e) {
-      console.error('RPC downloads try/catch:', e);
+      console.error('[RPC downloads] try/catch:', e, 'app_id:', app.id);
     }
 
+    const filename = `${app.slug || 'app'}.ipa`;
     res.setHeader('Content-Type', 'application/octet-stream');
-    res.setHeader('Content-Disposition', `attachment; filename="${app.slug}.ipa"`);
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
     const len = upstream.headers.get('content-length');
     if (len) res.setHeader('Content-Length', len);
 
@@ -91,7 +100,7 @@ export default async function handler(req, res) {
       const pump = async () => {
         const { value, done } = await reader.read();
         if (done) return res.end();
-        res.write(Buffer.from(value));
+        res.write(Buffer.isBuffer(value) ? value : Buffer.from(value));
         return pump();
       };
       await pump();
