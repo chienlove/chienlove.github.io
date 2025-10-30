@@ -928,59 +928,74 @@ export default function Detail({ serverApp, serverRelated }) {
         {/* ===== Nội dung dưới ===== */}
         <div className="max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 mt-6 space-y-6 overflow-x-hidden">
           {/* Info cards */}
-          <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow text-center">
-            <div className="-mx-2 overflow-x-auto sm:overflow-visible px-2">
-              <div
-                className="
-                  flex sm:grid sm:grid-cols-4
-                  divide-x divide-gray-200 dark:divide-zinc-700
-                  snap-x snap-mandatory
-                "
-              >
-                {/* Tác giả */}
-                <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
-                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Tác giả</p>
-                  <FontAwesomeIcon icon={faUser} fixedWidth className="w-8 h-8 text-gray-500 dark:text-gray-400 mb-1" />
-                  <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate w-full" title={app.author || 'Không rõ'}>
-                    {app.author || 'Không rõ'}
-                  </p>
-                </div>
+<div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow text-center">
+  <div className="-mx-2 overflow-x-auto sm:overflow-visible px-2">
+    <div
+      className="
+        flex sm:grid sm:grid-cols-5
+        divide-x divide-gray-200 dark:divide-zinc-700
+        snap-x snap-mandatory
+      "
+    >
+      {/* Tác giả */}
+      <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
+        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Tác giả</p>
+        <FontAwesomeIcon icon={faUser} fixedWidth className="w-8 h-8 text-gray-500 dark:text-gray-400 mb-1" />
+        <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate w-full" title={app.author || 'Không rõ'}>
+          {app.author || 'Không rõ'}
+        </p>
+      </div>
 
-                {/* Phiên bản */}
-                <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
-                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Phiên bản</p>
-                  <div className="text-xl font-bold leading-none text-gray-500 dark:text-gray-400 my-1 h-8 flex items-center justify-center" title={app.version || 'Không rõ'}>
-                    {app.version || '--'}
-                  </div>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">&nbsp;</p>
-                </div>
+      {/* Phiên bản */}
+      <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
+        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Phiên bản</p>
+        <div className="text-xl font-bold leading-none text-gray-500 dark:text-gray-400 my-1 h-8 flex items-center justify-center" title={app.version || 'Không rõ'}>
+          {app.version || '--'}
+        </div>
+        <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">&nbsp;</p>
+      </div>
 
-                {/* Dung lượng */}
-                <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
-                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Dung lượng</p>
-                  <FontAwesomeIcon icon={faDatabase} fixedWidth className="w-8 h-8 text-gray-500 dark:text-gray-400 mb-1" />
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-100 truncate w-full" title={displaySize}>
-                    {displaySize}
-                  </p>
-                </div>
+      {/* Dung lượng */}
+      <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
+        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Dung lượng</p>
+        <FontAwesomeIcon icon={faDatabase} fixedWidth className="w-8 h-8 text-gray-500 dark:text-gray-400 mb-1" />
+        <p className="text-sm font-medium text-gray-500 dark:text-gray-100 truncate w-full" title={displaySize}>
+          {displaySize}
+        </p>
+      </div>
 
-                {/* Lượt xem / Lượt tải */}
-                {(() => {
-                  const nf = new Intl.NumberFormat('vi-VN');
-                  const isTF = Boolean(isTestflight);
-                  const count = isTF ? (app?.views ?? 0) : (app?.downloads ?? 0);
-                  const topLabel = isTF ? 'Xem' : 'Tải';
-                  return (
-                    <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
-                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">{topLabel}</p>
-                      <div className="text-xl font-bold leading-none text-gray-500 dark:text-gray-400 my-1" title={String(count)}>{nf.format(count)}</div>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-500 mt-1">Lượt</p>
-                    </div>
-                  );
-                })()}
-              </div>
-            </div>
+      {/* Chỉ số theo loại */}
+      {isTestflight ? (
+        // TestFlight: hiển thị Lượt xem
+        <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4 col-span-2">
+          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Xem</p>
+          <div className="text-xl font-bold leading-none text-gray-500 dark:text-gray-400 my-1">
+            {new Intl.NumberFormat('vi-VN').format(app?.views ?? 0)}
           </div>
+          <p className="text-[11px] text-gray-500 dark:text-gray-500 mt-1">Lượt</p>
+        </div>
+      ) : (
+        // Non-TestFlight: Cài đặt & Tải IPA
+        <>
+          <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
+            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Cài đặt</p>
+            <div className="text-xl font-bold leading-none text-gray-500 dark:text-gray-400 my-1">
+              {new Intl.NumberFormat('vi-VN').format(app?.installs ?? 0)}
+            </div>
+            <p className="text-[11px] text-gray-500 dark:text-gray-500 mt-1">Lượt</p>
+          </div>
+          <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
+            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Tải IPA</p>
+            <div className="text-xl font-bold leading-none text-gray-500 dark:text-gray-400 my-1">
+              {new Intl.NumberFormat('vi-VN').format(app?.downloads ?? 0)}
+            </div>
+            <p className="text-[11px] text-gray-500 dark:text-gray-500 mt-1">Lượt</p>
+          </div>
+        </>
+      )}
+    </div>
+  </div>
+</div>
 
           {/* Mô tả */}
           <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
