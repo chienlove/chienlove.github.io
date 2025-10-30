@@ -5,10 +5,10 @@ import { useEffect, useRef } from 'react';
 
 export default function AdUnit({
   className = '',
-  mobileVariant = 'compact',        // 'compact' | 'multiplex'
-  mobileSlot1 = '5160182988',       // 300x250
-  mobileSlot2 = '7109430646',       // multiplex / autorelaxed
-  desktopMode = 'auto',             // 'auto' | 'unit' (render khối desktop riêng)
+  mobileVariant = 'compact',      // 'compact' | 'multiplex'
+  mobileSlot1 = '5160182988',     // 300x250
+  mobileSlot2 = '7109430646',     // multiplex / autorelaxed
+  desktopMode = 'auto',           // 'auto' | 'unit'
   desktopSlot = '4575220124',
 
   // In-article
@@ -18,62 +18,91 @@ export default function AdUnit({
   const wrapperRef = useRef(null);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    // Đảm bảo mảng tồn tại (không push ngay)
+    window.adsbygoogle = window.adsbygoogle || [];
+
     const root = wrapperRef.current;
     if (!root) return;
 
-    // Tìm tất cả ins.adsbygoogle trong component này
-    const insList = Array.from(root.querySelectorAll('ins.adsbygoogle'));
-    if (insList.length === 0) return;
+    const tryPush = (el) => {
+      // Đã load/đã filled thì bỏ qua
+      if (!el || el.dataset.adLoaded === '1') return true;
+      if (el.getAttribute('data-ad-status') === 'filled') {
+        el.dataset.adLoaded = '1';
+        return true;
+      }
+      if (Array.isArray(window.adsbygoogle)) {
+        try {
+          window.adsbygoogle.push({});
+          el.dataset.adLoaded = '1';
+          return true;
+        } catch {
+          // SDK có thể chưa sẵn sàng → sẽ retry
+        }
+      }
+      return false;
+    };
 
-    // Init safe
-    // eslint-disable-next-line no-unsafe-optional-chaining
-    if (typeof window !== 'undefined') {
-      // Bảo đảm mảng tồn tại, nhưng KHÔNG push ngay để tránh lỗi khi SDK chưa load
-      window.adsbygoogle = window.adsbygoogle || [];
-    }
+    const pending = new WeakMap();
 
     const io = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
           if (!entry.isIntersecting) continue;
-
           const el = entry.target;
-          // Chặn double-push
-          if (el.dataset.adLoaded === '1') {
+
+          if (el.dataset.adLoaded === '1' || el.getAttribute('data-ad-status') === 'filled') {
             io.unobserve(el);
             continue;
           }
 
-          try {
-            // Nếu SDK có sẵn thì push, nếu chưa có thì thử lại ở lần intersect sau
-            if (window?.adsbygoogle && Array.isArray(window.adsbygoogle)) {
-              window.adsbygoogle.push({});
-              el.dataset.adLoaded = '1';
-              io.unobserve(el);
-            }
-          } catch (e) {
-            // Không crash app; để IO tiếp tục theo dõi cho lần sau
-            console.warn('ads: push failed (safe-ignored)', e);
+          if (tryPush(el)) {
+            io.unobserve(el);
+            continue;
+          }
+
+          // Retry ngắn khi SDK chưa sẵn sàng
+          if (!pending.has(el)) {
+            let tries = 0;
+            const maxTries = 20; // ~10s với interval 500ms
+            const timer = setInterval(() => {
+              tries += 1;
+              if (tryPush(el) || tries >= maxTries) {
+                clearInterval(timer);
+                pending.delete(el);
+                if (el.dataset.adLoaded === '1') io.unobserve(el);
+              }
+            }, 500);
+            pending.set(el, timer);
           }
         }
       },
       { rootMargin: '200px' }
     );
 
+    const insList = root.querySelectorAll('ins.adsbygoogle');
     insList.forEach((el) => {
-      // Nếu đã được fill bởi Google (đã có data-ad-status hoặc đã đánh dấu), bỏ qua
-      if (el.dataset.adLoaded === '1' || el.getAttribute('data-ad-status') === 'filled') return;
+      if (el.getAttribute('data-ad-status') === 'filled') {
+        el.dataset.adLoaded = '1';
+        return;
+      }
       io.observe(el);
     });
 
     return () => {
       try { io.disconnect(); } catch {}
+      insList.forEach((el) => {
+        const t = pending.get(el);
+        if (t) clearInterval(t);
+      });
     };
   }, []);
 
   const isCompact = mobileVariant === 'compact';
 
-  // In-article riêng
+  // In-article
   if (isArticleAd) {
     return (
       <div ref={wrapperRef} className={`w-full ${className} flex justify-center py-2`}>
@@ -97,7 +126,7 @@ export default function AdUnit({
           <div className="w-full flex justify-center">
             <ins
               className="adsbygoogle"
-              style={{ display: 'block', width: '300px', height: '250px' }}
+              style={{ display: 'block', width: 300, height: 250 }}
               data-ad-client="ca-pub-3905625903416797"
               data-ad-slot={mobileSlot1}
               data-full-width-responsive="false"
@@ -117,7 +146,7 @@ export default function AdUnit({
         )}
       </div>
 
-      {/* Desktop */}
+      {/* Desktop (khi muốn render unit thủ công) */}
       {desktopMode === 'unit' && (
         <div className="hidden md:block w-full">
           <ins
