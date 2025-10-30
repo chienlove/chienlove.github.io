@@ -514,7 +514,7 @@ function interleaveAffiliate(apps, affiliatePool, category, {
     const posMax = Math.max(apps.length - 1, 0);
     const insertAt = apps.length <= 2
       ? apps.length
-      : Math.floor(Math.random() => Math.random()) && Math.floor(Math.random() * (posMax - posMin + 1)) + posMin;
+      : Math.floor(Math.random() * (posMax - posMin + 1)) + posMin;
 
     // (giữ nguyên vị trí chèn như cũ, chỉ bảo toàn)
     result.splice(Math.min(insertAt + i, result.length), 0, {
