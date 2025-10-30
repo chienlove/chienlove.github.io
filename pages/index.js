@@ -15,12 +15,7 @@ import {
   faFire,
   faChevronLeft,
   faChevronRight,
-  faEye,
-  faDownload,
-  faCircleDown
 } from '@fortawesome/free-solid-svg-icons';
-import { faCircleDown as faCircleDownRegular } from '@fortawesome/free-regular-svg-icons';
-import { faEye as faEyeRegular } from '@fortawesome/free-regular-svg-icons';
 
 // Affiliate tĩnh
 import affiliateApps from '../lib/appads';
@@ -31,8 +26,23 @@ import affiliateApps from '../lib/appads';
 const SITE = {
   name: 'StoreiOS',
   url: 'https://storeios.net',
-  twitter: '@storeios' // chỉnh nếu khác
+  twitter: '@storeios', // chỉnh nếu khác
 };
+
+// ✨ Chỉ lấy đúng cột cần thiết để giảm dung lượng page data
+const APP_FIELDS = [
+  'id',
+  'name',
+  'slug',
+  'icon_url',
+  'author',
+  'version',
+  'views',
+  'installs',
+  'downloads', // giữ nếu AppCard/Info khác còn dùng
+  'category_id',
+  'created_at',
+].join(',');
 
 function SEOIndexMeta({ meta }) {
   const {
@@ -114,7 +124,7 @@ function SEOIndexMeta({ meta }) {
       <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
 
-      {/* JSON‑LD */}
+      {/* JSON-LD */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdWebsite) }}
@@ -177,7 +187,7 @@ function PaginationFull({ categorySlug, currentPage, totalPages }) {
           aria-label="Trang trước"
           className="px-2.5 h-8 inline-flex items-center justify-center rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
         >
-          <FontAwesomeIcon icon={faChevronLeft} />
+          <FontAwesomeIcon icon={faChevronRight} style={{ transform: 'scaleX(-1)' }} />
         </Link>
       )}
 
@@ -286,7 +296,7 @@ const AffiliateInlineCard = ({ item, isFirst = false }) => {
 };
 
 /* =========================
-   Metric (absolute) -- Sửa triệt để: Dùng right-2 để khắc phục lỗi lệch trái.
+   Metric (absolute)
    ========================= */
 function MetricInlineAbsolute({ categorySlug, app }) {
   const slug = (categorySlug || '').toLowerCase();
@@ -295,23 +305,17 @@ function MetricInlineAbsolute({ categorySlug, app }) {
   if (slug === 'testflight') {
     value = app?.views ?? 0;
   } else if (slug === 'jailbreak' || slug === 'app-clone') {
-    value = app?.installs ?? 0;
+    value = app?.installs ?? 0; // đổi sang installs
   } else {
     return null;
   }
 
-  // Tối ưu vị trí triệt để:
-  // right-2 (8px): Giá trị này sẽ dịch chuyển khối số đếm thêm về bên phải,
-  // giúp tâm của khối w-10 (40px) khớp với tâm nút tải xuống.
-  // w-10: Khối rộng 40px.
-  // text-center: Căn giữa nội dung bên trong khối 40px này, bất kể số chữ số.
   return (
-    <div 
-      className="absolute right-2 md:right-2 top-[62px] w-10 text-center" 
-      style={{ zIndex: 10 }} 
+    <div
+      className="absolute right-2 md:right-2 top-[62px] w-10 text-center"
+      style={{ zIndex: 10 }}
     >
       <div className="text-[12px] text-gray-500 dark:text-gray-400 whitespace-nowrap">
-        {/* Số đếm in đậm, căn giữa nhờ text-center trên khối cha w-10 */}
         <span className="font-bold">{Number(value || 0).toLocaleString('vi-VN')}</span>
       </div>
     </div>
@@ -330,8 +334,7 @@ export default function Home({ categoriesWithApps, hotApps, paginationData, meta
 
   useEffect(() => {
     let alive = true;
-    
-    // Tối ưu: Loại bỏ setTimeout và logic ép về 'error' sớm.
+
     fetch('/api/check-revocation')
       .then(r => (r.ok ? r.json() : Promise.reject()))
       .then(json => {
@@ -342,12 +345,10 @@ export default function Home({ categoriesWithApps, hotApps, paginationData, meta
         if (!alive) return;
         setCertStatus({ ocspStatus: 'error' });
       });
-      // Không cần .finally()
 
     return () => { alive = false; };
   }, []);
 
-  const multiplexIndices = new Set([1, 3]);
   const contentCard = 'bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4';
   const adCard = contentCard;
 
@@ -395,7 +396,7 @@ export default function Home({ categoriesWithApps, hotApps, paginationData, meta
                   </h2>
 
                   {/* Badge trạng thái cert – chỉ hiện cho jailbreak/app-clone, và chỉ sau khi có kết quả */}
-                  {INSTALLABLE_SLUGS.has((category.slug || '').toLowerCase()) && certStatus && (
+                  {new Set(['jailbreak', 'app-clone']).has((category.slug || '').toLowerCase()) && certStatus && (
                     <span
                       className="flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300"
                       title={
@@ -513,8 +514,9 @@ function interleaveAffiliate(apps, affiliatePool, category, {
     const posMax = Math.max(apps.length - 1, 0);
     const insertAt = apps.length <= 2
       ? apps.length
-      : Math.floor(Math.random() * (posMax - posMin + 1)) + posMin;
+      : Math.floor(Math.random() => Math.random()) && Math.floor(Math.random() * (posMax - posMin + 1)) + posMin;
 
+    // (giữ nguyên vị trí chèn như cũ, chỉ bảo toàn)
     result.splice(Math.min(insertAt + i, result.length), 0, {
       ...aff,
       __isAffiliate: true,
@@ -535,7 +537,7 @@ function interleaveAffiliate(apps, affiliatePool, category, {
 }
 
 /* =========================
-   getServerSideProps (ĐÃ DỌN DẸP SẠCH LOGIC KIỂM TRA ADMIN)
+   getServerSideProps
    ========================= */
 export async function getServerSideProps(ctx) {
   const supabase = createSupabaseServer(ctx);
@@ -550,18 +552,17 @@ export async function getServerSideProps(ctx) {
   const currentPage = parseInt(pageQuery || '1', 10);
   const APPS_PER_PAGE = 10;
 
-  // 1. Kiểm tra User Auth: ĐÃ XÓA HOÀN TOÀN LOGIC KIỂM TRA ĐĂNG NHẬP ADMIN
-
   // 2. Khởi tạo tất cả các truy vấn DB còn lại song song
-  const [categoriesData, hotAppsData] = await Promise.all([ 
-    supabase.from('categories').select('id, name, slug'), 
-    supabase.from('apps') 
-      .select('*') 
-      .order('views', { ascending: false, nullsLast: true }) 
-      .limit(5) 
+  const [categoriesData, hotAppsData] = await Promise.all([
+    supabase.from('categories').select('id, name, slug'),
+    supabase
+      .from('apps')
+      .select(APP_FIELDS)
+      .order('views', { ascending: false, nullsLast: true })
+      .limit(5),
   ]);
 
-  const categories = categoriesData.data; 
+  const categories = categoriesData.data;
 
   const paginationData = {};
   const affiliatePool = affiliateApps.map(a => ({ ...a }));
@@ -577,12 +578,17 @@ export async function getServerSideProps(ctx) {
 
       if (isActive) {
         // Gộp count và data apps cho category active thành song song
-        const [{ count }, { data: apps }] = await Promise.all([ 
-          supabase.from('apps').select('*', { count: 'estimated', head: true }).eq('category_id', category.id), 
-          supabase.from('apps').select('*') 
-            .eq('category_id', category.id) 
-            .order('created_at', { ascending: false }) 
-            .range(startIndex, endIndex) 
+        const [{ count }, { data: apps }] = await Promise.all([
+          supabase
+            .from('apps')
+            .select('id', { count: 'estimated', head: true })
+            .eq('category_id', category.id),
+          supabase
+            .from('apps')
+            .select(APP_FIELDS)
+            .eq('category_id', category.id)
+            .order('created_at', { ascending: false })
+            .range(startIndex, endIndex),
         ]);
 
         const totalApps = count || 0;
@@ -601,12 +607,12 @@ export async function getServerSideProps(ctx) {
 
         return { ...category, apps: apps || [], appsRendered };
       } else {
-        const { data: appsPlusOne } = await supabase 
-          .from('apps') 
-          .select('*') 
-          .eq('category_id', category.id) 
-          .order('created_at', { ascending: false }) 
-          .range(0, APPS_PER_PAGE); 
+        const { data: appsPlusOne } = await supabase
+          .from('apps')
+          .select(APP_FIELDS)
+          .eq('category_id', category.id)
+          .order('created_at', { ascending: false })
+          .range(0, APPS_PER_PAGE);
 
         const hasNext = (appsPlusOne?.length || 0) > APPS_PER_PAGE;
         const apps = (appsPlusOne || []).slice(0, APPS_PER_PAGE);
