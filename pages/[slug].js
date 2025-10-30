@@ -965,7 +965,6 @@ export default function Detail({ serverApp, serverRelated }) {
       {/* Dung lượng */}
       <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
         <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Dung lượng</p>
-        {/* FIX: bọc icon trong container 36px */}
         <div className="h-[36px] flex items-center justify-center">
           <FontAwesomeIcon
             icon={faDatabase}
@@ -976,6 +975,7 @@ export default function Detail({ serverApp, serverRelated }) {
         <p className="text-sm font-medium text-gray-500 dark:text-gray-100 truncate w-full mt-1.5" title={displaySize}>
           {displaySize}
         </p>
+        <p className="text-[11px] text-gray-500 dark:text-gray-500 mt-1.5">App Size</p>
       </div>
 
       {/* Chỉ số theo loại */}
