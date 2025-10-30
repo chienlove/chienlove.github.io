@@ -13,7 +13,6 @@ import {
   faDownload,
   faRocket,
   faArrowLeft,
-  faCodeBranch,
   faDatabase,
   faUser,
   faCheckCircle,
@@ -23,14 +22,6 @@ import {
   faChevronUp,
   faFileArrowDown,
   faHouse,
-  faChevronRight,
-  faEye,
-  faGlobe, // Ngôn ngữ
-  faMobileAlt, // Thiết bị
-  faCalendarDay, // Ngày phát hành
-  faShieldAlt, // Xếp hạng tuổi
-  faGaugeHigh, // Yêu cầu OS
-  faWeightHanging, // Thay icon cho Dung lượng (Database icon đã dùng cho Dung lượng)
 } from '@fortawesome/free-solid-svg-icons';
 
 // Lazy-load Comments
@@ -113,7 +104,7 @@ function stripSimpleTagAll(str, tag) {
     if (iOpen === -1) break;
     const iBracket = s.indexOf(']', iOpen);
     if (iBracket === -1) { s = s.slice(0, iOpen); break; }
-    const iClose = lower.toLowerCase().indexOf(close, iBracket + 1);
+    const iClose = lower.indexOf(close, iBracket + 1); // (fix) không cần .toLowerCase() lần nữa
     if (iClose === -1) {
       s = s.slice(0, iOpen) + s.slice(iBracket + 1);
       continue;
@@ -383,7 +374,7 @@ export default function Detail({ serverApp, serverRelated }) {
     const appName     = app.name || '';
     const version     = app.version ? ` ${app.version}` : '';
     const author      = app.author || '';
-    const currentYear = '2025';
+    const currentYear = String(new Date().getFullYear()); // (fix) năm động
     const os          = app.minimum_os_version ? `iOS ${app.minimum_os_version}+` : 'iOS';
 
     const generateTitle = () => {
@@ -393,8 +384,6 @@ export default function Detail({ serverApp, serverRelated }) {
           const jailbreakKeywords = 'Jailbreak IPA, Tweak';
           return `${appName}${version} - ${jailbreakKeywords} cho ${os} | StoreiOS`;
       }
-      
-      // LOGIC MỚI CHO APP CLONE (Đảm bảo logic SEO)
       if (categorySlug === 'app-clone') {
           const cloneKeywords = 'App Clone IPA, Nhân bản, Đa tài khoản';
           return `${appName}${version} - ${cloneKeywords} cho ${os} | StoreiOS`;
@@ -414,11 +403,10 @@ export default function Detail({ serverApp, serverRelated }) {
       if (categorySlug === 'jailbreak') {
         return `${appName}${version}${catName} - Công cụ/ứng dụng jailbreak cho ${os}. Tải về an toàn${sizeText}${authorText}. Cập nhật ${currentYear}.`;
       }
-      // LOGIC MỚI CHO APP CLONE (Đảm bảo logic SEO)
       if (categorySlug === 'app-clone') {
         return `${appName}${version}${catName} - Ứng dụng nhân bản, đa tài khoản cho ${os}. Tải về an toàn${sizeText}${authorText}. Cập nhật ${currentYear}.`;
       }
-      
+
       return `${appName}${version}${catName} - Ứng dụng iOS miễn phí${sizeText}${authorText}. Cài đặt nhanh, cập nhật ${currentYear}.`;
     };
 
@@ -431,7 +419,6 @@ export default function Detail({ serverApp, serverRelated }) {
       if (author) keywords.push(author);
       if (isTestflight) keywords.push('testflight', 'tham gia');
       if (categorySlug === 'jailbreak') keywords.push('jailbreak', 'unc0ver', 'root', 'tweak');
-      // Thêm keywords cho App Clone
       if (categorySlug === 'app-clone') keywords.push('app clone', 'nhân bản', 'đa tài khoản', 'dual app');
       return keywords.join(', ');
     };
@@ -448,7 +435,7 @@ export default function Detail({ serverApp, serverRelated }) {
     if (!app) return null;
 
     return {
-      "@context": "[https://schema.org](https://schema.org)",
+      "@context": "https://schema.org", // (fix) không dùng Markdown
       "@type": "SoftwareApplication",
       "name": app.name,
       "applicationCategory": "SoftwareApplication",
@@ -479,7 +466,7 @@ export default function Detail({ serverApp, serverRelated }) {
         "@type": "ListItem",
         "position": 1,
         "name": "Home",
-        "item": "[https://storeios.net](https://storeios.net)"
+        "item": "https://storeios.net" // (fix) URL chuẩn
       }
     ];
 
@@ -499,7 +486,7 @@ export default function Detail({ serverApp, serverRelated }) {
     });
 
     return {
-      "@context": "[https://schema.org](https://schema.org)",
+      "@context": "https://schema.org", // (fix)
       "@type": "BreadcrumbList",
       "itemListElement": itemListElement
     };
@@ -642,7 +629,7 @@ export default function Detail({ serverApp, serverRelated }) {
   };
 
   /* =======================================================
-     SỬA ĐỔI HÀM CÀI ĐẶT: Mở tab mới & Gọi API tăng lượt tải
+     CÀI ĐẶT: chỉ mở tab mới. Đếm để server xử lý ở /install/*
      ======================================================= */
   const handleInstall = async (e) => {
     e.preventDefault();
@@ -650,25 +637,13 @@ export default function Detail({ serverApp, serverRelated }) {
 
     setIsInstalling(true);
     const installUrl = `/install/${app.slug}`;
+    window.open(installUrl, '_blank'); // server sẽ đếm
 
-    // Mở tab mới ngay lập tức
-    window.open(installUrl, '_blank');
-
-    try {
-      await fetch(`/api/admin/add-download?id=${app.id}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        cache: 'no-store',
-      });
-    } catch (err) {
-      console.error('Lỗi tăng lượt tải:', err);
-    } finally {
-      setTimeout(() => setIsInstalling(false), 500);
-    }
+    setTimeout(() => setIsInstalling(false), 500);
   };
 
   /* =======================================================
-     SỬA ĐỔI HÀM TẢI IPA: Mở tab mới với query & Gọi API tăng lượt tải
+     TẢI IPA: chỉ mở tab mới. Đếm để server xử lý ở /install/*
      ======================================================= */
   const handleDownloadIpa = (e) => {
     e.preventDefault();
@@ -679,15 +654,7 @@ export default function Detail({ serverApp, serverRelated }) {
 
     setIsFetchingIpa(true);
     const downloadUrl = `/install/${app.slug}?action=download`;
-
-    // Mở tab mới ngay lập tức
-    window.open(downloadUrl, '_blank');
-
-    fetch(`/api/admin/add-download?id=${app.id}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      cache: 'no-store',
-    }).catch(console.error);
+    window.open(downloadUrl, '_blank'); // server sẽ đếm
 
     setTimeout(() => setIsFetchingIpa(false), 500);
   };
@@ -914,7 +881,7 @@ export default function Detail({ serverApp, serverRelated }) {
                       >
                         {isInstalling ? (
                           <>
-                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" fill="none" viewBox="0 0 24 24">
+                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
@@ -937,7 +904,7 @@ export default function Detail({ serverApp, serverRelated }) {
                       >
                         {isFetchingIpa ? (
                           <>
-                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" fill="none" viewBox="0 0 24 24">
+                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
@@ -979,7 +946,7 @@ export default function Detail({ serverApp, serverRelated }) {
                   </p>
                 </div>
 
-                {/* Phiên bản (Đã sửa) */}
+                {/* Phiên bản */}
                 <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
                   <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Phiên bản</p>
                   <div className="text-xl font-bold leading-none text-gray-500 dark:text-gray-400 my-1 h-8 flex items-center justify-center" title={app.version || 'Không rõ'}>
@@ -1006,7 +973,6 @@ export default function Detail({ serverApp, serverRelated }) {
                   return (
                     <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
                       <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">{topLabel}</p>
-                      {/* Màu đồng bộ với các icon khác */}
                       <div className="text-xl font-bold leading-none text-gray-500 dark:text-gray-400 my-1" title={String(count)}>{nf.format(count)}</div>
                       <p className="text-[11px] text-gray-500 dark:text-gray-500 mt-1">Lượt</p>
                     </div>
@@ -1015,7 +981,6 @@ export default function Detail({ serverApp, serverRelated }) {
               </div>
             </div>
           </div>
-
 
           {/* Mô tả */}
           <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
@@ -1085,7 +1050,7 @@ export default function Detail({ serverApp, serverRelated }) {
             </div>
           )}
 
-          {/* Thông tin chi tiết (Giữ nguyên cấu trúc chi tiết hơn) */}
+          {/* Thông tin chi tiết */}
           <div className="bg-white dark:bg-zinc-900 rounded-xl shadow overflow-hidden">
             <h2 className="px-4 pt-4 text-lg font-bold text-gray-800 dark:text-gray-100">Thông tin</h2>
             <div className="mt-3 divide-y divide-gray-200 dark:divide-zinc-800">
