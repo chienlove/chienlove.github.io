@@ -17,13 +17,13 @@ function verifyTokenOrThrow(token, ua) {
   const decoded = jwt.verify(token, secret);
   const uaHash = crypto.createHash('sha256').update(ua || '').digest('hex');
   if (decoded.ua && decoded.ua !== uaHash) throw new Error('UA mismatch');
-  return decoded; // { id?, ipa_name, ua?, iat, exp }
+  return decoded;
 }
 
 async function getApp({ slug, id }) {
   if (slug) {
-    const { data } = await supabase.from('apps').select('*').ilike('slug', String(slug)).single();
-    if (data) return data;
+    const { data, error } = await supabase.from('apps').select('*').ilike('slug', String(slug)).single();
+    if (!error && data) return data;
   }
   if (id) {
     const { data } = await supabase.from('apps').select('*').eq('id', id).single();
@@ -57,7 +57,7 @@ export default async function handler(req, res) {
     if (!tRes.ok) return res.status(500).json({ error: 'Token error' });
     const { token: plistToken } = await tRes.json();
 
-    // Thêm source=proxy để /api/plist không cộng installs
+    // source=proxy để /api/plist không cộng installs
     const plistUrl = `${base}/api/plist?ipa_name=${encodeURIComponent(plistName)}&token=${encodeURIComponent(plistToken)}&source=proxy`;
     const pRes = await fetch(plistUrl);
     if (!pRes.ok) return res.status(500).json({ error: 'Manifest fail' });
@@ -71,8 +71,13 @@ export default async function handler(req, res) {
     const upstream = await fetch(ipaUrl);
     if (!upstream.ok) return res.status(upstream.status).end();
 
-    // ✅ Đếm DOWNLOADS (server side)
-    await supabase.rpc('increment_app_downloads', { app_id: app.id }).catch(console.error);
+    // ✅ Đếm DOWNLOADS bằng RPC (không chain .catch)
+    try {
+      const { error } = await supabase.rpc('increment_app_downloads', { app_id: app.id });
+      if (error) console.error('increment_app_downloads error:', error);
+    } catch (e) {
+      console.error('RPC downloads try/catch:', e);
+    }
 
     res.setHeader('Content-Type', 'application/octet-stream');
     res.setHeader('Content-Disposition', `attachment; filename="${app.slug}.ipa"`);
@@ -96,6 +101,7 @@ export default async function handler(req, res) {
     }
   } catch (err) {
     console.error('download-ipa error:', err);
-    return res.status(/token|expired|jwt/i.test(err.message) ? 401 : 400).json({ error: err.message });
+    const status = /expired|jwt|signature|token|UA mismatch/i.test(String(err?.message)) ? 401 : 400;
+    return res.status(status).json({ error: err?.message || 'Bad Request' });
   }
 }

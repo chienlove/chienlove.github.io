@@ -16,28 +16,25 @@ export async function getServerSideProps({ params, query, req }) {
   const isIpaDownload = query.action === 'download';
   const secret = process.env.JWT_SECRET;
 
-  // Xác định base từ header (ổn định trên Vercel)
   const proto = req.headers['x-forwarded-proto'] || 'https';
   const host  = req.headers['x-forwarded-host'] || req.headers.host;
   const baseUrl = `${proto}://${host}`;
 
   const expiresIn = isIpaDownload ? '60s' : '40s';
   const token = jwt.sign(
-    isIpaDownload
-      ? { id: app.id, ipa_name: encodeURIComponent(app.download_link) } // token cho download-ipa
-      : { id: app.id, ipa_name: encodeURIComponent(app.download_link) }, // token cho plist
+    { id: app.id, ipa_name: encodeURIComponent(app.download_link) },
     secret,
     { expiresIn }
   );
 
-  // itms-services: thêm install=1 để /api/plist biết đây là lần cài thực sự
-  const plistUrl = `${baseUrl}/api/plist?ipa_name=${encodeURIComponent(app.download_link)}&token=${encodeURIComponent(token)}&install=1`;
-  const installUrl = `itms-services://?action=download-manifest&url=${encodeURIComponent(plistUrl)}`;
+  // itms-services: có install=1 để /api/plist đếm installs
+  const plistUrl    = `${baseUrl}/api/plist?ipa_name=${encodeURIComponent(app.download_link)}&token=${encodeURIComponent(token)}&install=1`;
+  const installUrl  = `itms-services://?action=download-manifest&url=${encodeURIComponent(plistUrl)}`;
 
-  // link tải IPA (server sẽ đếm downloads)
+  // link tải IPA (server đếm downloads)
   const downloadIpaUrl = `/api/download-ipa?slug=${encodeURIComponent(app.slug)}&token=${encodeURIComponent(token)}`;
 
-  // HEAD check không có install=1 để tránh đếm
+  // HEAD verify: không có install=1, để không đếm
   const rawPlistUrl = `${baseUrl}/api/plist?ipa_name=${encodeURIComponent(app.download_link)}&token=${encodeURIComponent(token)}`;
 
   return {
@@ -92,11 +89,12 @@ export default function InstallPage({ app, installUrl, downloadIpaUrl, rawPlistU
       toast.error('Liên kết đã hết hạn. Vui lòng tải lại trang.');
       return;
     }
+
     if (isIpaDownload) {
-      // ✅ KHÔNG gọi add-download ở client -- server /api/download-ipa đã đếm
+      // Server /api/download-ipa đã tự đếm
       window.location.href = downloadIpaUrl;
     } else {
-      // HEAD verify không đếm
+      // HEAD verify: không đếm
       try {
         const verify = await fetch(rawPlistUrl, { method: 'HEAD' });
         if (!verify.ok) {
@@ -105,7 +103,7 @@ export default function InstallPage({ app, installUrl, downloadIpaUrl, rawPlistU
           else toast.error('Không thể xác minh liên kết cài đặt.');
           return;
         }
-        // Mở itms-services (install=1): /api/plist sẽ cộng installs
+        // Mở itms-services: /api/plist sẽ đếm installs
         window.location.href = installUrl;
       } catch (e) {
         console.error('Verify error:', e);
