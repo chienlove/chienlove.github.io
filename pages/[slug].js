@@ -948,7 +948,7 @@ export default function Detail({ serverApp, serverRelated }) {
             className="w-8 h-8 text-gray-500 dark:text-gray-400"
           />
         </div>
-        <p className="text-sm font-medium text-gray-800 dark:text-gray-100 truncate w-full mt-1.5" title={app.author || 'Không rõ'}>
+        <p className="text-sm font-medium text-gray-500 dark:text-gray-100 truncate w-full mt-1.5" title={app.author || 'Không rõ'}>
           {app.author || 'Không rõ'}
         </p>
       </div>
@@ -959,7 +959,7 @@ export default function Detail({ serverApp, serverRelated }) {
         <div className="text-xl font-bold leading-none text-gray-500 dark:text-gray-400 h-[36px] flex items-center justify-center" title={app.version || 'Không rõ'}>
           {app.version || '--'}
         </div>
-        <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1.5">Đã cập nhật</p>
+        <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-1.5">Đã cập nhật</p>
       </div>
 
       {/* Dung lượng */}
