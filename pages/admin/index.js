@@ -6,11 +6,13 @@ import { supabase } from "../../lib/supabase";
 import { v4 as uuidv4 } from "uuid";
 import CertManagerAndSigner from "../../components/admin/CertManagerAndSigner";
 
+import { toast } from "react-toastify";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faPlus, faEdit, faTrash, faSave, faTimes, faSync, faSpinner,
   faBoxOpen, faFolder, faShieldAlt, faSun, faMoon, faBars,
-  faSignOutAlt, faSearch, faExclamationTriangle, faEye, faCheckSquare, faSquare
+  faSignOutAlt, faSearch, faExclamationTriangle, faEye, faCheckSquare, faSquare,
+  faChevronDown, faChevronUp, faLayerGroup, faExchangeAlt
 } from "@fortawesome/free-solid-svg-icons";
 import { faApple } from "@fortawesome/free-brands-svg-icons";
 
@@ -56,8 +58,14 @@ export default function Admin() {
 
   // Bulk select
   const [selectedIds, setSelectedIds] = useState([]);
-  const [bulkCategory, setBulkCategory] = useState(""); // chuyên mục mới cho cập nhật hàng loạt
-  const [bulkWorking, setBulkWorking] = useState(false);
+  const [bulkMenuOpen, setBulkMenuOpen] = useState(false);
+
+  // Modals
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null); // xoá 1 app
+  const [confirmBulkDeleteOpen, setConfirmBulkDeleteOpen] = useState(false); // xoá nhiều
+  const [moveModalOpen, setMoveModalOpen] = useState(false); // chuyển chuyên mục nhiều
+  const [moveTargetCategory, setMoveTargetCategory] = useState("");
+  const [busyAction, setBusyAction] = useState(""); // "deleting" | "bulk-deleting" | "moving" | "saving"
 
   // --- helpers ---
   const isValidUUID = (id) => {
@@ -220,15 +228,23 @@ export default function Admin() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  async function handleDelete(id) {
-    if (!confirm("Xác nhận xoá ứng dụng?")) return;
+  function askDelete(id) {
+    setConfirmDeleteId(id);
+  }
+
+  async function doDelete(id) {
     try {
+      setBusyAction("deleting");
       const { error } = await supabase.from("apps").delete().eq("id", id);
       if (error) throw error;
       await fetchApps();
+      toast.success("Đã xoá ứng dụng!");
     } catch (err) {
       console.error("Delete app error:", err);
-      setErrorMessage("Lỗi khi xoá ứng dụng");
+      toast.error("Xoá ứng dụng thất bại!");
+    } finally {
+      setBusyAction("");
+      setConfirmDeleteId(null);
     }
   }
 
@@ -273,19 +289,21 @@ export default function Admin() {
       if (editingId) {
         const { error } = await supabase.from("apps").update(payload).eq("id", editingId);
         if (error) throw error;
+        toast.success("Cập nhật ứng dụng thành công!");
       } else {
         const { error } = await supabase
           .from("apps")
           .insert([{ ...payload, id: uuidv4(), created_at: new Date().toISOString() }]);
         if (error) throw error;
+        toast.success("Thêm ứng dụng mới thành công!");
       }
 
-      alert(editingId ? "Cập nhật thành công!" : "Thêm mới thành công!");
       resetForm(true); // giữ lại selectedCategory
       await fetchApps();
     } catch (err) {
       console.error("Submit error:", err);
       setErrorMessage(err.message || "Lỗi khi lưu dữ liệu");
+      toast.error("Lưu dữ liệu thất bại!");
     } finally {
       setSubmitting(false);
     }
@@ -360,7 +378,7 @@ export default function Admin() {
       }
 
       setAppStoreUrl("");
-      alert("Đã lấy thông tin thành công từ AppStore!");
+      toast.success("Đã lấy thông tin từ App Store!");
     } catch (err) {
       let msg = "Lỗi khi lấy thông tin từ AppStore";
       if (err.name === "TypeError" && String(err.message).includes("fetch"))
@@ -370,6 +388,7 @@ export default function Admin() {
       else if (err.message) msg = err.message;
 
       setErrorMessage(msg);
+      toast.error(msg);
     } finally {
       setLoadingAppStoreInfo(false);
     }
@@ -395,11 +414,13 @@ export default function Admin() {
           .update(payload)
           .eq("id", editingCategoryId);
         if (error) throw error;
+        toast.success("Cập nhật chuyên mục thành công!");
       } else {
         const { error } = await supabase
           .from("categories")
           .insert([{ ...payload, id: uuidv4() }]);
         if (error) throw error;
+        toast.success("Thêm chuyên mục mới thành công!");
       }
 
       setCategoryForm({ name: "", fields: [], enable_appstore_fetch: false });
@@ -408,6 +429,7 @@ export default function Admin() {
     } catch (err) {
       console.error("Category submit error:", err);
       setErrorMessage(err.message || "Lỗi khi lưu chuyên mục");
+      toast.error("Lưu chuyên mục thất bại!");
     } finally {
       setSubmitting(false);
     }
@@ -421,6 +443,7 @@ export default function Admin() {
       enable_appstore_fetch: !!category.enable_appstore_fetch,
     });
     setActiveTab("categories");
+    if (typeof window !== "undefined") window.location.hash = "categories";
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -431,9 +454,11 @@ export default function Admin() {
       await supabase.from("apps").delete().eq("category_id", id);
       await supabase.from("categories").delete().eq("id", id);
       await Promise.all([fetchCategories(), fetchApps()]);
+      toast.success("Đã xoá chuyên mục!");
     } catch (err) {
       console.error("Delete category error:", err);
       setErrorMessage("Lỗi khi xoá chuyên mục");
+      toast.error("Xoá chuyên mục thất bại!");
     }
   }
 
@@ -483,49 +508,59 @@ export default function Admin() {
   }
   function clearSelected() {
     setSelectedIds([]);
-    setBulkCategory("");
   }
 
-  // --- bulk actions handlers ---
-  async function bulkUpdateCategory() {
-    if (!bulkCategory || !isValidUUID(bulkCategory)) {
-      alert("Vui lòng chọn chuyên mục hợp lệ để cập nhật.");
-      return;
-    }
+  // --- bulk actions ---
+  function openBulkDelete() {
     if (selectedIds.length === 0) return;
-    setBulkWorking(true);
-    try {
-      const { error } = await supabase
-        .from("apps")
-        .update({ category_id: bulkCategory, updated_at: new Date().toISOString() })
-        .in("id", selectedIds);
-      if (error) throw error;
-      await fetchApps();
-      clearSelected();
-      alert("Đã cập nhật chuyên mục cho các mục đã chọn.");
-    } catch (err) {
-      console.error("Bulk update category error:", err);
-      setErrorMessage("Lỗi khi cập nhật chuyên mục hàng loạt");
-    } finally {
-      setBulkWorking(false);
-    }
+    setConfirmBulkDeleteOpen(true);
+    setBulkMenuOpen(false);
+  }
+  function openMoveModal() {
+    if (selectedIds.length === 0) return;
+    setMoveTargetCategory("");
+    setMoveModalOpen(true);
+    setBulkMenuOpen(false);
   }
 
-  async function bulkDelete() {
-    if (selectedIds.length === 0) return;
-    if (!confirm(`Xoá ${selectedIds.length} ứng dụng đã chọn?`)) return;
-    setBulkWorking(true);
+  async function doBulkDelete() {
     try {
+      setBusyAction("bulk-deleting");
       const { error } = await supabase.from("apps").delete().in("id", selectedIds);
       if (error) throw error;
       await fetchApps();
+      toast.success(`Đã xoá ${selectedIds.length} ứng dụng!`);
       clearSelected();
-      alert("Đã xoá các ứng dụng đã chọn.");
+      setConfirmBulkDeleteOpen(false);
     } catch (err) {
       console.error("Bulk delete error:", err);
-      setErrorMessage("Lỗi khi xoá hàng loạt");
+      toast.error("Xoá hàng loạt thất bại!");
     } finally {
-      setBulkWorking(false);
+      setBusyAction("");
+    }
+  }
+
+  async function doMoveCategory() {
+    if (!moveTargetCategory || !isValidUUID(moveTargetCategory)) {
+      toast.error("Vui lòng chọn chuyên mục hợp lệ!");
+      return;
+    }
+    try {
+      setBusyAction("moving");
+      const { error } = await supabase
+        .from("apps")
+        .update({ category_id: moveTargetCategory, updated_at: new Date().toISOString() })
+        .in("id", selectedIds);
+      if (error) throw error;
+      await fetchApps();
+      toast.success(`Đã chuyển ${selectedIds.length} ứng dụng!`);
+      clearSelected();
+      setMoveModalOpen(false);
+    } catch (err) {
+      console.error("Move error:", err);
+      toast.error("Chuyển chuyên mục thất bại!");
+    } finally {
+      setBusyAction("");
     }
   }
 
@@ -556,6 +591,7 @@ export default function Admin() {
           <button
             onClick={() => setSidebarOpen(false)}
             className="md:hidden text-gray-500 hover:text-gray-700"
+            aria-label="Đóng menu"
           >
             <FontAwesomeIcon icon={faTimes} />
           </button>
@@ -618,6 +654,7 @@ export default function Admin() {
             }}
             className="ml-auto text-red-500 hover:text-red-600"
             title="Đăng xuất"
+            aria-label="Đăng xuất"
           >
             <FontAwesomeIcon icon={faSignOutAlt} size="lg" />
           </button>
@@ -647,6 +684,7 @@ export default function Admin() {
             onClick={() => setDarkMode(!darkMode)}
             className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
             title={darkMode ? "Chế độ sáng" : "Chế độ tối"}
+            aria-label="Chuyển chế độ sáng/tối"
           >
             <FontAwesomeIcon icon={darkMode ? faSun : faMoon} />
           </button>
@@ -662,6 +700,7 @@ export default function Admin() {
               <button
                 onClick={() => setErrorMessage("")}
                 className="text-red-700 dark:text-red-300 hover:text-red-900 dark:hover:text-red-100"
+                aria-label="Đóng cảnh báo"
               >
                 <FontAwesomeIcon icon={faTimes} />
               </button>
@@ -727,7 +766,7 @@ export default function Admin() {
                         type="button"
                         onClick={fetchAppStoreInfo}
                         disabled={loadingAppStoreInfo || !appStoreUrl.trim()}
-                        className="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm font-medium flex items-center gap-2"
+                        className="px-3 py-2 text-sm font-semibold rounded bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
                       >
                         {loadingAppStoreInfo ? (
                           <>
@@ -787,7 +826,11 @@ export default function Admin() {
                   <button
                     type="submit"
                     disabled={submitting || !selectedCategory}
-                    className="px-4 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-semibold flex items-center gap-2 text-sm"
+                    className={`px-4 py-2 text-sm font-semibold rounded text-white flex items-center gap-2 ${
+                      editingId
+                        ? "bg-green-600 hover:bg-green-700"
+                        : "bg-blue-600 hover:bg-blue-700"
+                    } disabled:bg-gray-400 disabled:cursor-not-allowed`}
                   >
                     {submitting ? (
                       <>
@@ -808,7 +851,7 @@ export default function Admin() {
                     <button
                       type="button"
                       onClick={() => resetForm(true)}
-                      className="px-4 py-1.5 bg-gray-500 text-white rounded hover:bg-gray-600 font-semibold flex items-center gap-2 text-sm"
+                      className="px-4 py-2 text-sm font-semibold rounded bg-red-500 text-white hover:bg-red-600 flex items-center gap-2"
                     >
                       <FontAwesomeIcon icon={faTimes} /> Hủy
                     </button>
@@ -851,59 +894,57 @@ export default function Admin() {
               </div>
 
               {/* Bulk toolbar */}
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-3">
+              <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <button
                     onClick={toggleSelectAllOnPage}
-                    className="flex items-center gap-2 px-3 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm"
+                    className="flex items-center gap-2 px-3 py-1.5 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm"
                   >
                     <FontAwesomeIcon icon={allSelectedOnPage(pageItems) ? faCheckSquare : faSquare} />
-                    Chọn tất cả trang này
+                    Chọn trang này
                   </button>
-                  {selectedIds.length > 0 && (
-                    <div className="text-sm opacity-80">
-                      Đã chọn <b>{selectedIds.length}</b> mục
-                      <button
-                        onClick={clearSelected}
-                        className="ml-3 px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
-                      >
-                        Bỏ chọn
-                      </button>
-                    </div>
-                  )}
+
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setBulkMenuOpen((v) => !v)}
+                      disabled={selectedIds.length === 0}
+                      className="flex items-center gap-2 px-3 py-1.5 rounded border border-gray-300 dark:border-gray-600 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm font-semibold"
+                    >
+                      <FontAwesomeIcon icon={faLayerGroup} />
+                      Tác vụ ({selectedIds.length})
+                      <FontAwesomeIcon icon={bulkMenuOpen ? faChevronUp : faChevronDown} />
+                    </button>
+
+                    {bulkMenuOpen && (
+                      <div className="absolute z-10 mt-2 w-56 rounded border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg">
+                        <button
+                          onClick={openBulkDelete}
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                        >
+                          <FontAwesomeIcon icon={faTrash} className="text-red-500" />
+                          Xoá đã chọn
+                        </button>
+                        <button
+                          onClick={openMoveModal}
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
+                        >
+                          <FontAwesomeIcon icon={faExchangeAlt} className="text-blue-500" />
+                          Chuyển chuyên mục
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
-                {/* Bulk actions (hiện khi có chọn) */}
                 {selectedIds.length > 0 && (
-                  <div className="flex flex-col md:flex-row md:items-center gap-2">
-                    <div className="flex items-center gap-2">
-                      <select
-                        value={bulkCategory}
-                        onChange={(e) => setBulkCategory(e.target.value)}
-                        className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
-                      >
-                        <option value="">-- Chọn chuyên mục mới --</option>
-                        {categories.map((cat) => (
-                          <option key={cat.id} value={cat.id}>{cat.name}</option>
-                        ))}
-                      </select>
-                      <button
-                        onClick={bulkUpdateCategory}
-                        disabled={bulkWorking || !bulkCategory}
-                        className="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 text-sm font-semibold flex items-center gap-2"
-                      >
-                        {bulkWorking ? <FontAwesomeIcon icon={faSpinner} spin /> : <FontAwesomeIcon icon={faSave} />}
-                        Cập nhật chuyên mục
-                      </button>
-                    </div>
-
+                  <div className="text-sm opacity-80">
+                    Đã chọn <b>{selectedIds.length}</b> mục
                     <button
-                      onClick={bulkDelete}
-                      disabled={bulkWorking}
-                      className="px-3 py-1.5 bg-red-600 text-white rounded hover:bg-red-700 text-sm font-semibold flex items-center gap-2"
+                      onClick={clearSelected}
+                      className="ml-3 px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
                     >
-                      {bulkWorking ? <FontAwesomeIcon icon={faSpinner} spin /> : <FontAwesomeIcon icon={faTrash} />}
-                      Xoá đã chọn
+                      Bỏ chọn
                     </button>
                   </div>
                 )}
@@ -942,11 +983,7 @@ export default function Admin() {
                           <td className="p-3">
                             <div className="flex items-center gap-3">
                               {app.icon_url && <img src={app.icon_url} alt="" className="w-8 h-8 rounded" />}
-                              <Link
-                                href={`/${slug}`}
-                                target="_blank"
-                                className="text-blue-600 hover:underline font-medium"
-                              >
+                              <Link href={`/${slug}`} target="_blank" className="font-medium text-blue-600 hover:underline">
                                 {app.name || "Không có tên"}
                               </Link>
                             </div>
@@ -956,23 +993,23 @@ export default function Admin() {
                             {app.created_at ? new Date(app.created_at).toLocaleDateString("vi-VN") : "N/A"}
                           </td>
                           <td className="p-3">
-                            <div className="flex gap-1.5">
+                            <div className="flex gap-2">
                               <Link
                                 href={`/${slug}`}
                                 target="_blank"
-                                className="px-2 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 flex items-center gap-1 font-semibold"
+                                className="px-2.5 py-1 text-xs font-semibold rounded bg-green-600 text-white hover:bg-green-700 flex items-center gap-1"
                               >
                                 <FontAwesomeIcon icon={faEye} /> Xem
                               </Link>
                               <button
                                 onClick={() => handleEdit(app)}
-                                className="px-2 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600 flex items-center gap-1 font-semibold"
+                                className="px-2.5 py-1 text-xs font-semibold rounded bg-yellow-500 text-white hover:bg-yellow-600 flex items-center gap-1"
                               >
                                 <FontAwesomeIcon icon={faEdit} /> Sửa
                               </button>
                               <button
-                                onClick={() => handleDelete(app.id)}
-                                className="px-2 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600 flex items-center gap-1 font-semibold"
+                                onClick={() => askDelete(app.id)}
+                                className="px-2.5 py-1 text-xs font-semibold rounded bg-red-500 text-white hover:bg-red-600 flex items-center gap-1"
                               >
                                 <FontAwesomeIcon icon={faTrash} /> Xoá
                               </button>
@@ -1001,11 +1038,7 @@ export default function Admin() {
                           />
                           {app.icon_url && <img src={app.icon_url} alt="" className="w-8 h-8 rounded" />}
                           <div className="flex-1">
-                            <Link
-                              href={`/${slug}`}
-                              target="_blank"
-                              className="text-blue-600 hover:underline font-semibold block"
-                            >
+                            <Link href={`/${slug}`} target="_blank" className="font-semibold text-blue-600 hover:underline block">
                               {app.name || "Không có tên"}
                             </Link>
                             <div className="text-xs opacity-70 mt-0.5">
@@ -1020,19 +1053,19 @@ export default function Admin() {
                           <Link
                             href={`/${slug}`}
                             target="_blank"
-                            className="text-center px-2 py-1.5 rounded bg-green-600 text-white hover:bg-green-700 text-sm font-semibold"
+                            className="text-center px-2 py-1.5 text-xs font-semibold rounded bg-green-600 text-white hover:bg-green-700"
                           >
                             <FontAwesomeIcon icon={faEye} /> <span className="ml-1">Xem</span>
                           </Link>
                           <button
                             onClick={() => handleEdit(app)}
-                            className="text-center px-2 py-1.5 rounded bg-yellow-500 text-white hover:bg-yellow-600 text-sm font-semibold"
+                            className="text-center px-2 py-1.5 text-xs font-semibold rounded bg-yellow-500 text-white hover:bg-yellow-600"
                           >
                             <FontAwesomeIcon icon={faEdit} /> <span className="ml-1">Sửa</span>
                           </button>
                           <button
-                            onClick={() => handleDelete(app.id)}
-                            className="text-center px-2 py-1.5 rounded bg-red-500 text-white hover:bg-red-600 text-sm font-semibold"
+                            onClick={() => askDelete(app.id)}
+                            className="text-center px-2 py-1.5 text-xs font-semibold rounded bg-red-500 text-white hover:bg-red-600"
                           >
                             <FontAwesomeIcon icon={faTrash} /> <span className="ml-1">Xoá</span>
                           </button>
@@ -1132,7 +1165,7 @@ export default function Admin() {
                     <button
                       type="button"
                       onClick={addField}
-                      className="px-3 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 flex items-center gap-2 text-sm font-semibold"
+                      className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 flex items-center gap-2 font-semibold text-sm"
                     >
                       <FontAwesomeIcon icon={faPlus} /> Thêm
                     </button>
@@ -1162,7 +1195,9 @@ export default function Admin() {
                   <button
                     type="submit"
                     disabled={submitting || !categoryForm.name.trim()}
-                    className="px-4 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-semibold flex items-center gap-2 text-sm"
+                    className={`px-4 py-2 text-sm font-semibold text-white rounded flex items-center gap-2 ${
+                      editingCategoryId ? "bg-green-600 hover:bg-green-700" : "bg-blue-600 hover:bg-blue-700"
+                    } disabled:bg-gray-400 disabled:cursor-not-allowed`}
                   >
                     {submitting ? (
                       <>
@@ -1186,7 +1221,7 @@ export default function Admin() {
                         setEditingCategoryId(null);
                         setCategoryForm({ name: "", fields: [], enable_appstore_fetch: false });
                       }}
-                      className="px-4 py-1.5 bg-gray-500 text-white rounded hover:bg-gray-600 font-semibold flex items-center gap-2 text-sm"
+                      className="px-4 py-2 text-sm font-semibold rounded bg-red-500 text-white hover:bg-red-600 flex items-center gap-2"
                     >
                       <FontAwesomeIcon icon={faTimes} /> Hủy
                     </button>
@@ -1226,16 +1261,16 @@ export default function Admin() {
                         </td>
                         <td className="p-3">{category.fields?.length || 0} trường</td>
                         <td className="p-3">
-                          <div className="flex gap-1.5">
+                          <div className="flex gap-2">
                             <button
                               onClick={() => handleEditCategory(category)}
-                              className="px-2 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600 flex items-center gap-1 font-semibold"
+                              className="px-2.5 py-1 text-xs font-semibold rounded bg-yellow-500 text-white hover:bg-yellow-600 flex items-center gap-1"
                             >
                               <FontAwesomeIcon icon={faEdit} /> Sửa
                             </button>
                             <button
                               onClick={() => handleDeleteCategory(category.id)}
-                              className="px-2 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600 flex items-center gap-1 font-semibold"
+                              className="px-2.5 py-1 text-xs font-semibold rounded bg-red-500 text-white hover:bg-red-600 flex items-center gap-1"
                             >
                               <FontAwesomeIcon icon={faTrash} /> Xoá
                             </button>
@@ -1265,6 +1300,98 @@ export default function Admin() {
           </section>
         ) : null}
       </main>
+
+      {/* ---------- MODALS ---------- */}
+
+      {/* Confirm delete single */}
+      {confirmDeleteId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setConfirmDeleteId(null)} />
+          <div className="relative z-10 w-11/12 max-w-sm rounded-lg bg-white dark:bg-gray-800 p-5 shadow-lg">
+            <h3 className="text-lg font-semibold mb-2">Xác nhận xoá</h3>
+            <p className="text-sm opacity-80 mb-4">Bạn có chắc muốn xoá ứng dụng này?</p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setConfirmDeleteId(null)}
+                className="px-3 py-1.5 text-sm font-semibold rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+              >
+                Huỷ
+              </button>
+              <button
+                onClick={() => doDelete(confirmDeleteId)}
+                disabled={busyAction === "deleting"}
+                className="px-3 py-1.5 text-sm font-semibold rounded bg-red-500 text-white hover:bg-red-600 disabled:opacity-60"
+              >
+                {busyAction === "deleting" ? <FontAwesomeIcon icon={faSpinner} spin /> : "Xoá"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirm bulk delete */}
+      {confirmBulkDeleteOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setConfirmBulkDeleteOpen(false)} />
+          <div className="relative z-10 w-11/12 max-w-sm rounded-lg bg-white dark:bg-gray-800 p-5 shadow-lg">
+            <h3 className="text-lg font-semibold mb-2">Xác nhận xoá hàng loạt</h3>
+            <p className="text-sm opacity-80 mb-4">
+              Bạn sắp xoá <b>{selectedIds.length}</b> ứng dụng. Thao tác này không thể hoàn tác.
+            </p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setConfirmBulkDeleteOpen(false)}
+                className="px-3 py-1.5 text-sm font-semibold rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+              >
+                Huỷ
+              </button>
+              <button
+                onClick={doBulkDelete}
+                disabled={busyAction === "bulk-deleting"}
+                className="px-3 py-1.5 text-sm font-semibold rounded bg-red-500 text-white hover:bg-red-600 disabled:opacity-60"
+              >
+                {busyAction === "bulk-deleting" ? <FontAwesomeIcon icon={faSpinner} spin /> : "Xoá"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Move category modal */}
+      {moveModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setMoveModalOpen(false)} />
+          <div className="relative z-10 w-11/12 max-w-sm rounded-lg bg-white dark:bg-gray-800 p-5 shadow-lg">
+            <h3 className="text-lg font-semibold mb-3">Chuyển chuyên mục</h3>
+            <label className="block text-sm font-medium mb-1">Chọn chuyên mục đích:</label>
+            <select
+              value={moveTargetCategory}
+              onChange={(e) => setMoveTargetCategory(e.target.value)}
+              className="w-full mb-4 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+            >
+              <option value="">-- Chọn chuyên mục --</option>
+              {categories.map((cat) => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              ))}
+            </select>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setMoveModalOpen(false)}
+                className="px-3 py-1.5 text-sm font-semibold rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+              >
+                Huỷ
+              </button>
+              <button
+                onClick={doMoveCategory}
+                disabled={busyAction === "moving" || !moveTargetCategory}
+                className="px-3 py-1.5 text-sm font-semibold rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-60"
+              >
+                {busyAction === "moving" ? <FontAwesomeIcon icon={faSpinner} spin /> : "Chuyển"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
