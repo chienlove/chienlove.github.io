@@ -56,6 +56,8 @@ export default function Admin() {
 
   // Bulk select
   const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkCategory, setBulkCategory] = useState(""); // chuyên mục mới cho cập nhật hàng loạt
+  const [bulkWorking, setBulkWorking] = useState(false);
 
   // --- helpers ---
   const isValidUUID = (id) => {
@@ -481,6 +483,50 @@ export default function Admin() {
   }
   function clearSelected() {
     setSelectedIds([]);
+    setBulkCategory("");
+  }
+
+  // --- bulk actions handlers ---
+  async function bulkUpdateCategory() {
+    if (!bulkCategory || !isValidUUID(bulkCategory)) {
+      alert("Vui lòng chọn chuyên mục hợp lệ để cập nhật.");
+      return;
+    }
+    if (selectedIds.length === 0) return;
+    setBulkWorking(true);
+    try {
+      const { error } = await supabase
+        .from("apps")
+        .update({ category_id: bulkCategory, updated_at: new Date().toISOString() })
+        .in("id", selectedIds);
+      if (error) throw error;
+      await fetchApps();
+      clearSelected();
+      alert("Đã cập nhật chuyên mục cho các mục đã chọn.");
+    } catch (err) {
+      console.error("Bulk update category error:", err);
+      setErrorMessage("Lỗi khi cập nhật chuyên mục hàng loạt");
+    } finally {
+      setBulkWorking(false);
+    }
+  }
+
+  async function bulkDelete() {
+    if (selectedIds.length === 0) return;
+    if (!confirm(`Xoá ${selectedIds.length} ứng dụng đã chọn?`)) return;
+    setBulkWorking(true);
+    try {
+      const { error } = await supabase.from("apps").delete().in("id", selectedIds);
+      if (error) throw error;
+      await fetchApps();
+      clearSelected();
+      alert("Đã xoá các ứng dụng đã chọn.");
+    } catch (err) {
+      console.error("Bulk delete error:", err);
+      setErrorMessage("Lỗi khi xoá hàng loạt");
+    } finally {
+      setBulkWorking(false);
+    }
   }
 
   // --- render ---
@@ -681,7 +727,7 @@ export default function Admin() {
                         type="button"
                         onClick={fetchAppStoreInfo}
                         disabled={loadingAppStoreInfo || !appStoreUrl.trim()}
-                        className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm font-medium flex items-center gap-2"
+                        className="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm font-medium flex items-center gap-2"
                       >
                         {loadingAppStoreInfo ? (
                           <>
@@ -737,11 +783,11 @@ export default function Admin() {
                     );
                   })}
 
-                <div className="flex gap-4 pt-4">
+                <div className="flex gap-3 pt-4">
                   <button
                     type="submit"
                     disabled={submitting || !selectedCategory}
-                    className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium flex items-center gap-2"
+                    className="px-4 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-semibold flex items-center gap-2 text-sm"
                   >
                     {submitting ? (
                       <>
@@ -762,7 +808,7 @@ export default function Admin() {
                     <button
                       type="button"
                       onClick={() => resetForm(true)}
-                      className="px-6 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 font-medium flex items-center gap-2"
+                      className="px-4 py-1.5 bg-gray-500 text-white rounded hover:bg-gray-600 font-semibold flex items-center gap-2 text-sm"
                     >
                       <FontAwesomeIcon icon={faTimes} /> Hủy
                     </button>
@@ -805,22 +851,59 @@ export default function Admin() {
               </div>
 
               {/* Bulk toolbar */}
-              <div className="flex items-center justify-between mb-3">
-                <button
-                  onClick={toggleSelectAllOnPage}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm"
-                >
-                  <FontAwesomeIcon icon={allSelectedOnPage(pageItems) ? faCheckSquare : faSquare} />
-                  Chọn tất cả trang này
-                </button>
+              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-3">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={toggleSelectAllOnPage}
+                    className="flex items-center gap-2 px-3 py-1 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm"
+                  >
+                    <FontAwesomeIcon icon={allSelectedOnPage(pageItems) ? faCheckSquare : faSquare} />
+                    Chọn tất cả trang này
+                  </button>
+                  {selectedIds.length > 0 && (
+                    <div className="text-sm opacity-80">
+                      Đã chọn <b>{selectedIds.length}</b> mục
+                      <button
+                        onClick={clearSelected}
+                        className="ml-3 px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+                      >
+                        Bỏ chọn
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Bulk actions (hiện khi có chọn) */}
                 {selectedIds.length > 0 && (
-                  <div className="text-sm opacity-80">
-                    Đã chọn <b>{selectedIds.length}</b> mục
+                  <div className="flex flex-col md:flex-row md:items-center gap-2">
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={bulkCategory}
+                        onChange={(e) => setBulkCategory(e.target.value)}
+                        className="px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
+                      >
+                        <option value="">-- Chọn chuyên mục mới --</option>
+                        {categories.map((cat) => (
+                          <option key={cat.id} value={cat.id}>{cat.name}</option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={bulkUpdateCategory}
+                        disabled={bulkWorking || !bulkCategory}
+                        className="px-3 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 text-sm font-semibold flex items-center gap-2"
+                      >
+                        {bulkWorking ? <FontAwesomeIcon icon={faSpinner} spin /> : <FontAwesomeIcon icon={faSave} />}
+                        Cập nhật chuyên mục
+                      </button>
+                    </div>
+
                     <button
-                      onClick={clearSelected}
-                      className="ml-3 px-2 py-1 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+                      onClick={bulkDelete}
+                      disabled={bulkWorking}
+                      className="px-3 py-1.5 bg-red-600 text-white rounded hover:bg-red-700 text-sm font-semibold flex items-center gap-2"
                     >
-                      Bỏ chọn
+                      {bulkWorking ? <FontAwesomeIcon icon={faSpinner} spin /> : <FontAwesomeIcon icon={faTrash} />}
+                      Xoá đã chọn
                     </button>
                   </div>
                 )}
@@ -873,23 +956,23 @@ export default function Admin() {
                             {app.created_at ? new Date(app.created_at).toLocaleDateString("vi-VN") : "N/A"}
                           </td>
                           <td className="p-3">
-                            <div className="flex gap-2">
+                            <div className="flex gap-1.5">
                               <Link
                                 href={`/${slug}`}
                                 target="_blank"
-                                className="px-2.5 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 flex items-center gap-1 font-bold"
+                                className="px-2 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 flex items-center gap-1 font-semibold"
                               >
                                 <FontAwesomeIcon icon={faEye} /> Xem
                               </Link>
                               <button
                                 onClick={() => handleEdit(app)}
-                                className="px-2.5 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600 flex items-center gap-1 font-bold"
+                                className="px-2 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600 flex items-center gap-1 font-semibold"
                               >
                                 <FontAwesomeIcon icon={faEdit} /> Sửa
                               </button>
                               <button
                                 onClick={() => handleDelete(app.id)}
-                                className="px-2.5 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600 flex items-center gap-1 font-bold"
+                                className="px-2 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600 flex items-center gap-1 font-semibold"
                               >
                                 <FontAwesomeIcon icon={faTrash} /> Xoá
                               </button>
@@ -937,19 +1020,19 @@ export default function Admin() {
                           <Link
                             href={`/${slug}`}
                             target="_blank"
-                            className="text-center px-2.5 py-1.5 rounded bg-green-600 text-white hover:bg-green-700 text-sm font-bold"
+                            className="text-center px-2 py-1.5 rounded bg-green-600 text-white hover:bg-green-700 text-sm font-semibold"
                           >
                             <FontAwesomeIcon icon={faEye} /> <span className="ml-1">Xem</span>
                           </Link>
                           <button
                             onClick={() => handleEdit(app)}
-                            className="text-center px-2.5 py-1.5 rounded bg-yellow-500 text-white hover:bg-yellow-600 text-sm font-bold"
+                            className="text-center px-2 py-1.5 rounded bg-yellow-500 text-white hover:bg-yellow-600 text-sm font-semibold"
                           >
                             <FontAwesomeIcon icon={faEdit} /> <span className="ml-1">Sửa</span>
                           </button>
                           <button
                             onClick={() => handleDelete(app.id)}
-                            className="text-center px-2.5 py-1.5 rounded bg-red-500 text-white hover:bg-red-600 text-sm font-bold"
+                            className="text-center px-2 py-1.5 rounded bg-red-500 text-white hover:bg-red-600 text-sm font-semibold"
                           >
                             <FontAwesomeIcon icon={faTrash} /> <span className="ml-1">Xoá</span>
                           </button>
@@ -1049,7 +1132,7 @@ export default function Admin() {
                     <button
                       type="button"
                       onClick={addField}
-                      className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 flex items-center gap-2"
+                      className="px-3 py-1.5 bg-green-600 text-white rounded hover:bg-green-700 flex items-center gap-2 text-sm font-semibold"
                     >
                       <FontAwesomeIcon icon={faPlus} /> Thêm
                     </button>
@@ -1065,7 +1148,7 @@ export default function Admin() {
                         <button
                           type="button"
                           onClick={() => removeField(index)}
-                          className="px-2 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
+                          className="px-2 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600 font-semibold"
                           title="Xoá trường"
                         >
                           <FontAwesomeIcon icon={faTimes} />
@@ -1075,11 +1158,11 @@ export default function Admin() {
                   </div>
                 </div>
 
-                <div className="flex gap-4 pt-4">
+                <div className="flex gap-3 pt-4">
                   <button
                     type="submit"
                     disabled={submitting || !categoryForm.name.trim()}
-                    className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium flex items-center gap-2"
+                    className="px-4 py-1.5 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-semibold flex items-center gap-2 text-sm"
                   >
                     {submitting ? (
                       <>
@@ -1103,7 +1186,7 @@ export default function Admin() {
                         setEditingCategoryId(null);
                         setCategoryForm({ name: "", fields: [], enable_appstore_fetch: false });
                       }}
-                      className="px-6 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 font-medium flex items-center gap-2"
+                      className="px-4 py-1.5 bg-gray-500 text-white rounded hover:bg-gray-600 font-semibold flex items-center gap-2 text-sm"
                     >
                       <FontAwesomeIcon icon={faTimes} /> Hủy
                     </button>
@@ -1143,16 +1226,16 @@ export default function Admin() {
                         </td>
                         <td className="p-3">{category.fields?.length || 0} trường</td>
                         <td className="p-3">
-                          <div className="flex gap-2">
+                          <div className="flex gap-1.5">
                             <button
                               onClick={() => handleEditCategory(category)}
-                              className="px-2.5 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600 flex items-center gap-1 font-bold"
+                              className="px-2 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600 flex items-center gap-1 font-semibold"
                             >
                               <FontAwesomeIcon icon={faEdit} /> Sửa
                             </button>
                             <button
                               onClick={() => handleDeleteCategory(category.id)}
-                              className="px-2.5 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600 flex items-center gap-1 font-bold"
+                              className="px-2 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600 flex items-center gap-1 font-semibold"
                             >
                               <FontAwesomeIcon icon={faTrash} /> Xoá
                             </button>
