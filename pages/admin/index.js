@@ -1063,19 +1063,19 @@ useEffect(() => {
                           <Link
                             href={`/${slug}`}
                             target="_blank"
-                            className="text-center px-2 py-1.5 text-xs font-semibold rounded bg-green-600 text-white hover:bg-green-700"
+                            className="text-center px-1 py-1.5 text-xs font-semibold rounded bg-green-600 text-white hover:bg-green-700"
                           >
                             <FontAwesomeIcon icon={faEye} /> <span className="ml-1">Xem</span>
                           </Link>
                           <button
                             onClick={() => handleEdit(app)}
-                            className="text-center px-2 py-1.5 text-xs font-semibold rounded bg-yellow-500 text-white hover:bg-yellow-600"
+                            className="text-center px-1 py-1.5 text-xs font-semibold rounded bg-yellow-500 text-white hover:bg-yellow-600"
                           >
                             <FontAwesomeIcon icon={faEdit} /> <span className="ml-1">Sửa</span>
                           </button>
                           <button
                             onClick={() => askDelete(app.id)}
-                            className="text-center px-0 py-1.5 text-xs font-semibold rounded bg-red-500 text-white hover:bg-red-600"
+                            className="text-center px-1 py-1.5 text-xs font-semibold rounded bg-red-500 text-white hover:bg-red-600"
                           >
                             <FontAwesomeIcon icon={faTrash} /> <span className="ml-1">Xoá</span>
                           </button>
