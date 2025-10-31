@@ -327,7 +327,7 @@ function MetricInlineAbsolute({ categorySlug, app }) {
    ========================= */
 export default function Home({ categoriesWithApps, hotApps, paginationData, metaSEO }) {
   // Chỉ 2 chuyên mục cài IPA → hiển thị badge ký/thu hồi
-  const INSTALLABLE_SLUGS = new Set(['jailbreak', 'app-clone']);
+  const INSTALLABLE_SLUGS = new Set(['jailbreak', 'app-clone', 'app-removed']);
 
   // Trạng thái certificate (client-side, sau khi trang đã render)
   const [certStatus, setCertStatus] = useState(null);
@@ -396,7 +396,7 @@ export default function Home({ categoriesWithApps, hotApps, paginationData, meta
                   </h2>
 
                   {/* Badge trạng thái cert – chỉ hiện cho jailbreak/app-clone, và chỉ sau khi có kết quả */}
-                  {new Set(['jailbreak', 'app-clone']).has((category.slug || '').toLowerCase()) && certStatus && (
+                  {new Set(['jailbreak', 'app-clone', 'app-removed']).has((category.slug || '').toLowerCase()) && certStatus && (
                     <span
                       className="flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300"
                       title={

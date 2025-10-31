@@ -11,11 +11,11 @@ import {
   faPlus, faEdit, faTrash, faSave, faTimes, faSync, faSpinner,
   faBoxOpen, faFolder, faShieldAlt, faSun, faMoon, faBars,
   faSignOutAlt, faSearch, faExclamationTriangle, faChevronLeft,
-  faChevronRight, faCaretDown, faCheckSquare, faSquare, faCopy
+  faChevronRight, faCheckSquare, faSquare, faCopy, faEye
 } from "@fortawesome/free-solid-svg-icons";
 import { faApple } from "@fortawesome/free-brands-svg-icons";
 
-/* ===== Modal xác nhận đơn giản (dùng nội bộ) ===== */
+/* ===== Modal xác nhận ===== */
 function ConfirmModal({ open, title = "Xác nhận", message, onCancel, onConfirm, confirmText = "Xác nhận", danger = false }) {
   if (!open) return null;
   return (
@@ -46,8 +46,68 @@ function ConfirmModal({ open, title = "Xác nhận", message, onCancel, onConfir
   );
 }
 
-/* ===== Chuyển đổi Markdown/BBCode => HTML (nhẹ, đủ dùng nội bộ admin) ===== */
+/* ===== Quick View (xem nhanh bài viết) ===== */
+function QuickViewModal({ open, onClose, app, categories, htmlDesc }) {
+  if (!open || !app) return null;
+  const catName = categories.find(c => c.id === app.category_id)?.name || "Không xác định";
+  return (
+    <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 p-3">
+      <div className="w-full max-w-3xl max-h-[90vh] overflow-auto rounded-xl shadow-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
+        <div className="sticky top-0 z-10 flex items-center justify-between px-5 py-3 bg-white/90 dark:bg-gray-900/90 backdrop-blur border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center gap-3">
+            {app.icon_url ? <img src={app.icon_url} alt="" className="w-8 h-8 rounded" /> : null}
+            <div>
+              <div className="font-semibold">{app.name || "Không có tên"}</div>
+              <div className="text-xs opacity-70">
+                {catName} • {app.created_at ? new Date(app.created_at).toLocaleString("vi-VN") : "N/A"}
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="px-3 py-1.5 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-sm"
+          >
+            <FontAwesomeIcon icon={faTimes} /> Đóng
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <div
+            className="prose prose-sm max-w-none dark:prose-invert"
+            dangerouslySetInnerHTML={{ __html: htmlDesc }}
+          />
+          {Array.isArray(app.screenshots) && app.screenshots.length > 0 ? (
+            <div>
+              <div className="text-sm font-medium mb-2 opacity-80">Ảnh chụp màn hình</div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {app.screenshots.map((u, i) => (
+                  <img key={i} src={u} alt="" className="w-full h-auto rounded border border-gray-200 dark:border-gray-700" />
+                ))}
+              </div>
+            </div>
+          ) : null}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+            {app.version ? <div><span className="opacity-70">Version:</span> <b>{app.version}</b></div> : null}
+            {app.size ? <div><span className="opacity-70">Kích thước:</span> <b>{app.size}</b></div> : null}
+            {Array.isArray(app.languages) && app.languages.length ? (
+              <div><span className="opacity-70">Ngôn ngữ:</span> <b>{app.languages.join(", ")}</b></div>
+            ) : null}
+            {Array.isArray(app.supported_devices) && app.supported_devices.length ? (
+              <div><span className="opacity-70">Thiết bị hỗ trợ:</span> <b>{app.supported_devices.join(", ")}</b></div>
+            ) : null}
+            {app.minimum_os_version ? (
+              <div><span className="opacity-70">Yêu cầu iOS:</span> <b>{app.minimum_os_version}</b></div>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ===== Markdown/BBCode (link-safe, không dùng regex literal cho link) ===== */
 function mdToHtml(src = "") {
+  // an toàn: xử lý đậm/nghiêng/code bằng RegExp đơn giản
   let s = src
     .replace(/^###### (.*)$/gm, "<h6>$1</h6>")
     .replace(/^##### (.*)$/gm, "<h5>$1</h5>")
@@ -57,26 +117,66 @@ function mdToHtml(src = "") {
     .replace(/^# (.*)$/gm, "<h1>$1</h1>")
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
     .replace(/\*(.+?)\*/g, "<em>$1</em>")
-    .replace(/`([^`]+?)`/g, "<code>$1</code>")
-    .replace(/$begin:math:display$(.+?)$end:math:display$$begin:math:text$(https?:\\/\\/[^\\s)]+)$end:math:text$/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
-  // dòng mới => <br> đơn giản cho admin
+    .replace(/`([^`]+?)`/g, "<code>$1</code>");
+
+  // Link [text](http://...) -- không dùng regex literal để tránh Vercel inject phá cú pháp
+  s = replaceMarkdownLinksSafely(s);
+
+  // xuống dòng
   s = s.replace(/\n/g, "<br/>");
   return s;
 }
+
+function replaceMarkdownLinksSafely(input) {
+  // Parser nhỏ tìm pattern [text](url) với url bắt buộc bắt đầu bằng http/https
+  let out = "";
+  let i = 0;
+  while (i < input.length) {
+    const lb = input.indexOf("[", i);
+    if (lb === -1) { out += input.slice(i); break; }
+    const rb = input.indexOf("]", lb + 1);
+    if (rb === -1) { out += input.slice(i); break; }
+    const lp = input.indexOf("(", rb + 1);
+    if (lp !== rb + 1) { out += input.slice(i, lb + 1); i = lb + 1; continue; }
+    const rp = input.indexOf(")", lp + 1);
+    if (rp === -1) { out += input.slice(i); break; }
+
+    const text = input.slice(lb + 1, rb);
+    const url = input.slice(lp + 1, rp);
+    const isHttp = url.startsWith("http://") || url.startsWith("https://");
+
+    out += input.slice(i, lb);
+    if (isHttp) {
+      const escText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      const escUrl = url.replace(/"/g, "&quot;");
+      out += `<a href="${escUrl}" target="_blank" rel="noopener noreferrer">${escText}</a>`;
+    } else {
+      out += input.slice(lb, rp + 1); // giữ nguyên
+    }
+    i = rp + 1;
+  }
+  return out;
+}
+
 function bbcodeToHtml(src = "") {
+  // Tránh regex literal dài phức tạp; dùng RegExp constructor cho những đoạn đơn giản
   let s = src;
-  s = s.replace(/$begin:math:display$b$end:math:display$(.*?)$begin:math:display$\\/b$end:math:display$/gis, "<strong>$1</strong>");
-  s = s.replace(/$begin:math:display$i$end:math:display$(.*?)$begin:math:display$\\/i$end:math:display$/gis, "<em>$1</em>");
-  s = s.replace(/$begin:math:display$u$end:math:display$(.*?)$begin:math:display$\\/u$end:math:display$/gis, "<u>$1</u>");
-  s = s.replace(/$begin:math:display$url=(https?:\\/\\/[^$end:math:display$]+)\](.*?)$begin:math:display$\\/url$end:math:display$/gis, '<a href="$1" target="_blank" rel="noopener noreferrer">$2</a>');
-  s = s.replace(/$begin:math:display$img$end:math:display$(https?:\/\/[^\]]+)$begin:math:display$\\/img$end:math:display$/gis, '<img src="$1" alt="" style="max-width:100%;border-radius:8px"/>');
-  s = s.replace(/$begin:math:display$quote$end:math:display$(.*?)$begin:math:display$\\/quote$end:math:display$/gis, '<blockquote style="border-left:3px solid #ccc;padding-left:10px;margin:6px 0">$1</blockquote>');
-  // list đơn giản
-  s = s
-    .replace(/$begin:math:display$list$end:math:display$(.*?)$begin:math:display$\\/list$end:math:display$/gis, (m, p1) => {
-      const items = p1.replace(/$begin:math:display$\\*$end:math:display$\s?/g, "</li><li>").replace(/<\/li>/, "");
-      return `<ul style="padding-left:20px;list-style:disc"><li>${items}</li></ul>`;
-    });
+  s = s.replace(new RegExp("\$begin:math:display$b\\$end:math:display$(.*?)\$begin:math:display$/b\\$end:math:display$", "gis"), "<strong>$1</strong>");
+  s = s.replace(new RegExp("\$begin:math:display$i\\$end:math:display$(.*?)\$begin:math:display$/i\\$end:math:display$", "gis"), "<em>$1</em>");
+  s = s.replace(new RegExp("\$begin:math:display$u\\$end:math:display$(.*?)\$begin:math:display$/u\\$end:math:display$", "gis"), "<u>$1</u>");
+  s = s.replace(new RegExp("\$begin:math:display$url=(https?:\\\\/\\\\/[^\\$end:math:display$]+)\\](.*?)\$begin:math:display$\\\\/url\\$end:math:display$", "gis"),
+    '<a href="$1" target="_blank" rel="noopener noreferrer">$2</a>');
+  s = s.replace(new RegExp("\$begin:math:display$img\\$end:math:display$(https?:\\/\\/[^\\]]+)\$begin:math:display$\\\\/img\\$end:math:display$", "gis"),
+    '<img src="$1" alt="" style="max-width:100%;border-radius:8px"/>');
+  s = s.replace(new RegExp("\$begin:math:display$quote\\$end:math:display$(.*?)\$begin:math:display$\\\\/quote\\$end:math:display$", "gis"),
+    '<blockquote style="border-left:3px solid #ccc;padding-left:10px;margin:6px 0">$1</blockquote>');
+
+  // [list][*]a[*]b[/list] xử lý không dùng regex có /gi dài
+  s = s.replace(new RegExp("\$begin:math:display$list\\$end:math:display$([\\s\\S]*?)\$begin:math:display$\\\\/list\\$end:math:display$", "gi"), (_, inner) => {
+    const items = inner.split(/$begin:math:display$\\*$end:math:display$/).map(t => t.trim()).filter(Boolean);
+    if (!items.length) return inner;
+    return `<ul style="padding-left:20px;list-style:disc"><li>${items.join("</li><li>")}</li></ul>`;
+  });
   s = s.replace(/\n/g, "<br/>");
   return s;
 }
@@ -117,52 +217,39 @@ export default function Admin() {
   const [editingCategoryId, setEditingCategoryId] = useState(null);
   const [newField, setNewField] = useState("");
 
-  // ====== NEW: Description editor mode & preview ======
+  // Editor mode & preview
   const [descMode, setDescMode] = useState("markdown"); // 'markdown' | 'bbcode'
   const descHtml = useMemo(() => {
     const content = form["description"] || form["mô tả"] || "";
     return descMode === "markdown" ? mdToHtml(content) : bbcodeToHtml(content);
   }, [form, descMode]);
 
-  // ====== NEW: Pagination ======
+  // Pagination
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
-  // ====== NEW: Bulk select ======
+  // Bulk select
   const [selectedIds, setSelectedIds] = useState([]);
   const allSelectedOnPage = (list) => list.length > 0 && list.every(a => selectedIds.includes(a.id));
 
-  // ====== NEW: Modals state ======
-  const [confirmState, setConfirmState] = useState({
-    open: false,
-    title: "",
-    message: "",
-    danger: true,
-    onConfirm: () => {},
-  });
+  // Modals
+  const [confirmState, setConfirmState] = useState({ open: false, title: "", message: "", danger: true, onConfirm: () => {} });
+  const [quickState, setQuickState] = useState({ open: false, app: null });
 
-  // --- helpers ---
+  // helpers
   const isValidUUID = (id) => {
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     return id && uuidRegex.test(id);
   };
-
   const createSlug = (name = "") =>
-    name
-      .toLowerCase()
-      .replace(/[^\w\s-]/g, "")
-      .replace(/\s+/g, "-")
-      .trim();
-
+    name.toLowerCase().replace(/[^\w\s-]/g, "").replace(/\s+/g, "-").trim();
   const canFetchFromAppStore =
     categories.find((c) => c.id === selectedCategory)?.enable_appstore_fetch === true;
 
-  // --- effects ---
-  useEffect(() => {
-    checkAdmin();
-  }, []);
+  // effects
+  useEffect(() => { checkAdmin(); }, []);
 
-  // Quick-link mở đúng tab khi vào /admin#apps|#categories|#certs hoặc ?tab=
+  // hash/#tab và ?tab=
   useEffect(() => {
     const applyFromLocation = () => {
       const h = (typeof window !== "undefined" && window.location.hash) ? window.location.hash.replace("#", "") : "";
@@ -181,7 +268,7 @@ export default function Admin() {
     document.documentElement.classList.toggle("dark", darkMode);
   }, [darkMode]);
 
-  // chống zoom iOS cho các input
+  // chống zoom iOS
   useEffect(() => {
     if (typeof document !== "undefined") {
       const style = document.createElement("style");
@@ -191,7 +278,7 @@ export default function Admin() {
     }
   }, []);
 
-  // Tự tính SIZE từ plist khi nhập tên IPA
+  // tự tính size IPA
   useEffect(() => {
     async function fetchIpaSizeFromPlist() {
       const plistName = form["download_link"]?.trim();
@@ -207,17 +294,12 @@ export default function Admin() {
         const { token } = await tokenRes.json();
         if (!token) throw new Error("Không nhận được token từ API");
 
-        const plistUrl = `https://storeios.net/api/plist?ipa_name=${encodeURIComponent(
-          plistName
-        )}&token=${token}`;
-
+        const plistUrl = `https://storeios.net/api/plist?ipa_name=${encodeURIComponent(plistName)}&token=${token}`;
         const plistResponse = await fetch(plistUrl);
         if (!plistResponse.ok) throw new Error(`Lỗi tải plist: ${plistResponse.status}`);
 
         const plistContent = await plistResponse.text();
-        const ipaUrlMatch = plistContent.match(
-          /<key>url<\/key>\s*<string>([^<]+\.ipa)<\/string>/i
-        );
+        const ipaUrlMatch = plistContent.match(/<key>url<\/key>\s*<string>([^<]+\.ipa)<\/string>/i);
         if (!ipaUrlMatch || !ipaUrlMatch[1]) throw new Error("Không tìm thấy URL IPA trong plist");
 
         const ipaUrl = ipaUrlMatch[1];
@@ -233,11 +315,7 @@ export default function Admin() {
         setForm((prev) => ({ ...prev, size: `Lỗi: ${error.message}` }));
       }
     }
-
-    const timer = setTimeout(() => {
-      if (form["download_link"]) fetchIpaSizeFromPlist();
-    }, 500);
-
+    const timer = setTimeout(() => { if (form["download_link"]) fetchIpaSizeFromPlist(); }, 500);
     return () => clearTimeout(timer);
   }, [form["download_link"]]);
 
@@ -245,7 +323,7 @@ export default function Admin() {
     if (form.screenshots) setScreenshotInput(form.screenshots.join("\n"));
   }, [form]);
 
-  // --- data loaders ---
+  // data loaders
   async function checkAdmin() {
     try {
       const { data: { user }, error } = await supabase.auth.getUser();
@@ -289,7 +367,7 @@ export default function Admin() {
     }
   }
 
-  // --- actions (apps) ---
+  // actions apps
   function handleEdit(app) {
     if (!isValidUUID(app.category_id)) {
       setErrorMessage("ID chuyên mục không hợp lệ");
@@ -391,7 +469,7 @@ export default function Admin() {
     setAppStoreUrl("");
   }
 
-  // --- actions (App Store autofill) ---
+  // app store autofill
   const fetchAppStoreInfo = async () => {
     if (!appStoreUrl.trim()) {
       setErrorMessage("Vui lòng nhập URL AppStore");
@@ -416,15 +494,10 @@ export default function Admin() {
       if (!text.trim()) throw new Error("Server trả về phản hồi rỗng");
 
       let data;
-      try {
-        data = JSON.parse(text);
-      } catch {
-        throw new Error(`Phản hồi từ server không phải JSON hợp lệ: ${text.slice(0, 100)}...`);
-      }
+      try { data = JSON.parse(text); }
+      catch { throw new Error(`Phản hồi server không phải JSON hợp lệ: ${text.slice(0, 100)}...`); }
 
-      if (!res.ok) {
-        throw new Error(data?.error || `HTTP ${res.status}: ${res.statusText}`);
-      }
+      if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}: ${res.statusText}`);
       if (!data?.name) throw new Error("Dữ liệu ứng dụng không đầy đủ (thiếu tên)");
 
       const mapped = {
@@ -436,12 +509,8 @@ export default function Admin() {
         icon_url: data.icon || "",
         minimum_os_version: data.minimumOsVersion || "",
         age_rating: data.ageRating || "",
-        release_date: data.releaseDate
-          ? new Date(data.releaseDate).toISOString().split("T")[0]
-          : "",
-        supported_devices: Array.isArray(data.supportedDevices)
-          ? data.supportedDevices.join(", ")
-          : "",
+        release_date: data.releaseDate ? new Date(data.releaseDate).toISOString().split("T")[0] : "",
+        supported_devices: Array.isArray(data.supportedDevices) ? data.supportedDevices.join(", ") : "",
         languages: Array.isArray(data.languages) ? data.languages.join(", ") : "",
         screenshots: Array.isArray(data.screenshots) ? data.screenshots : [],
       };
@@ -455,19 +524,16 @@ export default function Admin() {
       alert("Đã lấy thông tin thành công từ AppStore!");
     } catch (err) {
       let msg = "Lỗi khi lấy thông tin từ AppStore";
-      if (err.name === "TypeError" && String(err.message).includes("fetch"))
-        msg = "Lỗi kết nối mạng. Vui lòng kiểm tra kết nối internet.";
-      else if (String(err.message).includes("JSON"))
-        msg = "Lỗi xử lý dữ liệu từ server.";
+      if (err.name === "TypeError" && String(err.message).includes("fetch")) msg = "Lỗi kết nối mạng.";
+      else if (String(err.message).includes("JSON")) msg = "Lỗi xử lý dữ liệu từ server.";
       else if (err.message) msg = err.message;
-
       setErrorMessage(msg);
     } finally {
       setLoadingAppStoreInfo(false);
     }
   };
 
-  // --- actions (categories) ---
+  // actions categories
   async function handleCategorySubmit(e) {
     e.preventDefault();
     setSubmitting(true);
@@ -482,15 +548,10 @@ export default function Admin() {
       };
 
       if (editingCategoryId) {
-        const { error } = await supabase
-          .from("categories")
-          .update(payload)
-          .eq("id", editingCategoryId);
+        const { error } = await supabase.from("categories").update(payload).eq("id", editingCategoryId);
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from("categories")
-          .insert([{ ...payload, id: uuidv4() }]);
+        const { error } = await supabase.from("categories").insert([{ ...payload, id: uuidv4() }]);
         if (error) throw error;
       }
 
@@ -546,22 +607,21 @@ export default function Admin() {
     setCategoryForm((prev) => ({ ...prev, fields: [...prev.fields, f] }));
     setNewField("");
   }
-
   function removeField(index) {
-    setCategoryForm((prev) => ({
-      ...prev,
-      fields: prev.fields.filter((_, i) => i !== index),
-    }));
+    setCategoryForm((prev) => ({ ...prev, fields: prev.fields.filter((_, i) => i !== index) }));
   }
 
-  // --- derived ---
+  // derived
   const filteredApps = useMemo(() => {
     const s = (search || "").toLowerCase().trim();
     if (!s) return apps;
     return apps.filter((a) => (a.name || "").toLowerCase().includes(s));
   }, [apps, search]);
 
-  // Pagination slices
+  const totalApps = apps.length;
+  const totalCategories = categories.length;
+
+  // pagination slice
   const total = filteredApps.length;
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const currentPage = Math.min(page, totalPages);
@@ -569,30 +629,24 @@ export default function Admin() {
   const pageEnd = pageStart + pageSize;
   const pageItems = filteredApps.slice(pageStart, pageEnd);
 
-  // Chọn/bỏ chọn theo trang
+  // bulk select
   function toggleSelectAllOnPage() {
     const idsOnPage = pageItems.map(a => a.id);
     const isAll = allSelectedOnPage(pageItems);
-    if (isAll) {
-      setSelectedIds(prev => prev.filter(id => !idsOnPage.includes(id)));
-    } else {
-      setSelectedIds(prev => Array.from(new Set([...prev, ...idsOnPage])));
-    }
+    if (isAll) setSelectedIds(prev => prev.filter(id => !idsOnPage.includes(id)));
+    else setSelectedIds(prev => Array.from(new Set([...prev, ...idsOnPage])));
   }
   function toggleSelectOne(id) {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   }
 
-  const currentFields =
-    categories.find((c) => c.id === selectedCategory)?.fields || [];
-
-  // click outside to close drawer (mobile)
+  // click outside drawer (mobile)
   const overlayRef = useRef(null);
   function onOverlayClick(e) {
     if (e.target === overlayRef.current) setSidebarOpen(false);
   }
 
-  // --- render ---
+  // render
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
@@ -603,64 +657,28 @@ export default function Admin() {
   }
 
   return (
-    <div
-      className={`min-h-screen flex transition-colors duration-300 ${
-        darkMode ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-800"
-      }`}
-    >
+    <div className={`min-h-screen flex transition-colors duration-300 ${darkMode ? "bg-gray-900 text-white" : "bg-gray-100 text-gray-800"}`}>
       {/* Sidebar (ẩn mặc định, mở bằng icon 3 gạch) */}
       {sidebarOpen && (
-        <div
-          ref={overlayRef}
-          onClick={onOverlayClick}
-          className="fixed inset-0 z-40 bg-black/40 md:hidden"
-        />
+        <div ref={overlayRef} onClick={onOverlayClick} className="fixed inset-0 z-40 bg-black/40 md:hidden" />
       )}
 
-      <aside
-        className={`${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        } fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 shadow-lg transform md:relative md:translate-x-0 transition-transform`}
-      >
+      <aside className={`${sidebarOpen ? "translate-x-0" : "-translate-x-full"} fixed inset-y-0 left-0 z-50 w-64 bg-white dark:bg-gray-800 shadow-lg transform md:relative md:translate-x-0 transition-transform`}>
         <div className="p-4 flex justify-between items-center">
           <h2 className="text-xl font-bold">Admin Panel</h2>
-          <button
-            onClick={() => setSidebarOpen(false)}
-            className="md:hidden text-gray-500 hover:text-gray-700"
-          >
+          <button onClick={() => setSidebarOpen(false)} className="md:hidden text-gray-500 hover:text-gray-700">
             <FontAwesomeIcon icon={faTimes} />
           </button>
         </div>
 
         <nav className="p-4 space-y-2">
-          <button
-            onClick={() => { setActiveTab("apps"); setSidebarOpen(false); }}
-            className={`w-full text-left flex items-center gap-3 px-4 py-2 rounded ${
-              activeTab === "apps"
-                ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200"
-                : "hover:bg-gray-200 dark:hover:bg-gray-700"
-            }`}
-          >
+          <button onClick={() => { setActiveTab("apps"); setSidebarOpen(false); }} className={`w-full text-left flex items-center gap-3 px-4 py-2 rounded ${activeTab === "apps" ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200" : "hover:bg-gray-200 dark:hover:bg-gray-700"}`}>
             <FontAwesomeIcon icon={faBoxOpen} /> Ứng dụng
           </button>
-          <button
-            onClick={() => { setActiveTab("categories"); setSidebarOpen(false); }}
-            className={`w-full text-left flex items-center gap-3 px-4 py-2 rounded ${
-              activeTab === "categories"
-                ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200"
-                : "hover:bg-gray-200 dark:hover:bg-gray-700"
-            }`}
-          >
+          <button onClick={() => { setActiveTab("categories"); setSidebarOpen(false); }} className={`w-full text-left flex items-center gap-3 px-4 py-2 rounded ${activeTab === "categories" ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200" : "hover:bg-gray-200 dark:hover:bg-gray-700"}`}>
             <FontAwesomeIcon icon={faFolder} /> Chuyên mục
           </button>
-          <button
-            onClick={() => { setActiveTab("certs"); setSidebarOpen(false); }}
-            className={`w-full text-left flex items-center gap-3 px-4 py-2 rounded ${
-              activeTab === "certs"
-                ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200"
-                : "hover:bg-gray-200 dark:hover:bg-gray-700"
-            }`}
-          >
+          <button onClick={() => { setActiveTab("certs"); setSidebarOpen(false); }} className={`w-full text-left flex items-center gap-3 px-4 py-2 rounded ${activeTab === "certs" ? "bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-200" : "hover:bg-gray-200 dark:hover:bg-gray-700"}`}>
             <FontAwesomeIcon icon={faShieldAlt} /> Chứng chỉ
           </button>
         </nav>
@@ -671,10 +689,7 @@ export default function Admin() {
           </div>
           <span className="ml-2 truncate">{user?.email}</span>
           <button
-            onClick={async () => {
-              await supabase.auth.signOut();
-              router.push("/login");
-            }}
+            onClick={async () => { await supabase.auth.signOut(); router.push("/login"); }}
             className="ml-auto text-red-500 hover:text-red-600"
             title="Đăng xuất"
           >
@@ -687,51 +702,34 @@ export default function Admin() {
       <main className="flex-1 p-4 md:p-6 overflow-auto pb-32">
         <header className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => setSidebarOpen(true)}
-              className="md:hidden p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
-              aria-label="Mở menu"
-            >
+            <button onClick={() => setSidebarOpen(true)} className="md:hidden p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700" aria-label="Mở menu">
               <FontAwesomeIcon icon={faBars} />
             </button>
             <h1 className="text-xl md:text-2xl font-bold">
               {activeTab === "apps"
-                ? "Quản lý Ứng dụng"
+                ? <>Quản lý Ứng dụng <span className="text-sm font-normal opacity-80">(Tổng: <b>{totalApps}</b>)</span></>
                 : activeTab === "categories"
-                ? "Quản lý Chuyên mục"
+                ? <>Quản lý Chuyên mục <span className="text-sm font-normal opacity-80">(Tổng: <b>{totalCategories}</b>)</span></>
                 : "Quản lý Chứng chỉ"}
             </h1>
           </div>
-          <button
-            onClick={() => setDarkMode(!darkMode)}
-            className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
-            title={darkMode ? "Chế độ sáng" : "Chế độ tối"}
-            aria-label="Đổi chế độ sáng/tối"
-          >
+          <button onClick={() => setDarkMode(!darkMode)} className="p-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700" title={darkMode ? "Chế độ sáng" : "Chế độ tối"} aria-label="Đổi chế độ sáng/tối">
             <FontAwesomeIcon icon={darkMode ? faSun : faMoon} />
           </button>
         </header>
 
-        {/* Error bar */}
         {errorMessage && (
           <div className="mb-4 p-3 bg-red-100 border-l-4 border-red-500 text-red-700 dark:bg-red-900 dark:text-red-100 rounded-r-md">
             <div className="flex justify-between items-center">
-              <span>
-                <FontAwesomeIcon icon={faExclamationTriangle} className="mr-2" />
-                {errorMessage}
-              </span>
-              <button
-                onClick={() => setErrorMessage("")}
-                className="text-red-700 dark:text-red-300 hover:text-red-900 dark:hover:text-red-100"
-                aria-label="Đóng cảnh báo"
-              >
+              <span><FontAwesomeIcon icon={faExclamationTriangle} className="mr-2" />{errorMessage}</span>
+              <button onClick={() => setErrorMessage("")} className="text-red-700 dark:text-red-300 hover:text-red-900 dark:hover:text-red-100" aria-label="Đóng cảnh báo">
                 <FontAwesomeIcon icon={faTimes} />
               </button>
             </div>
           </div>
         )}
 
-        {/* ====== Apps tab ====== */}
+        {/* ===== Apps tab ===== */}
         {activeTab === "apps" ? (
           <>
             <section className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-md mb-6">
@@ -741,7 +739,7 @@ export default function Admin() {
               </h2>
 
               <form onSubmit={handleSubmit} className="space-y-4">
-                {/* category selector (cho phép đổi khi sửa) */}
+                {/* chọn chuyên mục (đổi được khi sửa) */}
                 <div>
                   <label className="block text-sm font-medium mb-1">Chuyên mục:</label>
                   <select
@@ -757,9 +755,7 @@ export default function Admin() {
                   >
                     <option value="">-- Chọn chuyên mục --</option>
                     {categories.map((cat) => (
-                      <option key={cat.id} value={cat.id}>
-                        {cat.name}
-                      </option>
+                      <option key={cat.id} value={cat.id}>{cat.name}</option>
                     ))}
                   </select>
                 </div>
@@ -785,50 +781,32 @@ export default function Admin() {
                         disabled={loadingAppStoreInfo || !appStoreUrl.trim()}
                         className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-sm font-medium flex items-center gap-2"
                       >
-                        {loadingAppStoreInfo ? (
-                          <>
-                            <FontAwesomeIcon icon={faSpinner} spin /> Đang lấy...
-                          </>
-                        ) : (
-                          <>
-                            <FontAwesomeIcon icon={faSync} /> Get Info
-                          </>
-                        )}
+                        {loadingAppStoreInfo ? (<><FontAwesomeIcon icon={faSpinner} spin /> Đang lấy...</>) : (<><FontAwesomeIcon icon={faSync} /> Get Info</>)}
                       </button>
                     </div>
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
-                      Tự động điền thông tin ứng dụng vào các trường bên dưới.
-                    </p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">Tự động điền thông tin ứng dụng vào các trường bên dưới.</p>
                   </div>
                 )}
 
                 {/* dynamic fields */}
                 {selectedCategory &&
-                  (Array.isArray(currentFields) ? currentFields : []).map((field) => {
+                  (Array.isArray(categories.find(c => c.id === selectedCategory)?.fields) ? categories.find(c => c.id === selectedCategory)?.fields : []).map((field) => {
                     const lower = String(field).toLowerCase();
                     const isDesc = lower.includes("mô tả") || lower.includes("description");
                     const isScreens = lower.includes("screenshots");
                     const isDate = lower.includes("date");
 
                     if (isDesc) {
-                      const descKey = field; // "description" hoặc "mô tả"
+                      const descKey = field;
                       return (
                         <div key={field}>
                           <label className="block text-sm font-medium mb-2">{field}</label>
                           <div className="flex items-center gap-2 mb-2 text-xs">
                             <span>Chế độ:</span>
-                            <button
-                              type="button"
-                              onClick={() => setDescMode("markdown")}
-                              className={`px-2 py-1 rounded border ${descMode === "markdown" ? "bg-blue-600 text-white border-blue-600" : "bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600"}`}
-                            >
+                            <button type="button" onClick={() => setDescMode("markdown")} className={`px-2 py-1 rounded border ${descMode === "markdown" ? "bg-blue-600 text-white border-blue-600" : "bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600"}`}>
                               Markdown
                             </button>
-                            <button
-                              type="button"
-                              onClick={() => setDescMode("bbcode")}
-                              className={`px-2 py-1 rounded border ${descMode === "bbcode" ? "bg-blue-600 text-white border-blue-600" : "bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600"}`}
-                            >
+                            <button type="button" onClick={() => setDescMode("bbcode")} className={`px-2 py-1 rounded border ${descMode === "bbcode" ? "bg-blue-600 text-white border-blue-600" : "bg-gray-100 dark:bg-gray-700 border-gray-300 dark:border-gray-600"}`}>
                               BBCode
                             </button>
                           </div>
@@ -841,10 +819,7 @@ export default function Admin() {
                           />
                           <div className="mt-3">
                             <div className="text-sm font-medium mb-1 opacity-80">Xem trước</div>
-                            <div
-                              className="prose prose-sm max-w-none dark:prose-invert bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-3"
-                              dangerouslySetInnerHTML={{ __html: descHtml }}
-                            />
+                            <div className="prose prose-sm max-w-none dark:prose-invert bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-3" dangerouslySetInnerHTML={{ __html: descHtml }} />
                           </div>
                         </div>
                       );
@@ -874,32 +849,14 @@ export default function Admin() {
                   })}
 
                 <div className="flex gap-4 pt-4">
-                  <button
-                    type="submit"
-                    disabled={submitting || !selectedCategory}
-                    className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium flex items-center gap-2"
-                  >
-                    {submitting ? (
-                      <>
-                        <FontAwesomeIcon icon={faSpinner} spin /> Đang lưu...
-                      </>
-                    ) : editingId ? (
-                      <>
-                        <FontAwesomeIcon icon={faSave} /> Cập nhật
-                      </>
-                    ) : (
-                      <>
-                        <FontAwesomeIcon icon={faPlus} /> Thêm mới
-                      </>
-                    )}
+                  <button type="submit" disabled={submitting || !selectedCategory} className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium flex items-center gap-2">
+                    {submitting ? (<><FontAwesomeIcon icon={faSpinner} spin /> Đang lưu...</>) :
+                      editingId ? (<><FontAwesomeIcon icon={faSave} /> Cập nhật</>) :
+                      (<><FontAwesomeIcon icon={faPlus} /> Thêm mới</>)}
                   </button>
 
                   {editingId && (
-                    <button
-                      type="button"
-                      onClick={() => resetForm(true)}
-                      className="px-6 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 font-medium flex items-center gap-2"
-                    >
+                    <button type="button" onClick={() => resetForm(true)} className="px-6 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 font-medium flex items-center gap-2">
                       <FontAwesomeIcon icon={faTimes} /> Hủy
                     </button>
                   )}
@@ -909,14 +866,13 @@ export default function Admin() {
 
             {/* Bulk actions + Pagination + List */}
             <section className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-md">
-              {/* Hàng công cụ */}
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+                <h2 className="text-lg md:text-xl font-semibold">
+                  Danh sách ứng dụng <span className="text-sm font-normal opacity-80">(Đang lọc: <b>{total}</b> / Tổng: <b>{totalApps}</b>)</span>
+                </h2>
                 <div className="flex items-center gap-2">
-                  <div className="relative w-full md:w-64">
-                    <FontAwesomeIcon
-                      icon={faSearch}
-                      className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                    />
+                  <div className="relative w-56">
+                    <FontAwesomeIcon icon={faSearch} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                     <input
                       type="text"
                       placeholder="Tìm kiếm ứng dụng..."
@@ -925,128 +881,110 @@ export default function Admin() {
                       className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
                   </div>
-
-                  {/* Quick link copy (ví dụ copy link cài đặt nếu có) */}
                   <button
                     type="button"
-                    onClick={() => {
-                      try {
-                        navigator.clipboard.writeText(window.location.href);
-                      } catch {}
-                    }}
+                    onClick={() => { try { navigator.clipboard.writeText(window.location.href); } catch {} }}
                     className="px-3 py-2 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-sm flex items-center gap-2"
                     title="Sao chép URL trang hiện tại"
                   >
                     <FontAwesomeIcon icon={faCopy} /> Sao chép URL
                   </button>
                 </div>
+              </div>
 
-                {/* Bulk actions */}
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm opacity-70">Đã chọn:</span>
-                    <strong className="text-sm">{selectedIds.length}</strong>
-                  </div>
-                  {/* Chuyển chuyên mục hàng loạt */}
-                  <div className="flex items-center gap-2">
-                    <select
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (!val) return;
-                        if (!selectedIds.length) {
-                          setErrorMessage("Hãy chọn ít nhất 1 ứng dụng để chuyển chuyên mục.");
-                          e.target.value = "";
-                          return;
-                        }
-                        if (!isValidUUID(val)) {
-                          setErrorMessage("Chuyên mục không hợp lệ");
-                          e.target.value = "";
-                          return;
-                        }
-                        // Confirm
-                        const catName = categories.find(c => c.id === val)?.name || "chuyên mục";
-                        setConfirmState({
-                          open: true,
-                          title: "Chuyển chuyên mục hàng loạt",
-                          message: `Chuyển ${selectedIds.length} ứng dụng sang "${catName}"?`,
-                          danger: false,
-                          onConfirm: async () => {
-                            setConfirmState((p) => ({ ...p, open: false }));
-                            try {
-                              const { error } = await supabase
-                                .from("apps")
-                                .update({ category_id: val, updated_at: new Date().toISOString() })
-                                .in("id", selectedIds);
-                              if (error) throw error;
-                              setApps(prev => prev.map(a => selectedIds.includes(a.id) ? { ...a, category_id: val } : a));
-                              setSelectedIds([]);
-                            } catch (err) {
-                              console.error(err);
-                              setErrorMessage("Chuyển chuyên mục hàng loạt thất bại");
-                            }
-                          },
-                        });
+              {/* thanh bulk actions */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm opacity-70">Đã chọn:</span>
+                  <strong className="text-sm">{selectedIds.length}</strong>
+                </div>
+                <div className="flex items-center gap-2">
+                  <select
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (!val) return;
+                      if (!selectedIds.length) {
+                        setErrorMessage("Hãy chọn ít nhất 1 ứng dụng để chuyển chuyên mục.");
                         e.target.value = "";
-                      }}
-                      defaultValue=""
-                      className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm"
-                      title="Chuyển chuyên mục hàng loạt"
-                    >
-                      <option value="">Chuyển chuyên mục…</option>
-                      {categories.map((c) => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
-                    </select>
+                        return;
+                      }
+                      if (!isValidUUID(val)) {
+                        setErrorMessage("Chuyên mục không hợp lệ");
+                        e.target.value = "";
+                        return;
+                      }
+                      const catName = categories.find(c => c.id === val)?.name || "chuyên mục";
+                      setConfirmState({
+                        open: true,
+                        title: "Chuyển chuyên mục (hàng loạt)",
+                        message: `Chuyển ${selectedIds.length} ứng dụng sang "${catName}"?`,
+                        danger: false,
+                        onConfirm: async () => {
+                          setConfirmState((p) => ({ ...p, open: false }));
+                          try {
+                            const { error } = await supabase
+                              .from("apps")
+                              .update({ category_id: val, updated_at: new Date().toISOString() })
+                              .in("id", selectedIds);
+                            if (error) throw error;
+                            setApps(prev => prev.map(a => selectedIds.includes(a.id) ? { ...a, category_id: val } : a));
+                            setSelectedIds([]);
+                          } catch (err) {
+                            console.error(err);
+                            setErrorMessage("Chuyển chuyên mục hàng loạt thất bại");
+                          }
+                        },
+                      });
+                      e.target.value = "";
+                    }}
+                    defaultValue=""
+                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm"
+                    title="Chuyển chuyên mục hàng loạt"
+                  >
+                    <option value="">Chuyển chuyên mục…</option>
+                    {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
 
-                    {/* Xoá hàng loạt */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!selectedIds.length) {
-                          setErrorMessage("Chưa chọn ứng dụng nào để xoá.");
-                          return;
-                        }
-                        setConfirmState({
-                          open: true,
-                          title: "Xoá ứng dụng (hàng loạt)",
-                          message: `Bạn chắc chắn muốn xoá ${selectedIds.length} ứng dụng đã chọn?`,
-                          danger: true,
-                          onConfirm: async () => {
-                            setConfirmState((p) => ({ ...p, open: false }));
-                            try {
-                              const { error } = await supabase
-                                .from("apps")
-                                .delete()
-                                .in("id", selectedIds);
-                              if (error) throw error;
-                              setSelectedIds([]);
-                              await fetchApps();
-                            } catch (err) {
-                              console.error(err);
-                              setErrorMessage("Xoá hàng loạt thất bại");
-                            }
-                          },
-                        });
-                      }}
-                      className="px-3 py-2 rounded bg-red-600 hover:bg-red-700 text-white text-sm"
-                    >
-                      <FontAwesomeIcon icon={faTrash} /> Xoá đã chọn
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!selectedIds.length) {
+                        setErrorMessage("Chưa chọn ứng dụng nào để xoá.");
+                        return;
+                      }
+                      setConfirmState({
+                        open: true,
+                        title: "Xoá ứng dụng (hàng loạt)",
+                        message: `Bạn chắc chắn muốn xoá ${selectedIds.length} ứng dụng đã chọn?`,
+                        danger: true,
+                        onConfirm: async () => {
+                          setConfirmState((p) => ({ ...p, open: false }));
+                          try {
+                            const { error } = await supabase.from("apps").delete().in("id", selectedIds);
+                            if (error) throw error;
+                            setSelectedIds([]);
+                            await fetchApps();
+                          } catch (err) {
+                            console.error(err);
+                            setErrorMessage("Xoá hàng loạt thất bại");
+                          }
+                        },
+                      });
+                    }}
+                    className="px-3 py-2 rounded bg-red-600 hover:bg-red-700 text-white text-sm"
+                  >
+                    <FontAwesomeIcon icon={faTrash} /> Xoá đã chọn
+                  </button>
                 </div>
               </div>
 
-              {/* Bảng apps */}
+              {/* bảng */}
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse">
                   <thead>
                     <tr className="border-b border-gray-200 dark:border-gray-700">
                       <th className="text-left p-3 font-medium w-10">
-                        <button
-                          onClick={toggleSelectAllOnPage}
-                          className="inline-flex items-center"
-                          title={allSelectedOnPage(pageItems) ? "Bỏ chọn trang này" : "Chọn tất cả trang này"}
-                        >
+                        <button onClick={toggleSelectAllOnPage} className="inline-flex items-center" title={allSelectedOnPage(pageItems) ? "Bỏ chọn trang này" : "Chọn tất cả trang này"}>
                           <FontAwesomeIcon icon={allSelectedOnPage(pageItems) ? faCheckSquare : faSquare} />
                         </button>
                       </th>
@@ -1060,7 +998,13 @@ export default function Admin() {
                     {pageItems.map((app) => (
                       <tr
                         key={app.id}
-                        className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
+                        className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+                        onClick={(e) => {
+                          // tránh click vào nút/checkbox vẫn mở xem nhanh
+                          const tag = (e.target.tagName || "").toLowerCase();
+                          if (["button","svg","path","input","select"].includes(tag)) return;
+                          setQuickState({ open: true, app });
+                        }}
                       >
                         <td className="p-3 align-top">
                           <input
@@ -1069,13 +1013,12 @@ export default function Admin() {
                             onChange={() => toggleSelectOne(app.id)}
                             className="w-4 h-4"
                             aria-label="Chọn ứng dụng"
+                            onClick={(e) => e.stopPropagation()}
                           />
                         </td>
                         <td className="p-3">
                           <div className="flex items-center gap-3">
-                            {app.icon_url && (
-                              <img src={app.icon_url} alt="" className="w-8 h-8 rounded" />
-                            )}
+                            {app.icon_url ? <img src={app.icon_url} alt="" className="w-8 h-8 rounded" /> : null}
                             <span className="font-medium">{app.name || "Không có tên"}</span>
                           </div>
                         </td>
@@ -1092,15 +1035,10 @@ export default function Admin() {
                                   if (!isValidUUID(newCat)) throw new Error("Chuyên mục không hợp lệ");
                                   const { error } = await supabase
                                     .from("apps")
-                                    .update({
-                                      category_id: newCat,
-                                      updated_at: new Date().toISOString(),
-                                    })
+                                    .update({ category_id: newCat, updated_at: new Date().toISOString() })
                                     .eq("id", app.id);
                                   if (error) throw error;
-                                  setApps((prev) =>
-                                    prev.map((a) => (a.id === app.id ? { ...a, category_id: newCat } : a))
-                                  );
+                                  setApps((prev) => prev.map((a) => (a.id === app.id ? { ...a, category_id: newCat } : a)));
                                 } catch (err) {
                                   console.error("Move category error:", err);
                                   setErrorMessage(err.message || "Đổi chuyên mục thất bại");
@@ -1108,31 +1046,33 @@ export default function Admin() {
                               }}
                               className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm"
                               aria-label="Đổi chuyên mục nhanh"
+                              onClick={(e) => e.stopPropagation()}
                             >
                               <option value="">-- Chọn --</option>
-                              {categories.map((c) => (
-                                <option key={c.id} value={c.id}>
-                                  {c.name}
-                                </option>
-                              ))}
+                              {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                             </select>
                           </div>
                         </td>
                         <td className="p-3">
-                          {app.created_at
-                            ? new Date(app.created_at).toLocaleDateString("vi-VN")
-                            : "N/A"}
+                          {app.created_at ? new Date(app.created_at).toLocaleDateString("vi-VN") : "N/A"}
                         </td>
                         <td className="p-3">
-                          <div className="flex gap-2">
+                          <div className="flex flex-wrap gap-2">
                             <button
-                              onClick={() => handleEdit(app)}
+                              onClick={(e) => { e.stopPropagation(); setQuickState({ open: true, app }); }}
+                              className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 flex items-center gap-1"
+                              title="Xem nhanh"
+                            >
+                              <FontAwesomeIcon icon={faEye} /> Xem
+                            </button>
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleEdit(app); }}
                               className="px-3 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600 flex items-center gap-1"
                             >
                               <FontAwesomeIcon icon={faEdit} /> Sửa
                             </button>
                             <button
-                              onClick={() => askDeleteSingle(app.id)}
+                              onClick={(e) => { e.stopPropagation(); askDeleteSingle(app.id); }}
                               className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 flex items-center gap-1"
                             >
                               <FontAwesomeIcon icon={faTrash} /> Xoá
@@ -1154,7 +1094,7 @@ export default function Admin() {
               {/* Pagination */}
               <div className="mt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div className="text-sm opacity-80">
-                  Tổng <strong>{total}</strong> ứng dụng • Trang <strong>{currentPage}</strong> / {totalPages}
+                  Đang hiển thị <b>{pageItems.length}</b> / <b>{total}</b> kết quả • Trang <b>{currentPage}</b> / {totalPages}
                 </div>
                 <div className="flex items-center gap-2">
                   <label className="text-sm">Hiển thị:</label>
@@ -1191,7 +1131,7 @@ export default function Admin() {
           </>
         ) : null}
 
-        {/* ====== Categories tab ====== */}
+        {/* ===== Categories tab ===== */}
         {activeTab === "categories" ? (
           <>
             <section className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-md mb-6">
@@ -1206,15 +1146,11 @@ export default function Admin() {
                   <input
                     type="text"
                     value={categoryForm.name}
-                    onChange={(e) =>
-                      setCategoryForm((prev) => ({ ...prev, name: e.target.value }))
-                    }
+                    onChange={(e) => setCategoryForm((prev) => ({ ...prev, name: e.target.value }))}
                     className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required
                   />
-                  <p className="text-xs mt-1 text-gray-500">
-                    Slug sẽ được tạo tự động từ tên.
-                  </p>
+                  <p className="text-xs mt-1 text-gray-500">Slug sẽ được tạo tự động từ tên.</p>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -1222,17 +1158,10 @@ export default function Admin() {
                     id="enable_appstore_fetch"
                     type="checkbox"
                     checked={!!categoryForm.enable_appstore_fetch}
-                    onChange={(e) =>
-                      setCategoryForm((prev) => ({
-                        ...prev,
-                        enable_appstore_fetch: e.target.checked,
-                      }))
-                    }
+                    onChange={(e) => setCategoryForm((prev) => ({ ...prev, enable_appstore_fetch: e.target.checked }))}
                     className="h-4 w-4"
                   />
-                  <label htmlFor="enable_appstore_fetch" className="text-sm">
-                    Bật tự động lấy thông tin từ App Store cho chuyên mục này
-                  </label>
+                  <label htmlFor="enable_appstore_fetch" className="text-sm">Bật tự động lấy thông tin từ App Store cho chuyên mục này</label>
                 </div>
 
                 <div>
@@ -1242,31 +1171,19 @@ export default function Admin() {
                       type="text"
                       value={newField}
                       onChange={(e) => setNewField(e.target.value)}
-                      placeholder="Nhập tên trường mới (ví dụ: name, author, icon_url, ...)"
+                      placeholder="Ví dụ: name, author, icon_url, description, screenshots, version..."
                       className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
-                    <button
-                      type="button"
-                      onClick={addField}
-                      className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 flex items-center gap-2"
-                    >
+                    <button type="button" onClick={addField} className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 flex items-center gap-2">
                       <FontAwesomeIcon icon={faPlus} /> Thêm
                     </button>
                   </div>
 
                   <div className="space-y-2">
                     {categoryForm.fields.map((field, index) => (
-                      <div
-                        key={`${field}-${index}`}
-                        className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-700 rounded"
-                      >
+                      <div key={`${field}-${index}`} className="flex items-center gap-2 p-2 bg-gray-50 dark:bg-gray-700 rounded">
                         <span className="flex-1">{field}</span>
-                        <button
-                          type="button"
-                          onClick={() => removeField(index)}
-                          className="px-2 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
-                          title="Xoá trường"
-                        >
+                        <button type="button" onClick={() => removeField(index)} className="px-2 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600" title="Xoá trường">
                           <FontAwesomeIcon icon={faTimes} />
                         </button>
                       </div>
@@ -1275,33 +1192,16 @@ export default function Admin() {
                 </div>
 
                 <div className="flex gap-4 pt-4">
-                  <button
-                    type="submit"
-                    disabled={submitting || !categoryForm.name.trim()}
-                    className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium flex items-center gap-2"
-                  >
-                    {submitting ? (
-                      <>
-                        <FontAwesomeIcon icon={faSpinner} spin /> Đang lưu...
-                      </>
-                    ) : editingCategoryId ? (
-                      <>
-                        <FontAwesomeIcon icon={faSave} /> Cập nhật
-                      </>
-                    ) : (
-                      <>
-                        <FontAwesomeIcon icon={faPlus} /> Thêm mới
-                      </>
-                    )}
+                  <button type="submit" disabled={submitting || !categoryForm.name.trim()} className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed font-medium flex items-center gap-2">
+                    {submitting ? (<><FontAwesomeIcon icon={faSpinner} spin /> Đang lưu...</>) :
+                      editingCategoryId ? (<><FontAwesomeIcon icon={faSave} /> Cập nhật</>) :
+                      (<><FontAwesomeIcon icon={faPlus} /> Thêm mới</>)}
                   </button>
 
                   {editingCategoryId && (
                     <button
                       type="button"
-                      onClick={() => {
-                        setEditingCategoryId(null);
-                        setCategoryForm({ name: "", fields: [], enable_appstore_fetch: false });
-                      }}
+                      onClick={() => { setEditingCategoryId(null); setCategoryForm({ name: "", fields: [], enable_appstore_fetch: false }); }}
                       className="px-6 py-2 bg-gray-500 text-white rounded hover:bg-gray-600 font-medium flex items-center gap-2"
                     >
                       <FontAwesomeIcon icon={faTimes} /> Hủy
@@ -1311,9 +1211,10 @@ export default function Admin() {
               </form>
             </section>
 
-            {/* categories list */}
             <section className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-md">
-              <h2 className="text-lg md:text-xl font-semibold mb-4">Danh sách chuyên mục</h2>
+              <h2 className="text-lg md:text-xl font-semibold mb-4">
+                Danh sách chuyên mục <span className="text-sm font-normal opacity-80">(Tổng: <b>{totalCategories}</b>)</span>
+              </h2>
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse">
                   <thead>
@@ -1327,26 +1228,17 @@ export default function Admin() {
                   </thead>
                   <tbody>
                     {categories.map((category) => (
-                      <tr
-                        key={category.id}
-                        className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
-                      >
+                      <tr key={category.id} className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
                         <td className="p-3 font-medium">{category.name}</td>
                         <td className="p-3">{category.slug || "-"}</td>
                         <td className="p-3">{category.enable_appstore_fetch ? "Bật" : "Tắt"}</td>
                         <td className="p-3">{category.fields?.length || 0} trường</td>
                         <td className="p-3">
                           <div className="flex gap-2">
-                            <button
-                              onClick={() => handleEditCategory(category)}
-                              className="px-3 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600 flex items-center gap-1"
-                            >
+                            <button onClick={() => handleEditCategory(category)} className="px-3 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600 flex items-center gap-1">
                               <FontAwesomeIcon icon={faEdit} /> Sửa
                             </button>
-                            <button
-                              onClick={() => askDeleteCategory(category.id)}
-                              className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 flex items-center gap-1"
-                            >
+                            <button onClick={() => askDeleteCategory(category.id)} className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 flex items-center gap-1">
                               <FontAwesomeIcon icon={faTrash} /> Xoá
                             </button>
                           </div>
@@ -1364,7 +1256,7 @@ export default function Admin() {
           </>
         ) : null}
 
-        {/* ====== Certs tab ====== */}
+        {/* ===== Certs tab ===== */}
         {activeTab === "certs" ? (
           <section className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-md">
             <h2 className="text-lg md:text-xl font-semibold mb-4">
@@ -1376,7 +1268,7 @@ export default function Admin() {
         ) : null}
       </main>
 
-      {/* Global confirm modal */}
+      {/* Modals */}
       <ConfirmModal
         open={confirmState.open}
         title={confirmState.title}
@@ -1385,6 +1277,16 @@ export default function Admin() {
         onCancel={() => setConfirmState((p) => ({ ...p, open: false }))}
         onConfirm={confirmState.onConfirm}
         confirmText="Xác nhận"
+      />
+      <QuickViewModal
+        open={quickState.open}
+        onClose={() => setQuickState({ open: false, app: null })}
+        app={quickState.app}
+        categories={categories}
+        htmlDesc={(() => {
+          const raw = quickState.app ? (quickState.app.description || quickState.app["mô tả"] || "") : "";
+          return descMode === "markdown" ? mdToHtml(raw) : bbcodeToHtml(raw);
+        })()}
       />
     </div>
   );
