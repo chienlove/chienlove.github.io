@@ -4,7 +4,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { supabase } from '../lib/supabase';
 import { auth, db } from '../lib/firebase-client';
-import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
 
 import SearchModal from './SearchModal';
 import LoginButton from './LoginButton';
@@ -12,7 +12,8 @@ import NotificationsPanel from './NotificationsPanel';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faBars, faTimes, faSearch, faBell, faWrench, faLayerGroup, faArrowUpRightFromSquare
+  faBars, faTimes, faSearch, faBell, faWrench, faLayerGroup, faArrowUpRightFromSquare,
+  faCog, faBoxOpen, faFolder, faShieldAlt, faChartBar
 } from '@fortawesome/free-solid-svg-icons';
 
 export default function Layout({ children, fullWidth = false, hotApps }) {
@@ -29,7 +30,38 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifCount, setNotifCount] = useState(0);
 
+  // Thêm state kiểm tra admin
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminLoading, setAdminLoading] = useState(true);
+
   const drawerRef = useRef(null);
+
+  // Kiểm tra quyền admin khi user thay đổi
+  useEffect(() => {
+    const checkAdminStatus = async () => {
+      if (!user) {
+        setIsAdmin(false);
+        setAdminLoading(false);
+        return;
+      }
+
+      try {
+        // Kiểm tra trong Firestore
+        const adminDoc = await getDoc(doc(db, 'app_config', 'admins'));
+        if (adminDoc.exists()) {
+          const adminUids = adminDoc.data().uids || [];
+          setIsAdmin(adminUids.includes(user.uid));
+        }
+        setAdminLoading(false);
+      } catch (error) {
+        console.error('Error checking admin status:', error);
+        setIsAdmin(false);
+        setAdminLoading(false);
+      }
+    };
+
+    checkAdminStatus();
+  }, [user]);
 
   // Mở NotificationsPanel khi nhận sự kiện từ LoginButton
   useEffect(() => {
@@ -228,6 +260,50 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
               Tìm kiếm…
             </button>
 
+            {/* === PHẦN QUẢN TRỊ - CHỈ HIỆN KHI LÀ ADMIN === */}
+            {!adminLoading && isAdmin && (
+              <div className="mt-6 mb-4 pb-4 border-b border-green-200 dark:border-green-800">
+                <div className="flex items-center gap-2 text-sm font-semibold mb-2 text-green-600 dark:text-green-400">
+                  <FontAwesomeIcon icon={faCog} className="w-4 h-4" />
+                  Quản trị
+                </div>
+                <div className="space-y-1">
+                  <a
+                    href="/admin"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2 px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                  >
+                    <FontAwesomeIcon icon={faChartBar} className="w-4 h-4" />
+                    Dashboard
+                  </a>
+                  <a
+                    href="/admin#apps"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2 px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                  >
+                    <FontAwesomeIcon icon={faBoxOpen} className="w-4 h-4" />
+                    Quản lý App
+                  </a>
+                  <a
+                    href="/admin#categories"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2 px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                  >
+                    <FontAwesomeIcon icon={faFolder} className="w-4 h-4" />
+                    Chuyên mục
+                  </a>
+                  <a
+                    href="/admin#certs"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="flex items-center gap-2 px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                  >
+                    <FontAwesomeIcon icon={faShieldAlt} className="w-4 h-4" />
+                    Ký IPA
+                  </a>
+                </div>
+              </div>
+            )}
+
             {/* --- Công cụ --- */}
             <div className="mt-6">
               <div className="flex items-center gap-2 text-sm font-semibold mb-2">
@@ -248,7 +324,7 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
                   href="https://ipadl.storeios.net"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-between px-2 py-2 rounded hover:bg-gray-100 dark:hoverbg-gray-800"
+                  className="flex items-center justify-between px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
                 >
                   <span>IPA Downloader</span>
                   <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="w-3.5 h-3.5 opacity-70" />
