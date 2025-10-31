@@ -4,7 +4,7 @@ import Head from 'next/head';
 import Link from 'next/link';
 import { supabase } from '../lib/supabase';
 import { auth, db } from '../lib/firebase-client';
-import { collection, query, where, onSnapshot, doc, getDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc } from 'firebase/firestore';
 
 import SearchModal from './SearchModal';
 import LoginButton from './LoginButton';
@@ -18,6 +18,7 @@ import {
 
 export default function Layout({ children, fullWidth = false, hotApps }) {
   const [darkMode, setDarkMode] = useState(false);
+  const [user, setUser] = useState(null);               // ⟵ NEW: user state
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeCategory, setCategory] = useState('all');
@@ -36,31 +37,35 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
 
   const drawerRef = useRef(null);
 
-  // Kiểm tra quyền admin khi user thay đổi
+  // ⟵ NEW: Lắng nghe trạng thái đăng nhập Firebase Auth
   useEffect(() => {
-    const checkAdminStatus = async () => {
-      if (!user) {
+    const unsub = auth.onAuthStateChanged((u) => setUser(u));
+    return () => unsub && unsub();
+  }, []);
+
+  // Kiểm tra quyền admin khi user thay đổi (real-time theo doc app_config/admins)
+  useEffect(() => {
+    if (!user) {
+      setIsAdmin(false);
+      setAdminLoading(false);
+      return;
+    }
+    setAdminLoading(true);
+    const ref = doc(db, 'app_config', 'admins');
+    const unsub = onSnapshot(
+      ref,
+      (snap) => {
+        const adminUids = snap.exists() ? (snap.data().uids || []) : [];
+        setIsAdmin(adminUids.includes(user.uid));
+        setAdminLoading(false);
+      },
+      (err) => {
+        console.error('Error checking admin status:', err);
         setIsAdmin(false);
         setAdminLoading(false);
-        return;
       }
-
-      try {
-        // Kiểm tra trong Firestore
-        const adminDoc = await getDoc(doc(db, 'app_config', 'admins'));
-        if (adminDoc.exists()) {
-          const adminUids = adminDoc.data().uids || [];
-          setIsAdmin(adminUids.includes(user.uid));
-        }
-        setAdminLoading(false);
-      } catch (error) {
-        console.error('Error checking admin status:', error);
-        setIsAdmin(false);
-        setAdminLoading(false);
-      }
-    };
-
-    checkAdminStatus();
+    );
+    return () => unsub && unsub();
   }, [user]);
 
   // Mở NotificationsPanel khi nhận sự kiện từ LoginButton
@@ -200,7 +205,7 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
             <Link href="/about" className="hover:text-red-600">Giới thiệu</Link>
           </nav>
 
-          {/* Right: Search | Bell | Avatar/Login */}
+          {/* Right: Search | Bell | Admin (if) | Avatar/Login */}
           <div className="flex items-center gap-2">
             <button
               onClick={() => setSearchOpen(true)}
@@ -227,6 +232,17 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
               </button>
               <NotificationsPanel open={notifOpen} onClose={() => setNotifOpen(false)} />
             </div>
+
+            {/* ⟵ NEW: Nút Admin trên header desktop */}
+            {!adminLoading && isAdmin && (
+              <Link
+                href="/admin"
+                title="Bảng điều khiển admin"
+                className="hidden md:flex items-center justify-center w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
+              >
+                <FontAwesomeIcon icon={faCog} className="w-4 h-4" />
+              </Link>
+            )}
 
             <LoginButton onToggleTheme={() => setDarkMode(v => !v)} isDark={darkMode} />
           </div>
