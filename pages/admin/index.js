@@ -1280,7 +1280,7 @@ useEffect(() => {
                             </button>
                             <button
                               onClick={() => handleDeleteCategory(category.id)}
-                              className="px-2 py-1 text-xs font-semibold rounded bg-red-500 text-white hover:bg-red-600 flex items-center gap-1"
+                              className="px-0 py-1 text-xs font-semibold rounded bg-red-500 text-white hover:bg-red-600 flex items-center gap-1"
                             >
                               <FontAwesomeIcon icon={faTrash} /> Xoá
                             </button>
