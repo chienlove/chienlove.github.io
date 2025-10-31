@@ -1075,7 +1075,7 @@ useEffect(() => {
                           </button>
                           <button
                             onClick={() => askDelete(app.id)}
-                            className="text-center px-2 py-1.5 text-xs font-semibold rounded bg-red-500 text-white hover:bg-red-600"
+                            className="text-center px-1 py-1.5 text-xs font-semibold rounded bg-red-500 text-white hover:bg-red-600"
                           >
                             <FontAwesomeIcon icon={faTrash} /> <span className="ml-1">Xoá</span>
                           </button>
@@ -1280,7 +1280,7 @@ useEffect(() => {
                             </button>
                             <button
                               onClick={() => handleDeleteCategory(category.id)}
-                              className="px-0 py-1 text-xs font-semibold rounded bg-red-500 text-white hover:bg-red-600 flex items-center gap-1"
+                              className="px-2.5 py-1 text-xs font-semibold rounded bg-red-500 text-white hover:bg-red-600 flex items-center gap-1"
                             >
                               <FontAwesomeIcon icon={faTrash} /> Xoá
                             </button>
