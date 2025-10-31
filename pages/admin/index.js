@@ -15,8 +15,6 @@ import {
   faChevronDown, faChevronUp, faLayerGroup, faExchangeAlt
 } from "@fortawesome/free-solid-svg-icons";
 import { faApple } from "@fortawesome/free-brands-svg-icons";
-// ==== ADD: import icons for Back & Home ====
-import { faChevronLeft, faHome } from "@fortawesome/free-solid-svg-icons";
 
 export default function Admin() {
   const router = useRouter();
@@ -84,22 +82,6 @@ export default function Admin() {
 
   const canFetchFromAppStore =
     categories.find((c) => c.id === selectedCategory)?.enable_appstore_fetch === true;
-
-  // ==== ADD: safe back function ====
-  function smartBack() {
-    if (typeof window === "undefined") return;
-    try {
-      const ref = document.referrer || "";
-      const sameOrigin = ref && new URL(ref).origin === window.location.origin;
-      if (sameOrigin && window.history.length > 1) {
-        window.history.back();
-      } else {
-        router.push("/");
-      }
-    } catch {
-      router.push("/");
-    }
-  }
 
   // --- effects ---
   useEffect(() => { checkAdmin(); }, []);
@@ -690,24 +672,6 @@ export default function Admin() {
             >
               <FontAwesomeIcon icon={faBars} />
             </button>
-            {/* ==== ADD: Back & Home buttons (no existing line changed) ==== */}
-            <button
-              onClick={smartBack}
-              className="px-2 py-1 text-xs font-semibold rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
-              aria-label="Quay lại"
-              title="Quay lại"
-            >
-              <FontAwesomeIcon icon={faChevronLeft} /> <span className="ml-1 hidden sm:inline">Back</span>
-            </button>
-            <button
-              onClick={() => router.push("/")}
-              className="px-2 py-1 text-xs font-semibold rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700"
-              aria-label="Trang chủ"
-              title="Trang chủ"
-            >
-              <FontAwesomeIcon icon={faHome} /> <span className="ml-1 hidden sm:inline">Home</span>
-            </button>
-            {/* ==== END ADD ==== */}
             <h1 className="text-xl md:text-2xl font-bold">
               {activeTab === "apps"
                 ? <>Quản lý Ứng dụng <span className="text-sm font-normal opacity-70">({totalApps})</span></>
