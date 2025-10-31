@@ -466,7 +466,7 @@ export default function Admin() {
   const pageEnd = pageStart + pageSize;
   const pageItems = filteredApps.slice(pageStart, pageEnd);
 
-  // --- bulk select (ĐÃ GIỮ 1 HÀM, tránh trùng) ---
+  // --- bulk select ---
   const allSelectedOnPage = (list) =>
     list.length > 0 && list.every((a) => selectedIds.includes(a.id));
   function toggleSelectAllOnPage() {
@@ -826,9 +826,8 @@ export default function Admin() {
                 )}
               </div>
 
-              {/* Mobile-friendly list */}
+              {/* Desktop table */}
               <div className="overflow-x-auto">
-                {/* Desktop table */}
                 <table className="w-full border-collapse hidden md:table">
                   <thead>
                     <tr className="border-b border-gray-200 dark:border-gray-700">
@@ -860,7 +859,11 @@ export default function Admin() {
                           <td className="p-3">
                             <div className="flex items-center gap-3">
                               {app.icon_url && <img src={app.icon_url} alt="" className="w-8 h-8 rounded" />}
-                              <Link href={`/${slug}`} target="_blank" className="font-medium hover:underline">
+                              <Link
+                                href={`/${slug}`}
+                                target="_blank"
+                                className="text-blue-600 hover:underline font-medium"
+                              >
                                 {app.name || "Không có tên"}
                               </Link>
                             </div>
@@ -874,19 +877,19 @@ export default function Admin() {
                               <Link
                                 href={`/${slug}`}
                                 target="_blank"
-                                className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 flex items-center gap-1"
+                                className="px-2.5 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700 flex items-center gap-1 font-bold"
                               >
                                 <FontAwesomeIcon icon={faEye} /> Xem
                               </Link>
                               <button
                                 onClick={() => handleEdit(app)}
-                                className="px-3 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600 flex items-center gap-1"
+                                className="px-2.5 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600 flex items-center gap-1 font-bold"
                               >
                                 <FontAwesomeIcon icon={faEdit} /> Sửa
                               </button>
                               <button
                                 onClick={() => handleDelete(app.id)}
-                                className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600 flex items-center gap-1"
+                                className="px-2.5 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600 flex items-center gap-1 font-bold"
                               >
                                 <FontAwesomeIcon icon={faTrash} /> Xoá
                               </button>
@@ -915,7 +918,11 @@ export default function Admin() {
                           />
                           {app.icon_url && <img src={app.icon_url} alt="" className="w-8 h-8 rounded" />}
                           <div className="flex-1">
-                            <Link href={`/${slug}`} target="_blank" className="font-semibold hover:underline block">
+                            <Link
+                              href={`/${slug}`}
+                              target="_blank"
+                              className="text-blue-600 hover:underline font-semibold block"
+                            >
                               {app.name || "Không có tên"}
                             </Link>
                             <div className="text-xs opacity-70 mt-0.5">
@@ -930,19 +937,19 @@ export default function Admin() {
                           <Link
                             href={`/${slug}`}
                             target="_blank"
-                            className="text-center px-3 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+                            className="text-center px-2.5 py-1.5 rounded bg-green-600 text-white hover:bg-green-700 text-sm font-bold"
                           >
                             <FontAwesomeIcon icon={faEye} /> <span className="ml-1">Xem</span>
                           </Link>
                           <button
                             onClick={() => handleEdit(app)}
-                            className="text-center px-3 py-2 rounded bg-yellow-500 text-white hover:bg-yellow-600"
+                            className="text-center px-2.5 py-1.5 rounded bg-yellow-500 text-white hover:bg-yellow-600 text-sm font-bold"
                           >
                             <FontAwesomeIcon icon={faEdit} /> <span className="ml-1">Sửa</span>
                           </button>
                           <button
                             onClick={() => handleDelete(app.id)}
-                            className="text-center px-3 py-2 rounded bg-red-500 text-white hover:bg-red-600"
+                            className="text-center px-2.5 py-1.5 rounded bg-red-500 text-white hover:bg-red-600 text-sm font-bold"
                           >
                             <FontAwesomeIcon icon={faTrash} /> <span className="ml-1">Xoá</span>
                           </button>
@@ -1139,13 +1146,13 @@ export default function Admin() {
                           <div className="flex gap-2">
                             <button
                               onClick={() => handleEditCategory(category)}
-                              className="px-3 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600 flex items-center gap-1"
+                              className="px-2.5 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600 flex items-center gap-1 font-bold"
                             >
                               <FontAwesomeIcon icon={faEdit} /> Sửa
                             </button>
                             <button
                               onClick={() => handleDeleteCategory(category.id)}
-                              className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600 flex items-center gap-1"
+                              className="px-2.5 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600 flex items-center gap-1 font-bold"
                             >
                               <FontAwesomeIcon icon={faTrash} /> Xoá
                             </button>
