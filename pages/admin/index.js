@@ -118,54 +118,64 @@ export default function Admin() {
   }, []);
 
   // Tự tính SIZE từ plist khi nhập tên IPA (download_link = tên plist/ipa name)
-  useEffect(() => {
-    async function fetchIpaSizeFromPlist() {
-      const plistName = form["download_link"]?.trim();
-      if (!plistName) return;
+  // Tự tính SIZE từ plist khi nhập tên IPA (hỗ trợ nhiều tên trường & 2 cấu trúc plist)
+useEffect(() => {
+  const getPlistName = () =>
+    (form?.download_link || form?.plist || form?.plist_name || form?.manifest || "")
+      .toString()
+      .trim();
 
-      try {
-        const tokenRes = await fetch(`/api/generate-token`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ipa_name: plistName }),
-        });
-        if (!tokenRes.ok) throw new Error(`Lỗi lấy token: ${tokenRes.status}`);
-        const { token } = await tokenRes.json();
-        if (!token) throw new Error("Không nhận được token từ API");
+  async function fetchIpaSizeFromPlist() {
+    const plistName = getPlistName();
+    if (!plistName) return;
 
-        const plistUrl = `https://storeios.net/api/plist?ipa_name=${encodeURIComponent(
-          plistName
-        )}&token=${token}`;
+    try {
+      const tokenRes = await fetch(`/api/generate-token`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ipa_name: plistName }),
+      });
+      if (!tokenRes.ok) throw new Error(`Lỗi lấy token: ${tokenRes.status}`);
+      const { token } = await tokenRes.json();
+      if (!token) throw new Error("Không nhận được token từ API");
 
-        const plistResponse = await fetch(plistUrl);
-        if (!plistResponse.ok) throw new Error(`Lỗi tải plist: ${plistResponse.status}`);
+      const plistUrl = `https://storeios.net/api/plist?ipa_name=${encodeURIComponent(plistName)}&token=${token}`;
+      const plistResponse = await fetch(plistUrl);
+      if (!plistResponse.ok) throw new Error(`Lỗi tải plist: ${plistResponse.status}`);
+      const plistContent = await plistResponse.text();
 
-        const plistContent = await plistResponse.text();
-        const ipaUrlMatch = plistContent.match(
-          /<key>url<\/key>\s*<string>([^<]+\.ipa)<\/string>/i
+      // Pattern 1: <key>url</key><string>...ipa</string>
+      let match = plistContent.match(/<key>\s*url\s*<\/key>\s*<string>([^<]+\.ipa)<\/string>/i);
+
+      // Pattern 2: assets -> software-package -> <string>https://...ipa</string>
+      if (!match) {
+        match = plistContent.match(
+          /<string>\s*software-package\s*<\/string>[\s\S]*?<string>(https?:[^<]+\.ipa)<\/string>/i
         );
-        if (!ipaUrlMatch || !ipaUrlMatch[1]) throw new Error("Không tìm thấy URL IPA trong plist");
-
-        const ipaUrl = ipaUrlMatch[1];
-        const sizeResponse = await fetch(`/api/admin/get-size-ipa?url=${encodeURIComponent(ipaUrl)}`);
-        if (!sizeResponse.ok) throw new Error(`Lỗi lấy kích thước: ${sizeResponse.status}`);
-
-        const { size, error: sizeError } = await sizeResponse.json();
-        if (sizeError || !size) throw new Error(sizeError || "Không nhận được kích thước");
-
-        setForm((prev) => ({ ...prev, size: `${(size / (1024 * 1024)).toFixed(2)} MB` }));
-      } catch (error) {
-        console.error("Tính size IPA lỗi:", { error: error.message });
-        setForm((prev) => ({ ...prev, size: `Lỗi: ${error.message}` }));
       }
+      if (!match || !match[1]) throw new Error("Không tìm thấy URL IPA trong plist");
+
+      const ipaUrl = match[1].trim();
+      const sizeResponse = await fetch(`/api/admin/get-size-ipa?url=${encodeURIComponent(ipaUrl)}`);
+      if (!sizeResponse.ok) throw new Error(`Lỗi lấy kích thước: ${sizeResponse.status}`);
+
+      const { size, error: sizeError } = await sizeResponse.json();
+      if (sizeError || !size) throw new Error(sizeError || "Không nhận được kích thước");
+
+      setForm((prev) => ({ ...prev, size: `${(size / (1024 * 1024)).toFixed(2)} MB` }));
+    } catch (error) {
+      console.error("Tính size IPA lỗi:", { error: error.message });
+      setForm((prev) => ({ ...prev, size: `Lỗi: ${error.message}` }));
     }
+  }
 
-    const timer = setTimeout(() => {
-      if (form["download_link"]) fetchIpaSizeFromPlist();
-    }, 500);
+  const timer = setTimeout(() => {
+    if (getPlistName()) fetchIpaSizeFromPlist();
+  }, 600);
 
-    return () => clearTimeout(timer);
-  }, [form["download_link"]]);
+  return () => clearTimeout(timer);
+// Theo dõi nhiều khả năng tên trường
+}, [form?.download_link, form?.plist, form?.plist_name, form?.manifest]);
 
   useEffect(() => {
     if (form.screenshots) setScreenshotInput(form.screenshots.join("\n"));
