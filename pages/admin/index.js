@@ -1,5 +1,4 @@
 // pages/admin/index.js
-
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/router";
 import { supabase } from "../../lib/supabase";
@@ -11,45 +10,16 @@ import {
   faPlus, faEdit, faTrash, faSave, faTimes, faSync, faSpinner,
   faBoxOpen, faFolder, faShieldAlt, faSun, faMoon, faBars,
   faSignOutAlt, faSearch, faExclamationTriangle, faChevronLeft,
-  faChevronRight, faCheckSquare, faSquare, faCopy, faEye
+  faChevronRight, faCheckSquare, faSquare, faCopy, faEye, faArrowUpRightFromSquare
 } from "@fortawesome/free-solid-svg-icons";
 import { faApple } from "@fortawesome/free-brands-svg-icons";
-
-/* ===== Modal xác nhận ===== */
-function ConfirmModal({ open, title = "Xác nhận", message, onCancel, onConfirm, confirmText = "Xác nhận", danger = false }) {
-  if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-md rounded-lg shadow-xl bg-white dark:bg-gray-800">
-        <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-lg font-semibold">{title}</h3>
-        </div>
-        <div className="px-5 py-4 text-sm text-gray-700 dark:text-gray-200">
-          {message}
-        </div>
-        <div className="px-5 py-3 border-t border-gray-200 dark:border-gray-700 flex gap-2 justify-end">
-          <button
-            onClick={onCancel}
-            className="px-4 py-2 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-sm"
-          >
-            Hủy
-          </button>
-          <button
-            onClick={onConfirm}
-            className={`px-4 py-2 rounded text-sm text-white ${danger ? "bg-red-600 hover:bg-red-700" : "bg-blue-600 hover:bg-blue-700"}`}
-          >
-            {confirmText}
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 /* ===== Quick View (xem nhanh bài viết) ===== */
 function QuickViewModal({ open, onClose, app, categories, htmlDesc }) {
   if (!open || !app) return null;
   const catName = categories.find(c => c.id === app.category_id)?.name || "Không xác định";
+  const publicHref = app.slug ? `/${app.slug}` : null;
+
   return (
     <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/60 p-3">
       <div className="w-full max-w-3xl max-h-[90vh] overflow-auto rounded-xl shadow-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700">
@@ -63,19 +33,38 @@ function QuickViewModal({ open, onClose, app, categories, htmlDesc }) {
               </div>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className="px-3 py-1.5 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-sm"
-          >
-            <FontAwesomeIcon icon={faTimes} /> Đóng
-          </button>
+          <div className="flex items-center gap-2">
+            {publicHref && (
+              <a
+                href={publicHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-700 text-white text-sm flex items-center gap-2"
+                title="Mở ngoài trang công khai"
+              >
+                <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
+                Mở ngoài trang
+              </a>
+            )}
+            <button
+              onClick={onClose}
+              className="px-3 py-1.5 rounded bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-sm"
+            >
+              <FontAwesomeIcon icon={faTimes} /> Đóng
+            </button>
+          </div>
         </div>
 
         <div className="p-5 space-y-4">
-          <div
-            className="prose prose-sm max-w-none dark:prose-invert"
-            dangerouslySetInnerHTML={{ __html: htmlDesc }}
-          />
+          {htmlDesc?.trim() ? (
+            <div
+              className="prose prose-sm max-w-none dark:prose-invert"
+              dangerouslySetInnerHTML={{ __html: htmlDesc }}
+            />
+          ) : (
+            <div className="text-sm opacity-70 italic">Chưa có mô tả.</div>
+          )}
+
           {Array.isArray(app.screenshots) && app.screenshots.length > 0 ? (
             <div>
               <div className="text-sm font-medium mb-2 opacity-80">Ảnh chụp màn hình</div>
@@ -86,6 +75,7 @@ function QuickViewModal({ open, onClose, app, categories, htmlDesc }) {
               </div>
             </div>
           ) : null}
+
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
             {app.version ? <div><span className="opacity-70">Version:</span> <b>{app.version}</b></div> : null}
             {app.size ? <div><span className="opacity-70">Kích thước:</span> <b>{app.size}</b></div> : null}
@@ -107,7 +97,7 @@ function QuickViewModal({ open, onClose, app, categories, htmlDesc }) {
 
 /* ===== Markdown/BBCode (link-safe, không dùng regex literal cho link) ===== */
 function mdToHtml(src = "") {
-  // an toàn: xử lý đậm/nghiêng/code bằng RegExp đơn giản
+  // cơ bản: heading, bold, italic, code
   let s = src
     .replace(/^###### (.*)$/gm, "<h6>$1</h6>")
     .replace(/^##### (.*)$/gm, "<h5>$1</h5>")
@@ -119,16 +109,13 @@ function mdToHtml(src = "") {
     .replace(/\*(.+?)\*/g, "<em>$1</em>")
     .replace(/`([^`]+?)`/g, "<code>$1</code>");
 
-  // Link [text](http://...) -- không dùng regex literal để tránh Vercel inject phá cú pháp
   s = replaceMarkdownLinksSafely(s);
-
-  // xuống dòng
   s = s.replace(/\n/g, "<br/>");
   return s;
 }
 
 function replaceMarkdownLinksSafely(input) {
-  // Parser nhỏ tìm pattern [text](url) với url bắt buộc bắt đầu bằng http/https
+  // Parser nhỏ tìm [text](http|https)
   let out = "";
   let i = 0;
   while (i < input.length) {
@@ -151,7 +138,7 @@ function replaceMarkdownLinksSafely(input) {
       const escUrl = url.replace(/"/g, "&quot;");
       out += `<a href="${escUrl}" target="_blank" rel="noopener noreferrer">${escText}</a>`;
     } else {
-      out += input.slice(lb, rp + 1); // giữ nguyên
+      out += input.slice(lb, rp + 1);
     }
     i = rp + 1;
   }
@@ -159,7 +146,6 @@ function replaceMarkdownLinksSafely(input) {
 }
 
 function bbcodeToHtml(src = "") {
-  // Tránh regex literal dài phức tạp; dùng RegExp constructor cho những đoạn đơn giản
   let s = src;
   s = s.replace(new RegExp("\$begin:math:display$b\\$end:math:display$(.*?)\$begin:math:display$/b\\$end:math:display$", "gis"), "<strong>$1</strong>");
   s = s.replace(new RegExp("\$begin:math:display$i\\$end:math:display$(.*?)\$begin:math:display$/i\\$end:math:display$", "gis"), "<em>$1</em>");
@@ -171,12 +157,12 @@ function bbcodeToHtml(src = "") {
   s = s.replace(new RegExp("\$begin:math:display$quote\\$end:math:display$(.*?)\$begin:math:display$\\\\/quote\\$end:math:display$", "gis"),
     '<blockquote style="border-left:3px solid #ccc;padding-left:10px;margin:6px 0">$1</blockquote>');
 
-  // [list][*]a[*]b[/list] xử lý không dùng regex có /gi dài
   s = s.replace(new RegExp("\$begin:math:display$list\\$end:math:display$([\\s\\S]*?)\$begin:math:display$\\\\/list\\$end:math:display$", "gi"), (_, inner) => {
     const items = inner.split(/$begin:math:display$\\*$end:math:display$/).map(t => t.trim()).filter(Boolean);
     if (!items.length) return inner;
     return `<ul style="padding-left:20px;list-style:disc"><li>${items.join("</li><li>")}</li></ul>`;
   });
+
   s = s.replace(/\n/g, "<br/>");
   return s;
 }
@@ -217,7 +203,7 @@ export default function Admin() {
   const [editingCategoryId, setEditingCategoryId] = useState(null);
   const [newField, setNewField] = useState("");
 
-  // Editor mode & preview
+  // Editor
   const [descMode, setDescMode] = useState("markdown"); // 'markdown' | 'bbcode'
   const descHtml = useMemo(() => {
     const content = form["description"] || form["mô tả"] || "";
@@ -232,8 +218,7 @@ export default function Admin() {
   const [selectedIds, setSelectedIds] = useState([]);
   const allSelectedOnPage = (list) => list.length > 0 && list.every(a => selectedIds.includes(a.id));
 
-  // Modals
-  const [confirmState, setConfirmState] = useState({ open: false, title: "", message: "", danger: true, onConfirm: () => {} });
+  // Quick view
   const [quickState, setQuickState] = useState({ open: false, app: null });
 
   // helpers
@@ -268,7 +253,7 @@ export default function Admin() {
     document.documentElement.classList.toggle("dark", darkMode);
   }, [darkMode]);
 
-  // chống zoom iOS
+  // chống zoom iOS (fallback toàn cục)
   useEffect(() => {
     if (typeof document !== "undefined") {
       const style = document.createElement("style");
@@ -380,19 +365,6 @@ export default function Admin() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  function askDeleteSingle(id) {
-    setConfirmState({
-      open: true,
-      title: "Xoá ứng dụng",
-      message: "Bạn chắc chắn muốn xoá ứng dụng này? Thao tác không thể hoàn tác.",
-      danger: true,
-      onConfirm: async () => {
-        setConfirmState((p) => ({ ...p, open: false }));
-        await handleDelete(id);
-      },
-    });
-  }
-
   async function handleDelete(id) {
     try {
       const { error } = await supabase.from("apps").delete().eq("id", id);
@@ -469,70 +441,6 @@ export default function Admin() {
     setAppStoreUrl("");
   }
 
-  // app store autofill
-  const fetchAppStoreInfo = async () => {
-    if (!appStoreUrl.trim()) {
-      setErrorMessage("Vui lòng nhập URL AppStore");
-      return;
-    }
-    if (!appStoreUrl.includes("apps.apple.com")) {
-      setErrorMessage("URL phải là từ App Store (apps.apple.com)");
-      return;
-    }
-
-    setLoadingAppStoreInfo(true);
-    setErrorMessage("");
-
-    try {
-      const res = await fetch("/api/admin/appstore-info", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: appStoreUrl.trim() }),
-      });
-
-      const text = await res.text();
-      if (!text.trim()) throw new Error("Server trả về phản hồi rỗng");
-
-      let data;
-      try { data = JSON.parse(text); }
-      catch { throw new Error(`Phản hồi server không phải JSON hợp lệ: ${text.slice(0, 100)}...`); }
-
-      if (!res.ok) throw new Error(data?.error || `HTTP ${res.status}: ${res.statusText}`);
-      if (!data?.name) throw new Error("Dữ liệu ứng dụng không đầy đủ (thiếu tên)");
-
-      const mapped = {
-        name: data.name || "",
-        author: data.author || "",
-        size: data.size || "",
-        description: data.description || "",
-        version: data.version || "",
-        icon_url: data.icon || "",
-        minimum_os_version: data.minimumOsVersion || "",
-        age_rating: data.ageRating || "",
-        release_date: data.releaseDate ? new Date(data.releaseDate).toISOString().split("T")[0] : "",
-        supported_devices: Array.isArray(data.supportedDevices) ? data.supportedDevices.join(", ") : "",
-        languages: Array.isArray(data.languages) ? data.languages.join(", ") : "",
-        screenshots: Array.isArray(data.screenshots) ? data.screenshots : [],
-      };
-
-      setForm((prev) => ({ ...prev, ...mapped }));
-      if (Array.isArray(mapped.screenshots) && mapped.screenshots.length) {
-        setScreenshotInput(mapped.screenshots.join("\n"));
-      }
-
-      setAppStoreUrl("");
-      alert("Đã lấy thông tin thành công từ AppStore!");
-    } catch (err) {
-      let msg = "Lỗi khi lấy thông tin từ AppStore";
-      if (err.name === "TypeError" && String(err.message).includes("fetch")) msg = "Lỗi kết nối mạng.";
-      else if (String(err.message).includes("JSON")) msg = "Lỗi xử lý dữ liệu từ server.";
-      else if (err.message) msg = err.message;
-      setErrorMessage(msg);
-    } finally {
-      setLoadingAppStoreInfo(false);
-    }
-  };
-
   // actions categories
   async function handleCategorySubmit(e) {
     e.preventDefault();
@@ -577,19 +485,6 @@ export default function Admin() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  function askDeleteCategory(id) {
-    setConfirmState({
-      open: true,
-      title: "Xoá chuyên mục",
-      message: "Xoá chuyên mục sẽ xoá tất cả ứng dụng thuộc chuyên mục này. Bạn chắc chắn?",
-      danger: true,
-      onConfirm: async () => {
-        setConfirmState((p) => ({ ...p, open: false }));
-        await handleDeleteCategory(id);
-      },
-    });
-  }
-
   async function handleDeleteCategory(id) {
     try {
       await supabase.from("apps").delete().eq("category_id", id);
@@ -630,6 +525,7 @@ export default function Admin() {
   const pageItems = filteredApps.slice(pageStart, pageEnd);
 
   // bulk select
+  const allSelectedOnPage = (list) => list.length > 0 && list.every(a => selectedIds.includes(a.id));
   function toggleSelectAllOnPage() {
     const idsOnPage = pageItems.map(a => a.id);
     const isAll = allSelectedOnPage(pageItems);
@@ -707,9 +603,9 @@ export default function Admin() {
             </button>
             <h1 className="text-xl md:text-2xl font-bold">
               {activeTab === "apps"
-                ? <>Quản lý Ứng dụng <span className="text-sm font-normal opacity-80">(Tổng: <b>{totalApps}</b>)</span></>
+                ? <>Quản lý Ứng dụng <span className="text-sm font-normal opacity-80">(Tổng: <b>{apps.length}</b>)</span></>
                 : activeTab === "categories"
-                ? <>Quản lý Chuyên mục <span className="text-sm font-normal opacity-80">(Tổng: <b>{totalCategories}</b>)</span></>
+                ? <>Quản lý Chuyên mục <span className="text-sm font-normal opacity-80">(Tổng: <b>{categories.length}</b>)</span></>
                 : "Quản lý Chứng chỉ"}
             </h1>
           </div>
@@ -739,7 +635,7 @@ export default function Admin() {
               </h2>
 
               <form onSubmit={handleSubmit} className="space-y-4">
-                {/* chọn chuyên mục (đổi được khi sửa) */}
+                {/* chọn chuyên mục */}
                 <div>
                   <label className="block text-sm font-medium mb-1">Chuyên mục:</label>
                   <select
@@ -760,7 +656,7 @@ export default function Admin() {
                   </select>
                 </div>
 
-                {/* App Store autofill */}
+                {/* App Store autofill (giữ, chống zoom input) */}
                 {selectedCategory && canFetchFromAppStore && (
                   <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
                     <h3 className="text-md font-semibold mb-3 text-blue-800 dark:text-blue-200 flex items-center gap-2">
@@ -769,11 +665,14 @@ export default function Admin() {
                     <div className="flex gap-2">
                       <input
                         type="url"
+                        inputMode="url"
+                        enterKeyHint="go"
                         value={appStoreUrl}
                         onChange={(e) => setAppStoreUrl(e.target.value)}
                         placeholder="Nhập URL App Store..."
                         className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         disabled={loadingAppStoreInfo}
+                        style={{ fontSize: "16px" }} // chống zoom iOS chắc chắn
                       />
                       <button
                         type="button"
@@ -817,10 +716,7 @@ export default function Admin() {
                             className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             placeholder={descMode === "markdown" ? "Nhập mô tả bằng Markdown..." : "Nhập mô tả bằng BBCode..."}
                           />
-                          <div className="mt-3">
-                            <div className="text-sm font-medium mb-1 opacity-80">Xem trước</div>
-                            <div className="prose prose-sm max-w-none dark:prose-invert bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded p-3" dangerouslySetInnerHTML={{ __html: descHtml }} />
-                          </div>
+                          {/* BỎ xem trước theo yêu cầu */}
                         </div>
                       );
                     }
@@ -864,11 +760,11 @@ export default function Admin() {
               </form>
             </section>
 
-            {/* Bulk actions + Pagination + List */}
+            {/* Bulk + Search header */}
             <section className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-md">
               <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
                 <h2 className="text-lg md:text-xl font-semibold">
-                  Danh sách ứng dụng <span className="text-sm font-normal opacity-80">(Đang lọc: <b>{total}</b> / Tổng: <b>{totalApps}</b>)</span>
+                  Danh sách ứng dụng <span className="text-sm font-normal opacity-80">(Đang lọc: <b>{total}</b> / Tổng: <b>{apps.length}</b>)</span>
                 </h2>
                 <div className="flex items-center gap-2">
                   <div className="relative w-56">
@@ -884,7 +780,7 @@ export default function Admin() {
                   <button
                     type="button"
                     onClick={() => { try { navigator.clipboard.writeText(window.location.href); } catch {} }}
-                    className="px-3 py-2 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-sm flex items-center gap-2"
+                    className="hidden sm:flex px-3 py-2 rounded bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-sm items-center gap-2"
                     title="Sao chép URL trang hiện tại"
                   >
                     <FontAwesomeIcon icon={faCopy} /> Sao chép URL
@@ -892,94 +788,81 @@ export default function Admin() {
                 </div>
               </div>
 
-              {/* thanh bulk actions */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+              {/* ===== Mobile Cards (md:hidden) ===== */}
+              <div className="md:hidden space-y-3">
+                {/* chọn tất cả trang */}
                 <div className="flex items-center gap-2">
-                  <span className="text-sm opacity-70">Đã chọn:</span>
-                  <strong className="text-sm">{selectedIds.length}</strong>
-                </div>
-                <div className="flex items-center gap-2">
-                  <select
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (!val) return;
-                      if (!selectedIds.length) {
-                        setErrorMessage("Hãy chọn ít nhất 1 ứng dụng để chuyển chuyên mục.");
-                        e.target.value = "";
-                        return;
-                      }
-                      if (!isValidUUID(val)) {
-                        setErrorMessage("Chuyên mục không hợp lệ");
-                        e.target.value = "";
-                        return;
-                      }
-                      const catName = categories.find(c => c.id === val)?.name || "chuyên mục";
-                      setConfirmState({
-                        open: true,
-                        title: "Chuyển chuyên mục (hàng loạt)",
-                        message: `Chuyển ${selectedIds.length} ứng dụng sang "${catName}"?`,
-                        danger: false,
-                        onConfirm: async () => {
-                          setConfirmState((p) => ({ ...p, open: false }));
-                          try {
-                            const { error } = await supabase
-                              .from("apps")
-                              .update({ category_id: val, updated_at: new Date().toISOString() })
-                              .in("id", selectedIds);
-                            if (error) throw error;
-                            setApps(prev => prev.map(a => selectedIds.includes(a.id) ? { ...a, category_id: val } : a));
-                            setSelectedIds([]);
-                          } catch (err) {
-                            console.error(err);
-                            setErrorMessage("Chuyển chuyên mục hàng loạt thất bại");
-                          }
-                        },
-                      });
-                      e.target.value = "";
-                    }}
-                    defaultValue=""
-                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm"
-                    title="Chuyển chuyên mục hàng loạt"
-                  >
-                    <option value="">Chuyển chuyên mục…</option>
-                    {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-
                   <button
-                    type="button"
-                    onClick={() => {
-                      if (!selectedIds.length) {
-                        setErrorMessage("Chưa chọn ứng dụng nào để xoá.");
-                        return;
-                      }
-                      setConfirmState({
-                        open: true,
-                        title: "Xoá ứng dụng (hàng loạt)",
-                        message: `Bạn chắc chắn muốn xoá ${selectedIds.length} ứng dụng đã chọn?`,
-                        danger: true,
-                        onConfirm: async () => {
-                          setConfirmState((p) => ({ ...p, open: false }));
-                          try {
-                            const { error } = await supabase.from("apps").delete().in("id", selectedIds);
-                            if (error) throw error;
-                            setSelectedIds([]);
-                            await fetchApps();
-                          } catch (err) {
-                            console.error(err);
-                            setErrorMessage("Xoá hàng loạt thất bại");
-                          }
-                        },
-                      });
-                    }}
-                    className="px-3 py-2 rounded bg-red-600 hover:bg-red-700 text-white text-sm"
+                    onClick={toggleSelectAllOnPage}
+                    className="inline-flex items-center px-2 py-1 rounded bg-gray-100 dark:bg-gray-700"
+                    title={allSelectedOnPage(pageItems) ? "Bỏ chọn trang này" : "Chọn tất cả trang này"}
                   >
-                    <FontAwesomeIcon icon={faTrash} /> Xoá đã chọn
+                    <FontAwesomeIcon icon={allSelectedOnPage(pageItems) ? faCheckSquare : faSquare} />
                   </button>
+                  <span className="text-sm opacity-80">Đã chọn: <b>{selectedIds.length}</b></span>
                 </div>
+
+                {pageItems.map((app) => (
+                  <div
+                    key={app.id}
+                    className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 bg-white dark:bg-gray-900"
+                  >
+                    {/* Hàng đầu: checkbox + icon + tên/ngày */}
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(app.id)}
+                        onChange={() => toggleSelectOne(app.id)}
+                        className="w-4 h-4 mt-1"
+                        aria-label="Chọn ứng dụng"
+                      />
+                      {app.icon_url ? (
+                        <img src={app.icon_url} alt="" className="w-10 h-10 rounded mt-0.5" />
+                      ) : (
+                        <div className="w-10 h-10 rounded bg-gray-200 dark:bg-gray-700 mt-0.5" />
+                      )}
+                      <div className="flex-1">
+                        <div className="font-medium leading-5">{app.name || "Không có tên"}</div>
+                        <div className="text-xs opacity-70 leading-5">
+                          {app.created_at ? new Date(app.created_at).toLocaleDateString("vi-VN") : "N/A"}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Nút hành động */}
+                    <div className="mt-3 grid grid-cols-3 gap-2">
+                      <button
+                        onClick={() => setQuickState({ open: true, app })}
+                        className="px-3 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 flex items-center justify-center gap-1"
+                        title="Xem nhanh"
+                      >
+                        <FontAwesomeIcon icon={faEye} /> Xem
+                      </button>
+                      <button
+                        onClick={() => handleEdit(app)}
+                        className="px-3 py-2 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600 flex items-center justify-center gap-1"
+                      >
+                        <FontAwesomeIcon icon={faEdit} /> Sửa
+                      </button>
+                      <button
+                        onClick={() => handleDelete(app.id)}
+                        className="px-3 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700 flex items-center justify-center gap-1"
+                      >
+                        <FontAwesomeIcon icon={faTrash} /> Xoá
+                      </button>
+                    </div>
+                  </div>
+                ))}
+
+                {pageItems.length === 0 && (
+                  <div className="text-center py-8 text-gray-500">
+                    {search ? "Không tìm thấy ứng dụng nào" : "Chưa có ứng dụng nào"}
+                  </div>
+                )}
               </div>
 
-              {/* bảng */}
-              <div className="overflow-x-auto">
+              {/* ===== Desktop Table (hidden trên mobile) ===== */}
+              <div className="hidden md:block overflow-x-auto">
                 <table className="w-full border-collapse">
                   <thead>
                     <tr className="border-b border-gray-200 dark:border-gray-700">
@@ -1000,7 +883,6 @@ export default function Admin() {
                         key={app.id}
                         className="border-b border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
                         onClick={(e) => {
-                          // tránh click vào nút/checkbox vẫn mở xem nhanh
                           const tag = (e.target.tagName || "").toLowerCase();
                           if (["button","svg","path","input","select"].includes(tag)) return;
                           setQuickState({ open: true, app });
@@ -1024,9 +906,10 @@ export default function Admin() {
                         </td>
                         <td className="p-3">
                           <div className="flex items-center gap-2">
-                            <span className="hidden sm:inline">
+                            <span>
                               {categories.find((c) => c.id === app.category_id)?.name || "Không xác định"}
                             </span>
+                            {/* Ẩn trên mobile, hiện trên desktop */}
                             <select
                               value={app.category_id || ""}
                               onChange={async (e) => {
@@ -1044,7 +927,7 @@ export default function Admin() {
                                   setErrorMessage(err.message || "Đổi chuyên mục thất bại");
                                 }
                               }}
-                              className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm"
+                              className="px-2 py-1 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 text-sm hidden lg:inline-block"
                               aria-label="Đổi chuyên mục nhanh"
                               onClick={(e) => e.stopPropagation()}
                             >
@@ -1057,7 +940,7 @@ export default function Admin() {
                           {app.created_at ? new Date(app.created_at).toLocaleDateString("vi-VN") : "N/A"}
                         </td>
                         <td className="p-3">
-                          <div className="flex flex-wrap gap-2">
+                          <div className="flex gap-2">
                             <button
                               onClick={(e) => { e.stopPropagation(); setQuickState({ open: true, app }); }}
                               className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 flex items-center gap-1"
@@ -1072,7 +955,7 @@ export default function Admin() {
                               <FontAwesomeIcon icon={faEdit} /> Sửa
                             </button>
                             <button
-                              onClick={(e) => { e.stopPropagation(); askDeleteSingle(app.id); }}
+                              onClick={(e) => { e.stopPropagation(); handleDelete(app.id); }}
                               className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 flex items-center gap-1"
                             >
                               <FontAwesomeIcon icon={faTrash} /> Xoá
@@ -1213,7 +1096,7 @@ export default function Admin() {
 
             <section className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-md">
               <h2 className="text-lg md:text-xl font-semibold mb-4">
-                Danh sách chuyên mục <span className="text-sm font-normal opacity-80">(Tổng: <b>{totalCategories}</b>)</span>
+                Danh sách chuyên mục <span className="text-sm font-normal opacity-80">(Tổng: <b>{categories.length}</b>)</span>
               </h2>
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse">
@@ -1238,7 +1121,7 @@ export default function Admin() {
                             <button onClick={() => handleEditCategory(category)} className="px-3 py-1 bg-yellow-500 text-white rounded text-sm hover:bg-yellow-600 flex items-center gap-1">
                               <FontAwesomeIcon icon={faEdit} /> Sửa
                             </button>
-                            <button onClick={() => askDeleteCategory(category.id)} className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 flex items-center gap-1">
+                            <button onClick={() => handleDeleteCategory(category.id)} className="px-3 py-1 bg-red-600 text-white rounded text-sm hover:bg-red-700 flex items-center gap-1">
                               <FontAwesomeIcon icon={faTrash} /> Xoá
                             </button>
                           </div>
@@ -1268,16 +1151,7 @@ export default function Admin() {
         ) : null}
       </main>
 
-      {/* Modals */}
-      <ConfirmModal
-        open={confirmState.open}
-        title={confirmState.title}
-        message={confirmState.message}
-        danger={confirmState.danger}
-        onCancel={() => setConfirmState((p) => ({ ...p, open: false }))}
-        onConfirm={confirmState.onConfirm}
-        confirmText="Xác nhận"
-      />
+      {/* Quick View */}
       <QuickViewModal
         open={quickState.open}
         onClose={() => setQuickState({ open: false, app: null })}
