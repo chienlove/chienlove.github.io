@@ -18,7 +18,7 @@ import {
 
 export default function Layout({ children, fullWidth = false, hotApps }) {
   const [darkMode, setDarkMode] = useState(false);
-  const [user, setUser] = useState(null);               // ⟵ NEW: user state
+  const [user, setUser] = useState(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeCategory, setCategory] = useState('all');
@@ -31,19 +31,18 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifCount, setNotifCount] = useState(0);
 
-  // Thêm state kiểm tra admin
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminLoading, setAdminLoading] = useState(true);
 
   const drawerRef = useRef(null);
 
-  // ⟵ NEW: Lắng nghe trạng thái đăng nhập Firebase Auth
+  // Auth state
   useEffect(() => {
     const unsub = auth.onAuthStateChanged((u) => setUser(u));
     return () => unsub && unsub();
   }, []);
 
-  // Kiểm tra quyền admin khi user thay đổi (real-time theo doc app_config/admins)
+  // Admin state (realtime)
   useEffect(() => {
     if (!user) {
       setIsAdmin(false);
@@ -68,14 +67,14 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
     return () => unsub && unsub();
   }, [user]);
 
-  // Mở NotificationsPanel khi nhận sự kiện từ LoginButton
+  // open notifications from LoginButton
   useEffect(() => {
     const onOpenNoti = () => setNotifOpen(true);
     window.addEventListener('open-notifications', onOpenNoti);
     return () => window.removeEventListener('open-notifications', onOpenNoti);
   }, []);
 
-  // Keyboard open search
+  // Keyboard: / or ⌘/Ctrl+K
   useEffect(() => {
     const onKey = (e) => {
       const isSlash = e.key === '/';
@@ -102,7 +101,7 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
     if (typeof window !== 'undefined') localStorage.setItem('darkMode', darkMode);
   }, [darkMode]);
 
-  // Lấy chuyên mục
+  // Categories
   useEffect(() => {
     (async () => {
       const { data } = await supabase
@@ -131,7 +130,7 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
     if (searchOpen) runSearch();
   }, [q, activeCategory, sortBy, searchOpen]);
 
-  // Đóng drawer khi click ngoài
+  // Close drawer on outside click
   useEffect(() => {
     const close = (e) => {
       if (drawerRef.current && !drawerRef.current.contains(e.target)) setMobileMenuOpen(false);
@@ -140,7 +139,7 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
     return () => document.removeEventListener('mousedown', close);
   }, [mobileMenuOpen]);
 
-  // Badge thông báo thật từ Firestore
+  // Realtime unread badge
   useEffect(() => {
     let unsubNoti = null;
     const unsubAuth = auth.onAuthStateChanged((u) => {
@@ -164,10 +163,7 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
       <Head>
         <title>StoreIOS – TestFlight & Jailbreak</title>
-        <meta
-          name="description"
-          content="Kho ứng dụng TestFlight beta & công cụ jailbreak cho iOS"
-        />
+        <meta name="description" content="Kho ứng dụng TestFlight beta & công cụ jailbreak cho iOS" />
       </Head>
 
       {/* HEADER */}
@@ -183,12 +179,10 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
               <FontAwesomeIcon icon={faBars} className="w-5 h-5" />
             </button>
 
-            {/* Logo có hiệu ứng nhấp rõ ràng */}
             <Link
               href="/"
               className="text-xl md:text-2xl font-bold bg-gradient-to-r from-red-600 via-black to-red-600 dark:from-red-400 dark:via-white dark:to-red-400 bg-clip-text text-transparent
-                         px-1 rounded
-                         active:bg-gray-200 dark:active:bg-gray-800 active:scale-95
+                         px-1 rounded active:bg-gray-200 dark:active:bg-gray-800 active:scale-95
                          focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900
                          transition-all duration-150"
               title="Về trang chủ"
@@ -205,7 +199,7 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
             <Link href="/about" className="hover:text-red-600">Giới thiệu</Link>
           </nav>
 
-          {/* Right: Search | Bell | Admin (if) | Avatar/Login */}
+          {/* Right */}
           <div className="flex items-center gap-2">
             <button
               onClick={() => setSearchOpen(true)}
@@ -233,10 +227,9 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
               <NotificationsPanel open={notifOpen} onClose={() => setNotifOpen(false)} />
             </div>
 
-            {/* ⟵ NEW: Nút Admin trên header desktop */}
             {!adminLoading && isAdmin && (
               <Link
-                href="/admin"
+                href={{ pathname: '/admin', query: { tab: 'dashboard' } }}
                 title="Bảng điều khiển admin"
                 className="hidden md:flex items-center justify-center w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
               >
@@ -276,7 +269,7 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
               Tìm kiếm…
             </button>
 
-            {/* === PHẦN QUẢN TRỊ - CHỈ HIỆN KHI LÀ ADMIN === */}
+            {/* === QUẢN TRỊ (Admin only) === */}
             {!adminLoading && isAdmin && (
               <div className="mt-6 mb-4 pb-4 border-b border-green-200 dark:border-green-800">
                 <div className="flex items-center gap-2 text-sm font-semibold mb-2 text-green-600 dark:text-green-400">
@@ -284,38 +277,38 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
                   Quản trị
                 </div>
                 <div className="space-y-1">
-                  <a
-                    href="/admin"
+                  <Link
+                    href={{ pathname: '/admin', query: { tab: 'dashboard' } }}
                     onClick={() => setMobileMenuOpen(false)}
                     className="flex items-center gap-2 px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
                   >
                     <FontAwesomeIcon icon={faChartBar} className="w-4 h-4" />
                     Dashboard
-                  </a>
-                  <a
-                    href="/admin#apps"
+                  </Link>
+                  <Link
+                    href={{ pathname: '/admin', query: { tab: 'apps' } }}
                     onClick={() => setMobileMenuOpen(false)}
                     className="flex items-center gap-2 px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
                   >
                     <FontAwesomeIcon icon={faBoxOpen} className="w-4 h-4" />
                     Quản lý App
-                  </a>
-                  <a
-                    href="/admin#categories"
+                  </Link>
+                  <Link
+                    href={{ pathname: '/admin', query: { tab: 'categories' } }}
                     onClick={() => setMobileMenuOpen(false)}
                     className="flex items-center gap-2 px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
                   >
                     <FontAwesomeIcon icon={faFolder} className="w-4 h-4" />
                     Chuyên mục
-                  </a>
-                  <a
-                    href="/admin#certs"
+                  </Link>
+                  <Link
+                    href={{ pathname: '/admin', query: { tab: 'certs' } }}
                     onClick={() => setMobileMenuOpen(false)}
                     className="flex items-center gap-2 px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
                   >
                     <FontAwesomeIcon icon={faShieldAlt} className="w-4 h-4" />
                     Ký IPA
-                  </a>
+                  </Link>
                 </div>
               </div>
             )}
