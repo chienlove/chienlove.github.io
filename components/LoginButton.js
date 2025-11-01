@@ -1,5 +1,6 @@
 // components/LoginButton.js
 import { useEffect, useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { auth } from '../lib/firebase-client';
 import {
   GoogleAuthProvider,
@@ -23,6 +24,28 @@ import { faGoogle, faGithub, faXTwitter } from '@fortawesome/free-brands-svg-ico
 
 const ENFORCE_EMAIL_VERIFICATION = true; // gửi mail verify sau signup; KHÔNG chặn login
 
+/* ---------- Portal: đảm bảo modal được gắn lên <body> ---------- */
+function BodyPortal({ children }) {
+  const [mounted, setMounted] = useState(false);
+  const elRef = useRef(null);
+  if (!elRef.current && typeof document !== 'undefined') {
+    elRef.current = document.createElement('div');
+    elRef.current.setAttribute('id', 'login-modal-portal');
+  }
+
+  useEffect(() => {
+    if (!elRef.current) return;
+    document.body.appendChild(elRef.current);
+    setMounted(true);
+    return () => {
+      try { document.body.removeChild(elRef.current); } catch {}
+    };
+  }, []);
+
+  if (!mounted) return null;
+  return createPortal(children, elRef.current);
+}
+
 export default function LoginButton({ onToggleTheme, isDark }) {
   const [user, setUser] = useState(null);
   const [openAuth, setOpenAuth] = useState(false);
@@ -41,8 +64,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
   const [hint, setHint] = useState('');
   const [authClosedAt, setAuthClosedAt] = useState(0);
 
-  // ==== BAN details để hiển thị banner trong modal ====
-  // { mode: 'temporary'|'permanent', reason?, expiresAt?, remainingText? }
+  // BAN banner details
   const [banInfo, setBanInfo] = useState(null);
 
   const menuRef = useRef(null);
@@ -53,7 +75,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     return () => unsub();
   }, []);
 
-  // Cho phép nơi khác mở modal auth (ví dụ Comments.js)
+  // Cho phép nơi khác mở modal auth
   useEffect(() => {
     const onOpenAuth = () => {
       setGuestMenuOpen(false);
@@ -72,6 +94,24 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     document.addEventListener('mousedown', onClick);
     return () => document.removeEventListener('mousedown', onClick);
   }, []);
+
+  /* ---------- Lock scroll khi mở modal ---------- */
+  useEffect(() => {
+    if (!openAuth) return;
+    const html = document.documentElement;
+    const prevOverflow = html.style.overflow;
+    const prevPaddingRight = html.style.paddingRight;
+
+    // bù scrollbar để tránh giật layout
+    const scrollbarWidth = window.innerWidth - html.clientWidth;
+    html.style.overflow = 'hidden';
+    if (scrollbarWidth > 0) html.style.paddingRight = `${scrollbarWidth}px`;
+
+    return () => {
+      html.style.overflow = prevOverflow || '';
+      html.style.paddingRight = prevPaddingRight || '';
+    };
+  }, [openAuth]);
 
   /* ================= Toast + Loading Overlay ================= */
 
@@ -94,31 +134,36 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       toast.type === 'error'   ? faCircleXmark :
       toast.type === 'warning' ? faTriangleExclamation :
                                  faCircleInfo;
+
+    // ✅ Toast qua portal để không bị header ảnh hưởng z-index
     return (
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[140] px-4">
-        <div className={`flex items-center gap-2 rounded-xl border px-4 py-2 shadow-xl ${tone}`}>
-          <FontAwesomeIcon icon={Icon} className="shrink-0" />
-          <div className="text-sm">{toast.text}</div>
+      <BodyPortal>
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[1400] px-4 pointer-events-none">
+          <div className={`pointer-events-auto flex items-center gap-2 rounded-xl border px-4 py-2 shadow-xl ${tone}`}>
+            <FontAwesomeIcon icon={Icon} className="shrink-0" />
+            <div className="text-sm">{toast.text}</div>
+          </div>
         </div>
-      </div>
+      </BodyPortal>
     );
   };
 
   const LoadingOverlay = () => {
     if (!loading) return null;
     return (
-      <div className="fixed inset-0 z-[130] bg-black/30 backdrop-blur-[1px] flex items-center justify-center">
-        <div className="rounded-2xl bg-white/90 dark:bg-zinc-900/90 border border-gray-200 dark:border-zinc-800 px-5 py-4 shadow-2xl flex items-center gap-3">
-          <FontAwesomeIcon icon={faSpinner} className="animate-spin text-xl text-gray-700 dark:text-gray-200" />
-          <div className="text-sm font-medium text-gray-700 dark:text-gray-200">Đang xử lý…</div>
+      <BodyPortal>
+        <div className="fixed inset-0 z-[1350] bg-black/30 backdrop-blur-[1px] grid place-items-center">
+          <div className="rounded-2xl bg-white/90 dark:bg-zinc-900/90 border border-gray-200 dark:border-zinc-800 px-5 py-4 shadow-2xl flex items-center gap-3">
+            <FontAwesomeIcon icon={faSpinner} className="animate-spin text-xl text-gray-700 dark:text-gray-200" />
+            <div className="text-sm font-medium text-gray-700 dark:text-gray-200">Đang xử lý…</div>
+          </div>
         </div>
-      </div>
+      </BodyPortal>
     );
   };
 
   /* ================= Helpers ================= */
 
-  // Chuyển mili-giây → "x ngày y giờ" / "x giờ y phút" / ...
   const formatRemaining = (ms) => {
     if (!Number.isFinite(ms) || ms <= 0) return '';
     const s = Math.floor(ms / 1000);
@@ -131,14 +176,12 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     return `${s} giây`;
   };
 
-  // Lấy chi tiết BAN theo email (khi Firebase chặn login -> user-disabled, không có idToken)
   const fetchBanDetails = async (emailForLookup) => {
     if (!emailForLookup) return;
     try {
       const r = await fetch(`/api/auth/ban-info?email=${encodeURIComponent(emailForLookup)}`);
       const j = await r.json();
       if (!j || !j.banned) return;
-
       const isTemp = j.mode === 'temporary';
       let remainingText = '';
       if (isTemp && j.expiresAt) {
@@ -155,17 +198,14 @@ export default function LoginButton({ onToggleTheme, isDark }) {
         remainingText
       });
       showToast('error', isTemp ? 'Tài khoản đang bị BAN tạm thời.' : 'Tài khoản bị BAN vĩnh viễn.', 3600);
-    } catch {
-      // ignore
-    }
+    } catch {}
   };
 
-  // Ánh xạ mã lỗi Firebase → tiếng Việt
   const mapAuthError = (e) => {
     const code = e?.code || '';
     switch (code) {
       case 'auth/invalid-email': return 'Email không hợp lệ.';
-      case 'auth/user-disabled': return ''; // KHÔNG hiện msg thứ hai – đã có BanBanner
+      case 'auth/user-disabled': return '';
       case 'auth/user-not-found': return 'Không tìm thấy tài khoản với email này.';
       case 'auth/wrong-password': return 'Mật khẩu không đúng. Vui lòng thử lại.';
       case 'auth/too-many-requests': return 'Bạn đã thử quá nhiều lần. Vui lòng thử lại sau.';
@@ -180,7 +220,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     }
   };
 
-  // Nếu email đã tồn tại với provider khác → hướng dẫn liên kết
   const handleAccountExists = async (error, provider) => {
     const emailFromError = error?.customData?.email;
     if (!emailFromError) return setMsg('Tài khoản đã tồn tại với nhà cung cấp khác.');
@@ -204,7 +243,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     setMsg('Email đã tồn tại với nhà cung cấp khác. Hãy đăng nhập bằng nhà cung cấp cũ rồi thử lại.');
   };
 
-  // Liên kết credential treo (nếu có)
   const doLinkIfNeeded = async () => {
     if (pendingCred && auth.currentUser) {
       await linkWithCredential(auth.currentUser, pendingCred);
@@ -214,7 +252,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     }
   };
 
-  // Sau khi login thành công → hỏi guard xem có đang bị ban không
   const runGuardAfterSignIn = async () => {
     try {
       if (!auth.currentUser) return true;
@@ -226,7 +263,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       const json = await resp.json();
       if (json?.ok) return true;
 
-      // Bị ban → signOut + mở banner chi tiết
       await auth.signOut().catch(()=>{});
       const isTemp = json?.mode === 'temporary';
       let remainingText = '';
@@ -247,7 +283,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       showToast('error', isTemp ? 'Tài khoản đang bị BAN tạm thời.' : 'Tài khoản bị BAN vĩnh viễn.', 3600);
       return false;
     } catch {
-      return true; // nếu guard lỗi, đừng chặn login
+      return true;
     }
   };
 
@@ -258,14 +294,14 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     try {
       await signInWithPopup(auth, new GoogleAuthProvider());
       if (isLinking) await doLinkIfNeeded();
-      if (!(await runGuardAfterSignIn())) return; // nếu bị ban → đã hiển thị banner
+      if (!(await runGuardAfterSignIn())) return;
       setOpenAuth(false);
       showToast('success', 'Đăng nhập Google thành công!');
     } catch (e) {
       if (e.code === 'auth/account-exists-with-different-credential') {
         await handleAccountExists(e, 'google');
       } else if (e.code === 'auth/user-disabled') {
-        setMsg(''); // không in ra dòng msg thứ hai
+        setMsg('');
         await fetchBanDetails(e?.customData?.email);
       } else {
         setMsg(mapAuthError(e));
@@ -340,8 +376,8 @@ export default function LoginButton({ onToggleTheme, isDark }) {
           else setMsg('Mật khẩu không đúng. Vui lòng thử lại.');
         } catch { setMsg(mapAuthError(e)); }
       } else if (e.code === 'auth/user-disabled') {
-        setMsg('');              // không render msg thứ hai
-        await fetchBanDetails(email); // hiển thị BanBanner chi tiết
+        setMsg('');
+        await fetchBanDetails(email);
       } else {
         setMsg(mapAuthError(e));
       }
@@ -368,8 +404,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     } finally { setLoading(false); }
   };
 
-  /* ================= UI Banners & Menus ================= */
-
   const BanBanner = () => {
     if (!banInfo) return null;
     return (
@@ -386,6 +420,8 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       </div>
     );
   };
+
+  /* ================= RENDER ================= */
 
   // ==== Logged-in ====
   if (user) {
@@ -463,111 +499,131 @@ export default function LoginButton({ onToggleTheme, isDark }) {
         )}
       </div>
 
-      {/* Auth Modal */}
+      {/* ===== Auth Modal qua Portal (luôn giữa màn hình, trên mọi trình duyệt) ===== */}
       {openAuth && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4" onClick={(e) => e.stopPropagation()}>
-          <div className="w-full max-w-md rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-2xl">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-800">
-              <h3 className="text-lg font-semibold">{mode==='signup' ? 'Tạo tài khoản' : 'Đăng nhập'}</h3>
-              <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpenAuth(false); setAuthClosedAt(Date.now()); }} className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800" aria-label="Close">
-                <svg className="w-5 h-5" viewBox="0 0 20 20"><path d="M6 6l8 8M14 6l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-              </button>
-            </div>
-
-            <div className="px-5 pt-5 pb-2">
-              {/* 🔴 Banner chi tiết BAN */}
-              <BanBanner />
-
-              {/* Social */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <button onClick={() => loginGoogle(false)} disabled={loading} className="flex items-center justify-center gap-2 px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-60">
-                  <FontAwesomeIcon icon={faGoogle} /> Google
-                </button>
-                <button onClick={loginGithub} disabled={loading} className="flex items-center justify-center gap-2 px-3 py-2 rounded bg-gray-900 text-white hover:bg-black disabled:opacity-60">
-                  <FontAwesomeIcon icon={faGithub} /> GitHub
-                </button>
-                <button onClick={loginTwitter} disabled={loading} className="flex items-center justify-center gap-2 px-3 py-2 rounded bg-black text-white hover:opacity-90 disabled:opacity-60 col-span-1 sm:col-span-2">
-                  <FontAwesomeIcon icon={faXTwitter} /> X (Twitter)
+        <BodyPortal>
+          <div
+            className="fixed inset-0 z-[1500] bg-black/50 overscroll-contain grid place-items-center p-4"
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => {
+              // click nền thì đóng
+              if (e.target === e.currentTarget) {
+                setOpenAuth(false);
+                setAuthClosedAt(Date.now());
+              }
+            }}
+          >
+            <div
+              className="w-full max-w-md rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-2xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-800">
+                <h3 className="text-lg font-semibold">{mode==='signup' ? 'Tạo tài khoản' : 'Đăng nhập'}</h3>
+                <button
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpenAuth(false); setAuthClosedAt(Date.now()); }}
+                  className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                  aria-label="Close"
+                >
+                  <svg className="w-5 h-5" viewBox="0 0 20 20"><path d="M6 6l8 8M14 6l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
                 </button>
               </div>
 
-              <div className="my-4 flex items-center gap-4">
-                <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
-                <span className="text-xs uppercase tracking-wider text-gray-500">Hoặc email</span>
-                <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
-              </div>
+              <div className="px-5 pt-5 pb-2">
+                {/* 🔴 Banner chi tiết BAN */}
+                <BanBanner />
 
-              <form onSubmit={onSubmitEmail} className="space-y-3">
-                <input
-                  type="email"
-                  className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2"
-                  placeholder="Email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  required
-                />
-                <div className="relative">
+                {/* Social */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <button onClick={() => loginGoogle(false)} disabled={loading} className="flex items-center justify-center gap-2 px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-60">
+                    <FontAwesomeIcon icon={faGoogle} /> Google
+                  </button>
+                  <button onClick={loginGithub} disabled={loading} className="flex items-center justify-center gap-2 px-3 py-2 rounded bg-gray-900 text-white hover:bg-black disabled:opacity-60">
+                    <FontAwesomeIcon icon={faGithub} /> GitHub
+                  </button>
+                  <button onClick={loginTwitter} disabled={loading} className="flex items-center justify-center gap-2 px-3 py-2 rounded bg-black text-white hover:opacity-90 disabled:opacity-60 col-span-1 sm:col-span-2">
+                    <FontAwesomeIcon icon={faXTwitter} /> X (Twitter)
+                  </button>
+                </div>
+
+                <div className="my-4 flex items-center gap-4">
+                  <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
+                  <span className="text-xs uppercase tracking-wider text-gray-500">Hoặc email</span>
+                  <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
+                </div>
+
+                <form onSubmit={onSubmitEmail} className="space-y-3">
                   <input
-                    type={showPwd ? 'text' : 'password'}
-                    className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 pr-10"
-                    placeholder="Mật khẩu"
-                    value={password}
-                    onChange={e => setPassword(e.target.value)}
+                    type="email"
+                    className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2"
+                    placeholder="Email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
                     required
                   />
-                  <button type="button" onClick={() => setShowPwd(v => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-600">
-                    <FontAwesomeIcon icon={showPwd ? faEyeSlash : faEye} />
-                  </button>
-                </div>
-
-                {mode === 'signup' && (
-                  <>
-                    <div className="relative">
-                      <input
-                        type={showConfirm ? 'text' : 'password'}
-                        className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 pr-10"
-                        placeholder="Xác nhận mật khẩu"
-                        value={confirmPwd}
-                        onChange={e => setConfirmPwd(e.target.value)}
-                        required
-                      />
-                      <button type="button" onClick={() => setShowConfirm(v => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-600">
-                        <FontAwesomeIcon icon={showConfirm ? faEyeSlash : faEye} />
-                      </button>
-                    </div>
-                    <ul className="text-xs space-y-1 mt-1">
-                      <li className={password.length >= 8 ? 'text-emerald-600' : 'text-gray-500'}>• Tối thiểu 8 ký tự</li>
-                      <li className={/[A-Za-z]/.test(password) ? 'text-emerald-600' : 'text-gray-500'}>• Có chữ</li>
-                      <li className={/\d/.test(password) ? 'text-emerald-600' : 'text-gray-500'}>• Có số</li>
-                      <li className={/[^A-Za-z0-9]/.test(password) ? 'text-emerald-600' : 'text-gray-500'}>• Có ký tự đặc biệt</li>
-                      <li className={password && confirmPwd && password === confirmPwd ? 'text-emerald-600' : 'text-gray-500'}>• Xác nhận mật khẩu khớp</li>
-                    </ul>
-                  </>
-                )}
-
-                {msg && <div className="rounded-lg border border-rose-200 bg-rose-50 text-rose-800 px-3 py-2 text-sm">{msg}</div>}
-
-                <div className="flex items-center justify-between">
-                  <button
-                    type="submit"
-                    disabled={loading || (mode==='signup' && (!pwdStrong || !pwdMatch))}
-                    className={`px-3 py-2 rounded-lg text-white ${mode==='signup' ? (pwdStrong && pwdMatch ? 'bg-gray-900 hover:opacity-90' : 'bg-gray-400 cursor-not-allowed') : 'bg-gray-900 hover:opacity-90'}`}
-                  >
-                    {mode === 'signup' ? 'Đăng ký' : 'Đăng nhập'}
-                  </button>
-                  <div className="flex items-center gap-4 text-sm">
-                    <button type="button" onClick={() => setMode(m => m==='signup' ? 'login' : 'signup')} className="underline">
-                      {mode === 'signup' ? 'Tôi đã có tài khoản' : 'Tạo tài khoản mới'}
+                  <div className="relative">
+                    <input
+                      type={showPwd ? 'text' : 'password'}
+                      className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 pr-10"
+                      placeholder="Mật khẩu"
+                      value={password}
+                      onChange={e => setPassword(e.target.value)}
+                      required
+                    />
+                    <button type="button" onClick={() => setShowPwd(v => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-600">
+                      <FontAwesomeIcon icon={showPwd ? faEyeSlash : faEye} />
                     </button>
-                    <button type="button" onClick={onReset} className="underline">Quên mật khẩu?</button>
                   </div>
-                </div>
-              </form>
 
-              <div className="h-3" />
+                  {mode === 'signup' && (
+                    <>
+                      <div className="relative">
+                        <input
+                          type={showConfirm ? 'text' : 'password'}
+                          className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 pr-10"
+                          placeholder="Xác nhận mật khẩu"
+                          value={confirmPwd}
+                          onChange={e => setConfirmPwd(e.target.value)}
+                          required
+                        />
+                        <button type="button" onClick={() => setShowConfirm(v => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-600">
+                          <FontAwesomeIcon icon={showConfirm ? faEyeSlash : faEye} />
+                        </button>
+                      </div>
+                      <ul className="text-xs space-y-1 mt-1">
+                        <li className={password.length >= 8 ? 'text-emerald-600' : 'text-gray-500'}>• Tối thiểu 8 ký tự</li>
+                        <li className={/[A-Za-z]/.test(password) ? 'text-emerald-600' : 'text-gray-500'}>• Có chữ</li>
+                        <li className={/\d/.test(password) ? 'text-emerald-600' : 'text-gray-500'}>• Có số</li>
+                        <li className={/[^A-Za-z0-9]/.test(password) ? 'text-emerald-600' : 'text-gray-500'}>• Có ký tự đặc biệt</li>
+                        <li className={password && confirmPwd && password === confirmPwd ? 'text-emerald-600' : 'text-gray-500'}>• Xác nhận mật khẩu khớp</li>
+                      </ul>
+                    </>
+                  )}
+
+                  {msg && <div className="rounded-lg border border-rose-200 bg-rose-50 text-rose-800 px-3 py-2 text-sm">{msg}</div>}
+
+                  <div className="flex items-center justify-between">
+                    <button
+                      type="submit"
+                      disabled={loading || (mode==='signup' && (!pwdStrong || !pwdMatch))}
+                      className={`px-3 py-2 rounded-lg text-white ${mode==='signup' ? (pwdStrong && pwdMatch ? 'bg-gray-900 hover:opacity-90' : 'bg-gray-400 cursor-not-allowed') : 'bg-gray-900 hover:opacity-90'}`}
+                    >
+                      {mode === 'signup' ? 'Đăng ký' : 'Đăng nhập'}
+                    </button>
+                    <div className="flex items-center gap-4 text-sm">
+                      <button type="button" onClick={() => setMode(m => m==='signup' ? 'login' : 'signup')} className="underline">
+                        {mode === 'signup' ? 'Tôi đã có tài khoản' : 'Tạo tài khoản mới'}
+                      </button>
+                      <button type="button" onClick={onReset} className="underline">Quên mật khẩu?</button>
+                    </div>
+                  </div>
+
+                  <div className="h-3" />
+                </form>
+              </div>
             </div>
           </div>
-        </div>
+        </BodyPortal>
       )}
     </>
   );
