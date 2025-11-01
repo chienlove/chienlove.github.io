@@ -55,30 +55,52 @@ function MyApp({ Component, pageProps }) {
     };
   }, []);
 
-  // ✅ Fix Safari/iOS preview head refresh
+  // ✅ Safari back/forward cache safe fix (thay cho effect refreshHead cũ)
   useEffect(() => {
-    const refreshHead = () => {
-      const head = document.querySelector('head');
-      if (!head?.parentNode) return;
-      const clone = head.cloneNode(true);
-      head.parentNode.replaceChild(clone, head);
-    };
-    router.events.on('routeChangeComplete', refreshHead);
-    setTimeout(refreshHead, 0);
-    return () => router.events.off('routeChangeComplete', refreshHead);
-  }, [router.events]);
+    if (typeof window === 'undefined') return;
 
-  // ✅ Fix Safari Back/Forward Cache (bfcache) when pressing Back
-  useEffect(() => {
-    const onPageShow = (e) => {
-      // If restored from bfcache, re-render the current route to avoid DOMException
-      if (e.persisted) {
-        router.replace(router.asPath);
+    const ua = navigator.userAgent || '';
+    const isSafari = /Safari/.test(ua) && !/Chrome|Chromium|CriOS|Android/.test(ua);
+    if (!isSafari) return;
+
+    const refreshHeadSafe = () => {
+      const head = document.head;
+      const parent = head && head.parentNode;
+      if (!head || !parent || parent.nodeType !== 1) return;
+      try {
+        const clone = head.cloneNode(true);
+        parent.replaceChild(clone, head);
+      } catch {
+        // Bỏ qua nếu DOM đang ở trạng thái detached để tránh DOMException
       }
     };
+
+    const onRoute = () => {
+      if (document.visibilityState === 'visible') {
+        requestAnimationFrame(refreshHeadSafe);
+      }
+    };
+
+    const onPageShow = (e) => {
+      // Khi quay lại từ BFCache, reload để tránh DOM bị detach gây DOMException
+      if (e && e.persisted) {
+        window.location.reload();
+      }
+    };
+
+    try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; } catch {}
+
+    router.events.on('routeChangeComplete', onRoute);
     window.addEventListener('pageshow', onPageShow);
-    return () => window.removeEventListener('pageshow', onPageShow);
-  }, [router]);
+
+    // chạy 1 lần sau mount
+    requestAnimationFrame(refreshHeadSafe);
+
+    return () => {
+      router.events.off('routeChangeComplete', onRoute);
+      window.removeEventListener('pageshow', onPageShow);
+    };
+  }, [router.events]);
 
   return (
     <>
