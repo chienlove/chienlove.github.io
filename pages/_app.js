@@ -55,7 +55,7 @@ function MyApp({ Component, pageProps }) {
     };
   }, []);
 
-  // ✅ Safari back/forward cache safe fix (thay cho effect refreshHead cũ)
+  // ✅ Fix Safari BFCache an toàn: chặn BFCache + reload khi cần
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -63,44 +63,44 @@ function MyApp({ Component, pageProps }) {
     const isSafari = /Safari/.test(ua) && !/Chrome|Chromium|CriOS|Android/.test(ua);
     if (!isSafari) return;
 
-    const refreshHeadSafe = () => {
-      const head = document.head;
-      const parent = head && head.parentNode;
-      if (!head || !parent || parent.nodeType !== 1) return;
-      try {
-        const clone = head.cloneNode(true);
-        parent.replaceChild(clone, head);
-      } catch {
-        // Bỏ qua nếu DOM đang ở trạng thái detached để tránh DOMException
-      }
-    };
+    // 1) Chặn BFCache trên Safari: chỉ cần đăng ký 'unload' (không làm gì cả)
+    const noop = () => {};
+    window.addEventListener('unload', noop);
 
-    const onRoute = () => {
-      if (document.visibilityState === 'visible') {
-        requestAnimationFrame(refreshHeadSafe);
-      }
-    };
-
+    // 2) Nếu vẫn quay lại từ BFCache, force reload an toàn
     const onPageShow = (e) => {
-      // Khi quay lại từ BFCache, reload để tránh DOM bị detach gây DOMException
       if (e && e.persisted) {
         window.location.reload();
       }
     };
-
-    try { if ('scrollRestoration' in history) history.scrollRestoration = 'manual'; } catch {}
-
-    router.events.on('routeChangeComplete', onRoute);
     window.addEventListener('pageshow', onPageShow);
 
-    // chạy 1 lần sau mount
-    requestAnimationFrame(refreshHeadSafe);
-
     return () => {
-      router.events.off('routeChangeComplete', onRoute);
+      window.removeEventListener('unload', noop);
       window.removeEventListener('pageshow', onPageShow);
     };
-  }, [router.events]);
+  }, []);
+
+  // ✅ Tránh rehydrate lỗi khi back/forward giữa /admin và trang khác:
+  //    Nếu đang ở /admin hoặc điều hướng tới /admin qua nút back/forward,
+  //    chuyển sang hard navigation để đảm bảo trạng thái sạch.
+  useEffect(() => {
+    const isAdminPath = (p) => typeof p === 'string' && p.startsWith('/admin');
+
+    const handler = ({ url, as }) => {
+      const current = window.location.pathname;
+      const goingTo = as || url || '';
+      if (isAdminPath(current) || isAdminPath(goingTo)) {
+        // Hard load để tránh lỗi framework khi khôi phục từ lịch sử
+        window.location.href = goingTo || '/admin';
+        return false; // chặn Next xử lý client-side
+      }
+      return true;
+    };
+
+    router.beforePopState(handler);
+    return () => router.beforePopState(() => true);
+  }, [router]);
 
   return (
     <>
