@@ -36,13 +36,13 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
 
   const drawerRef = useRef(null);
 
-  // Auth state
+  // ===== Auth state
   useEffect(() => {
     const unsub = auth.onAuthStateChanged((u) => setUser(u));
     return () => unsub && unsub();
   }, []);
 
-  // Admin state (realtime)
+  // ===== Admin state (realtime)
   useEffect(() => {
     if (!user) {
       setIsAdmin(false);
@@ -67,14 +67,14 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
     return () => unsub && unsub();
   }, [user]);
 
-  // open notifications from LoginButton
+  // ===== open notifications from LoginButton
   useEffect(() => {
     const onOpenNoti = () => setNotifOpen(true);
     window.addEventListener('open-notifications', onOpenNoti);
     return () => window.removeEventListener('open-notifications', onOpenNoti);
   }, []);
 
-  // Keyboard: / or ⌘/Ctrl+K
+  // ===== Keyboard: / or ⌘/Ctrl+K
   useEffect(() => {
     const onKey = (e) => {
       const isSlash = e.key === '/';
@@ -88,7 +88,7 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  // Dark mode
+  // ===== Dark mode
   useEffect(() => {
     const stored = typeof window !== 'undefined' ? localStorage.getItem('darkMode') : null;
     const prefers = typeof window !== 'undefined'
@@ -101,7 +101,7 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
     if (typeof window !== 'undefined') localStorage.setItem('darkMode', darkMode);
   }, [darkMode]);
 
-  // Categories
+  // ===== Categories
   useEffect(() => {
     (async () => {
       const { data } = await supabase
@@ -112,7 +112,7 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
     })();
   }, []);
 
-  // Search dataset
+  // ===== Search dataset
   const runSearch = async () => {
     setLoading(true);
     let queryQ = supabase
@@ -130,7 +130,7 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
     if (searchOpen) runSearch();
   }, [q, activeCategory, sortBy, searchOpen]);
 
-  // Close drawer on outside click
+  // ===== Close drawer on outside click
   useEffect(() => {
     const close = (e) => {
       if (drawerRef.current && !drawerRef.current.contains(e.target)) setMobileMenuOpen(false);
@@ -139,7 +139,7 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
     return () => document.removeEventListener('mousedown', close);
   }, [mobileMenuOpen]);
 
-  // Realtime unread badge
+  // ===== Realtime unread badge
   useEffect(() => {
     let unsubNoti = null;
     const unsubAuth = auth.onAuthStateChanged((u) => {
@@ -159,11 +159,20 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
     return () => { unsubAuth && unsubAuth(); unsubNoti && unsubNoti(); };
   }, []);
 
+  // ===== Ensure page scroll is never locked accidentally
+  useEffect(() => {
+    const shouldLock = mobileMenuOpen || searchOpen;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = shouldLock ? 'hidden' : '';
+    return () => { document.body.style.overflow = prev; };
+  }, [mobileMenuOpen, searchOpen]);
+
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 overflow-x-hidden">
       <Head>
         <title>StoreIOS – TestFlight & Jailbreak</title>
         <meta name="description" content="Kho ứng dụng TestFlight beta & công cụ jailbreak cho iOS" />
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
       </Head>
 
       {/* HEADER */}
@@ -192,26 +201,11 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
             </Link>
           </div>
 
-          {/* Middle – pill nav clearer */}
-          <nav className="hidden md:flex items-center gap-2 text-sm">
-            <Link
-              href="/tools"
-              className="px-3 py-1.5 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition"
-            >
-              Công cụ
-            </Link>
-            <Link
-              href="/categories"
-              className="px-3 py-1.5 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition"
-            >
-              Chuyên mục
-            </Link>
-            <Link
-              href="/about"
-              className="px-3 py-1.5 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition"
-            >
-              Giới thiệu
-            </Link>
+          {/* Middle */}
+          <nav className="hidden md:flex items-center gap-6 text-sm">
+            <Link href="/tools" className="hover:text-red-600">Công cụ</Link>
+            <Link href="/categories" className="hover:text-red-600">Chuyên mục</Link>
+            <Link href="/about" className="hover:text-red-600">Giới thiệu</Link>
           </nav>
 
           {/* Right */}
@@ -242,14 +236,13 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
               <NotificationsPanel open={notifOpen} onClose={() => setNotifOpen(false)} />
             </div>
 
-            {/* Admin: direct to apps (no Dashboard link) */}
             {!adminLoading && isAdmin && (
               <Link
                 href={{ pathname: '/admin', query: { tab: 'apps' } }}
                 title="Quản trị"
-                className="hidden md:flex items-center justify-center w-9 h-9 rounded-full bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/50"
+                className="hidden md:flex items-center justify-center w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
               >
-                <FontAwesomeIcon icon={faCog} className="w-4 h-4 text-emerald-700 dark:text-emerald-300" />
+                <FontAwesomeIcon icon={faCog} className="w-4 h-4" />
               </Link>
             )}
 
@@ -263,7 +256,9 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
         <div className="fixed inset-0 z-50 bg-black/50 flex">
           <div
             ref={drawerRef}
-            className="w-80 max-w-[85%] bg-white dark:bg-gray-900 h-full p-6 shadow-2xl"
+            className="w-80 max-w-[85%] bg-white dark:bg-gray-900 h-full p-6 shadow-2xl overflow-y-auto"
+            aria-modal="true"
+            role="dialog"
           >
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-lg font-bold">Menu</h2>
@@ -285,48 +280,37 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
               Tìm kiếm…
             </button>
 
-            {/* === QUẢN TRỊ (Admin only, no Dashboard) === */}
+            {/* === QUẢN TRỊ (Admin only) === */}
             {!adminLoading && isAdmin && (
               <div className="mt-6 mb-4 pb-4 border-b border-emerald-200 dark:border-emerald-800">
-                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide mb-3 text-emerald-700 dark:text-emerald-300">
+                <div className="flex items-center gap-2 text-sm font-semibold mb-2 text-emerald-600 dark:text-emerald-400">
                   <FontAwesomeIcon icon={faCog} className="w-4 h-4" />
                   Quản trị
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <Link
                     href={{ pathname: '/admin', query: { tab: 'apps' } }}
                     onClick={() => setMobileMenuOpen(false)}
-                    className="group flex items-center justify-between px-3 py-2 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50/60 dark:bg-emerald-900/20 hover:bg-emerald-100/70 dark:hover:bg-emerald-900/40 transition"
+                    className="flex items-center gap-2 px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
                   >
-                    <span className="flex items-center gap-2 text-emerald-800 dark:text-emerald-200">
-                      <FontAwesomeIcon icon={faBoxOpen} className="w-4 h-4" />
-                      Quản lý App
-                    </span>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-700 text-white">Apps</span>
+                    <FontAwesomeIcon icon={faBoxOpen} className="w-4 h-4" />
+                    Quản lý App
                   </Link>
-
                   <Link
                     href={{ pathname: '/admin', query: { tab: 'categories' } }}
                     onClick={() => setMobileMenuOpen(false)}
-                    className="group flex items-center justify-between px-3 py-2 rounded-lg border border-sky-200 dark:border-sky-800 bg-sky-50/60 dark:bg-sky-900/20 hover:bg-sky-100/70 dark:hover:bg-sky-900/40 transition"
+                    className="flex items-center gap-2 px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
                   >
-                    <span className="flex items-center gap-2 text-sky-800 dark:text-sky-200">
-                      <FontAwesomeIcon icon={faFolder} className="w-4 h-4" />
-                      Chuyên mục
-                    </span>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-sky-700 text-white">Meta</span>
+                    <FontAwesomeIcon icon={faFolder} className="w-4 h-4" />
+                    Chuyên mục
                   </Link>
-
                   <Link
                     href={{ pathname: '/admin', query: { tab: 'certs' } }}
                     onClick={() => setMobileMenuOpen(false)}
-                    className="group flex items-center justify-between px-3 py-2 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/60 dark:bg-amber-900/20 hover:bg-amber-100/70 dark:hover:bg-amber-900/40 transition"
+                    className="flex items-center gap-2 px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
                   >
-                    <span className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
-                      <FontAwesomeIcon icon={faShieldAlt} className="w-4 h-4" />
-                      Ký IPA
-                    </span>
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-amber-700 text-white">Certs</span>
+                    <FontAwesomeIcon icon={faShieldAlt} className="w-4 h-4" />
+                    Ký IPA
                   </Link>
                 </div>
               </div>
@@ -334,16 +318,16 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
 
             {/* --- Công cụ --- */}
             <div className="mt-6">
-              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide mb-3 text-gray-700 dark:text-gray-300">
+              <div className="flex items-center gap-2 text-sm font-semibold mb-2">
                 <FontAwesomeIcon icon={faWrench} className="w-4 h-4" />
                 Công cụ
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1">
                 <a
                   href="https://appinfo.storeios.net"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-between px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  className="flex items-center justify-between px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
                 >
                   <span>App Info</span>
                   <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="w-3.5 h-3.5 opacity-70" />
@@ -352,7 +336,7 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
                   href="https://ipadl.storeios.net"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-between px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800"
+                  className="flex items-center justify-between px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
                 >
                   <span>IPA Downloader</span>
                   <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="w-3.5 h-3.5 opacity-70" />
@@ -362,7 +346,7 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
 
             {/* --- Chuyên mục --- */}
             <div className="mt-6">
-              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide mb-3 text-gray-700 dark:text-gray-300">
+              <div className="flex items-center gap-2 text-sm font-semibold mb-2">
                 <FontAwesomeIcon icon={faLayerGroup} className="w-4 h-4" />
                 Chuyên mục
               </div>
@@ -377,7 +361,7 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
                       key={c.id}
                       href={href}
                       onClick={() => setMobileMenuOpen(false)}
-                      className="block px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
+                      className="block px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
                     >
                       {c.name}
                     </Link>
@@ -390,19 +374,25 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
               <Link
                 href="/about"
                 onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+                className="block px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
               >
                 Giới thiệu
               </Link>
               <Link
                 href="/privacy"
                 onClick={() => setMobileMenuOpen(false)}
-                className="block px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+                className="block px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
               >
                 Bảo mật
               </Link>
             </div>
           </div>
+          {/* Click overlay to close */}
+          <button
+            aria-label="Đóng menu"
+            className="flex-1"
+            onClick={() => setMobileMenuOpen(false)}
+          />
         </div>
       )}
 
@@ -418,44 +408,68 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
       />
 
       {/* MAIN */}
-      <main className={`flex-1 ${fullWidth ? '' : 'w-full max-w-screen-2xl mx-auto px-4 py-6'}`}>
+      <main className={`flex-1 ${fullWidth ? '' : 'w-full max-w-screen-2xl mx-auto px-4 py-6'} overflow-visible`}>
         {children}
       </main>
 
-      {/* FOOTER */}
-      <footer className="bg-gray-900 text-gray-300 mt-16 border-t border-gray-800">
-        <div className="max-w-screen-2xl mx-auto px-4 py-10 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8">
-          <div>
-            <h3 className="text-white font-bold text-lg mb-3">StoreiOS</h3>
-            <p className="text-gray-400 text-sm">
-              Kho ứng dụng TestFlight beta & công cụ jailbreak cho cộng đồng iOS.
+      {/* FOOTER (compact, professional) */}
+      <footer className="mt-16 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
+        <div className="max-w-screen-2xl mx-auto px-4 py-10">
+          {/* Top row: brand + quick nav */}
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+            <div>
+              <div className="text-lg font-bold">
+                <span className="bg-gradient-to-r from-red-600 via-black to-red-600 dark:from-red-400 dark:via-white dark:to-red-400 bg-clip-text text-transparent">
+                  StoreiOS
+                </span>
+              </div>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                TestFlight beta & công cụ jailbreak cho cộng đồng iOS.
+              </p>
+            </div>
+
+            <nav className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm">
+              <Link href="/tools" className="text-gray-700 dark:text-gray-300 hover:text-red-600">Công cụ</Link>
+              <Link href="/categories" className="text-gray-700 dark:text-gray-300 hover:text-red-600">Chuyên mục</Link>
+              <Link href="/about" className="text-gray-700 dark:text-gray-300 hover:text-red-600">Giới thiệu</Link>
+              <Link href="/privacy" className="text-gray-700 dark:text-gray-300 hover:text-red-600">Bảo mật</Link>
+              <a
+                href="mailto:admin@storeios.net"
+                className="text-gray-700 dark:text-gray-300 hover:text-red-600"
+              >
+                Liên hệ
+              </a>
+              <a
+                href="https://appinfo.storeios.net"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-gray-700 dark:text-gray-300 hover:text-red-600"
+              >
+                App Info <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="w-3.5 h-3.5 opacity-70" />
+              </a>
+              <a
+                href="https://ipadl.storeios.net"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-gray-700 dark:text-gray-300 hover:text-red-600"
+              >
+                IPA Downloader <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="w-3.5 h-3.5 opacity-70" />
+              </a>
+            </nav>
+          </div>
+
+          {/* Divider */}
+          <div className="my-8 border-t border-gray-200 dark:border-gray-800" />
+
+          {/* Bottom row: copyright */}
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              © {new Date().getFullYear()} StoreiOS -- Made with ❤️ for the iOS community.
+            </p>
+            <p className="text-xs text-gray-400">
+              This site is not affiliated with Apple Inc.
             </p>
           </div>
-          <div>
-            <h4 className="font-semibold text-white mb-3">Điều hướng</h4>
-            <ul className="space-y-2 text-sm">
-              <li><Link href="/tools" className="hover:text-white">Công cụ</Link></li>
-              <li><Link href="/category" className="hover:text-white">Chuyên mục</Link></li>
-              <li><Link href="/about" className="hover:text-white">Giới thiệu</Link></li>
-              <li><Link href="/privacy" className="hover:text-white">Bảo mật</Link></li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="font-semibold text-white mb-3">Liên hệ</h4>
-            <ul className="space-y-2 text-sm">
-              <li><Link href="/contact" className="hover:text-white">Liên hệ trực tiếp</Link></li>
-              <li><a href="mailto:admin@storeios.net" className="hover:text-white">Email hỗ trợ</a></li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="font-semibold text-white mb-3">Cập nhật</h4>
-            <p className="text-sm text-gray-400">
-              Theo dõi để không bỏ lỡ app TestFlight hot.
-            </p>
-          </div>
-        </div>
-        <div className="text-center text-xs text-gray-500 border-t border-gray-800 py-6">
-          © {new Date().getFullYear()} StoreiOS – Made with ❤️ for the iOS community.
         </div>
       </footer>
     </div>
