@@ -13,7 +13,7 @@ import NotificationsPanel from './NotificationsPanel';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faBars, faTimes, faSearch, faBell, faWrench, faLayerGroup, faArrowUpRightFromSquare,
-  faCog, faBoxOpen, faFolder, faShieldAlt, faChartBar
+  faCog, faBoxOpen, faFolder, faShieldAlt
 } from '@fortawesome/free-solid-svg-icons';
 
 export default function Layout({ children, fullWidth = false, hotApps }) {
@@ -192,11 +192,26 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
             </Link>
           </div>
 
-          {/* Middle */}
-          <nav className="hidden md:flex items-center gap-6 text-sm">
-            <Link href="/tools" className="hover:text-red-600">Công cụ</Link>
-            <Link href="/categories" className="hover:text-red-600">Chuyên mục</Link>
-            <Link href="/about" className="hover:text-red-600">Giới thiệu</Link>
+          {/* Middle – pill nav clearer */}
+          <nav className="hidden md:flex items-center gap-2 text-sm">
+            <Link
+              href="/tools"
+              className="px-3 py-1.5 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition"
+            >
+              Công cụ
+            </Link>
+            <Link
+              href="/categories"
+              className="px-3 py-1.5 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition"
+            >
+              Chuyên mục
+            </Link>
+            <Link
+              href="/about"
+              className="px-3 py-1.5 rounded-md border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 hover:border-gray-300 dark:hover:border-gray-600 transition"
+            >
+              Giới thiệu
+            </Link>
           </nav>
 
           {/* Right */}
@@ -227,13 +242,14 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
               <NotificationsPanel open={notifOpen} onClose={() => setNotifOpen(false)} />
             </div>
 
+            {/* Admin: direct to apps (no Dashboard link) */}
             {!adminLoading && isAdmin && (
               <Link
-                href={{ pathname: '/admin', query: { tab: 'dashboard' } }}
-                title="Bảng điều khiển admin"
-                className="hidden md:flex items-center justify-center w-9 h-9 rounded-full bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
+                href={{ pathname: '/admin', query: { tab: 'apps' } }}
+                title="Quản trị"
+                className="hidden md:flex items-center justify-center w-9 h-9 rounded-full bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/50"
               >
-                <FontAwesomeIcon icon={faCog} className="w-4 h-4" />
+                <FontAwesomeIcon icon={faCog} className="w-4 h-4 text-emerald-700 dark:text-emerald-300" />
               </Link>
             )}
 
@@ -269,45 +285,48 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
               Tìm kiếm…
             </button>
 
-            {/* === QUẢN TRỊ (Admin only) === */}
+            {/* === QUẢN TRỊ (Admin only, no Dashboard) === */}
             {!adminLoading && isAdmin && (
-              <div className="mt-6 mb-4 pb-4 border-b border-green-200 dark:border-green-800">
-                <div className="flex items-center gap-2 text-sm font-semibold mb-2 text-green-600 dark:text-green-400">
+              <div className="mt-6 mb-4 pb-4 border-b border-emerald-200 dark:border-emerald-800">
+                <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide mb-3 text-emerald-700 dark:text-emerald-300">
                   <FontAwesomeIcon icon={faCog} className="w-4 h-4" />
                   Quản trị
                 </div>
-                <div className="space-y-1">
-                  <Link
-                    href={{ pathname: '/admin', query: { tab: 'dashboard' } }}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-2 px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
-                  >
-                    <FontAwesomeIcon icon={faChartBar} className="w-4 h-4" />
-                    Dashboard
-                  </Link>
+                <div className="space-y-2">
                   <Link
                     href={{ pathname: '/admin', query: { tab: 'apps' } }}
                     onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-2 px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                    className="group flex items-center justify-between px-3 py-2 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50/60 dark:bg-emerald-900/20 hover:bg-emerald-100/70 dark:hover:bg-emerald-900/40 transition"
                   >
-                    <FontAwesomeIcon icon={faBoxOpen} className="w-4 h-4" />
-                    Quản lý App
+                    <span className="flex items-center gap-2 text-emerald-800 dark:text-emerald-200">
+                      <FontAwesomeIcon icon={faBoxOpen} className="w-4 h-4" />
+                      Quản lý App
+                    </span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-700 text-white">Apps</span>
                   </Link>
+
                   <Link
                     href={{ pathname: '/admin', query: { tab: 'categories' } }}
                     onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-2 px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                    className="group flex items-center justify-between px-3 py-2 rounded-lg border border-sky-200 dark:border-sky-800 bg-sky-50/60 dark:bg-sky-900/20 hover:bg-sky-100/70 dark:hover:bg-sky-900/40 transition"
                   >
-                    <FontAwesomeIcon icon={faFolder} className="w-4 h-4" />
-                    Chuyên mục
+                    <span className="flex items-center gap-2 text-sky-800 dark:text-sky-200">
+                      <FontAwesomeIcon icon={faFolder} className="w-4 h-4" />
+                      Chuyên mục
+                    </span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-sky-700 text-white">Meta</span>
                   </Link>
+
                   <Link
                     href={{ pathname: '/admin', query: { tab: 'certs' } }}
                     onClick={() => setMobileMenuOpen(false)}
-                    className="flex items-center gap-2 px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                    className="group flex items-center justify-between px-3 py-2 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50/60 dark:bg-amber-900/20 hover:bg-amber-100/70 dark:hover:bg-amber-900/40 transition"
                   >
-                    <FontAwesomeIcon icon={faShieldAlt} className="w-4 h-4" />
-                    Ký IPA
+                    <span className="flex items-center gap-2 text-amber-800 dark:text-amber-200">
+                      <FontAwesomeIcon icon={faShieldAlt} className="w-4 h-4" />
+                      Ký IPA
+                    </span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-amber-700 text-white">Certs</span>
                   </Link>
                 </div>
               </div>
@@ -315,16 +334,16 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
 
             {/* --- Công cụ --- */}
             <div className="mt-6">
-              <div className="flex items-center gap-2 text-sm font-semibold mb-2">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide mb-3 text-gray-700 dark:text-gray-300">
                 <FontAwesomeIcon icon={faWrench} className="w-4 h-4" />
                 Công cụ
               </div>
-              <div className="space-y-1">
+              <div className="space-y-2">
                 <a
                   href="https://appinfo.storeios.net"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-between px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                  className="flex items-center justify-between px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800"
                 >
                   <span>App Info</span>
                   <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="w-3.5 h-3.5 opacity-70" />
@@ -333,7 +352,7 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
                   href="https://ipadl.storeios.net"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-between px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                  className="flex items-center justify-between px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800"
                 >
                   <span>IPA Downloader</span>
                   <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="w-3.5 h-3.5 opacity-70" />
@@ -343,7 +362,7 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
 
             {/* --- Chuyên mục --- */}
             <div className="mt-6">
-              <div className="flex items-center gap-2 text-sm font-semibold mb-2">
+              <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wide mb-3 text-gray-700 dark:text-gray-300">
                 <FontAwesomeIcon icon={faLayerGroup} className="w-4 h-4" />
                 Chuyên mục
               </div>
@@ -358,7 +377,7 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
                       key={c.id}
                       href={href}
                       onClick={() => setMobileMenuOpen(false)}
-                      className="block px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                      className="block px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
                     >
                       {c.name}
                     </Link>
@@ -371,14 +390,14 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
               <Link
                 href="/about"
                 onClick={() => setMobileMenuOpen(false)}
-                className="block px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                className="block px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
               >
                 Giới thiệu
               </Link>
               <Link
                 href="/privacy"
                 onClick={() => setMobileMenuOpen(false)}
-                className="block px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
+                className="block px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
               >
                 Bảo mật
               </Link>
