@@ -68,6 +68,18 @@ function MyApp({ Component, pageProps }) {
     return () => router.events.off('routeChangeComplete', refreshHead);
   }, [router.events]);
 
+  // ✅ Fix Safari Back/Forward Cache (bfcache) when pressing Back
+  useEffect(() => {
+    const onPageShow = (e) => {
+      // If restored from bfcache, re-render the current route to avoid DOMException
+      if (e.persisted) {
+        router.replace(router.asPath);
+      }
+    };
+    window.addEventListener('pageshow', onPageShow);
+    return () => window.removeEventListener('pageshow', onPageShow);
+  }, [router]);
+
   return (
     <>
       <Component {...pageProps} />
