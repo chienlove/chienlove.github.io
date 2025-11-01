@@ -1075,7 +1075,7 @@ useEffect(() => {
                           </button>
                           <button
                             onClick={() => askDelete(app.id)}
-                            className="text-center px-1 py-1.5 text-xs font-semibold rounded bg-red-500 text-white hover:bg-red-600"
+className="px-1 py-1 text-[11px] font-medium rounded bg-red-500 text-white hover:bg-red-600 gap-0.5"
                           >
                             <FontAwesomeIcon icon={faTrash} /> <span className="ml-1">Xoá</span>
                           </button>
