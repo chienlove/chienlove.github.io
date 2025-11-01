@@ -1061,24 +1061,48 @@ useEffect(() => {
                         </div>
                         <div className="mt-3 grid grid-cols-3 gap-2">
                           <Link
-                            href={`/${slug}`}
-                            target="_blank"
-                            className="text-center px-1 py-1.5 text-xs font-semibold rounded bg-green-600 text-white hover:bg-green-700"
-                          >
-                            <FontAwesomeIcon icon={faEye} /> <span className="ml-1">Xem</span>
-                          </Link>
-                          <button
-                            onClick={() => handleEdit(app)}
-                            className="text-center px-1 py-1.5 text-xs font-semibold rounded bg-yellow-500 text-white hover:bg-yellow-600"
-                          >
-                            <FontAwesomeIcon icon={faEdit} /> <span className="ml-1">Sửa</span>
-                          </button>
-                          <button
-                            onClick={() => askDelete(app.id)}
-className="px-1 py-1 text-[11px] font-medium rounded bg-red-500 text-white hover:bg-red-600 gap-0.5"
-                          >
-                            <FontAwesomeIcon icon={faTrash} /> <span className="ml-1">Xoá</span>
-                          </button>
+  href={`/${slug}`}
+  target="_blank"
+  className="hidden md:flex text-center px-2.5 py-1 text-xs font-semibold rounded bg-green-600 text-white hover:bg-green-700 items-center gap-1"
+>
+  <FontAwesomeIcon icon={faEye} /> <span>Xem</span>
+</Link>
+<Link
+  href={`/${slug}`}
+  target="_blank"
+  className="md:hidden text-green-500 hover:text-green-600 text-lg"
+  aria-label="Xem"
+>
+  <FontAwesomeIcon icon={faEye} />
+</Link>
+
+<button
+  onClick={() => handleEdit(app)}
+  className="hidden md:flex text-center px-2.5 py-1 text-xs font-semibold rounded bg-yellow-500 text-white hover:bg-yellow-600 items-center gap-1"
+>
+  <FontAwesomeIcon icon={faEdit} /> <span>Sửa</span>
+</button>
+<button
+  onClick={() => handleEdit(app)}
+  className="md:hidden text-yellow-500 hover:text-yellow-600 text-lg"
+  aria-label="Sửa"
+>
+  <FontAwesomeIcon icon={faEdit} />
+</button>
+
+<button
+  onClick={() => askDelete(app.id)}
+  className="hidden md:flex text-center px-2.5 py-1 text-xs font-semibold rounded bg-red-500 text-white hover:bg-red-600 items-center gap-1"
+>
+  <FontAwesomeIcon icon={faTrash} /> <span>Xoá</span>
+</button>
+<button
+  onClick={() => askDelete(app.id)}
+  className="md:hidden text-red-500 hover:text-red-600 text-lg"
+  aria-label="Xoá"
+>
+  <FontAwesomeIcon icon={faTrash} />
+</button>
                         </div>
                       </li>
                     );
