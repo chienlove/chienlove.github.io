@@ -40,7 +40,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
   const [hint, setHint] = useState('');
   const [authClosedAt, setAuthClosedAt] = useState(0);
   const [rememberMe, setRememberMe] = useState(true);
-
   const [banInfo, setBanInfo] = useState(null);
 
   const menuRef = useRef(null);
@@ -467,17 +466,17 @@ export default function LoginButton({ onToggleTheme, isDark }) {
         )}
       </div>
 
-      {/* AUTH MODAL -- căn giữa, safe-area, bo tròn, body scroll */}
+      {/* AUTH MODAL -- khoảng ngoài vừa đủ để luôn thấy bo tròn; padding trong rộng rãi */}
       {openAuth && (
         <div
           className="fixed inset-0 z-[2000] bg-black/55 flex items-center justify-center"
           style={{
             minHeight: '100dvh',
-            // ↓ Thu hẹp trên/dưới (12px) -- tăng khoảng 2 bên (24px)
-            paddingTop: 'max(env(safe-area-inset-top), 12px)',
-            paddingBottom: 'max(env(safe-area-inset-bottom), 12px)',
-            paddingLeft: 24,
-            paddingRight: 24,
+            // khoảng ngoài: vừa đủ để bo góc không chạm lề
+            paddingTop: 'max(env(safe-area-inset-top), 20px)',
+            paddingBottom: 'max(env(safe-area-inset-bottom), 20px)',
+            paddingLeft: 16,
+            paddingRight: 16,
           }}
           aria-modal="true"
           role="dialog"
@@ -488,8 +487,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
             ref={modalRef}
             tabIndex={-1}
             onClick={(e) => e.stopPropagation()}
-            // ↓ Mở rộng lề 2 bên bằng cách tăng mx (khoảng cách card với mép)
-            className="w-full max-w-[640px] mx-6 sm:mx-10 rounded-2xl sm:rounded-3xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-2xl focus:outline-none overflow-hidden"
+            className="w-full max-w-[640px] mx-4 sm:mx-6 rounded-2xl sm:rounded-3xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-2xl focus:outline-none overflow-hidden"
             style={{ WebkitOverflowScrolling: 'touch' }}
           >
             {/* Header (nút đóng) */}
@@ -503,15 +501,14 @@ export default function LoginButton({ onToggleTheme, isDark }) {
               </button>
             </div>
 
-            {/* Body scrollable */}
+            {/* Body scrollable -- tăng padding ngang, giảm padding dọc + giới hạn height để luôn thấy bo tròn */}
             <div
-              className="overflow-y-auto overscroll-contain px-8 pt-2 pb-6"
+              className="overflow-y-auto overscroll-contain px-7 sm:px-10 pt-1 pb-4"
               style={{
-                // ↓ Tăng maxHeight để giảm khoảng trống trên/dưới (card cao hơn)
-                maxHeight: '82vh',
+                maxHeight: '74vh',
                 WebkitOverflowScrolling: 'touch',
-                paddingBottom: 'max(env(safe-area-inset-bottom), 24px)',
-                paddingTop: 'max(env(safe-area-inset-top), 8px)',
+                paddingBottom: 'max(env(safe-area-inset-bottom), 18px)',
+                paddingTop: 'max(env(safe-area-inset-top), 6px)',
               }}
             >
               <div className="text-center mb-4">
@@ -523,7 +520,20 @@ export default function LoginButton({ onToggleTheme, isDark }) {
                 </p>
               </div>
 
-              <BanBanner />
+              {/* BAN banner (nếu có) */}
+              {banInfo && (
+                <div className="mb-4 rounded-xl border border-rose-300 bg-rose-50 text-rose-900 p-3">
+                  <div className="font-semibold">
+                    {banInfo.mode === 'permanent'
+                      ? 'Tài khoản của bạn bị BAN vĩnh viễn.'
+                      : 'Tài khoản của bạn đang bị BAN tạm thời.'}
+                  </div>
+                  {banInfo.reason && <div className="text-sm mt-1"><b>Lý do:</b> {banInfo.reason}</div>}
+                  {banInfo.mode === 'temporary' && banInfo.remainingText && (
+                    <div className="text-sm mt-1"><b>Thời gian còn lại:</b> {banInfo.remainingText}</div>
+                  )}
+                </div>
+              )}
 
               {/* Email */}
               <div className="mb-4">
@@ -584,7 +594,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
                     </button>
                   </div>
 
-                  {/* Tooltip điều kiện – B + 2️⃣ */}
+                  {/* Tooltip điều kiện */}
                   <ul className="text-xs space-y-1 mt-2">
                     <li className={`flex items-center gap-2 ${password.length >= 8 ? 'text-emerald-600' : 'text-gray-500'}`}>
                       <FontAwesomeIcon icon={password.length >= 8 ? faCircleCheck : faCircleXmark} className="w-3.5 h-3.5" />
@@ -653,7 +663,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
                 <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
               </div>
 
-              {/* Social (Google có màu, icon nhỏ gọn) */}
+              {/* Social */}
               <div className="flex items-center justify-center gap-4 sm:gap-5">
                 <button
                   onClick={() => loginGoogle(false)} disabled={loading}
