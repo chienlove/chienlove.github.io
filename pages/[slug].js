@@ -741,7 +741,9 @@ export default function Detail({ serverApp, serverRelated }) {
         {/* Open Graph */}
         <meta property="og:title" content={dynamicMetaTags?.title} />
         <meta property="og:description" content={dynamicMetaTags?.description} />
-        <meta property="og:image" content={app.icon_url} />
+        <meta property="og:image" content={app.icon_url?.startsWith('http') 
+  ? app.icon_url 
+  : `https://storeios.net${app.icon_url}`} />
         <meta property="og:url" content={`https://storeios.net/${app.slug}`} />
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="StoreiOS" />
