@@ -8,6 +8,7 @@ import { useEffect, useState, useMemo, memo } from 'react';
 import { auth } from '../lib/firebase-client';
 import { sendEmailVerification } from 'firebase/auth';
 import Head from 'next/head';
+import Image from 'next/image';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faDownload,
@@ -104,7 +105,7 @@ function stripSimpleTagAll(str, tag) {
     if (iOpen === -1) break;
     const iBracket = s.indexOf(']', iOpen);
     if (iBracket === -1) { s = s.slice(0, iOpen); break; }
-    const iClose = lower.indexOf(close, iBracket + 1); // (fix) không cần .toLowerCase() lần nữa
+    const iClose = lower.indexOf(close, iBracket + 1);
     if (iClose === -1) {
       s = s.slice(0, iOpen) + s.slice(iBracket + 1);
       continue;
@@ -278,21 +279,6 @@ const InfoRow = memo(({ label, value, expandable = false, expanded = false, onTo
 });
 InfoRow.displayName = 'InfoRow';
 
-/* ===================== Center Modal (generic) ===================== */
-function CenterModal({ open, title, body, actions }) {
-  if (!open) return null;
-  return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center">
-      <div className="absolute inset-0 bg-black/40" />
-      <div className="relative w-[92vw] max-w-md rounded-2xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xl p-4">
-        {title && <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">{title}</h3>}
-        <div className="text-sm text-gray-800 dark:text-gray-100">{body}</div>
-        <div className="mt-4 flex justify-end gap-2">{actions}</div>
-      </div>
-    </div>
-  );
-}
-
 /* ===================== Page ===================== */
 export default function Detail({ serverApp, serverRelated }) {
   const router = useRouter();
@@ -308,6 +294,16 @@ export default function Detail({ serverApp, serverRelated }) {
   const [isFetchingIpa, setIsFetchingIpa] = useState(false);
   const [showAllDevices, setShowAllDevices] = useState(false);
   const [showAllLanguages, setShowAllLanguages] = useState(false);
+
+  // Fallback ảnh với next/image
+  const [iconError, setIconError] = useState(false);
+  const iconSrc = iconError ? '/placeholder-icon.png' : (app?.icon_url || '/placeholder-icon.png');
+
+  // helper: chuẩn hoá URL cho next/image (absolute khi cần)
+  const toAbs = (src) => {
+    if (!src) return '';
+    return src.startsWith('http') ? src : `https://storeios.net${src}`;
+  };
 
   // Pagination cho Related apps
   const PAGE_SIZE = 5;
@@ -343,7 +339,7 @@ export default function Detail({ serverApp, serverRelated }) {
   const isTestflight = categorySlug === 'testflight';
   const isInstallable = ['jailbreak', 'app-clone'].includes(categorySlug);
 
-  // ===== Bạn đã thêm: languages/devices =====
+  // ===== languages/devices =====
   const languagesArray = useMemo(() => parseList(app?.languages), [app?.languages]);
   const devicesArray   = useMemo(() => parseList(app?.supported_devices), [app?.supported_devices]);
 
@@ -359,7 +355,7 @@ export default function Detail({ serverApp, serverRelated }) {
     return { list, remain };
   }, [devicesArray]);
 
-  // ===================== DYNAMIC META TAGS (Đã sửa cho App Clone) =====================
+  // ===================== DYNAMIC META TAGS =====================
   const displaySize = useMemo(() => {
     if (!app?.size) return 'Không rõ';
     const s = String(app.size);
@@ -373,22 +369,22 @@ export default function Detail({ serverApp, serverRelated }) {
 
     const appName     = app.name || '';
     const version     = app.version ? ` ${app.version}` : '';
+    the:
     const author      = app.author || '';
-    const currentYear = String(new Date().getFullYear()); // (fix) năm động
+    const currentYear = String(new Date().getFullYear());
     const os          = app.minimum_os_version ? `iOS ${app.minimum_os_version}+` : 'iOS';
 
     const generateTitle = () => {
       const baseTitle = `Tải ${appName}${version} cho ${os} | ${currentYear} | StoreiOS`;
 
       if (categorySlug === 'jailbreak') {
-          const jailbreakKeywords = 'Jailbreak IPA, Tweak';
-          return `${appName}${version} - ${jailbreakKeywords} cho ${os} | StoreiOS`;
+        const jailbreakKeywords = 'Jailbreak IPA, Tweak';
+        return `${appName}${version} - ${jailbreakKeywords} cho ${os} | StoreiOS`;
       }
       if (categorySlug === 'app-clone') {
-          const cloneKeywords = 'App Clone IPA, Nhân bản, Đa tài khoản';
-          return `${appName}${version} - ${cloneKeywords} cho ${os} | StoreiOS`;
+        const cloneKeywords = 'App Clone IPA, Nhân bản, Đa tài khoản';
+        return `${appName}${version} - ${cloneKeywords} cho ${os} | StoreiOS`;
       }
-
       return baseTitle;
     };
 
@@ -406,7 +402,6 @@ export default function Detail({ serverApp, serverRelated }) {
       if (categorySlug === 'app-clone') {
         return `${appName}${version}${catName} - Ứng dụng nhân bản, đa tài khoản cho ${os}. Tải về an toàn${sizeText}${authorText}. Cập nhật ${currentYear}.`;
       }
-
       return `${appName}${version}${catName} - Ứng dụng iOS miễn phí${sizeText}${authorText}. Cài đặt nhanh, cập nhật ${currentYear}.`;
     };
 
@@ -423,11 +418,7 @@ export default function Detail({ serverApp, serverRelated }) {
       return keywords.join(', ');
     };
 
-    return {
-      title: generateTitle(),
-      description: generateDescription(),
-      keywords: generateKeywords()
-    };
+    return { title: generateTitle(), description: generateDescription(), keywords: generateKeywords() };
   }, [app, isTestflight, categorySlug, displaySize]);
 
   // ===================== STRUCTURED DATA =====================
@@ -435,25 +426,18 @@ export default function Detail({ serverApp, serverRelated }) {
     if (!app) return null;
 
     return {
-      "@context": "https://schema.org", // (fix) không dùng Markdown
+      "@context": "https://schema.org",
       "@type": "SoftwareApplication",
       "name": app.name,
       "applicationCategory": "SoftwareApplication",
       "operatingSystem": "iOS",
       "description": dynamicMetaTags?.description || '',
       "image": app.icon_url,
-      "author": {
-        "@type": "Organization",
-        "name": app.author
-      },
+      "author": { "@type": "Organization", "name": app.author },
       "datePublished": app.release_date,
       "softwareVersion": app.version,
       "fileSize": displaySize,
-      "offers": {
-        "@type": "Offer",
-        "price": "0",
-        "priceCurrency": "USD"
-      }
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
     };
   }, [app, dynamicMetaTags, displaySize]);
 
@@ -462,12 +446,7 @@ export default function Detail({ serverApp, serverRelated }) {
     if (!app) return null;
 
     const itemListElement = [
-      {
-        "@type": "ListItem",
-        "position": 1,
-        "name": "Home",
-        "item": "https://storeios.net" // (fix) URL chuẩn
-      }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://storeios.net" }
     ];
 
     if (app.category?.slug) {
@@ -486,7 +465,7 @@ export default function Detail({ serverApp, serverRelated }) {
     });
 
     return {
-      "@context": "https://schema.org", // (fix)
+      "@context": "https://schema.org",
       "@type": "BreadcrumbList",
       "itemListElement": itemListElement
     };
@@ -520,7 +499,7 @@ export default function Detail({ serverApp, serverRelated }) {
         .finally(() => setStatusLoading(false));
     }
 
-    // ✅ Dynamic import FAC ở client để tránh SSR 500
+    // Dynamic import FAC (client)
     if (app.icon_url && typeof window !== 'undefined') {
       (async () => {
         try {
@@ -539,16 +518,12 @@ export default function Detail({ serverApp, serverRelated }) {
     }
   }, [app?.id, app?.icon_url, app?.testflight_url, isTestflight]);
 
-  /* ======= Thông báo "Cần đăng nhập" ======= */
+  /* ======= Modal helpers ======= */
   const requireLogin = () => {
     setModal({
       open: true,
       title: 'Cần đăng nhập',
-      body: (
-        <div className="text-sm">
-          <p>Bạn cần <b>đăng nhập</b> để tải IPA.</p>
-        </div>
-      ),
+      body: (<div className="text-sm"><p>Bạn cần <b>đăng nhập</b> để tải IPA.</p></div>),
       actions: (
         <>
           <button
@@ -565,10 +540,7 @@ export default function Detail({ serverApp, serverRelated }) {
           >
             Đăng nhập
           </button>
-          <button
-            onClick={() => setModal(s => ({ ...s, open: false }))}
-            className="px-3 py-2 text-sm rounded border"
-          >
+          <button onClick={() => setModal(s => ({ ...s, open: false }))} className="px-3 py-2 text-sm rounded border">
             Đóng
           </button>
         </>
@@ -576,7 +548,6 @@ export default function Detail({ serverApp, serverRelated }) {
     });
   };
 
-  /* ======= Thông báo "Cần xác minh email" ======= */
   const requireVerified = () => {
     setModal({
       open: true,
@@ -604,7 +575,7 @@ export default function Detail({ serverApp, serverRelated }) {
                     actions: <button onClick={() => setModal(s => ({ ...s, open: false }))} className="px-3 py-2 text-sm rounded border">Đóng</button>
                   });
                 }
-              } catch (e) {
+              } catch {
                 setModal({
                   open: true,
                   title: 'Lỗi',
@@ -617,10 +588,7 @@ export default function Detail({ serverApp, serverRelated }) {
           >
             Gửi lại email xác minh
           </button>
-          <button
-            onClick={() => setModal(s => ({ ...s, open: false }))}
-            className="px-3 py-2 text-sm rounded border"
-          >
+          <button onClick={() => setModal(s => ({ ...s, open: false }))} className="px-3 py-2 text-sm rounded border">
             Đóng
           </button>
         </>
@@ -628,38 +596,27 @@ export default function Detail({ serverApp, serverRelated }) {
     });
   };
 
-  /* =======================================================
-     CÀI ĐẶT: chỉ mở tab mới. Đếm để server xử lý ở /install/*
-     ======================================================= */
-  const handleInstall = async (e) => {
+  /* ======= Cài đặt / Tải IPA ======= */
+  const [modal, setModal] = useState({ open: false, title: '', body: null, actions: null });
+  const handleInstall = (e) => {
     e.preventDefault();
     if (!app?.id || isTestflight) return;
-
     setIsInstalling(true);
-    const installUrl = `/install/${app.slug}`;
-    window.open(installUrl, '_blank'); // server sẽ đếm
-
+    window.open(`/install/${app.slug}`, '_blank');
     setTimeout(() => setIsInstalling(false), 500);
   };
 
-  /* =======================================================
-     TẢI IPA: chỉ mở tab mới. Đếm để server xử lý ở /install/*
-     ======================================================= */
   const handleDownloadIpa = (e) => {
     e.preventDefault();
     if (!app?.id || !isInstallable) return;
-
     if (!me) { requireLogin(); return; }
     if (!me.emailVerified) { requireVerified(); return; }
-
     setIsFetchingIpa(true);
-    const downloadUrl = `/install/${app.slug}?action=download`;
-    window.open(downloadUrl, '_blank'); // server sẽ đếm
-
+    window.open(`/install/${app.slug}?action=download`, '_blank');
     setTimeout(() => setIsFetchingIpa(false), 500);
   };
 
-  // Cuộn đến bình luận từ ?comment= hoặc #comment-...
+  // Cuộn tới bình luận
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -674,7 +631,6 @@ export default function Detail({ serverApp, serverRelated }) {
       if (!target) return false;
 
       const rawId = target.replace(/^comment-/, '').replace(/^c-/, '');
-
       const el =
         document.getElementById(`comment-${rawId}`) ||
         document.getElementById(`c-${rawId}`) ||
@@ -728,12 +684,10 @@ export default function Detail({ serverApp, serverRelated }) {
     );
   }
 
-
   return (
     <Layout fullWidth>
-      {/* ===================== SEO META TAGS ĐẦY ĐỦ ===================== */}
+      {/* ===================== SEO META TAGS ===================== */}
       <Head>
-        {/* Dynamic Meta Tags */}
         <title>{dynamicMetaTags?.title || `${app.name} - StoreiOS`}</title>
         <meta name="description" content={dynamicMetaTags?.description} />
         <meta name="keywords" content={dynamicMetaTags?.keywords} />
@@ -741,9 +695,10 @@ export default function Detail({ serverApp, serverRelated }) {
         {/* Open Graph */}
         <meta property="og:title" content={dynamicMetaTags?.title} />
         <meta property="og:description" content={dynamicMetaTags?.description} />
-        <meta property="og:image" content={app.icon_url?.startsWith('http') 
-  ? app.icon_url 
-  : `https://storeios.net${app.icon_url}`} />
+        <meta
+          property="og:image"
+          content={app.icon_url?.startsWith('http') ? app.icon_url : `https://storeios.net${app.icon_url}`}
+        />
         <meta property="og:url" content={`https://storeios.net/${app.slug}`} />
         <meta property="og:type" content="website" />
         <meta property="og:site_name" content="StoreiOS" />
@@ -761,31 +716,18 @@ export default function Detail({ serverApp, serverRelated }) {
 
         {/* Preload critical images */}
         <link rel="preload" href={app.icon_url} as="image" />
-        {app.screenshots?.[0] && (
-          <link rel="preload" href={app.screenshots[0]} as="image" />
-        )}
+        {app.screenshots?.[0] && <link rel="preload" href={app.screenshots[0]} as="image" />}
       </Head>
 
       {/* ===================== STRUCTURED DATA ===================== */}
       {structuredData && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify(structuredData)
-          }}
-        />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
       )}
-
       {breadcrumbStructuredData && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{
-            __html: JSON.stringify(breadcrumbStructuredData)
-          }}
-        />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbStructuredData) }} />
       )}
 
-      {/* Modal thông báo */}
+      {/* Modal */}
       <CenterModal open={modal.open} title={modal.title} body={modal.body} actions={modal.actions} />
 
       {/* ===== Breadcrumb ===== */}
@@ -799,7 +741,6 @@ export default function Detail({ serverApp, serverRelated }) {
               className="relative w-full pb-6"
               style={{ backgroundImage: `linear-gradient(to bottom, ${dominantColor}, #f0f2f5)` }}
             >
-              {/* Dimming layer for dark mode */}
               <div className="absolute inset-0 pointer-events-none hidden dark:block bg-black/30" />
               <div className="absolute top-3 left-3 z-10">
                 <Link
@@ -811,18 +752,19 @@ export default function Detail({ serverApp, serverRelated }) {
               </div>
 
               <div className="pt-10 text-center px-4">
-                <div className="w-24 h-24 mx-auto overflow-hidden border-4 border-white rounded-2xl">
-                  <img
-                    src={app.icon_url || '/placeholder-icon.png'}
+                <div className="w-24 h-24 mx-auto overflow-hidden border-4 border-white rounded-2xl relative">
+                  <Image
+                    src={toAbs(iconSrc)}
                     alt={`Icon của ứng dụng ${app.name}`}
-                    className="w-full h-full object-cover"
-                    width={96}
-                    height={96}
-                    onError={(e) => { e.currentTarget.src = '/placeholder-icon.png'; }}
+                    fill
+                    sizes="96px"
+                    priority
+                    onError={() => setIconError(true)}
+                    className="object-cover"
                   />
                 </div>
 
-                {/* Title: 1 dòng */}
+                {/* Title */}
                 <h1
                   className="mt-4 text-2xl font-bold text-gray-900 dark:text-gray-100 drop-shadow truncate mx-auto max-w-[92vw] sm:max-w-[80vw]"
                   title={app.name}
@@ -837,7 +779,6 @@ export default function Detail({ serverApp, serverRelated }) {
 
                 {/* Buttons */}
                 <div className="mt-4 flex flex-wrap justify-center gap-2">
-                  {/* TestFlight */}
                   {isTestflight && app.testflight_url && (
                     <>
                       <a
@@ -872,10 +813,8 @@ export default function Detail({ serverApp, serverRelated }) {
                     </>
                   )}
 
-                  {/* Install / IPA */}
                   {!isTestflight && (
                     <>
-                      {/* NÚT CÀI ĐẶT */}
                       <button
                         onClick={handleInstall}
                         disabled={isInstalling}
@@ -897,7 +836,6 @@ export default function Detail({ serverApp, serverRelated }) {
                         )}
                       </button>
 
-                      {/* NÚT TẢI IPA */}
                       <button
                         onClick={handleDownloadIpa}
                         disabled={isFetchingIpa}
@@ -929,89 +867,72 @@ export default function Detail({ serverApp, serverRelated }) {
 
         {/* ===== Nội dung dưới ===== */}
         <div className="max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 mt-6 space-y-6 overflow-x-hidden">
+
           {/* Info cards */}
-<div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow text-center">
-  <div className="-mx-2 overflow-x-auto sm:overflow-visible px-2">
-    <div
-      className="
-        flex sm:grid sm:grid-cols-5
-        divide-x divide-gray-200 dark:divide-zinc-700
-        snap-x snap-mandatory
-      "
-    >
-      {/* Tác giả */}
-      <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
-        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Tác giả</p>
-        {/* FIX: bọc icon trong container 36px */}
-        <div className="h-[36px] flex items-center justify-center">
-          <FontAwesomeIcon
-            icon={faUser}
-            fixedWidth
-            className="w-8 h-8 text-gray-500 dark:text-gray-400"
-          />
-        </div>
-        <p className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate w-full mt-1.5" title={app.author || 'Không rõ'}>
-          {app.author || 'Không rõ'}
-        </p>
-      </div>
+          <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow text-center">
+            <div className="-mx-2 overflow-x-auto sm:overflow-visible px-2">
+              <div className="flex sm:grid sm:grid-cols-5 divide-x divide-gray-200 dark:divide-zinc-700 snap-x snap-mandatory">
+                {/* Tác giả */}
+                <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Tác giả</p>
+                  <div className="h-[36px] flex items-center justify-center">
+                    <FontAwesomeIcon icon={faUser} fixedWidth className="w-8 h-8 text-gray-500 dark:text-gray-400" />
+                  </div>
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate w-full mt-1.5" title={app.author || 'Không rõ'}>
+                    {app.author || 'Không rõ'}
+                  </p>
+                </div>
 
-      {/* Phiên bản */}
-      <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
-        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Phiên bản</p>
-        <div className="text-xl font-bold leading-none text-gray-500 dark:text-gray-400 h-[36px] flex items-center justify-center" title={app.version || 'Không rõ'}>
-          {app.version || '--'}
-        </div>
-        <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-1.5">Đã cập nhật</p>
-      </div>
+                {/* Phiên bản */}
+                <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Phiên bản</p>
+                  <div className="text-xl font-bold leading-none text-gray-500 dark:text-gray-400 h-[36px] flex items-center justify-center" title={app.version || 'Không rõ'}>
+                    {app.version || '--'}
+                  </div>
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mt-1.5">Đã cập nhật</p>
+                </div>
 
-      {/* Dung lượng */}
-      <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
-        <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Dung lượng</p>
-        <div className="h-[36px] flex items-center justify-center">
-          <FontAwesomeIcon
-            icon={faDatabase}
-            fixedWidth
-            className="w-8 h-8 text-gray-500 dark:text-gray-400"
-          />
-        </div>
-        <p className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate w-full mt-1.5" title={displaySize}>
-          {displaySize}
-        </p>
-      </div>
+                {/* Dung lượng */}
+                <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
+                  <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Dung lượng</p>
+                  <div className="h-[36px] flex items-center justify-center">
+                    <FontAwesomeIcon icon={faDatabase} fixedWidth className="w-8 h-8 text-gray-500 dark:text-gray-400" />
+                  </div>
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400 truncate w-full mt-1.5" title={displaySize}>
+                    {displaySize}
+                  </p>
+                </div>
 
-      {/* Chỉ số theo loại */}
-      {isTestflight ? (
-        <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4 col-span-2">
-          <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Lượt xem</p>
-          <div className="text-xl font-bold leading-none text-gray-500 dark:text-gray-400 h-[36px] flex items-center justify-center">
-            {new Intl.NumberFormat('vi-VN').format(app?.views ?? 0)}
-          </div>
-          <p className="text-[11px] text-gray-500 dark:text-gray-500 mt-1.5">Lượt</p>
-        </div>
-      ) : (
-        <>
-          {/* Cài đặt */}
-          <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
-            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Cài đặt</p>
-            <div className="text-xl font-bold leading-none text-gray-500 dark:text-gray-400 h-[36px] flex items-center justify-center">
-              {new Intl.NumberFormat('vi-VN').format(app?.installs ?? 0)}
+                {/* Chỉ số */}
+                {isTestflight ? (
+                  <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4 col-span-2">
+                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Lượt xem</p>
+                    <div className="text-xl font-bold leading-none text-gray-500 dark:text-gray-400 h-[36px] flex items-center justify-center">
+                      {new Intl.NumberFormat('vi-VN').format(app?.views ?? 0)}
+                    </div>
+                    <p className="text-[11px] text-gray-500 dark:text-gray-500 mt-1.5">Lượt</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
+                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Cài đặt</p>
+                      <div className="text-xl font-bold leading-none text-gray-500 dark:text-gray-400 h-[36px] flex items-center justify-center">
+                        {new Intl.NumberFormat('vi-VN').format(app?.installs ?? 0)}
+                      </div>
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-500 mt-1.5">Lượt</p>
+                    </div>
+                    <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
+                      <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Tải IPA</p>
+                      <div className="text-xl font-bold leading-none text-gray-500 dark:text-gray-400 h-[36px] flex items-center justify-center">
+                        {new Intl.NumberFormat('vi-VN').format(app?.downloads ?? 0)}
+                      </div>
+                      <p className="text-sm font-medium text-gray-500 dark:text-gray-500 mt-1.5">Lượt</p>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
-            <p className="text-sm font-medium text-gray-500 dark:text-gray-500 mt-1.5">Lượt</p>
           </div>
-
-          {/* Tải IPA */}
-          <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4">
-            <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Tải IPA</p>
-            <div className="text-xl font-bold leading-none text-gray-500 dark:text-gray-400 h-[36px] flex items-center justify-center">
-              {new Intl.NumberFormat('vi-VN').format(app?.downloads ?? 0)}
-            </div>
-            <p className="text-sm font-medium text-gray-500 dark:text-gray-500 mt-1.5">Lượt</p>
-          </div>
-        </>
-      )}
-    </div>
-  </div>
-</div>
 
           {/* Mô tả */}
           <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
@@ -1066,14 +987,13 @@ export default function Detail({ serverApp, serverRelated }) {
               <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-3">Ảnh màn hình</h2>
               <div className="flex gap-3 overflow-x-auto pb-1">
                 {app.screenshots.map((url, i) => (
-                  <div key={i} className="flex-shrink-0 w-48 md:w-56 rounded-xl overflow-hidden border border-gray-200 dark:border-zinc-800">
-                    <img
-                      src={url}
+                  <div key={i} className="flex-shrink-0 w-48 md:w-56 rounded-xl overflow-hidden border border-gray-200 dark:border-zinc-800 relative">
+                    <Image
+                      src={toAbs(url)}
                       alt={`Ảnh chụp màn hình ${i + 1} của ứng dụng ${app.name}`}
-                      className="w-full h-auto object-cover"
                       width={224}
                       height={400}
-                      onError={(e) => { e.currentTarget.src = '/placeholder-image.png'; }}
+                      className="object-cover w-full h-auto"
                     />
                   </div>
                 ))}
@@ -1114,22 +1034,12 @@ export default function Detail({ serverApp, serverRelated }) {
                 expanded={showAllLanguages}
                 onToggle={() => setShowAllLanguages(v => !v)}
               />
-              <InfoRow
-                label="Yêu cầu iOS"
-                value={app.minimum_os_version ? `iOS ${app.minimum_os_version}+` : 'Không rõ'}
-              />
+              <InfoRow label="Yêu cầu iOS" value={app.minimum_os_version ? `iOS ${app.minimum_os_version}+` : 'Không rõ'} />
               <InfoRow
                 label="Ngày phát hành"
-                value={
-                  app.release_date
-                    ? new Date(app.release_date).toLocaleDateString('vi-VN')
-                    : 'Không rõ'
-                }
+                value={app.release_date ? new Date(app.release_date).toLocaleDateString('vi-VN') : 'Không rõ'}
               />
-              <InfoRow
-                label="Xếp hạng tuổi"
-                value={app.age_rating || 'Không rõ'}
-              />
+              <InfoRow label="Xếp hạng tuổi" value={app.age_rating || 'Không rõ'} />
             </div>
           </div>
 
@@ -1146,14 +1056,15 @@ export default function Detail({ serverApp, serverRelated }) {
                     className="flex items-center justify-between py-4 hover:bg-gray-50 dark:hover:bg-white/5 px-2 rounded-lg transition"
                   >
                     <div className="flex items-center gap-4 min-w-0">
-                      <img
-                        src={item.icon_url || '/placeholder-icon.png'}
-                        alt={`Icon của ứng dụng liên quan ${item.name}`}
-                        className="w-14 h-14 rounded-xl object-cover shadow-sm"
-                        width={56}
-                        height={56}
-                        onError={(e) => { e.currentTarget.src = '/placeholder-icon.png'; }}
-                      />
+                      <div className="w-14 h-14 rounded-xl overflow-hidden shadow-sm relative flex-shrink-0 border border-gray-200 dark:border-zinc-800">
+                        <Image
+                          src={toAbs(item.icon_url || '/placeholder-icon.png')}
+                          alt={`Icon của ứng dụng liên quan ${item.name}`}
+                          width={56}
+                          height={56}
+                          className="object-cover w-full h-full"
+                        />
+                      </div>
                       <div className="flex flex-col min-w-0">
                         <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate" title={item.name}>{item.name}</p>
                         <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 min-w-0">
