@@ -40,6 +40,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
   const [hint, setHint] = useState('');
   const [authClosedAt, setAuthClosedAt] = useState(0);
   const [rememberMe, setRememberMe] = useState(true);
+
   const [banInfo, setBanInfo] = useState(null);
 
   const menuRef = useRef(null);
@@ -466,17 +467,15 @@ export default function LoginButton({ onToggleTheme, isDark }) {
         )}
       </div>
 
-      {/* AUTH MODAL -- khoảng ngoài vừa đủ để luôn thấy bo tròn; padding trong rộng rãi */}
+      {/* AUTH MODAL -- căn giữa, safe-area; mở rộng 2 bên, rút ngắn trên/dưới */}
       {openAuth && (
         <div
           className="fixed inset-0 z-[2000] bg-black/55 flex items-center justify-center"
           style={{
             minHeight: '100dvh',
-            // khoảng ngoài: vừa đủ để bo góc không chạm lề
-            paddingTop: 'max(env(safe-area-inset-top), 20px)',
-            paddingBottom: 'max(env(safe-area-inset-bottom), 20px)',
-            paddingLeft: 16,
-            paddingRight: 16,
+            paddingTop: 'max(env(safe-area-inset-top), 14px)',
+            paddingBottom: 'max(env(safe-area-inset-bottom), 14px)',
+            paddingLeft: 16, paddingRight: 16,
           }}
           aria-modal="true"
           role="dialog"
@@ -501,14 +500,14 @@ export default function LoginButton({ onToggleTheme, isDark }) {
               </button>
             </div>
 
-            {/* Body scrollable -- tăng padding ngang, giảm padding dọc + giới hạn height để luôn thấy bo tròn */}
+            {/* Body scrollable -- rộng hơn 2 bên, gọn hơn trên/dưới */}
             <div
-              className="overflow-y-auto overscroll-contain px-7 sm:px-10 pt-1 pb-4"
+              className="overflow-y-auto overscroll-contain px-9 sm:px-14 pt-0.5 pb-3"
               style={{
-                maxHeight: '74vh',
+                maxHeight: '72vh',
                 WebkitOverflowScrolling: 'touch',
-                paddingBottom: 'max(env(safe-area-inset-bottom), 18px)',
-                paddingTop: 'max(env(safe-area-inset-top), 6px)',
+                paddingBottom: 'max(env(safe-area-inset-bottom), 16px)',
+                paddingTop: 'max(env(safe-area-inset-top), 4px)',
               }}
             >
               <div className="text-center mb-4">
@@ -663,7 +662,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
                 <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
               </div>
 
-              {/* Social */}
+              {/* Social (Google màu, icon gọn) */}
               <div className="flex items-center justify-center gap-4 sm:gap-5">
                 <button
                   onClick={() => loginGoogle(false)} disabled={loading}
