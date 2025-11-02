@@ -44,26 +44,63 @@ const APP_FIELDS = [
   'created_at',
 ].join(',');
 
+/** Bản đồ SEO cho từng chuyên mục (slug) */
+const CATEGORY_SEO = {
+  testflight: {
+    title: 'StoreiOS – Ứng dụng TestFlight cho iOS',
+    description:
+      'Tổng hợp các ứng dụng TestFlight cho iPhone/iPad, cập nhật slot thường xuyên. Theo dõi link TestFlight còn chỗ, dễ cài đặt và an toàn.',
+  },
+  jailbreak: {
+    title: 'StoreiOS – Ứng dụng Jailbreak & tiện ích iOS',
+    description:
+      'Kho ứng dụng Jailbreak và tiện ích iOS đã ký, cập nhật thường xuyên. Hướng dẫn an toàn, cài đặt nhanh, theo dõi chứng chỉ Signed/Revoked.',
+  },
+  'app-clone': {
+    title: 'StoreiOS – App Clone (nhân bản) cho iOS',
+    description:
+      'App Clone (nhân bản) cho iOS: cài song song nhiều tài khoản, tối ưu cho mạng xã hội và công việc. Đã ký sẵn, dễ cài đặt.',
+  },
+  /** ✅ SEO cho chuyên mục mới */
+  'app-removed': {
+    title: 'StoreiOS – Ứng dụng đã gỡ khỏi App Store (Signed IPA)',
+    description:
+      'Tổng hợp ứng dụng iOS đã gỡ khỏi App Store nhưng vẫn có thể cài đặt qua IPA đã ký. Cập nhật thường xuyên, cài đặt nhanh, an toàn.',
+  },
+};
+
+function buildCanonical({ categorySlug, page }) {
+  const base = SITE.url;
+  if (!categorySlug && (!page || page <= 1)) return `${base}/`;
+  if (!categorySlug && page > 1) return `${base}/?page=${page}`;
+  if (categorySlug && (!page || page <= 1)) return `${base}/?category=${encodeURIComponent(categorySlug)}`;
+  return `${base}/?category=${encodeURIComponent(categorySlug)}&page=${page}`;
+}
+
 function SEOIndexMeta({ meta }) {
   const {
     page = 1,
     totalPages = 1,
+    /** có thể null */
     categorySlug = null,
-    description = 'Tải ứng dụng iOS, TestFlight, jailbreak và hướng dẫn an toàn. Cập nhật hằng ngày.',
+    /** fallback mô tả chung */
+    description: defaultDesc = 'Tải ứng dụng iOS, TestFlight, jailbreak và hướng dẫn an toàn. Cập nhật hằng ngày.',
   } = meta || {};
 
-  const titleBase = categorySlug
+  // Áp tiêu đề/mô tả riêng theo chuyên mục nếu có
+  const catKey = (categorySlug || '').toLowerCase();
+  const catSEO = catKey ? CATEGORY_SEO[catKey] : null;
+
+  const titleBase = catSEO?.title || (categorySlug
     ? `StoreiOS – ${categorySlug} cho iOS`
-    : 'StoreiOS – Ứng dụng iOS, TestFlight, Jailbreak';
+    : 'StoreiOS – Ứng dụng iOS, TestFlight, Jailbreak');
+
+  const desc = catSEO?.description || defaultDesc;
   const title = page > 1 ? `${titleBase} (Trang ${page})` : titleBase;
 
-  const canonical = `${SITE.url}${categorySlug ? `/?category=${encodeURIComponent(categorySlug)}` : ''}${page > 1 ? `${categorySlug ? '&' : '/?'}page=${page}` : ''}`;
-  const prevUrl = page > 1
-    ? `${SITE.url}${categorySlug ? `/?category=${encodeURIComponent(categorySlug)}&page=${page - 1}` : `/?page=${page - 1}`}`
-    : null;
-  const nextUrl = page < totalPages
-    ? `${SITE.url}${categorySlug ? `/?category=${encodeURIComponent(categorySlug)}&page=${page + 1}` : `/?page=${page + 1}`}`
-    : null;
+  const canonical = buildCanonical({ categorySlug, page });
+  const prevUrl = page > 1 ? buildCanonical({ categorySlug, page: page - 1 }) : null;
+  const nextUrl = page < totalPages ? buildCanonical({ categorySlug, page: page + 1 }) : null;
 
   // Supabase origin để preconnect (an toàn nếu biến môi trường chưa set)
   let supabaseOrigin = null;
@@ -73,6 +110,7 @@ function SEOIndexMeta({ meta }) {
     }
   } catch {}
 
+  // JSON-LD: Website + (nếu có chuyên mục) CollectionPage + Breadcrumb
   const jsonLdWebsite = {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
@@ -81,15 +119,49 @@ function SEOIndexMeta({ meta }) {
     potentialAction: {
       '@type': 'SearchAction',
       target: `${SITE.url}/search?q={query}`,
-      'query-input': 'required name=query'
-    }
+      'query-input': 'required name=query',
+    },
   };
+
+  const jsonLdBreadcrumb = categorySlug
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'BreadcrumbList',
+        itemListElement: [
+          {
+            '@type': 'ListItem',
+            position: 1,
+            name: 'Trang chủ',
+            item: SITE.url,
+          },
+          {
+            '@type': 'ListItem',
+            position: 2,
+            name:
+              CATEGORY_SEO[catKey]?.title?.replace(/^StoreiOS –\s*/, '') ||
+              (categorySlug.charAt(0).toUpperCase() + categorySlug.slice(1)),
+            item: buildCanonical({ categorySlug, page: 1 }),
+          },
+        ],
+      }
+    : null;
+
+  const jsonLdCollection = categorySlug
+    ? {
+        '@context': 'https://schema.org',
+        '@type': 'CollectionPage',
+        name: titleBase,
+        description: desc,
+        url: canonical,
+        isPartOf: SITE.url,
+      }
+    : null;
 
   return (
     <Head>
       {/* Title & basic meta */}
       <title>{title}</title>
-      <meta name="description" content={description} />
+      <meta name="description" content={desc} />
       <link rel="canonical" href={canonical} />
       {prevUrl && <link rel="prev" href={prevUrl} />}
       {nextUrl && <link rel="next" href={nextUrl} />}
@@ -102,7 +174,7 @@ function SEOIndexMeta({ meta }) {
       <meta property="og:site_name" content={SITE.name} />
       <meta property="og:url" content={canonical} />
       <meta property="og:title" content={title} />
-      <meta property="og:description" content={description} />
+      <meta property="og:description" content={desc} />
       <meta property="og:image" content={`${SITE.url}/og-default.jpg`} />
       <meta property="og:image:width" content="1200" />
       <meta property="og:image:height" content="630" />
@@ -111,10 +183,10 @@ function SEOIndexMeta({ meta }) {
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:site" content={SITE.twitter} />
       <meta name="twitter:title" content={title} />
-      <meta name="twitter:description" content={description} />
+      <meta name="twitter:description" content={desc} />
       <meta name="twitter:image" content={`${SITE.url}/og-default.jpg`} />
 
-      {/* Hreflang */}
+      {/* Hreflang (đơn ngữ) */}
       <link rel="alternate" hrefLang="vi" href={canonical} />
       <link rel="alternate" hrefLang="x-default" href={canonical} />
 
@@ -129,6 +201,18 @@ function SEOIndexMeta({ meta }) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdWebsite) }}
       />
+      {jsonLdBreadcrumb && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdBreadcrumb) }}
+        />
+      )}
+      {jsonLdCollection && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdCollection) }}
+        />
+      )}
     </Head>
   );
 }
@@ -304,8 +388,9 @@ function MetricInlineAbsolute({ categorySlug, app }) {
   let value = 0;
   if (slug === 'testflight') {
     value = app?.views ?? 0;
-  } else if (slug === 'jailbreak' || slug === 'app-clone') {
-    value = app?.installs ?? 0; // đổi sang installs
+  } else if (['jailbreak', 'app-clone', 'app-removed'].includes(slug)) {
+    // ✅ thêm app-removed hiển thị installs
+    value = app?.installs ?? 0;
   } else {
     return null;
   }
@@ -326,7 +411,7 @@ function MetricInlineAbsolute({ categorySlug, app }) {
    Home
    ========================= */
 export default function Home({ categoriesWithApps, hotApps, paginationData, metaSEO }) {
-  // Chỉ 2 chuyên mục cài IPA → hiển thị badge ký/thu hồi
+  // Thêm app-removed vào nhóm có badge ký/thu hồi
   const INSTALLABLE_SLUGS = new Set(['jailbreak', 'app-clone', 'app-removed']);
 
   // Trạng thái certificate (client-side, sau khi trang đã render)
@@ -395,7 +480,7 @@ export default function Home({ categoriesWithApps, hotApps, paginationData, meta
                     {category.name}
                   </h2>
 
-                  {/* Badge trạng thái cert – chỉ hiện cho jailbreak/app-clone, và chỉ sau khi có kết quả */}
+                  {/* Badge trạng thái cert – jailbreak/app-clone/app-removed */}
                   {new Set(['jailbreak', 'app-clone', 'app-removed']).has((category.slug || '').toLowerCase()) && certStatus && (
                     <span
                       className="flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300"
