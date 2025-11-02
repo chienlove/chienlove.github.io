@@ -40,13 +40,14 @@ export default function LoginButton({ onToggleTheme, isDark }) {
   const [pendingCred, setPendingCred] = useState(null);
   const [hint, setHint] = useState('');
   const [authClosedAt, setAuthClosedAt] = useState(0);
-  const [rememberMe, setRememberMe] = useState(false); // UI-only cho đúng layout
+  const [rememberMe, setRememberMe] = useState(false);
 
   // BAN banner
   const [banInfo, setBanInfo] = useState(null);
 
   const menuRef = useRef(null);
   const guestMenuRef = useRef(null);
+  const modalRef = useRef(null);
 
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(setUser);
@@ -350,20 +351,26 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     } finally { setLoading(false); }
   };
 
-  // Khoá scroll body khi mở modal
+  // Khoá scroll body khi mở modal + Esc để đóng
   useEffect(() => {
-    if (openAuth) {
-      const prev = document.documentElement.style.overflow;
-      document.documentElement.style.overflow = 'hidden';
-      return () => { document.documentElement.style.overflow = prev || ''; };
-    }
+    if (!openAuth) return;
+    const prev = document.documentElement.style.overflow;
+    document.documentElement.style.overflow = 'hidden';
+    const onKey = (e) => { if (e.key === 'Escape') setOpenAuth(false); };
+    window.addEventListener('keydown', onKey);
+    // focus vào modal để tránh header bị che
+    setTimeout(() => { modalRef.current?.focus?.(); }, 0);
+    return () => {
+      document.documentElement.style.overflow = prev || '';
+      window.removeEventListener('keydown', onKey);
+    };
   }, [openAuth]);
 
   /* ============== UI (menus) ============== */
   const BanBanner = () => {
     if (!banInfo) return null;
     return (
-      <div className="mb-4 rounded-xl border border-rose-300 bg-rose-50 text-rose-900 p-3">
+      <div className="mb-4 rounded-2xl border border-rose-300 bg-rose-50 text-rose-900 p-3">
         <div className="font-semibold">
           {banInfo.mode === 'permanent'
             ? 'Tài khoản của bạn bị BAN vĩnh viễn.'
@@ -453,16 +460,40 @@ export default function LoginButton({ onToggleTheme, isDark }) {
         )}
       </div>
 
-      {/* AUTH MODAL -- layout match image, recolored to site palette */}
+      {/* AUTH MODAL -- popup trung tâm, chống bị banner/ads che */}
       {openAuth && (
-        <div className="fixed inset-0 z-[1000] grid place-items-center bg-black/50 p-4 sm:p-6" onClick={() => {}}>
+        <div
+          className="fixed inset-0 z-[2000] bg-black/55 flex items-center justify-center p-4 sm:p-6"
+          aria-modal="true"
+          role="dialog"
+          onClick={() => setOpenAuth(false)}   // click nền để đóng
+        >
+          {/* Panel */}
           <div
-            className="w-full max-w-[560px] max-h-[min(92vh,760px)] overflow-y-auto overscroll-contain rounded-3xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-            style={{ WebkitOverflowScrolling: 'touch' }}
+            ref={modalRef}
+            tabIndex={-1}
+            onClick={(e) => e.stopPropagation()} // đừng đóng khi click trong panel
+            className="w-full max-w-[560px] max-h-[min(92vh,760px)] overflow-y-auto overscroll-contain rounded-3xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-2xl focus:outline-none
+                       pt-safe"
+            style={{
+              WebkitOverflowScrolling: 'touch',
+              paddingBottom: 'max(env(safe-area-inset-bottom), 72px)', // đệm đáy để không bị banner/pinned che
+              paddingTop: 'max(env(safe-area-inset-top), 0px)'
+            }}
           >
-            {/* Header BIG like mock */}
-            <div className="px-8 pt-10 pb-6 text-center sticky top-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur supports-[backdrop-filter]:backdrop-blur border-b border-gray-100 dark:border-gray-800">
+            {/* Close button (sticky) */}
+            <div className="sticky top-0 z-10 flex justify-end px-4 pt-4 pb-0 bg-white/90 dark:bg-gray-900/90 backdrop-blur">
+              <button
+                aria-label="Đóng"
+                className="w-9 h-9 inline-flex items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
+                onClick={() => { setOpenAuth(false); setAuthClosedAt(Date.now()); }}
+              >
+                <svg className="w-5 h-5" viewBox="0 0 20 20"><path d="M6 6l8 8M14 6l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+              </button>
+            </div>
+
+            {/* Header BIG */}
+            <div className="px-8 pt-4 pb-6 text-center">
               <h1 className="text-4xl sm:text-5xl font-extrabold leading-tight tracking-tight
                              bg-gradient-to-br from-emerald-600 to-blue-600 bg-clip-text text-transparent">
                 Chào mừng<br className="sm:hidden" /> trở lại!
@@ -471,7 +502,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
             </div>
 
             {/* Body form */}
-            <div className="px-8 pt-6 pb-10">
+            <div className="px-8 pb-6">
               <BanBanner />
 
               {/* Email */}
@@ -532,7 +563,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
                 </div>
               )}
 
-              {/* Submit button -- full width, big & rounded like mock */}
+              {/* Submit */}
               <form onSubmit={onSubmitEmail}>
                 <button
                   type="submit"
@@ -552,35 +583,32 @@ export default function LoginButton({ onToggleTheme, isDark }) {
                 <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
               </div>
 
-              {/* Social row -- three big circles like mock */}
-              <div className="flex items-center justify-center gap-6">
+              {/* Social -- thu nhỏ */}
+              <div className="flex items-center justify-center gap-5">
                 <button
                   onClick={() => loginGoogle(false)} disabled={loading}
-                  className="w-[78px] h-[78px] rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 shadow-sm hover:shadow
-                             flex items-center justify-center"
+                  className="w-[56px] h-[56px] rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 shadow-sm hover:shadow flex items-center justify-center"
                   title="Google"
                 >
-                  <FontAwesomeIcon icon={faGoogle} className="text-[26px]" />
+                  <FontAwesomeIcon icon={faGoogle} className="text-[20px]" />
                 </button>
                 <button
                   onClick={loginGithub} disabled={loading}
-                  className="w-[78px] h-[78px] rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 shadow-sm hover:shadow
-                             flex items-center justify-center"
+                  className="w-[56px] h-[56px] rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 shadow-sm hover:shadow flex items-center justify-center"
                   title="GitHub"
                 >
-                  <FontAwesomeIcon icon={faGithub} className="text-[26px]" />
+                  <FontAwesomeIcon icon={faGithub} className="text-[20px]" />
                 </button>
                 <button
                   onClick={loginTwitter} disabled={loading}
-                  className="w-[78px] h-[78px] rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 shadow-sm hover:shadow
-                             flex items-center justify-center"
+                  className="w-[56px] h-[56px] rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 shadow-sm hover:shadow flex items-center justify-center"
                   title="X (Twitter)"
                 >
-                  <FontAwesomeIcon icon={faXTwitter} className="text-[24px]" />
+                  <FontAwesomeIcon icon={faXTwitter} className="text-[18px]" />
                 </button>
               </div>
 
-              {/* Switch mode link at bottom */}
+              {/* Switch mode */}
               <div className="mt-8 text-center text-[15px]">
                 <span className="text-gray-600 dark:text-gray-400">
                   {mode === 'signup' ? 'Đã có tài khoản? ' : 'Chưa có tài khoản? '}
@@ -594,8 +622,8 @@ export default function LoginButton({ onToggleTheme, isDark }) {
                 </button>
               </div>
 
-              {/* Safe area iOS */}
-              <div className="pb-[env(safe-area-inset-bottom)]" />
+              {/* Safe area iOS / chống bị banner che */}
+              <div className="pb-[max(env(safe-area-inset-bottom),72px)]" />
             </div>
           </div>
         </div>
