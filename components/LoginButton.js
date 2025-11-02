@@ -15,40 +15,41 @@ import {
 } from 'firebase/auth';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faUserCircle, faMoon, faSun,
+  faUserCircle, faChevronDown, faMoon, faSun,
   faEye, faEyeSlash, faSpinner, faCircleCheck, faCircleXmark,
   faCircleInfo, faTriangleExclamation,
 } from '@fortawesome/free-solid-svg-icons';
 import { faGoogle, faGithub, faXTwitter } from '@fortawesome/free-brands-svg-icons';
 
-const ENFORCE_EMAIL_VERIFICATION = true;
+const ENFORCE_EMAIL_VERIFICATION = true; // gửi mail verify sau signup; KHÔNG chặn login
 
 export default function LoginButton({ onToggleTheme, isDark }) {
   const [user, setUser] = useState(null);
   const [openAuth, setOpenAuth] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [guestMenuOpen, setGuestMenuOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState('login'); // 'login' | 'signup'
+  const [loading, setLoading] = useState(false);      // overlay
+  const [mode, setMode] = useState('login');          // 'login' | 'signup'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
   const [confirmPwd, setConfirmPwd] = useState('');
   const [showConfirm, setShowConfirm] = useState(false);
   const [msg, setMsg] = useState('');
-  const [toast, setToast] = useState(null); // {type, text}
+  const [toast, setToast] = useState(null);           // {type, text}
   const [pendingCred, setPendingCred] = useState(null);
   const [hint, setHint] = useState('');
   const [authClosedAt, setAuthClosedAt] = useState(0);
-  const [rememberMe, setRememberMe] = useState(false);
+  const [rememberMe, setRememberMe] = useState(true);
 
-  // BAN banner
+  // BAN banner details
   const [banInfo, setBanInfo] = useState(null);
 
   const menuRef = useRef(null);
   const guestMenuRef = useRef(null);
   const modalRef = useRef(null);
 
+  /* ================== Auth state ================== */
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(setUser);
     return () => unsub();
@@ -75,7 +76,8 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     return () => document.removeEventListener('mousedown', onClick);
   }, []);
 
-  /* ============== Toast + Loading ============== */
+  /* ================= Toast + Loading Overlay ================= */
+
   const showToast = (type, text, ms = 2800) => {
     setToast({ type, text });
     window.clearTimeout((showToast._t || 0));
@@ -96,7 +98,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       toast.type === 'warning' ? faTriangleExclamation :
                                  faCircleInfo;
     return (
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[140] px-4">
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[2100] px-4">
         <div className={`flex items-center gap-2 rounded-xl border px-4 py-2 shadow-xl ${tone}`}>
           <FontAwesomeIcon icon={Icon} className="shrink-0" />
           <div className="text-sm">{toast.text}</div>
@@ -108,7 +110,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
   const LoadingOverlay = () => {
     if (!loading) return null;
     return (
-      <div className="fixed inset-0 z-[130] bg-black/30 backdrop-blur-[1px] flex items-center justify-center">
+      <div className="fixed inset-0 z-[2050] bg-black/30 backdrop-blur-[1px] flex items-center justify-center">
         <div className="rounded-2xl bg-white/90 dark:bg-zinc-900/90 border border-gray-200 dark:border-zinc-800 px-5 py-4 shadow-2xl flex items-center gap-3">
           <FontAwesomeIcon icon={faSpinner} className="animate-spin text-xl text-gray-700 dark:text-gray-200" />
           <div className="text-sm font-medium text-gray-700 dark:text-gray-200">Đang xử lý…</div>
@@ -117,7 +119,8 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     );
   };
 
-  /* ============== Helpers/Guard/Ban ============== */
+  /* ================= Helpers ================= */
+
   const formatRemaining = (ms) => {
     if (!Number.isFinite(ms) || ms <= 0) return '';
     const s = Math.floor(ms / 1000);
@@ -136,6 +139,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       const r = await fetch(`/api/auth/ban-info?email=${encodeURIComponent(emailForLookup)}`);
       const j = await r.json();
       if (!j || !j.banned) return;
+
       const isTemp = j.mode === 'temporary';
       let remainingText = '';
       if (isTemp && j.expiresAt) {
@@ -152,7 +156,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
         remainingText
       });
       showToast('error', isTemp ? 'Tài khoản đang bị BAN tạm thời.' : 'Tài khoản bị BAN vĩnh viễn.', 3600);
-    } catch {}
+    } catch { /* ignore */ }
   };
 
   const mapAuthError = (e) => {
@@ -241,7 +245,8 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     }
   };
 
-  /* ============== Social/Login actions ============== */
+  /* ================= Actions: Social ================= */
+
   const loginGoogle = async (isLinking = false) => {
     setLoading(true); setMsg(''); setBanInfo(null);
     try {
@@ -254,7 +259,8 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       if (e.code === 'auth/account-exists-with-different-credential') {
         await handleAccountExists(e, 'google');
       } else if (e.code === 'auth/user-disabled') {
-        setMsg(''); await fetchBanDetails(e?.customData?.email);
+        setMsg('');
+        await fetchBanDetails(e?.customData?.email);
       } else {
         setMsg(mapAuthError(e));
       }
@@ -270,7 +276,8 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       showToast('success', 'Đăng nhập GitHub thành công!');
     } catch (e) {
       if (e.code === 'auth/user-disabled') {
-        setMsg(''); await fetchBanDetails(e?.customData?.email);
+        setMsg('');
+        await fetchBanDetails(e?.customData?.email);
       } else {
         setMsg(mapAuthError(e));
       }
@@ -286,12 +293,15 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       showToast('success', 'Đăng nhập X (Twitter) thành công!');
     } catch (e) {
       if (e.code === 'auth/user-disabled') {
-        setMsg(''); await fetchBanDetails(e?.customData?.email);
+        setMsg('');
+        await fetchBanDetails(e?.customData?.email);
       } else {
         setMsg(mapAuthError(e));
       }
     } finally { setLoading(false); }
   };
+
+  /* ================= Actions: Email/Password ================= */
 
   const pwdStrong = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(password);
   const pwdMatch  = password && confirmPwd && password === confirmPwd;
@@ -324,7 +334,8 @@ export default function LoginButton({ onToggleTheme, isDark }) {
           else setMsg('Mật khẩu không đúng. Vui lòng thử lại.');
         } catch { setMsg(mapAuthError(e)); }
       } else if (e.code === 'auth/user-disabled') {
-        setMsg(''); await fetchBanDetails(email);
+        setMsg('');
+        await fetchBanDetails(email);
       } else {
         setMsg(mapAuthError(e));
       }
@@ -351,26 +362,52 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     } finally { setLoading(false); }
   };
 
-  // Khoá scroll body khi mở modal + Esc để đóng
+  /* ================= Accessibility & Modal Center Fix ================= */
+  // Khóa scroll nền + ESC để đóng + focus vào card
   useEffect(() => {
     if (!openAuth) return;
-    const prev = document.documentElement.style.overflow;
-    document.documentElement.style.overflow = 'hidden';
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
     const onKey = (e) => { if (e.key === 'Escape') setOpenAuth(false); };
     window.addEventListener('keydown', onKey);
-    // focus vào modal để tránh header bị che
-    setTimeout(() => { modalRef.current?.focus?.(); }, 0);
+
+    // focus card
+    setTimeout(() => { try { modalRef.current?.focus(); } catch {} }, 0);
+
     return () => {
-      document.documentElement.style.overflow = prev || '';
+      document.body.style.overflow = prev;
       window.removeEventListener('keydown', onKey);
     };
   }, [openAuth]);
 
-  /* ============== UI (menus) ============== */
+  // Fallback canh giữa cho vài browser iOS cũ: force reflow khi resize/rotation
+  useEffect(() => {
+    if (!openAuth) return;
+    const onResize = () => {
+      // trigger reflow -> giữ center
+      if (modalRef.current) {
+        modalRef.current.style.transform = 'translateZ(0)';
+        // revert nhanh để tránh paint lạ
+        requestAnimationFrame(() => {
+          modalRef.current && (modalRef.current.style.transform = '');
+        });
+      }
+    };
+    window.addEventListener('orientationchange', onResize);
+    window.addEventListener('resize', onResize);
+    return () => {
+      window.removeEventListener('orientationchange', onResize);
+      window.removeEventListener('resize', onResize);
+    };
+  }, [openAuth]);
+
+  /* ================= UI Banners & Menus ================= */
+
   const BanBanner = () => {
     if (!banInfo) return null;
     return (
-      <div className="mb-4 rounded-2xl border border-rose-300 bg-rose-50 text-rose-900 p-3">
+      <div className="mb-4 rounded-xl border border-rose-300 bg-rose-50 text-rose-900 p-3">
         <div className="font-semibold">
           {banInfo.mode === 'permanent'
             ? 'Tài khoản của bạn bị BAN vĩnh viễn.'
@@ -384,7 +421,9 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     );
   };
 
-  /* ============== Logged-in menu ============== */
+  /* ================= RENDER ================= */
+
+  // ==== Logged-in ====
   if (user) {
     const avatar = user.photoURL || null;
     return (
@@ -429,7 +468,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     );
   }
 
-  /* ============== Logged-out + AUTH MODAL ============== */
+  // ==== Logged-out ====
   return (
     <>
       <Toast />
@@ -460,28 +499,28 @@ export default function LoginButton({ onToggleTheme, isDark }) {
         )}
       </div>
 
-      {/* AUTH MODAL -- popup trung tâm, chống bị banner/ads che */}
+      {/* AUTH MODAL -- popup card bo tròn, luôn giữa màn hình */}
       {openAuth && (
         <div
-          className="fixed inset-0 z-[2000] bg-black/55 flex items-center justify-center p-4 sm:p-6"
+          className="fixed inset-0 z-[2000] bg-black/55 grid place-items-center px-4 sm:px-6"
+          style={{
+            minHeight: '100dvh',
+            paddingTop: 'max(env(safe-area-inset-top), 16px)',
+            paddingBottom: 'max(env(safe-area-inset-bottom), 16px)',
+          }}
           aria-modal="true"
           role="dialog"
-          onClick={() => setOpenAuth(false)}   // click nền để đóng
+          onClick={() => setOpenAuth(false)} // click nền để đóng
         >
-          {/* Panel */}
+          {/* Card */}
           <div
             ref={modalRef}
             tabIndex={-1}
-            onClick={(e) => e.stopPropagation()} // đừng đóng khi click trong panel
-            className="w-full max-w-[560px] max-h-[min(92vh,760px)] overflow-y-auto overscroll-contain rounded-3xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-2xl focus:outline-none
-                       pt-safe"
-            style={{
-              WebkitOverflowScrolling: 'touch',
-              paddingBottom: 'max(env(safe-area-inset-bottom), 72px)', // đệm đáy để không bị banner/pinned che
-              paddingTop: 'max(env(safe-area-inset-top), 0px)'
-            }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-[640px] rounded-3xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-2xl focus:outline-none overflow-hidden"
+            style={{ WebkitOverflowScrolling: 'touch' }}
           >
-            {/* Close button (sticky) */}
+            {/* Header: nút X */}
             <div className="sticky top-0 z-10 flex justify-end px-4 pt-4 pb-0 bg-white/90 dark:bg-gray-900/90 backdrop-blur">
               <button
                 aria-label="Đóng"
@@ -492,17 +531,26 @@ export default function LoginButton({ onToggleTheme, isDark }) {
               </button>
             </div>
 
-            {/* Header BIG */}
-            <div className="px-8 pt-4 pb-6 text-center">
-              <h1 className="text-4xl sm:text-5xl font-extrabold leading-tight tracking-tight
-                             bg-gradient-to-br from-emerald-600 to-blue-600 bg-clip-text text-transparent">
-                Chào mừng<br className="sm:hidden" /> trở lại!
-              </h1>
-              <p className="mt-3 text-base sm:text-lg text-gray-500 dark:text-gray-400">Đăng nhập để tiếp tục</p>
-            </div>
+            {/* Scroll area bên trong card */}
+            <div
+              className="max-h-[85vh] overflow-y-auto overscroll-contain px-8 pt-2 pb-6"
+              style={{
+                paddingBottom: 'max(env(safe-area-inset-bottom), 24px)',
+                paddingTop: 'max(env(safe-area-inset-top), 8px)',
+              }}
+            >
+              {/* Title */}
+              <div className="text-center mb-4">
+                <h1 className="text-4xl sm:text-5xl font-extrabold leading-tight tracking-tight
+                               bg-gradient-to-br from-emerald-600 to-blue-600 bg-clip-text text-transparent">
+                  Chào mừng<br className="sm:hidden" /> trở lại!
+                </h1>
+                <p className="mt-3 text-base sm:text-lg text-gray-500 dark:text-gray-400">
+                  Đăng nhập để tiếp tục
+                </p>
+              </div>
 
-            {/* Body form */}
-            <div className="px-8 pb-6">
+              {/* BAN banner (nếu có) */}
               <BanBanner />
 
               {/* Email */}
@@ -583,26 +631,39 @@ export default function LoginButton({ onToggleTheme, isDark }) {
                 <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
               </div>
 
-              {/* Social -- thu nhỏ */}
-              <div className="flex items-center justify-center gap-5">
+              {/* Social -- gọn + Google có màu */}
+              <div className="flex items-center justify-center gap-4 sm:gap-5">
+                {/* Google colored G */}
                 <button
                   onClick={() => loginGoogle(false)} disabled={loading}
-                  className="w-[56px] h-[56px] rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 shadow-sm hover:shadow flex items-center justify-center"
+                  className="w-[52px] h-[52px] rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 shadow-sm hover:shadow flex items-center justify-center"
                   title="Google"
+                  aria-label="Đăng nhập với Google"
                 >
-                  <FontAwesomeIcon icon={faGoogle} className="text-[20px]" />
+                  <svg width="22" height="22" viewBox="0 0 48 48" aria-hidden="true">
+                    <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.6-6 8-11.3 8-6.9 0-12.5-5.6-12.5-12.5S17.1 11 24 11c3.2 0 6.1 1.2 8.3 3.2l5.7-5.7C34.6 5.7 29.6 4 24 4 12.3 4 3 13.3 3 25s9.3 21 21 21 21-9.3 21-21c0-1.5-.2-3-.4-4.5z"/>
+                    <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.3 16.3 18.8 13 24 13c3.2 0 6.1 1.2 8.3 3.2l5.7-5.7C34.6 5.7 29.6 4 24 4 15.5 4 8.3 8.7 6.3 14.7z"/>
+                    <path fill="#4CAF50" d="M24 46c5.3 0 10.3-2 13.9-5.3l-6.4-5.2C29.4 37.4 26.9 38.5 24 38.5c-5.2 0-9.6-3.3-11.2-7.9l-6.5 5C8.3 41.3 15.5 46 24 46z"/>
+                    <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-1 2.9-3.1 5.3-5.8 6.8l.1.1 6.4 5.2c-.5.5 8-5.8 8-16.1 0-1.5-.2-3-.4-4.5z"/>
+                  </svg>
                 </button>
+
+                {/* GitHub */}
                 <button
                   onClick={loginGithub} disabled={loading}
-                  className="w-[56px] h-[56px] rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 shadow-sm hover:shadow flex items-center justify-center"
+                  className="w-[52px] h-[52px] rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 shadow-sm hover:shadow flex items-center justify-center"
                   title="GitHub"
+                  aria-label="Đăng nhập với GitHub"
                 >
                   <FontAwesomeIcon icon={faGithub} className="text-[20px]" />
                 </button>
+
+                {/* X / Twitter */}
                 <button
                   onClick={loginTwitter} disabled={loading}
-                  className="w-[56px] h-[56px] rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 shadow-sm hover:shadow flex items-center justify-center"
+                  className="w-[52px] h-[52px] rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 shadow-sm hover:shadow flex items-center justify-center"
                   title="X (Twitter)"
+                  aria-label="Đăng nhập với X"
                 >
                   <FontAwesomeIcon icon={faXTwitter} className="text-[18px]" />
                 </button>
@@ -621,9 +682,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
                   {mode === 'signup' ? 'Đăng nhập' : 'Đăng ký ngay'}
                 </button>
               </div>
-
-              {/* Safe area iOS / chống bị banner che */}
-              <div className="pb-[max(env(safe-area-inset-bottom),72px)]" />
             </div>
           </div>
         </div>
