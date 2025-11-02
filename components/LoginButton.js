@@ -1,6 +1,5 @@
 // components/LoginButton.js
 import { useEffect, useState, useRef } from 'react';
-import { createPortal } from 'react-dom';
 import { auth } from '../lib/firebase-client';
 import {
   GoogleAuthProvider,
@@ -24,28 +23,6 @@ import { faGoogle, faGithub, faXTwitter } from '@fortawesome/free-brands-svg-ico
 
 const ENFORCE_EMAIL_VERIFICATION = true; // gửi mail verify sau signup; KHÔNG chặn login
 
-/* ---------- Portal: đảm bảo modal được gắn lên <body> ---------- */
-function BodyPortal({ children }) {
-  const [mounted, setMounted] = useState(false);
-  const elRef = useRef(null);
-  if (!elRef.current && typeof document !== 'undefined') {
-    elRef.current = document.createElement('div');
-    elRef.current.setAttribute('id', 'login-modal-portal');
-  }
-
-  useEffect(() => {
-    if (!elRef.current) return;
-    document.body.appendChild(elRef.current);
-    setMounted(true);
-    return () => {
-      try { document.body.removeChild(elRef.current); } catch {}
-    };
-  }, []);
-
-  if (!mounted) return null;
-  return createPortal(children, elRef.current);
-}
-
 export default function LoginButton({ onToggleTheme, isDark }) {
   const [user, setUser] = useState(null);
   const [openAuth, setOpenAuth] = useState(false);
@@ -64,7 +41,8 @@ export default function LoginButton({ onToggleTheme, isDark }) {
   const [hint, setHint] = useState('');
   const [authClosedAt, setAuthClosedAt] = useState(0);
 
-  // BAN banner details
+  // ==== BAN details để hiển thị banner trong modal ====
+  // { mode: 'temporary'|'permanent', reason?, expiresAt?, remainingText? }
   const [banInfo, setBanInfo] = useState(null);
 
   const menuRef = useRef(null);
@@ -75,7 +53,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     return () => unsub();
   }, []);
 
-  // Cho phép nơi khác mở modal auth
+  // Cho phép nơi khác mở modal auth (ví dụ Comments.js)
   useEffect(() => {
     const onOpenAuth = () => {
       setGuestMenuOpen(false);
@@ -86,6 +64,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     return () => window.removeEventListener('open-auth', onOpenAuth);
   }, []);
 
+  // Đóng menu khi click ngoài
   useEffect(() => {
     const onClick = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
@@ -95,26 +74,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     return () => document.removeEventListener('mousedown', onClick);
   }, []);
 
-  /* ---------- Lock scroll khi mở modal ---------- */
-  useEffect(() => {
-    if (!openAuth) return;
-    const html = document.documentElement;
-    const prevOverflow = html.style.overflow;
-    const prevPaddingRight = html.style.paddingRight;
-
-    // bù scrollbar để tránh giật layout
-    const scrollbarWidth = window.innerWidth - html.clientWidth;
-    html.style.overflow = 'hidden';
-    if (scrollbarWidth > 0) html.style.paddingRight = `${scrollbarWidth}px`;
-
-    return () => {
-      html.style.overflow = prevOverflow || '';
-      html.style.paddingRight = prevPaddingRight || '';
-    };
-  }, [openAuth]);
-
-  /* ================= Toast + Loading Overlay ================= */
-
+  // ======= Toast + Loading Overlay =======
   const showToast = (type, text, ms = 2800) => {
     setToast({ type, text });
     window.clearTimeout((showToast._t || 0));
@@ -134,36 +94,29 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       toast.type === 'error'   ? faCircleXmark :
       toast.type === 'warning' ? faTriangleExclamation :
                                  faCircleInfo;
-
-    // ✅ Toast qua portal để không bị header ảnh hưởng z-index
     return (
-      <BodyPortal>
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[1400] px-4 pointer-events-none">
-          <div className={`pointer-events-auto flex items-center gap-2 rounded-xl border px-4 py-2 shadow-xl ${tone}`}>
-            <FontAwesomeIcon icon={Icon} className="shrink-0" />
-            <div className="text-sm">{toast.text}</div>
-          </div>
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[140] px-4">
+        <div className={`flex items-center gap-2 rounded-xl border px-4 py-2 shadow-xl ${tone}`}>
+          <FontAwesomeIcon icon={Icon} className="shrink-0" />
+          <div className="text-sm">{toast.text}</div>
         </div>
-      </BodyPortal>
+      </div>
     );
   };
 
   const LoadingOverlay = () => {
     if (!loading) return null;
     return (
-      <BodyPortal>
-        <div className="fixed inset-0 z-[1350] bg-black/30 backdrop-blur-[1px] grid place-items-center">
-          <div className="rounded-2xl bg-white/90 dark:bg-zinc-900/90 border border-gray-200 dark:border-zinc-800 px-5 py-4 shadow-2xl flex items-center gap-3">
-            <FontAwesomeIcon icon={faSpinner} className="animate-spin text-xl text-gray-700 dark:text-gray-200" />
-            <div className="text-sm font-medium text-gray-700 dark:text-gray-200">Đang xử lý…</div>
-          </div>
+      <div className="fixed inset-0 z-[130] bg-black/30 backdrop-blur-[1px] flex items-center justify-center">
+        <div className="rounded-2xl bg-white/90 dark:bg-zinc-900/90 border border-gray-200 dark:border-zinc-800 px-5 py-4 shadow-2xl flex items-center gap-3">
+          <FontAwesomeIcon icon={faSpinner} className="animate-spin text-xl text-gray-700 dark:text-gray-200" />
+          <div className="text-sm font-medium text-gray-700 dark:text-gray-200">Đang xử lý…</div>
         </div>
-      </BodyPortal>
+      </div>
     );
   };
 
-  /* ================= Helpers ================= */
-
+  // ========= Helpers =========
   const formatRemaining = (ms) => {
     if (!Number.isFinite(ms) || ms <= 0) return '';
     const s = Math.floor(ms / 1000);
@@ -182,6 +135,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       const r = await fetch(`/api/auth/ban-info?email=${encodeURIComponent(emailForLookup)}`);
       const j = await r.json();
       if (!j || !j.banned) return;
+
       const isTemp = j.mode === 'temporary';
       let remainingText = '';
       if (isTemp && j.expiresAt) {
@@ -198,7 +152,9 @@ export default function LoginButton({ onToggleTheme, isDark }) {
         remainingText
       });
       showToast('error', isTemp ? 'Tài khoản đang bị BAN tạm thời.' : 'Tài khoản bị BAN vĩnh viễn.', 3600);
-    } catch {}
+    } catch {
+      // ignore
+    }
   };
 
   const mapAuthError = (e) => {
@@ -287,8 +243,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     }
   };
 
-  /* ================= Actions: Social ================= */
-
+  // ======= Actions: Social =======
   const loginGoogle = async (isLinking = false) => {
     setLoading(true); setMsg(''); setBanInfo(null);
     try {
@@ -301,8 +256,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       if (e.code === 'auth/account-exists-with-different-credential') {
         await handleAccountExists(e, 'google');
       } else if (e.code === 'auth/user-disabled') {
-        setMsg('');
-        await fetchBanDetails(e?.customData?.email);
+        setMsg(''); await fetchBanDetails(e?.customData?.email);
       } else {
         setMsg(mapAuthError(e));
       }
@@ -318,8 +272,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       showToast('success', 'Đăng nhập GitHub thành công!');
     } catch (e) {
       if (e.code === 'auth/user-disabled') {
-        setMsg('');
-        await fetchBanDetails(e?.customData?.email);
+        setMsg(''); await fetchBanDetails(e?.customData?.email);
       } else {
         setMsg(mapAuthError(e));
       }
@@ -335,16 +288,14 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       showToast('success', 'Đăng nhập X (Twitter) thành công!');
     } catch (e) {
       if (e.code === 'auth/user-disabled') {
-        setMsg('');
-        await fetchBanDetails(e?.customData?.email);
+        setMsg(''); await fetchBanDetails(e?.customData?.email);
       } else {
         setMsg(mapAuthError(e));
       }
     } finally { setLoading(false); }
   };
 
-  /* ================= Actions: Email/Password ================= */
-
+  // ======= Actions: Email/Password =======
   const pwdStrong = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(password);
   const pwdMatch  = password && confirmPwd && password === confirmPwd;
 
@@ -376,8 +327,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
           else setMsg('Mật khẩu không đúng. Vui lòng thử lại.');
         } catch { setMsg(mapAuthError(e)); }
       } else if (e.code === 'auth/user-disabled') {
-        setMsg('');
-        await fetchBanDetails(email);
+        setMsg(''); await fetchBanDetails(email);
       } else {
         setMsg(mapAuthError(e));
       }
@@ -404,6 +354,16 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     } finally { setLoading(false); }
   };
 
+  // ====== Popup always centered: khóa body scroll khi mở modal ======
+  useEffect(() => {
+    if (openAuth) {
+      const prev = document.documentElement.style.overflow;
+      document.documentElement.style.overflow = 'hidden';
+      return () => { document.documentElement.style.overflow = prev || ''; };
+    }
+  }, [openAuth]);
+
+  // ====== UI Banners & Menus ======
   const BanBanner = () => {
     if (!banInfo) return null;
     return (
@@ -420,8 +380,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       </div>
     );
   };
-
-  /* ================= RENDER ================= */
 
   // ==== Logged-in ====
   if (user) {
@@ -499,73 +457,97 @@ export default function LoginButton({ onToggleTheme, isDark }) {
         )}
       </div>
 
-      {/* ===== Auth Modal qua Portal (luôn giữa màn hình, trên mọi trình duyệt) ===== */}
+      {/* Auth Modal */}
       {openAuth && (
-        <BodyPortal>
+        <div
+          className="fixed inset-0 z-[1000] grid place-items-center bg-black/50 p-4 sm:p-6"
+          onClick={() => { /* click nền để đóng */ }}
+        >
+          {/* Card: max-h + scroll nội bộ để không bị che header */}
           <div
-            className="fixed inset-0 z-[1500] bg-black/50 overscroll-contain grid place-items-center p-4"
-            role="dialog"
-            aria-modal="true"
-            onClick={(e) => {
-              // click nền thì đóng
-              if (e.target === e.currentTarget) {
-                setOpenAuth(false);
-                setAuthClosedAt(Date.now());
-              }
-            }}
+            className="w-full max-w-md max-h-[min(90vh,720px)] overflow-y-auto overscroll-contain rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+            style={{ WebkitOverflowScrolling: 'touch' }}
           >
-            <div
-              className="w-full max-w-md rounded-2xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-2xl"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-800">
-                <h3 className="text-lg font-semibold">{mode==='signup' ? 'Tạo tài khoản' : 'Đăng nhập'}</h3>
+            {/* Header */}
+            <div className="px-6 pt-6 pb-3 sticky top-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur border-b border-gray-100 dark:border-gray-800">
+              <div className="flex items-start justify-between">
+                <div>
+                  <h3 className="text-2xl font-extrabold leading-tight bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">
+                    {mode === 'signup' ? 'Tạo tài khoản' : 'Chào mừng trở lại!'}
+                  </h3>
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    {mode === 'signup' ? 'Đăng ký để tiếp tục' : 'Đăng nhập để tiếp tục'}
+                  </p>
+                </div>
                 <button
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpenAuth(false); setAuthClosedAt(Date.now()); }}
-                  className="p-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
-                  aria-label="Close"
+                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
+                  aria-label="Đóng"
                 >
                   <svg className="w-5 h-5" viewBox="0 0 20 20"><path d="M6 6l8 8M14 6l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
                 </button>
               </div>
+            </div>
 
-              <div className="px-5 pt-5 pb-2">
-                {/* 🔴 Banner chi tiết BAN */}
-                <BanBanner />
+            {/* Body */}
+            <div className="px-6 pt-4 pb-6">
+              {/* BAN banner */}
+              <BanBanner />
 
-                {/* Social */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <button onClick={() => loginGoogle(false)} disabled={loading} className="flex items-center justify-center gap-2 px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-60">
-                    <FontAwesomeIcon icon={faGoogle} /> Google
-                  </button>
-                  <button onClick={loginGithub} disabled={loading} className="flex items-center justify-center gap-2 px-3 py-2 rounded bg-gray-900 text-white hover:bg-black disabled:opacity-60">
-                    <FontAwesomeIcon icon={faGithub} /> GitHub
-                  </button>
-                  <button onClick={loginTwitter} disabled={loading} className="flex items-center justify-center gap-2 px-3 py-2 rounded bg-black text-white hover:opacity-90 disabled:opacity-60 col-span-1 sm:col-span-2">
-                    <FontAwesomeIcon icon={faXTwitter} /> X (Twitter)
-                  </button>
-                </div>
+              {/* Social first (như ảnh – nhưng tinh gọn) */}
+              <div className="grid grid-cols-3 gap-3 mb-4">
+                <button
+                  onClick={() => loginGoogle(false)} disabled={loading}
+                  className="h-12 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900 flex items-center justify-center"
+                  title="Đăng nhập Google"
+                >
+                  <FontAwesomeIcon icon={faGoogle} className="text-[22px]" />
+                </button>
+                <button
+                  onClick={loginGithub} disabled={loading}
+                  className="h-12 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900 flex items-center justify-center"
+                  title="Đăng nhập GitHub"
+                >
+                  <FontAwesomeIcon icon={faGithub} className="text-[22px]" />
+                </button>
+                <button
+                  onClick={loginTwitter} disabled={loading}
+                  className="h-12 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900 flex items-center justify-center"
+                  title="Đăng nhập X"
+                >
+                  <FontAwesomeIcon icon={faXTwitter} className="text-[20px]" />
+                </button>
+              </div>
 
-                <div className="my-4 flex items-center gap-4">
-                  <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
-                  <span className="text-xs uppercase tracking-wider text-gray-500">Hoặc email</span>
-                  <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
-                </div>
+              <div className="relative my-4">
+                <div className="h-px bg-gray-200 dark:bg-gray-800" />
+                <span className="absolute -top-2 left-1/2 -translate-x-1/2 px-2 text-xs text-gray-500 bg-white dark:bg-gray-900">
+                  hoặc bằng email
+                </span>
+              </div>
 
-                <form onSubmit={onSubmitEmail} className="space-y-3">
+              {/* Form email/pwd */}
+              <form onSubmit={onSubmitEmail} className="space-y-3">
+                <div>
+                  <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Email</label>
                   <input
                     type="email"
-                    className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2"
-                    placeholder="Email"
+                    className="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2.5"
+                    placeholder="example@email.com"
                     value={email}
                     onChange={e => setEmail(e.target.value)}
                     required
                   />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Mật khẩu</label>
                   <div className="relative">
                     <input
                       type={showPwd ? 'text' : 'password'}
-                      className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 pr-10"
-                      placeholder="Mật khẩu"
+                      className="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2.5 pr-10"
+                      placeholder="••••••••"
                       value={password}
                       onChange={e => setPassword(e.target.value)}
                       required
@@ -574,14 +556,17 @@ export default function LoginButton({ onToggleTheme, isDark }) {
                       <FontAwesomeIcon icon={showPwd ? faEyeSlash : faEye} />
                     </button>
                   </div>
+                </div>
 
-                  {mode === 'signup' && (
-                    <>
+                {mode === 'signup' && (
+                  <>
+                    <div>
+                      <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Xác nhận mật khẩu</label>
                       <div className="relative">
                         <input
                           type={showConfirm ? 'text' : 'password'}
-                          className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2 pr-10"
-                          placeholder="Xác nhận mật khẩu"
+                          className="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2.5 pr-10"
+                          placeholder="••••••••"
                           value={confirmPwd}
                           onChange={e => setConfirmPwd(e.target.value)}
                           required
@@ -590,40 +575,44 @@ export default function LoginButton({ onToggleTheme, isDark }) {
                           <FontAwesomeIcon icon={showConfirm ? faEyeSlash : faEye} />
                         </button>
                       </div>
-                      <ul className="text-xs space-y-1 mt-1">
-                        <li className={password.length >= 8 ? 'text-emerald-600' : 'text-gray-500'}>• Tối thiểu 8 ký tự</li>
-                        <li className={/[A-Za-z]/.test(password) ? 'text-emerald-600' : 'text-gray-500'}>• Có chữ</li>
-                        <li className={/\d/.test(password) ? 'text-emerald-600' : 'text-gray-500'}>• Có số</li>
-                        <li className={/[^A-Za-z0-9]/.test(password) ? 'text-emerald-600' : 'text-gray-500'}>• Có ký tự đặc biệt</li>
-                        <li className={password && confirmPwd && password === confirmPwd ? 'text-emerald-600' : 'text-gray-500'}>• Xác nhận mật khẩu khớp</li>
-                      </ul>
-                    </>
-                  )}
-
-                  {msg && <div className="rounded-lg border border-rose-200 bg-rose-50 text-rose-800 px-3 py-2 text-sm">{msg}</div>}
-
-                  <div className="flex items-center justify-between">
-                    <button
-                      type="submit"
-                      disabled={loading || (mode==='signup' && (!pwdStrong || !pwdMatch))}
-                      className={`px-3 py-2 rounded-lg text-white ${mode==='signup' ? (pwdStrong && pwdMatch ? 'bg-gray-900 hover:opacity-90' : 'bg-gray-400 cursor-not-allowed') : 'bg-gray-900 hover:opacity-90'}`}
-                    >
-                      {mode === 'signup' ? 'Đăng ký' : 'Đăng nhập'}
-                    </button>
-                    <div className="flex items-center gap-4 text-sm">
-                      <button type="button" onClick={() => setMode(m => m==='signup' ? 'login' : 'signup')} className="underline">
-                        {mode === 'signup' ? 'Tôi đã có tài khoản' : 'Tạo tài khoản mới'}
-                      </button>
-                      <button type="button" onClick={onReset} className="underline">Quên mật khẩu?</button>
                     </div>
-                  </div>
+                    <ul className="text-xs space-y-1 mt-1">
+                      <li className={password.length >= 8 ? 'text-emerald-600' : 'text-gray-500'}>• Tối thiểu 8 ký tự</li>
+                      <li className={/[A-Za-z]/.test(password) ? 'text-emerald-600' : 'text-gray-500'}>• Có chữ</li>
+                      <li className={/\d/.test(password) ? 'text-emerald-600' : 'text-gray-500'}>• Có số</li>
+                      <li className={/[^A-Za-z0-9]/.test(password) ? 'text-emerald-600' : 'text-gray-500'}>• Có ký tự đặc biệt</li>
+                      <li className={password && confirmPwd && password === confirmPwd ? 'text-emerald-600' : 'text-gray-500'}>• Xác nhận mật khẩu khớp</li>
+                    </ul>
+                  </>
+                )}
 
-                  <div className="h-3" />
-                </form>
-              </div>
+                {msg && <div className="rounded-xl border border-rose-200 bg-rose-50 text-rose-800 px-3 py-2 text-sm">{msg}</div>}
+
+                <div className="flex items-center justify-between">
+                  <button
+                    type="submit"
+                    disabled={loading || (mode==='signup' && (!pwdStrong || !pwdMatch))}
+                    className={`px-4 py-2.5 rounded-xl text-white font-semibold 
+                      bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-500 hover:to-blue-500 
+                      disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed shadow-md`}
+                  >
+                    {mode === 'signup' ? 'Đăng ký' : 'Đăng nhập'}
+                  </button>
+                  <div className="flex items-center gap-4 text-sm">
+                    <button type="button" onClick={() => setMode(m => m==='signup' ? 'login' : 'signup')} className="underline underline-offset-2">
+                      {mode === 'signup' ? 'Tôi đã có tài khoản' : 'Tạo tài khoản mới'}
+                    </button>
+                    <button type="button" onClick={onReset} className="text-emerald-700 dark:text-emerald-400 hover:underline">Quên mật khẩu?</button>
+                  </div>
+                </div>
+              </form>
+
+              <div className="h-2" />
+              {/* Safe-area cho iOS */}
+              <div className="pb-[env(safe-area-inset-bottom)]" />
             </div>
           </div>
-        </BodyPortal>
+        </div>
       )}
     </>
   );
