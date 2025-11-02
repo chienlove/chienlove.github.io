@@ -1,5 +1,5 @@
 // pages/index.js
-import { useMemo, useEffect, useState, Fragment } from 'react';
+import { useMemo, useEffect, useState, Fragment, useRef } from 'react';
 import Head from 'next/head';
 import Layout from '../components/Layout';
 import AppCard from '../components/AppCard';
@@ -17,18 +17,19 @@ import {
   faChevronRight,
   faEye,
   faDownload,
+  faCaretDown,
 } from '@fortawesome/free-solid-svg-icons';
 
 // Affiliate tĩnh
 import affiliateApps from '../lib/appads';
 
 /* =========================
-   SEO component (bổ sung, không đổi UI)
+   SEO
    ========================= */
 const SITE = {
   name: 'StoreiOS',
   url: 'https://storeios.net',
-  twitter: '@storeios', // chỉnh nếu khác
+  twitter: '@storeios',
 };
 
 // ✨ Chỉ lấy đúng cột cần thiết để giảm dung lượng page data
@@ -41,7 +42,7 @@ const APP_FIELDS = [
   'version',
   'views',
   'installs',
-  'downloads', // giữ nếu AppCard/Info khác còn dùng
+  'downloads',
   'category_id',
   'created_at',
 ].join(',');
@@ -63,7 +64,7 @@ const CATEGORY_SEO = {
     description:
       'App Clone (nhân bản) cho iOS: cài song song nhiều tài khoản, tối ưu cho mạng xã hội và công việc. Đã ký sẵn, dễ cài đặt.',
   },
-  /** ✅ SEO cho chuyên mục mới */
+  // ✅ SEO cho chuyên mục mới
   'app-removed': {
     title: 'StoreiOS – Ứng dụng đã gỡ khỏi App Store (Signed IPA)',
     description:
@@ -79,32 +80,36 @@ function buildCanonical({ categorySlug, page }) {
   return `${base}/?category=${encodeURIComponent(categorySlug)}&page=${page}`;
 }
 
+function titleFromNameOrSlug(categoryName, categorySlug) {
+  if (CATEGORY_SEO[categorySlug]) return CATEGORY_SEO[categorySlug].title;
+  if (categoryName) return `StoreiOS – ${categoryName}`;
+  if (categorySlug) return `StoreiOS – ${categorySlug} cho iOS`;
+  return 'StoreiOS – Ứng dụng iOS, TestFlight, Jailbreak';
+}
+
+function descFromSlugOrDefault(categorySlug, fallback) {
+  return CATEGORY_SEO[categorySlug]?.description || fallback;
+}
+
 function SEOIndexMeta({ meta }) {
   const {
     page = 1,
     totalPages = 1,
-    /** có thể null */
-    categorySlug = null,
-    /** fallback mô tả chung */
+    categorySlug = null,     // string | null
+    categoryName = null,     // string | null (server gửi kèm)
     description: defaultDesc = 'Tải ứng dụng iOS, TestFlight, jailbreak và hướng dẫn an toàn. Cập nhật hằng ngày.',
   } = meta || {};
 
-  // Áp tiêu đề/mô tả riêng theo chuyên mục nếu có
-  const catKey = (categorySlug || '').toLowerCase();
-  const catSEO = catKey ? CATEGORY_SEO[catKey] : null;
-
-  const titleBase = catSEO?.title || (categorySlug
-    ? `StoreiOS – ${categorySlug} cho iOS`
-    : 'StoreiOS – Ứng dụng iOS, TestFlight, Jailbreak');
-
-  const desc = catSEO?.description || defaultDesc;
+  const slug = (categorySlug || '').toLowerCase();
+  const titleBase = titleFromNameOrSlug(categoryName, slug);
+  const desc = descFromSlugOrDefault(slug, defaultDesc);
   const title = page > 1 ? `${titleBase} (Trang ${page})` : titleBase;
 
-  const canonical = buildCanonical({ categorySlug, page });
-  const prevUrl = page > 1 ? buildCanonical({ categorySlug, page: page - 1 }) : null;
-  const nextUrl = page < totalPages ? buildCanonical({ categorySlug, page: page + 1 }) : null;
+  const canonical = buildCanonical({ categorySlug: slug || null, page });
+  const prevUrl = page > 1 ? buildCanonical({ categorySlug: slug || null, page: page - 1 }) : null;
+  const nextUrl = page < totalPages ? buildCanonical({ categorySlug: slug || null, page: page + 1 }) : null;
 
-  // Supabase origin để preconnect (an toàn nếu biến môi trường chưa set)
+  // Supabase origin để preconnect
   let supabaseOrigin = null;
   try {
     if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
@@ -112,7 +117,7 @@ function SEOIndexMeta({ meta }) {
     }
   } catch {}
 
-  // JSON-LD: Website + (nếu có chuyên mục) CollectionPage + Breadcrumb
+  // JSON-LD
   const jsonLdWebsite = {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
@@ -125,30 +130,26 @@ function SEOIndexMeta({ meta }) {
     },
   };
 
-  const jsonLdBreadcrumb = categorySlug
+  const jsonLdBreadcrumb = slug
     ? {
         '@context': 'https://schema.org',
         '@type': 'BreadcrumbList',
         itemListElement: [
-          {
-            '@type': 'ListItem',
-            position: 1,
-            name: 'Trang chủ',
-            item: SITE.url,
-          },
+          { '@type': 'ListItem', position: 1, name: 'Trang chủ', item: SITE.url },
           {
             '@type': 'ListItem',
             position: 2,
             name:
-              CATEGORY_SEO[catKey]?.title?.replace(/^StoreiOS –\s*/, '') ||
-              (categorySlug.charAt(0).toUpperCase() + categorySlug.slice(1)),
-            item: buildCanonical({ categorySlug, page: 1 }),
+              CATEGORY_SEO[slug]?.title?.replace(/^StoreiOS –\s*/, '') ||
+              categoryName ||
+              (slug.charAt(0).toUpperCase() + slug.slice(1)),
+            item: buildCanonical({ categorySlug: slug, page: 1 }),
           },
         ],
       }
     : null;
 
-  const jsonLdCollection = categorySlug
+  const jsonLdCollection = slug
     ? {
         '@context': 'https://schema.org',
         '@type': 'CollectionPage',
@@ -188,7 +189,7 @@ function SEOIndexMeta({ meta }) {
       <meta name="twitter:description" content={desc} />
       <meta name="twitter:image" content={`${SITE.url}/og-default.jpg`} />
 
-      {/* Hreflang (đơn ngữ) */}
+      {/* Hreflang */}
       <link rel="alternate" hrefLang="vi" href={canonical} />
       <link rel="alternate" hrefLang="x-default" href={canonical} />
 
@@ -199,28 +200,19 @@ function SEOIndexMeta({ meta }) {
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
 
       {/* JSON-LD */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdWebsite) }}
-      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdWebsite) }} />
       {jsonLdBreadcrumb && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdBreadcrumb) }}
-        />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdBreadcrumb) }} />
       )}
       {jsonLdCollection && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdCollection) }}
-        />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdCollection) }} />
       )}
     </Head>
   );
 }
 
 /* =========================
-   Pagination components (giữ nguyên)
+   Pagination components
    ========================= */
 
 // Full pagination (cho category đang active)
@@ -262,9 +254,7 @@ function PaginationFull({ categorySlug, currentPage, totalPages }) {
 
   return (
     <nav className="flex items-center justify-center gap-1.5 mt-4 flex-wrap" aria-label="Phân trang">
-      {currentPage > 1 && (
-        <PageBtn p={1} aria="Về trang đầu" />
-      )}
+      {currentPage > 1 && <PageBtn p={1} aria="Về trang đầu" />}
       {currentPage > 1 && (
         <Link
           prefetch={false}
@@ -277,7 +267,11 @@ function PaginationFull({ categorySlug, currentPage, totalPages }) {
         </Link>
       )}
 
-      {pages.map((p, i) => <Fragment key={`${p}-${i}`}><PageBtn p={p} /></Fragment>)}
+      {pages.map((p, i) => (
+        <Fragment key={`${p}-${i}`}>
+          <PageBtn p={p} />
+        </Fragment>
+      ))}
 
       {currentPage < totalPages && (
         <Link
@@ -290,9 +284,7 @@ function PaginationFull({ categorySlug, currentPage, totalPages }) {
           <FontAwesomeIcon icon={faChevronRight} />
         </Link>
       )}
-      {currentPage < totalPages && (
-        <PageBtn p={totalPages} aria="Tới trang cuối" />
-      )}
+      {currentPage < totalPages && <PageBtn p={totalPages} aria="Tới trang cuối" />}
     </nav>
   );
 }
@@ -338,7 +330,7 @@ function MetricInlineAbsolute({ categorySlug, app, forceKey }) {
 }
 
 /* =========================
-   Hot App Card (giữ bố cục, thêm MetricInlineAbsolute theo chế độ)
+   Hot App Card
    ========================= */
 const HotAppCard = ({ app, rank, hotMode }) => {
   const rankColors = [
@@ -361,14 +353,13 @@ const HotAppCard = ({ app, rank, hotMode }) => {
       >
         {rank}
       </div>
-      {/* ✅ hiện số ngay dưới icon tải theo hotMode (installs/views) */}
       <MetricInlineAbsolute app={app} forceKey={hotMode} />
     </div>
   );
 };
 
 /* =========================
-   Affiliate inline card (giữ nguyên)
+   Affiliate inline card
    ========================= */
 const AffiliateInlineCard = ({ item, isFirst = false }) => {
   const { name, author, icon_url, affiliate_url, payout_label } = item;
@@ -411,41 +402,45 @@ const AffiliateInlineCard = ({ item, isFirst = false }) => {
 export default function Home({ categoriesWithApps, hotByInstalls, hotByViews, paginationData, metaSEO }) {
   const INSTALLABLE_SLUGS = new Set(['jailbreak', 'app-clone', 'app-removed']);
 
-  // Trạng thái certificate (client-side, sau khi trang đã render)
+  // Trạng thái certificate
   const [certStatus, setCertStatus] = useState(null);
-  // ✅ Chế độ hiển thị Hot: installs | views
+  // Chế độ App hot: installs | views
   const [hotMode, setHotMode] = useState('installs');
+  const [hotMenuOpen, setHotMenuOpen] = useState(false);
+  const hotMenuRef = useRef(null);
 
   useEffect(() => {
     let alive = true;
 
     fetch('/api/check-revocation')
       .then(r => (r.ok ? r.json() : Promise.reject()))
-      .then(json => {
-        if (!alive) return;
-        setCertStatus(json);
-      })
-      .catch(() => {
-        if (!alive) return;
-        setCertStatus({ ocspStatus: 'error' });
-      });
+      .then(json => { if (alive) setCertStatus(json); })
+      .catch(() => { if (alive) setCertStatus({ ocspStatus: 'error' }); });
 
     return () => { alive = false; };
   }, []);
 
+  // đóng menu khi click ra ngoài
+  useEffect(() => {
+    const onDocClick = (e) => {
+      if (hotMenuRef.current && !hotMenuRef.current.contains(e.target)) setHotMenuOpen(false);
+    };
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, []);
+
   const contentCard = 'bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4';
   const adCard = contentCard;
-
   const AdLabel = () => (<div className="text-sm text-gray-500 dark:text-gray-400 font-semibold px-1">Quảng cáo</div>);
 
-  // ===== SEO (không đổi UI) =====
+  // ===== SEO =====
   const seoData = useMemo(() => metaSEO || {}, [metaSEO]);
 
-  // Chọn danh sách theo hotMode
+  // Danh sách hot theo chế độ
   const hotApps = hotMode === 'views' ? hotByViews : hotByInstalls;
 
   return (
-    <Layout hotApps={hotByInstalls /* giữ nguyên cho header nếu bạn đang dùng */}>
+    <Layout hotApps={hotByInstalls /* giữ nguyên nếu header cần */}>
       <SEOIndexMeta meta={seoData} />
 
       <div className="container mx-auto px-1 md:px-2 py-6 space-y-10">
@@ -466,32 +461,51 @@ export default function Home({ categoriesWithApps, hotByInstalls, hotByViews, pa
                 <FontAwesomeIcon icon={faFire} className="text-xl text-red-500" />
               </div>
 
-              {/* ✅ Bộ chuyển danh sách: Cài nhiều / Xem nhiều */}
-              <div className="inline-flex items-center rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+              {/* ✅ Nút đơn + mũi tên để mở menu chọn chế độ */}
+              <div className="relative" ref={hotMenuRef}>
                 <button
-                  className={`px-3 py-1.5 text-sm font-semibold flex items-center gap-1 ${
-                    hotMode === 'installs'
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                  }`}
-                  onClick={() => setHotMode('installs')}
-                  aria-pressed={hotMode === 'installs'}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-semibold rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
+                  onClick={() => setHotMenuOpen(v => !v)}
+                  aria-haspopup="menu"
+                  aria-expanded={hotMenuOpen}
                 >
-                  <FontAwesomeIcon icon={faDownload} />
-                  Cài nhiều
+                  {hotMode === 'installs' ? (
+                    <>
+                      <FontAwesomeIcon icon={faDownload} />
+                      Cài nhiều
+                    </>
+                  ) : (
+                    <>
+                      <FontAwesomeIcon icon={faEye} />
+                      Xem nhiều
+                    </>
+                  )}
+                  <FontAwesomeIcon icon={faCaretDown} className="opacity-80" />
                 </button>
-                <button
-                  className={`px-3 py-1.5 text-sm font-semibold flex items-center gap-1 border-l border-gray-200 dark:border-gray-700 ${
-                    hotMode === 'views'
-                      ? 'bg-emerald-600 text-white'
-                      : 'bg-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
-                  }`}
-                  onClick={() => setHotMode('views')}
-                  aria-pressed={hotMode === 'views'}
-                >
-                  <FontAwesomeIcon icon={faEye} />
-                  Xem nhiều
-                </button>
+
+                {hotMenuOpen && (
+                  <div
+                    role="menu"
+                    className="absolute right-0 mt-2 w-40 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl overflow-hidden z-10"
+                  >
+                    <button
+                      role="menuitem"
+                      className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 ${hotMode==='installs' ? 'font-bold' : ''}`}
+                      onClick={() => { setHotMode('installs'); setHotMenuOpen(false); }}
+                    >
+                      <FontAwesomeIcon icon={faDownload} />
+                      Cài nhiều
+                    </button>
+                    <button
+                      role="menuitem"
+                      className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 ${hotMode==='views' ? 'font-bold' : ''}`}
+                      onClick={() => { setHotMode('views'); setHotMenuOpen(false); }}
+                    >
+                      <FontAwesomeIcon icon={faEye} />
+                      Xem nhiều
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -585,12 +599,7 @@ export default function Home({ categoriesWithApps, hotByInstalls, hotByViews, pa
                     totalPages={pageInfo.totalPages || 1}
                   />
                 )}
-                {hasLitePager && (
-                  <PaginationLite
-                    categorySlug={category.slug}
-                    hasNext={true}
-                  />
-                )}
+                {hasLitePager && <PaginationLite categorySlug={category.slug} hasNext={true} />}
               </div>
 
               {new Set([1, 3]).has(index) && (
@@ -614,7 +623,7 @@ export default function Home({ categoriesWithApps, hotByInstalls, hotByViews, pa
 }
 
 /* =========================
-   Affiliate interleave (giữ)
+   Affiliate interleave
    ========================= */
 function interleaveAffiliate(apps, affiliatePool, category, {
   ratioEvery = 5,
@@ -638,7 +647,6 @@ function interleaveAffiliate(apps, affiliatePool, category, {
       ? apps.length
       : Math.floor(Math.random() * (posMax - posMin + 1)) + posMin;
 
-    // (giữ nguyên vị trí chèn như cũ, chỉ bảo toàn)
     result.splice(Math.min(insertAt + i, result.length), 0, {
       ...aff,
       __isAffiliate: true,
@@ -663,10 +671,8 @@ function interleaveAffiliate(apps, affiliatePool, category, {
    ========================= */
 export async function getServerSideProps(ctx) {
   const supabase = createSupabaseServer(ctx);
-  const userAgent = ctx.req.headers['user-agent'] || '';
-  const isGoogleBot = userAgent.toLowerCase().includes('googlebot');
 
-  // CDN caching ngắn hạn để vào trang nhanh hơn
+  // CDN caching ngắn hạn
   ctx.res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
 
   const { category: categorySlug, page: pageQuery } = ctx.query;
@@ -674,28 +680,21 @@ export async function getServerSideProps(ctx) {
   const currentPage = parseInt(pageQuery || '1', 10);
   const APPS_PER_PAGE = 10;
 
-  // 2. Khởi tạo tất cả các truy vấn DB còn lại song song
+  // Song song: categories + hot by views + hot by installs
   const [categoriesData, hotByViewsData, hotByInstallsData] = await Promise.all([
     supabase.from('categories').select('id, name, slug'),
-    supabase
-      .from('apps')
-      .select(APP_FIELDS)
-      .order('views', { ascending: false, nullsLast: true })
-      .limit(5),
-    supabase
-      .from('apps')
-      .select(APP_FIELDS)
-      .order('installs', { ascending: false, nullsLast: true })
-      .limit(5),
+    supabase.from('apps').select(APP_FIELDS).order('views', { ascending: false, nullsLast: true }).limit(5),
+    supabase.from('apps').select(APP_FIELDS).order('installs', { ascending: false, nullsLast: true }).limit(5),
   ]);
 
-  const categories = categoriesData.data;
+  const categories = categoriesData.data || [];
 
+  // Chuẩn bị phân trang + data per category
   const paginationData = {};
   const affiliatePool = affiliateApps.map(a => ({ ...a }));
 
   const categoriesWithApps = await Promise.all(
-    (categories || []).map(async (category) => {
+    categories.map(async (category) => {
       const catSlug = (category.slug || '').toLowerCase();
       const isActive = activeSlug && catSlug === activeSlug;
 
@@ -704,12 +703,8 @@ export async function getServerSideProps(ctx) {
       const endIndex = startIndex + APPS_PER_PAGE - 1;
 
       if (isActive) {
-        // Gộp count và data apps cho category active thành song song
         const [{ count }, { data: apps }] = await Promise.all([
-          supabase
-            .from('apps')
-            .select('id', { count: 'estimated', head: true })
-            .eq('category_id', category.id),
+          supabase.from('apps').select('id', { count: 'estimated', head: true }).eq('category_id', category.id),
           supabase
             .from('apps')
             .select(APP_FIELDS)
@@ -727,10 +722,7 @@ export async function getServerSideProps(ctx) {
           totalApps,
         };
 
-        const appsRendered = interleaveAffiliate(apps || [], affiliatePool, category, {
-          ratioEvery: 5,
-          maxPerCategory: 2,
-        });
+        const appsRendered = interleaveAffiliate(apps || [], affiliatePool, category, { ratioEvery: 5, maxPerCategory: 2 });
 
         return { ...category, apps: apps || [], appsRendered };
       } else {
@@ -752,29 +744,27 @@ export async function getServerSideProps(ctx) {
           hasNext,
         };
 
-        const appsRendered = interleaveAffiliate(apps, affiliatePool, category, {
-          ratioEvery: 5,
-          maxPerCategory: 2,
-        });
+        const appsRendered = interleaveAffiliate(apps, affiliatePool, category, { ratioEvery: 5, maxPerCategory: 2 });
 
         return { ...category, apps, appsRendered };
       }
     })
   );
 
-  // ✅ Hai danh sách hot riêng: theo views & theo installs
+  // Hai danh sách hot riêng
   const hotByViews = (hotByViewsData.data || []).slice(0, 5);
   const hotByInstalls = (hotByInstallsData.data || []).slice(0, 5);
 
-  // ====== Chuẩn bị meta SEO động cho Index ======
-  let metaSEO = { page: 1, totalPages: 1, categorySlug: null };
+  // ====== SEO động: luôn truyền slug + name của chuyên mục active (nếu có) ======
+  let metaSEO = { page: 1, totalPages: 1, categorySlug: null, categoryName: null };
   if (activeSlug) {
-    const activeCat = (categories || []).find(c => (c.slug || '').toLowerCase() === activeSlug);
+    const activeCat = categories.find(c => (c.slug || '').toLowerCase() === activeSlug);
     const pageInfo = activeCat ? paginationData[activeCat.id] : null;
     metaSEO = {
       page: pageInfo?.currentPage || 1,
       totalPages: pageInfo?.totalPages || 1,
       categorySlug: activeSlug,
+      categoryName: activeCat?.name || null,     // ✅ thêm tên chuyên mục cho title đẹp
     };
   }
 
