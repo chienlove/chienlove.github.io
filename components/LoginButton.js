@@ -15,34 +15,34 @@ import {
 } from 'firebase/auth';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faUserCircle, faChevronDown, faMoon, faSun,
+  faUserCircle, faMoon, faSun,
   faEye, faEyeSlash, faSpinner, faCircleCheck, faCircleXmark,
   faCircleInfo, faTriangleExclamation,
 } from '@fortawesome/free-solid-svg-icons';
 import { faGoogle, faGithub, faXTwitter } from '@fortawesome/free-brands-svg-icons';
 
-const ENFORCE_EMAIL_VERIFICATION = true; // gửi mail verify sau signup; KHÔNG chặn login
+const ENFORCE_EMAIL_VERIFICATION = true;
 
 export default function LoginButton({ onToggleTheme, isDark }) {
   const [user, setUser] = useState(null);
   const [openAuth, setOpenAuth] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [guestMenuOpen, setGuestMenuOpen] = useState(false);
-  const [loading, setLoading] = useState(false);      // overlay
-  const [mode, setMode] = useState('login');          // 'login' | 'signup'
+  const [loading, setLoading] = useState(false);
+  const [mode, setMode] = useState('login'); // 'login' | 'signup'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
   const [confirmPwd, setConfirmPwd] = useState('');
   const [showConfirm, setShowConfirm] = useState(false);
   const [msg, setMsg] = useState('');
-  const [toast, setToast] = useState(null);           // {type, text}
+  const [toast, setToast] = useState(null); // {type, text}
   const [pendingCred, setPendingCred] = useState(null);
   const [hint, setHint] = useState('');
   const [authClosedAt, setAuthClosedAt] = useState(0);
+  const [rememberMe, setRememberMe] = useState(false); // UI-only cho đúng layout
 
-  // ==== BAN details để hiển thị banner trong modal ====
-  // { mode: 'temporary'|'permanent', reason?, expiresAt?, remainingText? }
+  // BAN banner
   const [banInfo, setBanInfo] = useState(null);
 
   const menuRef = useRef(null);
@@ -53,7 +53,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     return () => unsub();
   }, []);
 
-  // Cho phép nơi khác mở modal auth (ví dụ Comments.js)
+  // Cho phép nơi khác mở modal auth
   useEffect(() => {
     const onOpenAuth = () => {
       setGuestMenuOpen(false);
@@ -74,7 +74,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     return () => document.removeEventListener('mousedown', onClick);
   }, []);
 
-  // ======= Toast + Loading Overlay =======
+  /* ============== Toast + Loading ============== */
   const showToast = (type, text, ms = 2800) => {
     setToast({ type, text });
     window.clearTimeout((showToast._t || 0));
@@ -116,7 +116,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     );
   };
 
-  // ========= Helpers =========
+  /* ============== Helpers/Guard/Ban ============== */
   const formatRemaining = (ms) => {
     if (!Number.isFinite(ms) || ms <= 0) return '';
     const s = Math.floor(ms / 1000);
@@ -135,7 +135,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       const r = await fetch(`/api/auth/ban-info?email=${encodeURIComponent(emailForLookup)}`);
       const j = await r.json();
       if (!j || !j.banned) return;
-
       const isTemp = j.mode === 'temporary';
       let remainingText = '';
       if (isTemp && j.expiresAt) {
@@ -152,9 +151,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
         remainingText
       });
       showToast('error', isTemp ? 'Tài khoản đang bị BAN tạm thời.' : 'Tài khoản bị BAN vĩnh viễn.', 3600);
-    } catch {
-      // ignore
-    }
+    } catch {}
   };
 
   const mapAuthError = (e) => {
@@ -243,7 +240,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     }
   };
 
-  // ======= Actions: Social =======
+  /* ============== Social/Login actions ============== */
   const loginGoogle = async (isLinking = false) => {
     setLoading(true); setMsg(''); setBanInfo(null);
     try {
@@ -295,7 +292,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     } finally { setLoading(false); }
   };
 
-  // ======= Actions: Email/Password =======
   const pwdStrong = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(password);
   const pwdMatch  = password && confirmPwd && password === confirmPwd;
 
@@ -354,7 +350,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     } finally { setLoading(false); }
   };
 
-  // ====== Popup always centered: khóa body scroll khi mở modal ======
+  // Khoá scroll body khi mở modal
   useEffect(() => {
     if (openAuth) {
       const prev = document.documentElement.style.overflow;
@@ -363,7 +359,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     }
   }, [openAuth]);
 
-  // ====== UI Banners & Menus ======
+  /* ============== UI (menus) ============== */
   const BanBanner = () => {
     if (!banInfo) return null;
     return (
@@ -381,7 +377,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     );
   };
 
-  // ==== Logged-in ====
+  /* ============== Logged-in menu ============== */
   if (user) {
     const avatar = user.photoURL || null;
     return (
@@ -426,7 +422,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     );
   }
 
-  // ==== Logged-out ====
+  /* ============== Logged-out + AUTH MODAL ============== */
   return (
     <>
       <Toast />
@@ -457,158 +453,148 @@ export default function LoginButton({ onToggleTheme, isDark }) {
         )}
       </div>
 
-      {/* Auth Modal */}
+      {/* AUTH MODAL -- layout match image, recolored to site palette */}
       {openAuth && (
-        <div
-          className="fixed inset-0 z-[1000] grid place-items-center bg-black/50 p-4 sm:p-6"
-          onClick={() => { /* click nền để đóng */ }}
-        >
-          {/* Card: max-h + scroll nội bộ để không bị che header */}
+        <div className="fixed inset-0 z-[1000] grid place-items-center bg-black/50 p-4 sm:p-6" onClick={() => {}}>
           <div
-            className="w-full max-w-md max-h-[min(90vh,720px)] overflow-y-auto overscroll-contain rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-2xl"
+            className="w-full max-w-[560px] max-h-[min(92vh,760px)] overflow-y-auto overscroll-contain rounded-3xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
             style={{ WebkitOverflowScrolling: 'touch' }}
           >
-            {/* Header */}
-            <div className="px-6 pt-6 pb-3 sticky top-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur border-b border-gray-100 dark:border-gray-800">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="text-2xl font-extrabold leading-tight bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent">
-                    {mode === 'signup' ? 'Tạo tài khoản' : 'Chào mừng trở lại!'}
-                  </h3>
-                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                    {mode === 'signup' ? 'Đăng ký để tiếp tục' : 'Đăng nhập để tiếp tục'}
-                  </p>
-                </div>
-                <button
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setOpenAuth(false); setAuthClosedAt(Date.now()); }}
-                  className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800"
-                  aria-label="Đóng"
-                >
-                  <svg className="w-5 h-5" viewBox="0 0 20 20"><path d="M6 6l8 8M14 6l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-                </button>
-              </div>
+            {/* Header BIG like mock */}
+            <div className="px-8 pt-10 pb-6 text-center sticky top-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur supports-[backdrop-filter]:backdrop-blur border-b border-gray-100 dark:border-gray-800">
+              <h1 className="text-4xl sm:text-5xl font-extrabold leading-tight tracking-tight
+                             bg-gradient-to-br from-emerald-600 to-blue-600 bg-clip-text text-transparent">
+                Chào mừng<br className="sm:hidden" /> trở lại!
+              </h1>
+              <p className="mt-3 text-base sm:text-lg text-gray-500 dark:text-gray-400">Đăng nhập để tiếp tục</p>
             </div>
 
-            {/* Body */}
-            <div className="px-6 pt-4 pb-6">
-              {/* BAN banner */}
+            {/* Body form */}
+            <div className="px-8 pt-6 pb-10">
               <BanBanner />
 
-              {/* Social first (như ảnh – nhưng tinh gọn) */}
-              <div className="grid grid-cols-3 gap-3 mb-4">
+              {/* Email */}
+              <div className="mb-4">
+                <label className="block text-[15px] font-semibold text-gray-800 dark:text-gray-200 mb-2">Email</label>
+                <input
+                  type="email"
+                  className="w-full h-12 sm:h-[54px] rounded-2xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-4 text-[15px] placeholder-gray-400"
+                  placeholder="example@email.com"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+
+              {/* Password */}
+              <div className="mb-3">
+                <label className="block text-[15px] font-semibold text-gray-800 dark:text-gray-200 mb-2">Mật khẩu</label>
+                <div className="relative">
+                  <input
+                    type={showPwd ? 'text' : 'password'}
+                    className="w-full h-12 sm:h-[54px] rounded-2xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-4 pr-11 text-[15px] placeholder-gray-400"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={e => setPassword(e.target.value)}
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPwd(v => !v)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-gray-600"
+                  >
+                    <FontAwesomeIcon icon={showPwd ? faEyeSlash : faEye} />
+                  </button>
+                </div>
+              </div>
+
+              {/* Row: remember + forgot */}
+              <div className="flex items-center justify-between text-[15px] mb-5">
+                <label className="inline-flex items-center gap-2 select-none">
+                  <input
+                    type="checkbox"
+                    className="w-5 h-5 rounded border-gray-300"
+                    checked={rememberMe}
+                    onChange={(e) => setRememberMe(e.target.checked)}
+                  />
+                  <span className="text-gray-800 dark:text-gray-200 font-semibold">Ghi nhớ</span>
+                </label>
+                <button type="button" onClick={onReset} className="font-bold text-[15px] text-emerald-700 hover:underline">
+                  Quên mật khẩu?
+                </button>
+              </div>
+
+              {/* Error bubble */}
+              {msg && (
+                <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 text-rose-800 px-4 py-3 text-[14px]">
+                  {msg}
+                </div>
+              )}
+
+              {/* Submit button -- full width, big & rounded like mock */}
+              <form onSubmit={onSubmitEmail}>
+                <button
+                  type="submit"
+                  disabled={loading || (mode==='signup' && (!pwdStrong || password!==confirmPwd))}
+                  className="w-full h-[56px] rounded-full text-white text-[17px] font-extrabold tracking-wide
+                             bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-500 hover:to-blue-500
+                             disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed shadow-lg"
+                >
+                  {mode === 'signup' ? 'Đăng ký' : 'Đăng nhập'}
+                </button>
+              </form>
+
+              {/* Divider */}
+              <div className="flex items-center gap-4 my-6">
+                <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
+                <span className="text-gray-500 dark:text-gray-400 text-[15px]">Hoặc đăng nhập với</span>
+                <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
+              </div>
+
+              {/* Social row -- three big circles like mock */}
+              <div className="flex items-center justify-center gap-6">
                 <button
                   onClick={() => loginGoogle(false)} disabled={loading}
-                  className="h-12 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900 flex items-center justify-center"
-                  title="Đăng nhập Google"
+                  className="w-[78px] h-[78px] rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 shadow-sm hover:shadow
+                             flex items-center justify-center"
+                  title="Google"
                 >
-                  <FontAwesomeIcon icon={faGoogle} className="text-[22px]" />
+                  <FontAwesomeIcon icon={faGoogle} className="text-[26px]" />
                 </button>
                 <button
                   onClick={loginGithub} disabled={loading}
-                  className="h-12 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900 flex items-center justify-center"
-                  title="Đăng nhập GitHub"
+                  className="w-[78px] h-[78px] rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 shadow-sm hover:shadow
+                             flex items-center justify-center"
+                  title="GitHub"
                 >
-                  <FontAwesomeIcon icon={faGithub} className="text-[22px]" />
+                  <FontAwesomeIcon icon={faGithub} className="text-[26px]" />
                 </button>
                 <button
                   onClick={loginTwitter} disabled={loading}
-                  className="h-12 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 hover:bg-gray-50 dark:hover:bg-gray-900 flex items-center justify-center"
-                  title="Đăng nhập X"
+                  className="w-[78px] h-[78px] rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 shadow-sm hover:shadow
+                             flex items-center justify-center"
+                  title="X (Twitter)"
                 >
-                  <FontAwesomeIcon icon={faXTwitter} className="text-[20px]" />
+                  <FontAwesomeIcon icon={faXTwitter} className="text-[24px]" />
                 </button>
               </div>
 
-              <div className="relative my-4">
-                <div className="h-px bg-gray-200 dark:bg-gray-800" />
-                <span className="absolute -top-2 left-1/2 -translate-x-1/2 px-2 text-xs text-gray-500 bg-white dark:bg-gray-900">
-                  hoặc bằng email
+              {/* Switch mode link at bottom */}
+              <div className="mt-8 text-center text-[15px]">
+                <span className="text-gray-600 dark:text-gray-400">
+                  {mode === 'signup' ? 'Đã có tài khoản? ' : 'Chưa có tài khoản? '}
                 </span>
+                <button
+                  type="button"
+                  className="font-extrabold text-emerald-700 hover:underline"
+                  onClick={() => setMode(m => m==='signup' ? 'login' : 'signup')}
+                >
+                  {mode === 'signup' ? 'Đăng nhập' : 'Đăng ký ngay'}
+                </button>
               </div>
 
-              {/* Form email/pwd */}
-              <form onSubmit={onSubmitEmail} className="space-y-3">
-                <div>
-                  <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Email</label>
-                  <input
-                    type="email"
-                    className="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2.5"
-                    placeholder="example@email.com"
-                    value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Mật khẩu</label>
-                  <div className="relative">
-                    <input
-                      type={showPwd ? 'text' : 'password'}
-                      className="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2.5 pr-10"
-                      placeholder="••••••••"
-                      value={password}
-                      onChange={e => setPassword(e.target.value)}
-                      required
-                    />
-                    <button type="button" onClick={() => setShowPwd(v => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-600">
-                      <FontAwesomeIcon icon={showPwd ? faEyeSlash : faEye} />
-                    </button>
-                  </div>
-                </div>
-
-                {mode === 'signup' && (
-                  <>
-                    <div>
-                      <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-300">Xác nhận mật khẩu</label>
-                      <div className="relative">
-                        <input
-                          type={showConfirm ? 'text' : 'password'}
-                          className="w-full rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-950 px-3 py-2.5 pr-10"
-                          placeholder="••••••••"
-                          value={confirmPwd}
-                          onChange={e => setConfirmPwd(e.target.value)}
-                          required
-                        />
-                        <button type="button" onClick={() => setShowConfirm(v => !v)} className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-600">
-                          <FontAwesomeIcon icon={showConfirm ? faEyeSlash : faEye} />
-                        </button>
-                      </div>
-                    </div>
-                    <ul className="text-xs space-y-1 mt-1">
-                      <li className={password.length >= 8 ? 'text-emerald-600' : 'text-gray-500'}>• Tối thiểu 8 ký tự</li>
-                      <li className={/[A-Za-z]/.test(password) ? 'text-emerald-600' : 'text-gray-500'}>• Có chữ</li>
-                      <li className={/\d/.test(password) ? 'text-emerald-600' : 'text-gray-500'}>• Có số</li>
-                      <li className={/[^A-Za-z0-9]/.test(password) ? 'text-emerald-600' : 'text-gray-500'}>• Có ký tự đặc biệt</li>
-                      <li className={password && confirmPwd && password === confirmPwd ? 'text-emerald-600' : 'text-gray-500'}>• Xác nhận mật khẩu khớp</li>
-                    </ul>
-                  </>
-                )}
-
-                {msg && <div className="rounded-xl border border-rose-200 bg-rose-50 text-rose-800 px-3 py-2 text-sm">{msg}</div>}
-
-                <div className="flex items-center justify-between">
-                  <button
-                    type="submit"
-                    disabled={loading || (mode==='signup' && (!pwdStrong || !pwdMatch))}
-                    className={`px-4 py-2.5 rounded-xl text-white font-semibold 
-                      bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-500 hover:to-blue-500 
-                      disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed shadow-md`}
-                  >
-                    {mode === 'signup' ? 'Đăng ký' : 'Đăng nhập'}
-                  </button>
-                  <div className="flex items-center gap-4 text-sm">
-                    <button type="button" onClick={() => setMode(m => m==='signup' ? 'login' : 'signup')} className="underline underline-offset-2">
-                      {mode === 'signup' ? 'Tôi đã có tài khoản' : 'Tạo tài khoản mới'}
-                    </button>
-                    <button type="button" onClick={onReset} className="text-emerald-700 dark:text-emerald-400 hover:underline">Quên mật khẩu?</button>
-                  </div>
-                </div>
-              </form>
-
-              <div className="h-2" />
-              {/* Safe-area cho iOS */}
+              {/* Safe area iOS */}
               <div className="pb-[env(safe-area-inset-bottom)]" />
             </div>
           </div>
