@@ -15,6 +15,8 @@ import {
   faFire,
   faChevronLeft,
   faChevronRight,
+  faEye,
+  faDownload,
 } from '@fortawesome/free-solid-svg-icons';
 
 // Affiliate tĩnh
@@ -314,9 +316,31 @@ function PaginationLite({ categorySlug, hasNext }) {
 }
 
 /* =========================
-   Hot App Card (giữ nguyên)
+   Metric (absolute)
    ========================= */
-const HotAppCard = ({ app, rank }) => {
+function MetricInlineAbsolute({ categorySlug, app, forceKey }) {
+  const slug = (categorySlug || '').toLowerCase();
+
+  let value = 0;
+  if (forceKey === 'views') value = app?.views ?? 0;
+  else if (forceKey === 'installs') value = app?.installs ?? 0;
+  else if (slug === 'testflight') value = app?.views ?? 0;
+  else if (['jailbreak', 'app-clone', 'app-removed'].includes(slug)) value = app?.installs ?? 0;
+  else return null;
+
+  return (
+    <div className="absolute right-2 md:right-2 top-[62px] w-10 text-center" style={{ zIndex: 10 }}>
+      <div className="text-[12px] text-gray-500 dark:text-gray-400 whitespace-nowrap">
+        <span className="font-bold">{Number(value || 0).toLocaleString('vi-VN')}</span>
+      </div>
+    </div>
+  );
+}
+
+/* =========================
+   Hot App Card (giữ bố cục, thêm MetricInlineAbsolute theo chế độ)
+   ========================= */
+const HotAppCard = ({ app, rank, hotMode }) => {
   const rankColors = [
     'from-red-600 to-orange-500',
     'from-orange-500 to-amber-400',
@@ -337,6 +361,8 @@ const HotAppCard = ({ app, rank }) => {
       >
         {rank}
       </div>
+      {/* ✅ hiện số ngay dưới icon tải theo hotMode (installs/views) */}
+      <MetricInlineAbsolute app={app} forceKey={hotMode} />
     </div>
   );
 };
@@ -380,42 +406,15 @@ const AffiliateInlineCard = ({ item, isFirst = false }) => {
 };
 
 /* =========================
-   Metric (absolute)
-   ========================= */
-function MetricInlineAbsolute({ categorySlug, app }) {
-  const slug = (categorySlug || '').toLowerCase();
-
-  let value = 0;
-  if (slug === 'testflight') {
-    value = app?.views ?? 0;
-  } else if (['jailbreak', 'app-clone', 'app-removed'].includes(slug)) {
-    // ✅ thêm app-removed hiển thị installs
-    value = app?.installs ?? 0;
-  } else {
-    return null;
-  }
-
-  return (
-    <div
-      className="absolute right-2 md:right-2 top-[62px] w-10 text-center"
-      style={{ zIndex: 10 }}
-    >
-      <div className="text-[12px] text-gray-500 dark:text-gray-400 whitespace-nowrap">
-        <span className="font-bold">{Number(value || 0).toLocaleString('vi-VN')}</span>
-      </div>
-    </div>
-  );
-}
-
-/* =========================
    Home
    ========================= */
-export default function Home({ categoriesWithApps, hotApps, paginationData, metaSEO }) {
-  // Thêm app-removed vào nhóm có badge ký/thu hồi
+export default function Home({ categoriesWithApps, hotByInstalls, hotByViews, paginationData, metaSEO }) {
   const INSTALLABLE_SLUGS = new Set(['jailbreak', 'app-clone', 'app-removed']);
 
   // Trạng thái certificate (client-side, sau khi trang đã render)
   const [certStatus, setCertStatus] = useState(null);
+  // ✅ Chế độ hiển thị Hot: installs | views
+  const [hotMode, setHotMode] = useState('installs');
 
   useEffect(() => {
     let alive = true;
@@ -442,8 +441,11 @@ export default function Home({ categoriesWithApps, hotApps, paginationData, meta
   // ===== SEO (không đổi UI) =====
   const seoData = useMemo(() => metaSEO || {}, [metaSEO]);
 
+  // Chọn danh sách theo hotMode
+  const hotApps = hotMode === 'views' ? hotByViews : hotByInstalls;
+
   return (
-    <Layout hotApps={hotApps}>
+    <Layout hotApps={hotByInstalls /* giữ nguyên cho header nếu bạn đang dùng */}>
       <SEOIndexMeta meta={seoData} />
 
       <div className="container mx-auto px-1 md:px-2 py-6 space-y-10">
@@ -456,12 +458,47 @@ export default function Home({ categoriesWithApps, hotApps, paginationData, meta
         {/* Hot apps */}
         {hotApps && hotApps.length > 0 && (
           <div className={contentCard}>
-            <div className="flex items-center gap-3 mb-4">
-              <h2 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-green-500">Top download</h2>
-              <FontAwesomeIcon icon={faFire} className="text-xl text-red-500" />
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <h2 className="text-xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-green-500">
+                  Top download
+                </h2>
+                <FontAwesomeIcon icon={faFire} className="text-xl text-red-500" />
+              </div>
+
+              {/* ✅ Bộ chuyển danh sách: Cài nhiều / Xem nhiều */}
+              <div className="inline-flex items-center rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+                <button
+                  className={`px-3 py-1.5 text-sm font-semibold flex items-center gap-1 ${
+                    hotMode === 'installs'
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }`}
+                  onClick={() => setHotMode('installs')}
+                  aria-pressed={hotMode === 'installs'}
+                >
+                  <FontAwesomeIcon icon={faDownload} />
+                  Cài nhiều
+                </button>
+                <button
+                  className={`px-3 py-1.5 text-sm font-semibold flex items-center gap-1 border-l border-gray-200 dark:border-gray-700 ${
+                    hotMode === 'views'
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-transparent text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }`}
+                  onClick={() => setHotMode('views')}
+                  aria-pressed={hotMode === 'views'}
+                >
+                  <FontAwesomeIcon icon={faEye} />
+                  Xem nhiều
+                </button>
+              </div>
             </div>
+
             <div className="space-y-1">
-              {hotApps.map((app, index) => (<HotAppCard key={app.id} app={app} rank={index + 1} />))}
+              {hotApps.map((app, index) => (
+                <HotAppCard key={`${hotMode}-${app.id}`} app={app} rank={index + 1} hotMode={hotMode} />
+              ))}
             </div>
           </div>
         )}
@@ -638,12 +675,17 @@ export async function getServerSideProps(ctx) {
   const APPS_PER_PAGE = 10;
 
   // 2. Khởi tạo tất cả các truy vấn DB còn lại song song
-  const [categoriesData, hotAppsData] = await Promise.all([
+  const [categoriesData, hotByViewsData, hotByInstallsData] = await Promise.all([
     supabase.from('categories').select('id, name, slug'),
     supabase
       .from('apps')
       .select(APP_FIELDS)
       .order('views', { ascending: false, nullsLast: true })
+      .limit(5),
+    supabase
+      .from('apps')
+      .select(APP_FIELDS)
+      .order('installs', { ascending: false, nullsLast: true })
       .limit(5),
   ]);
 
@@ -720,10 +762,9 @@ export async function getServerSideProps(ctx) {
     })
   );
 
-  const sortedHotApps = (hotAppsData.data || [])
-    .map(app => ({ ...app, hotScore: (app.views || 0) + (app.installs || 0) }))
-    .sort((a, b) => b.hotScore - a.hotScore)
-    .slice(0, 5);
+  // ✅ Hai danh sách hot riêng: theo views & theo installs
+  const hotByViews = (hotByViewsData.data || []).slice(0, 5);
+  const hotByInstalls = (hotByInstallsData.data || []).slice(0, 5);
 
   // ====== Chuẩn bị meta SEO động cho Index ======
   let metaSEO = { page: 1, totalPages: 1, categorySlug: null };
@@ -740,7 +781,8 @@ export async function getServerSideProps(ctx) {
   return {
     props: {
       categoriesWithApps,
-      hotApps: sortedHotApps,
+      hotByInstalls,
+      hotByViews,
       paginationData,
       metaSEO,
     }
