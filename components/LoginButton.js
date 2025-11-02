@@ -52,6 +52,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     return () => unsub();
   }, []);
 
+  // Cho phép nơi khác mở modal auth (ví dụ Comments.js)
   useEffect(() => {
     const onOpenAuth = () => {
       setGuestMenuOpen(false);
@@ -62,6 +63,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     return () => window.removeEventListener('open-auth', onOpenAuth);
   }, []);
 
+  // Đóng menu khi click ra ngoài
   useEffect(() => {
     const onClick = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
@@ -70,6 +72,8 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     document.addEventListener('mousedown', onClick);
     return () => document.removeEventListener('mousedown', onClick);
   }, []);
+
+  /* ================= Toast + Loading Overlay ================= */
 
   const showToast = (type, text, ms = 2800) => {
     setToast({ type, text });
@@ -112,6 +116,8 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     );
   };
 
+  /* ================= Helpers ================= */
+
   const formatRemaining = (ms) => {
     if (!Number.isFinite(ms) || ms <= 0) return '';
     const s = Math.floor(ms / 1000);
@@ -149,6 +155,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     } catch {}
   };
 
+  // Ánh xạ mã lỗi Firebase → tiếng Việt
   const mapAuthError = (e) => {
     const code = e?.code || '';
     switch (code) {
@@ -168,6 +175,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     }
   };
 
+  // Nếu email đã tồn tại với provider khác → hướng dẫn liên kết
   const handleAccountExists = async (error, provider) => {
     const emailFromError = error?.customData?.email;
     if (!emailFromError) return setMsg('Tài khoản đã tồn tại với nhà cung cấp khác.');
@@ -191,6 +199,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     setMsg('Email đã tồn tại với nhà cung cấp khác. Hãy đăng nhập bằng nhà cung cấp cũ rồi thử lại.');
   };
 
+  // Liên kết credential treo (nếu có)
   const doLinkIfNeeded = async () => {
     if (pendingCred && auth.currentUser) {
       await linkWithCredential(auth.currentUser, pendingCred);
@@ -200,6 +209,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     }
   };
 
+  // Guard sau login (kiểm tra BAN)
   const runGuardAfterSignIn = async () => {
     try {
       if (!auth.currentUser) return true;
@@ -211,6 +221,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       const json = await resp.json();
       if (json?.ok) return true;
 
+      // Bị ban → signOut + hiển thị banner chi tiết
       await auth.signOut().catch(()=>{});
       const isTemp = json?.mode === 'temporary';
       let remainingText = '';
@@ -231,9 +242,11 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       showToast('error', isTemp ? 'Tài khoản đang bị BAN tạm thời.' : 'Tài khoản bị BAN vĩnh viễn.', 3600);
       return false;
     } catch {
-      return true;
+      return true; // guard lỗi → không chặn login
     }
   };
+
+  /* ================= Actions: Social ================= */
 
   const loginGoogle = async (isLinking = false) => {
     setLoading(true); setMsg(''); setBanInfo(null);
@@ -286,6 +299,8 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       }
     } finally { setLoading(false); }
   };
+
+  /* ================= Actions: Email/Password ================= */
 
   const pwdStrong = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(password);
   const pwdMatch  = password && confirmPwd && password === confirmPwd;
@@ -345,6 +360,8 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     } finally { setLoading(false); }
   };
 
+  /* ================= Modal Behaviors ================= */
+
   // Khóa scroll nền + ESC + focus card
   useEffect(() => {
     if (!openAuth) return;
@@ -359,7 +376,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     };
   }, [openAuth]);
 
-  // Giữ center khi rotate/resize trên iOS
+  // Giữ center khi rotate/resize trên iOS/Safari
   useEffect(() => {
     if (!openAuth) return;
     const onResize = () => {
@@ -375,6 +392,8 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       window.removeEventListener('resize', onResize);
     };
   }, [openAuth]);
+
+  /* ================= UI Pieces ================= */
 
   const BanBanner = () => {
     if (!banInfo) return null;
@@ -395,6 +414,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
 
   /* ================= RENDER ================= */
 
+  // Logged-in
   if (user) {
     const avatar = user.photoURL || null;
     return (
@@ -437,6 +457,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     );
   }
 
+  // Logged-out
   return (
     <>
       <Toast />
@@ -467,14 +488,14 @@ export default function LoginButton({ onToggleTheme, isDark }) {
         )}
       </div>
 
-      {/* AUTH MODAL -- căn giữa, safe-area; mở rộng 2 bên, rút ngắn trên/dưới */}
+      {/* AUTH MODAL -- căn giữa, safe-area, bo tròn, body scroll */}
       {openAuth && (
         <div
           className="fixed inset-0 z-[2000] bg-black/55 flex items-center justify-center"
           style={{
             minHeight: '100dvh',
-            paddingTop: 'max(env(safe-area-inset-top), 14px)',
-            paddingBottom: 'max(env(safe-area-inset-bottom), 14px)',
+            paddingTop: 'max(env(safe-area-inset-top), 10px)',
+            paddingBottom: 'max(env(safe-area-inset-bottom), 10px)',
             paddingLeft: 16, paddingRight: 16,
           }}
           aria-modal="true"
@@ -486,7 +507,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
             ref={modalRef}
             tabIndex={-1}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-[640px] mx-4 sm:mx-6 rounded-2xl sm:rounded-3xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-2xl focus:outline-none overflow-hidden"
+            className="w-full max-w-[700px] mx-1.5 sm:mx-4 rounded-2xl sm:rounded-3xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-2xl focus:outline-none overflow-hidden"
             style={{ WebkitOverflowScrolling: 'touch' }}
           >
             {/* Header (nút đóng) */}
@@ -500,13 +521,13 @@ export default function LoginButton({ onToggleTheme, isDark }) {
               </button>
             </div>
 
-            {/* Body scrollable -- rộng hơn 2 bên, gọn hơn trên/dưới */}
+            {/* Body scrollable */}
             <div
-              className="overflow-y-auto overscroll-contain px-9 sm:px-14 pt-0.5 pb-3"
+              className="overflow-y-auto overscroll-contain px-11 sm:px-20 pt-0 pb-1"
               style={{
-                maxHeight: '72vh',
+                maxHeight: '68vh',
                 WebkitOverflowScrolling: 'touch',
-                paddingBottom: 'max(env(safe-area-inset-bottom), 16px)',
+                paddingBottom: 'max(env(safe-area-inset-bottom), 18px)',
                 paddingTop: 'max(env(safe-area-inset-top), 4px)',
               }}
             >
@@ -519,20 +540,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
                 </p>
               </div>
 
-              {/* BAN banner (nếu có) */}
-              {banInfo && (
-                <div className="mb-4 rounded-xl border border-rose-300 bg-rose-50 text-rose-900 p-3">
-                  <div className="font-semibold">
-                    {banInfo.mode === 'permanent'
-                      ? 'Tài khoản của bạn bị BAN vĩnh viễn.'
-                      : 'Tài khoản của bạn đang bị BAN tạm thời.'}
-                  </div>
-                  {banInfo.reason && <div className="text-sm mt-1"><b>Lý do:</b> {banInfo.reason}</div>}
-                  {banInfo.mode === 'temporary' && banInfo.remainingText && (
-                    <div className="text-sm mt-1"><b>Thời gian còn lại:</b> {banInfo.remainingText}</div>
-                  )}
-                </div>
-              )}
+              <BanBanner />
 
               {/* Email */}
               <div className="mb-4">
@@ -593,7 +601,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
                     </button>
                   </div>
 
-                  {/* Tooltip điều kiện */}
+                  {/* Điều kiện mật khẩu – tooltip checklist */}
                   <ul className="text-xs space-y-1 mt-2">
                     <li className={`flex items-center gap-2 ${password.length >= 8 ? 'text-emerald-600' : 'text-gray-500'}`}>
                       <FontAwesomeIcon icon={password.length >= 8 ? faCircleCheck : faCircleXmark} className="w-3.5 h-3.5" />
@@ -628,7 +636,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
                     checked={rememberMe}
                     onChange={(e) => setRememberMe(e.target.checked)}
                   />
-                  <span className="text-gray-800 dark:text-gray-200 font-semibold">Ghi nhớ</span>
+                <span className="text-gray-800 dark:text-gray-200 font-semibold">Ghi nhớ</span>
                 </label>
                 <button type="button" onClick={onReset} className="font-bold text-[15px] text-emerald-700 hover:underline">
                   Quên mật khẩu?
@@ -662,13 +670,14 @@ export default function LoginButton({ onToggleTheme, isDark }) {
                 <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
               </div>
 
-              {/* Social (Google màu, icon gọn) */}
+              {/* Social (Google có màu, icon nhỏ gọn) */}
               <div className="flex items-center justify-center gap-4 sm:gap-5">
                 <button
                   onClick={() => loginGoogle(false)} disabled={loading}
                   className="w-[52px] h-[52px] rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 shadow-sm hover:shadow flex items-center justify-center"
                   title="Google" aria-label="Đăng nhập với Google"
                 >
+                  {/* Google colored icon */}
                   <svg width="22" height="22" viewBox="0 0 48 48" aria-hidden="true">
                     <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.6-6 8-11.3 8-6.9 0-12.5-5.6-12.5-12.5S17.1 11 24 11c3.2 0 6.1 1.2 8.3 3.2l5.7-5.7C34.6 5.7 29.6 4 24 4 12.3 4 3 13.3 3 25s9.3 21 21 21 21-9.3 21-21c0-1.5-.2-3-.4-4.5z"/>
                     <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.3 16.3 18.8 13 24 13c3.2 0 6.1 1.2 8.3 3.2l5.7-5.7C34.6 5.7 29.6 4 24 4 15.5 4 8.3 8.7 6.3 14.7z"/>
