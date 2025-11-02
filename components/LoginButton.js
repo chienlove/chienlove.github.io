@@ -15,47 +15,43 @@ import {
 } from 'firebase/auth';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
-  faUserCircle, faChevronDown, faMoon, faSun,
-  faEye, faEyeSlash, faSpinner, faCircleCheck, faCircleXmark,
-  faCircleInfo, faTriangleExclamation,
+  faUserCircle, faMoon, faSun, faEye, faEyeSlash, faSpinner,
+  faCircleCheck, faCircleXmark, faCircleInfo, faTriangleExclamation,
 } from '@fortawesome/free-solid-svg-icons';
-import { faGoogle, faGithub, faXTwitter } from '@fortawesome/free-brands-svg-icons';
+import { faGithub, faXTwitter } from '@fortawesome/free-brands-svg-icons';
 
-const ENFORCE_EMAIL_VERIFICATION = true; // gửi mail verify sau signup; KHÔNG chặn login
+const ENFORCE_EMAIL_VERIFICATION = true;
 
 export default function LoginButton({ onToggleTheme, isDark }) {
   const [user, setUser] = useState(null);
   const [openAuth, setOpenAuth] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [guestMenuOpen, setGuestMenuOpen] = useState(false);
-  const [loading, setLoading] = useState(false);      // overlay
-  const [mode, setMode] = useState('login');          // 'login' | 'signup'
+  const [loading, setLoading] = useState(false);
+  const [mode, setMode] = useState('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPwd, setShowPwd] = useState(false);
   const [confirmPwd, setConfirmPwd] = useState('');
   const [showConfirm, setShowConfirm] = useState(false);
   const [msg, setMsg] = useState('');
-  const [toast, setToast] = useState(null);           // {type, text}
+  const [toast, setToast] = useState(null);
   const [pendingCred, setPendingCred] = useState(null);
   const [hint, setHint] = useState('');
   const [authClosedAt, setAuthClosedAt] = useState(0);
   const [rememberMe, setRememberMe] = useState(true);
 
-  // BAN banner details
   const [banInfo, setBanInfo] = useState(null);
 
   const menuRef = useRef(null);
   const guestMenuRef = useRef(null);
   const modalRef = useRef(null);
 
-  /* ================== Auth state ================== */
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(setUser);
     return () => unsub();
   }, []);
 
-  // Cho phép nơi khác mở modal auth
   useEffect(() => {
     const onOpenAuth = () => {
       setGuestMenuOpen(false);
@@ -66,7 +62,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     return () => window.removeEventListener('open-auth', onOpenAuth);
   }, []);
 
-  // Đóng menu khi click ngoài
   useEffect(() => {
     const onClick = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
@@ -75,8 +70,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     document.addEventListener('mousedown', onClick);
     return () => document.removeEventListener('mousedown', onClick);
   }, []);
-
-  /* ================= Toast + Loading Overlay ================= */
 
   const showToast = (type, text, ms = 2800) => {
     setToast({ type, text });
@@ -119,8 +112,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     );
   };
 
-  /* ================= Helpers ================= */
-
   const formatRemaining = (ms) => {
     if (!Number.isFinite(ms) || ms <= 0) return '';
     const s = Math.floor(ms / 1000);
@@ -139,7 +130,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       const r = await fetch(`/api/auth/ban-info?email=${encodeURIComponent(emailForLookup)}`);
       const j = await r.json();
       if (!j || !j.banned) return;
-
       const isTemp = j.mode === 'temporary';
       let remainingText = '';
       if (isTemp && j.expiresAt) {
@@ -156,7 +146,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
         remainingText
       });
       showToast('error', isTemp ? 'Tài khoản đang bị BAN tạm thời.' : 'Tài khoản bị BAN vĩnh viễn.', 3600);
-    } catch { /* ignore */ }
+    } catch {}
   };
 
   const mapAuthError = (e) => {
@@ -245,8 +235,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     }
   };
 
-  /* ================= Actions: Social ================= */
-
   const loginGoogle = async (isLinking = false) => {
     setLoading(true); setMsg(''); setBanInfo(null);
     try {
@@ -276,8 +264,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       showToast('success', 'Đăng nhập GitHub thành công!');
     } catch (e) {
       if (e.code === 'auth/user-disabled') {
-        setMsg('');
-        await fetchBanDetails(e?.customData?.email);
+        setMsg(''); await fetchBanDetails(e?.customData?.email);
       } else {
         setMsg(mapAuthError(e));
       }
@@ -293,15 +280,12 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       showToast('success', 'Đăng nhập X (Twitter) thành công!');
     } catch (e) {
       if (e.code === 'auth/user-disabled') {
-        setMsg('');
-        await fetchBanDetails(e?.customData?.email);
+        setMsg(''); await fetchBanDetails(e?.customData?.email);
       } else {
         setMsg(mapAuthError(e));
       }
     } finally { setLoading(false); }
   };
-
-  /* ================= Actions: Email/Password ================= */
 
   const pwdStrong = /^(?=.*[A-Za-z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/.test(password);
   const pwdMatch  = password && confirmPwd && password === confirmPwd;
@@ -334,8 +318,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
           else setMsg('Mật khẩu không đúng. Vui lòng thử lại.');
         } catch { setMsg(mapAuthError(e)); }
       } else if (e.code === 'auth/user-disabled') {
-        setMsg('');
-        await fetchBanDetails(email);
+        setMsg(''); await fetchBanDetails(email);
       } else {
         setMsg(mapAuthError(e));
       }
@@ -362,36 +345,27 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     } finally { setLoading(false); }
   };
 
-  /* ================= Accessibility & Modal Center Fix ================= */
-  // Khóa scroll nền + ESC để đóng + focus vào card
+  // Khóa scroll nền + ESC + focus card
   useEffect(() => {
     if (!openAuth) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-
     const onKey = (e) => { if (e.key === 'Escape') setOpenAuth(false); };
     window.addEventListener('keydown', onKey);
-
-    // focus card
     setTimeout(() => { try { modalRef.current?.focus(); } catch {} }, 0);
-
     return () => {
       document.body.style.overflow = prev;
       window.removeEventListener('keydown', onKey);
     };
   }, [openAuth]);
 
-  // Fallback canh giữa cho vài browser iOS cũ: force reflow khi resize/rotation
+  // Giữ center khi rotate/resize trên iOS
   useEffect(() => {
     if (!openAuth) return;
     const onResize = () => {
-      // trigger reflow -> giữ center
       if (modalRef.current) {
         modalRef.current.style.transform = 'translateZ(0)';
-        // revert nhanh để tránh paint lạ
-        requestAnimationFrame(() => {
-          modalRef.current && (modalRef.current.style.transform = '');
-        });
+        requestAnimationFrame(() => { if (modalRef.current) modalRef.current.style.transform = ''; });
       }
     };
     window.addEventListener('orientationchange', onResize);
@@ -401,8 +375,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       window.removeEventListener('resize', onResize);
     };
   }, [openAuth]);
-
-  /* ================= UI Banners & Menus ================= */
 
   const BanBanner = () => {
     if (!banInfo) return null;
@@ -423,7 +395,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
 
   /* ================= RENDER ================= */
 
-  // ==== Logged-in ====
   if (user) {
     const avatar = user.photoURL || null;
     return (
@@ -437,11 +408,9 @@ export default function LoginButton({ onToggleTheme, isDark }) {
             aria-label="User menu"
             title={user.displayName || user.email}
           >
-            {avatar ? (
-              <img src={avatar} alt="avatar" className="w-8 h-8 rounded-full" referrerPolicy="no-referrer" />
-            ) : (
-              <FontAwesomeIcon icon={faUserCircle} className="w-6 h-6" />
-            )}
+            {avatar
+              ? <img src={avatar} alt="avatar" className="w-8 h-8 rounded-full" referrerPolicy="no-referrer" />
+              : <FontAwesomeIcon icon={faUserCircle} className="w-6 h-6" />}
             <svg className="w-3.5 h-3.5 opacity-75" viewBox="0 0 20 20"><path d="M7 8l3 3 3-3" fill="currentColor"/></svg>
           </button>
 
@@ -468,7 +437,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     );
   }
 
-  // ==== Logged-out ====
   return (
     <>
       <Toast />
@@ -499,28 +467,29 @@ export default function LoginButton({ onToggleTheme, isDark }) {
         )}
       </div>
 
-      {/* AUTH MODAL -- popup card bo tròn, luôn giữa màn hình */}
+      {/* AUTH MODAL -- flex center, card bo tròn, scroll nội dung */}
       {openAuth && (
         <div
-          className="fixed inset-0 z-[2000] bg-black/55 grid place-items-center px-4 sm:px-6"
+          className="fixed inset-0 z-[2000] bg-black/55 flex items-center justify-center"
           style={{
             minHeight: '100dvh',
             paddingTop: 'max(env(safe-area-inset-top), 16px)',
             paddingBottom: 'max(env(safe-area-inset-bottom), 16px)',
+            paddingLeft: 16, paddingRight: 16,
           }}
           aria-modal="true"
           role="dialog"
-          onClick={() => setOpenAuth(false)} // click nền để đóng
+          onClick={() => setOpenAuth(false)}
         >
           {/* Card */}
           <div
             ref={modalRef}
             tabIndex={-1}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-[640px] rounded-3xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-2xl focus:outline-none overflow-hidden"
+            className="w-full max-w-[640px] mx-4 rounded-2xl sm:rounded-3xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-2xl focus:outline-none overflow-hidden"
             style={{ WebkitOverflowScrolling: 'touch' }}
           >
-            {/* Header: nút X */}
+            {/* Header */}
             <div className="sticky top-0 z-10 flex justify-end px-4 pt-4 pb-0 bg-white/90 dark:bg-gray-900/90 backdrop-blur">
               <button
                 aria-label="Đóng"
@@ -531,18 +500,18 @@ export default function LoginButton({ onToggleTheme, isDark }) {
               </button>
             </div>
 
-            {/* Scroll area bên trong card */}
+            {/* Scrollable body */}
             <div
-              className="max-h-[85vh] overflow-y-auto overscroll-contain px-8 pt-2 pb-6"
+              className="overflow-y-auto overscroll-contain px-8 pt-2 pb-6"
               style={{
+                maxHeight: '75vh',
+                WebkitOverflowScrolling: 'touch',
                 paddingBottom: 'max(env(safe-area-inset-bottom), 24px)',
                 paddingTop: 'max(env(safe-area-inset-top), 8px)',
               }}
             >
-              {/* Title */}
               <div className="text-center mb-4">
-                <h1 className="text-4xl sm:text-5xl font-extrabold leading-tight tracking-tight
-                               bg-gradient-to-br from-emerald-600 to-blue-600 bg-clip-text text-transparent">
+                <h1 className="text-4xl sm:text-5xl font-extrabold leading-tight tracking-tight bg-gradient-to-br from-emerald-600 to-blue-600 bg-clip-text text-transparent">
                   Chào mừng<br className="sm:hidden" /> trở lại!
                 </h1>
                 <p className="mt-3 text-base sm:text-lg text-gray-500 dark:text-gray-400">
@@ -550,10 +519,8 @@ export default function LoginButton({ onToggleTheme, isDark }) {
                 </p>
               </div>
 
-              {/* BAN banner (nếu có) */}
               <BanBanner />
 
-              {/* Email */}
               <div className="mb-4">
                 <label className="block text-[15px] font-semibold text-gray-800 dark:text-gray-200 mb-2">Email</label>
                 <input
@@ -566,7 +533,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
                 />
               </div>
 
-              {/* Password */}
               <div className="mb-3">
                 <label className="block text-[15px] font-semibold text-gray-800 dark:text-gray-200 mb-2">Mật khẩu</label>
                 <div className="relative">
@@ -588,7 +554,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
                 </div>
               </div>
 
-              {/* Row: remember + forgot */}
               <div className="flex items-center justify-between text-[15px] mb-5">
                 <label className="inline-flex items-center gap-2 select-none">
                   <input
@@ -604,18 +569,16 @@ export default function LoginButton({ onToggleTheme, isDark }) {
                 </button>
               </div>
 
-              {/* Error bubble */}
               {msg && (
                 <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 text-rose-800 px-4 py-3 text-[14px]">
                   {msg}
                 </div>
               )}
 
-              {/* Submit */}
               <form onSubmit={onSubmitEmail}>
                 <button
                   type="submit"
-                  disabled={loading || (mode==='signup' && (!pwdStrong || password!==confirmPwd))}
+                  disabled={loading || (mode==='signup' && (password.length<8))}
                   className="w-full h-[56px] rounded-full text-white text-[17px] font-extrabold tracking-wide
                              bg-gradient-to-r from-emerald-600 to-blue-600 hover:from-emerald-500 hover:to-blue-500
                              disabled:from-gray-400 disabled:to-gray-400 disabled:cursor-not-allowed shadow-lg"
@@ -624,16 +587,14 @@ export default function LoginButton({ onToggleTheme, isDark }) {
                 </button>
               </form>
 
-              {/* Divider */}
               <div className="flex items-center gap-4 my-6">
                 <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
                 <span className="text-gray-500 dark:text-gray-400 text-[15px]">Hoặc đăng nhập với</span>
                 <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
               </div>
 
-              {/* Social -- gọn + Google có màu */}
               <div className="flex items-center justify-center gap-4 sm:gap-5">
-                {/* Google colored G */}
+                {/* Google màu */}
                 <button
                   onClick={() => loginGoogle(false)} disabled={loading}
                   className="w-[52px] h-[52px] rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 shadow-sm hover:shadow flex items-center justify-center"
@@ -648,7 +609,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
                   </svg>
                 </button>
 
-                {/* GitHub */}
                 <button
                   onClick={loginGithub} disabled={loading}
                   className="w-[52px] h-[52px] rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 shadow-sm hover:shadow flex items-center justify-center"
@@ -658,7 +618,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
                   <FontAwesomeIcon icon={faGithub} className="text-[20px]" />
                 </button>
 
-                {/* X / Twitter */}
                 <button
                   onClick={loginTwitter} disabled={loading}
                   className="w-[52px] h-[52px] rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 shadow-sm hover:shadow flex items-center justify-center"
@@ -669,7 +628,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
                 </button>
               </div>
 
-              {/* Switch mode */}
               <div className="mt-8 text-center text-[15px]">
                 <span className="text-gray-600 dark:text-gray-400">
                   {mode === 'signup' ? 'Đã có tài khoản? ' : 'Chưa có tài khoản? '}
