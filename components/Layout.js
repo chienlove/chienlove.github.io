@@ -170,9 +170,11 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 overflow-x-hidden">
       <Head>
-        <title>StoreIOS – TestFlight & Jailbreak</title>
-        <meta name="description" content="Kho ứng dụng TestFlight beta & công cụ jailbreak cho iOS" />
+        {/* Tối giản để không override SEO động của từng trang */}
+        <title key="site-default-title">StoreiOS</title>
+        <meta key="site-default-desc" name="description" content="Kho ứng dụng TestFlight beta & công cụ jailbreak cho iOS" />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        {/* Không đặt og:* hay twitter:* ở Layout */}
       </Head>
 
       {/* HEADER */}
