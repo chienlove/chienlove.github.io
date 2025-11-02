@@ -473,9 +473,11 @@ export default function LoginButton({ onToggleTheme, isDark }) {
           className="fixed inset-0 z-[2000] bg-black/55 flex items-center justify-center"
           style={{
             minHeight: '100dvh',
-            paddingTop: 'max(env(safe-area-inset-top), 16px)',
-            paddingBottom: 'max(env(safe-area-inset-bottom), 16px)',
-            paddingLeft: 16, paddingRight: 16,
+            // ↓ Thu hẹp trên/dưới (12px) -- tăng khoảng 2 bên (24px)
+            paddingTop: 'max(env(safe-area-inset-top), 12px)',
+            paddingBottom: 'max(env(safe-area-inset-bottom), 12px)',
+            paddingLeft: 24,
+            paddingRight: 24,
           }}
           aria-modal="true"
           role="dialog"
@@ -486,7 +488,8 @@ export default function LoginButton({ onToggleTheme, isDark }) {
             ref={modalRef}
             tabIndex={-1}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-[640px] mx-4 rounded-2xl sm:rounded-3xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-2xl focus:outline-none overflow-hidden"
+            // ↓ Mở rộng lề 2 bên bằng cách tăng mx (khoảng cách card với mép)
+            className="w-full max-w-[640px] mx-6 sm:mx-10 rounded-2xl sm:rounded-3xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-2xl focus:outline-none overflow-hidden"
             style={{ WebkitOverflowScrolling: 'touch' }}
           >
             {/* Header (nút đóng) */}
@@ -504,7 +507,8 @@ export default function LoginButton({ onToggleTheme, isDark }) {
             <div
               className="overflow-y-auto overscroll-contain px-8 pt-2 pb-6"
               style={{
-                maxHeight: '75vh',
+                // ↓ Tăng maxHeight để giảm khoảng trống trên/dưới (card cao hơn)
+                maxHeight: '82vh',
                 WebkitOverflowScrolling: 'touch',
                 paddingBottom: 'max(env(safe-area-inset-bottom), 24px)',
                 paddingTop: 'max(env(safe-area-inset-top), 8px)',
