@@ -240,7 +240,7 @@ function NewBreadcrumb({ category, appName }) {
             {/* Current App Name */}
             <li className="flex-shrink-0 text-gray-400 dark:text-gray-500">/</li>
             <li className="text-blue-600 dark:text-blue-400 font-semibold max-w-[200px] sm:max-w-xs md:max-w-md truncate" title={appName}>
-                {appName}
+              {appName}
             </li>
           </ol>
         </nav>
@@ -369,7 +369,6 @@ export default function Detail({ serverApp, serverRelated }) {
 
     const appName     = app.name || '';
     const version     = app.version ? ` ${app.version}` : '';
-    the:
     const author      = app.author || '';
     const currentYear = String(new Date().getFullYear());
     const os          = app.minimum_os_version ? `iOS ${app.minimum_os_version}+` : 'iOS';
@@ -597,7 +596,6 @@ export default function Detail({ serverApp, serverRelated }) {
   };
 
   /* ======= Cài đặt / Tải IPA ======= */
-  const [modal, setModal] = useState({ open: false, title: '', body: null, actions: null });
   const handleInstall = (e) => {
     e.preventDefault();
     if (!app?.id || isTestflight) return;
@@ -684,6 +682,9 @@ export default function Detail({ serverApp, serverRelated }) {
     );
   }
 
+  const absIcon = toAbs(iconSrc);
+  const absOg = toAbs(app.icon_url || '/og-default.png');
+
   return (
     <Layout fullWidth>
       {/* ===================== SEO META TAGS ===================== */}
@@ -695,12 +696,13 @@ export default function Detail({ serverApp, serverRelated }) {
         {/* Open Graph */}
         <meta property="og:title" content={dynamicMetaTags?.title} />
         <meta property="og:description" content={dynamicMetaTags?.description} />
-        <meta
-          property="og:image"
-          content={app.icon_url?.startsWith('http') ? app.icon_url : `https://storeios.net${app.icon_url}`}
-        />
+        <meta property="og:image" content={absOg} />
+        <meta property="og:image:secure_url" content={absOg} />
+        <meta property="og:image:alt" content={`Icon của ${app.name}`} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
         <meta property="og:url" content={`https://storeios.net/${app.slug}`} />
-        <meta property="og:type" content="website" />
+        <meta property="og:type" content="article" />
         <meta property="og:site_name" content="StoreiOS" />
         <meta property="og:locale" content="vi_VN" />
 
@@ -708,15 +710,15 @@ export default function Detail({ serverApp, serverRelated }) {
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content={dynamicMetaTags?.title} />
         <meta name="twitter:description" content={dynamicMetaTags?.description} />
-        <meta name="twitter:image" content={app.icon_url} />
+        <meta name="twitter:image" content={absOg} />
         <meta name="twitter:site" content="@storeios" />
 
         {/* Canonical */}
         <link rel="canonical" href={`https://storeios.net/${app.slug}`} />
 
         {/* Preload critical images */}
-        <link rel="preload" href={app.icon_url} as="image" />
-        {app.screenshots?.[0] && <link rel="preload" href={app.screenshots[0]} as="image" />}
+        <link rel="preload" href={absIcon} as="image" />
+        {app.screenshots?.[0] && <link rel="preload" href={toAbs(app.screenshots[0])} as="image" />}
       </Head>
 
       {/* ===================== STRUCTURED DATA ===================== */}
@@ -727,8 +729,17 @@ export default function Detail({ serverApp, serverRelated }) {
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbStructuredData) }} />
       )}
 
-      {/* Modal */}
-      <CenterModal open={modal.open} title={modal.title} body={modal.body} actions={modal.actions} />
+      {/* ===== simple Center Modal ===== */}
+      {modal.open && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" />
+          <div className="relative w-[92vw] max-w-md rounded-2xl border border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xl p-4">
+            {modal.title && <h3 className="text-lg font-semibold mb-2 text-gray-900 dark:text-gray-100">{modal.title}</h3>}
+            <div className="text-sm text-gray-800 dark:text-gray-100">{modal.body}</div>
+            <div className="mt-4 flex justify-end gap-2">{modal.actions}</div>
+          </div>
+        </div>
+      )}
 
       {/* ===== Breadcrumb ===== */}
       <NewBreadcrumb category={app?.category} appName={app?.name} />
@@ -754,7 +765,7 @@ export default function Detail({ serverApp, serverRelated }) {
               <div className="pt-10 text-center px-4">
                 <div className="w-24 h-24 mx-auto overflow-hidden border-4 border-white rounded-2xl relative">
                   <Image
-                    src={toAbs(iconSrc)}
+                    src={absIcon}
                     alt={`Icon của ứng dụng ${app.name}`}
                     fill
                     sizes="96px"
