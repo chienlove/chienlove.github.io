@@ -62,7 +62,7 @@ export async function getServerSideProps(context) {
     return { notFound: true };
   }
 
-  // 3) Related apps - Giới hạn số lượng để tối ưu
+  // 3) Related apps
   const { data: relatedApps } = await supabase
     .from('apps')
     .select('id, name, slug, icon_url, author, version, category_id, downloads, views')
@@ -144,7 +144,7 @@ function processListBlocks(str) {
   return output;
 }
 
-/* ====== BBCode → Markdown (an toàn, tránh regex literal) ====== */
+/* ====== BBCode → Markdown ====== */
 function bbcodeToMarkdownLite(input = '') {
   let s = String(input);
   const R = (p, f) => { s = s.replace(new RegExp(p, 'gi'), f); };
@@ -165,15 +165,15 @@ function bbcodeToMarkdownLite(input = '') {
   s = stripSimpleTagAll(s, 'color');
   s = stripSimpleTagAll(s, 'size');
 
-  // [list][*]...[/list] (split-based)
+  // [list]
   s = processListBlocks(s);
 
-  // [quote]...[/quote]
+  // [quote]
   s = s.replace(new RegExp('\\[quote\\]\\s*([\\s\\S]*?)\\s*\\[/quote\\]', 'gi'), (_m, g1) => {
     return String(g1).trim().split(/\r?\n/).map(line => `> ${line}`).join('\n');
   });
 
-  // [code]...[/code]
+  // [code]
   s = s.replace(new RegExp('\\[code\\]\\s*([\\s\\S]*?)\\s*\\[/code\\]', 'gi'), (_m, g1) => {
     const body = String(g1).replace(/```/g, '``');
     return `\n\`\`\`\n${body}\n\`\`\`\n`;
@@ -202,14 +202,13 @@ function PrettyBlockquote({ children }) {
   );
 }
 
-/* ===================== BREADCRUMB HOÀN TOÀN MỚI ===================== */
+/* ===================== BREADCRUMB ===================== */
 function NewBreadcrumb({ category, appName }) {
   return (
     <div className="bg-gray-100 dark:bg-zinc-950">
       <div className="w-full flex justify-center px-2 sm:px-4 md:px-6">
         <nav className="w-full max-w-screen-2xl py-3 overflow-x-auto whitespace-nowrap" aria-label="Breadcrumb">
           <ol className="inline-flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
-            {/* Home */}
             <li className="inline-flex items-center">
               <Link
                 href="/"
@@ -221,7 +220,6 @@ function NewBreadcrumb({ category, appName }) {
               </Link>
             </li>
 
-            {/* Category */}
             {category?.slug && (
               <>
                 <li className="flex-shrink-0 text-gray-400 dark:text-gray-500">/</li>
@@ -237,7 +235,6 @@ function NewBreadcrumb({ category, appName }) {
               </>
             )}
 
-            {/* Current App Name */}
             <li className="flex-shrink-0 text-gray-400 dark:text-gray-500">/</li>
             <li className="text-blue-600 dark:text-blue-400 font-semibold max-w-[200px] sm:max-w-xs md:max-w-md truncate" title={appName}>
               {appName}
@@ -299,13 +296,13 @@ export default function Detail({ serverApp, serverRelated }) {
   const [iconError, setIconError] = useState(false);
   const iconSrc = iconError ? '/placeholder-icon.png' : (app?.icon_url || '/placeholder-icon.png');
 
-  // helper: chuẩn hoá URL cho next/image (absolute khi cần)
+  // chuẩn hoá URL tuyệt đối
   const toAbs = (src) => {
     if (!src) return '';
     return src.startsWith('http') ? src : `https://storeios.net${src}`;
   };
 
-  // Pagination cho Related apps
+  // Pagination
   const PAGE_SIZE = 5;
   const [relPage, setRelPage] = useState(1);
   const relTotalPages = Math.max(1, Math.ceil((related?.length || 0) / PAGE_SIZE));
@@ -470,7 +467,7 @@ export default function Detail({ serverApp, serverRelated }) {
     };
   }, [app]);
 
-  // Theo dõi auth
+  // Auth
   useEffect(() => {
     const unsub = auth.onAuthStateChanged(setMe);
     return () => unsub();
@@ -498,7 +495,6 @@ export default function Detail({ serverApp, serverRelated }) {
         .finally(() => setStatusLoading(false));
     }
 
-    // Dynamic import FAC (client)
     if (app.icon_url && typeof window !== 'undefined') {
       (async () => {
         try {
@@ -662,9 +658,9 @@ export default function Detail({ serverApp, serverRelated }) {
     return (
       <Layout fullWidth>
         <Head>
-          <title>Không tìm thấy ứng dụng - StoreiOS</title>
-          <meta name="description" content="Ứng dụng bạn tìm kiếm không tồn tại. Khám phá hàng ngàn ứng dụng iOS miễn phí khác trên StoreiOS." />
-          <meta name="robots" content="noindex, nofollow" />
+          <title key="title">Không tìm thấy ứng dụng - StoreiOS</title>
+          <meta name="description" key="description" content="Ứng dụng bạn tìm kiếm không tồn tại. Khám phá hàng ngàn ứng dụng iOS miễn phí khác trên StoreiOS." />
+          <meta name="robots" content="noindex, nofollow" key="robots" />
         </Head>
         <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-zinc-950">
           <div className="text-center">
@@ -689,36 +685,35 @@ export default function Detail({ serverApp, serverRelated }) {
     <Layout fullWidth>
       {/* ===================== SEO META TAGS ===================== */}
       <Head>
-        <title>{dynamicMetaTags?.title || `${app.name} - StoreiOS`}</title>
-        <meta name="description" content={dynamicMetaTags?.description} />
-        <meta name="keywords" content={dynamicMetaTags?.keywords} />
+        {/* Base SEO */}
+        <title key="title">{dynamicMetaTags?.title || `${app.name} - StoreiOS`}</title>
+        <meta name="description" key="description" content={dynamicMetaTags?.description} />
+        <meta name="keywords" key="keywords" content={dynamicMetaTags?.keywords} />
 
-        {/* Open Graph */}
-        <meta property="og:title" content={dynamicMetaTags?.title} />
-        <meta property="og:description" content={dynamicMetaTags?.description} />
-        <meta property="og:image" content={absOg} />
-        <meta property="og:image:secure_url" content={absOg} />
-        <meta property="og:image:alt" content={`Icon của ${app.name}`} />
-        <meta property="og:image:width" content="1200" />
-        <meta property="og:image:height" content="630" />
-        <meta property="og:url" content={`https://storeios.net/${app.slug}`} />
-        <meta property="og:type" content="article" />
-        <meta property="og:site_name" content="StoreiOS" />
-        <meta property="og:locale" content="vi_VN" />
+        {/* Open Graph (dedup bằng key) */}
+        <meta property="og:title" key="og:title" content={dynamicMetaTags?.title} />
+        <meta property="og:description" key="og:description" content={dynamicMetaTags?.description} />
+        <meta property="og:image" key="og:image" content={absOg} />
+        <meta property="og:image:secure_url" key="og:image:secure_url" content={absOg} />
+        <meta property="og:image:alt" key="og:image:alt" content={`Icon của ${app.name}`} />
+        <meta property="og:url" key="og:url" content={`https://storeios.net/${app.slug}`} />
+        <meta property="og:type" key="og:type" content="article" />
+        <meta property="og:site_name" key="og:site_name" content="StoreiOS" />
+        <meta property="og:locale" key="og:locale" content="vi_VN" />
 
         {/* Twitter Card */}
-        <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content={dynamicMetaTags?.title} />
-        <meta name="twitter:description" content={dynamicMetaTags?.description} />
-        <meta name="twitter:image" content={absOg} />
-        <meta name="twitter:site" content="@storeios" />
+        <meta name="twitter:card" key="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" key="twitter:title" content={dynamicMetaTags?.title} />
+        <meta name="twitter:description" key="twitter:description" content={dynamicMetaTags?.description} />
+        <meta name="twitter:image" key="twitter:image" content={absOg} />
+        <meta name="twitter:site" key="twitter:site" content="@storeios" />
 
         {/* Canonical */}
-        <link rel="canonical" href={`https://storeios.net/${app.slug}`} />
+        <link rel="canonical" key="canonical" href={`https://storeios.net/${app.slug}`} />
 
         {/* Preload critical images */}
-        <link rel="preload" href={absIcon} as="image" />
-        {app.screenshots?.[0] && <link rel="preload" href={toAbs(app.screenshots[0])} as="image" />}
+        <link rel="preload" key="preload:icon" href={absIcon} as="image" />
+        {app.screenshots?.[0] && <link rel="preload" key="preload:ss1" href={toAbs(app.screenshots[0])} as="image" />}
       </Head>
 
       {/* ===================== STRUCTURED DATA ===================== */}
@@ -876,7 +871,7 @@ export default function Detail({ serverApp, serverRelated }) {
           </div>
         </div>
 
-        {/* ===== Nội dung dưới ===== */}
+        {/* Nội dung dưới */}
         <div className="max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 mt-6 space-y-6 overflow-x-hidden">
 
           {/* Info cards */}
@@ -1012,7 +1007,7 @@ export default function Detail({ serverApp, serverRelated }) {
             </div>
           )}
 
-          {/* Thông tin chi tiết */}
+          {/* Thông tin */}
           <div className="bg-white dark:bg-zinc-900 rounded-xl shadow overflow-hidden">
             <h2 className="px-4 pt-4 text-lg font-bold text-gray-800 dark:text-gray-100">Thông tin</h2>
             <div className="mt-3 divide-y divide-gray-200 dark:divide-zinc-800">
@@ -1054,7 +1049,7 @@ export default function Detail({ serverApp, serverRelated }) {
             </div>
           </div>
 
-          {/* Related + phân trang */}
+          {/* Related */}
           {related.length > 0 && (
             <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
               <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4">Ứng dụng cùng chuyên mục</h2>
