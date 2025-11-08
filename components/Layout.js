@@ -170,10 +170,11 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 overflow-x-hidden">
       <Head>
-        <title>StoreIOS – TestFlight & Jailbreak</title>
-        <meta name="description" content="Kho ứng dụng TestFlight beta & công cụ jailbreak cho iOS" />
-        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-      </Head>
+  <title key="layout-title">StoreIOS – TestFlight & Jailbreak</title>
+  <meta name="description" key="layout-description" content="Kho ứng dụng TestFlight beta & công cụ jailbreak cho iOS" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+</Head>
+
 
       {/* HEADER */}
       <header className="sticky top-0 z-50 w-full bg-white/85 dark:bg-gray-900/85 backdrop-blur border-b border-gray-200 dark:border-gray-800">

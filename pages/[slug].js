@@ -696,6 +696,9 @@ export default function Detail({ serverApp, serverRelated }) {
         <meta property="og:image" key="og:image" content={absOg} />
         <meta property="og:image:secure_url" key="og:image:secure_url" content={absOg} />
         <meta property="og:image:alt" key="og:image:alt" content={`Icon của ${app.name}`} />
+        <meta property="og:image:type" content="image/png" />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="1200" />
         <meta property="og:url" key="og:url" content={`https://storeios.net/${app.slug}`} />
         <meta property="og:type" key="og:type" content="article" />
         <meta property="og:site_name" key="og:site_name" content="StoreiOS" />
