@@ -756,17 +756,27 @@ export async function getServerSideProps(ctx) {
   const hotByInstalls = (hotByInstallsData.data || []).slice(0, 5);
 
   // ====== SEO động: luôn truyền slug + name của chuyên mục active (nếu có) ======
-  let metaSEO = { page: 1, totalPages: 1, categorySlug: null, categoryName: null };
-  if (activeSlug) {
-    const activeCat = categories.find(c => (c.slug || '').toLowerCase() === activeSlug);
-    const pageInfo = activeCat ? paginationData[activeCat.id] : null;
+  let metaSEO = { 
+  page: 1, 
+  totalPages: 1, 
+  categorySlug: null, 
+  categoryName: null,
+  description: 'Kho ứng dụng TestFlight beta & công cụ jailbreak cho iOS'
+};
+
+if (activeSlug) {
+  const activeCat = categories.find(c => (c.slug || '').toLowerCase() === activeSlug);
+  const pageInfo = activeCat ? paginationData[activeCat.id] : null;
+  if (activeCat) {
     metaSEO = {
       page: pageInfo?.currentPage || 1,
       totalPages: pageInfo?.totalPages || 1,
       categorySlug: activeSlug,
-      categoryName: activeCat?.name || null,     // ✅ thêm tên chuyên mục cho title đẹp
+      categoryName: activeCat.name || null,
+      description: CATEGORY_SEO[activeSlug]?.description || `Kho ứng dụng ${activeCat.name} cho iOS`
     };
   }
+}
 
   return {
     props: {
