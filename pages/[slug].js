@@ -685,39 +685,43 @@ export default function Detail({ serverApp, serverRelated }) {
     <Layout fullWidth>
       {/* ===================== SEO META TAGS ===================== */}
       <Head>
-        {/* Base SEO */}
-        <title key="title">{dynamicMetaTags?.title || `${app.name} - StoreiOS`}</title>
-        <meta name="description" key="description" content={dynamicMetaTags?.description} />
-        <meta name="keywords" key="keywords" content={dynamicMetaTags?.keywords} />
+  {/* ✅ Base SEO - Dùng dynamicMetaTags fallback */}
+  <title>{dynamicMetaTags?.title || `${app.name} - StoreiOS`}</title>
+  <meta name="description" content={dynamicMetaTags?.description || app.description?.slice(0, 160)} />
+  <meta name="keywords" content={dynamicMetaTags?.keywords || 'iOS, TestFlight, Jailbreak, StoreiOS'} />
 
-        {/* Open Graph (dedup bằng key) */}
-        <meta property="og:title" key="og:title" content={dynamicMetaTags?.title} />
-        <meta property="og:description" key="og:description" content={dynamicMetaTags?.description} />
-        <meta property="og:image" key="og:image" content={absOg} />
-        <meta property="og:image:secure_url" key="og:image:secure_url" content={absOg} />
-        <meta property="og:image:alt" key="og:image:alt" content={`Icon của ${app.name}`} />
-        <meta property="og:image:type" content="image/png" />
-        <meta property="og:image:width" content="1200" />
-        <meta property="og:image:height" content="1200" />
-        <meta property="og:url" key="og:url" content={`https://storeios.net/${app.slug}`} />
-        <meta property="og:type" key="og:type" content="article" />
-        <meta property="og:site_name" key="og:site_name" content="StoreiOS" />
-        <meta property="og:locale" key="og:locale" content="vi_VN" />
+  {/* ✅ Open Graph - DÙNG URL GỐC CHO ẢNH */}
+  <meta property="og:title" content={dynamicMetaTags?.title || app.name} />
+  <meta property="og:description" content={dynamicMetaTags?.description || app.description?.slice(0, 160)} />
+  
+  {/* 🔥 FIX: Dùng URL trực tiếp, không qua /_next/image */}
+  <meta property="og:image" content={app.icon_url || 'https://storeios.net/og-default.png'} />
+  <meta property="og:image:secure_url" content={app.icon_url || 'https://storeios.net/og-default.png'} />
+  <meta property="og:image:alt" content={`Icon của ứng dụng ${app.name}`} />
+  <meta property="og:image:type" content="image/png" />
+  <meta property="og:image:width" content="512" />
+  <meta property="og:image:height" content="512" />
+  
+  <meta property="og:url" content={`https://storeios.net/${app.slug}`} />
+  <meta property="og:type" content="article" />
+  <meta property="og:site_name" content="StoreiOS" />
+  <meta property="og:locale" content="vi_VN" />
 
-        {/* Twitter Card */}
-        <meta name="twitter:card" key="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" key="twitter:title" content={dynamicMetaTags?.title} />
-        <meta name="twitter:description" key="twitter:description" content={dynamicMetaTags?.description} />
-        <meta name="twitter:image" key="twitter:image" content={absOg} />
-        <meta name="twitter:site" key="twitter:site" content="@storeios" />
+  {/* ✅ Twitter Card */}
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content={dynamicMetaTags?.title || app.name} />
+  <meta name="twitter:description" content={dynamicMetaTags?.description || app.description?.slice(0, 160)} />
+  <meta name="twitter:image" content={app.icon_url || 'https://storeios.net/og-default.png'} />
+  <meta name="twitter:site" content="@storeios" />
 
-        {/* Canonical */}
-        <link rel="canonical" key="canonical" href={`https://storeios.net/${app.slug}`} />
+  {/* ✅ Canonical */}
+  <link rel="canonical" href={`https://storeios.net/${app.slug}`} />
 
-        {/* Preload critical images */}
-        <link rel="preload" key="preload:icon" href={absIcon} as="image" />
-        {app.screenshots?.[0] && <link rel="preload" key="preload:ss1" href={toAbs(app.screenshots[0])} as="image" />}
-      </Head>
+  {/* ✅ Preload icon chính (vẫn dùng để tối ưu UI) */}
+  <link rel="preload" href={absIcon} as="image" />
+  {app.screenshots?.[0] && <link rel="preload" href={toAbs(app.screenshots[0])} as="image" />}
+</Head>
+
 
       {/* ===================== STRUCTURED DATA ===================== */}
       {structuredData && (
