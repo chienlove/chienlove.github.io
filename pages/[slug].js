@@ -403,14 +403,14 @@ export default function Detail({ serverApp, serverRelated }) {
 
     const generateKeywords = () => {
       const keywords = [
-        `Tải ${appName}`, appName, 'iOS', 'download', 'tải về', 'miễn phí',
+        `Tải ${appName}`, appName, 'IPA', 'iOS', 'download', 'tải về', 'miễn phí',
         currentYear, 'storeios', 'storeios.net'
       ];
       if (version) keywords.push(version.trim());
       if (author) keywords.push(author);
       if (isTestflight) keywords.push('testflight', 'tham gia');
-      if (categorySlug === 'jailbreak') keywords.push('jailbreak', 'unc0ver', 'root', 'tweak');
-      if (categorySlug === 'app-clone') keywords.push('app clone', 'nhân bản', 'đa tài khoản', 'dual app');
+      if (categorySlug === 'jailbreak') keywords.push('jailbreak', 'cydia', 'unc0ver', 'root', 'tweak');
+      if (categorySlug === 'app-clone') keywords.push('app clone', 'nhân bản', 'đa tài khoản', 'dual app', 'cài app song song');
       return keywords.join(', ');
     };
 
