@@ -1,2 +1,7 @@
 User-agent: *
 Allow: /
+Disallow: /api/
+Disallow: /admin/
+
+# Sitemap
+Sitemap: https://storeios.net/sitemap.xml
