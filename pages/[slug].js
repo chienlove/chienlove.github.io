@@ -375,11 +375,11 @@ export default function Detail({ serverApp, serverRelated }) {
 
       if (categorySlug === 'jailbreak') {
         const jailbreakKeywords = 'Jailbreak IPA, Tweak';
-        return `${appName}${version} - ${jailbreakKeywords} cho ${os} | StoreiOS`;
+        return `Tải ${appName}${version} - ${jailbreakKeywords} cho ${os} | StoreiOS`;
       }
       if (categorySlug === 'app-clone') {
         const cloneKeywords = 'App Clone IPA, Nhân bản, Đa tài khoản';
-        return `${appName}${version} - ${cloneKeywords} cho ${os} | StoreiOS`;
+        return `Tải ${appName}${version} - ${cloneKeywords} cho ${os} | StoreiOS`;
       }
       return baseTitle;
     };
