@@ -191,6 +191,12 @@ jobs:
           BASE_URL="https://github.com/$REPO/releases/download/$TAG"
           ICON_BASE_URL="https://storeios.net/icons"
 
+          # keep track of new icons to add/commit (we will NOT add icons that already exist)
+          NEW_ICONS=()
+
+          # keep track whether any plist changed (we'll check files after loop)
+          PLIST_CHANGED=0
+
           while IFS='|' read -r IPA FINAL_ID; do
             FILENAME=$(basename "$IPA")
             APP_NAME="${FILENAME%.ipa}"
@@ -207,15 +213,22 @@ jobs:
             ICON_OUT="public/icons/$ICON_NAME"
 
             if [ -f "$ICON_PATH" ]; then
-              cp "$ICON_PATH" "$ICON_OUT"
-              echo "🖼️ Đã trích xuất icon: $ICON_OUT"
+              # If icon with same name already exists in repo, skip copying/committing it
+              if [ -f "$ICON_OUT" ]; then
+                echo "🟡 Icon $ICON_OUT already exists in repository -- skipping copy and commit for this icon."
+              else
+                cp "$ICON_PATH" "$ICON_OUT"
+                echo "🖼️ Extracted icon: $ICON_OUT"
+                NEW_ICONS+=("$ICON_OUT")
+              fi
             else
-              echo "📦 Không tìm thấy icon phù hợp."
+              echo "📦 Không tìm thấy icon phù hợp cho $APP_NAME."
             fi
 
             PLIST_NAME="${APP_NAME}.plist"
             PLIST_PATH="secure/plist/$PLIST_NAME"
 
+            # generate plist (always overwrite)
             echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" > "$PLIST_PATH"
             echo "<!DOCTYPE plist PUBLIC \"-//Apple//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">" >> "$PLIST_PATH"
             echo "<plist version=\"1.0\"><dict>" >> "$PLIST_PATH"
@@ -244,9 +257,24 @@ jobs:
             echo "    </dict>" >> "$PLIST_PATH"
             echo "  </dict></array></dict></plist>" >> "$PLIST_PATH"
 
+            # mark that plist(s) were generated/changed
+            PLIST_CHANGED=1
+
             rm -rf "$WORKDIR"
           done < id_map.txt
 
-          git add secure/plist/*.plist public/icons/*.png || true
-          git commit -m "🤖 Update plist & icon for tag $TAG" || echo "No changes to commit"
-          git push || echo "Nothing to push"
+          # Add only new icons (skip icons that already existed)
+          if [ ${#NEW_ICONS[@]} -gt 0 ]; then
+            git add "${NEW_ICONS[@]}"
+          fi
+
+          # Add all generated plists (we always overwrite plist files)
+          git add secure/plist/*.plist || true
+
+          # Commit only if there is something to commit
+          if git diff --cached --quiet; then
+            echo "No new icons or plist changes to commit."
+          else
+            git commit -m "🤖 Update plist & icon for tag $TAG" || echo "No changes to commit"
+            git push || echo "Push failed or nothing to push"
+          fi
