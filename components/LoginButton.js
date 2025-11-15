@@ -52,7 +52,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     return () => unsub();
   }, []);
 
-  // Cho phép nơi khác mở modal auth (ví dụ Comments.js)
   useEffect(() => {
     const onOpenAuth = () => {
       setGuestMenuOpen(false);
@@ -63,7 +62,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     return () => window.removeEventListener('open-auth', onOpenAuth);
   }, []);
 
-  // Đóng menu khi click ra ngoài
   useEffect(() => {
     const onClick = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) setMenuOpen(false);
@@ -75,9 +73,12 @@ export default function LoginButton({ onToggleTheme, isDark }) {
 
   /* ================= Toast + Loading Overlay ================= */
 
+  // FIX: Clear timeout properly to prevent memory leak
   const showToast = (type, text, ms = 2800) => {
+    // Clear previous timeout
+    if (showToast._t) window.clearTimeout(showToast._t);
+    
     setToast({ type, text });
-    window.clearTimeout((showToast._t || 0));
     showToast._t = window.setTimeout(() => setToast(null), ms);
   };
 
@@ -155,7 +156,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     } catch {}
   };
 
-  // Ánh xạ mã lỗi Firebase → tiếng Việt
   const mapAuthError = (e) => {
     const code = e?.code || '';
     switch (code) {
@@ -175,7 +175,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     }
   };
 
-  // Nếu email đã tồn tại với provider khác → hướng dẫn liên kết
   const handleAccountExists = async (error, provider) => {
     const emailFromError = error?.customData?.email;
     if (!emailFromError) return setMsg('Tài khoản đã tồn tại với nhà cung cấp khác.');
@@ -199,7 +198,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     setMsg('Email đã tồn tại với nhà cung cấp khác. Hãy đăng nhập bằng nhà cung cấp cũ rồi thử lại.');
   };
 
-  // Liên kết credential treo (nếu có)
   const doLinkIfNeeded = async () => {
     if (pendingCred && auth.currentUser) {
       await linkWithCredential(auth.currentUser, pendingCred);
@@ -209,16 +207,26 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     }
   };
 
-  // Guard sau login (kiểm tra BAN)
+  // FIX: Add timeout to prevent API hang
   const runGuardAfterSignIn = async () => {
     try {
       if (!auth.currentUser) return true;
+      
       const idToken = await auth.currentUser.getIdToken();
+      
+      // Add 3 second timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      
       const resp = await fetch('/api/auth/guard', {
         method: 'GET',
-        headers: { Authorization: `Bearer ${idToken}` }
+        headers: { Authorization: `Bearer ${idToken}` },
+        signal: controller.signal
       });
+      
+      clearTimeout(timeoutId);
       const json = await resp.json();
+      
       if (json?.ok) return true;
 
       // Bị ban → signOut + hiển thị banner chi tiết
@@ -242,14 +250,18 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       showToast('error', isTemp ? 'Tài khoản đang bị BAN tạm thời.' : 'Tài khoản bị BAN vĩnh viễn.', 3600);
       return false;
     } catch {
-      return true; // guard lỗi → không chặn login
+      // Guard error should not block login
+      return true;
     }
   };
 
   /* ================= Actions: Social ================= */
 
+  // FIX: Show toast immediately when login starts
   const loginGoogle = async (isLinking = false) => {
     setLoading(true); setMsg(''); setBanInfo(null);
+    showToast('info', 'Đang đăng nhập Google...', 2000); // ➕ Immediate feedback
+    
     try {
       await signInWithPopup(auth, new GoogleAuthProvider());
       if (isLinking) await doLinkIfNeeded();
@@ -265,11 +277,15 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       } else {
         setMsg(mapAuthError(e));
       }
-    } finally { setLoading(false); }
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   const loginGithub = async () => {
     setLoading(true); setMsg(''); setBanInfo(null);
+    showToast('info', 'Đang đăng nhập GitHub...', 2000); // ➕ Immediate feedback
+    
     try {
       await signInWithPopup(auth, new GithubAuthProvider());
       if (!(await runGuardAfterSignIn())) return;
@@ -281,11 +297,15 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       } else {
         setMsg(mapAuthError(e));
       }
-    } finally { setLoading(false); }
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   const loginTwitter = async () => {
     setLoading(true); setMsg(''); setBanInfo(null);
+    showToast('info', 'Đang đăng nhập X (Twitter)...', 2000); // ➕ Immediate feedback
+    
     try {
       await signInWithPopup(auth, new TwitterAuthProvider());
       if (!(await runGuardAfterSignIn())) return;
@@ -297,7 +317,9 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       } else {
         setMsg(mapAuthError(e));
       }
-    } finally { setLoading(false); }
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   /* ================= Actions: Email/Password ================= */
@@ -308,6 +330,8 @@ export default function LoginButton({ onToggleTheme, isDark }) {
   const onSubmitEmail = async (e) => {
     e.preventDefault();
     setLoading(true); setMsg(''); setBanInfo(null);
+    showToast('info', mode === 'signup' ? 'Đang đăng ký...' : 'Đang đăng nhập...', 2000); // ➕ Immediate feedback
+    
     try {
       if (mode === 'signup') {
         if (!pwdStrong) { setMsg('Mật khẩu phải ≥8 ký tự và có chữ, số, ký tự đặc biệt.'); setLoading(false); return; }
@@ -337,7 +361,9 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       } else {
         setMsg(mapAuthError(e2));
       }
-    } finally { setLoading(false); }
+    } finally { 
+      setLoading(false); 
+    }
   };
 
   const onReset = async () => {
@@ -362,7 +388,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
 
   /* ================= Modal Behaviors ================= */
 
-  // Khóa scroll nền + ESC + focus card
   useEffect(() => {
     if (!openAuth) return;
     const prev = document.body.style.overflow;
@@ -376,7 +401,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     };
   }, [openAuth]);
 
-  // Giữ center khi rotate/resize trên iOS/Safari
   useEffect(() => {
     if (!openAuth) return;
     const onResize = () => {
@@ -414,7 +438,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
 
   /* ================= RENDER ================= */
 
-  // Logged-in
   if (user) {
     const avatar = user.photoURL || null;
     return (
@@ -457,7 +480,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     );
   }
 
-  // Logged-out
   return (
     <>
       <Toast />
@@ -488,7 +510,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
         )}
       </div>
 
-      {/* AUTH MODAL -- căn giữa, safe-area, bo tròn, body scroll */}
       {openAuth && (
         <div
           className="fixed inset-0 z-[2000] bg-black/55 flex items-center justify-center"
@@ -502,7 +523,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
           role="dialog"
           onClick={() => setOpenAuth(false)}
         >
-          {/* Card */}
           <div
             ref={modalRef}
             tabIndex={-1}
@@ -510,7 +530,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
             className="w-full max-w-[700px] mx-1.5 sm:mx-4 rounded-2xl sm:rounded-3xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-2xl focus:outline-none overflow-hidden"
             style={{ WebkitOverflowScrolling: 'touch' }}
           >
-            {/* Header (nút đóng) */}
             <div className="sticky top-0 z-10 flex justify-end px-4 pt-4 pb-0 bg-white/90 dark:bg-gray-900/90 backdrop-blur">
               <button
                 aria-label="Đóng"
@@ -521,7 +540,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
               </button>
             </div>
 
-            {/* Body scrollable */}
             <div
               className="overflow-y-auto overscroll-contain px-11 sm:px-20 pt-0 pb-1"
               style={{
@@ -542,7 +560,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
 
               <BanBanner />
 
-              {/* Email */}
               <div className="mb-4">
                 <label className="block text-[15px] font-semibold text-gray-800 dark:text-gray-200 mb-2">Email</label>
                 <input
@@ -555,7 +572,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
                 />
               </div>
 
-              {/* Password */}
               <div className="mb-3">
                 <label className="block text-[15px] font-semibold text-gray-800 dark:text-gray-200 mb-2">Mật khẩu</label>
                 <div className="relative">
@@ -578,7 +594,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
                 </div>
               </div>
 
-              {/* Confirm + Tooltip (chỉ khi signup) */}
               {mode === 'signup' && (
                 <div className="mb-4">
                   <label className="block text-[15px] font-semibold text-gray-800 dark:text-gray-200 mb-2">Xác nhận mật khẩu</label>
@@ -601,7 +616,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
                     </button>
                   </div>
 
-                  {/* Điều kiện mật khẩu – tooltip checklist */}
                   <ul className="text-xs space-y-1 mt-2">
                     <li className={`flex items-center gap-2 ${password.length >= 8 ? 'text-emerald-600' : 'text-gray-500'}`}>
                       <FontAwesomeIcon icon={password.length >= 8 ? faCircleCheck : faCircleXmark} className="w-3.5 h-3.5" />
@@ -627,7 +641,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
                 </div>
               )}
 
-              {/* Remember + Reset */}
               <div className="flex items-center justify-between text-[15px] mb-5">
                 <label className="inline-flex items-center gap-2 select-none">
                   <input
@@ -643,14 +656,12 @@ export default function LoginButton({ onToggleTheme, isDark }) {
                 </button>
               </div>
 
-              {/* Error box */}
               {msg && (
                 <div className="mb-4 rounded-2xl border border-rose-200 bg-rose-50 text-rose-800 px-4 py-3 text-[14px]">
                   {msg}
                 </div>
               )}
 
-              {/* Submit */}
               <form onSubmit={onSubmitEmail}>
                 <button
                   type="submit"
@@ -663,21 +674,18 @@ export default function LoginButton({ onToggleTheme, isDark }) {
                 </button>
               </form>
 
-              {/* Or */}
               <div className="flex items-center gap-4 my-6">
                 <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
                 <span className="text-gray-500 dark:text-gray-400 text-[15px]">Hoặc đăng nhập với</span>
                 <div className="flex-1 h-px bg-gray-200 dark:bg-gray-800" />
               </div>
 
-              {/* Social (Google có màu, icon nhỏ gọn) */}
               <div className="flex items-center justify-center gap-4 sm:gap-5">
                 <button
                   onClick={() => loginGoogle(false)} disabled={loading}
                   className="w-[52px] h-[52px] rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-950 shadow-sm hover:shadow flex items-center justify-center"
                   title="Google" aria-label="Đăng nhập với Google"
                 >
-                  {/* Google colored icon */}
                   <svg width="22" height="22" viewBox="0 0 48 48" aria-hidden="true">
                     <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.6-6 8-11.3 8-6.9 0-12.5-5.6-12.5-12.5S17.1 11 24 11c3.2 0 6.1 1.2 8.3 3.2l5.7-5.7C34.6 5.7 29.6 4 24 4 12.3 4 3 13.3 3 25s9.3 21 21 21 21-9.3 21-21c0-1.5-.2-3-.4-4.5z"/>
                     <path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.3 16.3 18.8 13 24 13c3.2 0 6.1 1.2 8.3 3.2l5.7-5.7C34.6 5.7 29.6 4 24 4 15.5 4 8.3 8.7 6.3 14.7z"/>
@@ -703,7 +711,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
                 </button>
               </div>
 
-              {/* Switch mode */}
               <div className="mt-8 text-center text-[15px]">
                 <span className="text-gray-600 dark:text-gray-400">
                   {mode === 'signup' ? 'Đã có tài khoản? ' : 'Chưa có tài khoản? '}
