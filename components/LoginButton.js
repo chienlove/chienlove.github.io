@@ -73,11 +73,8 @@ export default function LoginButton({ onToggleTheme, isDark }) {
 
   /* ================= Toast + Loading Overlay ================= */
 
-  // FIX: Clear timeout properly to prevent memory leak
   const showToast = (type, text, ms = 2800) => {
-    // Clear previous timeout
     if (showToast._t) window.clearTimeout(showToast._t);
-    
     setToast({ type, text });
     showToast._t = window.setTimeout(() => setToast(null), ms);
   };
@@ -207,8 +204,9 @@ export default function LoginButton({ onToggleTheme, isDark }) {
     }
   };
 
-  // FIX: Add timeout to prevent API hang
+  // FIX: Handle AbortError silently and clear timeout properly
   const runGuardAfterSignIn = async () => {
+    let timeoutId;
     try {
       if (!auth.currentUser) return true;
       
@@ -216,7 +214,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       
       // Add 3 second timeout
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 3000);
+      timeoutId = setTimeout(() => controller.abort(), 3000);
       
       const resp = await fetch('/api/auth/guard', {
         method: 'GET',
@@ -224,7 +222,6 @@ export default function LoginButton({ onToggleTheme, isDark }) {
         signal: controller.signal
       });
       
-      clearTimeout(timeoutId);
       const json = await resp.json();
       
       if (json?.ok) return true;
@@ -249,18 +246,25 @@ export default function LoginButton({ onToggleTheme, isDark }) {
       setMsg('');
       showToast('error', isTemp ? 'Tài khoản đang bị BAN tạm thời.' : 'Tài khoản bị BAN vĩnh viễn.', 3600);
       return false;
-    } catch {
-      // Guard error should not block login
+    } catch (error) {
+      // FIX: Silently handle AbortError from timeout
+      if (error.name === 'AbortError') {
+        // Timeout occurred, allow login to proceed
+        return true;
+      }
+      // Other guard errors should not block login
       return true;
+    } finally {
+      // FIX: Always clear the timeout to prevent memory leaks
+      if (timeoutId) clearTimeout(timeoutId);
     }
   };
 
   /* ================= Actions: Social ================= */
 
-  // FIX: Show toast immediately when login starts
   const loginGoogle = async (isLinking = false) => {
     setLoading(true); setMsg(''); setBanInfo(null);
-    showToast('info', 'Đang đăng nhập Google...', 2000); // ➕ Immediate feedback
+    showToast('info', 'Đang đăng nhập Google...', 2000);
     
     try {
       await signInWithPopup(auth, new GoogleAuthProvider());
@@ -284,7 +288,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
 
   const loginGithub = async () => {
     setLoading(true); setMsg(''); setBanInfo(null);
-    showToast('info', 'Đang đăng nhập GitHub...', 2000); // ➕ Immediate feedback
+    showToast('info', 'Đang đăng nhập GitHub...', 2000);
     
     try {
       await signInWithPopup(auth, new GithubAuthProvider());
@@ -304,7 +308,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
 
   const loginTwitter = async () => {
     setLoading(true); setMsg(''); setBanInfo(null);
-    showToast('info', 'Đang đăng nhập X (Twitter)...', 2000); // ➕ Immediate feedback
+    showToast('info', 'Đang đăng nhập X (Twitter)...', 2000);
     
     try {
       await signInWithPopup(auth, new TwitterAuthProvider());
@@ -330,7 +334,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
   const onSubmitEmail = async (e) => {
     e.preventDefault();
     setLoading(true); setMsg(''); setBanInfo(null);
-    showToast('info', mode === 'signup' ? 'Đang đăng ký...' : 'Đang đăng nhập...', 2000); // ➕ Immediate feedback
+    showToast('info', mode === 'signup' ? 'Đang đăng ký...' : 'Đang đăng nhập...', 2000);
     
     try {
       if (mode === 'signup') {
