@@ -653,7 +653,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
         </button>
 
         {guestMenuOpen && (
-          <div className="absolute right-0 mt-2 w-64 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl overflow-hidden">
+          <div className="absolute right-0 mt-2 w-56 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl overflow-hidden">
             {/* Đăng nhập / Đăng ký */}
             <button
               type="button"
