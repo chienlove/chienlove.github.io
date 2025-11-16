@@ -170,7 +170,6 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
   return (
     <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 overflow-x-hidden">
 
-
       {/* HEADER */}
       <header className="sticky top-0 z-50 w-full bg-white/85 dark:bg-gray-900/85 backdrop-blur border-b border-gray-200 dark:border-gray-800">
         <div className="max-w-screen-2xl mx-auto px-4 h-16 flex items-center justify-between">
@@ -261,7 +260,6 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
               <button
                 onClick={() => setMobileMenuOpen(false)}
                 className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
-                aria-label="Close"
               >
                 <FontAwesomeIcon icon={faTimes} />
               </button>
@@ -429,6 +427,10 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
               <Link href="/categories" className="text-gray-700 dark:text-gray-300 hover:text-red-600">Chuyên mục</Link>
               <Link href="/about" className="text-gray-700 dark:text-gray-300 hover:text-red-600">Giới thiệu</Link>
               <Link href="/privacy" className="text-gray-700 dark:text-gray-300 hover:text-red-600">Bảo mật</Link>
+              {/* +++ Added links below +++ */}
+              <Link href="/privacy-policy" className="text-gray-700 dark:text-gray-300 hover:text-red-600">Privacy Policy</Link>
+              <Link href="/sitemap.xml" className="text-gray-700 dark:text-gray-300 hover:text-red-600">Sitemap</Link>
+              {/* +++ End added +++ */}
               <a
                 href="mailto:admin@storeios.net"
                 className="text-gray-700 dark:text-gray-300 hover:text-red-600"
