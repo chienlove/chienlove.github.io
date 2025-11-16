@@ -565,7 +565,7 @@ export default function LoginButton({ onToggleTheme, isDark }) {
           </button>
 
           {menuOpen && (
-            <div className="absolute right-0 mt-2 w-64 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl overflow-hidden">
+            <div className="absolute right-0 mt-2 w-52 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl overflow-hidden">
               <div className="px-4 py-3 text-sm">
                 <div className="font-semibold">{user.displayName || 'Người dùng'}</div>
                 <div className="text-gray-500 truncate">{user.email}</div>
