@@ -559,9 +559,13 @@ export default function LoginButton({ onToggleTheme, isDark }) {
             ) : (
               <FontAwesomeIcon icon={faUserCircle} className="w-6 h-6" />
             )}
-            <svg className="w-3.5 h-3.5 opacity-75" viewBox="0 0 20 20">
-              <path d="M7 8l3 3 3-3" fill="currentColor" />
-            </svg>
+            <svg
+    className="w-4 h-4 ml-1 text-gray-500 dark:text-gray-300"
+    viewBox="0 0 20 20"
+    aria-hidden="true"
+  >
+    <path d="M6 8l4 4 4-4" fill="currentColor" />
+  </svg>
           </button>
 
           {menuOpen && (
