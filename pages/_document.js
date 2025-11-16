@@ -15,6 +15,7 @@ export default function Document() {
         <script src="https://the.gatekeeperconsent.com/cmp.min.js" data-cfasync="false"></script>
         <script src="https://www.ezojs.com/ezoic/sa.min.js" data-cfasync="false" async></script>
         <script dangerouslySetInnerHTML={{__html:'window.ezstandalone=window.ezstandalone||{};window.ezstandalone.cmd=window.ezstandalone.cmd||[];'}} />
+        <script dangerouslySetInnerHTML={{__html:`(function(){var started=false;function loadAdsense(){if(started||window.ezstandalone)return;started=true;var s=document.createElement('script');s.async=true;s.src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797';s.crossOrigin='anonymous';document.head.appendChild(s);}if(!window.ezstandalone){setTimeout(loadAdsense,3000);}})();`}} />
       </Head>
       <body className="antialiased bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
         <Main />
