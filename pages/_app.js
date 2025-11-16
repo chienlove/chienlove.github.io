@@ -1,6 +1,7 @@
 // pages/_app.js
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
+import Script from 'next/script';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import '../styles/globals.css';
@@ -12,24 +13,19 @@ function MyApp({ Component, pageProps }) {
   const [darkMode, setDarkMode] = useState(false);
   const router = useRouter();
 
-  // Dark mode init
   useEffect(() => {
     const savedMode = localStorage.getItem('darkMode') === 'true';
     setDarkMode(savedMode);
     document.documentElement.classList.toggle('dark', savedMode);
   }, []);
 
-  // ✅ Centralized Browser Error Logger
   useEffect(() => {
     if (process.env.NODE_ENV !== 'production') return;
-
     const sent = new WeakSet();
-
     const sendLog = (errorObj) => {
       try {
         if (!errorObj || sent.has(errorObj)) return;
         sent.add(errorObj);
-
         fetch('/api/log-client-error', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -42,68 +38,74 @@ function MyApp({ Component, pageProps }) {
         }).catch(() => {});
       } catch {}
     };
-
     const onError = (event) => sendLog(event.error);
     const onUnhandled = (event) => sendLog(event.reason);
-
     window.addEventListener('error', onError);
     window.addEventListener('unhandledrejection', onUnhandled);
-
     return () => {
       window.removeEventListener('error', onError);
       window.removeEventListener('unhandledrejection', onUnhandled);
     };
   }, []);
 
-  // ✅ Fix Safari BFCache an toàn: chặn BFCache + reload khi cần
   useEffect(() => {
     if (typeof window === 'undefined') return;
-
     const ua = navigator.userAgent || '';
     const isSafari = /Safari/.test(ua) && !/Chrome|Chromium|CriOS|Android/.test(ua);
     if (!isSafari) return;
-
-    // 1) Chặn BFCache trên Safari: chỉ cần đăng ký 'unload' (không làm gì cả)
     const noop = () => {};
     window.addEventListener('unload', noop);
-
-    // 2) Nếu vẫn quay lại từ BFCache, force reload an toàn
     const onPageShow = (e) => {
       if (e && e.persisted) {
         window.location.reload();
       }
     };
     window.addEventListener('pageshow', onPageShow);
-
     return () => {
       window.removeEventListener('unload', noop);
       window.removeEventListener('pageshow', onPageShow);
     };
   }, []);
 
-  // ✅ Tránh rehydrate lỗi khi back/forward giữa /admin và trang khác:
-  //    Nếu đang ở /admin hoặc điều hướng tới /admin qua nút back/forward,
-  //    chuyển sang hard navigation để đảm bảo trạng thái sạch.
   useEffect(() => {
     const isAdminPath = (p) => typeof p === 'string' && p.startsWith('/admin');
-
     const handler = ({ url, as }) => {
       const current = window.location.pathname;
       const goingTo = as || url || '';
       if (isAdminPath(current) || isAdminPath(goingTo)) {
-        // Hard load để tránh lỗi framework khi khôi phục từ lịch sử
         window.location.href = goingTo || '/admin';
-        return false; // chặn Next xử lý client-side
+        return false;
       }
       return true;
     };
-
     router.beforePopState(handler);
     return () => router.beforePopState(() => true);
   }, [router]);
 
   return (
     <>
+      <Script
+        id="ezoic-cmp-min"
+        src="https://cmp.gatekeeperconsent.com/min.js"
+        data-cfasync="false"
+        strategy="beforeInteractive"
+      />
+      <Script
+        id="ezoic-cmp"
+        src="https://the.gatekeeperconsent.com/cmp.min.js"
+        data-cfasync="false"
+        strategy="beforeInteractive"
+      />
+      <Script
+        id="ezoic-sa"
+        src="//www.ezojs.com/ezoic/sa.min.js"
+        strategy="beforeInteractive"
+      />
+      <Script id="ezoic-boot" strategy="beforeInteractive">{`
+        window.ezstandalone = window.ezstandalone || {};
+        window.ezstandalone.cmd = window.ezstandalone.cmd || [];
+      `}</Script>
+
       <Component {...pageProps} />
       <ToastContainer
         position="top-center"
