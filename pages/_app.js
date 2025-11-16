@@ -1,7 +1,5 @@
-// pages/_app.js
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import Script from 'next/script';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import '../styles/globals.css';
@@ -84,28 +82,6 @@ function MyApp({ Component, pageProps }) {
 
   return (
     <>
-      <Script
-        id="ezoic-cmp-min"
-        src="https://cmp.gatekeeperconsent.com/min.js"
-        data-cfasync="false"
-        strategy="beforeInteractive"
-      />
-      <Script
-        id="ezoic-cmp"
-        src="https://the.gatekeeperconsent.com/cmp.min.js"
-        data-cfasync="false"
-        strategy="beforeInteractive"
-      />
-      <Script
-        id="ezoic-sa"
-        src="//www.ezojs.com/ezoic/sa.min.js"
-        strategy="beforeInteractive"
-      />
-      <Script id="ezoic-boot" strategy="beforeInteractive">{`
-        window.ezstandalone = window.ezstandalone || {};
-        window.ezstandalone.cmd = window.ezstandalone.cmd || [];
-      `}</Script>
-
       <Component {...pageProps} />
       <ToastContainer
         position="top-center"
