@@ -11,11 +11,34 @@ export default function Document() {
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+
+        {/* Ezoic CMP + Header */}
         <script src="https://cmp.gatekeeperconsent.com/min.js" data-cfasync="false"></script>
         <script src="https://the.gatekeeperconsent.com/cmp.min.js" data-cfasync="false"></script>
         <script src="https://www.ezojs.com/ezoic/sa.min.js" data-cfasync="false" async></script>
-        <script dangerouslySetInnerHTML={{__html:'window.ezstandalone=window.ezstandalone||{};window.ezstandalone.cmd=window.ezstandalone.cmd||[];'}} />
-        <script dangerouslySetInnerHTML={{__html:`(function(){var started=false;function loadAdsense(){if(started||window.ezstandalone)return;started=true;var s=document.createElement('script');s.async=true;s.src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797';s.crossOrigin='anonymous';document.head.appendChild(s);}if(!window.ezstandalone){setTimeout(loadAdsense,3000);}})();`}} />
+        <script dangerouslySetInnerHTML={{__html:`
+          window.ezstandalone = window.ezstandalone || {};
+          window.ezstandalone.cmd = window.ezstandalone.cmd || [];
+          window.__EZOIC_READY = false;
+          window.ezstandalone.cmd.push(function(){ window.__EZOIC_READY = true; });
+        `}} />
+
+        {/* AdSense fallback: chỉ nạp nếu Ezoic không sẵn sàng sau 3s, hoặc khi thêm ?forceadsense=1 */}
+        <script dangerouslySetInnerHTML={{__html:`
+          (function(){
+            function loadAdsense(){
+              if(window.__ADSENSE_LOADED) return;
+              window.__ADSENSE_LOADED = true;
+              var s=document.createElement('script');
+              s.async=true;
+              s.src='https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797';
+              s.crossOrigin='anonymous';
+              document.head.appendChild(s);
+            }
+            if(/[?&]forceadsense=1/.test(window.location.search)){ loadAdsense(); return; }
+            setTimeout(function(){ if(!window.__EZOIC_READY) loadAdsense(); }, 3000);
+          })();
+        `}} />
       </Head>
       <body className="antialiased bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
         <Main />
