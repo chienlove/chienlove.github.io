@@ -13,7 +13,7 @@ export default function Document() {
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
         <script src="https://cmp.gatekeeperconsent.com/min.js" data-cfasync="false"></script>
         <script src="https://the.gatekeeperconsent.com/cmp.min.js" data-cfasync="false"></script>
-        <script src="https://www.ezojs.com/ezoic/sa.min.js"></script>
+        <script src="https://www.ezojs.com/ezoic/sa.min.js" data-cfasync="false" async></script>
         <script dangerouslySetInnerHTML={{__html:'window.ezstandalone=window.ezstandalone||{};window.ezstandalone.cmd=window.ezstandalone.cmd||[];'}} />
       </Head>
       <body className="antialiased bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
