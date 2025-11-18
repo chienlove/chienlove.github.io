@@ -149,7 +149,7 @@ jobs:
             echo "📌 New Identifier: $FINAL_ID"
 
             /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $FINAL_ID" "$MAIN_PLIST"
-            /usr/bin/perl -pi -e "s/\Q$OLD_ID\E/$FINAL_ID/" "$BINARY_PATH"
+            # /usr/bin/perl -pi -e "s/\Q$OLD_ID\E/$FINAL_ID/" "$BINARY_PATH"
 
             echo "$IPA|$FINAL_ID" >> id_map.txt
 
