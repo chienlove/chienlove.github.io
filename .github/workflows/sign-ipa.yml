@@ -175,12 +175,16 @@ jobs:
 
               NEW_SUB_ID=""
 
-              # 1) Nếu id con bằng hệt id chính cũ → đổi sang id chính mới
-              if [ "$SUB_ID" = "$OLD_ID" ]; then
+              # 1) Nếu id con bằng hệt id chính cũ hoặc base id → đổi sang id chính mới
+              if [ "$SUB_ID" = "$OLD_ID" ] || [ "$SUB_ID" = "$BASE_ID" ]; then
                 NEW_SUB_ID="$FINAL_ID"
               # 2) Nếu id con dạng OLD_ID.suffix → đổi thành FINAL_ID.suffix
               elif [[ "$SUB_ID" == "$OLD_ID."* ]]; then
                 SUFFIX="${SUB_ID#$OLD_ID}"
+                NEW_SUB_ID="${FINAL_ID}${SUFFIX}"
+              # 3) Nếu id con dạng BASE_ID.suffix → đổi thành FINAL_ID.suffix
+              elif [[ "$SUB_ID" == "$BASE_ID."* ]]; then
+                SUFFIX="${SUB_ID#$BASE_ID}"
                 NEW_SUB_ID="${FINAL_ID}${SUFFIX}"
               fi
 
