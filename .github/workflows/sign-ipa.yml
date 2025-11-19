@@ -125,9 +125,12 @@ jobs:
             BINARY_NAME=$(/usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$MAIN_PLIST")
             BINARY_PATH="$APP_DIR/$BINARY_NAME"
 
+            # Bundle ID gốc của app chính
             OLD_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$MAIN_PLIST")
+            # Bỏ hậu tố -storeios.net-xxxx nếu đã ký bằng hệ thống này trước đó
             BASE_ID=$(echo "$OLD_ID" | sed -E 's/-storeios\.net(-[a-f0-9]+)?$//')
 
+            # Xác định FINAL_ID
             if [ -z "$INPUT_IDENTIFIER" ]; then
               FINAL_ID="${BASE_ID}-storeios.net-${RAND}"
             else
@@ -148,8 +151,46 @@ jobs:
             echo "🔍 OLD Identifier: $OLD_ID"
             echo "📌 New Identifier: $FINAL_ID"
 
+            # Đổi bundle id app chính
             /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $FINAL_ID" "$MAIN_PLIST"
             # /usr/bin/perl -pi -e "s/\Q$OLD_ID\E/$FINAL_ID/" "$BINARY_PATH"
+
+            echo "🔎 Scanning sub-bundles (extensions, widgets, watch, ...)"
+
+            # Duyệt tất cả Info.plist bên trong .app (kể cả PlugIns/*.appex, Watch/*.app, ...)
+            while IFS= read -r PLIST_PATH; do
+              if [ ! -f "$PLIST_PATH" ]; then
+                continue
+              fi
+
+              # Bỏ qua main plist (đã xử lý ở trên)
+              if [ "$PLIST_PATH" = "$MAIN_PLIST" ]; then
+                continue
+              fi
+
+              SUB_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$PLIST_PATH" 2>/dev/null || echo "")
+              if [ -z "$SUB_ID" ]; then
+                continue
+              fi
+
+              NEW_SUB_ID=""
+
+              # 1) Nếu id con bằng hệt id chính cũ → đổi sang id chính mới
+              if [ "$SUB_ID" = "$OLD_ID" ]; then
+                NEW_SUB_ID="$FINAL_ID"
+              # 2) Nếu id con dạng OLD_ID.suffix → đổi thành FINAL_ID.suffix
+              elif [[ "$SUB_ID" == "$OLD_ID."* ]]; then
+                SUFFIX="${SUB_ID#$OLD_ID}"
+                NEW_SUB_ID="${FINAL_ID}${SUFFIX}"
+              fi
+
+              if [ -n "$NEW_SUB_ID" ]; then
+                /usr/libexec/PlistBuddy -c "Set :CFBundleIdentifier $NEW_SUB_ID" "$PLIST_PATH"
+                echo "   🔧 Patched bundle id: $SUB_ID -> $NEW_SUB_ID (plist: $PLIST_PATH)"
+              else
+                echo "   ℹ️ Keep sub-bundle ID unchanged: $SUB_ID"
+              fi
+            done < <(find "$APP_DIR" -name "Info.plist" -type f)
 
             echo "$IPA|$FINAL_ID" >> id_map.txt
 
@@ -272,7 +313,10 @@ jobs:
           git add secure/plist/*.plist || true
 
           # Commit only if there is something to commit
-          if git diff --cached --quiet; then
+          if git diff --cached
+           
+
+ quiet; then
             echo "No new icons or plist changes to commit."
           else
             git commit -m "🤖 Update plist & icon for tag $TAG" || echo "No changes to commit"
