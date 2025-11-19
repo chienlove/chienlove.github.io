@@ -313,10 +313,7 @@ jobs:
           git add secure/plist/*.plist || true
 
           # Commit only if there is something to commit
-          if git diff --cached
-           
-
- quiet; then
+          if git diff --cached --quiet; then
             echo "No new icons or plist changes to commit."
           else
             git commit -m "🤖 Update plist & icon for tag $TAG" || echo "No changes to commit"
