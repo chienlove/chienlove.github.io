@@ -127,7 +127,7 @@ export default function AboutPage() {
             yêu cầu gỡ bỏ nội dung, vui lòng liên hệ:
           </p>
           <ul className="list-disc list-inside space-y-1">
-            <li>Email: <span className="font-mono">[thay-bang-email-cua-ban]@gmail.com</span></li>
+            <li>Email: <span className="font-mono">admin@storeios.net</span></li>
             <li>Tiêu đề gợi ý: <em>Yêu cầu hỗ trợ / Gỡ nội dung - storeios.net</em></li>
           </ul>
           <p>

@@ -178,7 +178,7 @@ export default function TermsPage() {
           <h2 className="text-2xl font-semibold">10. Liên hệ</h2>
           <p>Nếu bạn có câu hỏi liên quan đến Điều khoản sử dụng, vui lòng liên hệ:</p>
           <ul className="list-disc list-inside space-y-1">
-            <li>Email: <span className="font-mono">[thay-bang-email-cua-ban]@gmail.com</span></li>
+            <li>Email: <span className="font-mono">admin@storeios.net</span></li>
             <li>Tiêu đề gợi ý: <em>Hỏi đáp / Khiếu nại về Điều khoản sử dụng - storeios.net</em></li>
           </ul>
           <p>Chúng tôi sẽ cố gắng phản hồi trong thời gian sớm nhất có thể.</p>
