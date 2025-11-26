@@ -302,6 +302,10 @@ export default function Detail({ serverApp, serverRelated }) {
     return src.startsWith('http') ? src : `https://storeios.net${src}`;
   };
 
+  const canonicalUrl = useMemo(() => `https://storeios.net/${app?.slug || ''}`, [app?.slug]);
+  const absOg = useMemo(() => toAbs(app?.icon_url || '/og-default.png'), [app?.icon_url]);
+  const absIcon = useMemo(() => toAbs(iconSrc), [iconSrc]);
+
   // Pagination
   const PAGE_SIZE = 5;
   const [relPage, setRelPage] = useState(1);
@@ -417,27 +421,37 @@ export default function Detail({ serverApp, serverRelated }) {
     return { title: generateTitle(), description: generateDescription(), keywords: generateKeywords() };
   }, [app, isTestflight, categorySlug, displaySize]);
 
-  // ===================== STRUCTURED DATA =====================
+  // ===================== STRUCTURED DATA (SEO CLEAN) =====================
   const structuredData = useMemo(() => {
     if (!app) return null;
 
-    return {
+    const data = {
       "@context": "https://schema.org",
       "@type": "SoftwareApplication",
       "name": app.name,
       "applicationCategory": "SoftwareApplication",
       "operatingSystem": "iOS",
       "description": dynamicMetaTags?.description || '',
-      "image": app.icon_url,
-      "author": { "@type": "Organization", "name": app.author },
-      "datePublished": app.release_date,
-      "softwareVersion": app.version,
-      "fileSize": displaySize,
+      "image": absOg,
+      "datePublished": app.release_date || undefined,
+      "softwareVersion": app.version || undefined,
+      "fileSize": displaySize || undefined,
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
     };
-  }, [app, dynamicMetaTags, displaySize]);
 
-  // ===================== BREADCRUMB STRUCTURED DATA =====================
+    if (app.author) {
+      data.author = { "@type": "Organization", "name": app.author };
+    }
+
+    // remove empty
+    Object.keys(data).forEach((k) => {
+      if (data[k] === null || data[k] === undefined || data[k] === '') delete data[k];
+    });
+
+    return data;
+  }, [app, dynamicMetaTags, displaySize, absOg]);
+
+  // ===================== BREADCRUMB STRUCTURED DATA (FIX LAST ITEM URL) =====================
   const breadcrumbStructuredData = useMemo(() => {
     if (!app) return null;
 
@@ -457,7 +471,8 @@ export default function Detail({ serverApp, serverRelated }) {
     itemListElement.push({
       "@type": "ListItem",
       "position": itemListElement.length + 1,
-      "name": app.name
+      "name": app.name,
+      "item": canonicalUrl
     });
 
     return {
@@ -465,7 +480,7 @@ export default function Detail({ serverApp, serverRelated }) {
       "@type": "BreadcrumbList",
       "itemListElement": itemListElement
     };
-  }, [app]);
+  }, [app, canonicalUrl]);
 
   // Auth
   useEffect(() => {
@@ -678,50 +693,39 @@ export default function Detail({ serverApp, serverRelated }) {
     );
   }
 
-  const absIcon = toAbs(iconSrc);
-  const absOg = toAbs(app.icon_url || '/og-default.png');
-
   return (
     <Layout fullWidth>
       {/* ===================== SEO META TAGS ===================== */}
       <Head>
-  {/* ✅ Base SEO - Dùng dynamicMetaTags fallback */}
-  <title>{dynamicMetaTags?.title || `${app.name} - StoreiOS`}</title>
-  <meta name="description" content={dynamicMetaTags?.description || app.description?.slice(0, 160)} />
-  <meta name="keywords" content={dynamicMetaTags?.keywords || 'iOS, TestFlight, Jailbreak, StoreiOS'} />
+        <title>{dynamicMetaTags?.title || `${app.name} - StoreiOS`}</title>
+        <meta name="description" content={dynamicMetaTags?.description || app.description?.slice(0, 160)} />
+        <meta name="keywords" content={dynamicMetaTags?.keywords || 'iOS, TestFlight, Jailbreak, StoreiOS'} />
 
-  {/* ✅ Open Graph - DÙNG URL GỐC CHO ẢNH */}
-  <meta property="og:title" content={dynamicMetaTags?.title || app.name} />
-  <meta property="og:description" content={dynamicMetaTags?.description || app.description?.slice(0, 160)} />
-  
-  {/* 🔥 FIX: Dùng URL trực tiếp, không qua /_next/image */}
-  <meta property="og:image" content={app.icon_url || 'https://storeios.net/og-default.png'} />
-  <meta property="og:image:secure_url" content={app.icon_url || 'https://storeios.net/og-default.png'} />
-  <meta property="og:image:alt" content={`Icon của ứng dụng ${app.name}`} />
-  <meta property="og:image:type" content="image/png" />
-  <meta property="og:image:width" content="512" />
-  <meta property="og:image:height" content="512" />
-  
-  <meta property="og:url" content={`https://storeios.net/${app.slug}`} />
-  <meta property="og:type" content="article" />
-  <meta property="og:site_name" content="StoreiOS" />
-  <meta property="og:locale" content="vi_VN" />
+        {/* Open Graph */}
+        <meta property="og:title" content={dynamicMetaTags?.title || app.name} />
+        <meta property="og:description" content={dynamicMetaTags?.description || app.description?.slice(0, 160)} />
+        <meta property="og:image" content={absOg} />
+        <meta property="og:image:secure_url" content={absOg} />
+        <meta property="og:image:alt" content={`Icon của ứng dụng ${app.name}`} />
+        <meta property="og:url" content={canonicalUrl} />
+        <meta property="og:type" content="article" />
+        <meta property="og:site_name" content="StoreiOS" />
+        <meta property="og:locale" content="vi_VN" />
 
-  {/* ✅ Twitter Card */}
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content={dynamicMetaTags?.title || app.name} />
-  <meta name="twitter:description" content={dynamicMetaTags?.description || app.description?.slice(0, 160)} />
-  <meta name="twitter:image" content={app.icon_url || 'https://storeios.net/og-default.png'} />
-  <meta name="twitter:site" content="@storeios" />
+        {/* Twitter */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={dynamicMetaTags?.title || app.name} />
+        <meta name="twitter:description" content={dynamicMetaTags?.description || app.description?.slice(0, 160)} />
+        <meta name="twitter:image" content={absOg} />
+        <meta name="twitter:site" content="@storeios" />
 
-  {/* ✅ Canonical */}
-  <link rel="canonical" href={`https://storeios.net/${app.slug}`} />
+        {/* Canonical */}
+        <link rel="canonical" href={canonicalUrl} />
 
-  {/* ✅ Preload icon chính (vẫn dùng để tối ưu UI) */}
-  <link rel="preload" href={absIcon} as="image" />
-  {app.screenshots?.[0] && <link rel="preload" href={toAbs(app.screenshots[0])} as="image" />}
-</Head>
-
+        {/* Preload icon/screenshot */}
+        <link rel="preload" href={absIcon} as="image" />
+        {app.screenshots?.[0] && <link rel="preload" href={toAbs(app.screenshots[0])} as="image" />}
+      </Head>
 
       {/* ===================== STRUCTURED DATA ===================== */}
       {structuredData && (
@@ -837,7 +841,7 @@ export default function Detail({ serverApp, serverRelated }) {
                           <>
                             <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 01 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
                             Đang xử lý…
                           </>
@@ -859,7 +863,7 @@ export default function Detail({ serverApp, serverRelated }) {
                           <>
                             <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 01 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                             </svg>
                             Đang tạo…
                           </>
