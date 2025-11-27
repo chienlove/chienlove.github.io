@@ -1133,7 +1133,7 @@ export default function Detail({ serverApp, serverRelated }) {
             </div>
           )}
 
-          {/* Quảng cáo (bottom) */}
+          {/* Quảng cáo */}
           <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
             <div className="text-[11px] uppercase tracking-wider text-gray-400 mb-2 text-center">Quảng cáo</div>
             <AdUnit desktopMode="unit" mobileVariant="multiplex" />
