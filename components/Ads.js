@@ -31,32 +31,42 @@ export default function AdUnit({
       const list = Array.from(root.querySelectorAll('ins.adsbygoogle'));
       if (!list.length) return;
 
-      // Chỉ xử lý các ins:
-      // - Đang hiển thị
-      // - Chưa có data-ad-status = filled/done (AdSense đã fill quảng cáo)
-      // - Chưa bị mình đánh dấu init (data-ad-init !== '1')
-      const candidates = list.filter((ins) => {
-        if (ins.offsetParent === null) return false;
+      // Chỉ xử lý các ins đang thực sự hiển thị (không display:none)
+      const visible = list.filter(
+        (ins) => ins.offsetParent !== null && ins.dataset.adLoaded !== '1'
+      );
+      if (!visible.length) return;
 
-        const status = ins.getAttribute('data-ad-status');
-        if (status === 'filled' || status === 'done') return false;
+      // Lọc tiếp theo chiều rộng thực tế
+      const ready = visible.filter((ins) => {
+        const rect = ins.getBoundingClientRect?.();
+        const width =
+          (rect && rect.width) ||
+          ins.parentElement?.getBoundingClientRect?.().width ||
+          0;
 
-        if (ins.dataset.adInit === '1') return false;
+        const format = (ins.getAttribute('data-ad-format') || '').toLowerCase();
+        const isFluid = format === 'fluid' || format === 'autorelaxed';
 
+        // Với fluid / autorelaxed AdSense yêu cầu >= 250px
+        const minWidth = isFluid ? 250 : 10;
+
+        if (width < minWidth) {
+          // Chưa đủ rộng, để lần resize sau xử lý tiếp
+          return false;
+        }
         return true;
       });
 
-      if (!candidates.length) return;
+      if (!ready.length) return;
 
-      if (!w.adsbygoogle) {
-        w.adsbygoogle = [];
-      }
+      if (!w.adsbygoogle) return;
 
       try {
-        w.adsbygoogle.push({});
-        // Đánh dấu đã init để tránh push nhiều lần
-        candidates.forEach((ins) => {
-          ins.dataset.adInit = '1';
+        // Mỗi lần push sẽ khởi tạo cho tất cả ins chưa loaded
+        (w.adsbygoogle = w.adsbygoogle || []).push({});
+        ready.forEach((ins) => {
+          ins.dataset.adLoaded = '1';
         });
       } catch (e) {
         // Không throw để khỏi phá UI
@@ -80,7 +90,7 @@ export default function AdUnit({
     window.addEventListener('resize', onResize);
 
     // fallback: thử 1 lần ngay sau mount
-    const t = setTimeout(pushIfNeeded, 50);
+    const t = setTimeout(pushIfNeeded, 80);
 
     return () => {
       disposed = true;
@@ -92,7 +102,7 @@ export default function AdUnit({
 
   const isCompact = mobileVariant === 'compact';
 
-  // In-article
+  // In-article (fluid)
   if (isArticleAd) {
     return (
       <div ref={wrapperRef} className={`w-full ${className} flex justify-center py-2`}>
