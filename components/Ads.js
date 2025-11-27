@@ -31,16 +31,33 @@ export default function AdUnit({
       const list = Array.from(root.querySelectorAll('ins.adsbygoogle'));
       if (!list.length) return;
 
-      // Chỉ xử lý các ins đang thực sự hiển thị (không display:none)
-      const visible = list.filter((ins) => ins.offsetParent !== null && ins.dataset.adLoaded !== '1');
-      if (!visible.length) return;
+      // Chỉ xử lý các ins:
+      // - Đang hiển thị
+      // - Chưa có data-ad-status = filled/done (AdSense đã fill quảng cáo)
+      // - Chưa bị mình đánh dấu init (data-ad-init !== '1')
+      const candidates = list.filter((ins) => {
+        if (ins.offsetParent === null) return false;
 
-      if (!w.adsbygoogle) return;
+        const status = ins.getAttribute('data-ad-status');
+        if (status === 'filled' || status === 'done') return false;
+
+        if (ins.dataset.adInit === '1') return false;
+
+        return true;
+      });
+
+      if (!candidates.length) return;
+
+      if (!w.adsbygoogle) {
+        w.adsbygoogle = [];
+      }
 
       try {
-        (w.adsbygoogle = w.adsbygoogle || []).push({});
-        // Đánh dấu đã init để tránh push spam khi re-render
-        visible.forEach((ins) => (ins.dataset.adLoaded = '1'));
+        w.adsbygoogle.push({});
+        // Đánh dấu đã init để tránh push nhiều lần
+        candidates.forEach((ins) => {
+          ins.dataset.adInit = '1';
+        });
       } catch (e) {
         // Không throw để khỏi phá UI
         console.warn('Adsense push error:', e);
