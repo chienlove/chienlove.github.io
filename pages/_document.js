@@ -5,6 +5,7 @@ export default function Document() {
   return (
     <Html lang="vi" className="scroll-smooth">
       <Head>
+        {/* Cơ bản */}
         <meta
           name="viewport"
           content="width=device-width, initial-scale=1, viewport-fit=cover"
@@ -12,7 +13,7 @@ export default function Document() {
         <meta name="theme-color" content="#111827" />
         <meta name="color-scheme" content="dark light" />
 
-        {/* AdSense – chỉ dùng thủ công, KHÔNG overlay/auto-ads */}
+        {/* AdSense – chỉ dùng thủ công, KHÔNG overlay/auto-ads đặc biệt */}
         <meta
           name="google-adsense-account"
           content="ca-pub-3905625903416797"
