@@ -4,7 +4,6 @@
 import { useEffect, useRef } from 'react';
 
 // Hàm helper để gọi window.adsbygoogle.push({})
-// Đặt riêng để dễ bảo trì và sử dụng.
 function pushAdsense() {
   try {
     const w = window;
@@ -12,7 +11,8 @@ function pushAdsense() {
       w.adsbygoogle.push({});
     }
   } catch (e) {
-    console.error('Adsense push error (global):', e);
+    // Sửa lỗi console.log(null) bằng cách kiểm tra e trước khi log
+    console.error('Adsense push error (global):', e ? e : 'Unknown AdSense push error'); 
   }
 }
 
