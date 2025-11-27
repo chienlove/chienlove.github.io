@@ -28,10 +28,10 @@ const HotAppItem = ({ app, onClick }) => {
       whileTap={{ scale: 0.96 }}
       onClick={() => onClick(app.name)}
       title={app.name}
-      className="flex-shrink-0 cursor-pointer group"
+      className="cursor-pointer group w-20"
     >
       <div
-        className="w-16 h-16 md:w-18 md:h-18 rounded-2xl overflow-hidden
+        className="w-20 h-20 rounded-2xl overflow-hidden mx-auto
                    bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-700
                    flex items-center justify-center shadow-lg
                    group-hover:shadow-2xl group-hover:ring-4 group-hover:ring-blue-400/30
@@ -50,7 +50,7 @@ const HotAppItem = ({ app, onClick }) => {
           </span>
         )}
       </div>
-      <span className="block mt-2.5 text-xs font-semibold text-gray-700 dark:text-gray-200 text-center truncate w-16 md:w-18">
+      <span className="block mt-2.5 text-xs font-semibold text-gray-700 dark:text-gray-200 text-center truncate w-20 px-1">
         {app.name}
       </span>
     </motion.div>
@@ -211,12 +211,12 @@ export default function SearchModal({
                 </div>
               </div>
 
-              {/* Filters Section - Fixed to prevent wrapping */}
+              {/* Filters Section - Fixed Grid Layout */}
               <div className="px-6 py-4 border-y border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/50">
-                <div className="flex items-center gap-3">
+                <div className="grid grid-cols-2 gap-3">
                   
                   {/* Category Dropdown */}
-                  <div className="relative flex-1 min-w-0">
+                  <div className="relative">
                     <FontAwesomeIcon 
                       icon={faFilter} 
                       className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400 pointer-events-none z-10" 
@@ -224,7 +224,7 @@ export default function SearchModal({
                     <select
                       value={activeCategory}
                       onChange={(e) => setCategory(e.target.value)}
-                      className="w-full bg-white dark:bg-gray-700 rounded-xl pl-10 pr-10 py-2.5 text-sm
+                      className="w-full bg-white dark:bg-gray-700 rounded-xl pl-10 pr-9 py-2.5 text-sm
                                border-2 border-gray-200 dark:border-gray-600 
                                focus:border-blue-500 dark:focus:border-blue-400
                                focus:ring-2 focus:ring-blue-500/10 dark:focus:ring-blue-400/10
@@ -246,7 +246,7 @@ export default function SearchModal({
                   </div>
 
                   {/* Sort By Dropdown */}
-                  <div className="relative flex-1 min-w-0">
+                  <div className="relative">
                     <FontAwesomeIcon 
                       icon={faSort} 
                       className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 dark:text-gray-400 pointer-events-none z-10" 
@@ -254,7 +254,7 @@ export default function SearchModal({
                     <select
                       value={sortBy}
                       onChange={(e) => setSortBy(e.target.value)}
-                      className="w-full bg-white dark:bg-gray-700 rounded-xl pl-10 pr-10 py-2.5 text-sm
+                      className="w-full bg-white dark:bg-gray-700 rounded-xl pl-10 pr-9 py-2.5 text-sm
                                border-2 border-gray-200 dark:border-gray-600 
                                focus:border-blue-500 dark:focus:border-blue-400
                                focus:ring-2 focus:ring-blue-500/10 dark:focus:ring-blue-400/10
@@ -288,7 +288,7 @@ export default function SearchModal({
                             Ứng dụng nổi bật
                           </h3>
                         </div>
-                        <div className="flex flex-wrap justify-center gap-6 px-2">
+                        <div className="grid grid-cols-4 md:grid-cols-5 gap-4 justify-items-center py-2">
                           {hotApps.slice(0, 10).map((app) => (
                             <HotAppItem
                               key={app.id}
@@ -355,4 +355,3 @@ export default function SearchModal({
       )}
     </AnimatePresence>
   );
-}
