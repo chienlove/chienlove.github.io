@@ -5,15 +5,20 @@ export default function Document() {
   return (
     <Html lang="vi" className="scroll-smooth">
       <Head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, viewport-fit=cover"
+        />
         <meta name="theme-color" content="#111827" />
         <meta name="color-scheme" content="dark light" />
 
-        {/* AdSense */}
-        <meta name="google-adsense-account" content="ca-pub-3905625903416797" />
+        {/* AdSense – chỉ dùng thủ công, KHÔNG overlay/auto-ads */}
+        <meta
+          name="google-adsense-account"
+          content="ca-pub-3905625903416797"
+        />
         <script
           async
-          data-overlays="bottom"
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797"
           crossOrigin="anonymous"
         />
@@ -21,8 +26,17 @@ export default function Document() {
         {/* Icons */}
         <link rel="icon" type="image/x-icon" href="/favicon.ico" />
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
-        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+        <link
+          rel="icon"
+          type="image/png"
+          sizes="16x16"
+          href="/favicon-16x16.png"
+        />
+        <link
+          rel="apple-touch-icon"
+          sizes="180x180"
+          href="/apple-touch-icon.png"
+        />
       </Head>
 
       <body className="antialiased bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">

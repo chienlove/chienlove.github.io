@@ -7,7 +7,7 @@ export default function AdUnit({
   className = '',
   mobileVariant = 'compact',        // 'compact' | 'multiplex'
   mobileSlot1 = '5160182988',       // 300x250
-  mobileSlot2 = '7109430646',       // multiplex / autorelaxed
+  mobileSlot2 = '7109430646',       // "multiplex" nhưng ta render dạng auto
   desktopMode = 'auto',             // 'auto' | 'unit'
   desktopSlot = '4575220124',
 
@@ -31,13 +31,13 @@ export default function AdUnit({
       const list = Array.from(root.querySelectorAll('ins.adsbygoogle'));
       if (!list.length) return;
 
-      // Chỉ xử lý các ins đang thực sự hiển thị (không display:none)
+      // Chỉ xử lý các ins đang thực sự hiển thị và chưa load
       const visible = list.filter(
         (ins) => ins.offsetParent !== null && ins.dataset.adLoaded !== '1'
       );
       if (!visible.length) return;
 
-      // Lọc tiếp theo chiều rộng thực tế
+      // Đảm bảo container đủ rộng (tránh availableWidth = 0)
       const ready = visible.filter((ins) => {
         const rect = ins.getBoundingClientRect?.();
         const width =
@@ -45,31 +45,21 @@ export default function AdUnit({
           ins.parentElement?.getBoundingClientRect?.().width ||
           0;
 
-        const format = (ins.getAttribute('data-ad-format') || '').toLowerCase();
-        const isFluid = format === 'fluid' || format === 'autorelaxed';
-
-        // Với fluid / autorelaxed AdSense yêu cầu >= 250px
-        const minWidth = isFluid ? 250 : 10;
-
-        if (width < minWidth) {
-          // Chưa đủ rộng, để lần resize sau xử lý tiếp
-          return false;
-        }
-        return true;
+        // Tối thiểu 120px cho an toàn (không dùng fluid nữa nên không cần 250)
+        return width >= 120;
       });
 
       if (!ready.length) return;
-
-      if (!w.adsbygoogle) return;
+      if (!w.adsbygoogle) {
+        w.adsbygoogle = [];
+      }
 
       try {
-        // Mỗi lần push sẽ khởi tạo cho tất cả ins chưa loaded
-        (w.adsbygoogle = w.adsbygoogle || []).push({});
+        w.adsbygoogle.push({});
         ready.forEach((ins) => {
           ins.dataset.adLoaded = '1';
         });
       } catch (e) {
-        // Không throw để khỏi phá UI
         console.warn('Adsense push error:', e);
       }
     };
@@ -85,16 +75,12 @@ export default function AdUnit({
 
     io.observe(root);
 
-    // Nếu user xoay màn hình / resize làm đổi breakpoint
     const onResize = () => pushIfNeeded();
     window.addEventListener('resize', onResize);
 
-    // fallback: thử 1 lần ngay sau mount
-    const t = setTimeout(pushIfNeeded, 80);
-
+    // Không push ngay khi mount, đợi IO/resize để tránh width=0
     return () => {
       disposed = true;
-      clearTimeout(t);
       window.removeEventListener('resize', onResize);
       io.disconnect();
     };
@@ -102,16 +88,19 @@ export default function AdUnit({
 
   const isCompact = mobileVariant === 'compact';
 
-  // In-article (fluid)
+  // In-article: dùng auto, không fluid
   if (isArticleAd) {
     return (
-      <div ref={wrapperRef} className={`w-full ${className} flex justify-center py-2`}>
+      <div
+        ref={wrapperRef}
+        className={`w-full ${className} flex justify-center py-2`}
+      >
         <ins
           className="adsbygoogle"
           style={{ display: 'block', textAlign: 'center' }}
           data-ad-client="ca-pub-3905625903416797"
           data-ad-slot={inArticleSlot}
-          data-ad-format="fluid"
+          data-ad-format="auto"
           data-full-width-responsive="true"
         />
       </div>
@@ -139,7 +128,7 @@ export default function AdUnit({
               style={{ display: 'block' }}
               data-ad-client="ca-pub-3905625903416797"
               data-ad-slot={mobileSlot2}
-              data-ad-format="autorelaxed"
+              data-ad-format="auto"
               data-full-width-responsive="true"
             />
           </div>
