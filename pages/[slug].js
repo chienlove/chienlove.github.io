@@ -1,4 +1,3 @@
-// pages/[slug].js
 import { supabase } from '../lib/supabase';
 import Layout from '../components/Layout';
 import { useRouter } from 'next/router';
@@ -9,6 +8,7 @@ import { auth } from '../lib/firebase-client';
 import { sendEmailVerification } from 'firebase/auth';
 import Head from 'next/head';
 import Image from 'next/image';
+import AdUnit from '../components/Ads';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faDownload,
@@ -951,6 +951,11 @@ export default function Detail({ serverApp, serverRelated }) {
             </div>
           </div>
 
+          {/* Quảng cáo (thủ công) */}
+          <div className="bg-white dark:bg-zinc-900 rounded-xl p-3 shadow">
+            <AdUnit className="my-0" mobileVariant="compact" desktopMode="unit" />
+          </div>
+
           {/* Mô tả */}
           <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
             <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-3">Mô tả</h2>
@@ -996,6 +1001,11 @@ export default function Detail({ serverApp, serverRelated }) {
                 {showFullDescription ? 'Thu gọn' : 'Xem thêm...'}
               </button>
             )}
+          </div>
+
+          {/* Quảng cáo trong bài (thủ công) */}
+          <div className="bg-white dark:bg-zinc-900 rounded-xl p-3 shadow">
+            <AdUnit className="my-0" isArticleAd desktopMode="unit" />
           </div>
 
           {/* Screenshots */}
@@ -1119,6 +1129,11 @@ export default function Detail({ serverApp, serverRelated }) {
               </div>
             </div>
           )}
+
+          {/* Quảng cáo (thủ công) */}
+          <div className="bg-white dark:bg-zinc-900 rounded-xl p-3 shadow">
+            <AdUnit className="my-0" mobileVariant="multiplex" desktopMode="unit" />
+          </div>
 
           {/* Bình luận */}
           <Comments postId={app.slug} postTitle={app.name} />
