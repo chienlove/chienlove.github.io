@@ -11,7 +11,7 @@ function pushAdsense() {
       w.adsbygoogle.push({});
     }
   } catch (e) {
-    // Sửa lỗi console.log(null) bằng cách kiểm tra e trước khi log
+    // Giữ nguyên fix để tránh log lỗi 'null' từ catch block
     console.error('Adsense push error (global):', e ? e : 'Unknown AdSense push error'); 
   }
 }
@@ -38,7 +38,7 @@ export default function AdUnit({
     let observer = null;
 
     const pushIfNeeded = () => {
-      if (disposed) return; // Không làm gì nếu component đã bị hủy
+      if (disposed) return;
       if (typeof window === 'undefined') return;
 
       const list = Array.from(root.querySelectorAll('ins.adsbygoogle'));
@@ -46,18 +46,23 @@ export default function AdUnit({
 
       // 1. Chỉ xử lý các ins đang thực sự hiển thị và chưa load
       const visible = list.filter(
-        // offsetParent !== null: Đảm bảo phần tử không bị display: none
+        // Đảm bảo phần tử không bị display: none
         (ins) => ins.offsetParent !== null && ins.dataset.adLoaded !== '1'
       );
       
       if (!visible.length) return;
 
-      // 2. Sửa lỗi triệt để cho "No slot size for availableWidth=0"
-      // Phải có width VÀ height > 0 cho responsive ads.
+      // 2. Sửa lỗi triệt để cho "No slot size for availableWidth=0" VÀ FIX LỖI DESKTOP
+      // Chỉ cần kiểm tra width > 0.
       const ready = visible.filter((ins) => {
-        const rect = ins.getBoundingClientRect?.();
-        // Kiểm tra width VÀ height phải lớn hơn 0
-        return rect && rect.width > 0 && rect.height > 0;
+        // Tăng cường kiểm tra null/undefined trước khi gọi getBoundingClientRect
+        if (!ins.getBoundingClientRect) return false; 
+        
+        const rect = ins.getBoundingClientRect();
+        
+        // **FIX:** Đối với quảng cáo responsive/auto, chỉ cần kiểm tra width > 0 
+        // để tránh lỗi availableWidth=0. KHÔNG cần check height > 0 vì AdSense sẽ tự tính height.
+        return rect.width > 0;
       });
       
       if (!ready.length) return; // KHÔNG push nếu chưa có kích thước hợp lệ
@@ -68,43 +73,35 @@ export default function AdUnit({
         ins.dataset.adLoaded = '1';
       });
       
-      // Push chung: AdSense script sẽ tự tìm các phần tử `ins` mới được đánh dấu
+      // Push chung
       pushAdsense();
     };
 
     // --- Khởi tạo và Cleanup ---
     
-    // Sử dụng ResizeObserver để theo dõi khi kích thước thay đổi (từ 0 lên > 0)
-    // Đây là fix triệt để cho lỗi availableWidth=0 trong các component ẩn/hiện.
     if (typeof window !== 'undefined' && 'ResizeObserver' in window) {
       observer = new ResizeObserver(() => {
-        pushIfNeeded(); // Gọi lại khi kích thước thay đổi
+        pushIfNeeded();
       });
       
-      // Theo dõi tất cả các ins elements
       const insElements = root.querySelectorAll('ins.adsbygoogle');
       insElements.forEach(ins => observer.observe(ins));
     }
 
-    // Luôn chạy lần đầu tiên sau khi component mount
     pushIfNeeded();
     
-    // Cleanup function: Rất quan trọng trong React/Next.js
     return () => {
-      disposed = true; // Ngăn chặn lệnh push bị trì hoãn
+      disposed = true;
       if (observer) {
-        observer.disconnect(); // Ngừng theo dõi
+        observer.disconnect();
       }
       
-      // Tùy chọn: Xóa data-ad-loaded khi component unmount
-      // Giúp đảm bảo ad có thể load lại nếu component bị unmount/mount lại nhanh
       const insElements = root.querySelectorAll('ins.adsbygoogle');
       insElements.forEach(ins => {
          delete ins.dataset.adLoaded;
       });
     };
   }, [
-    // Dependency list giữ nguyên
     mobileVariant,
     mobileSlot1,
     mobileSlot2,
