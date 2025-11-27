@@ -1,3 +1,4 @@
+// pages/_document.js
 import { Html, Head, Main, NextScript } from 'next/document';
 
 export default function Document() {
@@ -12,9 +13,10 @@ export default function Document() {
         <meta name="google-adsense-account" content="ca-pub-3905625903416797" />
         <script
           async
+          data-overlays="bottom"
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797"
           crossOrigin="anonymous"
-        ></script>
+        />
 
         {/* Icons */}
         <link rel="icon" type="image/x-icon" href="/favicon.ico" />
@@ -22,6 +24,7 @@ export default function Document() {
         <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
       </Head>
+
       <body className="antialiased bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
         <Main />
         <NextScript />

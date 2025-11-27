@@ -1,3 +1,4 @@
+// pages/[slug].js
 import { supabase } from '../lib/supabase';
 import Layout from '../components/Layout';
 import { useRouter } from 'next/router';
@@ -885,6 +886,12 @@ export default function Detail({ serverApp, serverRelated }) {
         {/* Nội dung dưới */}
         <div className="max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 mt-6 space-y-6 overflow-x-hidden">
 
+          {/* Quảng cáo (top) */}
+          <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
+            <div className="text-[11px] uppercase tracking-wider text-gray-400 mb-2 text-center">Quảng cáo</div>
+            <AdUnit desktopMode="unit" mobileVariant="compact" />
+          </div>
+
           {/* Info cards */}
           <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow text-center">
             <div className="-mx-2 overflow-x-auto sm:overflow-visible px-2">
@@ -951,11 +958,6 @@ export default function Detail({ serverApp, serverRelated }) {
             </div>
           </div>
 
-          {/* Quảng cáo (thủ công) */}
-          <div className="bg-white dark:bg-zinc-900 rounded-xl p-3 shadow">
-            <AdUnit className="my-0" mobileVariant="compact" desktopMode="unit" />
-          </div>
-
           {/* Mô tả */}
           <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
             <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-3">Mô tả</h2>
@@ -1003,9 +1005,10 @@ export default function Detail({ serverApp, serverRelated }) {
             )}
           </div>
 
-          {/* Quảng cáo trong bài (thủ công) */}
-          <div className="bg-white dark:bg-zinc-900 rounded-xl p-3 shadow">
-            <AdUnit className="my-0" isArticleAd desktopMode="unit" />
+          {/* Quảng cáo (between sections) */}
+          <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
+            <div className="text-[11px] uppercase tracking-wider text-gray-400 mb-2 text-center">Quảng cáo</div>
+            <AdUnit desktopMode="unit" isArticleAd />
           </div>
 
           {/* Screenshots */}
@@ -1130,9 +1133,10 @@ export default function Detail({ serverApp, serverRelated }) {
             </div>
           )}
 
-          {/* Quảng cáo (thủ công) */}
-          <div className="bg-white dark:bg-zinc-900 rounded-xl p-3 shadow">
-            <AdUnit className="my-0" mobileVariant="multiplex" desktopMode="unit" />
+          {/* Quảng cáo (bottom) */}
+          <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
+            <div className="text-[11px] uppercase tracking-wider text-gray-400 mb-2 text-center">Quảng cáo</div>
+            <AdUnit desktopMode="unit" mobileVariant="multiplex" />
           </div>
 
           {/* Bình luận */}
