@@ -1,95 +1,90 @@
 // components/Ads.js
+'use client';
+
 import { useEffect, useRef } from 'react';
 
 export default function AdUnit({
   className = '',
-  mobileVariant = 'compact',   // 'compact' | 'multiplex'
-  mobileSlot1 = '5160182988',  // 300x250
-  mobileSlot2 = '7109430646',  // multiplex / autorelaxed
-  desktopMode = 'auto',        // 'auto' | 'unit'
+  mobileVariant = 'compact',        // 'compact' | 'multiplex'
+  mobileSlot1 = '5160182988',       // 300x250
+  mobileSlot2 = '7109430646',       // multiplex / autorelaxed
+  desktopMode = 'auto',             // 'auto' | 'unit'
   desktopSlot = '4575220124',
 
   // In-article
   inArticleSlot = '4276741180',
   isArticleAd = false,
 }) {
-  const adRef = useRef(null);
+  const wrapperRef = useRef(null);
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const el = adRef.current;
-    if (!el) return;
+    const root = wrapperRef.current;
+    if (!root) return;
 
-    // Tránh push nhiều lần cho cùng 1 <ins>
-    if (el.dataset.adLoaded === '1') return;
+    let disposed = false;
 
-    let cancelled = false;
-    let tries = 0;
+    const pushIfNeeded = () => {
+      if (disposed) return;
+      if (typeof window === 'undefined') return;
 
-    const pushAd = () => {
-      if (cancelled) return false;
+      const w = window;
+      const list = Array.from(root.querySelectorAll('ins.adsbygoogle'));
+      if (!list.length) return;
+
+      // Chỉ xử lý các ins đang thực sự hiển thị (không display:none)
+      const visible = list.filter((ins) => ins.offsetParent !== null && ins.dataset.adLoaded !== '1');
+      if (!visible.length) return;
+
+      if (!w.adsbygoogle) return;
+
       try {
-        // Luôn đảm bảo adsbygoogle là array trước khi push
-        window.adsbygoogle = window.adsbygoogle || [];
-        window.adsbygoogle.push({});
-        el.dataset.adLoaded = '1';
-        return true;
+        (w.adsbygoogle = w.adsbygoogle || []).push({});
+        // Đánh dấu đã init để tránh push spam khi re-render
+        visible.forEach((ins) => (ins.dataset.adLoaded = '1'));
       } catch (e) {
-        // Thường gặp khi push quá sớm / bị chặn bởi content-blocker
-        console.error('Ad push error:', e);
-        return false;
+        // Không throw để khỏi phá UI
+        console.warn('Adsense push error:', e);
       }
     };
 
-    const tryPushWithRetry = () => {
-      if (cancelled) return;
-      const ok = pushAd();
-      if (ok) return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((en) => {
+          if (en.isIntersecting) pushIfNeeded();
+        });
+      },
+      { rootMargin: '300px' }
+    );
 
-      tries += 1;
-      // Retry vài lần để chờ script adsense load xong
-      if (tries <= 5) setTimeout(tryPushWithRetry, 600);
+    io.observe(root);
+
+    // Nếu user xoay màn hình / resize làm đổi breakpoint
+    const onResize = () => pushIfNeeded();
+    window.addEventListener('resize', onResize);
+
+    // fallback: thử 1 lần ngay sau mount
+    const t = setTimeout(pushIfNeeded, 50);
+
+    return () => {
+      disposed = true;
+      clearTimeout(t);
+      window.removeEventListener('resize', onResize);
+      io.disconnect();
     };
-
-    // Lazy-load khi sắp xuất hiện
-    if ('IntersectionObserver' in window) {
-      const observer = new IntersectionObserver(
-        (entries) => {
-          entries.forEach((entry) => {
-            if (!entry.isIntersecting) return;
-            tryPushWithRetry();
-            observer.unobserve(entry.target);
-          });
-        },
-        { rootMargin: '250px' }
-      );
-
-      observer.observe(el);
-      return () => {
-        cancelled = true;
-        try { observer.unobserve(el); } catch {}
-        try { observer.disconnect(); } catch {}
-      };
-    }
-
-    // Fallback
-    tryPushWithRetry();
-    return () => { cancelled = true; };
-  }, []);
+  }, [mobileVariant, mobileSlot1, mobileSlot2, desktopMode, desktopSlot, inArticleSlot, isArticleAd]);
 
   const isCompact = mobileVariant === 'compact';
 
   // In-article
   if (isArticleAd) {
     return (
-      <div className={`w-full ${className}`}>
+      <div ref={wrapperRef} className={`w-full ${className} flex justify-center py-2`}>
         <ins
-          ref={adRef}
           className="adsbygoogle"
           style={{ display: 'block', textAlign: 'center' }}
           data-ad-client="ca-pub-3905625903416797"
           data-ad-slot={inArticleSlot}
-          data-ad-format="auto"
+          data-ad-format="fluid"
           data-full-width-responsive="true"
         />
       </div>
@@ -97,23 +92,22 @@ export default function AdUnit({
   }
 
   return (
-    <div className={`w-full ${className}`}>
+    <div ref={wrapperRef} className={`w-full ${className}`}>
       {/* Mobile */}
-      <div className="md:hidden w-full">
+      <div className="block md:hidden w-full">
         {isCompact ? (
           <div className="w-full flex justify-center">
             <ins
-              ref={adRef}
               className="adsbygoogle"
-              style={{ display: 'inline-block', width: 300, height: 250 }}
+              style={{ display: 'block', width: '300px', height: '250px' }}
               data-ad-client="ca-pub-3905625903416797"
               data-ad-slot={mobileSlot1}
+              data-full-width-responsive="false"
             />
           </div>
         ) : (
           <div className="w-full">
             <ins
-              ref={adRef}
               className="adsbygoogle"
               style={{ display: 'block' }}
               data-ad-client="ca-pub-3905625903416797"
@@ -129,7 +123,6 @@ export default function AdUnit({
       {desktopMode === 'unit' && (
         <div className="hidden md:block w-full">
           <ins
-            ref={adRef}
             className="adsbygoogle"
             style={{ display: 'block' }}
             data-ad-client="ca-pub-3905625903416797"
