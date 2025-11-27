@@ -3,6 +3,19 @@
 
 import { useEffect, useRef } from 'react';
 
+// Hàm helper để gọi window.adsbygoogle.push({})
+// Đặt riêng để dễ bảo trì và sử dụng.
+function pushAdsense() {
+  try {
+    const w = window;
+    if (w.adsbygoogle && w.adsbygoogle.push) {
+      w.adsbygoogle.push({});
+    }
+  } catch (e) {
+    console.error('Adsense push error (global):', e);
+  }
+}
+
 export default function AdUnit({
   className = '',
   mobileVariant = 'compact',        // 'compact' | 'multiplex'
@@ -21,80 +34,91 @@ export default function AdUnit({
     const root = wrapperRef.current;
     if (!root) return;
 
-    let disposed = false;
+    let disposed = false; // Biến cờ để kiểm soát việc unmount
+    let observer = null;
 
     const pushIfNeeded = () => {
-      if (disposed) return;
+      if (disposed) return; // Không làm gì nếu component đã bị hủy
       if (typeof window === 'undefined') return;
 
-      const w = window;
       const list = Array.from(root.querySelectorAll('ins.adsbygoogle'));
       if (!list.length) return;
 
-      // Chỉ xử lý các ins đang thực sự hiển thị và chưa load
+      // 1. Chỉ xử lý các ins đang thực sự hiển thị và chưa load
       const visible = list.filter(
+        // offsetParent !== null: Đảm bảo phần tử không bị display: none
         (ins) => ins.offsetParent !== null && ins.dataset.adLoaded !== '1'
       );
+      
       if (!visible.length) return;
 
-      // Đảm bảo container đủ rộng (tránh availableWidth = 0)
+      // 2. Sửa lỗi triệt để cho "No slot size for availableWidth=0"
+      // Phải có width VÀ height > 0 cho responsive ads.
       const ready = visible.filter((ins) => {
         const rect = ins.getBoundingClientRect?.();
-        const width =
-          (rect && rect.width) ||
-          ins.parentElement?.getBoundingClientRect?.().width ||
-          0;
-
-        // Tối thiểu 120px cho an toàn (không dùng fluid nữa nên không cần 250)
-        return width >= 120;
+        // Kiểm tra width VÀ height phải lớn hơn 0
+        return rect && rect.width > 0 && rect.height > 0;
       });
+      
+      if (!ready.length) return; // KHÔNG push nếu chưa có kích thước hợp lệ
 
-      if (!ready.length) return;
-      if (!w.adsbygoogle) {
-        w.adsbygoogle = [];
-      }
-
-      try {
-        w.adsbygoogle.push({});
-        ready.forEach((ins) => {
-          ins.dataset.adLoaded = '1';
-        });
-      } catch (e) {
-        console.warn('Adsense push error:', e);
-      }
+      // 3. Tiến hành push (chỉ các phần tử đã sẵn sàng)
+      ready.forEach(ins => {
+        // Đánh dấu là đã được push để tránh lỗi "already have ads in them"
+        ins.dataset.adLoaded = '1';
+      });
+      
+      // Push chung: AdSense script sẽ tự tìm các phần tử `ins` mới được đánh dấu
+      pushAdsense();
     };
 
-    const io = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((en) => {
-          if (en.isIntersecting) pushIfNeeded();
-        });
-      },
-      { rootMargin: '300px' }
-    );
+    // --- Khởi tạo và Cleanup ---
+    
+    // Sử dụng ResizeObserver để theo dõi khi kích thước thay đổi (từ 0 lên > 0)
+    // Đây là fix triệt để cho lỗi availableWidth=0 trong các component ẩn/hiện.
+    if (typeof window !== 'undefined' && 'ResizeObserver' in window) {
+      observer = new ResizeObserver(() => {
+        pushIfNeeded(); // Gọi lại khi kích thước thay đổi
+      });
+      
+      // Theo dõi tất cả các ins elements
+      const insElements = root.querySelectorAll('ins.adsbygoogle');
+      insElements.forEach(ins => observer.observe(ins));
+    }
 
-    io.observe(root);
-
-    const onResize = () => pushIfNeeded();
-    window.addEventListener('resize', onResize);
-
-    // Không push ngay khi mount, đợi IO/resize để tránh width=0
+    // Luôn chạy lần đầu tiên sau khi component mount
+    pushIfNeeded();
+    
+    // Cleanup function: Rất quan trọng trong React/Next.js
     return () => {
-      disposed = true;
-      window.removeEventListener('resize', onResize);
-      io.disconnect();
+      disposed = true; // Ngăn chặn lệnh push bị trì hoãn
+      if (observer) {
+        observer.disconnect(); // Ngừng theo dõi
+      }
+      
+      // Tùy chọn: Xóa data-ad-loaded khi component unmount
+      // Giúp đảm bảo ad có thể load lại nếu component bị unmount/mount lại nhanh
+      const insElements = root.querySelectorAll('ins.adsbygoogle');
+      insElements.forEach(ins => {
+         delete ins.dataset.adLoaded;
+      });
     };
-  }, [mobileVariant, mobileSlot1, mobileSlot2, desktopMode, desktopSlot, inArticleSlot, isArticleAd]);
-
-  const isCompact = mobileVariant === 'compact';
-
-  // In-article: dùng auto, không fluid
+  }, [
+    // Dependency list giữ nguyên
+    mobileVariant,
+    mobileSlot1,
+    mobileSlot2,
+    desktopMode,
+    desktopSlot,
+    inArticleSlot,
+    isArticleAd,
+  ]);
+  
+  // --- JSX Rendering (Giữ nguyên cấu trúc) ---
+  
   if (isArticleAd) {
     return (
-      <div
-        ref={wrapperRef}
-        className={`w-full ${className} flex justify-center py-2`}
-      >
+      <div ref={wrapperRef} className={`w-full ${className}`}>
         <ins
           className="adsbygoogle"
           style={{ display: 'block', textAlign: 'center' }}
@@ -111,7 +135,7 @@ export default function AdUnit({
     <div ref={wrapperRef} className={`w-full ${className}`}>
       {/* Mobile */}
       <div className="block md:hidden w-full">
-        {isCompact ? (
+        {mobileVariant === 'compact' ? (
           <div className="w-full flex justify-center">
             <ins
               className="adsbygoogle"
