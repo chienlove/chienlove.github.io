@@ -637,7 +637,6 @@ export default function Home({ categoriesWithApps, hotByInstalls, hotByViews, pa
   <div className={contentCard}>
     <AdUnit className="my-0" mobileVariant="compact" desktopMode="unit" />
   </div>
-      </div>
     </Layout>
   );
 }
