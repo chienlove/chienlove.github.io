@@ -8,6 +8,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faDownload, faHome, faFileArrowDown } from '@fortawesome/free-solid-svg-icons';
 import jwt from 'jsonwebtoken';
 import { toast } from 'react-toastify';
+import AdUnit from '../../components/Ads';
 
 export async function getServerSideProps({ params, query, req }) {
   const { data: app } = await supabase
@@ -21,7 +22,7 @@ export async function getServerSideProps({ params, query, req }) {
   const isIpaDownload = query.action === 'download';
   const secret = process.env.JWT_SECRET;
   const proto = req.headers['x-forwarded-proto'] || 'https';
-  const host  = req.headers['x-forwarded-host'] || req.headers.host;
+  const host = req.headers['x-forwarded-host'] || req.headers.host;
   const baseUrl = `${proto}://${host}`;
 
   // ✅ Token cho CẢ 2 nhánh đều chứa { id, ipa_name }
@@ -33,15 +34,21 @@ export async function getServerSideProps({ params, query, req }) {
   );
 
   // itms-services (THÊM install=1 để đếm installs)
-  const installUrl = `itms-services://?action=download-manifest&url=${
-    encodeURIComponent(`${baseUrl}/api/plist?ipa_name=${encodeURIComponent(app.download_link)}&token=${token}&install=1`)
-  }`;
+  const installUrl = `itms-services://?action=download-manifest&url=${encodeURIComponent(
+    `${baseUrl}/api/plist?ipa_name=${encodeURIComponent(
+      app.download_link
+    )}&token=${token}&install=1`
+  )}`;
 
   // Dùng cho HEAD verify (KHÔNG có install=1 để tránh đếm)
-  const rawPlistUrl = `${baseUrl}/api/plist?ipa_name=${encodeURIComponent(app.download_link)}&token=${token}`;
+  const rawPlistUrl = `${baseUrl}/api/plist?ipa_name=${encodeURIComponent(
+    app.download_link
+  )}&token=${token}`;
 
   // Download IPA (đếm downloads ở /api/download-ipa)
-  const downloadIpaUrl = `/api/download-ipa?slug=${encodeURIComponent(app.slug)}&token=${encodeURIComponent(token)}`;
+  const downloadIpaUrl = `/api/download-ipa?slug=${encodeURIComponent(
+    app.slug
+  )}&token=${encodeURIComponent(token)}`;
 
   return {
     props: {
@@ -55,7 +62,14 @@ export async function getServerSideProps({ params, query, req }) {
   };
 }
 
-export default function InstallPage({ app, installUrl, downloadIpaUrl, rawPlistUrl, tokenExpiresIn, isIpaDownload }) {
+export default function InstallPage({
+  app,
+  installUrl,
+  downloadIpaUrl,
+  rawPlistUrl,
+  tokenExpiresIn,
+  isIpaDownload,
+}) {
   const [countdown, setCountdown] = useState(10);
   const [tokenTimer, setTokenTimer] = useState(tokenExpiresIn);
   const [hasStartedTokenTimer, setHasStartedTokenTimer] = useState(false);
@@ -102,8 +116,10 @@ export default function InstallPage({ app, installUrl, downloadIpaUrl, rawPlistU
       try {
         const verify = await fetch(rawPlistUrl, { method: 'HEAD' });
         if (!verify.ok) {
-          if (verify.status === 403) toast.error('Liên kết đã hết hạn. Vui lòng tải lại trang.');
-          else if (verify.status === 404) toast.error('Không tìm thấy file cài đặt.');
+          if (verify.status === 403)
+            toast.error('Liên kết đã hết hạn. Vui lòng tải lại trang.');
+          else if (verify.status === 404)
+            toast.error('Không tìm thấy file cài đặt.');
           else toast.error('Không thể xác minh liên kết cài đặt.');
           return;
         }
@@ -121,23 +137,44 @@ export default function InstallPage({ app, installUrl, downloadIpaUrl, rawPlistU
   return (
     <Layout fullWidth>
       <Head>
-        <title>{isIpaDownload ? `Tải IPA ${app.name}` : `Cài đặt ${app.name}`}</title>
-        <meta name="description" content={`Tải xuống ${app.name} phiên bản ${app.version}`} />
+        <title>
+          {isIpaDownload ? `Tải IPA ${app.name}` : `Cài đặt ${app.name}`}
+        </title>
+        <meta
+          name="description"
+          content={`Tải xuống ${app.name} phiên bản ${app.version}`}
+        />
       </Head>
 
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900 p-4">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-900 p-4 space-y-4">
+        {/* Khung cài đặt chính */}
         <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg max-w-md w-full text-center">
           <div className="relative w-32 h-32 mx-auto mb-6">
             <svg className="w-full h-full" viewBox="0 0 100 100">
-              <circle cx="50" cy="50" r={radius} fill="none" stroke="#e5e7eb" strokeWidth="8" />
               <circle
-                cx="50" cy="50" r={radius}
-                fill="none" stroke="#22c55e" strokeWidth="8"
+                cx="50"
+                cy="50"
+                r={radius}
+                fill="none"
+                stroke="#e5e7eb"
+                strokeWidth="8"
+              />
+              <circle
+                cx="50"
+                cy="50"
+                r={radius}
+                fill="none"
+                stroke="#22c55e"
+                strokeWidth="8"
                 strokeDasharray={circumference}
                 strokeDashoffset={strokeDashoffset}
                 strokeLinecap="round"
                 transform="rotate(-90 50 50)"
-                className={countdown > 0 ? 'transition-all duration-1000 ease-linear' : ''}
+                className={
+                  countdown > 0
+                    ? 'transition-all duration-1000 ease-linear'
+                    : ''
+                }
               />
             </svg>
             <span className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-3xl font-bold text-gray-800 dark:text-white">
@@ -145,24 +182,44 @@ export default function InstallPage({ app, installUrl, downloadIpaUrl, rawPlistU
             </span>
           </div>
 
-          <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">{app.name}</h1>
-          <p className="text-gray-600 dark:text-gray-300 mb-4">Phiên bản: {app.version}</p>
+          <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">
+            {app.name}
+          </h1>
+          <p className="text-gray-600 dark:text-gray-300 mb-4">
+            Phiên bản: {app.version}
+          </p>
 
           <p className="mb-2 text-gray-700 dark:text-gray-300">
-            {countdown > 0
-              ? <>Vui lòng chờ <span className="font-bold">{countdown}</span> giây trước khi {isIpaDownload ? 'tải file IPA' : 'cài đặt ứng dụng'}...</>
-              : <>Nhấn nút bên dưới để {isIpaDownload ? 'tải file IPA' : 'tải ứng dụng'}.</>}
+            {countdown > 0 ? (
+              <>
+                Vui lòng chờ <span className="font-bold">{countdown}</span> giây
+                trước khi {isIpaDownload ? 'tải file IPA' : 'cài đặt ứng dụng'}
+                ...
+              </>
+            ) : (
+              <>
+                Nhấn nút bên dưới để{' '}
+                {isIpaDownload ? 'tải file IPA' : 'tải ứng dụng'}.
+              </>
+            )}
           </p>
 
           <div
             className={`text-sm text-gray-500 dark:text-gray-300 mb-4 transition-all duration-500 ease-out transform ${
-              countdown === 0 ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-2 pointer-events-none'
+              countdown === 0
+                ? 'opacity-100 translate-y-0'
+                : 'opacity-0 -translate-y-2 pointer-events-none'
             }`}
           >
             {tokenTimer > 0 ? (
-              <>Liên kết sẽ hết hạn sau: <span className="font-semibold">{tokenTimer}s</span></>
+              <>
+                Liên kết sẽ hết hạn sau:{' '}
+                <span className="font-semibold">{tokenTimer}s</span>
+              </>
             ) : (
-              <span className="text-red-500 dark:text-red-400 font-medium">Liên kết đã hết hạn. Vui lòng tải lại trang.</span>
+              <span className="text-red-500 dark:text-red-400 font-medium">
+                Liên kết đã hết hạn. Vui lòng tải lại trang.
+              </span>
             )}
           </div>
 
@@ -184,6 +241,16 @@ export default function InstallPage({ app, installUrl, downloadIpaUrl, rawPlistU
               <FontAwesomeIcon icon={faHome} />
               <span>Quay lại trang chủ</span>
             </button>
+          </div>
+        </div>
+
+        {/* Khối quảng cáo – giống style label + viền như index */}
+        <div className="w-full max-w-md space-y-2">
+          <div className="text-sm text-gray-500 dark:text-gray-400 font-semibold px-1 text-center">
+            Quảng cáo
+          </div>
+          <div className="border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 p-2">
+            <AdUnit className="my-0" mobileVariant="compact" desktopMode="unit" />
           </div>
         </div>
       </div>
