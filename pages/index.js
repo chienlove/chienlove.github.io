@@ -1,4 +1,4 @@
-// pages/index.js
+// pages/index.js (ĐÃ SỬA)
 import { useMemo, useEffect, useState, Fragment, useRef } from 'react';
 import Head from 'next/head';
 import Layout from '../components/Layout';
@@ -13,7 +13,7 @@ import {
   faCheckCircle,
   faExclamationCircle,
   faFire,
-  faChevronLeft,
+  faChevronLeft, // Đã sửa
   faChevronRight,
   faEye,
   faDownload,
@@ -263,7 +263,8 @@ function PaginationFull({ categorySlug, currentPage, totalPages }) {
           aria-label="Trang trước"
           className="px-2.5 h-8 inline-flex items-center justify-center rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
         >
-          <FontAwesomeIcon icon={faChevronRight} style={{ transform: 'scaleX(-1)' }} />
+          {/* ✅ Đã sửa: dùng icon ChevronLeft chuẩn */}
+          <FontAwesomeIcon icon={faChevronLeft} /> 
         </Link>
       )}
 
@@ -431,7 +432,26 @@ export default function Home({ categoriesWithApps, hotByInstalls, hotByViews, pa
 
   const contentCard = 'bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4';
   const adCard = contentCard;
-  const AdLabel = () => (<div className="text-sm text-gray-500 dark:text-gray-400 font-semibold px-1">Quảng cáo</div>);
+
+  // Label quảng cáo nằm chính giữa đường viền trên của card
+  const AdLabel = () => (
+    <div
+      className="absolute -top-3 left-1/2 -translate-x-1/2 px-2 text-xs md:text-sm text-gray-500 dark:text-gray-400 font-semibold bg-white dark:bg-gray-800"
+      style={{ zIndex: 1 }} // Đảm bảo label nằm trên border của card
+    >
+      Quảng cáo
+    </div>
+  );
+
+  // Wrapper cho block quảng cáo (Đã loại bỏ mt-6 để không xung đột với space-y-10)
+  const AdWrapper = ({ children }) => (
+    <div className="relative">
+      <AdLabel />
+      <div className={`${adCard} pt-4`}>
+        {children}
+      </div>
+    </div>
+  );
 
   // ===== SEO =====
   const seoData = useMemo(() => metaSEO || {}, [metaSEO]);
@@ -444,12 +464,10 @@ export default function Home({ categoriesWithApps, hotByInstalls, hotByViews, pa
       <SEOIndexMeta meta={seoData} />
 
       <div className="container mx-auto px-1 md:px-2 py-6 space-y-10">
-        {/* Banner Ad */}
-        <div className="space-y-2">
-          <AdLabel />
-          {/* ✅ Thêm desktopMode="unit" để hiện trên desktop */}
-          <div className={adCard}><AdUnit className="my-0" mobileVariant="compact" desktopMode="unit" /></div>
-        </div>
+        {/* Banner Ad - SỬ DỤNG ADWRAPPER */}
+        <AdWrapper>
+          <AdUnit className="my-0" mobileVariant="compact" desktopMode="unit" />
+        </AdWrapper>
 
         {/* Hot apps */}
         {hotApps && hotApps.length > 0 && (
@@ -603,24 +621,21 @@ export default function Home({ categoriesWithApps, hotByInstalls, hotByViews, pa
                 {hasLitePager && <PaginationLite categorySlug={category.slug} hasNext={true} />}
               </div>
 
+              {/* Quảng cáo chèn giữa các category - SỬ DỤNG ADWRAPPER */}
               {new Set([1, 3]).has(index) && (
-                <div className="space-y-2">
-                  <div className="text-sm text-gray-500 dark:text-gray-400 font-semibold px-1">Quảng cáo</div>
-                  {/* ✅ Thêm desktopMode="unit" cho block giữa */}
-                  <div className={contentCard}><AdUnit className="my-0" mobileVariant="multiplex" desktopMode="unit" /></div>
-                </div>
+                <AdWrapper>
+                  <AdUnit className="my-0" mobileVariant="multiplex" desktopMode="unit" />
+                </AdWrapper>
               )}
             </Fragment>
           );
         })}
 
-        {/* Footer Ad */}
-        <div className="space-y-2">
-          <div className="text-sm text-gray-500 dark:text-gray-400 font-semibold px-1">Quảng cáo</div>
-          {/* ✅ Thêm desktopMode="unit" cho footer */}
-          <div className={contentCard}><AdUnit className="my-0" mobileVariant="compact" desktopMode="unit" /></div>
-        </div>
-      </div>
+        {/* Footer Ad - SỬ DỤNG ADWRAPPER */}
+        <AdWrapper>
+          <AdUnit className="my-0" mobileVariant="compact" desktopMode="unit" />
+        </AdWrapper>
+       </div> 
     </Layout>
   );
 }
