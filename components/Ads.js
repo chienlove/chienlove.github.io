@@ -19,6 +19,7 @@ function pushAdsense() {
     }
 
     // 2) Bỏ qua lỗi khi tất cả ins.adsbygoogle đã có quảng cáo
+    //    (trường hợp push() thừa, không ảnh hưởng hiển thị)
     if (msg.includes("All 'ins' elements in the DOM with class=adsbygoogle already have ads in them.")) {
       return;
     }
@@ -31,8 +32,8 @@ export default function AdUnit({
   className = '',
   mobileVariant = 'compact',        // 'compact' | 'multiplex'
   mobileSlot1 = '5160182988',       // 300x250
-  mobileSlot2 = '7109430646',       // multiplex / autorelaxed
-  desktopMode = 'auto',             // 'auto' | 'unit' (render khối desktop riêng)
+  mobileSlot2 = '7109430646',       // "multiplex" nhưng ta render dạng auto
+  desktopMode = 'auto',             // 'auto' | 'unit'
   desktopSlot = '4575220124',
 
   // In-article
@@ -43,9 +44,6 @@ export default function AdUnit({
 
   // layout: 'unknown' | 'mobile' | 'desktop'
   const [layout, setLayout] = useState('unknown');
-
-  // Flag: đảm bảo chỉ push ads MỘT LẦN cho mỗi AdUnit
-  const hasPushedRef = useRef(false);
 
   // Xác định layout theo window.innerWidth (chỉ chạy trên client)
   useEffect(() => {
@@ -82,13 +80,13 @@ export default function AdUnit({
     const pushIfNeeded = () => {
       if (disposed) return;
       if (typeof window === 'undefined') return;
-      if (hasPushedRef.current) return; // 🔒 ĐÃ push rồi thì không push lại nữa
 
       const list = Array.from(root.querySelectorAll('ins.adsbygoogle'));
       if (!list.length) return;
 
-      // Chỉ xử lý các ins đang hiển thị, chưa được load
-      // và chưa có data-adsbygoogle-status="done" (AdSense đã render xong)
+      // Chỉ xử lý các ins đang hiển thị và:
+      // - chưa được đánh dấu adLoaded
+      // - và CHƯA có data-adsbygoogle-status="done" (AdSense đã render xong)
       const visible = list.filter((ins) => {
         const status = ins.getAttribute('data-adsbygoogle-status');
         return (
@@ -115,9 +113,6 @@ export default function AdUnit({
         ins.dataset.adLoaded = '1';
       });
 
-      // 🔒 Đánh dấu đã push quảng cáo cho wrapper này
-      hasPushedRef.current = true;
-
       // Push global (AdSense sẽ pick thẻ tiếp theo trong hàng đợi)
       pushAdsense();
     };
@@ -141,12 +136,9 @@ export default function AdUnit({
 
       const insElements = root.querySelectorAll('ins.adsbygoogle');
       insElements.forEach((ins) => {
-        // Chỉ xóa cờ nội bộ nếu cần, KHÔNG đụng tới data-adsbygoogle-status
+        // Chỉ xóa cờ nội bộ, KHÔNG đụng tới data-adsbygoogle-status của AdSense
         delete ins.dataset.adLoaded;
       });
-
-      // Khi unmount, mở khoá để nếu component mount lần nữa thì push lại được
-      hasPushedRef.current = false;
     };
   }, [
     mobileVariant,

@@ -1,5 +1,5 @@
 // pages/install/[appSlug].js
-import { useEffect, useState } from 'react';
+import { useEffect, useState, memo } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
 import Layout from '../../components/Layout';
@@ -62,6 +62,28 @@ export async function getServerSideProps({ params, query, req }) {
   };
 }
 
+// 🔒 Khối quảng cáo được tách riêng + memo để KHÔNG re-render theo countdown
+const InstallAdBlock = memo(function InstallAdBlock() {
+  return (
+    <div className="w-full max-w-md">
+      <div className="relative">
+        {/* Label "Quảng cáo" dạng pill, giống index */}
+        <div
+          className="absolute -top-3 left-1/2 -translate-x-1/2 px-2 text-xs md:text-sm text-gray-500 dark:text-gray-400 font-semibold bg-white dark:bg-gray-800"
+          style={{ zIndex: 1 }}
+        >
+          Quảng cáo
+        </div>
+
+        {/* Card quảng cáo: style giống contentCard/adCard ở index */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 pt-4 pb-4">
+          <AdUnit className="my-0" mobileVariant="compact" desktopMode="unit" />
+        </div>
+      </div>
+    </div>
+  );
+});
+
 export default function InstallPage({
   app,
   installUrl,
@@ -81,7 +103,7 @@ export default function InstallPage({
 
   useEffect(() => {
     if (countdown <= 0) return;
-    const t = setInterval(() => setCountdown(v => v - 1), 1000);
+    const t = setInterval(() => setCountdown((v) => v - 1), 1000);
     return () => clearInterval(t);
   }, [countdown]);
 
@@ -92,7 +114,7 @@ export default function InstallPage({
   useEffect(() => {
     if (!hasStartedTokenTimer) return;
     const t = setInterval(() => {
-      setTokenTimer(v => {
+      setTokenTimer((v) => {
         if (v <= 1) {
           clearInterval(t);
           toast.warning('Liên kết đã hết hạn. Vui lòng tải lại trang.');
@@ -134,29 +156,6 @@ export default function InstallPage({
   const buttonText = isIpaDownload ? 'Tải file IPA ngay' : 'Tải xuống ngay';
   const headerIcon = isIpaDownload ? faFileArrowDown : faDownload;
 
-  // ===== Style card & AdWrapper GIỐNG HỆT INDEX =====
-  const contentCard =
-    'bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4';
-  const adCard = contentCard;
-
-  const AdLabel = () => (
-    <div
-      className="absolute -top-3 left-1/2 -translate-x-1/2 px-2 text-xs md:text-sm text-gray-500 dark:text-gray-400 font-semibold bg-white dark:bg-gray-800"
-      style={{ zIndex: 1 }}
-    >
-      Quảng cáo
-    </div>
-  );
-
-  const AdWrapper = ({ children }) => (
-    <div className="relative">
-      <AdLabel />
-      <div className={`${adCard} pt-4`}>
-        {children}
-      </div>
-    </div>
-  );
-
   return (
     <Layout fullWidth>
       <Head>
@@ -182,7 +181,7 @@ export default function InstallPage({
                 stroke="#e5e7eb"
                 strokeWidth="8"
               />
-              <circle
+            <circle
                 cx="50"
                 cy="50"
                 r={radius}
@@ -267,12 +266,8 @@ export default function InstallPage({
           </div>
         </div>
 
-        {/* Quảng cáo – dùng đúng AdWrapper như index */}
-        <div className="w-full max-w-md">
-          <AdWrapper>
-            <AdUnit className="my-0" mobileVariant="compact" desktopMode="unit" />
-          </AdWrapper>
-        </div>
+        {/* Quảng cáo – memo hóa, không re-render theo countdown */}
+        <InstallAdBlock />
       </div>
     </Layout>
   );
