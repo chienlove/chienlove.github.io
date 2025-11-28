@@ -431,7 +431,7 @@ export default function Home({ categoriesWithApps, hotByInstalls, hotByViews, pa
 
   const contentCard = 'bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4';
   const adCard = contentCard;
-  const AdLabel = () => (<div className="text-sm text-gray-500 dark:text-gray-400 font-semibold px-1">Quảng cáo</div>);
+  const AdLabel = () => (<div className="text-sm text-gray-500 dark:text-gray-400 font-semibold px-1 text-center">Quảng cáo</div>);
 
   // ===== SEO =====
   const seoData = useMemo(() => metaSEO || {}, [metaSEO]);
