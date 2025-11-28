@@ -258,7 +258,7 @@ function PaginationFull({ categorySlug, currentPage, totalPages }) {
       {currentPage > 1 && (
         <Link
           prefetch={false}
-          href={`/?category=${categorySlug}&page={currentPage - 1}`}
+          href={`/?category=${categorySlug}&page=${currentPage - 1}`}
           scroll={false}
           aria-label="Trang trước"
           className="px-2.5 h-8 inline-flex items-center justify-center rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
@@ -429,26 +429,9 @@ export default function Home({ categoriesWithApps, hotByInstalls, hotByViews, pa
     return () => document.removeEventListener('mousedown', onDocClick);
   }, []);
 
-  const contentCard =
-    'bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4';
+  const contentCard = 'bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4';
   const adCard = contentCard;
-
-  // Label "Quảng cáo" nằm giữa đường viền trên của card
-  const AdLabel = () => (
-    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-2 text-sm text-gray-500 dark:text-gray-400 font-semibold bg-white dark:bg-gray-800">
-      Quảng cáo
-    </div>
-  );
-
-  // Wrapper cho card quảng cáo, dùng chung mọi nơi
-  const AdWrapper = ({ children }) => (
-    <div className="relative mt-6">
-      <AdLabel />
-      <div className={`${adCard} pt-4`}>
-        {children}
-      </div>
-    </div>
-  );
+  const AdLabel = () => (<div className="text-sm text-gray-500 dark:text-gray-400 font-semibold px-1">Quảng cáo</div>);
 
   // ===== SEO =====
   const seoData = useMemo(() => metaSEO || {}, [metaSEO]);
@@ -462,9 +445,11 @@ export default function Home({ categoriesWithApps, hotByInstalls, hotByViews, pa
 
       <div className="container mx-auto px-1 md:px-2 py-6 space-y-10">
         {/* Banner Ad */}
-        <AdWrapper>
-          <AdUnit className="my-0" mobileVariant="compact" />
-        </AdWrapper>
+        <div className="space-y-2">
+          <AdLabel />
+          {/* ✅ Thêm desktopMode="unit" để hiện trên desktop */}
+          <div className={adCard}><AdUnit className="my-0" mobileVariant="compact" desktopMode="unit" /></div>
+        </div>
 
         {/* Hot apps */}
         {hotApps && hotApps.length > 0 && (
@@ -619,18 +604,22 @@ export default function Home({ categoriesWithApps, hotByInstalls, hotByViews, pa
               </div>
 
               {new Set([1, 3]).has(index) && (
-                <AdWrapper>
-                  <AdUnit className="my-0" mobileVariant="multiplex" />
-                </AdWrapper>
+                <div className="space-y-2">
+                  <div className="text-sm text-gray-500 dark:text-gray-400 font-semibold px-1">Quảng cáo</div>
+                  {/* ✅ Thêm desktopMode="unit" cho block giữa */}
+                  <div className={contentCard}><AdUnit className="my-0" mobileVariant="multiplex" desktopMode="unit" /></div>
+                </div>
               )}
             </Fragment>
           );
         })}
 
         {/* Footer Ad */}
-        <AdWrapper>
-          <AdUnit className="my-0" mobileVariant="compact" />
-        </AdWrapper>
+        <div className="space-y-2">
+          <div className="text-sm text-gray-500 dark:text-gray-400 font-semibold px-1">Quảng cáo</div>
+          {/* ✅ Thêm desktopMode="unit" cho footer */}
+          <div className={contentCard}><AdUnit className="my-0" mobileVariant="compact" desktopMode="unit" /></div>
+        </div>
       </div>
     </Layout>
   );
