@@ -263,7 +263,7 @@ function PaginationFull({ categorySlug, currentPage, totalPages }) {
           aria-label="Trang trước"
           className="px-2.5 h-8 inline-flex items-center justify-center rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
         >
-          <FontAwesomeIcon icon={faChevronRight} style={{ transform: 'scaleX(-1)' }} />
+          <FontAwesomeIcon icon={faChevronLeft} />
         </Link>
       )}
 
@@ -436,14 +436,15 @@ export default function Home({ categoriesWithApps, hotByInstalls, hotByViews, pa
   const AdLabel = () => (
     <div
       className="absolute -top-3 left-1/2 -translate-x-1/2 px-2 text-xs md:text-sm text-gray-500 dark:text-gray-400 font-semibold bg-white dark:bg-gray-800"
+      style={{ zIndex: 1 }} // Thêm zIndex để đảm bảo Label nằm trên border của card
     >
       Quảng cáo
     </div>
   );
 
-  // Wrapper cho block quảng cáo (dùng lại cho banner, giữa, footer)
+  // Wrapper cho block quảng cáo (Đã SỬA: Bỏ mt-6)
   const AdWrapper = ({ children }) => (
-    <div className="relative mt-6">
+    <div className="relative">
       <AdLabel />
       <div className={`${adCard} pt-4`}>
         {children}
@@ -462,7 +463,7 @@ export default function Home({ categoriesWithApps, hotByInstalls, hotByViews, pa
       <SEOIndexMeta meta={seoData} />
 
       <div className="container mx-auto px-1 md:px-2 py-6 space-y-10">
-        {/* Banner Ad */}
+        {/* Banner Ad - Dùng AdWrapper đã sửa */}
         <AdWrapper>
           <AdUnit className="my-0" mobileVariant="compact" desktopMode="unit" />
         </AdWrapper>
@@ -619,7 +620,7 @@ export default function Home({ categoriesWithApps, hotByInstalls, hotByViews, pa
                 {hasLitePager && <PaginationLite categorySlug={category.slug} hasNext={true} />}
               </div>
 
-              {/* Quảng cáo chèn giữa các category */}
+              {/* Quảng cáo chèn giữa các category - Dùng AdWrapper đã sửa */}
               {new Set([1, 3]).has(index) && (
                 <AdWrapper>
                   <AdUnit className="my-0" mobileVariant="multiplex" desktopMode="unit" />
@@ -629,10 +630,11 @@ export default function Home({ categoriesWithApps, hotByInstalls, hotByViews, pa
           );
         })}
 
-        {/* Footer Ad */}
+        {/* Footer Ad - Dùng AdWrapper đã sửa */}
         <AdWrapper>
           <AdUnit className="my-0" mobileVariant="compact" desktopMode="unit" />
         </AdWrapper>
+       </div> 
     </Layout>
   );
 }
