@@ -1,4 +1,4 @@
-// components/Ads.js
+// components/Ads.js (ĐÃ SỬA TRIỆT ĐỂ LOGIC TẢI ADSENSE)
 'use client';
 
 import { useEffect, useRef } from 'react';
@@ -7,11 +7,11 @@ import { useEffect, useRef } from 'react';
 function pushAdsense() {
   try {
     const w = window;
+    // Kiểm tra và đẩy vào hàng đợi Adsense
     if (w.adsbygoogle && w.adsbygoogle.push) {
       w.adsbygoogle.push({});
     }
   } catch (e) {
-    // Nuốt riêng các TagError "vô hại" để không spam console
     const name = e && e.name;
     const msg = e && typeof e.message === 'string' ? e.message : '';
 
@@ -22,11 +22,9 @@ function pushAdsense() {
         msg.includes("All 'ins' elements in the DOM with class=adsbygoogle already have ads in them")
       )
     ) {
-      // Bỏ qua hoàn toàn, vì đây là lỗi do push thừa / layout 0 width tạm thời
-      return;
+      return; // Bỏ qua lỗi TagError thông thường
     }
 
-    // Các lỗi khác vẫn log ra để dễ debug
     console.error(
       'Adsense push error (global):',
       e ? e : 'Unknown AdSense push error'
@@ -52,62 +50,69 @@ export default function AdUnit({
     const root = wrapperRef.current;
     if (!root) return;
 
-    let disposed = false; // Biến cờ để kiểm soát việc unmount
+    let disposed = false;
     let observer = null;
 
     const pushIfNeeded = () => {
       if (disposed) return;
       if (typeof window === 'undefined') return;
 
-      const list = Array.from(root.querySelectorAll('ins.adsbygoogle'));
-      if (!list.length) return;
+      const insList = Array.from(root.querySelectorAll('ins.adsbygoogle'));
+      if (!insList.length) return;
 
-      // 1. Chỉ xử lý các ins đang thực sự hiển thị và chưa load
-      const visible = list.filter(
-        // Đảm bảo phần tử không bị display: none
-        (ins) => ins.offsetParent !== null && ins.dataset.adLoaded !== '1'
+      const visibleIns = insList.filter(
+        (ins) => {
+          // Chỉ lấy các ins có width > 0 VÀ chưa được đánh dấu là đã tải.
+          // ins.offsetParent !== null kiểm tra phần tử có bị display: none hay không,
+          // nhưng kiểm tra width an toàn hơn.
+          if (!ins.getBoundingClientRect) return false;
+
+          const rect = ins.getBoundingClientRect();
+          const isReady = rect.width > 0;
+          const isLoaded = ins.dataset.adLoaded === '1';
+
+          return isReady && !isLoaded;
+        }
       );
 
-      if (!visible.length) return;
+      if (!visibleIns.length) return;
 
-      // 2. Sửa lỗi triệt để cho "No slot size for availableWidth=0" VÀ FIX LỖI DESKTOP
-      // Chỉ cần kiểm tra width > 0.
-      const ready = visible.filter((ins) => {
-        // Tăng cường kiểm tra null/undefined trước khi gọi getBoundingClientRect
-        if (!ins.getBoundingClientRect) return false;
-
-        const rect = ins.getBoundingClientRect();
-
-        // Đối với quảng cáo responsive/auto, chỉ cần kiểm tra width > 0
-        // để tránh lỗi availableWidth=0. KHÔNG cần check height > 0
-        return rect.width > 0;
-      });
-
-      if (!ready.length) return; // KHÔNG push nếu chưa có kích thước hợp lệ
-
-      // 3. Tiến hành push (chỉ các phần tử đã sẵn sàng)
-      ready.forEach((ins) => {
-        // Đánh dấu là đã được push để tránh lỗi "already have ads in them"
+      // Đánh dấu và tiến hành push cho các phần tử đã sẵn sàng
+      visibleIns.forEach((ins) => {
         ins.dataset.adLoaded = '1';
       });
 
-      // Push chung
+      // Gọi push chung
       pushAdsense();
     };
 
     // --- Khởi tạo và Cleanup ---
 
     if (typeof window !== 'undefined' && 'ResizeObserver' in window) {
-      observer = new ResizeObserver(() => {
+      observer = new ResizeObserver((entries) => {
+        // Fix: Xóa data-ad-loaded cho các phần tử đang bị ẩn khi resize
+        entries.forEach(entry => {
+          const ins = entry.target;
+          if (entry.contentRect.width === 0 && ins.dataset.adLoaded === '1') {
+             // Xóa data-ad-loaded để khi nó hiện lại, nó sẽ được push
+             delete ins.dataset.adLoaded;
+          }
+        });
+        
+        // Kiểm tra và push lại nếu cần
         pushIfNeeded();
       });
 
+      // Chỉ theo dõi các phần tử <ins>
       const insElements = root.querySelectorAll('ins.adsbygoogle');
       insElements.forEach((ins) => observer.observe(ins));
     }
 
     // Gọi lần đầu sau khi mount
     pushIfNeeded();
+    
+    // Thêm listener cho sự kiện load của window, đôi khi Adsense cần tải sau khi load DOM hoàn tất
+    window.addEventListener('load', pushIfNeeded);
 
     return () => {
       disposed = true;
@@ -115,6 +120,9 @@ export default function AdUnit({
         observer.disconnect();
       }
 
+      window.removeEventListener('load', pushIfNeeded);
+
+      // Cleanup dataset khi unmount để tránh lỗi nếu component được dùng lại
       const insElements = root.querySelectorAll('ins.adsbygoogle');
       insElements.forEach((ins) => {
         delete ins.dataset.adLoaded;
