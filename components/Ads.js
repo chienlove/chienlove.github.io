@@ -11,10 +11,19 @@ function pushAdsense() {
       w.adsbygoogle.push({});
     }
   } catch (e) {
-    // Nếu là lỗi "No slot size for availableWidth=0" thì bỏ qua, không log nữa
-    if (e && typeof e.message === 'string' && e.message.includes('No slot size for availableWidth=0')) {
+    const msg = e && typeof e.message === 'string' ? e.message : '';
+
+    // 1) Bỏ qua lỗi "No slot size for availableWidth=0"
+    if (msg.includes('No slot size for availableWidth=0')) {
       return;
     }
+
+    // 2) Bỏ qua lỗi khi tất cả ins.adsbygoogle đã có quảng cáo
+    //    (trường hợp push() thừa, không ảnh hưởng hiển thị)
+    if (msg.includes("All 'ins' elements in the DOM with class=adsbygoogle already have ads in them.")) {
+      return;
+    }
+
     console.error('Adsense push error (global):', e ? e : 'Unknown AdSense push error');
   }
 }
@@ -41,7 +50,12 @@ export default function AdUnit({
     if (typeof window === 'undefined') return;
 
     const detect = () => {
-      const w = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth || 0;
+      const w =
+        window.innerWidth ||
+        document.documentElement.clientWidth ||
+        document.body.clientWidth ||
+        0;
+
       if (desktopMode === 'unit' && w >= 768) {
         setLayout('desktop');
       } else {
@@ -70,10 +84,17 @@ export default function AdUnit({
       const list = Array.from(root.querySelectorAll('ins.adsbygoogle'));
       if (!list.length) return;
 
-      // Chỉ xử lý các ins đang hiển thị và chưa được load
-      const visible = list.filter(
-        (ins) => ins.offsetParent !== null && ins.dataset.adLoaded !== '1'
-      );
+      // Chỉ xử lý các ins đang hiển thị và:
+      // - chưa được đánh dấu adLoaded
+      // - và CHƯA có data-adsbygoogle-status="done" (AdSense đã render xong)
+      const visible = list.filter((ins) => {
+        const status = ins.getAttribute('data-adsbygoogle-status');
+        return (
+          ins.offsetParent !== null &&
+          ins.dataset.adLoaded !== '1' &&
+          status !== 'done'
+        );
+      });
 
       if (!visible.length) return;
 
@@ -87,7 +108,7 @@ export default function AdUnit({
 
       if (!ready.length) return;
 
-      // Đánh dấu đã load, tránh push lặp
+      // Đánh dấu đã load, tránh push lặp cho cùng 1 thẻ
       ready.forEach((ins) => {
         ins.dataset.adLoaded = '1';
       });
@@ -115,6 +136,7 @@ export default function AdUnit({
 
       const insElements = root.querySelectorAll('ins.adsbygoogle');
       insElements.forEach((ins) => {
+        // Chỉ xóa cờ nội bộ, KHÔNG đụng tới data-adsbygoogle-status của AdSense
         delete ins.dataset.adLoaded;
       });
     };
