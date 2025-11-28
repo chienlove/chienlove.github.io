@@ -258,7 +258,7 @@ function PaginationFull({ categorySlug, currentPage, totalPages }) {
       {currentPage > 1 && (
         <Link
           prefetch={false}
-          href={`/?category=${categorySlug}&page=${currentPage - 1}`}
+          href={`/?category=${categorySlug}&page={currentPage - 1}`}
           scroll={false}
           aria-label="Trang trước"
           className="px-2.5 h-8 inline-flex items-center justify-center rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
@@ -429,9 +429,26 @@ export default function Home({ categoriesWithApps, hotByInstalls, hotByViews, pa
     return () => document.removeEventListener('mousedown', onDocClick);
   }, []);
 
-  const contentCard = 'bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4';
+  const contentCard =
+    'bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4';
   const adCard = contentCard;
-  const AdLabel = () => (<div className="text-sm text-gray-500 dark:text-gray-400 font-semibold w-full text-center py-1">Quảng cáo</div>);
+
+  // Label "Quảng cáo" nằm giữa đường viền trên của card
+  const AdLabel = () => (
+    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-2 text-sm text-gray-500 dark:text-gray-400 font-semibold bg-white dark:bg-gray-800">
+      Quảng cáo
+    </div>
+  );
+
+  // Wrapper cho card quảng cáo, dùng chung mọi nơi
+  const AdWrapper = ({ children }) => (
+    <div className="relative mt-6">
+      <AdLabel />
+      <div className={`${adCard} pt-4`}>
+        {children}
+      </div>
+    </div>
+  );
 
   // ===== SEO =====
   const seoData = useMemo(() => metaSEO || {}, [metaSEO]);
@@ -445,10 +462,9 @@ export default function Home({ categoriesWithApps, hotByInstalls, hotByViews, pa
 
       <div className="container mx-auto px-1 md:px-2 py-6 space-y-10">
         {/* Banner Ad */}
-        <div className="space-y-2">
-          <AdLabel />
-          <div className={adCard}><AdUnit className="my-0" mobileVariant="compact" /></div>
-        </div>
+        <AdWrapper>
+          <AdUnit className="my-0" mobileVariant="compact" />
+        </AdWrapper>
 
         {/* Hot apps */}
         {hotApps && hotApps.length > 0 && (
@@ -603,20 +619,18 @@ export default function Home({ categoriesWithApps, hotByInstalls, hotByViews, pa
               </div>
 
               {new Set([1, 3]).has(index) && (
-                <div className="space-y-2">
-                  <div className="text-sm text-gray-500 dark:text-gray-400 font-semibold px-1">Quảng cáo</div>
-                  <div className={contentCard}><AdUnit className="my-0" mobileVariant="multiplex" /></div>
-                </div>
+                <AdWrapper>
+                  <AdUnit className="my-0" mobileVariant="multiplex" />
+                </AdWrapper>
               )}
             </Fragment>
           );
         })}
 
         {/* Footer Ad */}
-        <div className="space-y-2">
-          <div className="text-sm text-gray-500 dark:text-gray-400 font-semibold px-1">Quảng cáo</div>
-          <div className={contentCard}><AdUnit className="my-0" mobileVariant="compact" /></div>
-        </div>
+        <AdWrapper>
+          <AdUnit className="my-0" mobileVariant="compact" />
+        </AdWrapper>
       </div>
     </Layout>
   );
@@ -757,26 +771,26 @@ export async function getServerSideProps(ctx) {
 
   // ====== SEO động: luôn truyền slug + name của chuyên mục active (nếu có) ======
   let metaSEO = { 
-  page: 1, 
-  totalPages: 1, 
-  categorySlug: null, 
-  categoryName: null,
-  description: 'Kho ứng dụng TestFlight beta & công cụ jailbreak cho iOS'
-};
+    page: 1, 
+    totalPages: 1, 
+    categorySlug: null, 
+    categoryName: null,
+    description: 'Kho ứng dụng TestFlight beta & công cụ jailbreak cho iOS'
+  };
 
-if (activeSlug) {
-  const activeCat = categories.find(c => (c.slug || '').toLowerCase() === activeSlug);
-  const pageInfo = activeCat ? paginationData[activeCat.id] : null;
-  if (activeCat) {
-    metaSEO = {
-      page: pageInfo?.currentPage || 1,
-      totalPages: pageInfo?.totalPages || 1,
-      categorySlug: activeSlug,
-      categoryName: activeCat.name || null,
-      description: CATEGORY_SEO[activeSlug]?.description || `Kho ứng dụng ${activeCat.name} cho iOS`
-    };
+  if (activeSlug) {
+    const activeCat = categories.find(c => (c.slug || '').toLowerCase() === activeSlug);
+    const pageInfo = activeCat ? paginationData[activeCat.id] : null;
+    if (activeCat) {
+      metaSEO = {
+        page: pageInfo?.currentPage || 1,
+        totalPages: pageInfo?.totalPages || 1,
+        categorySlug: activeSlug,
+        categoryName: activeCat.name || null,
+        description: CATEGORY_SEO[activeSlug]?.description || `Kho ứng dụng ${activeCat.name} cho iOS`
+      };
+    }
   }
-}
 
   return {
     props: {
