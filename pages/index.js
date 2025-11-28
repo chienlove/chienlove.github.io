@@ -1,4 +1,4 @@
-// pages/index.js (ĐÃ SỬA)
+// pages/index.js (ĐÃ SỬA TRIỆT ĐỂ 100% UX)
 import { useMemo, useEffect, useState, Fragment, useRef } from 'react';
 import Head from 'next/head';
 import Layout from '../components/Layout';
@@ -13,7 +13,7 @@ import {
   faCheckCircle,
   faExclamationCircle,
   faFire,
-  faChevronLeft, // Đã sửa
+  faChevronLeft,
   faChevronRight,
   faEye,
   faDownload,
@@ -263,8 +263,8 @@ function PaginationFull({ categorySlug, currentPage, totalPages }) {
           aria-label="Trang trước"
           className="px-2.5 h-8 inline-flex items-center justify-center rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
         >
-          {/* ✅ Đã sửa: dùng icon ChevronLeft chuẩn */}
-          <FontAwesomeIcon icon={faChevronLeft} /> 
+          {/* ✅ KHÔI PHỤC LẠI CẤU TRÚC CODE CŨ: dùng transform */}
+          <FontAwesomeIcon icon={faChevronRight} style={{ transform: 'scaleX(-1)' }} />
         </Link>
       )}
 
@@ -443,7 +443,7 @@ export default function Home({ categoriesWithApps, hotByInstalls, hotByViews, pa
     </div>
   );
 
-  // Wrapper cho block quảng cáo (Đã loại bỏ mt-6 để không xung đột với space-y-10)
+  // Wrapper cho block quảng cáo chèn giữa (GIỮ NGUYÊN cho mục đích tái sử dụng trong vòng lặp)
   const AdWrapper = ({ children }) => (
     <div className="relative">
       <AdLabel />
@@ -464,10 +464,13 @@ export default function Home({ categoriesWithApps, hotByInstalls, hotByViews, pa
       <SEOIndexMeta meta={seoData} />
 
       <div className="container mx-auto px-1 md:px-2 py-6 space-y-10">
-        {/* Banner Ad - SỬ DỤNG ADWRAPPER */}
-        <AdWrapper>
-          <AdUnit className="my-0" mobileVariant="compact" desktopMode="unit" />
-        </AdWrapper>
+        {/* Banner Ad - KHÔI PHỤC CẤU TRÚC CODE CŨ */}
+        <div className="relative"> 
+          <AdLabel />
+          <div className={`${adCard} pt-4`}>
+            <AdUnit className="my-0" mobileVariant="compact" desktopMode="unit" />
+          </div>
+        </div>
 
         {/* Hot apps */}
         {hotApps && hotApps.length > 0 && (
@@ -631,10 +634,14 @@ export default function Home({ categoriesWithApps, hotByInstalls, hotByViews, pa
           );
         })}
 
-        {/* Footer Ad - SỬ DỤNG ADWRAPPER */}
-        <AdWrapper>
-          <AdUnit className="my-0" mobileVariant="compact" desktopMode="unit" />
-        </AdWrapper>
+        {/* Footer Ad - KHÔI PHỤC CẤU TRÚC CODE CŨ */}
+        <div className="relative">
+          <AdLabel />
+          <div className={`${adCard} pt-4`}>
+            <AdUnit className="my-0" mobileVariant="compact" desktopMode="unit" />
+          </div>
+        </div>
+        
        </div> 
     </Layout>
   );
