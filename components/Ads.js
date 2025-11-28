@@ -1,7 +1,7 @@
 // components/Ads.js
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 // Hàm helper để gọi window.adsbygoogle.push({})
 function pushAdsense() {
@@ -11,8 +11,11 @@ function pushAdsense() {
       w.adsbygoogle.push({});
     }
   } catch (e) {
-    // Giữ nguyên fix để tránh log lỗi 'null' từ catch block
-    console.error('Adsense push error (global):', e ? e : 'Unknown AdSense push error'); 
+    // Nếu là lỗi "No slot size for availableWidth=0" thì bỏ qua, không log nữa
+    if (e && typeof e.message === 'string' && e.message.includes('No slot size for availableWidth=0')) {
+      return;
+    }
+    console.error('Adsense push error (global):', e ? e : 'Unknown AdSense push error');
   }
 }
 
@@ -30,11 +33,34 @@ export default function AdUnit({
 }) {
   const wrapperRef = useRef(null);
 
+  // layout: 'unknown' | 'mobile' | 'desktop'
+  const [layout, setLayout] = useState('unknown');
+
+  // Xác định layout theo window.innerWidth (chỉ chạy trên client)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const detect = () => {
+      const w = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth || 0;
+      if (desktopMode === 'unit' && w >= 768) {
+        setLayout('desktop');
+      } else {
+        setLayout('mobile');
+      }
+    };
+
+    detect();
+
+    // Nếu bạn muốn khi resize thay đổi ad, có thể bật lại:
+    // window.addEventListener('resize', detect);
+    // return () => window.removeEventListener('resize', detect);
+  }, [desktopMode]);
+
   useEffect(() => {
     const root = wrapperRef.current;
     if (!root) return;
 
-    let disposed = false; // Biến cờ để kiểm soát việc unmount
+    let disposed = false;
     let observer = null;
 
     const pushIfNeeded = () => {
@@ -44,61 +70,52 @@ export default function AdUnit({
       const list = Array.from(root.querySelectorAll('ins.adsbygoogle'));
       if (!list.length) return;
 
-      // 1. Chỉ xử lý các ins đang thực sự hiển thị và chưa load
+      // Chỉ xử lý các ins đang hiển thị và chưa được load
       const visible = list.filter(
-        // Đảm bảo phần tử không bị display: none
         (ins) => ins.offsetParent !== null && ins.dataset.adLoaded !== '1'
       );
-      
+
       if (!visible.length) return;
 
-      // 2. Sửa lỗi triệt để cho "No slot size for availableWidth=0" VÀ FIX LỖI DESKTOP
-      // Chỉ cần kiểm tra width > 0.
+      // Kiểm tra kích thước, tránh availableWidth = 0
       const ready = visible.filter((ins) => {
-        // Tăng cường kiểm tra null/undefined trước khi gọi getBoundingClientRect
-        if (!ins.getBoundingClientRect) return false; 
-        
+        if (!ins.getBoundingClientRect) return false;
         const rect = ins.getBoundingClientRect();
-        
-        // **FIX:** Đối với quảng cáo responsive/auto, chỉ cần kiểm tra width > 0 
-        // để tránh lỗi availableWidth=0. KHÔNG cần check height > 0 vì AdSense sẽ tự tính height.
+        // Chỉ cần width > 0 là đủ, height AdSense tự tính
         return rect.width > 0;
       });
-      
-      if (!ready.length) return; // KHÔNG push nếu chưa có kích thước hợp lệ
 
-      // 3. Tiến hành push (chỉ các phần tử đã sẵn sàng)
-      ready.forEach(ins => {
-        // Đánh dấu là đã được push để tránh lỗi "already have ads in them"
+      if (!ready.length) return;
+
+      // Đánh dấu đã load, tránh push lặp
+      ready.forEach((ins) => {
         ins.dataset.adLoaded = '1';
       });
-      
-      // Push chung
+
+      // Push global (AdSense sẽ pick thẻ tiếp theo trong hàng đợi)
       pushAdsense();
     };
 
-    // --- Khởi tạo và Cleanup ---
-    
+    // Theo dõi thay đổi kích thước của ins
     if (typeof window !== 'undefined' && 'ResizeObserver' in window) {
       observer = new ResizeObserver(() => {
         pushIfNeeded();
       });
-      
+
       const insElements = root.querySelectorAll('ins.adsbygoogle');
-      insElements.forEach(ins => observer.observe(ins));
+      insElements.forEach((ins) => observer.observe(ins));
     }
 
+    // Push lần đầu
     pushIfNeeded();
-    
+
     return () => {
       disposed = true;
-      if (observer) {
-        observer.disconnect();
-      }
-      
+      if (observer) observer.disconnect();
+
       const insElements = root.querySelectorAll('ins.adsbygoogle');
-      insElements.forEach(ins => {
-         delete ins.dataset.adLoaded;
+      insElements.forEach((ins) => {
+        delete ins.dataset.adLoaded;
       });
     };
   }, [
@@ -109,10 +126,12 @@ export default function AdUnit({
     desktopSlot,
     inArticleSlot,
     isArticleAd,
+    layout, // khi layout đổi (mobile/desktop) thì chạy lại
   ]);
-  
-  // --- JSX Rendering (Giữ nguyên cấu trúc) ---
-  
+
+  // ======================= JSX Rendering =======================
+
+  // Quảng cáo in-article: luôn là 1 ins duy nhất
   if (isArticleAd) {
     return (
       <div ref={wrapperRef} className={`w-full ${className}`}>
@@ -128,42 +147,63 @@ export default function AdUnit({
     );
   }
 
+  // Chưa biết layout (SSR vừa mount, chưa đo xong width) → render container rỗng để tránh push sớm
+  if (layout === 'unknown') {
+    return <div ref={wrapperRef} className={`w-full ${className}`} />;
+  }
+
   return (
     <div ref={wrapperRef} className={`w-full ${className}`}>
-      {/* Mobile */}
-      <div className="block md:hidden w-full">
-        {mobileVariant === 'compact' ? (
-          <div className="w-full flex justify-center">
-            <ins
-              className="adsbygoogle"
-              style={{ display: 'block', width: '300px', height: '250px' }}
-              data-ad-client="ca-pub-3905625903416797"
-              data-ad-slot={mobileSlot1}
-              data-full-width-responsive="false"
-            />
-          </div>
-        ) : (
-          <div className="w-full">
-            <ins
-              className="adsbygoogle"
-              style={{ display: 'block' }}
-              data-ad-client="ca-pub-3905625903416797"
-              data-ad-slot={mobileSlot2}
-              data-ad-format="auto"
-              data-full-width-responsive="true"
-            />
-          </div>
-        )}
-      </div>
+      {/* MOBILE ONLY */}
+      {layout === 'mobile' && (
+        <div className="w-full">
+          {mobileVariant === 'compact' ? (
+            <div className="w-full flex justify-center">
+              <ins
+                className="adsbygoogle"
+                style={{ display: 'block', width: '300px', height: '250px' }}
+                data-ad-client="ca-pub-3905625903416797"
+                data-ad-slot={mobileSlot1}
+                data-full-width-responsive="false"
+              />
+            </div>
+          ) : (
+            <div className="w-full">
+              <ins
+                className="adsbygoogle"
+                style={{ display: 'block' }}
+                data-ad-client="ca-pub-3905625903416797"
+                data-ad-slot={mobileSlot2}
+                data-ad-format="auto"
+                data-full-width-responsive="true"
+              />
+            </div>
+          )}
+        </div>
+      )}
 
-      {/* Desktop */}
-      {desktopMode === 'unit' && (
-        <div className="hidden md:block w-full">
+      {/* DESKTOP ONLY */}
+      {layout === 'desktop' && desktopMode === 'unit' && (
+        <div className="w-full">
           <ins
             className="adsbygoogle"
             style={{ display: 'block' }}
             data-ad-client="ca-pub-3905625903416797"
             data-ad-slot={desktopSlot}
+            data-ad-format="auto"
+            data-full-width-responsive="true"
+          />
+        </div>
+      )}
+
+      {/* Nếu desktopMode === 'auto' thì layout='desktop' cũng dùng luôn biến thể mobile responsive */}
+      {layout === 'desktop' && desktopMode === 'auto' && (
+        <div className="w-full">
+          <ins
+            className="adsbygoogle"
+            style={{ display: 'block' }}
+            data-ad-client="ca-pub-3905625903416797"
+            data-ad-slot={mobileSlot2}
             data-ad-format="auto"
             data-full-width-responsive="true"
           />
