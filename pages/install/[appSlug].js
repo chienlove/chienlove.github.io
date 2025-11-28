@@ -244,16 +244,18 @@ export default function InstallPage({
           </div>
         </div>
 
-        {/* Khối quảng cáo – giống style label + viền như index */}
-        <div className="w-full max-w-md space-y-2">
-          <div className="text-sm text-gray-500 dark:text-gray-400 font-semibold px-1 text-center">
-            Quảng cáo
-          </div>
-          <div className="border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800 p-2">
-            <AdUnit className="my-0" mobileVariant="compact" desktopMode="unit" />
-          </div>
-        </div>
-      </div>
+        {/* Quảng cáo */}
+        
+        <div className="w-full max-w-md">
+  <div className="border border-gray-200 dark:border-gray-700 rounded-xl bg-white dark:bg-gray-800">
+    <div className="text-sm text-gray-500 dark:text-gray-400 font-semibold text-center py-1 border-b border-gray-200 dark:border-gray-700">
+      Quảng cáo
+    </div>
+    <div className="p-2">
+      <AdUnit className="my-0" mobileVariant="compact" desktopMode="unit" />
+    </div>
+  </div>
+</div>
     </Layout>
   );
 }
