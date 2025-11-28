@@ -1,9 +1,8 @@
-// components/Ads.js (TỐI ƯU HÓA ĐỒNG BỘ ADSENSE)
+// components/Ads.js (PHIÊN BẢN TÁCH BIỆT)
 'use client';
 
 import { useEffect, useRef } from 'react';
 
-// Hàm helper để gọi window.adsbygoogle.push({})
 function pushAdsense() {
   try {
     const w = window;
@@ -11,15 +10,9 @@ function pushAdsense() {
       w.adsbygoogle.push({});
     }
   } catch (e) {
-    // Luôn nuốt các lỗi TagError và lỗi liên quan đến width/div để console sạch sẽ hơn
-    const name = e && e.name;
     const msg = e && typeof e.message === 'string' ? e.message : '';
-    if (
-      name === 'TagError' || 
-      msg.includes('No slot size for availableWidth=0') || 
-      msg.includes("All 'ins' elements in the DOM with class=adsbygoogle already have ads in them") ||
-      msg.includes('no_div')
-    ) {
+    // Nuốt các lỗi Adsense vô hại
+    if (e?.name === 'TagError' || msg.includes('No slot size') || msg.includes("already have ads")) {
       return; 
     }
     // console.error('Adsense push error (global):', e ? e : 'Unknown AdSense push error');
@@ -28,11 +21,14 @@ function pushAdsense() {
 
 export default function AdUnit({
   className = '',
-  mobileVariant = 'compact',        // 'compact' | 'multiplex'
-  mobileSlot1 = '5160182988',       // 300x250
-  mobileSlot2 = '7109430646',       // "multiplex"
-  desktopMode = 'unit',             // 'auto' | 'unit'
+  mobileVariant = 'compact',
+  mobileSlot1 = '5160182988', 
+  mobileSlot2 = '7109430646', 
   desktopSlot = '4575220124',
+  
+  // ✅ Thêm thuộc tính để xác định loại render
+  isMobileOnly = false,
+  isDesktopOnly = false,
 
   inArticleSlot = '4276741180',
   isArticleAd = false,
@@ -47,48 +43,32 @@ export default function AdUnit({
     let observer = null;
 
     const pushIfNeeded = () => {
-      if (disposed) return;
-      if (typeof window === 'undefined') return;
+      if (disposed || typeof window === 'undefined') return;
 
       const list = Array.from(root.querySelectorAll('ins.adsbygoogle'));
       if (!list.length) return;
 
-      // ✅ Dùng getBoundingClientRect để kiểm tra kích thước thực tế
       const ready = list.filter((ins) => {
-        // Nếu phần tử đã được đánh dấu là đã tải, bỏ qua
         if (ins.dataset.adLoaded === '1') return false; 
         
         if (!ins.getBoundingClientRect) return false;
         
         const rect = ins.getBoundingClientRect();
-        // Cần width > 0 VÀ height > 0 (đảm bảo nó không bị ẩn bằng display: none)
-        // Lưu ý: với ad-format="auto", Adsense có thể tự điều chỉnh height sau, nhưng ta cần 
-        // kích thước ban đầu đủ lớn để nó khởi tạo.
+        // Kiểm tra kích thước cứng
         return rect.width > 0 && rect.height > 0;
       });
 
       if (!ready.length) return;
 
-      // Đánh dấu đã load, tránh push lặp
       ready.forEach((ins) => {
         ins.dataset.adLoaded = '1';
       });
-
-      // Push global
       pushAdsense();
     };
 
-    // Theo dõi thay đổi kích thước của ins
     if (typeof window !== 'undefined' && 'ResizeObserver' in window) {
-      observer = new ResizeObserver((entries) => {
-        entries.forEach(entry => {
-          const ins = entry.target;
-          const rect = ins.getBoundingClientRect();
-          // Nếu kích thước về 0 hoặc bị ẩn (ví dụ: chuyển breakpoint), xóa dấu đã tải
-          if ((rect.width === 0 || rect.height === 0) && ins.dataset.adLoaded === '1') {
-             delete ins.dataset.adLoaded;
-          }
-        });
+      observer = new ResizeObserver(() => {
+        // Luôn push lại nếu có thay đổi kích thước, hoặc khi chuyển breakpoint
         pushIfNeeded();
       });
 
@@ -96,33 +76,20 @@ export default function AdUnit({
       insElements.forEach((ins) => observer.observe(ins));
     }
 
-    // Push lần đầu (thêm timeout ngắn để đảm bảo DOM đã render và đo đạc xong)
     const initialTimeout = setTimeout(pushIfNeeded, 50); 
 
     return () => {
       clearTimeout(initialTimeout);
       disposed = true;
       if (observer) observer.disconnect();
-
-      const insElements = root.querySelectorAll('ins.adsbygoogle');
-      insElements.forEach((ins) => {
-        delete ins.dataset.adLoaded;
-      });
+      root.querySelectorAll('ins.adsbygoogle').forEach((ins) => delete ins.dataset.adLoaded);
     };
-  }, [
-    mobileVariant,
-    mobileSlot1,
-    mobileSlot2,
-    desktopMode,
-    desktopSlot,
-    inArticleSlot,
-    isArticleAd,
-  ]);
+  }, [mobileVariant, mobileSlot1, mobileSlot2, desktopSlot, isArticleAd, isMobileOnly, isDesktopOnly]);
 
   // ======================= JSX Rendering =======================
 
-  // Quảng cáo in-article
   if (isArticleAd) {
+    // Giữ nguyên logic In-Article
     return (
       <div ref={wrapperRef} className={`w-full ${className}`}>
         <ins
@@ -136,63 +103,55 @@ export default function AdUnit({
       </div>
     );
   }
+  
+  // Dành cho Mobile (compact / multiplex)
+  if (isMobileOnly) {
+    const slot = mobileVariant === 'compact' ? mobileSlot1 : mobileSlot2;
+    const style = mobileVariant === 'compact' ? { display: 'block', width: '300px', height: '250px' } : { display: 'block' };
 
+    return (
+      <div ref={wrapperRef} className={`w-full ${className}`}>
+        <div className="w-full flex justify-center">
+            <ins
+              className="adsbygoogle"
+              style={style}
+              data-ad-client="ca-pub-3905625903416797"
+              data-ad-slot={slot}
+              data-full-width-responsive={mobileVariant !== 'compact'}
+            />
+          </div>
+      </div>
+    );
+  }
+
+  // Dành cho Desktop (unit)
+  if (isDesktopOnly) {
+    return (
+      <div ref={wrapperRef} className={`w-full ${className}`}>
+        <ins
+          className="adsbygoogle"
+          style={{ display: 'block' }}
+          data-ad-client="ca-pub-3905625903416797"
+          data-ad-slot={desktopSlot}
+          data-ad-format="auto"
+          data-full-width-responsive="true"
+        />
+      </div>
+    );
+  }
+  
+  // Mặc định fallback (nếu không xác định rõ Mobile/Desktop, ví dụ quảng cáo chèn giữa)
+  // Ta dùng slot responsive chung (mobileSlot2)
   return (
     <div ref={wrapperRef} className={`w-full ${className}`}>
-      {/* MOBILE (Màn hình < md) */}
-      <div className="block md:hidden w-full">
-        {mobileVariant === 'compact' ? (
-          <div className="w-full flex justify-center">
-            {/* COMPACT: Kích thước cứng 300x250 */}
-            <ins
-              className="adsbygoogle"
-              style={{ display: 'block', width: '300px', height: '250px' }}
-              data-ad-client="ca-pub-3905625903416797"
-              data-ad-slot={mobileSlot1} // 5160182988
-              data-full-width-responsive="false"
-            />
-          </div>
-        ) : (
-          <div className="w-full">
-            {/* MULTIPLEX/AUTO: Tự động responsive */}
-            <ins
-              className="adsbygoogle"
-              style={{ display: 'block' }}
-              data-ad-client="ca-pub-3905625903416797"
-              data-ad-slot={mobileSlot2} // 7109430646
-              data-ad-format="auto"
-              data-full-width-responsive="true"
-            />
-          </div>
-        )}
-      </div>
-
-      {/* DESKTOP (Màn hình >= md) */}
-      <div className="hidden md:block w-full">
-        {/* DESKTOP MODE: UNIT */}
-        {desktopMode === 'unit' && (
-          <ins
-            className="adsbygoogle"
-            style={{ display: 'block' }}
-            data-ad-client="ca-pub-3905625903416797"
-            data-ad-slot={desktopSlot} // 4575220124
-            data-ad-format="auto"
-            data-full-width-responsive="true"
-          />
-        )}
-        
-        {/* DESKTOP MODE: AUTO (Dùng slot mobile responsive) */}
-        {desktopMode === 'auto' && (
-          <ins
-            className="adsbygoogle"
-            style={{ display: 'block' }}
-            data-ad-client="ca-pub-3905625903416797"
-            data-ad-slot={mobileSlot2} // 7109430646
-            data-ad-format="auto"
-            data-full-width-responsive="true"
-          />
-        )}
-      </div>
+        <ins
+          className="adsbygoogle"
+          style={{ display: 'block' }}
+          data-ad-client="ca-pub-3905625903416797"
+          data-ad-slot={mobileSlot2} 
+          data-ad-format="auto"
+          data-full-width-responsive="true"
+        />
     </div>
   );
 }
