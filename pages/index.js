@@ -630,13 +630,9 @@ export default function Home({ categoriesWithApps, hotByInstalls, hotByViews, pa
         })}
 
         {/* Footer Ad */}
-        <div className="mt-6 space-y-2">
-  <div className="text-sm text-gray-500 dark:text-gray-400 font-semibold px-1 text-center">
-    Quảng cáo
-  </div>
-  <div className={contentCard}>
-    <AdUnit className="my-0" mobileVariant="compact" desktopMode="unit" />
-  </div>
+        <AdWrapper>
+          <AdUnit className="my-0" mobileVariant="compact" desktopMode="unit" />
+        </AdWrapper>
     </Layout>
   );
 }
