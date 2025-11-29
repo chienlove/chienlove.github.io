@@ -95,8 +95,8 @@ function SEOIndexMeta({ meta }) {
   const {
     page = 1,
     totalPages = 1,
-    categorySlug = null,     // string | null
-    categoryName = null,     // string | null (server gửi kèm)
+    categorySlug = null, // string | null
+    categoryName = null, // string | null (server gửi kèm)
     description: defaultDesc = 'Tải ứng dụng iOS, TestFlight, jailbreak và hướng dẫn an toàn. Cập nhật hằng ngày.',
   } = meta || {};
 
@@ -263,8 +263,7 @@ function PaginationFull({ categorySlug, currentPage, totalPages }) {
           aria-label="Trang trước"
           className="px-2.5 h-8 inline-flex items-center justify-center rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
         >
-          {/* ✅ Đã sửa: dùng icon ChevronLeft chuẩn */}
-          <FontAwesomeIcon icon={faChevronLeft} /> 
+          <FontAwesomeIcon icon={faChevronLeft} />
         </Link>
       )}
 
@@ -374,7 +373,9 @@ const AffiliateInlineCard = ({ item, isFirst = false }) => {
       <div className="relative w-14 h-14 rounded-2xl overflow-hidden border border-gray-300 dark:border-gray-600 flex-shrink-0 mt-1">
         <img src={icon_url} alt={name} className="w-full h-full object-cover" loading="lazy" />
         <div className="absolute top-0 left-0 w-16 h-16 overflow-hidden z-10 pointer-events-none">
-          <div className="absolute top-[6px] left-[-25px] w-[80px] rotate-[-45deg] bg-yellow-400 text-black text-[10px] font-bold text-center py-[0.5px] shadow-md">Ad</div>
+          <div className="absolute top-[6px] left-[-25px] w-[80px] rotate-[-45deg] bg-yellow-400 text-black text-[10px] font-bold text-center py-[0.5px] shadow-md">
+            Ad
+          </div>
         </div>
       </div>
       <div className={`flex-1 min-w-0 ${isFirst ? '' : 'border-t border-gray-200 dark:border-gray-700 pt-2'}`}>
@@ -400,26 +401,21 @@ const AffiliateInlineCard = ({ item, isFirst = false }) => {
 /* =========================
    Home
    ========================= */
-export default function Home({ categoriesWithApps, hotByInstalls, hotByViews, paginationData, metaSEO }) {
+export default function Home({
+  categoriesWithApps,
+  hotByInstalls,
+  hotByViews,
+  paginationData,
+  metaSEO,
+  certStatus,
+}) {
   const INSTALLABLE_SLUGS = new Set(['jailbreak', 'app-clone', 'app-removed']);
 
-  // Trạng thái certificate
-  const [certStatus, setCertStatus] = useState(null);
+  // Trạng thái certificate (nhận từ server qua props certStatus)
   // Chế độ App hot: installs | views
   const [hotMode, setHotMode] = useState('installs');
   const [hotMenuOpen, setHotMenuOpen] = useState(false);
   const hotMenuRef = useRef(null);
-
-  useEffect(() => {
-    let alive = true;
-
-    fetch('/api/check-revocation')
-      .then(r => (r.ok ? r.json() : Promise.reject()))
-      .then(json => { if (alive) setCertStatus(json); })
-      .catch(() => { if (alive) setCertStatus({ ocspStatus: 'error' }); });
-
-    return () => { alive = false; };
-  }, []);
 
   // đóng menu khi click ra ngoài
   useEffect(() => {
@@ -430,7 +426,8 @@ export default function Home({ categoriesWithApps, hotByInstalls, hotByViews, pa
     return () => document.removeEventListener('mousedown', onDocClick);
   }, []);
 
-  const contentCard = 'bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4';
+  const contentCard =
+    'bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4';
   const adCard = contentCard;
 
   // Label quảng cáo nằm chính giữa đường viền trên của card
@@ -447,9 +444,7 @@ export default function Home({ categoriesWithApps, hotByInstalls, hotByViews, pa
   const AdWrapper = ({ children }) => (
     <div className="relative">
       <AdLabel />
-      <div className={`${adCard} pt-4`}>
-        {children}
-      </div>
+      <div className={`${adCard} pt-4`}>{children}</div>
     </div>
   );
 
@@ -484,7 +479,7 @@ export default function Home({ categoriesWithApps, hotByInstalls, hotByViews, pa
               <div className="relative" ref={hotMenuRef}>
                 <button
                   className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-semibold rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
-                  onClick={() => setHotMenuOpen(v => !v)}
+                  onClick={() => setHotMenuOpen((v) => !v)}
                   aria-haspopup="menu"
                   aria-expanded={hotMenuOpen}
                 >
@@ -509,16 +504,26 @@ export default function Home({ categoriesWithApps, hotByInstalls, hotByViews, pa
                   >
                     <button
                       role="menuitem"
-                      className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 ${hotMode==='installs' ? 'font-bold' : ''}`}
-                      onClick={() => { setHotMode('installs'); setHotMenuOpen(false); }}
+                      className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                        hotMode === 'installs' ? 'font-bold' : ''
+                      }`}
+                      onClick={() => {
+                        setHotMode('installs');
+                        setHotMenuOpen(false);
+                      }}
                     >
                       <FontAwesomeIcon icon={faDownload} />
                       Cài nhiều
                     </button>
                     <button
                       role="menuitem"
-                      className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 ${hotMode==='views' ? 'font-bold' : ''}`}
-                      onClick={() => { setHotMode('views'); setHotMenuOpen(false); }}
+                      className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 ${
+                        hotMode === 'views' ? 'font-bold' : ''
+                      }`}
+                      onClick={() => {
+                        setHotMode('views');
+                        setHotMenuOpen(false);
+                      }}
                     >
                       <FontAwesomeIcon icon={faEye} />
                       Xem nhiều
@@ -551,35 +556,38 @@ export default function Home({ categoriesWithApps, hotByInstalls, hotByViews, pa
                   </h2>
 
                   {/* Badge trạng thái cert – jailbreak/app-clone/app-removed */}
-                  {new Set(['jailbreak', 'app-clone', 'app-removed']).has((category.slug || '').toLowerCase()) && certStatus && (
-                    <span
-                      className="flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300"
-                      title={
-                        certStatus?.ocspStatus === 'successful'
-                          ? (certStatus.isRevoked ? 'Chứng chỉ đã bị thu hồi' : 'Chứng chỉ hợp lệ')
-                          : 'Không thể kiểm tra'
-                      }
-                    >
-                      {certStatus?.ocspStatus === 'successful' ? (
-                        certStatus.isRevoked ? (
-                          <>
-                            <span className="font-bold text-red-600">Revoked</span>
-                            <FontAwesomeIcon icon={faTimesCircle} className="text-red-500" />
-                          </>
+                  {new Set(['jailbreak', 'app-clone', 'app-removed']).has((category.slug || '').toLowerCase()) &&
+                    certStatus && (
+                      <span
+                        className="flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300"
+                        title={
+                          certStatus?.ocspStatus === 'successful'
+                            ? certStatus.isRevoked
+                              ? 'Chứng chỉ đã bị thu hồi'
+                              : 'Chứng chỉ hợp lệ'
+                            : 'Không thể kiểm tra'
+                        }
+                      >
+                        {certStatus?.ocspStatus === 'successful' ? (
+                          certStatus.isRevoked ? (
+                            <>
+                              <span className="font-bold text-red-600">Revoked</span>
+                              <FontAwesomeIcon icon={faTimesCircle} className="text-red-500" />
+                            </>
+                          ) : (
+                            <>
+                              <span className="font-bold text-green-600">Signed</span>
+                              <FontAwesomeIcon icon={faCheckCircle} className="text-green-500" />
+                            </>
+                          )
                         ) : (
                           <>
-                            <span className="font-bold text-green-600">Signed</span>
-                            <FontAwesomeIcon icon={faCheckCircle} className="text-green-500" />
+                            <span className="font-bold text-gray-500">Error</span>
+                            <FontAwesomeIcon icon={faExclamationCircle} className="text-gray-400" />
                           </>
-                        )
-                      ) : (
-                        <>
-                          <span className="font-bold text-gray-500">Error</span>
-                          <FontAwesomeIcon icon={faExclamationCircle} className="text-gray-400" />
-                        </>
-                      )}
-                    </span>
-                  )}
+                        )}
+                      </span>
+                    )}
                 </div>
 
                 {/* Thông tin trang (nếu có) */}
@@ -635,7 +643,7 @@ export default function Home({ categoriesWithApps, hotByInstalls, hotByViews, pa
         <AdWrapper>
           <AdUnit className="my-0" mobileVariant="compact" desktopMode="unit" />
         </AdWrapper>
-       </div> 
+      </div>
     </Layout>
   );
 }
@@ -643,14 +651,19 @@ export default function Home({ categoriesWithApps, hotByInstalls, hotByViews, pa
 /* =========================
    Affiliate interleave
    ========================= */
-function interleaveAffiliate(apps, affiliatePool, category, {
-  ratioEvery = 5,
-  maxPerCategory = 2,
-}) {
+function interleaveAffiliate(
+  apps,
+  affiliatePool,
+  category,
+  {
+    ratioEvery = 5,
+    maxPerCategory = 2,
+  }
+) {
   const result = [...(apps || [])];
   if (!affiliatePool || affiliatePool.length === 0) return result;
 
-  const matched = affiliatePool.filter(a => {
+  const matched = affiliatePool.filter((a) => {
     const slug = (a.category_slug || '').toLowerCase();
     return slug ? slug === (category.slug || '').toLowerCase() : true;
   });
@@ -661,14 +674,17 @@ function interleaveAffiliate(apps, affiliatePool, category, {
   shuffled.forEach((aff, i) => {
     const posMin = Math.min(apps.length, 2);
     const posMax = Math.max(apps.length - 1, 0);
-    const insertAt = apps.length <= 2
-      ? apps.length
-      : Math.floor(Math.random() * (posMax - posMin + 1)) + posMin;
+    const insertAt =
+      apps.length <= 2
+        ? apps.length
+        : Math.floor(Math.random() * (posMax - posMin + 1)) + posMin;
 
     result.splice(Math.min(insertAt + i, result.length), 0, {
       ...aff,
       __isAffiliate: true,
-      __affKey: `${aff.id || aff.affiliate_url}-${i}-${Math.random().toString(36).slice(2, 8)}`,
+      __affKey: `${aff.id || aff.affiliate_url}-${i}-${Math.random()
+        .toString(36)
+        .slice(2, 8)}`,
       affiliate_url: (() => {
         try {
           const u = new URL(aff.affiliate_url);
@@ -676,7 +692,9 @@ function interleaveAffiliate(apps, affiliatePool, category, {
           if (!u.searchParams.get('utm_medium')) u.searchParams.set('utm_medium', 'listing');
           if (!u.searchParams.get('utm_campaign')) u.searchParams.set('utm_campaign', 'affiliate');
           return u.toString();
-        } catch { return aff.affiliate_url; }
+        } catch {
+          return aff.affiliate_url;
+        }
       })(),
     });
   });
@@ -698,18 +716,53 @@ export async function getServerSideProps(ctx) {
   const currentPage = parseInt(pageQuery || '1', 10);
   const APPS_PER_PAGE = 10;
 
-  // Song song: categories + hot by views + hot by installs
-  const [categoriesData, hotByViewsData, hotByInstallsData] = await Promise.all([
+  // Chuẩn bị URL nội bộ để gọi API check-revocation ở server (ẩn khỏi Network của trình duyệt)
+  const protocol = ctx.req.headers['x-forwarded-proto'] || 'https';
+  const host = ctx.req.headers['x-forwarded-host'] || ctx.req.headers.host;
+  const baseUrl = `${protocol}://${host}`;
+
+  // Giới hạn thời gian chờ để không làm chậm TTFB index
+  const withTimeout = (promise, ms) =>
+    Promise.race([
+      promise,
+      new Promise((resolve) => setTimeout(() => resolve({ ocspStatus: 'error' }), ms)),
+    ]);
+
+  const checkRevocation = () =>
+    withTimeout(
+      (async () => {
+        try {
+          const res = await fetch(`${baseUrl}/api/check-revocation`);
+          if (!res.ok) throw new Error('Bad status');
+          return await res.json();
+        } catch (e) {
+          return { ocspStatus: 'error' };
+        }
+      })(),
+      800
+    );
+
+  // Song song: categories + hot by views + hot by installs + check-revocation
+  const [categoriesData, hotByViewsData, hotByInstallsData, certStatus] = await Promise.all([
     supabase.from('categories').select('id, name, slug'),
-    supabase.from('apps').select(APP_FIELDS).order('views', { ascending: false, nullsLast: true }).limit(5),
-    supabase.from('apps').select(APP_FIELDS).order('installs', { ascending: false, nullsLast: true }).limit(5),
+    supabase
+      .from('apps')
+      .select(APP_FIELDS)
+      .order('views', { ascending: false, nullsLast: true })
+      .limit(5),
+    supabase
+      .from('apps')
+      .select(APP_FIELDS)
+      .order('installs', { ascending: false, nullsLast: true })
+      .limit(5),
+    checkRevocation(),
   ]);
 
   const categories = categoriesData.data || [];
 
   // Chuẩn bị phân trang + data per category
   const paginationData = {};
-  const affiliatePool = affiliateApps.map(a => ({ ...a }));
+  const affiliatePool = affiliateApps.map((a) => ({ ...a }));
 
   const categoriesWithApps = await Promise.all(
     categories.map(async (category) => {
@@ -740,7 +793,10 @@ export async function getServerSideProps(ctx) {
           totalApps,
         };
 
-        const appsRendered = interleaveAffiliate(apps || [], affiliatePool, category, { ratioEvery: 5, maxPerCategory: 2 });
+        const appsRendered = interleaveAffiliate(apps || [], affiliatePool, category, {
+          ratioEvery: 5,
+          maxPerCategory: 2,
+        });
 
         return { ...category, apps: apps || [], appsRendered };
       } else {
@@ -762,7 +818,10 @@ export async function getServerSideProps(ctx) {
           hasNext,
         };
 
-        const appsRendered = interleaveAffiliate(apps, affiliatePool, category, { ratioEvery: 5, maxPerCategory: 2 });
+        const appsRendered = interleaveAffiliate(apps, affiliatePool, category, {
+          ratioEvery: 5,
+          maxPerCategory: 2,
+        });
 
         return { ...category, apps, appsRendered };
       }
@@ -774,16 +833,16 @@ export async function getServerSideProps(ctx) {
   const hotByInstalls = (hotByInstallsData.data || []).slice(0, 5);
 
   // ====== SEO động: luôn truyền slug + name của chuyên mục active (nếu có) ======
-  let metaSEO = { 
-    page: 1, 
-    totalPages: 1, 
-    categorySlug: null, 
+  let metaSEO = {
+    page: 1,
+    totalPages: 1,
+    categorySlug: null,
     categoryName: null,
-    description: 'Kho ứng dụng TestFlight beta & công cụ jailbreak cho iOS'
+    description: 'Kho ứng dụng TestFlight beta & công cụ jailbreak cho iOS',
   };
 
   if (activeSlug) {
-    const activeCat = categories.find(c => (c.slug || '').toLowerCase() === activeSlug);
+    const activeCat = categories.find((c) => (c.slug || '').toLowerCase() === activeSlug);
     const pageInfo = activeCat ? paginationData[activeCat.id] : null;
     if (activeCat) {
       metaSEO = {
@@ -791,7 +850,8 @@ export async function getServerSideProps(ctx) {
         totalPages: pageInfo?.totalPages || 1,
         categorySlug: activeSlug,
         categoryName: activeCat.name || null,
-        description: CATEGORY_SEO[activeSlug]?.description || `Kho ứng dụng ${activeCat.name} cho iOS`
+        description:
+          CATEGORY_SEO[activeSlug]?.description || `Kho ứng dụng ${activeCat.name} cho iOS`,
       };
     }
   }
@@ -803,6 +863,7 @@ export async function getServerSideProps(ctx) {
       hotByViews,
       paginationData,
       metaSEO,
-    }
+      certStatus,
+    },
   };
 }
