@@ -630,7 +630,7 @@ export default function Home({
               </div>
 
               {/* Quảng cáo chèn giữa các category - SỬ DỤNG ADWRAPPER */}
-              {new Set([1, 3]).has(index) && (
+              {new Set([1]).has(index) && (
                 <AdWrapper>
                   <AdUnit className="my-0" mobileVariant="multiplex" desktopMode="unit" />
                 </AdWrapper>
