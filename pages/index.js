@@ -1,4 +1,4 @@
-// pages/index.js (ĐÃ SỬA HOÀN CHỈNH - TỐI ƯU TỐC ĐỘ + ẨN API CHECK)
+// pages/index.js (ĐÃ SỬA)
 import { useMemo, useEffect, useState, Fragment, useRef } from 'react';
 import Head from 'next/head';
 import Layout from '../components/Layout';
@@ -13,13 +13,14 @@ import {
   faCheckCircle,
   faExclamationCircle,
   faFire,
-  faChevronLeft,
+  faChevronLeft, // Đã sửa
   faChevronRight,
   faEye,
   faDownload,
   faCaretDown,
 } from '@fortawesome/free-solid-svg-icons';
 
+// Affiliate tĩnh
 import affiliateApps from '../lib/appads';
 
 /* =========================
@@ -31,6 +32,7 @@ const SITE = {
   twitter: '@storeios',
 };
 
+// ✨ Chỉ lấy đúng cột cần thiết để giảm dung lượng page data
 const APP_FIELDS = [
   'id',
   'name',
@@ -45,22 +47,28 @@ const APP_FIELDS = [
   'created_at',
 ].join(',');
 
+/** Bản đồ SEO cho từng chuyên mục (slug) */
 const CATEGORY_SEO = {
   testflight: {
     title: 'StoreiOS – Ứng dụng TestFlight cho iOS',
-    description: 'Tổng hợp các ứng dụng TestFlight cho iPhone/iPad, cập nhật slot thường xuyên. Theo dõi link TestFlight còn chỗ, dễ cài đặt và an toàn.',
+    description:
+      'Tổng hợp các ứng dụng TestFlight cho iPhone/iPad, cập nhật slot thường xuyên. Theo dõi link TestFlight còn chỗ, dễ cài đặt và an toàn.',
   },
   jailbreak: {
     title: 'StoreiOS – Ứng dụng Jailbreak & tiện ích iOS',
-    description: 'Kho ứng dụng Jailbreak và tiện ích iOS đã ký, cập nhật thường xuyên. Hướng dẫn an toàn, cài đặt nhanh, theo dõi chứng chỉ Signed/Revoked.',
+    description:
+      'Kho ứng dụng Jailbreak và tiện ích iOS đã ký, cập nhật thường xuyên. Hướng dẫn an toàn, cài đặt nhanh, theo dõi chứng chỉ Signed/Revoked.',
   },
   'app-clone': {
     title: 'StoreiOS – App Clone (nhân bản) cho iOS',
-    description: 'App Clone (nhân bản) cho iOS: cài song song nhiều tài khoản, tối ưu cho mạng xã hội và công việc. Đã ký sẵn, dễ cài đặt.',
+    description:
+      'App Clone (nhân bản) cho iOS: cài song song nhiều tài khoản, tối ưu cho mạng xã hội và công việc. Đã ký sẵn, dễ cài đặt.',
   },
+  // ✅ SEO cho chuyên mục mới
   'app-removed': {
     title: 'StoreiOS – Ứng dụng đã gỡ khỏi App Store (Signed IPA)',
-    description: 'Tổng hợp ứng dụng iOS đã gỡ khỏi App Store nhưng vẫn có thể cài đặt qua IPA đã ký. Cập nhật thường xuyên, cài đặt nhanh, an toàn.',
+    description:
+      'Tổng hợp ứng dụng iOS đã gỡ khỏi App Store nhưng vẫn có thể cài đặt qua IPA đã ký. Cập nhật thường xuyên, cài đặt nhanh, an toàn.',
   },
 };
 
@@ -87,8 +95,8 @@ function SEOIndexMeta({ meta }) {
   const {
     page = 1,
     totalPages = 1,
-    categorySlug = null,
-    categoryName = null,
+    categorySlug = null,     // string | null
+    categoryName = null,     // string | null (server gửi kèm)
     description: defaultDesc = 'Tải ứng dụng iOS, TestFlight, jailbreak và hướng dẫn an toàn. Cập nhật hằng ngày.',
   } = meta || {};
 
@@ -101,6 +109,7 @@ function SEOIndexMeta({ meta }) {
   const prevUrl = page > 1 ? buildCanonical({ categorySlug: slug || null, page: page - 1 }) : null;
   const nextUrl = page < totalPages ? buildCanonical({ categorySlug: slug || null, page: page + 1 }) : null;
 
+  // Supabase origin để preconnect
   let supabaseOrigin = null;
   try {
     if (process.env.NEXT_PUBLIC_SUPABASE_URL) {
@@ -108,6 +117,7 @@ function SEOIndexMeta({ meta }) {
     }
   } catch {}
 
+  // JSON-LD
   const jsonLdWebsite = {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
@@ -152,6 +162,7 @@ function SEOIndexMeta({ meta }) {
 
   return (
     <Head>
+      {/* Title & basic meta */}
       <title>{title}</title>
       <meta name="description" content={desc} />
       <link rel="canonical" href={canonical} />
@@ -161,6 +172,7 @@ function SEOIndexMeta({ meta }) {
       <meta name="googlebot" content="index,follow" />
       <meta name="theme-color" content="#111111" />
 
+      {/* Open Graph */}
       <meta property="og:type" content="website" />
       <meta property="og:site_name" content={SITE.name} />
       <meta property="og:url" content={canonical} />
@@ -170,20 +182,24 @@ function SEOIndexMeta({ meta }) {
       <meta property="og:image:width" content="1200" />
       <meta property="og:image:height" content="630" />
 
+      {/* Twitter */}
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:site" content={SITE.twitter} />
       <meta name="twitter:title" content={title} />
       <meta name="twitter:description" content={desc} />
       <meta name="twitter:image" content={`${SITE.url}/og-default.jpg`} />
 
+      {/* Hreflang */}
       <link rel="alternate" hrefLang="vi" href={canonical} />
       <link rel="alternate" hrefLang="x-default" href={canonical} />
 
+      {/* Performance */}
       {supabaseOrigin && <link rel="dns-prefetch" href={supabaseOrigin} />}
       {supabaseOrigin && <link rel="preconnect" href={supabaseOrigin} crossOrigin="" />}
       <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
       <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
 
+      {/* JSON-LD */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdWebsite) }} />
       {jsonLdBreadcrumb && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdBreadcrumb) }} />
@@ -196,10 +212,11 @@ function SEOIndexMeta({ meta }) {
 }
 
 /* =========================
-   Pagination components (giữ nguyên)
+   Pagination components
    ========================= */
+
+// Full pagination (cho category đang active)
 function PaginationFull({ categorySlug, currentPage, totalPages }) {
-  // ... giữ nguyên hoàn toàn
   if (!totalPages || totalPages <= 1) return null;
 
   const windowSize = 2;
@@ -246,7 +263,8 @@ function PaginationFull({ categorySlug, currentPage, totalPages }) {
           aria-label="Trang trước"
           className="px-2.5 h-8 inline-flex items-center justify-center rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
         >
-          <FontAwesomeIcon icon={faChevronLeft} />
+          {/* ✅ Đã sửa: dùng icon ChevronLeft chuẩn */}
+          <FontAwesomeIcon icon={faChevronLeft} /> 
         </Link>
       )}
 
@@ -272,6 +290,7 @@ function PaginationFull({ categorySlug, currentPage, totalPages }) {
   );
 }
 
+// Lite pagination (cho category không active)
 function PaginationLite({ categorySlug, hasNext }) {
   if (!hasNext) return null;
   return (
@@ -290,10 +309,11 @@ function PaginationLite({ categorySlug, hasNext }) {
 }
 
 /* =========================
-   Metric + HotAppCard + Affiliate (giữ nguyên)
+   Metric (absolute)
    ========================= */
 function MetricInlineAbsolute({ categorySlug, app, forceKey }) {
   const slug = (categorySlug || '').toLowerCase();
+
   let value = 0;
   if (forceKey === 'views') value = app?.views ?? 0;
   else if (forceKey === 'installs') value = app?.installs ?? 0;
@@ -310,6 +330,9 @@ function MetricInlineAbsolute({ categorySlug, app, forceKey }) {
   );
 }
 
+/* =========================
+   Hot App Card
+   ========================= */
 const HotAppCard = ({ app, rank, hotMode }) => {
   const rankColors = [
     'from-red-600 to-orange-500',
@@ -336,6 +359,9 @@ const HotAppCard = ({ app, rank, hotMode }) => {
   );
 };
 
+/* =========================
+   Affiliate inline card
+   ========================= */
 const AffiliateInlineCard = ({ item, isFirst = false }) => {
   const { name, author, icon_url, affiliate_url, payout_label } = item;
   return (
@@ -372,36 +398,30 @@ const AffiliateInlineCard = ({ item, isFirst = false }) => {
 };
 
 /* =========================
-   Home Component
+   Home
    ========================= */
-export default function Home({ 
-  categoriesWithApps, 
-  hotByInstalls, 
-  hotByViews, 
-  paginationData, 
-  metaSEO,
-  certStatus: initialCertStatus   // ← nhận từ server
-}) {
+export default function Home({ categoriesWithApps, hotByInstalls, hotByViews, paginationData, metaSEO }) {
   const INSTALLABLE_SLUGS = new Set(['jailbreak', 'app-clone', 'app-removed']);
+
+  // Trạng thái certificate
+  const [certStatus, setCertStatus] = useState(null);
+  // Chế độ App hot: installs | views
   const [hotMode, setHotMode] = useState('installs');
   const [hotMenuOpen, setHotMenuOpen] = useState(false);
   const hotMenuRef = useRef(null);
 
-  // Dùng initial từ server, nếu chưa có thì null → badge sẽ ẩn cho đến khi có dữ liệu
-  const [certStatus, setCertStatus] = useState(initialCertStatus || null);
-
-  // Fallback: nếu server lỗi, vẫn thử fetch client 1 lần nữa (dự phòng)
   useEffect(() => {
-    if (!certStatus) {
-      let alive = true;
-      fetch('/api/check-revocation')
-        .then(r => r.ok ? r.json() : Promise.reject())
-        .then(json => { if (alive && json?.success !== false) setCertStatus(json); })
-        .catch(() => { if (alive) setCertStatus({ ocspStatus: 'error' }); });
-      return () => { alive = false; };
-    }
-  }, [certStatus]);
+    let alive = true;
 
+    fetch('/api/check-revocation')
+      .then(r => (r.ok ? r.json() : Promise.reject()))
+      .then(json => { if (alive) setCertStatus(json); })
+      .catch(() => { if (alive) setCertStatus({ ocspStatus: 'error' }); });
+
+    return () => { alive = false; };
+  }, []);
+
+  // đóng menu khi click ra ngoài
   useEffect(() => {
     const onDocClick = (e) => {
       if (hotMenuRef.current && !hotMenuRef.current.contains(e.target)) setHotMenuOpen(false);
@@ -413,31 +433,43 @@ export default function Home({
   const contentCard = 'bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4';
   const adCard = contentCard;
 
+  // Label quảng cáo nằm chính giữa đường viền trên của card
   const AdLabel = () => (
-    <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-2 text-xs md:text-sm text-gray-500 dark:text-gray-400 font-semibold bg-white dark:bg-gray-800" style={{ zIndex: 1 }}>
+    <div
+      className="absolute -top-3 left-1/2 -translate-x-1/2 px-2 text-xs md:text-sm text-gray-500 dark:text-gray-400 font-semibold bg-white dark:bg-gray-800"
+      style={{ zIndex: 1 }} // Đảm bảo label nằm trên border của card
+    >
       Quảng cáo
     </div>
   );
 
+  // Wrapper cho block quảng cáo (Đã loại bỏ mt-6 để không xung đột với space-y-10)
   const AdWrapper = ({ children }) => (
     <div className="relative">
       <AdLabel />
-      <div className={`${adCard} pt-4`}>{children}</div>
+      <div className={`${adCard} pt-4`}>
+        {children}
+      </div>
     </div>
   );
 
+  // ===== SEO =====
   const seoData = useMemo(() => metaSEO || {}, [metaSEO]);
+
+  // Danh sách hot theo chế độ
   const hotApps = hotMode === 'views' ? hotByViews : hotByInstalls;
 
   return (
-    <Layout hotApps={hotByInstalls}>
+    <Layout hotApps={hotByInstalls /* giữ nguyên nếu header cần */}>
       <SEOIndexMeta meta={seoData} />
 
       <div className="container mx-auto px-1 md:px-2 py-6 space-y-10">
+        {/* Banner Ad - SỬ DỤNG ADWRAPPER */}
         <AdWrapper>
           <AdUnit className="my-0" mobileVariant="compact" desktopMode="unit" />
         </AdWrapper>
 
+        {/* Hot apps */}
         {hotApps && hotApps.length > 0 && (
           <div className={contentCard}>
             <div className="flex items-center justify-between mb-4">
@@ -448,28 +480,48 @@ export default function Home({
                 <FontAwesomeIcon icon={faFire} className="text-xl text-red-500" />
               </div>
 
+              {/* ✅ Nút đơn + mũi tên để mở menu chọn chế độ */}
               <div className="relative" ref={hotMenuRef}>
                 <button
                   className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-semibold rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
                   onClick={() => setHotMenuOpen(v => !v)}
+                  aria-haspopup="menu"
+                  aria-expanded={hotMenuOpen}
                 >
                   {hotMode === 'installs' ? (
-                    <> <FontAwesomeIcon icon={faDownload} /> Cài nhiều </>
+                    <>
+                      <FontAwesomeIcon icon={faDownload} />
+                      Cài nhiều
+                    </>
                   ) : (
-                    <> <FontAwesomeIcon icon={faEye} /> Xem nhiều </>
+                    <>
+                      <FontAwesomeIcon icon={faEye} />
+                      Xem nhiều
+                    </>
                   )}
                   <FontAwesomeIcon icon={faCaretDown} className="opacity-80" />
                 </button>
 
                 {hotMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-40 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl overflow-hidden z-10">
-                    <button className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 ${hotMode==='installs' ? 'font-bold' : ''}`}
-                      onClick={() => { setHotMode('installs'); setHotMenuOpen(false); }}>
-                      <FontAwesomeIcon icon={faDownload} /> Cài nhiều
+                  <div
+                    role="menu"
+                    className="absolute right-0 mt-2 w-40 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-xl overflow-hidden z-10"
+                  >
+                    <button
+                      role="menuitem"
+                      className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 ${hotMode==='installs' ? 'font-bold' : ''}`}
+                      onClick={() => { setHotMode('installs'); setHotMenuOpen(false); }}
+                    >
+                      <FontAwesomeIcon icon={faDownload} />
+                      Cài nhiều
                     </button>
-                    <button className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 ${hotMode==='views' ? 'font-bold' : ''}`}
-                      onClick={() => { setHotMode('views'); setHotMenuOpen(false); }}>
-                      <FontAwesomeIcon icon={faEye} /> Xem nhiều
+                    <button
+                      role="menuitem"
+                      className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-700 ${hotMode==='views' ? 'font-bold' : ''}`}
+                      onClick={() => { setHotMode('views'); setHotMenuOpen(false); }}
+                    >
+                      <FontAwesomeIcon icon={faEye} />
+                      Xem nhiều
                     </button>
                   </div>
                 )}
@@ -484,11 +536,11 @@ export default function Home({
           </div>
         )}
 
+        {/* Categories */}
         {categoriesWithApps.map((category, index) => {
           const pageInfo = paginationData?.[category.id];
           const hasFullPager = !!pageInfo?.totalPages && pageInfo.totalPages > 1 && pageInfo.mode === 'full';
           const hasLitePager = pageInfo?.mode === 'lite' && pageInfo?.hasNext === true;
-          const isInstallableCategory = ['jailbreak', 'app-clone', 'app-removed'].includes((category.slug || '').toLowerCase());
 
           return (
             <Fragment key={category.id}>
@@ -498,9 +550,16 @@ export default function Home({
                     {category.name}
                   </h2>
 
-                  {/* Badge chỉ hiện khi đã có certStatus */}
-                  {isInstallableCategory && certStatus && (
-                    <span className="flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300 transition-opacity duration-300">
+                  {/* Badge trạng thái cert – jailbreak/app-clone/app-removed */}
+                  {new Set(['jailbreak', 'app-clone', 'app-removed']).has((category.slug || '').toLowerCase()) && certStatus && (
+                    <span
+                      className="flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300"
+                      title={
+                        certStatus?.ocspStatus === 'successful'
+                          ? (certStatus.isRevoked ? 'Chứng chỉ đã bị thu hồi' : 'Chứng chỉ hợp lệ')
+                          : 'Không thể kiểm tra'
+                      }
+                    >
                       {certStatus?.ocspStatus === 'successful' ? (
                         certStatus.isRevoked ? (
                           <>
@@ -523,6 +582,7 @@ export default function Home({
                   )}
                 </div>
 
+                {/* Thông tin trang (nếu có) */}
                 {hasFullPager && (
                   <div className="text-[12px] text-gray-500 dark:text-gray-400 mb-2">
                     Trang {pageInfo.currentPage} / {pageInfo.totalPages} ({pageInfo.totalApps} ứng dụng)
@@ -532,8 +592,15 @@ export default function Home({
                 <div>
                   {(category.appsRendered || category.apps).map((item, idx) => {
                     if (item.__isAffiliate) {
-                      return <AffiliateInlineCard key={`aff-${item.__affKey || item.id}`} item={item} isFirst={idx === 0} />;
+                      return (
+                        <AffiliateInlineCard
+                          key={`aff-${item.__affKey || item.id}`}
+                          item={item}
+                          isFirst={idx === 0}
+                        />
+                      );
                     }
+                    // ✅ Bọc AppCard trong relative & chèn Metric absolute (ngay dưới icon tải)
                     return (
                       <div key={item.id} className="relative">
                         <AppCard app={item} mode="list" />
@@ -543,13 +610,19 @@ export default function Home({
                   })}
                 </div>
 
+                {/* Phân trang */}
                 {hasFullPager && (
-                  <PaginationFull categorySlug={category.slug} currentPage={pageInfo.currentPage || 1} totalPages={pageInfo.totalPages || 1} />
+                  <PaginationFull
+                    categorySlug={category.slug}
+                    currentPage={pageInfo.currentPage || 1}
+                    totalPages={pageInfo.totalPages || 1}
+                  />
                 )}
                 {hasLitePager && <PaginationLite categorySlug={category.slug} hasNext={true} />}
               </div>
 
-              {[1, 3].includes(index) && (
+              {/* Quảng cáo chèn giữa các category - SỬ DỤNG ADWRAPPER */}
+              {new Set([1, 3]).has(index) && (
                 <AdWrapper>
                   <AdUnit className="my-0" mobileVariant="multiplex" desktopMode="unit" />
                 </AdWrapper>
@@ -558,36 +631,66 @@ export default function Home({
           );
         })}
 
+        {/* Footer Ad - SỬ DỤNG ADWRAPPER */}
         <AdWrapper>
           <AdUnit className="my-0" mobileVariant="compact" desktopMode="unit" />
         </AdWrapper>
-      </div>
+       </div> 
     </Layout>
   );
 }
 
 /* =========================
-   Helper: Check certificate (server-side)
+   Affiliate interleave
    ========================= */
-async function checkCertificateStatus() {
-  try {
-    const res = await fetch('https://storeios.net/api/check-revocation', { 
-      headers: { 'Cache-Control': 'no-store' },
-      next: { revalidate: 300 } // cache 5 phút nếu dùng ISR (tùy bạn)
+function interleaveAffiliate(apps, affiliatePool, category, {
+  ratioEvery = 5,
+  maxPerCategory = 2,
+}) {
+  const result = [...(apps || [])];
+  if (!affiliatePool || affiliatePool.length === 0) return result;
+
+  const matched = affiliatePool.filter(a => {
+    const slug = (a.category_slug || '').toLowerCase();
+    return slug ? slug === (category.slug || '').toLowerCase() : true;
+  });
+
+  const want = Math.min(Math.max(0, Math.round((apps?.length || 0) / ratioEvery)), maxPerCategory);
+  const shuffled = [...matched].sort(() => Math.random() - 0.5).slice(0, want);
+
+  shuffled.forEach((aff, i) => {
+    const posMin = Math.min(apps.length, 2);
+    const posMax = Math.max(apps.length - 1, 0);
+    const insertAt = apps.length <= 2
+      ? apps.length
+      : Math.floor(Math.random() * (posMax - posMin + 1)) + posMin;
+
+    result.splice(Math.min(insertAt + i, result.length), 0, {
+      ...aff,
+      __isAffiliate: true,
+      __affKey: `${aff.id || aff.affiliate_url}-${i}-${Math.random().toString(36).slice(2, 8)}`,
+      affiliate_url: (() => {
+        try {
+          const u = new URL(aff.affiliate_url);
+          if (!u.searchParams.get('utm_source')) u.searchParams.set('utm_source', 'storeios');
+          if (!u.searchParams.get('utm_medium')) u.searchParams.set('utm_medium', 'listing');
+          if (!u.searchParams.get('utm_campaign')) u.searchParams.set('utm_campaign', 'affiliate');
+          return u.toString();
+        } catch { return aff.affiliate_url; }
+      })(),
     });
-    if (!res.ok) return { ocspStatus: 'error' };
-    const data = await res.json();
-    return data.success !== false ? data : { ocspStatus: 'error' };
-  } catch (err) {
-    return { ocspStatus: 'error' };
-  }
+  });
+
+  return result;
 }
 
 /* =========================
-   getServerSideProps (đã thêm certStatus)
+   getServerSideProps
    ========================= */
 export async function getServerSideProps(ctx) {
   const supabase = createSupabaseServer(ctx);
+
+  // CDN caching ngắn hạn
   ctx.res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
 
   const { category: categorySlug, page: pageQuery } = ctx.query;
@@ -595,6 +698,7 @@ export async function getServerSideProps(ctx) {
   const currentPage = parseInt(pageQuery || '1', 10);
   const APPS_PER_PAGE = 10;
 
+  // Song song: categories + hot by views + hot by installs
   const [categoriesData, hotByViewsData, hotByInstallsData] = await Promise.all([
     supabase.from('categories').select('id, name, slug'),
     supabase.from('apps').select(APP_FIELDS).order('views', { ascending: false, nullsLast: true }).limit(5),
@@ -602,6 +706,8 @@ export async function getServerSideProps(ctx) {
   ]);
 
   const categories = categoriesData.data || [];
+
+  // Chuẩn bị phân trang + data per category
   const paginationData = {};
   const affiliatePool = affiliateApps.map(a => ({ ...a }));
 
@@ -609,6 +715,7 @@ export async function getServerSideProps(ctx) {
     categories.map(async (category) => {
       const catSlug = (category.slug || '').toLowerCase();
       const isActive = activeSlug && catSlug === activeSlug;
+
       const pageForThisCategory = isActive ? currentPage : 1;
       const startIndex = (pageForThisCategory - 1) * APPS_PER_PAGE;
       const endIndex = startIndex + APPS_PER_PAGE - 1;
@@ -616,19 +723,29 @@ export async function getServerSideProps(ctx) {
       if (isActive) {
         const [{ count }, { data: apps }] = await Promise.all([
           supabase.from('apps').select('id', { count: 'estimated', head: true }).eq('category_id', category.id),
-          supabase.from('apps').select(APP_FIELDS).eq('category_id', category.id)
+          supabase
+            .from('apps')
+            .select(APP_FIELDS)
+            .eq('category_id', category.id)
             .order('created_at', { ascending: false })
             .range(startIndex, endIndex),
         ]);
 
         const totalApps = count || 0;
         const totalPages = Math.max(1, Math.ceil(totalApps / APPS_PER_PAGE));
-        paginationData[category.id] = { mode: 'full', currentPage: pageForThisCategory, totalPages, totalApps };
+        paginationData[category.id] = {
+          mode: 'full',
+          currentPage: pageForThisCategory,
+          totalPages,
+          totalApps,
+        };
 
         const appsRendered = interleaveAffiliate(apps || [], affiliatePool, category, { ratioEvery: 5, maxPerCategory: 2 });
+
         return { ...category, apps: apps || [], appsRendered };
       } else {
-        const { data: appsPlusOne } = await supabase.from('apps')
+        const { data: appsPlusOne } = await supabase
+          .from('apps')
           .select(APP_FIELDS)
           .eq('category_id', category.id)
           .order('created_at', { ascending: false })
@@ -641,20 +758,30 @@ export async function getServerSideProps(ctx) {
           mode: hasNext ? 'lite' : 'none',
           currentPage: 1,
           totalPages: hasNext ? 2 : 1,
+          totalApps: undefined,
           hasNext,
         };
 
         const appsRendered = interleaveAffiliate(apps, affiliatePool, category, { ratioEvery: 5, maxPerCategory: 2 });
+
         return { ...category, apps, appsRendered };
       }
     })
   );
 
+  // Hai danh sách hot riêng
   const hotByViews = (hotByViewsData.data || []).slice(0, 5);
   const hotByInstalls = (hotByInstallsData.data || []).slice(0, 5);
 
-  // SEO
-  let metaSEO = { page: 1, totalPages: 1, categorySlug: null, categoryName: null, description: 'Kho ứng dụng TestFlight beta & công cụ jailbreak cho iOS' };
+  // ====== SEO động: luôn truyền slug + name của chuyên mục active (nếu có) ======
+  let metaSEO = { 
+    page: 1, 
+    totalPages: 1, 
+    categorySlug: null, 
+    categoryName: null,
+    description: 'Kho ứng dụng TestFlight beta & công cụ jailbreak cho iOS'
+  };
+
   if (activeSlug) {
     const activeCat = categories.find(c => (c.slug || '').toLowerCase() === activeSlug);
     const pageInfo = activeCat ? paginationData[activeCat.id] : null;
@@ -669,9 +796,6 @@ export async function getServerSideProps(ctx) {
     }
   }
 
-  // CHECK CERTIFICATE TRÊN SERVER → KHÔNG HIỆN TRONG NETWORK
-  const certStatus = await checkCertificateStatus();
-
   return {
     props: {
       categoriesWithApps,
@@ -679,7 +803,6 @@ export async function getServerSideProps(ctx) {
       hotByViews,
       paginationData,
       metaSEO,
-      certStatus,   // ← thêm vào đây
     }
   };
 }
