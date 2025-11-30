@@ -1,19 +1,86 @@
+import Head from 'next/head';
+import Layout from '../components/Layout';
+
 export default function PrivacyPolicy() {
   return (
-    <main style={{maxWidth:800,margin:'40px auto',padding:'0 16px',lineHeight:1.7}}>
-      <h1>Chính sách Quyền riêng tư</h1>
-      <p>Trang web storeios.net tôn trọng quyền riêng tư của người dùng. Chúng tôi sử dụng cookie và các công nghệ tương tự để phân tích lưu lượng, cá nhân hoá nội dung và hiển thị quảng cáo.</p>
-      <h2>Cookie và quảng cáo</h2>
-      <p>Chúng tôi hợp tác với các đối tác quảng cáo, bao gồm Google AdSense và Ezoic. Các đối tác có thể sử dụng cookie, web beacon để phân phát quảng cáo phù hợp.</p>
-      <ul>
-        <li>Chính sách về cách Google sử dụng dữ liệu: <a href="https://policies.google.com/technologies/partner-sites" target="_blank" rel="noreferrer">policies.google.com/technologies/partner-sites</a></li>
-        <li>Trang quyền riêng tư do Ezoic cung cấp cho domain này: <a href="https://g.ezoic.net/privacy/storeios.net" target="_blank" rel="noreferrer">g.ezoic.net/privacy/storeios.net</a></li>
-      </ul>
-      <h2>Quyền của bạn</h2>
-      <p>Bạn có thể quản lý tuỳ chọn đồng ý cookie thông qua banner/biểu mẫu đồng ý hiển thị trên trang.</p>
-      <h2>Liên hệ</h2>
-      <p>Nếu có câu hỏi về chính sách, vui lòng liên hệ: contact@storeios.net.</p>
-      <p>Cập nhật lần cuối: {new Date().toISOString().slice(0,10)}</p>
-    </main>
+    <Layout fullWidth={false}>
+      <Head>
+        <title>Privacy Policy – StoreiOS</title>
+        <meta name="description" content="Privacy Policy of StoreiOS – how we collect, use, protect user data." />
+        <meta name="robots" content="index, follow" />
+      </Head>
+
+      <div className="max-w-3xl mx-auto py-8 text-gray-800 dark:text-gray-200">
+        <h1 className="text-3xl font-bold mb-6">Privacy Policy</h1>
+
+        <p className="mb-4">
+          StoreiOS ("we", "our", or "the site") is committed to protecting your privacy. 
+          This Privacy Policy explains how your information is collected, used, and safeguarded 
+          when you visit <strong>storeios.net</strong>.
+        </p>
+
+        <h2 className="text-xl font-semibold mt-6 mb-2">1. Information We Collect</h2>
+        <p className="mb-3">We may collect:</p>
+        <ul className="list-disc ml-6 mb-4 space-y-1">
+          <li>Basic device information (browser type, OS, IP address)</li>
+          <li>Analytics data (pages visited, time on site, search queries)</li>
+          <li>Information you provide voluntarily (comments, login data via Firebase Auth)</li>
+          <li>Cookie data for personalization & advertising</li>
+        </ul>
+
+        <h2 className="text-xl font-semibold mt-6 mb-2">2. Use of Cookies</h2>
+        <p className="mb-4">
+          We use cookies for analytics, site functionality, and advertising. 
+          Third-party vendors, including Google, use cookies to serve personalized ads.
+        </p>
+
+        <h2 className="text-xl font-semibold mt-6 mb-2">3. Third-Party Services</h2>
+        <p className="mb-3">We use the following services:</p>
+        <ul className="list-disc ml-6 mb-4 space-y-1">
+          <li>Google AdSense (personalized ad delivery)</li>
+          <li>Google Analytics / Ads measurement</li>
+          <li>Supabase (database & API)</li>
+          <li>Firebase Authentication (login)</li>
+        </ul>
+
+        <h2 className="text-xl font-semibold mt-6 mb-2">4. How We Use Your Information</h2>
+        <p className="mb-4">We use collected data to:</p>
+        <ul className="list-disc ml-6 mb-4 space-y-1">
+          <li>Improve site performance and features</li>
+          <li>Secure user accounts</li>
+          <li>Deliver relevant content</li>
+          <li>Serve personalized/non-personalized ads</li>
+        </ul>
+
+        <h2 className="text-xl font-semibold mt-6 mb-2">5. Data Protection</h2>
+        <p className="mb-4">
+          We do not sell or share your personal information.  
+          All data is stored securely via trusted service providers.
+        </p>
+
+        <h2 className="text-xl font-semibold mt-6 mb-2">6. Advertising</h2>
+        <p className="mb-4">
+          StoreiOS displays ads provided by Google AdSense and other partners.  
+          Third-party vendors use cookies to personalize advertisements.
+        </p>
+
+        <h2 className="text-xl font-semibold mt-6 mb-2">7. Children's Privacy</h2>
+        <p className="mb-4">
+          We do not knowingly collect information from children under 13.  
+          If you believe such data has been collected, contact us to remove it.
+        </p>
+
+        <h2 className="text-xl font-semibold mt-6 mb-2">8. Changes to This Policy</h2>
+        <p className="mb-4">
+          We may update this policy at any time. Updates will be posted on this page.
+        </p>
+
+        <h2 className="text-xl font-semibold mt-6 mb-2">9. Contact</h2>
+        <p className="mb-4">
+          For any questions regarding this Privacy Policy, contact us at:  
+          <a href="mailto:admin@storeios.net" className="text-blue-500 underline">admin@storeios.net</a>
+        </p>
+      </div>
+    </Layout>
   );
 }
