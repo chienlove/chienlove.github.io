@@ -3,7 +3,7 @@ export default async function handler(req, res) {
   // Cache rất ngắn ở CDN và cho phép SWR để lần sau vào nhanh
   res.setHeader(
     'Cache-Control',
-    'public, max-age=5, s-maxage=5, stale-while-revalidate=300'
+    'public, max-age=0, s-maxage=300, stale-while-revalidate=300'
   );
 
   async function fetchOnce(timeoutMs = 3000) {
