@@ -16,6 +16,58 @@ import {
   faCog, faBoxOpen, faFolder, faShieldAlt
 } from '@fortawesome/free-solid-svg-icons';
 
+/* =========================
+   Helpers tối ưu tìm kiếm
+   ========================= */
+
+// Chuẩn hóa chuỗi: lower-case, bỏ ký tự đặc biệt, gom space
+function normalizeSearchQuery(raw) {
+  if (!raw) return '';
+  return raw
+    .toLowerCase()
+    // thay các ký tự phân tách thành khoảng trắng
+    .replace(/[`"'’""]/g, ' ')
+    .replace(/[-–--_/\\|()[\]{}+*?!.,:;@#$%^&~]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// Escape ký tự đặc biệt cho ILIKE & Supabase .or()
+function sanitizeForLike(str) {
+  if (!str) return '';
+  return str
+    .replace(/%/g, '\\%')
+    .replace(/_/g, '\\_')
+    .replace(/,/g, '\\,');
+}
+
+// Tạo chuỗi filter .or() từ query đã chuẩn hóa
+function buildOrFilterFromQuery(normalized) {
+  if (!normalized) return '';
+
+  const tokens = normalized
+    .split(' ')
+    .map((t) => t.trim())
+    .filter((t) => t.length > 1) // bỏ từ 1 ký tự cho đỡ nhiễu
+    .slice(0, 6); // giới hạn tối đa 6 token để tránh query quá dài
+
+  const parts = [];
+
+  const full = sanitizeForLike(normalized);
+  // Ưu tiên match cả cụm trước
+  parts.push(`name.ilike.%${full}%`);
+  parts.push(`author.ilike.%${full}%`);
+
+  // Sau đó tới từng token riêng lẻ
+  for (const tok of tokens) {
+    const s = sanitizeForLike(tok);
+    parts.push(`name.ilike.%${s}%`);
+    parts.push(`author.ilike.%${s}%`);
+  }
+
+  return parts.join(',');
+}
+
 export default function Layout({ children, fullWidth = false, hotApps }) {
   const [darkMode, setDarkMode] = useState(false);
   const [user, setUser] = useState(null);
@@ -112,20 +164,52 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
     })();
   }, []);
 
-  // ===== Search dataset
+  // ===== Search dataset (tối ưu & thân thiện SEO nội bộ)
   const runSearch = async () => {
+    // Khi chưa nhập gì và không lọc category -> không cần query nặng
+    const raw = q || '';
+    const normalized = normalizeSearchQuery(raw);
+
+    if (!normalized && activeCategory === 'all') {
+      setApps([]);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
-    let queryQ = supabase
-      .from('apps')
-      .select('*')
-      .order(sortBy, { ascending: sortBy === 'name' });
-    if (q.trim())
-      queryQ = queryQ.or(`name.ilike.%${q.trim()}%,author.ilike.%${q.trim()}%`);
-    if (activeCategory !== 'all') queryQ = queryQ.eq('category_id', activeCategory);
-    const { data } = await queryQ;
-    setApps(data || []);
-    setLoading(false);
+
+    try {
+      let queryQ = supabase
+        .from('apps')
+        .select('*')
+        .order(sortBy, { ascending: sortBy === 'name' });
+
+      // Lọc theo category nếu có
+      if (activeCategory !== 'all') {
+        queryQ = queryQ.eq('category_id', activeCategory);
+      }
+
+      // Áp dụng filter theo từ khóa (cả cụm + từng token)
+      if (normalized) {
+        const orFilter = buildOrFilterFromQuery(normalized);
+        if (orFilter) {
+          queryQ = queryQ.or(orFilter);
+        }
+      }
+
+      // Giới hạn số kết quả để phản hồi nhanh (SEO tốt hơn vì TTFB thấp)
+      queryQ = queryQ.limit(60);
+
+      const { data } = await queryQ;
+      setApps(data || []);
+    } catch (err) {
+      console.error('Search error:', err);
+      setApps([]);
+    } finally {
+      setLoading(false);
+    }
   };
+
   useEffect(() => {
     if (searchOpen) runSearch();
   }, [q, activeCategory, sortBy, searchOpen]);
