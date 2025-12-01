@@ -13,7 +13,8 @@ import {
   faBoxOpen, faFolder, faShieldAlt, faSun, faMoon, faBars,
   faSignOutAlt, faSearch, faExclamationTriangle, faEye, faCheckSquare, faSquare,
   faChevronDown, faChevronUp, faLayerGroup, faExchangeAlt,
-  faNewspaper,            // 👈 THÊM ICON BLOG
+  faNewspaper,            // Blog
+  faHouse,                // Trang chủ
 } from "@fortawesome/free-solid-svg-icons";
 import { faApple } from "@fortawesome/free-brands-svg-icons";
 
@@ -70,7 +71,8 @@ export default function Admin() {
 
   // --- helpers ---
   const isValidUUID = (id) => {
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    const uuidRegex =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
     return id && uuidRegex.test(id);
   };
 
@@ -85,24 +87,38 @@ export default function Admin() {
     categories.find((c) => c.id === selectedCategory)?.enable_appstore_fetch === true;
 
   // --- effects ---
-  useEffect(() => { checkAdmin(); }, []);
+  useEffect(() => {
+    checkAdmin();
+  }, []);
 
-  // hash/#tab và ?tab=
+  // hash/#tab và ?tab=  (THÊM HỖ TRỢ tab=blog/blogs)
   useEffect(() => {
     const applyFromLocation = () => {
-      const h = (typeof window !== "undefined" && window.location.hash)
-        ? window.location.hash.replace("#", "")
-        : "";
+      const h =
+        typeof window !== "undefined" && window.location.hash
+          ? window.location.hash.replace("#", "")
+          : "";
       const qtab = (router.query?.tab || "").toString();
       const tab = (h || qtab || "").toLowerCase();
-      if (["apps", "categories", "certs"].includes(tab)) setActiveTab(tab);
+
+      if (["apps", "categories", "certs"].includes(tab)) {
+        setActiveTab(tab);
+        return;
+      }
+
+      // 👉 Hỗ trợ ?tab=blog / ?tab=blogs: tự chuyển sang /admin/blog
+      if (tab === "blog" || tab === "blogs") {
+        router.push("/admin/blog");
+        return;
+      }
     };
+
     applyFromLocation();
     const onHash = () => applyFromLocation();
     window.addEventListener("hashchange", onHash);
     return () => window.removeEventListener("hashchange", onHash);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [router.query?.tab]);
+  }, [router.query?.tab, router]);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", darkMode);
@@ -118,11 +134,14 @@ export default function Admin() {
     }
   }, []);
 
-  // Tự tính SIZE từ plist khi nhập tên IPA (download_link = tên plist/ipa name)
-  // Tự tính SIZE từ plist khi nhập tên IPA (hỗ trợ nhiều tên trường & 2 cấu trúc plist)
+  // Tự tính SIZE từ plist khi nhập tên IPA
   useEffect(() => {
     const getPlistName = () =>
-      (form?.download_link || form?.plist || form?.plist_name || form?.manifest || "")
+      (form?.download_link ||
+        form?.plist ||
+        form?.plist_name ||
+        form?.manifest ||
+        "")
         .toString()
         .trim();
 
@@ -140,13 +159,18 @@ export default function Admin() {
         const { token } = await tokenRes.json();
         if (!token) throw new Error("Không nhận được token từ API");
 
-        const plistUrl = `https://storeios.net/api/plist?ipa_name=${encodeURIComponent(plistName)}&token=${token}`;
+        const plistUrl = `https://storeios.net/api/plist?ipa_name=${encodeURIComponent(
+          plistName
+        )}&token=${token}`;
         const plistResponse = await fetch(plistUrl);
-        if (!plistResponse.ok) throw new Error(`Lỗi tải plist: ${plistResponse.status}`);
+        if (!plistResponse.ok)
+          throw new Error(`Lỗi tải plist: ${plistResponse.status}`);
         const plistContent = await plistResponse.text();
 
         // Pattern 1: <key>url</key><string>...ipa</string>
-        let match = plistContent.match(/<key>\s*url\s*<\/key>\s*<string>([^<]+\.ipa)<\/string>/i);
+        let match = plistContent.match(
+          /<key>\s*url\s*<\/key>\s*<string>([^<]+\.ipa)<\/string>/i
+        );
 
         // Pattern 2: assets -> software-package -> <string>https://...ipa</string>
         if (!match) {
@@ -154,16 +178,23 @@ export default function Admin() {
             /<string>\s*software-package\s*<\/string>[\s\S]*?<string>(https?:[^<]+\.ipa)<\/string>/i
           );
         }
-        if (!match || !match[1]) throw new Error("Không tìm thấy URL IPA trong plist");
+        if (!match || !match[1])
+          throw new Error("Không tìm thấy URL IPA trong plist");
 
         const ipaUrl = match[1].trim();
-        const sizeResponse = await fetch(`/api/admin/get-size-ipa?url=${encodeURIComponent(ipaUrl)}`);
-        if (!sizeResponse.ok) throw new Error(`Lỗi lấy kích thước: ${sizeResponse.status}`);
+        const sizeResponse = await fetch(
+          `/api/admin/get-size-ipa?url=${encodeURIComponent(ipaUrl)}`
+        );
+        if (!sizeResponse.ok)
+          throw new Error(`Lỗi lấy kích thước: ${sizeResponse.status}`);
 
         const { size, error: sizeError } = await sizeResponse.json();
         if (sizeError || !size) throw new Error(sizeError || "Không nhận được kích thước");
 
-        setForm((prev) => ({ ...prev, size: `${(size / (1024 * 1024)).toFixed(2)} MB` }));
+        setForm((prev) => ({
+          ...prev,
+          size: `${(size / (1024 * 1024)).toFixed(2)} MB`,
+        }));
       } catch (error) {
         console.error("Tính size IPA lỗi:", { error: error.message });
         setForm((prev) => ({ ...prev, size: `Lỗi: ${error.message}` }));
@@ -175,7 +206,6 @@ export default function Admin() {
     }, 600);
 
     return () => clearTimeout(timer);
-    // Theo dõi nhiều khả năng tên trường
   }, [form?.download_link, form?.plist, form?.plist_name, form?.manifest]);
 
   useEffect(() => {
@@ -185,10 +215,17 @@ export default function Admin() {
   // --- data loaders ---
   async function checkAdmin() {
     try {
-      const { data: { user }, error } = await supabase.auth.getUser();
+      const {
+        data: { user },
+        error,
+      } = await supabase.auth.getUser();
       if (error || !user) return router.push("/login");
 
-      const { data } = await supabase.from("users").select("role").eq("id", user.id).single();
+      const { data } = await supabase
+        .from("users")
+        .select("role")
+        .eq("id", user.id)
+        .single();
       if (!data || data?.role !== "admin") return router.push("/");
 
       setUser(user);
@@ -235,7 +272,9 @@ export default function Admin() {
     setEditingId(app.id);
     setSelectedCategory(app.category_id);
     setForm(app);
-    setScreenshotInput(Array.isArray(app.screenshots) ? app.screenshots.join("\n") : "");
+    setScreenshotInput(
+      Array.isArray(app.screenshots) ? app.screenshots.join("\n") : ""
+    );
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -304,7 +343,9 @@ export default function Admin() {
       } else {
         const { error } = await supabase
           .from("apps")
-          .insert([{ ...payload, id: uuidv4(), created_at: new Date().toISOString() }]);
+          .insert([
+            { ...payload, id: uuidv4(), created_at: new Date().toISOString() },
+          ]);
         if (error) throw error;
         toast.success("Thêm ứng dụng mới thành công!");
       }
@@ -356,7 +397,9 @@ export default function Admin() {
       try {
         data = JSON.parse(text);
       } catch {
-        throw new Error(`Phản hồi từ server không phải JSON hợp lệ: ${text.slice(0, 100)}...`);
+        throw new Error(
+          `Phản hồi từ server không phải JSON hợp lệ: ${text.slice(0, 100)}...`
+        );
       }
 
       if (!res.ok) {
@@ -379,7 +422,9 @@ export default function Admin() {
         supported_devices: Array.isArray(data.supportedDevices)
           ? data.supportedDevices.join(", ")
           : "",
-        languages: Array.isArray(data.languages) ? data.languages.join(", ") : "",
+        languages: Array.isArray(data.languages)
+          ? data.languages.join(", ")
+          : "",
         screenshots: Array.isArray(data.screenshots) ? data.screenshots : [],
       };
 
@@ -434,7 +479,11 @@ export default function Admin() {
         toast.success("Thêm chuyên mục mới thành công!");
       }
 
-      setCategoryForm({ name: "", fields: [], enable_appstore_fetch: false });
+      setCategoryForm({
+        name: "",
+        fields: [],
+        enable_appstore_fetch: false,
+      });
       setEditingCategoryId(null);
       await fetchCategories();
     } catch (err) {
@@ -459,7 +508,11 @@ export default function Admin() {
   }
 
   async function handleDeleteCategory(id) {
-    if (!confirm("Xoá chuyên mục sẽ xoá tất cả ứng dụng thuộc chuyên mục này. Xác nhận xoá?"))
+    if (
+      !confirm(
+        "Xoá chuyên mục sẽ xoá tất cả ứng dụng thuộc chuyên mục này. Xác nhận xoá?"
+      )
+    )
       return;
     try {
       await supabase.from("apps").delete().eq("category_id", id);
@@ -511,11 +564,15 @@ export default function Admin() {
     const idsOnPage = pageItems.map((a) => a.id);
     const isAll = allSelectedOnPage(pageItems);
     setSelectedIds((prev) =>
-      isAll ? prev.filter((id) => !idsOnPage.includes(id)) : Array.from(new Set([...prev, ...idsOnPage]))
+      isAll
+        ? prev.filter((id) => !idsOnPage.includes(id))
+        : Array.from(new Set([...prev, ...idsOnPage]))
     );
   }
   function toggleOne(id) {
-    setSelectedIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
   }
   function clearSelected() {
     setSelectedIds([]);
@@ -537,7 +594,10 @@ export default function Admin() {
   async function doBulkDelete() {
     try {
       setBusyAction("bulk-deleting");
-      const { error } = await supabase.from("apps").delete().in("id", selectedIds);
+      const { error } = await supabase
+        .from("apps")
+        .delete()
+        .in("id", selectedIds);
       if (error) throw error;
       await fetchApps();
       toast.success(`Đã xoá ${selectedIds.length} ứng dụng!`);
@@ -560,7 +620,10 @@ export default function Admin() {
       setBusyAction("moving");
       const { error } = await supabase
         .from("apps")
-        .update({ category_id: moveTargetCategory, updated_at: new Date().toISOString() })
+        .update({
+          category_id: moveTargetCategory,
+          updated_at: new Date().toISOString(),
+        })
         .in("id", selectedIds);
       if (error) throw error;
       await fetchApps();
@@ -609,6 +672,17 @@ export default function Admin() {
         </div>
 
         <nav className="p-4 space-y-2">
+          {/* Trang chủ */}
+          <button
+            onClick={() => {
+              setSidebarOpen(false);
+              router.push("/");
+            }}
+            className="w-full text-left flex items-center gap-3 px-4 py-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
+          >
+            <FontAwesomeIcon icon={faHouse} /> Trang chủ
+          </button>
+
           <button
             onClick={() => {
               setActiveTab("apps");
@@ -627,7 +701,8 @@ export default function Admin() {
             onClick={() => {
               setActiveTab("categories");
               setSidebarOpen(false);
-              if (typeof window !== "undefined") window.location.hash = "categories";
+              if (typeof window !== "undefined")
+                window.location.hash = "categories";
             }}
             className={`w-full text-left flex items-center gap-3 px-4 py-2 rounded ${
               activeTab === "categories"
@@ -652,7 +727,7 @@ export default function Admin() {
             <FontAwesomeIcon icon={faShieldAlt} /> Chứng chỉ
           </button>
 
-          {/* 👇 TAB BLOG – chuyển sang /admin/blog */}
+          {/* TAB BLOG – chuyển sang /admin/blog */}
           <button
             onClick={() => {
               setSidebarOpen(false);
@@ -695,11 +770,23 @@ export default function Admin() {
               <FontAwesomeIcon icon={faBars} />
             </button>
             <h1 className="text-xl md:text-2xl font-bold">
-              {activeTab === "apps"
-                ? <>Quản lý Ứng dụng <span className="text-sm font-normal opacity-70">({totalApps})</span></>
-                : activeTab === "categories"
-                ? <>Quản lý Chuyên mục <span className="text-sm font-normal opacity-70">({totalCategories})</span></>
-                : "Quản lý Chứng chỉ"}
+              {activeTab === "apps" ? (
+                <>
+                  Quản lý Ứng dụng{" "}
+                  <span className="text-sm font-normal opacity-70">
+                    ({totalApps})
+                  </span>
+                </>
+              ) : activeTab === "categories" ? (
+                <>
+                  Quản lý Chuyên mục{" "}
+                  <span className="text-sm font-normal opacity-70">
+                    ({totalCategories})
+                  </span>
+                </>
+              ) : (
+                "Quản lý Chứng chỉ"
+              )}
             </h1>
           </div>
           <button
@@ -716,7 +803,10 @@ export default function Admin() {
           <div className="mb-4 p-3 bg-red-100 border-l-4 border-red-500 text-red-700 dark:bg-red-900 dark:text-red-100 rounded-r-md">
             <div className="flex justify-between items-center">
               <span>
-                <FontAwesomeIcon icon={faExclamationTriangle} className="mr-2" />
+                <FontAwesomeIcon
+                  icon={faExclamationTriangle}
+                  className="mr-2"
+                />
                 {errorMessage}
               </span>
               <button
@@ -743,7 +833,9 @@ export default function Admin() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 {/* category selector */}
                 <div>
-                  <label className="block text-sm font-medium mb-1">Chuyên mục:</label>
+                  <label className="block text-sm font-medium mb-1">
+                    Chuyên mục:
+                  </label>
                   <select
                     value={selectedCategory}
                     onChange={(e) => {
@@ -755,7 +847,7 @@ export default function Admin() {
                       setAppStoreUrl("");
                       setErrorMessage("");
                     }}
-                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base"
                     required
                   >
                     <option value="">-- Chọn chuyên mục --</option>
@@ -767,11 +859,12 @@ export default function Admin() {
                   </select>
                 </div>
 
-                {/* App Store autofill (bật qua flag enable_appstore_fetch) */}
+                {/* App Store autofill */}
                 {selectedCategory && canFetchFromAppStore && (
                   <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg border border-blue-200 dark:border-blue-800">
                     <h3 className="text-md font-semibold mb-3 text-blue-800 dark:text-blue-200 flex items-center gap-2">
-                      <FontAwesomeIcon icon={faApple} /> Lấy thông tin từ App Store
+                      <FontAwesomeIcon icon={faApple} /> Lấy thông tin từ App
+                      Store
                     </h3>
                     <div className="flex gap-2">
                       <input
@@ -787,12 +880,15 @@ export default function Admin() {
                       <button
                         type="button"
                         onClick={fetchAppStoreInfo}
-                        disabled={loadingAppStoreInfo || !appStoreUrl.trim()}
+                        disabled={
+                          loadingAppStoreInfo || !appStoreUrl.trim()
+                        }
                         className="px-3 py-2 text-sm font-semibold rounded bg-blue-600 text-white hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
                       >
                         {loadingAppStoreInfo ? (
                           <>
-                            <FontAwesomeIcon icon={faSpinner} spin /> Đang lấy...
+                            <FontAwesomeIcon icon={faSpinner} spin /> Đang
+                            lấy...
                           </>
                         ) : (
                           <>
@@ -809,25 +905,37 @@ export default function Admin() {
 
                 {/* dynamic fields */}
                 {selectedCategory &&
-                  (categories.find((c) => c.id === selectedCategory)?.fields || []).map((field) => {
+                  (categories.find((c) => c.id === selectedCategory)?.fields ||
+                    []).map((field) => {
                     const lower = field.toLowerCase();
-                    const isDesc = lower.includes("mô tả") || lower.includes("description");
+                    const isDesc =
+                      lower.includes("mô tả") ||
+                      lower.includes("description");
                     const isScreens = lower.includes("screenshots");
                     const isDate = lower.includes("date");
                     return (
                       <div key={field}>
-                        <label className="block text-sm font-medium mb-1">{field}</label>
+                        <label className="block text-sm font-medium mb-1">
+                          {field}
+                        </label>
                         {isDesc ? (
                           <textarea
                             value={form[field] || ""}
-                            onChange={(e) => setForm((prev) => ({ ...prev, [field]: e.target.value }))}
+                            onChange={(e) =>
+                              setForm((prev) => ({
+                                ...prev,
+                                [field]: e.target.value,
+                              }))
+                            }
                             rows={4}
                             className="w-full px-4 py-2 text-base border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           />
                         ) : isScreens ? (
                           <textarea
                             value={screenshotInput}
-                            onChange={(e) => setScreenshotInput(e.target.value)}
+                            onChange={(e) =>
+                              setScreenshotInput(e.target.value)
+                            }
                             placeholder="Mỗi URL một dòng"
                             rows={4}
                             className="w-full px-4 py-2 text-base border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -836,7 +944,12 @@ export default function Admin() {
                           <input
                             type={isDate ? "date" : "text"}
                             value={form[field] || ""}
-                            onChange={(e) => setForm((prev) => ({ ...prev, [field]: e.target.value }))}
+                            onChange={(e) =>
+                              setForm((prev) => ({
+                                ...prev,
+                                [field]: e.target.value,
+                              }))
+                            }
                             className="w-full px-4 py-2 text-base border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                           />
                         )}
@@ -886,7 +999,10 @@ export default function Admin() {
             <section className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-md">
               <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4">
                 <h2 className="text-lg md:text-xl font-semibold">
-                  Danh sách ứng dụng <span className="text-sm font-normal opacity-70">({total})</span>
+                  Danh sách ứng dụng{" "}
+                  <span className="text-sm font-normal opacity-70">
+                    ({total})
+                  </span>
                 </h2>
                 <div className="flex items-center gap-3 w-full md:w-auto">
                   <div className="relative flex-1 md:flex-initial md:w-64">
@@ -898,13 +1014,19 @@ export default function Admin() {
                       type="text"
                       placeholder="Tìm kiếm ứng dụng..."
                       value={search}
-                      onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                      onChange={(e) => {
+                        setSearch(e.target.value);
+                        setPage(1);
+                      }}
                       className="w-full pl-10 pr-4 py-2 text-base border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
                   </div>
                   <select
                     value={pageSize}
-                    onChange={(e) => { setPageSize(parseInt(e.target.value, 10)); setPage(1); }}
+                    onChange={(e) => {
+                      setPageSize(parseInt(e.target.value, 10));
+                      setPage(1);
+                    }}
                     className="px-3 py-2 text-base border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
                     aria-label="Số dòng mỗi trang"
                   >
@@ -922,7 +1044,13 @@ export default function Admin() {
                     onClick={toggleSelectAllOnPage}
                     className="flex items-center gap-2 px-3 py-1.5 rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm"
                   >
-                    <FontAwesomeIcon icon={allSelectedOnPage(pageItems) ? faCheckSquare : faSquare} />
+                    <FontAwesomeIcon
+                      icon={
+                        allSelectedOnPage(pageItems)
+                          ? faCheckSquare
+                          : faSquare
+                      }
+                    />
                     Chọn trang này
                   </button>
 
@@ -935,7 +1063,9 @@ export default function Admin() {
                     >
                       <FontAwesomeIcon icon={faLayerGroup} />
                       Tác vụ ({selectedIds.length})
-                      <FontAwesomeIcon icon={bulkMenuOpen ? faChevronUp : faChevronDown} />
+                      <FontAwesomeIcon
+                        icon={bulkMenuOpen ? faChevronUp : faChevronDown}
+                      />
                     </button>
 
                     {bulkMenuOpen && (
@@ -944,14 +1074,20 @@ export default function Admin() {
                           onClick={openBulkDelete}
                           className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
                         >
-                          <FontAwesomeIcon icon={faTrash} className="text-red-500" />
+                          <FontAwesomeIcon
+                            icon={faTrash}
+                            className="text-red-500"
+                          />
                           Xoá đã chọn
                         </button>
                         <button
                           onClick={openMoveModal}
                           className="w-full text-left px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2"
                         >
-                          <FontAwesomeIcon icon={faExchangeAlt} className="text-blue-500" />
+                          <FontAwesomeIcon
+                            icon={faExchangeAlt}
+                            className="text-blue-500"
+                          />
                           Chuyển chuyên mục
                         </button>
                       </div>
@@ -986,7 +1122,9 @@ export default function Admin() {
                   </thead>
                   <tbody>
                     {pageItems.map((app) => {
-                      const catName = categories.find((c) => c.id === app.category_id)?.name || "Không xác định";
+                      const catName =
+                        categories.find((c) => c.id === app.category_id)
+                          ?.name || "Không xác định";
                       const slug = app.slug || app.id;
                       const isChecked = selectedIds.includes(app.id);
                       return (
@@ -1004,15 +1142,29 @@ export default function Admin() {
                           </td>
                           <td className="p-3">
                             <div className="flex items-center gap-3">
-                              {app.icon_url && <img src={app.icon_url} alt="" className="w-8 h-8 rounded" />}
-                              <Link href={`/${slug}`} target="_blank" className="font-medium text-blue-600 hover:underline">
+                              {app.icon_url && (
+                                <img
+                                  src={app.icon_url}
+                                  alt=""
+                                  className="w-8 h-8 rounded"
+                                />
+                              )}
+                              <Link
+                                href={`/${slug}`}
+                                target="_blank"
+                                className="font-medium text-blue-600 hover:underline"
+                              >
                                 {app.name || "Không có tên"}
                               </Link>
                             </div>
                           </td>
                           <td className="p-3">{catName}</td>
                           <td className="p-3">
-                            {app.created_at ? new Date(app.created_at).toLocaleDateString("vi-VN") : "N/A"}
+                            {app.created_at
+                              ? new Date(
+                                  app.created_at
+                                ).toLocaleDateString("vi-VN")
+                              : "N/A"}
                           </td>
                           <td className="p-3">
                             <div className="flex gap-2">
@@ -1046,11 +1198,16 @@ export default function Admin() {
                 {/* Mobile cards */}
                 <ul className="md:hidden space-y-3">
                   {pageItems.map((app) => {
-                    const catName = categories.find((c) => c.id === app.category_id)?.name || "Không xác định";
+                    const catName =
+                      categories.find((c) => c.id === app.category_id)?.name ||
+                      "Không xác định";
                     const slug = app.slug || app.id;
                     const isChecked = selectedIds.includes(app.id);
                     return (
-                      <li key={app.id} className="p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+                      <li
+                        key={app.id}
+                        className="p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800"
+                      >
                         <div className="flex items-center gap-3">
                           <input
                             type="checkbox"
@@ -1058,20 +1215,36 @@ export default function Admin() {
                             onChange={() => toggleOne(app.id)}
                             className="w-5 h-5"
                           />
-                          {app.icon_url && <img src={app.icon_url} alt="" className="w-8 h-8 rounded" />}
+                          {app.icon_url && (
+                            <img
+                              src={app.icon_url}
+                              alt=""
+                              className="w-8 h-8 rounded"
+                            />
+                          )}
                           <div className="flex-1">
-                            <Link href={`/${slug}`} target="_blank" className="font-semibold text-blue-600 hover:underline block">
+                            <Link
+                              href={`/${slug}`}
+                              target="_blank"
+                              className="font-semibold text-blue-600 hover:underline block"
+                            >
                               {app.name || "Không có tên"}
                             </Link>
                             <div className="text-xs opacity-70 mt-0.5">
-                              {app.created_at ? new Date(app.created_at).toLocaleDateString("vi-VN") : "N/A"}
+                              {app.created_at
+                                ? new Date(
+                                    app.created_at
+                                  ).toLocaleDateString("vi-VN")
+                                : "N/A"}
                             </div>
                           </div>
                         </div>
                         <div className="mt-3 text-sm opacity-80">
-                          Chuyên mục: <span className="font-medium">{catName}</span>
+                          Chuyên mục:{" "}
+                          <span className="font-medium">{catName}</span>
                         </div>
                         <div className="mt-3 grid grid-cols-3 gap-2">
+                          {/* Desktop buttons hidden on mobile */}
                           <Link
                             href={`/${slug}`}
                             target="_blank"
@@ -1092,7 +1265,7 @@ export default function Admin() {
                             <FontAwesomeIcon icon={faTrash} /> <span>Xoá</span>
                           </button>
 
-                          {/* Mobile -- chỉ icon */}
+                          {/* Mobile icons */}
                           <Link
                             href={`/${slug}`}
                             target="_blank"
@@ -1125,7 +1298,9 @@ export default function Admin() {
 
                 {pageItems.length === 0 && (
                   <div className="text-center py-8 text-gray-500">
-                    {search ? "Không tìm thấy ứng dụng nào" : "Chưa có ứng dụng nào"}
+                    {search
+                      ? "Không tìm thấy ứng dụng nào"
+                      : "Chưa có ứng dụng nào"}
                   </div>
                 )}
               </div>
@@ -1167,12 +1342,17 @@ export default function Admin() {
 
               <form onSubmit={handleCategorySubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium mb-1">Tên chuyên mục:</label>
+                  <label className="block text-sm font-medium mb-1">
+                    Tên chuyên mục:
+                  </label>
                   <input
                     type="text"
                     value={categoryForm.name}
                     onChange={(e) =>
-                      setCategoryForm((prev) => ({ ...prev, name: e.target.value }))
+                      setCategoryForm((prev) => ({
+                        ...prev,
+                        name: e.target.value,
+                      }))
                     }
                     className="w-full px-4 py-2 text-base border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     required
@@ -1195,13 +1375,18 @@ export default function Admin() {
                     }
                     className="h-4 w-4"
                   />
-                  <label htmlFor="enable_appstore_fetch" className="text-sm">
+                  <label
+                    htmlFor="enable_appstore_fetch"
+                    className="text-sm"
+                  >
                     Bật tự động lấy thông tin từ App Store cho chuyên mục này
                   </label>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-1">Trường dữ liệu:</label>
+                  <label className="block text-sm font-medium mb-1">
+                    Trường dữ liệu:
+                  </label>
                   <div className="flex gap-2 mb-2">
                     <input
                       type="text"
@@ -1244,7 +1429,9 @@ export default function Admin() {
                     type="submit"
                     disabled={submitting || !categoryForm.name.trim()}
                     className={`px-4 py-2 text-sm font-semibold text-white rounded flex items-center gap-2 ${
-                      editingCategoryId ? "bg-green-600 hover:bg-green-700" : "bg-blue-600 hover:bg-blue-700"
+                      editingCategoryId
+                        ? "bg-green-600 hover:bg-green-700"
+                        : "bg-blue-600 hover:bg-blue-700"
                     } disabled:bg-gray-400 disabled:cursor-not-allowed`}
                   >
                     {submitting ? (
@@ -1267,7 +1454,11 @@ export default function Admin() {
                       type="button"
                       onClick={() => {
                         setEditingCategoryId(null);
-                        setCategoryForm({ name: "", fields: [], enable_appstore_fetch: false });
+                        setCategoryForm({
+                          name: "",
+                          fields: [],
+                          enable_appstore_fetch: false,
+                        });
                       }}
                       className="px-4 py-2 text-sm font-semibold rounded bg-red-500 text-white hover:bg-red-600 flex items-center gap-2"
                     >
@@ -1282,7 +1473,10 @@ export default function Admin() {
             <section className="bg-white dark:bg-gray-800 p-4 md:p-6 rounded-lg shadow-md">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg md:text-xl font-semibold">
-                  Danh sách chuyên mục <span className="text-sm font-normal opacity-70">({totalCategories})</span>
+                  Danh sách chuyên mục{" "}
+                  <span className="text-sm font-normal opacity-70">
+                    ({totalCategories})
+                  </span>
                 </h2>
               </div>
               <div className="overflow-x-auto">
@@ -1291,7 +1485,9 @@ export default function Admin() {
                     <tr className="border-b border-gray-200 dark:border-gray-700">
                       <th className="text-left p-3 font-medium">Tên</th>
                       <th className="text-left p-3 font-medium">Slug</th>
-                      <th className="text-left p-3 font-medium">AppStore Fetch</th>
+                      <th className="text-left p-3 font-medium">
+                        AppStore Fetch
+                      </th>
                       <th className="text-left p-3 font-medium">Số trường</th>
                       <th className="text-left p-3 font-medium">Thao tác</th>
                     </tr>
@@ -1307,7 +1503,9 @@ export default function Admin() {
                         <td className="p-3">
                           {category.enable_appstore_fetch ? "Bật" : "Tắt"}
                         </td>
-                        <td className="p-3">{category.fields?.length || 0} trường</td>
+                        <td className="p-3">
+                          {category.fields?.length || 0} trường
+                        </td>
                         <td className="p-3">
                           <div className="flex gap-2">
                             <button
@@ -1317,7 +1515,9 @@ export default function Admin() {
                               <FontAwesomeIcon icon={faEdit} /> Sửa
                             </button>
                             <button
-                              onClick={() => handleDeleteCategory(category.id)}
+                              onClick={() =>
+                                handleDeleteCategory(category.id)
+                              }
                               className="px-2.5 py-1 text-xs font-semibold rounded bg-red-500 text-white hover:bg-red-600 flex items-center gap-1"
                             >
                               <FontAwesomeIcon icon={faTrash} /> Xoá
@@ -1330,7 +1530,9 @@ export default function Admin() {
                 </table>
 
                 {categories.length === 0 && (
-                  <div className="text-center py-8 text-gray-500">Chưa có chuyên mục nào</div>
+                  <div className="text-center py-8 text-gray-500">
+                    Chưa có chuyên mục nào
+                  </div>
                 )}
               </div>
             </section>
@@ -1354,10 +1556,15 @@ export default function Admin() {
       {/* Confirm delete single */}
       {confirmDeleteId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setConfirmDeleteId(null)} />
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setConfirmDeleteId(null)}
+          />
           <div className="relative z-10 w-11/12 max-w-sm rounded-lg bg-white dark:bg-gray-800 p-5 shadow-lg">
             <h3 className="text-lg font-semibold mb-2">Xác nhận xoá</h3>
-            <p className="text-sm opacity-80 mb-4">Bạn có chắc muốn xoá ứng dụng này?</p>
+            <p className="text-sm opacity-80 mb-4">
+              Bạn có chắc muốn xoá ứng dụng này?
+            </p>
             <div className="flex justify-end gap-2">
               <button
                 onClick={() => setConfirmDeleteId(null)}
@@ -1370,7 +1577,11 @@ export default function Admin() {
                 disabled={busyAction === "deleting"}
                 className="px-3 py-1.5 text-sm font-semibold rounded bg-red-500 text-white hover:bg-red-600 disabled:opacity-60"
               >
-                {busyAction === "deleting" ? <FontAwesomeIcon icon={faSpinner} spin /> : "Xoá"}
+                {busyAction === "deleting" ? (
+                  <FontAwesomeIcon icon={faSpinner} spin />
+                ) : (
+                  "Xoá"
+                )}
               </button>
             </div>
           </div>
@@ -1380,11 +1591,17 @@ export default function Admin() {
       {/* Confirm bulk delete */}
       {confirmBulkDeleteOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setConfirmBulkDeleteOpen(false)} />
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setConfirmBulkDeleteOpen(false)}
+          />
           <div className="relative z-10 w-11/12 max-w-sm rounded-lg bg-white dark:bg-gray-800 p-5 shadow-lg">
-            <h3 className="text-lg font-semibold mb-2">Xác nhận xoá hàng loạt</h3>
+            <h3 className="text-lg font-semibold mb-2">
+              Xác nhận xoá hàng loạt
+            </h3>
             <p className="text-sm opacity-80 mb-4">
-              Bạn sắp xoá <b>{selectedIds.length}</b> ứng dụng. Thao tác này không thể hoàn tác.
+              Bạn sắp xoá <b>{selectedIds.length}</b> ứng dụng. Thao tác này
+              không thể hoàn tác.
             </p>
             <div className="flex justify-end gap-2">
               <button
@@ -1398,7 +1615,11 @@ export default function Admin() {
                 disabled={busyAction === "bulk-deleting"}
                 className="px-3 py-1.5 text-sm font-semibold rounded bg-red-500 text-white hover:bg-red-600 disabled:opacity-60"
               >
-                {busyAction === "bulk-deleting" ? <FontAwesomeIcon icon={faSpinner} spin /> : "Xoá"}
+                {busyAction === "bulk-deleting" ? (
+                  <FontAwesomeIcon icon={faSpinner} spin />
+                ) : (
+                  "Xoá"
+                )}
               </button>
             </div>
           </div>
@@ -1408,10 +1629,15 @@ export default function Admin() {
       {/* Move category modal */}
       {moveModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setMoveModalOpen(false)} />
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setMoveModalOpen(false)}
+          />
           <div className="relative z-10 w-11/12 max-w-sm rounded-lg bg-white dark:bg-gray-800 p-5 shadow-lg">
             <h3 className="text-lg font-semibold mb-3">Chuyển chuyên mục</h3>
-            <label className="block text-sm font-medium mb-1">Chọn chuyên mục đích:</label>
+            <label className="block text-sm font-medium mb-1">
+              Chọn chuyên mục đích:
+            </label>
             <select
               value={moveTargetCategory}
               onChange={(e) => setMoveTargetCategory(e.target.value)}
@@ -1419,7 +1645,9 @@ export default function Admin() {
             >
               <option value="">-- Chọn chuyên mục --</option>
               {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
               ))}
             </select>
             <div className="flex justify-end gap-2">
@@ -1434,7 +1662,11 @@ export default function Admin() {
                 disabled={busyAction === "moving" || !moveTargetCategory}
                 className="px-3 py-1.5 text-sm font-semibold rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-60"
               >
-                {busyAction === "moving" ? <FontAwesomeIcon icon={faSpinner} spin /> : "Chuyển"}
+                {busyAction === "moving" ? (
+                  <FontAwesomeIcon icon={faSpinner} spin />
+                ) : (
+                  "Chuyển"
+                )}
               </button>
             </div>
           </div>
