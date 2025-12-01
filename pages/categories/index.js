@@ -1,13 +1,27 @@
-// pages/categories.js
+// pages/categories/index.js
 import Head from 'next/head';
 import Link from 'next/link';
-import Layout from '../components/Layout';
-import { supabase } from '../lib/supabase';
+import Layout from '../../components/Layout';
+import { supabase } from '../../lib/supabase';
+
+export async function getServerSideProps() {
+  const { data: categories, error } = await supabase
+    .from('categories')
+    .select('id, name, slug')
+    .order('name', { ascending: true });
+
+  return {
+    props: {
+      categories: error || !categories ? [] : categories,
+    },
+  };
+}
 
 export default function CategoriesPage({ categories }) {
   const title = 'Chuyên mục ứng dụng – StoreiOS';
   const description =
-    'Tổng hợp các chuyên mục ứng dụng trên StoreiOS: TestFlight, Jailbreak, app clone, app removed và nhiều hơn nữa.';
+    'Danh sách các chuyên mục ứng dụng trên StoreiOS: TestFlight, jailbreak, app clone, app removed và nhiều nhóm ứng dụng khác.';
+
   const url = 'https://storeios.net/categories';
 
   return (
@@ -15,6 +29,7 @@ export default function CategoriesPage({ categories }) {
       <Head>
         <title>{title}</title>
         <meta name="description" content={description} />
+
         <link rel="canonical" href={url} />
 
         <meta property="og:title" content={title} />
@@ -28,10 +43,10 @@ export default function CategoriesPage({ categories }) {
       </Head>
 
       <main className="max-w-5xl mx-auto px-4 py-10">
-        <h1 className="text-3xl font-bold mb-4">Chuyên mục ứng dụng</h1>
+        <h1 className="text-3xl font-bold mb-4">📂 Chuyên mục ứng dụng</h1>
         <p className="text-gray-600 dark:text-gray-400 mb-8">
-          Duyệt các ứng dụng theo chuyên mục. Mỗi chuyên mục là một nhóm app có nội dung hoặc mục
-          đích tương tự, giúp bạn tìm nhanh hơn những gì mình cần.
+          Duyệt các ứng dụng theo nhóm: TestFlight, jailbreak, app clone, app removed…
+          giúp bạn tìm đúng loại ứng dụng mình cần nhanh hơn.
         </p>
 
         {(!categories || categories.length === 0) ? (
@@ -68,18 +83,4 @@ export default function CategoriesPage({ categories }) {
       </main>
     </Layout>
   );
-}
-
-// Lấy categories từ Supabase
-export async function getServerSideProps() {
-  const { data, error } = await supabase
-    .from('categories')
-    .select('id, name, slug')
-    .order('name', { ascending: true });
-
-  return {
-    props: {
-      categories: error || !data ? [] : data,
-    },
-  };
 }

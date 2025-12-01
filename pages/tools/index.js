@@ -1,29 +1,34 @@
-// pages/tools.js
+// pages/tools/index.js
 import Head from 'next/head';
-import Layout from '../components/Layout';
+import Layout from '../../components/Layout';
 
 export default function ToolsPage() {
-  const title = 'Công cụ iOS – StoreiOS';
+  const title = 'Công cụ iOS – Ký IPA, TestFlight, TrollStore | StoreiOS';
   const description =
-    'Danh sách công cụ hỗ trợ iOS trên StoreiOS: xem thông tin app, tải IPA hợp pháp và các tiện ích kỹ thuật khác cho cộng đồng iOS.';
+    'Tổng hợp công cụ iOS hữu ích: TrollInstallerX, eSign, Sideloadly, Filza… hỗ trợ ký IPA, cài ứng dụng thử nghiệm và quản lý hệ thống an toàn.';
   const url = 'https://storeios.net/tools';
 
   const tools = [
     {
-      name: 'App Info',
-      url: 'https://appinfo.storeios.net',
-      badge: 'External',
-      desc: 'Xem thông tin chi tiết của ứng dụng iOS: bundle id, phiên bản, kích thước…',
-      icon: '📱',
+      name: 'TrollInstallerX',
+      desc: 'Công cụ cài TrollStore nhanh và ổn định cho iOS 14 – 16.6.1.',
+      icon: '🧩',
     },
     {
-      name: 'IPA Downloader',
-      url: 'https://ipadl.storeios.net',
-      badge: 'External',
-      desc: 'Tải file IPA từ App Store một cách hợp pháp để phục vụ ký và cài đặt.',
-      icon: '📦',
+      name: 'eSign',
+      desc: 'Ứng dụng ký file IPA trực tiếp trên iPhone, không cần máy tính.',
+      icon: '✍️',
     },
-    // sau này bạn thêm tool khác thì chỉ cần push thêm vào đây
+    {
+      name: 'Sideloadly',
+      desc: 'Cài IPA qua máy tính bằng Apple ID, hỗ trợ Windows & macOS.',
+      icon: '💻',
+    },
+    {
+      name: 'Filza File Manager',
+      desc: 'Trình quản lý file mạnh mẽ cho iOS, phù hợp người dùng nâng cao.',
+      icon: '📂',
+    },
   ];
 
   return (
@@ -31,6 +36,7 @@ export default function ToolsPage() {
       <Head>
         <title>{title}</title>
         <meta name="description" content={description} />
+
         <link rel="canonical" href={url} />
 
         <meta property="og:title" content={title} />
@@ -43,40 +49,31 @@ export default function ToolsPage() {
         <meta name="twitter:description" content={description} />
       </Head>
 
-      <main className="max-w-4xl mx-auto px-4 py-10">
-        <h1 className="text-3xl font-bold mb-4">Công cụ iOS trên StoreiOS</h1>
+      <main className="max-w-5xl mx-auto px-4 py-10">
+        <h1 className="text-3xl font-bold mb-4">🛠 Công cụ iOS hữu ích</h1>
         <p className="text-gray-600 dark:text-gray-400 mb-8">
-          Đây là những công cụ kỹ thuật do StoreiOS vận hành hoặc giới thiệu, phục vụ việc ký và
-          cài đặt ứng dụng iOS <strong>hợp pháp</strong>. Chúng tôi không chia sẻ hack, crack,
-          mod, cheat hay phần mềm độc hại.
+          Bộ công cụ giúp bạn quản lý file, ký ứng dụng IPA, cài TrollStore, cài app thử nghiệm
+          và tối ưu thiết bị iOS một cách hợp pháp và an toàn.
         </p>
 
-        <div className="grid gap-6 sm:grid-cols-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {tools.map((tool) => (
-            <a
+            <div
               key={tool.name}
-              href={tool.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group rounded-2xl border border-gray-200 dark:border-gray-800 p-5 bg-white dark:bg-gray-900 shadow-sm hover:shadow-lg transition-shadow"
+              className="group rounded-2xl border border-gray-200 dark:border-gray-800 p-6 bg-white dark:bg-gray-900 shadow-sm hover:shadow-xl transition-all cursor-default"
             >
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl">
-                    {tool.icon}
-                  </div>
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                    {tool.name}
-                  </h2>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-xl">
+                  {tool.icon}
                 </div>
-                <span className="text-[11px] px-2 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 font-semibold">
-                  {tool.badge}
-                </span>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 group-hover:text-blue-600 dark:group-hover:text-blue-400">
+                  {tool.name}
+                </h2>
               </div>
-              <p className="text-sm text-gray-600 dark:text-gray-400 group-hover:text-gray-800 dark:group-hover:text-gray-200 transition-colors">
+              <p className="text-sm text-gray-600 dark:text-gray-400">
                 {tool.desc}
               </p>
-            </a>
+            </div>
           ))}
         </div>
       </main>
