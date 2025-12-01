@@ -12,7 +12,8 @@ import {
   faPlus, faEdit, faTrash, faSave, faTimes, faSync, faSpinner,
   faBoxOpen, faFolder, faShieldAlt, faSun, faMoon, faBars,
   faSignOutAlt, faSearch, faExclamationTriangle, faEye, faCheckSquare, faSquare,
-  faChevronDown, faChevronUp, faLayerGroup, faExchangeAlt
+  faChevronDown, faChevronUp, faLayerGroup, faExchangeAlt,
+  faNewspaper,            // 👈 THÊM ICON BLOG
 } from "@fortawesome/free-solid-svg-icons";
 import { faApple } from "@fortawesome/free-brands-svg-icons";
 
@@ -119,63 +120,63 @@ export default function Admin() {
 
   // Tự tính SIZE từ plist khi nhập tên IPA (download_link = tên plist/ipa name)
   // Tự tính SIZE từ plist khi nhập tên IPA (hỗ trợ nhiều tên trường & 2 cấu trúc plist)
-useEffect(() => {
-  const getPlistName = () =>
-    (form?.download_link || form?.plist || form?.plist_name || form?.manifest || "")
-      .toString()
-      .trim();
+  useEffect(() => {
+    const getPlistName = () =>
+      (form?.download_link || form?.plist || form?.plist_name || form?.manifest || "")
+        .toString()
+        .trim();
 
-  async function fetchIpaSizeFromPlist() {
-    const plistName = getPlistName();
-    if (!plistName) return;
+    async function fetchIpaSizeFromPlist() {
+      const plistName = getPlistName();
+      if (!plistName) return;
 
-    try {
-      const tokenRes = await fetch(`/api/generate-token`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ipa_name: plistName }),
-      });
-      if (!tokenRes.ok) throw new Error(`Lỗi lấy token: ${tokenRes.status}`);
-      const { token } = await tokenRes.json();
-      if (!token) throw new Error("Không nhận được token từ API");
+      try {
+        const tokenRes = await fetch(`/api/generate-token`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ipa_name: plistName }),
+        });
+        if (!tokenRes.ok) throw new Error(`Lỗi lấy token: ${tokenRes.status}`);
+        const { token } = await tokenRes.json();
+        if (!token) throw new Error("Không nhận được token từ API");
 
-      const plistUrl = `https://storeios.net/api/plist?ipa_name=${encodeURIComponent(plistName)}&token=${token}`;
-      const plistResponse = await fetch(plistUrl);
-      if (!plistResponse.ok) throw new Error(`Lỗi tải plist: ${plistResponse.status}`);
-      const plistContent = await plistResponse.text();
+        const plistUrl = `https://storeios.net/api/plist?ipa_name=${encodeURIComponent(plistName)}&token=${token}`;
+        const plistResponse = await fetch(plistUrl);
+        if (!plistResponse.ok) throw new Error(`Lỗi tải plist: ${plistResponse.status}`);
+        const plistContent = await plistResponse.text();
 
-      // Pattern 1: <key>url</key><string>...ipa</string>
-      let match = plistContent.match(/<key>\s*url\s*<\/key>\s*<string>([^<]+\.ipa)<\/string>/i);
+        // Pattern 1: <key>url</key><string>...ipa</string>
+        let match = plistContent.match(/<key>\s*url\s*<\/key>\s*<string>([^<]+\.ipa)<\/string>/i);
 
-      // Pattern 2: assets -> software-package -> <string>https://...ipa</string>
-      if (!match) {
-        match = plistContent.match(
-          /<string>\s*software-package\s*<\/string>[\s\S]*?<string>(https?:[^<]+\.ipa)<\/string>/i
-        );
+        // Pattern 2: assets -> software-package -> <string>https://...ipa</string>
+        if (!match) {
+          match = plistContent.match(
+            /<string>\s*software-package\s*<\/string>[\s\S]*?<string>(https?:[^<]+\.ipa)<\/string>/i
+          );
+        }
+        if (!match || !match[1]) throw new Error("Không tìm thấy URL IPA trong plist");
+
+        const ipaUrl = match[1].trim();
+        const sizeResponse = await fetch(`/api/admin/get-size-ipa?url=${encodeURIComponent(ipaUrl)}`);
+        if (!sizeResponse.ok) throw new Error(`Lỗi lấy kích thước: ${sizeResponse.status}`);
+
+        const { size, error: sizeError } = await sizeResponse.json();
+        if (sizeError || !size) throw new Error(sizeError || "Không nhận được kích thước");
+
+        setForm((prev) => ({ ...prev, size: `${(size / (1024 * 1024)).toFixed(2)} MB` }));
+      } catch (error) {
+        console.error("Tính size IPA lỗi:", { error: error.message });
+        setForm((prev) => ({ ...prev, size: `Lỗi: ${error.message}` }));
       }
-      if (!match || !match[1]) throw new Error("Không tìm thấy URL IPA trong plist");
-
-      const ipaUrl = match[1].trim();
-      const sizeResponse = await fetch(`/api/admin/get-size-ipa?url=${encodeURIComponent(ipaUrl)}`);
-      if (!sizeResponse.ok) throw new Error(`Lỗi lấy kích thước: ${sizeResponse.status}`);
-
-      const { size, error: sizeError } = await sizeResponse.json();
-      if (sizeError || !size) throw new Error(sizeError || "Không nhận được kích thước");
-
-      setForm((prev) => ({ ...prev, size: `${(size / (1024 * 1024)).toFixed(2)} MB` }));
-    } catch (error) {
-      console.error("Tính size IPA lỗi:", { error: error.message });
-      setForm((prev) => ({ ...prev, size: `Lỗi: ${error.message}` }));
     }
-  }
 
-  const timer = setTimeout(() => {
-    if (getPlistName()) fetchIpaSizeFromPlist();
-  }, 600);
+    const timer = setTimeout(() => {
+      if (getPlistName()) fetchIpaSizeFromPlist();
+    }, 600);
 
-  return () => clearTimeout(timer);
-// Theo dõi nhiều khả năng tên trường
-}, [form?.download_link, form?.plist, form?.plist_name, form?.manifest]);
+    return () => clearTimeout(timer);
+    // Theo dõi nhiều khả năng tên trường
+  }, [form?.download_link, form?.plist, form?.plist_name, form?.manifest]);
 
   useEffect(() => {
     if (form.screenshots) setScreenshotInput(form.screenshots.join("\n"));
@@ -650,6 +651,17 @@ useEffect(() => {
           >
             <FontAwesomeIcon icon={faShieldAlt} /> Chứng chỉ
           </button>
+
+          {/* 👇 TAB BLOG – chuyển sang /admin/blog */}
+          <button
+            onClick={() => {
+              setSidebarOpen(false);
+              router.push("/admin/blog");
+            }}
+            className="w-full text-left flex items-center gap-3 px-4 py-2 rounded hover:bg-gray-200 dark:hover:bg-gray-700"
+          >
+            <FontAwesomeIcon icon={faNewspaper} /> Blog
+          </button>
         </nav>
 
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200 dark:border-gray-700 flex items-center">
@@ -1061,50 +1073,50 @@ useEffect(() => {
                         </div>
                         <div className="mt-3 grid grid-cols-3 gap-2">
                           <Link
-    href={`/${slug}`}
-    target="_blank"
-    className="hidden md:flex text-center px-2.5 py-1 text-xs font-semibold rounded bg-green-600 text-white hover:bg-green-700 items-center gap-1"
-  >
-    <FontAwesomeIcon icon={faEye} /> <span>Xem</span>
-  </Link>
-  <button
-    onClick={() => handleEdit(app)}
-    className="hidden md:flex text-center px-2.5 py-1 text-xs font-semibold rounded bg-yellow-500 text-white hover:bg-yellow-600 items-center gap-1"
-  >
-    <FontAwesomeIcon icon={faEdit} /> <span>Sửa</span>
-  </button>
-  <button
-    onClick={() => askDelete(app.id)}
-    className="hidden md:flex text-center px-2.5 py-1 text-xs font-semibold rounded bg-red-500 text-white hover:bg-red-600 items-center gap-1"
-  >
-    <FontAwesomeIcon icon={faTrash} /> <span>Xoá</span>
-  </button>
+                            href={`/${slug}`}
+                            target="_blank"
+                            className="hidden md:flex text-center px-2.5 py-1 text-xs font-semibold rounded bg-green-600 text-white hover:bg-green-700 items-center gap-1"
+                          >
+                            <FontAwesomeIcon icon={faEye} /> <span>Xem</span>
+                          </Link>
+                          <button
+                            onClick={() => handleEdit(app)}
+                            className="hidden md:flex text-center px-2.5 py-1 text-xs font-semibold rounded bg-yellow-500 text-white hover:bg-yellow-600 items-center gap-1"
+                          >
+                            <FontAwesomeIcon icon={faEdit} /> <span>Sửa</span>
+                          </button>
+                          <button
+                            onClick={() => askDelete(app.id)}
+                            className="hidden md:flex text-center px-2.5 py-1 text-xs font-semibold rounded bg-red-500 text-white hover:bg-red-600 items-center gap-1"
+                          >
+                            <FontAwesomeIcon icon={faTrash} /> <span>Xoá</span>
+                          </button>
 
-  {/* Mobile -- chỉ icon */}
-  <Link
-    href={`/${slug}`}
-    target="_blank"
-    className="md:hidden text-green-500 hover:text-green-600 text-base p-2 flex items-center justify-center"
-    aria-label="Xem"
-  >
-    <FontAwesomeIcon icon={faEye} />
-  </Link>
+                          {/* Mobile -- chỉ icon */}
+                          <Link
+                            href={`/${slug}`}
+                            target="_blank"
+                            className="md:hidden text-green-500 hover:text-green-600 text-base p-2 flex items-center justify-center"
+                            aria-label="Xem"
+                          >
+                            <FontAwesomeIcon icon={faEye} />
+                          </Link>
 
-  <button
-    onClick={() => handleEdit(app)}
-    className="md:hidden text-yellow-500 hover:text-yellow-600 text-base p-2 flex items-center justify-center"
-    aria-label="Sửa"
-  >
-    <FontAwesomeIcon icon={faEdit} />
-  </button>
+                          <button
+                            onClick={() => handleEdit(app)}
+                            className="md:hidden text-yellow-500 hover:text-yellow-600 text-base p-2 flex items-center justify-center"
+                            aria-label="Sửa"
+                          >
+                            <FontAwesomeIcon icon={faEdit} />
+                          </button>
 
-  <button
-    onClick={() => askDelete(app.id)}
-    className="md:hidden text-red-500 hover:text-red-600 text-base p-2 flex items-center justify-center"
-    aria-label="Xoá"
-  >
-    <FontAwesomeIcon icon={faTrash} />
-  </button>
+                          <button
+                            onClick={() => askDelete(app.id)}
+                            className="md:hidden text-red-500 hover:text-red-600 text-base p-2 flex items-center justify-center"
+                            aria-label="Xoá"
+                          >
+                            <FontAwesomeIcon icon={faTrash} />
+                          </button>
                         </div>
                       </li>
                     );
