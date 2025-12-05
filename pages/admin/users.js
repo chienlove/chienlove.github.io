@@ -821,3 +821,163 @@ export default function AdminUsersPage() {
                                     title={user.banned ? 'Gỡ ban' : 'Ban tài khoản'}
                                   >
                                     <FontAwesomeIcon icon={user.banned ? faUnlock : faBan} className="mr-1" />
+                                    {user.banned ? 'Gỡ ban' : 'Ban'}
+                                  </button>
+                                  
+                                  <button
+                                    onClick={() => handleUserAction(adminUids.includes(user.uid) ? 'remove_admin' : 'make_admin', user.uid)}
+                                    className={`px-2 py-1 text-xs rounded inline-flex items-center ${
+                                      adminUids.includes(user.uid)
+                                        ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300'
+                                        : 'bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-300'
+                                    }`}
+                                    title={adminUids.includes(user.uid) ? 'Xoá quyền admin' : 'Thêm quyền admin'}
+                                  >
+                                    <FontAwesomeIcon icon={faUserShield} className="mr-1" />
+                                    {adminUids.includes(user.uid) ? 'Xoá Admin' : 'Thêm Admin'}
+                                  </button>
+                                  
+                                  <button
+                                    onClick={() => handleUserAction('delete', user.uid)}
+                                    className="px-2 py-1 text-xs rounded bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 inline-flex items-center"
+                                    title="Đánh dấu đã xoá"
+                                  >
+                                    <FontAwesomeIcon icon={faTrash} className="mr-1" />
+                                    Xoá
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                
+                {/* Pagination */}
+                {totalFilteredPages > 1 && (
+                  <div className="border-t border-gray-200 dark:border-gray-700 p-4">
+                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                      <div className="text-sm text-gray-500 dark:text-gray-400">
+                        Hiển thị {paginatedUsers.length} người dùng (trang {page}/{totalFilteredPages})
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handlePageChange(page - 1)}
+                          disabled={page === 1}
+                          className="px-3 py-1 rounded border border-gray-300 dark:border-gray-600 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700"
+                        >
+                          ← Trước
+                        </button>
+                        
+                        <div className="flex items-center gap-1">
+                          {Array.from({ length: Math.min(5, totalFilteredPages) }, (_, i) => {
+                            let pageNum;
+                            if (totalFilteredPages <= 5) {
+                              pageNum = i + 1;
+                            } else if (page <= 3) {
+                              pageNum = i + 1;
+                            } else if (page >= totalFilteredPages - 2) {
+                              pageNum = totalFilteredPages - 4 + i;
+                            } else {
+                              pageNum = page - 2 + i;
+                            }
+                            
+                            return (
+                              <button
+                                key={pageNum}
+                                onClick={() => handlePageChange(pageNum)}
+                                className={`w-8 h-8 rounded text-sm ${page === pageNum ? 'bg-blue-600 text-white' : 'border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+                              >
+                                {pageNum}
+                              </button>
+                            );
+                          })}
+                          
+                          {totalFilteredPages > 5 && (
+                            <span className="px-2 text-gray-500">...</span>
+                          )}
+                        </div>
+                        
+                        <button
+                          onClick={() => handlePageChange(page + 1)}
+                          disabled={page === totalFilteredPages}
+                          className="px-3 py-1 rounded border border-gray-300 dark:border-gray-600 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700"
+                        >
+                          Tiếp →
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+          
+          {/* Information panel */}
+          <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <h3 className="font-medium mb-3 flex items-center gap-2">
+                  <FontAwesomeIcon icon={faCircleInfo} />
+                  Thông tin hệ thống
+                </h3>
+                <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
+                  <li className="flex justify-between">
+                    <span>• Tổng số người dùng trong hệ thống:</span>
+                    <span className="font-semibold">{stats.total}</span>
+                  </li>
+                  <li className="flex justify-between">
+                    <span>• Người dùng đang hoạt động:</span>
+                    <span className="font-semibold text-emerald-600">{stats.active}</span>
+                  </li>
+                  <li className="flex justify-between">
+                    <span>• Quản trị viên:</span>
+                    <span className="font-semibold text-purple-600">{stats.admin}</span>
+                  </li>
+                  <li className="flex justify-between">
+                    <span>• Hồ sơ chưa hoàn thiện:</span>
+                    <span className="font-semibold text-amber-600">{stats.noName + stats.noEmail}</span>
+                  </li>
+                </ul>
+              </div>
+              
+              <div>
+                <h3 className="font-medium mb-3 flex items-center gap-2">
+                  <FontAwesomeIcon icon={faCog} />
+                  Hướng dẫn sử dụng
+                </h3>
+                <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-2">
+                  <li>• <span className="font-medium">Xem</span>: Xem hồ sơ công khai của người dùng</li>
+                  <li>• <span className="font-medium">Ban/Gỡ ban</span>: Quản lý trạng thái BAN của tài khoản</li>
+                  <li>• <span className="font-medium">Thêm/Xoá Admin</span>: Cấp hoặc thu hồi quyền quản trị</li>
+                  <li>• <span className="font-medium">Xoá</span>: Đánh dấu tài khoản đã bị xoá (không xoá thật)</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          
+          {/* Navigation */}
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link
+              href="/admin"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
+            >
+              <FontAwesomeIcon icon={faCog} />
+              Quay lại Admin Panel
+            </Link>
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+            >
+              <FontAwesomeIcon icon={faHome} />
+              Về trang chủ
+            </Link>
+          </div>
+        </main>
+      </div>
+    </>
+  );
+}
