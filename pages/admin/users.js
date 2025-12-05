@@ -13,6 +13,7 @@ import {
   orderBy,
   limit,
   startAfter,
+  getCountFromServer,
 } from 'firebase/firestore';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -36,6 +37,7 @@ import {
   faFilter,
   faUsers,
   faExclamationTriangle,
+  faUser,
 } from '@fortawesome/free-solid-svg-icons';
 
 /* ================= Helper functions ================= */
@@ -55,53 +57,92 @@ const fmtDate = (ts) => {
   return d ? d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
 };
 
-/* ================= Function để lấy tất cả users từ Firestore ================= */
-async function fetchAllUsersFromFirestore() {
-  console.log('Bắt đầu fetch tất cả users từ Firestore...');
+const fmtDateTime = (ts) => {
+  const d = toDate(ts);
+  return d ? d.toLocaleDateString('vi-VN', { 
+    day: '2-digit', 
+    month: '2-digit', 
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  }) : '';
+};
+
+/* ================= Function để lấy ALL users từ Firebase Auth và Firestore ================= */
+async function fetchAllUsersCombined() {
+  console.log('Bắt đầu fetch tất cả users...');
   
   try {
-    // Lấy tất cả documents từ collection 'users' mà không cần orderBy
+    // 1. Lấy tất cả users từ Firestore (users collection)
     const usersCollection = collection(db, 'users');
     const snapshot = await getDocs(usersCollection);
     
-    console.log(`Firestore trả về ${snapshot.size} documents`);
+    console.log(`Firestore trả về ${snapshot.size} documents trong collection 'users'`);
     
-    const users = [];
+    const usersFromFirestore = [];
+    const firestoreUserMap = new Map();
+    
     snapshot.forEach((docSnap) => {
       const data = docSnap.data();
-      console.log(`User ${docSnap.id}:`, data);
+      const userId = docSnap.id;
       
-      // Xử lý data để đảm bảo có tất cả các field cần thiết
+      // Xử lý data với các field có thể có
       const userData = {
-        id: docSnap.id,
-        uid: docSnap.id,
+        id: userId,
+        uid: userId,
+        // Thông tin cơ bản
         email: data.email || data.Email || '',
-        displayName: data.displayName || data.DisplayName || data.name || data.userName || data.username || 'Không có tên',
+        displayName: data.displayName || data.DisplayName || data.name || data.userName || data.username || '',
         photoURL: data.photoURL || data.PhotoURL || data.avatar || data.photoUrl || '',
+        // Metadata
+        createdAt: data.createdAt || data.CreatedAt || data.created_at || data.dateCreated || null,
+        updatedAt: data.updatedAt || data.UpdatedAt || data.updated_at || data.lastUpdated || null,
+        // Các field tùy chọn
         emailVerified: data.emailVerified || data.EmailVerified || data.email_verified || false,
         banned: data.banned || data.Banned || false,
         status: data.status || data.Status || 'active',
-        createdAt: data.createdAt || data.CreatedAt || data.created_at || data.dateCreated || null,
-        updatedAt: data.updatedAt || data.UpdatedAt || data.updated_at || data.lastUpdated || null,
         providerData: data.providerData || data.provider || [],
-        isDeleted: data.status === 'deleted' || data.isDeleted || false
+        // Flags
+        hasFirestoreDoc: true,
+        hasAuthUser: false, // Sẽ được cập nhật sau
+        lastSignInTime: data.lastSignInTime || null,
       };
       
-      users.push(userData);
+      usersFromFirestore.push(userData);
+      firestoreUserMap.set(userId, userData);
     });
     
-    console.log(`Đã parse thành công ${users.length} users`);
-    return users;
+    console.log(`Đã parse ${usersFromFirestore.length} users từ Firestore`);
+    
+    // 2. Try to get users count (không bắt lỗi nếu không được)
+    let totalUsersCount = usersFromFirestore.length;
+    try {
+      const countSnapshot = await getCountFromServer(collection(db, 'users'));
+      totalUsersCount = countSnapshot.data().count;
+      console.log(`Tổng số users trong Firestore: ${totalUsersCount}`);
+    } catch (countError) {
+      console.warn('Không thể đếm tổng số users:', countError);
+    }
+    
+    return {
+      users: usersFromFirestore,
+      totalCount: totalUsersCount,
+      firestoreUserMap: firestoreUserMap
+    };
     
   } catch (error) {
     console.error('Lỗi khi fetch users từ Firestore:', error);
-    throw error;
+    throw new Error(`Không thể tải danh sách người dùng: ${error.message}`);
   }
 }
 
 /* ================= User Status Badge ================= */
 function UserStatusBadge({ userData, isAdminUser }) {
-  if (userData?.isDeleted || userData?.status === 'deleted') {
+  // Kiểm tra trạng thái deleted
+  const isDeleted = userData?.status === 'deleted' || userData?.isDeleted;
+  
+  if (isDeleted) {
     return (
       <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
         <FontAwesomeIcon icon={faUserSlash} />
@@ -124,6 +165,16 @@ function UserStatusBadge({ userData, isAdminUser }) {
       <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
         <FontAwesomeIcon icon={faUserShield} />
         Admin
+      </span>
+    );
+  }
+
+  // Nếu có email nhưng chưa verify
+  if (userData?.email && !userData?.emailVerified) {
+    return (
+      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
+        <FontAwesomeIcon icon={faTimesCircle} />
+        Chưa xác minh
       </span>
     );
   }
@@ -152,29 +203,36 @@ export default function AdminUsersPage() {
     banned: 0, 
     deleted: 0, 
     unverified: 0, 
-    admin: 0 
+    admin: 0,
+    noName: 0,
+    noEmail: 0
   });
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
+  const [totalUsersCount, setTotalUsersCount] = useState(0);
   const [error, setError] = useState(null);
+  const [debugInfo, setDebugInfo] = useState('');
 
   // Check admin status and load users
   useEffect(() => {
     const initialize = async () => {
       try {
         setLoading(true);
+        setDebugInfo('Đang khởi tạo...');
         
         // Lấy user hiện tại
         const unsub = auth.onAuthStateChanged(async (user) => {
           setCurrentUser(user);
           
           if (!user) {
+            setError('Bạn cần đăng nhập để truy cập trang này');
             router.push('/login');
             return;
           }
           
           try {
             console.log('Current user UID:', user.uid);
+            setDebugInfo(`Đang kiểm tra quyền admin cho UID: ${user.uid}`);
             
             // Check if user is admin
             const adminSnap = await getDoc(doc(db, 'app_config', 'admins'));
@@ -187,10 +245,12 @@ export default function AdminUsersPage() {
             setIsCurrentUserAdmin(isAdmin);
             
             if (!isAdmin) {
-              router.push('/');
+              setError('Bạn không có quyền truy cập trang admin');
+              setTimeout(() => router.push('/'), 2000);
               return;
             }
             
+            setDebugInfo('Đang tải danh sách người dùng...');
             // Load all users
             await loadAllUsers(admins);
             
@@ -198,6 +258,7 @@ export default function AdminUsersPage() {
             console.error('Admin check error:', error);
             setError('Lỗi kiểm tra quyền admin: ' + error.message);
             setIsCurrentUserAdmin(false);
+            setLoading(false);
           }
         });
         
@@ -214,33 +275,59 @@ export default function AdminUsersPage() {
 
   const loadAllUsers = async (admins = []) => {
     try {
-      console.log('Bắt đầu load tất cả users...');
+      setDebugInfo('Đang fetch users từ Firestore...');
       
-      const usersData = await fetchAllUsersFromFirestore();
-      console.log(`Đã load thành công ${usersData.length} users từ Firestore`);
+      const result = await fetchAllUsersCombined();
+      const { users: usersData, totalCount } = result;
       
-      // Mark admin users
-      const usersWithAdminFlag = usersData.map(user => ({
-        ...user,
-        isAdmin: admins.includes(user.uid) || false,
-        // Đảm bảo có displayName
-        displayName: user.displayName || user.email?.split('@')[0] || `User_${user.uid.substring(0, 6)}`,
-        // Đảm bảo có emailVerified
-        emailVerified: user.emailVerified || false,
-        // Đảm bảo có banned
-        banned: user.banned || false
-      }));
+      setDebugInfo(`Đã load ${usersData.length} users, tổng trong DB: ${totalCount}`);
+      setTotalUsersCount(totalCount);
       
-      setAllUsers(usersWithAdminFlag);
+      // Process users: mark admin users and ensure all fields exist
+      const processedUsers = usersData.map(user => {
+        const isAdmin = admins.includes(user.uid);
+        
+        // Generate display name if missing
+        let displayName = user.displayName || '';
+        if (!displayName && user.email) {
+          displayName = user.email.split('@')[0];
+        } else if (!displayName) {
+          displayName = `User_${user.uid.substring(0, 8)}`;
+        }
+        
+        return {
+          ...user,
+          isAdmin: isAdmin,
+          displayName: displayName,
+          // Ensure boolean fields
+          emailVerified: user.emailVerified || false,
+          banned: user.banned || false,
+          // Check if user has minimal data
+          hasMinimalData: !!(user.email || user.displayName),
+          // Last activity
+          lastActivity: user.updatedAt || user.createdAt,
+        };
+      });
+      
+      // Sort by creation date (newest first)
+      processedUsers.sort((a, b) => {
+        const dateA = toDate(a.createdAt)?.getTime() || 0;
+        const dateB = toDate(b.createdAt)?.getTime() || 0;
+        return dateB - dateA;
+      });
+      
+      setAllUsers(processedUsers);
       
       // Calculate stats
-      calculateStats(usersWithAdminFlag, admins);
+      calculateStats(processedUsers, admins);
       
-      console.log('Users loaded successfully:', usersWithAdminFlag.length);
+      console.log(`Loaded ${processedUsers.length} users successfully`);
+      setDebugInfo(`Hoàn tất: ${processedUsers.length} users đã được tải`);
       
     } catch (error) {
       console.error('Error loading all users:', error);
       setError('Lỗi tải danh sách người dùng: ' + error.message);
+      setDebugInfo(`Lỗi: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -254,23 +341,48 @@ export default function AdminUsersPage() {
       deleted: 0,
       unverified: 0,
       admin: 0,
+      noName: 0,
+      noEmail: 0,
+      incomplete: 0
     };
     
     userList.forEach(user => {
-      if (user.isDeleted || user.status === 'deleted') {
+      // Count deleted users
+      if (user.status === 'deleted' || user.isDeleted) {
         stats.deleted++;
-      } else if (user.banned) {
+        return;
+      }
+      
+      // Count banned users
+      if (user.banned) {
         stats.banned++;
       } else {
         stats.active++;
       }
       
-      if (!user.emailVerified) {
+      // Count unverified emails
+      if (user.email && !user.emailVerified) {
         stats.unverified++;
       }
       
+      // Count admin users
       if (admins.includes(user.uid)) {
         stats.admin++;
+      }
+      
+      // Count users without display name
+      if (!user.displayName || user.displayName === '') {
+        stats.noName++;
+      }
+      
+      // Count users without email
+      if (!user.email || user.email === '') {
+        stats.noEmail++;
+      }
+      
+      // Count incomplete profiles
+      if (!user.email || !user.displayName) {
+        stats.incomplete++;
       }
     });
     
@@ -281,6 +393,7 @@ export default function AdminUsersPage() {
   const refreshList = async () => {
     setLoading(true);
     setError(null);
+    setDebugInfo('Đang làm mới danh sách...');
     try {
       // Refresh admin list
       const adminSnap = await getDoc(doc(db, 'app_config', 'admins'));
@@ -293,6 +406,7 @@ export default function AdminUsersPage() {
     } catch (error) {
       console.error('Refresh error:', error);
       setError('Lỗi làm mới: ' + error.message);
+      setDebugInfo(`Lỗi làm mới: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -316,15 +430,19 @@ export default function AdminUsersPage() {
       filtered = filtered.filter(user => {
         switch (statusFilter) {
           case 'active':
-            return !user.isDeleted && user.status !== 'deleted' && !user.banned;
+            return user.status !== 'deleted' && !user.isDeleted && !user.banned;
           case 'banned':
             return user.banned === true;
           case 'deleted':
-            return user.isDeleted || user.status === 'deleted';
+            return user.status === 'deleted' || user.isDeleted;
           case 'unverified':
-            return !user.emailVerified;
+            return user.email && !user.emailVerified;
           case 'admin':
             return adminUids.includes(user.uid);
+          case 'noname':
+            return !user.displayName || user.displayName === '';
+          case 'noemail':
+            return !user.email || user.email === '';
           default:
             return true;
         }
@@ -350,26 +468,66 @@ export default function AdminUsersPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Helper function to handle user actions
+  const handleUserAction = async (action, userId) => {
+    if (!currentUser || !isCurrentUserAdmin) return;
+    
+    switch (action) {
+      case 'view':
+        router.push(`/users/${userId}`);
+        break;
+      case 'ban':
+        if (window.confirm('Bạn có chắc muốn BAN người dùng này?')) {
+          alert('Chức năng BAN đang được phát triển');
+        }
+        break;
+      case 'unban':
+        if (window.confirm('Bạn có chắc muốn gỡ BAN người dùng này?')) {
+          alert('Chức năng gỡ BAN đang được phát triển');
+        }
+        break;
+      case 'make_admin':
+        if (window.confirm('Bạn có chắc muốn thêm quyền admin cho người dùng này?')) {
+          alert('Chức năng thêm admin đang được phát triển');
+        }
+        break;
+      case 'remove_admin':
+        if (window.confirm('Bạn có chắc muốn xoá quyền admin của người dùng này?')) {
+          alert('Chức năng xoá admin đang được phát triển');
+        }
+        break;
+      case 'delete':
+        if (window.confirm('Bạn có chắc muốn đánh dấu xoá người dùng này?')) {
+          alert('Chức năng xoá đang được phát triển');
+        }
+        break;
+      default:
+        break;
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <FontAwesomeIcon icon={faSpinner} className="animate-spin text-3xl text-gray-400 mb-4" />
           <p className="text-gray-500 dark:text-gray-400">Đang tải danh sách người dùng...</p>
+          {debugInfo && <p className="text-sm text-gray-400 mt-2">{debugInfo}</p>}
         </div>
       </div>
     );
   }
 
-  if (!isCurrentUserAdmin) {
+  if (error && !isCurrentUserAdmin) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-xl font-bold text-rose-600 mb-2">Truy cập bị từ chối</h1>
-          <p className="text-gray-500 dark:text-gray-400">Bạn không có quyền truy cập trang này.</p>
+        <div className="text-center max-w-md p-6">
+          <FontAwesomeIcon icon={faExclamationTriangle} className="text-3xl text-rose-500 mb-4" />
+          <h1 className="text-xl font-bold text-rose-600 mb-2">Lỗi</h1>
+          <p className="text-gray-500 dark:text-gray-400 mb-4">{error}</p>
           <Link 
             href="/" 
-            className="mt-4 inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            className="inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
           >
             Quay về trang chủ
           </Link>
@@ -429,32 +587,46 @@ export default function AdminUsersPage() {
               </div>
             )}
             
+            {/* Debug info */}
+            {debugInfo && (
+              <div className="mt-2 p-2 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+                <p className="text-xs text-blue-700 dark:text-blue-300">{debugInfo}</p>
+              </div>
+            )}
+            
             {/* Stats */}
-            <div className="mt-4 grid grid-cols-2 md:grid-cols-6 gap-3">
-              <div className="rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-3">
+            <div className="mt-4 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2">
+              <div className="rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 p-2">
                 <div className="text-xs text-gray-500">Tổng số</div>
                 <div className="text-lg font-semibold">{stats.total}</div>
-                <div className="text-xs text-gray-400">đã tải</div>
               </div>
-              <div className="rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 p-3">
-                <div className="text-xs text-emerald-600 dark:text-emerald-400">Đang hoạt động</div>
+              <div className="rounded-lg bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 p-2">
+                <div className="text-xs text-emerald-600 dark:text-emerald-400">Hoạt động</div>
                 <div className="text-lg font-semibold">{stats.active}</div>
               </div>
-              <div className="rounded-lg bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 p-3">
+              <div className="rounded-lg bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 p-2">
                 <div className="text-xs text-rose-600 dark:text-rose-400">Bị BAN</div>
                 <div className="text-lg font-semibold">{stats.banned}</div>
               </div>
-              <div className="rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 p-3">
+              <div className="rounded-lg bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 p-2">
                 <div className="text-xs text-gray-600 dark:text-gray-400">Đã xoá</div>
                 <div className="text-lg font-semibold">{stats.deleted}</div>
               </div>
-              <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-3">
+              <div className="rounded-lg bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 p-2">
                 <div className="text-xs text-amber-600 dark:text-amber-400">Chưa xác minh</div>
                 <div className="text-lg font-semibold">{stats.unverified}</div>
               </div>
-              <div className="rounded-lg bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 p-3">
+              <div className="rounded-lg bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 p-2">
                 <div className="text-xs text-purple-600 dark:text-purple-400">Admin</div>
                 <div className="text-lg font-semibold">{stats.admin}</div>
+              </div>
+              <div className="rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 p-2">
+                <div className="text-xs text-blue-600 dark:text-blue-400">Không tên</div>
+                <div className="text-lg font-semibold">{stats.noName}</div>
+              </div>
+              <div className="rounded-lg bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 p-2">
+                <div className="text-xs text-orange-600 dark:text-orange-400">Không email</div>
+                <div className="text-lg font-semibold">{stats.noEmail}</div>
               </div>
             </div>
           </div>
@@ -499,8 +671,10 @@ export default function AdminUsersPage() {
                   <option value="active">Đang hoạt động</option>
                   <option value="banned">Bị BAN</option>
                   <option value="deleted">Đã xoá</option>
-                  <option value="unverified">Chưa xác minh</option>
+                  <option value="unverified">Chưa xác minh email</option>
                   <option value="admin">Quản trị viên</option>
+                  <option value="noname">Không có tên</option>
+                  <option value="noemail">Không có email</option>
                 </select>
               </div>
               
@@ -520,18 +694,32 @@ export default function AdminUsersPage() {
                 </select>
               </div>
             </div>
+            
+            {/* Summary */}
+            <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="text-sm text-gray-600 dark:text-gray-400">
+                  Hiển thị <span className="font-semibold">{filteredUsers.length}</span> người dùng phù hợp
+                  {filteredUsers.length !== allUsers.length && ` (trong tổng ${allUsers.length})`}
+                </div>
+                <div className="text-sm text-gray-500">
+                  Trang {page}/{totalFilteredPages}
+                </div>
+              </div>
+            </div>
           </div>
           
           {/* Users table */}
           <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
             {allUsers.length === 0 ? (
-              <div className="py-8 text-center">
-                <FontAwesomeIcon icon={faExclamationTriangle} className="text-2xl text-gray-400 mb-2" />
-                <p className="text-gray-500">Không có người dùng nào</p>
+              <div className="py-12 text-center">
+                <FontAwesomeIcon icon={faUser} className="text-4xl text-gray-300 dark:text-gray-600 mb-4" />
+                <p className="text-gray-500 dark:text-gray-400">Không tìm thấy người dùng nào</p>
                 <button
                   onClick={refreshList}
-                  className="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+                  className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                 >
+                  <FontAwesomeIcon icon={faSync} className="mr-2" />
                   Thử lại
                 </button>
               </div>
@@ -543,231 +731,93 @@ export default function AdminUsersPage() {
                       <tr>
                         <th className="py-3 px-4 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">Người dùng</th>
                         <th className="py-3 px-4 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">Trạng thái</th>
-                        <th className="py-3 px-4 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">Ngày tham gia</th>
+                        <th className="py-3 px-4 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">Ngày tạo</th>
                         <th className="py-3 px-4 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">Email</th>
                         <th className="py-3 px-4 text-left text-sm font-semibold text-gray-600 dark:text-gray-300">Thao tác</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                      {paginatedUsers.length === 0 ? (
-                        <tr>
-                          <td colSpan="5" className="py-8 text-center text-gray-500 dark:text-gray-400">
-                            {searchTerm || statusFilter !== 'all' ? 'Không tìm thấy người dùng nào phù hợp' : 'Không có người dùng nào'}
-                          </td>
-                        </tr>
-                      ) : (
-                        paginatedUsers.map(user => (
-                          <tr key={user.uid} className="hover:bg-gray-50 dark:hover:bg-gray-900/50">
-                            <td className="py-3 px-4">
-                              <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden flex-shrink-0">
-                                  {user.photoURL ? (
-                                    <img
-                                      src={user.photoURL}
-                                      alt={user.displayName}
-                                      className="w-full h-full object-cover"
-                                      referrerPolicy="no-referrer"
-                                    />
-                                  ) : (
-                                    <div className="w-full h-full flex items-center justify-center">
-                                      <FontAwesomeIcon icon={faUserCircle} className="w-6 h-6 text-gray-400" />
-                                    </div>
-                                  )}
-                                </div>
-                                <div className="min-w-0">
-                                  <div className="font-medium truncate" title={user.displayName}>
-                                    {user.displayName}
+                      {paginatedUsers.map(user => (
+                        <tr key={user.uid} className="hover:bg-gray-50 dark:hover:bg-gray-900/50">
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden flex-shrink-0">
+                                {user.photoURL ? (
+                                  <img
+                                    src={user.photoURL}
+                                    alt={user.displayName}
+                                    className="w-full h-full object-cover"
+                                    referrerPolicy="no-referrer"
+                                  />
+                                ) : (
+                                  <div className="w-full h-full flex items-center justify-center">
+                                    <FontAwesomeIcon icon={faUserCircle} className="w-6 h-6 text-gray-400" />
                                   </div>
-                                  <div className="text-xs text-gray-500 dark:text-gray-400 font-mono truncate" title={user.uid}>
-                                    {user.uid.substring(0, 12)}...
-                                  </div>
-                                  {!user.displayName && (
-                                    <div className="text-xs text-amber-600">Chưa có tên hiển thị</div>
-                                  )}
-                                </div>
-                              </div>
-                            </td>
-                            <td className="py-3 px-4">
-                              <UserStatusBadge 
-                                userData={user} 
-                                isAdminUser={adminUids.includes(user.uid)}
-                              />
-                              {!user.email && (
-                                <div className="text-xs text-gray-500 mt-1">Không có email</div>
-                              )}
-                            </td>
-                            <td className="py-3 px-4">
-                              <div className="text-sm">{fmtDate(user.createdAt) || 'N/A'}</div>
-                            </td>
-                            <td className="py-3 px-4">
-                              <div className="flex items-center gap-2">
-                                <span className="text-sm truncate" title={user.email}>
-                                  {user.email || 'N/A'}
-                                </span>
-                                {user.email && user.emailVerified ? (
-                                  <FontAwesomeIcon icon={faCheckCircle} className="text-emerald-500 flex-shrink-0" title="Đã xác minh email" />
-                                ) : user.email ? (
-                                  <FontAwesomeIcon icon={faTimesCircle} className="text-amber-500 flex-shrink-0" title="Chưa xác minh email" />
-                                ) : null}
-                              </div>
-                            </td>
-                            <td className="py-3 px-4">
-                              <div className="flex flex-wrap gap-2">
-                                <Link
-                                  href={`/users/${user.uid}`}
-                                  className="px-2 py-1 text-xs rounded bg-sky-100 text-sky-700 hover:bg-sky-200 dark:bg-sky-900/30 dark:text-sky-300"
-                                  title="Xem hồ sơ"
-                                >
-                                  <FontAwesomeIcon icon={faEye} className="mr-1" />
-                                  Xem
-                                </Link>
-                                {!user.isDeleted && user.status !== 'deleted' && (
-                                  <>
-                                    <button
-                                      className={`px-2 py-1 text-xs rounded ${
-                                        user.banned
-                                          ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300'
-                                          : 'bg-rose-100 text-rose-700 hover:bg-rose-200 dark:bg-rose-900/30 dark:text-rose-300'
-                                      }`}
-                                      title={user.banned ? 'Gỡ ban' : 'Ban tài khoản'}
-                                      onClick={() => alert('Chức năng ban sẽ được tích hợp sau')}
-                                    >
-                                      {user.banned ? (
-                                        <FontAwesomeIcon icon={faUnlock} className="mr-1" />
-                                      ) : (
-                                        <FontAwesomeIcon icon={faBan} className="mr-1" />
-                                      )}
-                                      {user.banned ? 'Gỡ ban' : 'Ban'}
-                                    </button>
-                                    
-                                    <button
-                                      className={`px-2 py-1 text-xs rounded ${
-                                        adminUids.includes(user.uid)
-                                          ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300'
-                                          : 'bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-300'
-                                      }`}
-                                      title={adminUids.includes(user.uid) ? 'Xoá quyền admin' : 'Thêm quyền admin'}
-                                      onClick={() => alert('Chức năng quản lý admin sẽ được tích hợp sau')}
-                                    >
-                                      <FontAwesomeIcon icon={faUserShield} className="mr-1" />
-                                      {adminUids.includes(user.uid) ? 'Xoá Admin' : 'Thêm Admin'}
-                                    </button>
-                                    
-                                    <button
-                                      className="px-2 py-1 text-xs rounded bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300"
-                                      title="Đánh dấu đã xoá"
-                                      onClick={() => alert('Chức năng xoá sẽ được tích hợp sau')}
-                                    >
-                                      <FontAwesomeIcon icon={faTrash} className="mr-1" />
-                                      Xoá
-                                    </button>
-                                  </>
                                 )}
                               </div>
-                            </td>
-                          </tr>
-                        ))
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-                
-                {/* Pagination */}
-                {totalFilteredPages > 1 && (
-                  <div className="border-t border-gray-200 dark:border-gray-700 p-4">
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                      <div className="text-sm text-gray-500 dark:text-gray-400">
-                        Hiển thị {paginatedUsers.length}/{filteredUsers.length} người dùng
-                      </div>
-                      
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handlePageChange(page - 1)}
-                          disabled={page === 1}
-                          className="px-3 py-1 rounded border border-gray-300 dark:border-gray-600 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700"
-                        >
-                          ← Trước
-                        </button>
-                        
-                        <div className="flex items-center gap-1">
-                          {Array.from({ length: Math.min(5, totalFilteredPages) }, (_, i) => {
-                            let pageNum;
-                            if (totalFilteredPages <= 5) {
-                              pageNum = i + 1;
-                            } else if (page <= 3) {
-                              pageNum = i + 1;
-                            } else if (page >= totalFilteredPages - 2) {
-                              pageNum = totalFilteredPages - 4 + i;
-                            } else {
-                              pageNum = page - 2 + i;
-                            }
-                            
-                            return (
-                              <button
-                                key={pageNum}
-                                onClick={() => handlePageChange(pageNum)}
-                                className={`w-8 h-8 rounded ${page === pageNum ? 'bg-blue-600 text-white' : 'border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700'}`}
+                              <div className="min-w-0">
+                                <div className="font-medium truncate" title={user.displayName}>
+                                  {user.displayName}
+                                  {!user.displayName && (
+                                    <span className="text-xs text-amber-600 ml-2">(chưa có tên)</span>
+                                  )}
+                                </div>
+                                <div className="text-xs text-gray-500 dark:text-gray-400 font-mono truncate" title={user.uid}>
+                                  {user.uid.substring(0, 10)}...
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  {fmtDateTime(user.createdAt)}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <UserStatusBadge 
+                              userData={user} 
+                              isAdminUser={adminUids.includes(user.uid)}
+                            />
+                            {!user.email && (
+                              <div className="text-xs text-gray-500 mt-1">Không có email</div>
+                            )}
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="text-sm">{fmtDate(user.createdAt) || 'N/A'}</div>
+                            <div className="text-xs text-gray-500">
+                              {user.updatedAt ? `Cập nhật: ${fmtDate(user.updatedAt)}` : ''}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm truncate" title={user.email}>
+                                {user.email || 'Không có email'}
+                              </span>
+                              {user.email && user.emailVerified ? (
+                                <FontAwesomeIcon icon={faCheckCircle} className="text-emerald-500 flex-shrink-0" title="Đã xác minh email" />
+                              ) : user.email ? (
+                                <FontAwesomeIcon icon={faTimesCircle} className="text-amber-500 flex-shrink-0" title="Chưa xác minh email" />
+                              ) : null}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex flex-wrap gap-2">
+                              <Link
+                                href={`/users/${user.uid}`}
+                                className="px-2 py-1 text-xs rounded bg-sky-100 text-sky-700 hover:bg-sky-200 dark:bg-sky-900/30 dark:text-sky-300 inline-flex items-center"
+                                title="Xem hồ sơ"
                               >
-                                {pageNum}
-                              </button>
-                            );
-                          })}
-                          
-                          {totalFilteredPages > 5 && (
-                            <span className="px-2 text-gray-500">...</span>
-                          )}
-                        </div>
-                        
-                        <button
-                          onClick={() => handlePageChange(page + 1)}
-                          disabled={page === totalFilteredPages}
-                          className="px-3 py-1 rounded border border-gray-300 dark:border-gray-600 disabled:opacity-50 hover:bg-gray-50 dark:hover:bg-gray-700"
-                        >
-                          Tiếp →
-                        </button>
-                      </div>
-                      
-                      <div className="text-sm text-gray-500 dark:text-gray-400">
-                        Trang {page}/{totalFilteredPages}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
-          
-          {/* Debug info (chỉ hiển thị trong development) */}
-          {process.env.NODE_ENV === 'development' && (
-            <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
-              <h3 className="font-medium mb-2">Debug Information</h3>
-              <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                <div>• Total users loaded: {allUsers.length}</div>
-                <div>• First user sample: {JSON.stringify(allUsers[0] || {})}</div>
-                <div>• Admin UIDs count: {adminUids.length}</div>
-              </div>
-            </div>
-          )}
-          
-          {/* Navigation */}
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Link
-              href="/admin"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
-            >
-              <FontAwesomeIcon icon={faCog} />
-              Quay lại Admin Panel
-            </Link>
-            <Link
-              href="/"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
-            >
-              <FontAwesomeIcon icon={faHome} />
-              Về trang chủ
-            </Link>
-          </div>
-        </main>
-      </div>
-    </>
-  );
-}
+                                <FontAwesomeIcon icon={faEye} className="mr-1" />
+                                Xem
+                              </Link>
+                              
+                              {!(user.status === 'deleted' || user.isDeleted) && (
+                                <>
+                                  <button
+                                    onClick={() => handleUserAction(user.banned ? 'unban' : 'ban', user.uid)}
+                                    className={`px-2 py-1 text-xs rounded inline-flex items-center ${
+                                      user.banned
+                                        ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300'
+                                        : 'bg-rose-100 text-rose-700 hover:bg-rose-200 dark:bg-rose-900/30 dark:text-rose-300'
+                                    }`}
+                                    title={user.banned ? 'Gỡ ban' : 'Ban tài khoản'}
+                                  >
+                                    <FontAwesomeIcon icon={user.banned ? faUnlock : faBan} className="mr-1" />
