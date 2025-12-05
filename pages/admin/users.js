@@ -11,14 +11,9 @@ import {
   getDocs,
   query,
   orderBy,
-  where,
   limit,
   startAfter,
-  updateDoc,
-  serverTimestamp,
-  deleteDoc,
 } from 'firebase/firestore';
-import { sendEmailVerification, deleteUser } from 'firebase/auth';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
   faUserCircle,
@@ -35,9 +30,10 @@ import {
   faCheckCircle,
   faTimesCircle,
   faSearch,
-  faFilter,
   faArrowLeft,
   faSync,
+  faHome,
+  faCog,
 } from '@fortawesome/free-solid-svg-icons';
 
 /* ================= Helper functions ================= */
@@ -54,21 +50,11 @@ function toDate(ts) {
 
 const fmtDate = (ts) => {
   const d = toDate(ts);
-  return d ? d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
-};
-
-const fmtRel = (ts) => {
-  const d = toDate(ts);
-  if (!d) return '';
-  const diff = (Date.now() - d.getTime()) / 1000;
-  const rtf = new Intl.RelativeTimeFormat('vi', { numeric: 'auto' });
-  const units = [['year', 31536000], ['month', 2592000], ['week', 604800], ['day', 86400], ['hour', 3600], ['minute', 60], ['second', 1]];
-  for (const [u, s] of units) if (Math.abs(diff) >= s || u === 'second') return rtf.format(Math.round(diff / s * -1), u);
-  return '';
+  return d ? d.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
 };
 
 /* ================= User Status Badge ================= */
-function UserStatusBadge({ userData, banInfo }) {
+function UserStatusBadge({ userData, isAdminUser, isBanned }) {
   if (userData?.status === 'deleted') {
     return (
       <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
@@ -78,16 +64,16 @@ function UserStatusBadge({ userData, banInfo }) {
     );
   }
 
-  if (banInfo?.banned) {
+  if (isBanned) {
     return (
       <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-800 dark:bg-rose-900/30 dark:text-rose-300">
         <FontAwesomeIcon icon={faBan} />
-        {banInfo.mode === 'permanent' ? 'BAN vĩnh viễn' : 'BAN tạm thời'}
+        Bị BAN
       </span>
     );
   }
 
-  if (userData?.isAdmin) {
+  if (isAdminUser) {
     return (
       <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
         <FontAwesomeIcon icon={faUserShield} />
@@ -96,109 +82,76 @@ function UserStatusBadge({ userData, banInfo }) {
     );
   }
 
-  if (userData?.emailVerified) {
-    return (
-      <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300">
-        <FontAwesomeIcon icon={faUserCheck} />
-        Đã xác minh
-      </span>
-    );
-  }
-
   return (
-    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
-      <FontAwesomeIcon icon={faUserCircle} />
+    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300">
+      <FontAwesomeIcon icon={faUserCheck} />
       Đang hoạt động
     </span>
   );
 }
 
 /* ================= User Actions ================= */
-function UserActions({ userData, me, isAdmin, banInfo, onAction }) {
+function UserActions({ userData, currentUser, isCurrentUserAdmin, onAction }) {
   const [loading, setLoading] = useState(false);
   const [actionType, setActionType] = useState('');
 
-  if (!me || !isAdmin) return null;
+  if (!currentUser || !isCurrentUserAdmin) return null;
 
   const handleAction = async (action) => {
-    if (!me || !isAdmin) return;
+    if (!currentUser || !isCurrentUserAdmin) return;
     
     setLoading(true);
     setActionType(action);
     
     try {
       if (action === 'verify_email') {
-        // Gửi email xác minh
-        const user = await auth.getUser(userData.uid);
-        await sendEmailVerification(user);
-        onAction?.('verify_email', 'Đã gửi email xác minh');
+        alert('Chức năng gửi email xác minh cần được tích hợp với API');
+        onAction?.('verify_email', 'Chức năng đang phát triển');
       } else if (action === 'toggle_ban') {
-        // Toggle ban/unban
-        const idToken = await me.getIdToken();
-        const payload = {
-          uid: userData.uid,
-          action: banInfo?.banned ? 'unban' : 'ban',
-          reason: 'Quản trị viên thao tác',
-          mode: 'permanent'
-        };
-        
-        const resp = await fetch('/api/admin/ban-user', {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json', 
-            Authorization: `Bearer ${idToken}` 
-          },
-          body: JSON.stringify(payload)
-        });
-        
-        const json = await resp.json();
-        if (!resp.ok || !json.ok) throw new Error(json?.error || 'Thao tác thất bại');
-        
-        onAction?.('toggle_ban', banInfo?.banned ? 'Đã gỡ ban' : 'Đã ban tài khoản');
-      } else if (action === 'delete_user') {
-        // Xoá tài khoản
-        if (!confirm(`Bạn có chắc muốn xoá vĩnh viễn người dùng ${userData.displayName || userData.email}?\n\nHành động này sẽ:\n1. Xoá khỏi Firebase Authentication\n2. Đánh dấu đã xoá trong Firestore\n3. Xoá các bình luận liên quan`)) {
+        const ok = window.confirm(`Bạn có chắc muốn ${userData.banned ? 'gỡ BAN' : 'BAN'} người dùng ${userData.displayName || userData.email}?`);
+        if (!ok) {
           setLoading(false);
           return;
         }
         
-        const idToken = await me.getIdToken();
-        const params = new URLSearchParams({
-          uid: userData.uid,
-          hard: '1',
-          deleteAuth: '1',
-        });
-        
-        const resp = await fetch(`/api/admin/delete-user-data?${params.toString()}`, {
+        // Toggle ban status
+        const newStatus = !userData.banned;
+        await fetch('/api/admin/toggle-ban', {
           method: 'POST',
-          headers: { Authorization: `Bearer ${idToken}` }
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid: userData.uid, banned: newStatus })
         });
         
-        const json = await resp.json();
-        if (!resp.ok || !json.ok) throw new Error(json?.error || 'Không xoá được dữ liệu.');
+        onAction?.('toggle_ban', newStatus ? 'Đã BAN người dùng' : 'Đã gỡ BAN người dùng');
+      } else if (action === 'delete_user') {
+        if (!confirm(`Bạn có chắc muốn đánh dấu xoá người dùng ${userData.displayName || userData.email}?\n\nHành động này sẽ đánh dấu tài khoản là đã xoá.`)) {
+          setLoading(false);
+          return;
+        }
         
-        onAction?.('delete_user', 'Đã xoá người dùng');
+        await fetch('/api/admin/mark-deleted', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid: userData.uid })
+        });
+        
+        onAction?.('delete_user', 'Đã đánh dấu xoá người dùng');
       } else if (action === 'make_admin') {
-        // Thêm quyền admin
-        const idToken = await me.getIdToken();
-        const resp = await fetch('/api/admin/manage-admins', {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json', 
-            Authorization: `Bearer ${idToken}` 
-          },
-          body: JSON.stringify({
-            action: 'add',
-            uid: userData.uid
-          })
-        });
+        if (!confirm(`Bạn có chắc muốn thêm quyền admin cho ${userData.displayName || userData.email}?`)) {
+          setLoading(false);
+          return;
+        }
         
-        const json = await resp.json();
-        if (!resp.ok || !json.ok) throw new Error(json?.error || 'Thao tác thất bại');
+        await fetch('/api/admin/add-admin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ uid: userData.uid })
+        });
         
         onAction?.('make_admin', 'Đã thêm quyền admin');
       }
     } catch (error) {
+      console.error('Action error:', error);
       alert(error.message || 'Lỗi không xác định');
     } finally {
       setLoading(false);
@@ -208,72 +161,6 @@ function UserActions({ userData, me, isAdmin, banInfo, onAction }) {
 
   return (
     <div className="flex flex-wrap gap-2">
-      {!userData?.emailVerified && (
-        <button
-          onClick={() => handleAction('verify_email')}
-          disabled={loading}
-          className="px-2 py-1 text-xs rounded bg-blue-100 text-blue-700 hover:bg-blue-200 dark:bg-blue-900/30 dark:text-blue-300 disabled:opacity-50"
-          title="Gửi email xác minh"
-        >
-          {actionType === 'verify_email' && loading ? (
-            <FontAwesomeIcon icon={faSpinner} className="animate-spin mr-1" />
-          ) : (
-            <FontAwesomeIcon icon={faEnvelope} className="mr-1" />
-          )}
-          Xác minh
-        </button>
-      )}
-      
-      <button
-        onClick={() => handleAction('toggle_ban')}
-        disabled={loading}
-        className={`px-2 py-1 text-xs rounded ${
-          banInfo?.banned
-            ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300'
-            : 'bg-rose-100 text-rose-700 hover:bg-rose-200 dark:bg-rose-900/30 dark:text-rose-300'
-        } disabled:opacity-50`}
-        title={banInfo?.banned ? 'Gỡ ban' : 'Ban tài khoản'}
-      >
-        {actionType === 'toggle_ban' && loading ? (
-          <FontAwesomeIcon icon={faSpinner} className="animate-spin mr-1" />
-        ) : banInfo?.banned ? (
-          <FontAwesomeIcon icon={faUnlock} className="mr-1" />
-        ) : (
-          <FontAwesomeIcon icon={faBan} className="mr-1" />
-        )}
-        {banInfo?.banned ? 'Gỡ ban' : 'Ban'}
-      </button>
-      
-      {!userData?.isAdmin && (
-        <button
-          onClick={() => handleAction('make_admin')}
-          disabled={loading}
-          className="px-2 py-1 text-xs rounded bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-300 disabled:opacity-50"
-          title="Thêm quyền admin"
-        >
-          {actionType === 'make_admin' && loading ? (
-            <FontAwesomeIcon icon={faSpinner} className="animate-spin mr-1" />
-          ) : (
-            <FontAwesomeIcon icon={faUserShield} className="mr-1" />
-          )}
-          Thêm Admin
-        </button>
-      )}
-      
-      <button
-        onClick={() => handleAction('delete_user')}
-        disabled={loading}
-        className="px-2 py-1 text-xs rounded bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300 disabled:opacity-50"
-        title="Xoá người dùng"
-      >
-        {actionType === 'delete_user' && loading ? (
-          <FontAwesomeIcon icon={faSpinner} className="animate-spin mr-1" />
-        ) : (
-          <FontAwesomeIcon icon={faTrash} className="mr-1" />
-        )}
-        Xoá
-      </button>
-      
       <Link
         href={`/users/${userData.uid}`}
         className="px-2 py-1 text-xs rounded bg-sky-100 text-sky-700 hover:bg-sky-200 dark:bg-sky-900/30 dark:text-sky-300"
@@ -282,6 +169,26 @@ function UserActions({ userData, me, isAdmin, banInfo, onAction }) {
         <FontAwesomeIcon icon={faEye} className="mr-1" />
         Xem
       </Link>
+      
+      <button
+        onClick={() => handleAction('toggle_ban')}
+        disabled={loading}
+        className={`px-2 py-1 text-xs rounded ${
+          userData.banned
+            ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300'
+            : 'bg-rose-100 text-rose-700 hover:bg-rose-200 dark:bg-rose-900/30 dark:text-rose-300'
+        } disabled:opacity-50`}
+        title={userData.banned ? 'Gỡ ban' : 'Ban tài khoản'}
+      >
+        {actionType === 'toggle_ban' && loading ? (
+          <FontAwesomeIcon icon={faSpinner} className="animate-spin mr-1" />
+        ) : userData.banned ? (
+          <FontAwesomeIcon icon={faUnlock} className="mr-1" />
+        ) : (
+          <FontAwesomeIcon icon={faBan} className="mr-1" />
+        )}
+        {userData.banned ? 'Gỡ ban' : 'Ban'}
+      </button>
     </div>
   );
 }
@@ -289,113 +196,84 @@ function UserActions({ userData, me, isAdmin, banInfo, onAction }) {
 /* ================= Main Component ================= */
 export default function AdminUsersPage() {
   const router = useRouter();
-  const [me, setMe] = useState(null);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [isCurrentUserAdmin, setIsCurrentUserAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState([]);
+  const [adminUids, setAdminUids] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all'); // all, active, banned, deleted, unverified, admin
-  const [sortBy, setSortBy] = useState('createdAt_desc'); // createdAt_desc, createdAt_asc, name_asc, name_desc
-  const [stats, setStats] = useState({ total: 0, active: 0, banned: 0, deleted: 0, unverified: 0, admin: 0 });
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [stats, setStats] = useState({ 
+    total: 0, 
+    active: 0, 
+    banned: 0, 
+    deleted: 0, 
+    unverified: 0, 
+    admin: 0 
+  });
   const [page, setPage] = useState(1);
   const [pageSize] = useState(20);
   const [hasMore, setHasMore] = useState(false);
   const [lastDoc, setLastDoc] = useState(null);
   const [loadingMore, setLoadingMore] = useState(false);
-  const [banInfoMap, setBanInfoMap] = useState({});
-  const [loadingBanInfo, setLoadingBanInfo] = useState(false);
 
-  // Check admin status
+  // Check admin status and load users
   useEffect(() => {
-    const unsub = auth.onAuthStateChanged(async (user) => {
-      setMe(user || null);
-      if (!user) {
-        router.push('/login');
-        return;
-      }
-      
+    const checkAdminAndLoad = async () => {
       try {
-        const snap = await getDoc(doc(db, 'app_config', 'admins'));
-        const admins = Array.isArray(snap.data()?.uids) ? snap.data().uids : [];
-        const isUserAdmin = admins.includes(user.uid);
-        setIsAdmin(isUserAdmin);
-        
-        if (!isUserAdmin) {
-          router.push('/');
-          return;
-        }
-        
-        await loadUsers();
-      } catch (error) {
-        console.error('Admin check error:', error);
-        router.push('/');
-      }
-    });
-    
-    return () => unsub();
-  }, [router]);
-
-  // Load ban info for users
-  useEffect(() => {
-    if (!me || !isAdmin || users.length === 0) return;
-    
-    const fetchBanInfo = async () => {
-      setLoadingBanInfo(true);
-      try {
-        const idToken = await me.getIdToken();
-        const promises = users.map(async (user) => {
-          if (banInfoMap[user.uid]) return;
+        const unsub = auth.onAuthStateChanged(async (user) => {
+          setCurrentUser(user);
+          
+          if (!user) {
+            router.push('/login');
+            return;
+          }
           
           try {
-            const resp = await fetch(`/api/admin/ban-status?uid=${encodeURIComponent(user.uid)}`, {
-              headers: { Authorization: `Bearer ${idToken}` }
-            });
-            const json = await resp.json();
-            if (json?.ok) {
-              setBanInfoMap(prev => ({
-                ...prev,
-                [user.uid]: {
-                  banned: json.banned,
-                  authDisabled: json.authDisabled,
-                  reason: json.reason || null,
-                  mode: json.mode || null,
-                  expiresAt: json.expiresAt || null,
-                  remainingMs: json.remainingMs || null,
-                }
-              }));
+            // Check if user is admin
+            const adminSnap = await getDoc(doc(db, 'app_config', 'admins'));
+            const admins = Array.isArray(adminSnap.data()?.uids) ? adminSnap.data().uids : [];
+            setAdminUids(admins);
+            
+            const isAdmin = admins.includes(user.uid);
+            setIsCurrentUserAdmin(isAdmin);
+            
+            if (!isAdmin) {
+              router.push('/');
+              return;
             }
+            
+            // Load users
+            await loadUsers();
           } catch (error) {
-            console.error('Error fetching ban info:', error);
+            console.error('Admin check error:', error);
+            setIsCurrentUserAdmin(false);
+            router.push('/');
           }
         });
         
-        await Promise.all(promises);
+        return () => unsub();
       } catch (error) {
-        console.error('Error in fetchBanInfo:', error);
-      } finally {
-        setLoadingBanInfo(false);
+        console.error('Initialization error:', error);
+        setLoading(false);
       }
     };
     
-    fetchBanInfo();
-  }, [me, isAdmin, users, banInfoMap]);
+    checkAdminAndLoad();
+  }, [router]);
 
   const loadUsers = async (loadMore = false) => {
-    if (!isAdmin) return;
-    
-    if (!loadMore) {
-      setLoading(true);
-    } else {
-      setLoadingMore(true);
-    }
+    if (!isCurrentUserAdmin && currentUser) return;
     
     try {
-      let usersQuery = query(
-        collection(db, 'users'),
-        orderBy('createdAt', 'desc'),
-        limit(pageSize)
-      );
+      if (!loadMore) {
+        setLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
       
+      // Build query
+      let usersQuery;
       if (loadMore && lastDoc) {
         usersQuery = query(
           collection(db, 'users'),
@@ -403,20 +281,25 @@ export default function AdminUsersPage() {
           startAfter(lastDoc),
           limit(pageSize)
         );
+      } else {
+        usersQuery = query(
+          collection(db, 'users'),
+          orderBy('createdAt', 'desc'),
+          limit(pageSize)
+        );
       }
       
       const snapshot = await getDocs(usersQuery);
       const userList = [];
       
-      for (const docSnap of snapshot.docs) {
+      snapshot.forEach((docSnap) => {
         const data = docSnap.data();
-        if (data) {
-          userList.push({
-            id: docSnap.id,
-            ...data
-          });
-        }
-      }
+        userList.push({
+          id: docSnap.id,
+          uid: docSnap.id,
+          ...data
+        });
+      });
       
       if (!loadMore) {
         setUsers(userList);
@@ -429,14 +312,13 @@ export default function AdminUsersPage() {
       
       // Calculate stats
       calculateStats(userList);
+      
     } catch (error) {
       console.error('Error loading users:', error);
+      alert('Lỗi khi tải danh sách người dùng: ' + error.message);
     } finally {
-      if (!loadMore) {
-        setLoading(false);
-      } else {
-        setLoadingMore(false);
-      }
+      setLoading(false);
+      setLoadingMore(false);
     }
   };
 
@@ -450,95 +332,71 @@ export default function AdminUsersPage() {
       admin: 0,
     };
     
-    // Load admin list
-    const loadAdminStats = async () => {
-      try {
-        const adminSnap = await getDoc(doc(db, 'app_config', 'admins'));
-        const adminUids = Array.isArray(adminSnap.data()?.uids) ? adminSnap.data().uids : [];
-        
-        userList.forEach(user => {
-          if (user.status === 'deleted') {
-            stats.deleted++;
-          } else if (!user.emailVerified) {
-            stats.unverified++;
-          } else {
-            stats.active++;
-          }
-          
-          if (adminUids.includes(user.uid)) {
-            stats.admin++;
-          }
-        });
-        
-        setStats(stats);
-      } catch (error) {
-        console.error('Error loading admin stats:', error);
+    userList.forEach(user => {
+      if (user.status === 'deleted') {
+        stats.deleted++;
+      } else if (user.banned) {
+        stats.banned++;
+      } else {
+        stats.active++;
       }
-    };
+      
+      if (!user.emailVerified) {
+        stats.unverified++;
+      }
+      
+      if (adminUids.includes(user.uid)) {
+        stats.admin++;
+      }
+    });
     
-    loadAdminStats();
+    setStats(stats);
   };
 
   const handleAction = (action, message) => {
     console.log(`${action}: ${message}`);
     // Refresh user list after action
-    setPage(1);
-    setLastDoc(null);
-    loadUsers(false);
+    refreshList();
   };
 
   const filteredUsers = useMemo(() => {
-    return users.filter(user => {
-      // Search filter
+    let filtered = [...users];
+    
+    // Search filter
+    if (searchTerm) {
       const searchLower = searchTerm.toLowerCase();
-      const matchesSearch = 
-        !searchTerm ||
+      filtered = filtered.filter(user => 
         (user.displayName || '').toLowerCase().includes(searchLower) ||
         (user.email || '').toLowerCase().includes(searchLower) ||
-        user.uid.toLowerCase().includes(searchLower);
-      
-      if (!matchesSearch) return false;
-      
-      // Status filter
-      const userBanInfo = banInfoMap[user.uid];
-      
-      switch (statusFilter) {
-        case 'active':
-          return user.status !== 'deleted' && (!userBanInfo || !userBanInfo.banned) && user.emailVerified;
-        case 'banned':
-          return userBanInfo?.banned === true;
-        case 'deleted':
-          return user.status === 'deleted';
-        case 'unverified':
-          return !user.emailVerified;
-        case 'admin':
-          // Need to check admin status
-          return user.isAdmin === true;
-        default:
-          return true;
-      }
-    }).sort((a, b) => {
-      // Sort filter
-      const [field, direction] = sortBy.split('_');
-      const dir = direction === 'desc' ? -1 : 1;
-      
-      if (field === 'createdAt') {
-        const aDate = toDate(a.createdAt)?.getTime() || 0;
-        const bDate = toDate(b.createdAt)?.getTime() || 0;
-        return (aDate - bDate) * dir;
-      } else if (field === 'name') {
-        const aName = (a.displayName || a.email || '').toLowerCase();
-        const bName = (b.displayName || b.email || '').toLowerCase();
-        return aName.localeCompare(bName) * dir;
-      }
-      
-      return 0;
-    });
-  }, [users, searchTerm, statusFilter, sortBy, banInfoMap]);
+        (user.uid || '').toLowerCase().includes(searchLower)
+      );
+    }
+    
+    // Status filter
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(user => {
+        switch (statusFilter) {
+          case 'active':
+            return user.status !== 'deleted' && !user.banned;
+          case 'banned':
+            return user.banned === true;
+          case 'deleted':
+            return user.status === 'deleted';
+          case 'unverified':
+            return !user.emailVerified;
+          case 'admin':
+            return adminUids.includes(user.uid);
+          default:
+            return true;
+        }
+      });
+    }
+    
+    return filtered;
+  }, [users, searchTerm, statusFilter, adminUids]);
 
   const handleLoadMore = () => {
     if (hasMore && !loadingMore) {
-      setPage(prev => prev + 1);
       loadUsers(true);
     }
   };
@@ -560,12 +418,18 @@ export default function AdminUsersPage() {
     );
   }
 
-  if (!isAdmin) {
+  if (!isCurrentUserAdmin) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-xl font-bold text-rose-600 mb-2">Truy cập bị từ chối</h1>
           <p className="text-gray-500 dark:text-gray-400">Bạn không có quyền truy cập trang này.</p>
+          <Link 
+            href="/" 
+            className="mt-4 inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Quay về trang chủ
+          </Link>
         </div>
       </div>
     );
@@ -643,7 +507,7 @@ export default function AdminUsersPage() {
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           {/* Filters */}
           <div className="mb-6 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium mb-1">Tìm kiếm</label>
                 <div className="relative">
@@ -673,20 +537,6 @@ export default function AdminUsersPage() {
                   <option value="admin">Quản trị viên</option>
                 </select>
               </div>
-              
-              <div>
-                <label className="block text-sm font-medium mb-1">Sắp xếp</label>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value="createdAt_desc">Mới nhất trước</option>
-                  <option value="createdAt_asc">Cũ nhất trước</option>
-                  <option value="name_asc">Tên A-Z</option>
-                  <option value="name_desc">Tên Z-A</option>
-                </select>
-              </div>
             </div>
           </div>
           
@@ -707,7 +557,7 @@ export default function AdminUsersPage() {
                   {filteredUsers.length === 0 ? (
                     <tr>
                       <td colSpan="5" className="py-8 text-center text-gray-500 dark:text-gray-400">
-                        Không tìm thấy người dùng nào
+                        {searchTerm || statusFilter !== 'all' ? 'Không tìm thấy người dùng nào phù hợp' : 'Không có người dùng nào'}
                       </td>
                     </tr>
                   ) : (
@@ -731,46 +581,37 @@ export default function AdminUsersPage() {
                             </div>
                             <div>
                               <div className="font-medium">{user.displayName || 'Không có tên'}</div>
-                              <div className="text-xs text-gray-500 dark:text-gray-400 font-mono">{user.uid.substring(0, 8)}...</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400 font-mono truncate max-w-[120px]">
+                                {user.uid}
+                              </div>
                             </div>
                           </div>
                         </td>
                         <td className="py-3 px-4">
                           <UserStatusBadge 
                             userData={user} 
-                            banInfo={banInfoMap[user.uid]} 
+                            isAdminUser={adminUids.includes(user.uid)}
+                            isBanned={user.banned}
                           />
-                          {banInfoMap[user.uid]?.mode === 'temporary' && (
-                            <div className="text-xs text-gray-500 mt-1">
-                              Hết hạn: {fmtDate(banInfoMap[user.uid]?.expiresAt)}
-                            </div>
-                          )}
                         </td>
                         <td className="py-3 px-4">
-                          <div className="text-sm">{fmtDate(user.createdAt)}</div>
-                          <div className="text-xs text-gray-500">{fmtRel(user.createdAt)}</div>
+                          <div className="text-sm">{fmtDate(user.createdAt) || 'N/A'}</div>
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
-                            <span className="text-sm">{user.email}</span>
+                            <span className="text-sm truncate max-w-[200px]">{user.email || 'N/A'}</span>
                             {user.emailVerified ? (
-                              <FontAwesomeIcon icon={faCheckCircle} className="text-emerald-500" title="Đã xác minh email" />
+                              <FontAwesomeIcon icon={faCheckCircle} className="text-emerald-500 shrink-0" title="Đã xác minh email" />
                             ) : (
-                              <FontAwesomeIcon icon={faTimesCircle} className="text-amber-500" title="Chưa xác minh email" />
+                              <FontAwesomeIcon icon={faTimesCircle} className="text-amber-500 shrink-0" title="Chưa xác minh email" />
                             )}
                           </div>
-                          {user.providerData && (
-                            <div className="text-xs text-gray-500 mt-1">
-                              {user.providerData.map(p => p.providerId).join(', ')}
-                            </div>
-                          )}
                         </td>
                         <td className="py-3 px-4">
                           <UserActions 
                             userData={user}
-                            me={me}
-                            isAdmin={isAdmin}
-                            banInfo={banInfoMap[user.uid]}
+                            currentUser={currentUser}
+                            isCurrentUserAdmin={isCurrentUserAdmin}
                             onAction={handleAction}
                           />
                         </td>
@@ -804,7 +645,25 @@ export default function AdminUsersPage() {
           
           {/* Info */}
           <div className="mt-4 text-sm text-gray-500 dark:text-gray-400">
-            <p>Hiển thị {filteredUsers.length} người dùng</p>
+            <p>Hiển thị {filteredUsers.length}/{users.length} người dùng</p>
+          </div>
+          
+          {/* Navigation */}
+          <div className="mt-6 flex flex-wrap gap-3">
+            <Link
+              href="/admin"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700"
+            >
+              <FontAwesomeIcon icon={faCog} />
+              Quay lại Admin Panel
+            </Link>
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+            >
+              <FontAwesomeIcon icon={faHome} />
+              Về trang chủ
+            </Link>
           </div>
         </main>
       </div>
