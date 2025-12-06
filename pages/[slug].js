@@ -339,7 +339,7 @@ export default function Detail({ serverApp, serverRelated }) {
 
   const categorySlug = app?.category?.slug ?? null;
   const isTestflight = categorySlug === 'testflight';
-  const isInstallable = ['jailbreak', 'app-clone'].includes(categorySlug);
+  const isInstallable = ['jailbreak', 'app-clone', 'app-removed'].includes(categorySlug);
 
   // ===== languages/devices =====
   const languagesArray = useMemo(() => parseList(app?.languages), [app?.languages]);
