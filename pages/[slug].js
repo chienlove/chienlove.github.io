@@ -194,12 +194,18 @@ function normalizeDescription(raw = '') {
 
 function PrettyBlockquote({ children }) {
   return (
-    <blockquote className="relative my-4 rounded-xl border border-blue-100 bg-gradient-to-br from-blue-50 to-white p-4 pl-5 dark:border-blue-900/40 dark:from-blue-950/30 dark:to-transparent">
-      <div className="absolute left-0 top-0 bottom-0 w-1 rounded-l-xl bg-blue-500/80 dark:bg-blue-400/80" />
-      <div className="text-blue-900 dark:text-blue-100 leading-relaxed">
-        {children}
-      </div>
-    </blockquote>
+    <blockquote className="relative my-4 rounded-xl overflow-hidden">
+  <div 
+    className="absolute inset-0 bg-gradient-to-r from-emerald-500 via-emerald-500 to-emerald-500" 
+    style={{clipPath: 'polygon(0 0, 70% 0, 60% 100%, 0 100%)'}} 
+  />
+  <div className="relative bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm p-6 ml-2 rounded-lg">
+    <div className="text-slate-700 dark:text-slate-200 leading-relaxed">
+      {children}
+    </div>
+  </div>
+</blockquote>
+
   );
 }
 
