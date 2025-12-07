@@ -969,7 +969,7 @@ export default function Detail({ serverApp, serverRelated }) {
             <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-3">Mô tả</h2>
             <div className={`relative overflow-hidden transition-all duration-300 ${showFullDescription ? '' : 'max-h-72'}`}>
               <div className={`${showFullDescription ? '' : 'mask-gradient-bottom'}`}>
-                {ReactMarkdown ? (
+                {ReactMarkdown && remarkGfm ? (
   <ReactMarkdown
     remarkPlugins={[remarkGfm]}
     components={{
@@ -979,7 +979,7 @@ export default function Detail({ serverApp, serverRelated }) {
       p: ({...props}) => <p className="text-gray-700 dark:text-gray-200 leading-7 mb-3 break-words" {...props} />,
       ul: ({...props}) => <ul className="list-disc pl-5 space-y-1 mb-3 text-gray-700 dark:text-gray-200" {...props} />,
       ol: ({...props}) => <ol className="list-decimal pl-5 space-y-1 mb-3 text-gray-700 dark:text-gray-200" {...props} />,
-      li: ({...props}) => <li className="marker:text-blue-500" {...props} />,
+      li: ({...props}) => <li className="marker:text-gray-500 dark:marker:text-gray-200" {...props} />,
       a: ({...props}) => <a className="text-blue-600 dark:text-blue-400 hover:underline break-all" target="_blank" rel="noopener noreferrer" {...props} />,
       code: ({inline, ...props}) =>
         inline ? (
@@ -999,8 +999,8 @@ export default function Detail({ serverApp, serverRelated }) {
       thead: ({children, ...props}) => <thead className="bg-gray-50 dark:bg-zinc-800/50" {...props}>{children}</thead>,
       tbody: ({children, ...props}) => <tbody className="divide-y divide-gray-200 dark:divide-zinc-700 bg-white dark:bg-zinc-900" {...props}>{children}</tbody>,
       tr: ({children, ...props}) => <tr className="transition-colors hover:bg-gray-50 dark:hover:bg-white/5" {...props}>{children}</tr>,
-      th: ({children, ...props}) => <th className="px-4 py-3 text-left font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap" {...props}>{children}</th>,
-      td: ({children, ...props}) => <td className="px-4 py-3 text-gray-700 dark:text-gray-300 whitespace-normal align-top" {...props}>{children}</td>,
+      th: ({children, ...props}) => <th className="px-4 py-3 text-left font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap border-r border-gray-200 dark:border-zinc-700 first:border-l-0 last:border-r-0" {...props}>{children}</th>,
+      td: ({children, ...props}) => <td className="px-4 py-3 text-gray-700 dark:text-gray-300 whitespace-normal align-top border-r border-gray-200 dark:border-zinc-700 first:border-l-0 last:border-r-0" {...props}>{children}</td>,
     }}
   >
     {mdDescription}
