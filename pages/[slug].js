@@ -969,7 +969,7 @@ export default function Detail({ serverApp, serverRelated }) {
             <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-3">Mô tả</h2>
             <div className={`relative overflow-hidden transition-all duration-300 ${showFullDescription ? '' : 'max-h-72'}`}>
               <div className={`${showFullDescription ? '' : 'mask-gradient-bottom'}`}>
-                {ReactMarkdown && remarkGfm ? (
+                {ReactMarkdown ? (
   <ReactMarkdown
     remarkPlugins={[remarkGfm]}
     components={{
@@ -989,16 +989,18 @@ export default function Detail({ serverApp, serverRelated }) {
         ),
       blockquote: ({...props}) => <PrettyBlockquote {...props} />,
       hr: () => <hr className="my-4 border-gray-200 dark:border-zinc-800" />,
-      table: ({...props}) => (
+      table: ({children, ...props}) => (
         <div className="overflow-x-auto my-4 border border-gray-200 dark:border-zinc-700 rounded-lg">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-zinc-700 text-sm" {...props} />
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-zinc-700 text-sm" {...props}>
+            {children}
+          </table>
         </div>
       ),
-      thead: ({...props}) => <thead className="bg-gray-50 dark:bg-zinc-800/50" {...props} />,
-      tbody: ({...props}) => <tbody className="divide-y divide-gray-200 dark:divide-zinc-700 bg-white dark:bg-zinc-900" {...props} />,
-      tr: ({...props}) => <tr className="transition-colors hover:bg-gray-50 dark:hover:bg-white/5" {...props} />,
-      th: ({...props}) => <th className="px-4 py-3 text-left font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap" {...props} />,
-      td: ({...props}) => <td className="px-4 py-3 text-gray-700 dark:text-gray-300 whitespace-normal align-top" {...props} />,
+      thead: ({children, ...props}) => <thead className="bg-gray-50 dark:bg-zinc-800/50" {...props}>{children}</thead>,
+      tbody: ({children, ...props}) => <tbody className="divide-y divide-gray-200 dark:divide-zinc-700 bg-white dark:bg-zinc-900" {...props}>{children}</tbody>,
+      tr: ({children, ...props}) => <tr className="transition-colors hover:bg-gray-50 dark:hover:bg-white/5" {...props}>{children}</tr>,
+      th: ({children, ...props}) => <th className="px-4 py-3 text-left font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap" {...props}>{children}</th>,
+      td: ({children, ...props}) => <td className="px-4 py-3 text-gray-700 dark:text-gray-300 whitespace-normal align-top" {...props}>{children}</td>,
     }}
   >
     {mdDescription}
