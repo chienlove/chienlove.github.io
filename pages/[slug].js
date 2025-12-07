@@ -969,30 +969,40 @@ export default function Detail({ serverApp, serverRelated }) {
             <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-3">Mô tả</h2>
             <div className={`relative overflow-hidden transition-all duration-300 ${showFullDescription ? '' : 'max-h-72'}`}>
               <div className={`${showFullDescription ? '' : 'mask-gradient-bottom'}`}>
-                {ReactMarkdown ? (
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    components={{
-                      h1: ({...props}) => <h3 className="text-xl font-bold mt-3 mb-2 text-gray-900 dark:text-gray-100" {...props} />,
-                      h2: ({...props}) => <h4 className="text-lg font-bold mt-3 mb-2 text-gray-900 dark:text-gray-100" {...props} />,
-                      h3: ({...props}) => <h5 className="text-base font-bold mt-3 mb-2 text-gray-900 dark:text-gray-100" {...props} />,
-                      p: ({...props}) => <p className="text-gray-700 dark:text-gray-200 leading-7 mb-3 break-words" {...props} />,
-                      ul: ({...props}) => <ul className="list-disc pl-5 space-y-1 mb-3 text-gray-700 dark:text-gray-200" {...props} />,
-                      ol: ({...props}) => <ol className="list-decimal pl-5 space-y-1 mb-3 text-gray-700 dark:text-gray-200" {...props} />,
-                      li: ({...props}) => <li className="marker:text-blue-500" {...props} />,
-                      a: ({...props}) => <a className="text-blue-600 dark:text-blue-400 hover:underline break-all" target="_blank" rel="noopener noreferrer" {...props} />,
-                      code: ({inline, ...props}) =>
-                        inline ? (
-                          <code className="px-1 py-0.5 rounded bg-gray-100 dark:bg-zinc-800 text-pink-700 dark:text-pink-300" {...props} />
-                        ) : (
-                          <pre className="p-3 rounded bg-gray-900 text-gray-100 overflow-auto mb-3"><code {...props} /></pre>
-                        ),
-                      blockquote: ({...props}) => <PrettyBlockquote {...props} />,
-                      hr: () => <hr className="my-4 border-gray-200 dark:border-zinc-800" />,
-                    }}
-                  >
-                    {mdDescription}
-                  </ReactMarkdown>
+                {ReactMarkdown && remarkGfm ? (
+  <ReactMarkdown
+    remarkPlugins={[remarkGfm]}
+    components={{
+      h1: ({...props}) => <h3 className="text-xl font-bold mt-3 mb-2 text-gray-900 dark:text-gray-100" {...props} />,
+      h2: ({...props}) => <h4 className="text-lg font-bold mt-3 mb-2 text-gray-900 dark:text-gray-100" {...props} />,
+      h3: ({...props}) => <h5 className="text-base font-bold mt-3 mb-2 text-gray-900 dark:text-gray-100" {...props} />,
+      p: ({...props}) => <p className="text-gray-700 dark:text-gray-200 leading-7 mb-3 break-words" {...props} />,
+      ul: ({...props}) => <ul className="list-disc pl-5 space-y-1 mb-3 text-gray-700 dark:text-gray-200" {...props} />,
+      ol: ({...props}) => <ol className="list-decimal pl-5 space-y-1 mb-3 text-gray-700 dark:text-gray-200" {...props} />,
+      li: ({...props}) => <li className="marker:text-blue-500" {...props} />,
+      a: ({...props}) => <a className="text-blue-600 dark:text-blue-400 hover:underline break-all" target="_blank" rel="noopener noreferrer" {...props} />,
+      code: ({inline, ...props}) =>
+        inline ? (
+          <code className="px-1 py-0.5 rounded bg-gray-100 dark:bg-zinc-800 text-pink-700 dark:text-pink-300" {...props} />
+        ) : (
+          <pre className="p-3 rounded bg-gray-900 text-gray-100 overflow-auto mb-3"><code {...props} /></pre>
+        ),
+      blockquote: ({...props}) => <PrettyBlockquote {...props} />,
+      hr: () => <hr className="my-4 border-gray-200 dark:border-zinc-800" />,
+      table: ({...props}) => (
+        <div className="overflow-x-auto my-4 border border-gray-200 dark:border-zinc-700 rounded-lg">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-zinc-700 text-sm" {...props} />
+        </div>
+      ),
+      thead: ({...props}) => <thead className="bg-gray-50 dark:bg-zinc-800/50" {...props} />,
+      tbody: ({...props}) => <tbody className="divide-y divide-gray-200 dark:divide-zinc-700 bg-white dark:bg-zinc-900" {...props} />,
+      tr: ({...props}) => <tr className="transition-colors hover:bg-gray-50 dark:hover:bg-white/5" {...props} />,
+      th: ({...props}) => <th className="px-4 py-3 text-left font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap" {...props} />,
+      td: ({...props}) => <td className="px-4 py-3 text-gray-700 dark:text-gray-300 whitespace-normal align-top" {...props} />,
+    }}
+  >
+    {mdDescription}
+  </ReactMarkdown>
                 ) : (
                   <p className="text-gray-700 dark:text-gray-200 leading-7 mb-3 whitespace-pre-wrap break-words">{mdDescription}</p>
                 )}
