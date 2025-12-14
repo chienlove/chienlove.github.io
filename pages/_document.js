@@ -5,7 +5,7 @@ export default function Document() {
   return (
     <Html lang="vi" className="scroll-smooth">
       <Head>
-        {/* Cơ bản */}
+        {/* ===== Cơ bản ===== */}
         <meta
           name="viewport"
           content="width=device-width, initial-scale=1, viewport-fit=cover"
@@ -13,7 +13,25 @@ export default function Document() {
         <meta name="theme-color" content="#111827" />
         <meta name="color-scheme" content="dark light" />
 
-        {/* AdSense – chỉ dùng thủ công, KHÔNG overlay/auto-ads đặc biệt */}
+        {/* ===== Google Analytics (GA4) ===== */}
+        <script
+          async
+          src="https://www.googletagmanager.com/gtag/js?id=G-P52SLKFWJE"
+        />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-P52SLKFWJE', {
+                page_path: window.location.pathname,
+              });
+            `,
+          }}
+        />
+
+        {/* ===== AdSense (thủ công, không auto-ads) ===== */}
         <meta
           name="google-adsense-account"
           content="ca-pub-3905625903416797"
@@ -24,7 +42,7 @@ export default function Document() {
           crossOrigin="anonymous"
         />
 
-        {/* Icons */}
+        {/* ===== Icons ===== */}
         <link rel="icon" type="image/x-icon" href="/favicon.ico" />
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
         <link
