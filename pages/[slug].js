@@ -4,7 +4,7 @@ import Layout from '../components/Layout';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { useEffect, useState, useMemo, memo } from 'react';
+import { useEffect, useState, useMemo, memo, useRef } from 'react'; // + useRef
 import { auth } from '../lib/firebase-client';
 import { sendEmailVerification } from 'firebase/auth';
 import Head from 'next/head';
@@ -632,6 +632,15 @@ export default function Detail({ serverApp, serverRelated }) {
     setTimeout(() => setIsFetchingIpa(false), 500);
   };
 
+  // Cuộn tới khu vực hành động tải
+  const actionsRef = useRef(null);
+  const scrollToActions = () => {
+    // Vì chính sách ads: tránh CTA "đè" quảng cáo; chỉ cuộn, không delay/force-view.
+    if (typeof window !== 'undefined' && actionsRef.current) {
+      actionsRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   // Cuộn tới bình luận
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -801,9 +810,9 @@ export default function Detail({ serverApp, serverRelated }) {
                   </p>
                 )}
 
-                {/* Buttons */}
+                {/* Buttons (hero): chỉ cuộn xuống phần tải */}
                 <div className="mt-4 flex flex-wrap justify-center gap-2">
-                  {isTestflight && app.testflight_url && (
+                  {isTestflight && app.testflight_url ? (
                     <>
                       <a
                         href={app.testflight_url}
@@ -835,55 +844,22 @@ export default function Detail({ serverApp, serverRelated }) {
                         </span>
                       )}
                     </>
-                  )}
-
-                  {!isTestflight && (
-                    <>
-                      <button
-                        onClick={handleInstall}
-                        disabled={isInstalling}
-                        className={`inline-flex items-center border border-green-500 text-green-700 dark:text-green-400 dark:border-green-400/60 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-green-200 dark:active:bg-green-400/10 active:shadow-inner active:ring-2 active:ring-green-500 ${isInstalling ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-100 dark:hover:bg-green-400/10'}`}
-                      >
-                        {isInstalling ? (
-                          <>
-                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 01 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Đang xử lý…
-                          </>
-                        ) : (
-                          <>
-                            <FontAwesomeIcon icon={faDownload} className="mr-2" />
-                            Cài đặt
-                          </>
-                        )}
-                      </button>
-
-                      <button
-                        onClick={handleDownloadIpa}
-                        disabled={isFetchingIpa}
-                        className={`inline-flex items-center border border-blue-500 text-blue-700 dark:text-blue-400 dark:border-blue-400/60 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-blue-200 dark:active:bg-blue-400/10 active:shadow-inner active:ring-2 active:ring-blue-500 ${isFetchingIpa ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-100 dark:hover:bg-blue-400/10'}`}
-                        title="Tải file IPA (ẩn nguồn tải)"
-                      >
-                        {isFetchingIpa ? (
-                          <>
-                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 01 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Đang tạo…
-                          </>
-                        ) : (
-                          <>
-                            <FontAwesomeIcon icon={faFileArrowDown} className="mr-2" />
-                            Tải IPA
-                          </>
-                        )}
-                      </button>
-                    </>
+                  ) : (
+                    <button
+                      onClick={scrollToActions}
+                      className="inline-flex items-center border border-green-500 text-green-700 dark:text-green-400 dark:border-green-400/60 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 hover:bg-green-100 dark:hover:bg-green-400/10"
+                      aria-describedby="dl-desc"
+                    >
+                      <FontAwesomeIcon icon={faDownload} className="mr-2" />
+                      Xuống phần tải
+                    </button>
                   )}
                 </div>
+                {!isTestflight && (
+                  <p id="dl-desc" className="mt-1 text-xs text-gray-600 dark:text-gray-400">
+                    Nút tải đặt bên dưới quảng cáo để tránh nhầm lẫn.
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -897,6 +873,63 @@ export default function Detail({ serverApp, serverRelated }) {
             <div className="text-[11px] uppercase tracking-wider text-gray-400 mb-2 text-center">Quảng cáo</div>
             <AdUnit desktopMode="unit" mobileVariant="compact" />
           </div>
+
+          {/* Khu vực nút tải chính sau quảng cáo */}
+          {!isTestflight && (
+            <div
+              ref={actionsRef}
+              id="download-actions"
+              className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow scroll-mt-20"
+            >
+              <div className="flex flex-wrap justify-center gap-2">
+                <button
+                  onClick={handleInstall}
+                  disabled={isInstalling}
+                  className={`inline-flex items-center border border-green-500 text-green-700 dark:text-green-400 dark:border-green-400/60 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-green-200 dark:active:bg-green-400/10 active:shadow-inner active:ring-2 active:ring-green-500 ${isInstalling ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-100 dark:hover:bg-green-400/10'}`}
+                >
+                  {isInstalling ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 01 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Đang xử lý…
+                    </>
+                  ) : (
+                    <>
+                      <FontAwesomeIcon icon={faDownload} className="mr-2" />
+                      Cài đặt
+                    </>
+                  )}
+                </button>
+
+                <button
+                  onClick={handleDownloadIpa}
+                  disabled={isFetchingIpa}
+                  className={`inline-flex items-center border border-blue-500 text-blue-700 dark:text-blue-400 dark:border-blue-400/60 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-blue-200 dark:active:bg-blue-400/10 active:shadow-inner active:ring-2 active:ring-blue-500 ${isFetchingIpa ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-100 dark:hover:bg-blue-400/10'}`}
+                  title="Tải file IPA (ẩn nguồn tải)"
+                >
+                  {isFetchingIpa ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 01 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Đang tạo…
+                    </>
+                  ) : (
+                    <>
+                      <FontAwesomeIcon icon={faFileArrowDown} className="mr-2" />
+                      Tải IPA
+                    </>
+                  )}
+                </button>
+              </div>
+              <p className="mt-2 text-center text-xs text-gray-500 dark:text-gray-400">
+                Nút tải được đặt sau quảng cáo để tránh nhầm lẫn và cải thiện viewability.
+              </p>
+            </div>
+          )}
 
           {/* Info cards */}
           <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow text-center">
