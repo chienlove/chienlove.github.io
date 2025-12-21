@@ -6,7 +6,7 @@ export default async function handler(req, res) {
     const {
       appid_or_url,
       countries = ["us", "vn", "hk", "jp", "sg", "th"],
-      prefer = "iphone", // 1a: ưu tiên iPhone
+      prefer = "iphone", // ưu tiên iPhone
       html_fallback = true,
     } = req.body || {};
 
@@ -19,7 +19,7 @@ export default async function handler(req, res) {
     // trackViewUrl: dùng từ iTunes nếu có, fallback build từ country best hoặc first country
     const trackViewUrl =
       itunes.best?.trackViewUrl ||
-      `https://apps.apple.com/${itunes.bestCountry || countries?.[0] || "us"}/app/id${appId}`;
+      `https://apps.apple.com/${itunes.bestCountry || uniq(countries)[0] || "us"}/app/id${appId}`;
 
     // 2) Build screenshots theo thứ tự ưu tiên (iPhone trước)
     const shotsFromItunes = buildScreenshotsFromItunes(itunes.best, prefer);
@@ -27,7 +27,7 @@ export default async function handler(req, res) {
     // 3) HTML fallback (parse JSON nhúng + bắt mzstatic trong JSON/HTML)
     let html = { ok: false, screenshots: [], notes: [] };
     if (html_fallback && shotsFromItunes.length === 0) {
-      html = await fetchAndParseAppStoreHTMLv2(trackViewUrl, prefer);
+      html = await fetchAndParseAppStoreHTMLv2(trackViewUrl);
     }
 
     // 4) chọn nguồn screenshots
@@ -85,9 +85,13 @@ function buildScreenshotsFromItunes(r, prefer) {
   const ipad = r.ipadScreenshotUrls || [];
   const appletv = r.appletvScreenshotUrls || [];
 
-  if (prefer === "iphone") return uniq([...iphone, ...ipad, ...appletv]);
-  if (prefer === "ipad") return uniq([...ipad, ...iphone, ...appletv]);
-  return uniq([...iphone, ...ipad, ...appletv]);
+  let merged;
+  if (prefer === "iphone") merged = [...iphone, ...ipad, ...appletv];
+  else if (prefer === "ipad") merged = [...ipad, ...iphone, ...appletv];
+  else merged = [...iphone, ...ipad, ...appletv];
+
+  // Chỉ giữ URL ảnh "đúng chuẩn" có kích thước ở cuối
+  return uniq(merged.map(normalizeAppleImageUrl)).filter(isSizedAppleImageUrl);
 }
 
 function scoreItunesResult(r, prefer) {
@@ -102,7 +106,7 @@ function scoreItunesResult(r, prefer) {
   if (r.description) s += 2;
   if (icon) s += 3;
 
-  // ưu tiên iPhone (1a)
+  // ưu tiên iPhone
   if (prefer === "iphone") {
     if (iphoneN > 0) s += 20;
     if (ipadN > 0) s += 5;
@@ -111,9 +115,7 @@ function scoreItunesResult(r, prefer) {
     if (iphoneN > 0) s += 5;
   }
 
-  // có trackViewUrl thì cộng nhẹ
   if (r.trackViewUrl) s += 1;
-
   return s;
 }
 
@@ -153,11 +155,11 @@ async function lookupBestItunesResult(appId, countries, prefer) {
 /**
  * HTML parser v2:
  * - fetch apps.apple.com
- * - lấy tất cả <script type="application/json">...</script> và tìm URL mzstatic trong JSON
- * - fallback: tìm URL mzstatic trực tiếp trong HTML
- * - lọc "giống screenshot" mềm hơn
+ * - lấy tất cả <script type="application/json">...</script> và tìm URL ảnh trong JSON
+ * - fallback: tìm URL ảnh trực tiếp trong HTML
+ * - CHỈ GIỮ URL có /<w>x<h>bb.<ext> ở cuối (đúng chuẩn ảnh)
  */
-async function fetchAndParseAppStoreHTMLv2(trackViewUrl, prefer) {
+async function fetchAndParseAppStoreHTMLv2(trackViewUrl) {
   const notes = [];
   try {
     const r = await fetch(trackViewUrl, {
@@ -177,34 +179,40 @@ async function fetchAndParseAppStoreHTMLv2(trackViewUrl, prefer) {
     const html = await r.text();
     notes.push(`htmlLength=${html.length}`);
 
-    // A) URLs mzstatic từ JSON nhúng
-    const jsonUrls = extractMzstaticUrlsFromEmbeddedJson(html);
-    notes.push(`mzstaticFromJson=${jsonUrls.length}`);
+    // A) URLs từ JSON nhúng
+    const jsonUrls = extractAppleImageUrlsFromEmbeddedJson(html);
+    notes.push(`urlsFromJson=${jsonUrls.length}`);
 
-    // B) URLs mzstatic trực tiếp trong HTML
-    const htmlUrls = extractMzstaticUrlsFromText(html);
-    notes.push(`mzstaticFromHtml=${htmlUrls.length}`);
+    // B) URLs trực tiếp trong HTML
+    const htmlUrls = extractAppleImageUrlsFromText(html);
+    notes.push(`urlsFromHtml=${htmlUrls.length}`);
 
-    const all = uniq([...jsonUrls, ...htmlUrls]);
+    const all = uniq([...jsonUrls, ...htmlUrls])
+      .map(normalizeAppleImageUrl)
+      .filter(isSizedAppleImageUrl);
 
-    // lọc mềm: loại icon nhỏ phổ biến, ưu tiên ảnh có hint "screenshot"
-    const filtered = filterLikelyScreenshots(all, prefer);
-    notes.push(`likelyScreenshots=${filtered.length}`);
+    notes.push(`sizedUrls=${all.length}`);
 
-    return { ok: true, screenshots: filtered, notes };
+    return { ok: true, screenshots: all, notes };
   } catch (e) {
     notes.push(`error=${String(e?.message || e)}`);
     return { ok: false, screenshots: [], notes };
   }
 }
 
-function extractMzstaticUrlsFromText(text) {
-  const re = /https:\/\/is\d-ssl\.mzstatic\.com\/image\/thumb\/[^"'<> ]+?\.(png|jpg|jpeg|webp)/gi;
+/**
+ * Bắt 3 dạng URL:
+ * 1) https://is1-ssl.mzstatic.com/image/thumb/.../1242x2688bb.png
+ * 2) //is1-ssl.mzstatic.com/image/thumb/.../1242x2688bb.png
+ * 3) /image/thumb/.../1242x2688bb.png   (relative trên apps.apple.com)
+ */
+function extractAppleImageUrlsFromText(text) {
+  const re =
+    /(https:\/\/is\d-ssl\.mzstatic\.com\/image\/thumb\/[^\s"'<>]+?\.(png|jpg|jpeg|webp)|\/\/is\d-ssl\.mzstatic\.com\/image\/thumb\/[^\s"'<>]+?\.(png|jpg|jpeg|webp)|\/image\/thumb\/[^\s"'<>]+?\.(png|jpg|jpeg|webp))/gi;
   return uniq(text.match(re) || []);
 }
 
-function extractMzstaticUrlsFromEmbeddedJson(html) {
-  // Lấy script application/json
+function extractAppleImageUrlsFromEmbeddedJson(html) {
   const scripts = [];
   const re = /<script[^>]+type=["']application\/json["'][^>]*>([\s\S]*?)<\/script>/gi;
   let m;
@@ -212,34 +220,21 @@ function extractMzstaticUrlsFromEmbeddedJson(html) {
     scripts.push(m[1]);
   }
 
-  // từ nội dung JSON (string) -> bắt URL mzstatic
   const urls = [];
   for (const s of scripts) {
-    // không parse JSON cứng để tránh lỗi escape; bắt URL trực tiếp
-    urls.push(...extractMzstaticUrlsFromText(s));
+    urls.push(...extractAppleImageUrlsFromText(s));
   }
   return uniq(urls);
 }
 
-function filterLikelyScreenshots(urls, prefer) {
-  // lọc icon nhỏ
-  const notIcon = (u) => !/\/(60x60|75x75|83\.5x83\.5|100x100|128x128|256x256|512x512)(bb)?\./i.test(u);
+function normalizeAppleImageUrl(u) {
+  if (!u) return u;
+  if (u.startsWith("//is")) return "https:" + u;
+  if (u.startsWith("/image/thumb/")) return "https://apps.apple.com" + u;
+  return u;
+}
 
-  // screenshot thường có kích thước lớn hoặc "PurpleSource/Purple" trong đường dẫn
-  const looksLikeScreen = (u) =>
-    /Purple(Source)?/i.test(u) ||
-    /\/\d{3,4}x\d{3,4}/.test(u) ||
-    /bb\.(png|jpg|jpeg|webp)/i.test(u);
-
-  // ưu tiên iPhone: ảnh portrait hay gặp 1242x2688 / 1290x2796 / 1179x2556... (chỉ là heuristic)
-  const iphoneHint = (u) =>
-    /(1242x2688|1170x2532|1284x2778|1290x2796|1179x2556|1080x2340|1125x2436)/.test(u);
-
-  const base = urls.filter(notIcon).filter(looksLikeScreen);
-
-  if (prefer === "iphone") {
-    const a = base.filter(iphoneHint);
-    return a.length ? uniq([...a, ...base]) : uniq(base);
-  }
-  return uniq(base);
+// Chỉ giữ link ảnh đúng chuẩn có kích thước ở cuối
+function isSizedAppleImageUrl(u) {
+  return /\/\d{3,4}x\d{3,4}bb\.(png|jpg|jpeg|webp)(\?.*)?$/i.test(String(u || ""));
 }

@@ -39,7 +39,8 @@ export default function TestAppStoreHTMLv2() {
     <div style={{ padding: 16, fontFamily: "system-ui" }}>
       <h1 style={{ margin: 0 }}>Test App Store screenshots (v2)</h1>
       <p style={{ marginTop: 8, color: "#555" }}>
-        Ưu tiên iPhone (1A). Multi-country lookup + fallback parse HTML (JSON nhúng).
+        Ưu tiên iPhone. Multi-country lookup + fallback parse HTML (JSON nhúng).
+        API chỉ trả URL ảnh "đúng chuẩn" (có kích thước ở cuối).
       </p>
 
       <div style={{ display: "grid", gap: 8, maxWidth: 900 }}>
@@ -58,7 +59,13 @@ export default function TestAppStoreHTMLv2() {
         <button
           onClick={run}
           disabled={loading}
-          style={{ padding: "10px 14px", borderRadius: 8, border: "1px solid #333", background: "#fff", width: 160 }}
+          style={{
+            padding: "10px 14px",
+            borderRadius: 8,
+            border: "1px solid #333",
+            background: "#fff",
+            width: 160
+          }}
         >
           {loading ? "Đang test..." : "Test"}
         </button>
@@ -72,19 +79,34 @@ export default function TestAppStoreHTMLv2() {
             <div><b>AppId:</b> {data.appId}</div>
             <div><b>Prefer:</b> {data.prefer}</div>
             <div><b>iTunes best country:</b> {data.itunes_best_country} (score {data.itunes_best_score})</div>
-            <div><b>trackViewUrl:</b> <a href={data.trackViewUrl} target="_blank" rel="noreferrer">{data.trackViewUrl}</a></div>
+            <div>
+              <b>trackViewUrl:</b>{" "}
+              <a href={data.trackViewUrl} target="_blank" rel="noreferrer">
+                {data.trackViewUrl}
+              </a>
+            </div>
             <div><b>Screenshots source:</b> {data.screenshots_source}</div>
             <div><b>HTML notes:</b> {data.debug?.html_notes?.join(" | ")}</div>
           </div>
 
           <h2 style={{ marginTop: 16 }}>Screenshots ({shots.length})</h2>
+
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))", gap: 10 }}>
-            {shots.slice(0, 40).map((u) => (
-              <a key={u} href={u} target="_blank" rel="noreferrer"
-                 style={{ display: "block", border: "1px solid #eee", borderRadius: 8, overflow: "hidden" }}>
-                <img src={u} alt="" style={{ width: "100%", display: "block" }} />
-              </a>
-            ))}
+            {shots.slice(0, 40).map((u) => {
+              // API đã chuẩn hoá tuyệt đối, nhưng vẫn phòng thủ:
+              const href = u.startsWith("http") ? u : `https://apps.apple.com${u}`;
+              return (
+                <a
+                  key={href}
+                  href={href}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{ display: "block", border: "1px solid #eee", borderRadius: 8, overflow: "hidden" }}
+                >
+                  <img src={href} alt="" style={{ width: "100%", display: "block" }} />
+                </a>
+              );
+            })}
           </div>
 
           <h2 style={{ marginTop: 16 }}>Raw JSON</h2>
