@@ -19,6 +19,131 @@ export default async function handler(req, res) {
   const { url } = req.body;
   console.log(`[API] Processing URL: ${url}`);
 
+  // --- Helpers: Apple HTML screenshot fallback (iPhone only) ---
+  const isProbablyPlaceholder = (u) =>
+    typeof u === 'string' &&
+    (u.includes('Placeholder.mill') || u.endsWith('/400x400bb.webp'));
+
+  const normalizeBaseMzStaticUrl = (u) => {
+    if (!u || typeof u !== 'string') return null;
+    // strip query/hash
+    const clean = u.split('?')[0].split('#')[0];
+    // if already has /{WxH}bb.xxx suffix -> remove it to get base
+    return clean.replace(/\/\d{3,4}x\d{3,4}bb\.(png|jpg|jpeg|webp)$/i, '');
+  };
+
+  const isIpadShot = (u) => {
+    const s = (u || '').toLowerCase();
+    return (
+      s.includes('ipad') ||
+      s.includes('u0028ipad') ||
+      s.includes('ipad_') ||
+      s.includes('ipad-pro') ||
+      s.includes('ipad%20') ||
+      s.includes('ipad_pro')
+    );
+  };
+
+  const isAppIcon = (u) => {
+    const s = (u || '').toLowerCase();
+    return s.includes('appicon') || s.includes('artwork') || s.includes('/purple') && s.includes('appicon');
+  };
+
+  const extractIphoneScreenshotBasesFromHtml = (html) => {
+    if (!html || typeof html !== 'string') return [];
+    // Grab any mzstatic image URLs that look like screenshots or feature graphics
+    const matches = html.match(/https:\/\/is\d-ssl\.mzstatic\.com\/image\/thumb\/[^"'\\\s]+/g) || [];
+    const bases = [];
+    for (const m of matches) {
+      const base = normalizeBaseMzStaticUrl(m);
+      if (!base) continue;
+
+      const lower = base.toLowerCase();
+
+      // must be an image/thumb asset
+      if (!lower.includes('/image/thumb/')) continue;
+
+      // drop obvious non-screenshot assets
+      if (lower.includes('placeholder.mill')) continue;
+      if (lower.includes('promotional') || lower.includes('marketing')) continue;
+      if (isAppIcon(base)) continue;
+
+      // prefer screenshot-ish collections (PurpleSource*, Features*)
+      const looksLikeShot = lower.includes('purplesource') || lower.includes('/features');
+      if (!looksLikeShot) continue;
+
+      // iPhone only
+      if (isIpadShot(base)) continue;
+
+      bases.push(base);
+    }
+    // unique by base url
+    return Array.from(new Set(bases));
+  };
+
+  const buildIphoneSizedUrls = (bases) => {
+    // One "best" size per screenshot base to avoid duplicates.
+    // Chosen to render well in admin + matches common iPhone screenshot sizes.
+    const preferredSizes = [
+      '1290x2796bb.png', // newer iPhones
+      '1242x2688bb.png',
+      '1179x2556bb.png',
+      '1170x2532bb.png',
+      '1284x2778bb.png',
+      '1125x2436bb.png',
+      '1080x2340bb.png',
+      '828x1792bb.png',
+    ];
+    const out = [];
+    for (const b of bases || []) {
+      // always pick the first preferred size; Apple CDN usually serves it if that screenshot exists
+      out.push(`${b}/${preferredSizes[0]}`);
+    }
+    return out;
+  };
+
+  const fetchAppleHtmlIphoneScreenshots = async ({ trackViewUrl, appId, country }) => {
+    const baseUrl =
+      trackViewUrl ||
+      (appId ? `https://apps.apple.com/${country || 'us'}/app/id${appId}` : null);
+
+    if (!baseUrl) return { screenshots: [], notes: ['noBaseUrl'] };
+
+    const notes = [];
+    try {
+      const resp = await fetch(baseUrl, {
+        redirect: 'follow',
+        headers: {
+          // Apple sometimes returns different HTML for "bots" – this UA helps.
+          'user-agent':
+            'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36',
+          'accept-language': 'en-US,en;q=0.9,vi;q=0.8',
+        },
+      });
+
+      notes.push(`HTTP ${resp.status} ${resp.ok ? 'OK' : 'NOT_OK'}`);
+      notes.push(`finalUrl=${resp.url || baseUrl}`);
+
+      if (!resp.ok) return { screenshots: [], notes };
+
+      const html = await resp.text();
+      notes.push(`htmlLength=${html.length}`);
+
+      const bases = extractIphoneScreenshotBasesFromHtml(html);
+      notes.push(`baseUrls=${bases.length}`);
+
+      const sized = buildIphoneSizedUrls(bases);
+      // unique + limit
+      const uniq = Array.from(new Set(sized)).slice(0, 10);
+      notes.push(`finalScreenshots=${uniq.length}`);
+
+      return { screenshots: uniq, notes };
+    } catch (e) {
+      notes.push(`error=${e?.message || String(e)}`);
+      return { screenshots: [], notes };
+    }
+  };
+
   try {
     // Validate input
     if (!url || typeof url !== 'string') {
@@ -192,6 +317,43 @@ export default async function handler(req, res) {
       foundInCountry: successfulCountry,
       searchedCountries: uniqueCountries
     };
+
+    // --- Prefer iPhone screenshots only ---
+    // Keep original iTunes fields, but normalize screenshots:
+    // 1) Drop iPad screenshots completely
+    // 2) If iTunes screenshots are missing/placeholder -> fallback to Apple HTML (iPhone only)
+    appInfo.ipadScreenshots = []; // admin chỉ dùng iPhone
+
+    const itunesShots = Array.isArray(appInfo.screenshots) ? appInfo.screenshots : [];
+    const hasRealItunesShot = itunesShots.some((u) => u && !isProbablyPlaceholder(u) && !isIpadShot(u) && !isAppIcon(u));
+
+    if (!hasRealItunesShot) {
+      const { screenshots: htmlShots, notes } = await fetchAppleHtmlIphoneScreenshots({
+        trackViewUrl: result.trackViewUrl,
+        appId: appInfo.appId,
+        country: successfulCountry || 'us',
+      });
+
+      if (htmlShots.length) {
+        appInfo.screenshots = htmlShots;
+        appInfo.screenshots_source = 'apple_html';
+      } else {
+        // keep original (could be empty), but mark source for debugging
+        appInfo.screenshots_source = 'itunes_api_empty';
+      }
+
+      // optional debug (won't break existing clients)
+      appInfo.debug = appInfo.debug || {};
+      appInfo.debug.html_notes = notes;
+    } else {
+      // Use iTunes screenshots, but dedupe + filter iPhone-only
+      const filtered = itunesShots
+        .filter((u) => u && !isProbablyPlaceholder(u) && !isIpadShot(u) && !isAppIcon(u))
+        .map((u) => u.split('?')[0]);
+      appInfo.screenshots = Array.from(new Set(filtered)).slice(0, 10);
+      appInfo.screenshots_source = 'itunes_api';
+    }
+
 
     console.log('[API] Final app info prepared for:', appInfo.name, 'found in country:', successfulCountry);
     return res.status(200).json(appInfo);
