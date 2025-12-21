@@ -39,8 +39,7 @@ export default function TestAppStoreHTMLv2() {
     <div style={{ padding: 16, fontFamily: "system-ui" }}>
       <h1 style={{ margin: 0 }}>Test App Store screenshots (v2)</h1>
       <p style={{ marginTop: 8, color: "#555" }}>
-        Ưu tiên iPhone. Multi-country lookup + fallback parse HTML (JSON nhúng).
-        API chỉ trả URL ảnh "đúng chuẩn" (có kích thước ở cuối).
+        Ưu tiên iPhone. Multi-country lookup + fallback parse HTML (giữ base URL và tự ghép size).
       </p>
 
       <div style={{ display: "grid", gap: 8, maxWidth: 900 }}>
@@ -93,7 +92,7 @@ export default function TestAppStoreHTMLv2() {
 
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(170px, 1fr))", gap: 10 }}>
             {shots.slice(0, 40).map((u) => {
-              // API đã chuẩn hoá tuyệt đối, nhưng vẫn phòng thủ:
+              // API trả tuyệt đối; vẫn phòng thủ nếu có case lạ
               const href = u.startsWith("http") ? u : `https://apps.apple.com${u}`;
               return (
                 <a
@@ -103,7 +102,15 @@ export default function TestAppStoreHTMLv2() {
                   rel="noreferrer"
                   style={{ display: "block", border: "1px solid #eee", borderRadius: 8, overflow: "hidden" }}
                 >
-                  <img src={href} alt="" style={{ width: "100%", display: "block" }} />
+                  <img
+                    src={href}
+                    alt=""
+                    style={{ width: "100%", display: "block" }}
+                    onError={(e) => {
+                      // nếu một size fail, ẩn ảnh lỗi cho đỡ "?"
+                      e.currentTarget.style.display = "none";
+                    }}
+                  />
                 </a>
               );
             })}
