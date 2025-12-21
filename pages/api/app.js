@@ -6,25 +6,22 @@ export default async function handler(req, res) {
     const {
       appid_or_url,
       countries = ["us", "vn", "hk", "jp", "sg", "th"],
-      prefer = "iphone", // 1a
+      prefer = "iphone", // "iphone" | "ipad"
       html_fallback = true,
     } = req.body || {};
 
     const appId = extractAppId(appid_or_url);
     if (!appId) return res.status(400).json({ error: "Không tìm thấy appid từ input" });
 
-    // 1) iTunes lookup multi-country -> chọn "best" theo điểm
     const itunes = await lookupBestItunesResult(appId, countries, prefer);
 
     const trackViewUrl =
       itunes.best?.trackViewUrl ||
       `https://apps.apple.com/${itunes.bestCountry || uniq(countries)[0] || "us"}/app/id${appId}`;
 
-    // 2) iTunes screenshots (nếu có)
     const shotsFromItunes = buildScreenshotsFromItunes(itunes.best, prefer);
 
-    // 3) HTML fallback -> lấy base urls + expanded urls
-    let html = { ok: false, screenshots: [], base_urls: [], expanded_urls: [], notes: [] };
+    let html = { ok: false, screenshots: [], notes: [], base_urls: [], expanded_urls: [] };
     if (html_fallback && shotsFromItunes.length === 0) {
       html = await fetchAndParseAppStoreHTMLv2(trackViewUrl, prefer);
     }
@@ -54,8 +51,6 @@ export default async function handler(req, res) {
       screenshots_source:
         shotsFromItunes.length > 0 ? "itunes" : (html.screenshots?.length ? "apple_html" : "none"),
       screenshots,
-
-      // debug hữu ích
       debug: {
         itunes_shots: shotsFromItunes,
         html_notes: html.notes,
@@ -152,11 +147,11 @@ async function lookupBestItunesResult(appId, countries, prefer) {
 }
 
 /**
- * HTML parser v2 (FIX):
- * - Lấy URL ảnh từ JSON nhúng + HTML
- * - Loại placeholder
- * - Giữ cả base URL (không có /WxHbb)
- * - Tự expand base URL -> URL có /WxHbb.<ext> (ưu tiên iPhone)
+ * ✅ HTML parser v2 (lọc sạch):
+ * - chỉ giữ screenshot thực (ưu tiên Simulator_Screenshot)
+ * - bỏ Features*, AppIcon, Placeholder
+ * - mỗi base screenshot chọn 1 size tốt nhất (không nhân 12)
+ * - dedup theo base key
  */
 async function fetchAndParseAppStoreHTMLv2(trackViewUrl, prefer) {
   const notes = [];
@@ -172,7 +167,7 @@ async function fetchAndParseAppStoreHTMLv2(trackViewUrl, prefer) {
 
     notes.push(`HTTP ${r.status} ${r.statusText}`);
     notes.push(`finalUrl=${r.url}`);
-    if (!r.ok) return { ok: false, screenshots: [], base_urls: [], expanded_urls: [], notes };
+    if (!r.ok) return { ok: false, screenshots: [], notes, base_urls: [], expanded_urls: [] };
 
     const html = await r.text();
     notes.push(`htmlLength=${html.length}`);
@@ -183,48 +178,46 @@ async function fetchAndParseAppStoreHTMLv2(trackViewUrl, prefer) {
     notes.push(`urlsFromJson=${jsonUrls.length}`);
     notes.push(`urlsFromHtml=${htmlUrls.length}`);
 
-    // normalize + loại placeholder
     const all = uniq([...jsonUrls, ...htmlUrls])
       .map(normalizeAppleImageUrl)
       .filter(Boolean)
-      .filter(u => !/Placeholder\.mill/i.test(u));
+      .filter(u => !/Placeholder\.mill/i.test(u))
+      .filter(u => !/\/image\/thumb\/Features/i.test(u))   // bỏ Features*
+      .filter(u => !/\/image\/thumb\/Purple.*\/AppIcon/i.test(u)); // bỏ AppIcon
 
-    // Tách base + sized
-    const sized = all.filter(isSizedAppleImageUrl);
-    const base = all.filter(u => isBaseAppleImageUrl(u) && !isSizedAppleImageUrl(u));
+    // ✅ chỉ lấy screenshot thực
+    const onlyScreens = all.filter(u => /Simulator_Screenshot/i.test(u));
 
-    notes.push(`baseUrls=${base.length}`);
-    notes.push(`sizedUrls=${sized.length}`);
+    // base urls (không có /WxHbb...)
+    const base = uniq(onlyScreens.map(stripSizeSuffix));
 
-    // Expand base -> sized urls
-    const expanded = expandBaseUrlsToSized(base, prefer);
+    // chọn 1 size tốt nhất / base
+    const chosen = [];
+    const expanded = [];
+    for (const b of base) {
+      const u = chooseBestSizeForBase(b, prefer);
+      if (u) {
+        chosen.push(u);
+        expanded.push(u);
+      }
+    }
 
-    // Output: ưu tiên sized có sẵn, rồi tới expanded
-    const screenshots = uniq([...sized, ...expanded]);
-
-    // debug số lượng
-    notes.push(`expandedUrls=${expanded.length}`);
-    notes.push(`finalScreenshots=${screenshots.length}`);
+    notes.push(`baseScreenshotUrls=${base.length}`);
+    notes.push(`finalScreenshots=${chosen.length}`);
 
     return {
       ok: true,
-      screenshots,
+      screenshots: uniq(chosen),
+      notes,
       base_urls: base,
       expanded_urls: expanded,
-      notes,
     };
   } catch (e) {
     notes.push(`error=${String(e?.message || e)}`);
-    return { ok: false, screenshots: [], base_urls: [], expanded_urls: [], notes };
+    return { ok: false, screenshots: [], notes, base_urls: [], expanded_urls: [] };
   }
 }
 
-/**
- * Bắt 3 dạng URL:
- * 1) https://is1-ssl.mzstatic.com/image/thumb/...
- * 2) //is1-ssl.mzstatic.com/image/thumb/...
- * 3) /image/thumb/... (relative trên apps.apple.com)
- */
 function extractAppleImageUrlsFromText(text) {
   const re =
     /(https:\/\/is\d-ssl\.mzstatic\.com\/image\/thumb\/[^\s"'<>]+?\.(png|jpg|jpeg|webp)|\/\/is\d-ssl\.mzstatic\.com\/image\/thumb\/[^\s"'<>]+?\.(png|jpg|jpeg|webp)|\/image\/thumb\/[^\s"'<>]+?\.(png|jpg|jpeg|webp))/gi;
@@ -235,9 +228,7 @@ function extractAppleImageUrlsFromEmbeddedJson(html) {
   const scripts = [];
   const re = /<script[^>]+type=["']application\/json["'][^>]*>([\s\S]*?)<\/script>/gi;
   let m;
-  while ((m = re.exec(html)) !== null) {
-    scripts.push(m[1]);
-  }
+  while ((m = re.exec(html)) !== null) scripts.push(m[1]);
 
   const urls = [];
   for (const s of scripts) urls.push(...extractAppleImageUrlsFromText(s));
@@ -251,55 +242,25 @@ function normalizeAppleImageUrl(u) {
   return u;
 }
 
-function isSizedAppleImageUrl(u) {
-  return /\/\d{3,4}x\d{3,4}bb\.(png|jpg|jpeg|webp)(\?.*)?$/i.test(String(u || ""));
+// bỏ phần /<w>x<h>bb.<ext> nếu đã có
+function stripSizeSuffix(u) {
+  const s = String(u || "");
+  return s.replace(/\/\d{3,4}x\d{3,4}bb\.(png|jpg|jpeg|webp)(\?.*)?$/i, "");
 }
 
-function isBaseAppleImageUrl(u) {
-  // base URL kết thúc bằng .png/.jpg/.webp nhưng KHÔNG có /WxHbb.<ext> ở cuối
-  return /\.(png|jpg|jpeg|webp)(\?.*)?$/i.test(String(u || ""));
-}
+// chọn 1 size "đẹp nhất" theo prefer
+function chooseBestSizeForBase(baseUrl, prefer) {
+  const clean = String(baseUrl).split("?")[0];
+  const m = clean.match(/\.(png|jpg|jpeg|webp)$/i);
+  const ext = (m?.[1] || "png").toLowerCase();
 
-/**
- * Expand base URL -> sized URL bằng cách ghép `/<w>x<h>bb.<ext>`
- * Ưu tiên iPhone (portrait) trước.
- */
-function expandBaseUrlsToSized(baseUrls, prefer) {
-  const sizesIphone = [
-    "1242x2688",
-    "1290x2796",
-    "1179x2556",
-    "1170x2532",
-    "1284x2778",
-    "1125x2436",
-    "1080x2340",
-    "828x1792",
-  ];
-  const sizesIpad = [
-    "2048x2732",
-    "1668x2388",
-    "1668x2224",
-    "1536x2048",
-  ];
+  const iphoneSizes = ["1242x2688", "1170x2532", "1284x2778", "1290x2796", "1179x2556", "1125x2436", "828x1792"];
+  const ipadSizes = ["2048x2732", "1668x2388", "1668x2224", "1536x2048"];
 
-  const sizes = prefer === "iphone" ? [...sizesIphone, ...sizesIpad] : [...sizesIpad, ...sizesIphone];
+  const order = prefer === "ipad"
+    ? [...ipadSizes, ...iphoneSizes]
+    : [...iphoneSizes, ...ipadSizes];
 
-  const out = [];
-  for (const u of baseUrls) {
-    // bỏ query để tránh hỏng ghép
-    const clean = String(u).split("?")[0];
-
-    // tách ext
-    const m = clean.match(/\.(png|jpg|jpeg|webp)$/i);
-    const ext = m?.[1]?.toLowerCase() || "png";
-
-    // Nếu base đã có dạng .../something.png (không có /WxHbb) thì ghép:
-    // .../something.png/1242x2688bb.png
-    for (const sz of sizes) {
-      out.push(`${clean}/${sz}bb.${ext}`);
-    }
-  }
-
-  // loại placeholder phát sinh (phòng thủ)
-  return uniq(out).filter(u => !/Placeholder\.mill/i.test(u));
+  // ✅ chỉ trả 1 URL size đầu tiên trong thứ tự ưu tiên
+  return `${clean}/${order[0]}bb.${ext}`;
 }
