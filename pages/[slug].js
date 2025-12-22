@@ -8,7 +8,6 @@ import { useEffect, useState, useMemo, memo } from 'react';
 import { auth } from '../lib/firebase-client';
 import { sendEmailVerification } from 'firebase/auth';
 import Head from 'next/head';
-import Image from 'next/image';
 import AdUnit from '../components/Ads';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import {
@@ -777,15 +776,13 @@ export default function Detail({ serverApp, serverRelated }) {
 
               <div className="pt-10 text-center px-4">
                 <div className="w-24 h-24 mx-auto overflow-hidden border-4 border-white rounded-2xl relative">
-                  <Image
-                    src={absIcon}
-                    alt={`Icon của ứng dụng ${app.name}`}
-                    fill
-                    sizes="96px"
-                    priority
-                    onError={() => setIconError(true)}
-                    className="object-cover"
-                  />
+                  <img
+  src={absIcon}
+  alt={`Icon của ứng dụng ${app.name}`}
+  loading="eager"
+  onError={() => setIconError(true)}
+  className="absolute inset-0 w-full h-full object-cover"
+/>
                 </div>
 
                 {/* Title */}
@@ -1036,13 +1033,14 @@ export default function Detail({ serverApp, serverRelated }) {
               <div className="flex gap-3 overflow-x-auto pb-1">
                 {app.screenshots.map((url, i) => (
                   <div key={i} className="flex-shrink-0 w-48 md:w-56 rounded-xl overflow-hidden border border-gray-200 dark:border-zinc-800 relative">
-                    <Image
-                      src={toAbs(url)}
-                      alt={`Ảnh chụp màn hình ${i + 1} của ứng dụng ${app.name}`}
-                      width={224}
-                      height={400}
-                      className="object-cover w-full h-auto"
-                    />
+                    <img
+  src={toAbs(url)}
+  alt={`Ảnh chụp màn hình ${i + 1} của ứng dụng ${app.name}`}
+  loading="lazy"
+  width="224"
+  height="400"
+  className="object-cover w-full h-auto"
+/>
                   </div>
                 ))}
               </div>
@@ -1105,13 +1103,14 @@ export default function Detail({ serverApp, serverRelated }) {
                   >
                     <div className="flex items-center gap-4 min-w-0">
                       <div className="w-14 h-14 rounded-xl overflow-hidden shadow-sm relative flex-shrink-0 border border-gray-200 dark:border-zinc-800">
-                        <Image
-                          src={toAbs(item.icon_url || '/placeholder-icon.png')}
-                          alt={`Icon của ứng dụng liên quan ${item.name}`}
-                          width={56}
-                          height={56}
-                          className="object-cover w-full h-full"
-                        />
+                       <img
+  src={toAbs(item.icon_url || '/placeholder-icon.png')}
+  alt={`Icon của ứng dụng liên quan ${item.name}`}
+  width="56"
+  height="56"
+  loading="lazy"
+  className="object-cover w-full h-full"
+/>
                       </div>
                       <div className="flex flex-col min-w-0">
                         <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate" title={item.name}>{item.name}</p>
