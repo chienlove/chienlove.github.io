@@ -18,33 +18,82 @@ function MyApp({ Component, pageProps }) {
   }, []);
 
   useEffect(() => {
-    if (process.env.NODE_ENV !== 'production') return;
-    const sent = new WeakSet();
-    const sendLog = (errorObj) => {
-      try {
-        if (!errorObj || sent.has(errorObj)) return;
-        sent.add(errorObj);
-        fetch('/api/log-client-error', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            url: window.location.href,
-            userAgent: navigator.userAgent,
-            error: String(errorObj?.message || errorObj),
-            stack: String(errorObj?.stack || 'no stack'),
-          })
-        }).catch(() => {});
-      } catch {}
+  if (process.env.NODE_ENV !== 'production') return;
+
+  let isLeavingPage = false;
+
+  const shouldIgnore = (message = '') => {
+    const msg = String(message).toLowerCase();
+
+    // Safari / iOS spam khi redirect download
+    if (msg.includes('load failed')) return true;
+
+    // Abort do navigation
+    if (msg.includes('abort')) return true;
+
+    return false;
+  };
+
+  const sendLogOnce = (() => {
+    const seen = new Set();
+    return (payload) => {
+      const key = `${payload.error}|${payload.url}`;
+      if (seen.has(key)) return;
+      seen.add(key);
+
+      fetch('/api/log-client-error', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+        keepalive: true, // an toàn khi page unload
+      }).catch(() => {});
     };
-    const onError = (event) => sendLog(event.error);
-    const onUnhandled = (event) => sendLog(event.reason);
-    window.addEventListener('error', onError);
-    window.addEventListener('unhandledrejection', onUnhandled);
-    return () => {
-      window.removeEventListener('error', onError);
-      window.removeEventListener('unhandledrejection', onUnhandled);
-    };
-  }, []);
+  })();
+
+  const onError = (event) => {
+    if (isLeavingPage) return;
+    if (!event) return;
+
+    const msg = event?.message || event?.error?.message;
+    if (shouldIgnore(msg)) return;
+
+    sendLogOnce({
+      url: window.location.href,
+      userAgent: navigator.userAgent,
+      error: String(msg || 'Unknown error'),
+      stack: String(event?.error?.stack || 'no stack'),
+    });
+  };
+
+  const onUnhandled = (event) => {
+    if (isLeavingPage) return;
+    if (!event) return;
+
+    const msg = event?.reason?.message || event?.reason;
+    if (shouldIgnore(msg)) return;
+
+    sendLogOnce({
+      url: window.location.href,
+      userAgent: navigator.userAgent,
+      error: String(msg || 'Unhandled rejection'),
+      stack: String(event?.reason?.stack || 'no stack'),
+    });
+  };
+
+  const onPageHide = () => {
+    isLeavingPage = true;
+  };
+
+  window.addEventListener('error', onError);
+  window.addEventListener('unhandledrejection', onUnhandled);
+  window.addEventListener('pagehide', onPageHide);
+
+  return () => {
+    window.removeEventListener('error', onError);
+    window.removeEventListener('unhandledrejection', onUnhandled);
+    window.removeEventListener('pagehide', onPageHide);
+  };
+}, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
