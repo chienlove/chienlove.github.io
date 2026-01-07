@@ -4,6 +4,7 @@ import Head from 'next/head';
 import Layout from '../components/Layout';
 import AppCard from '../components/AppCard';
 import AdUnit from '../components/Ads';
+import Adsterra300x250 from "../components/Adsterra300x250";
 import { createSupabaseServer } from '../lib/supabase';
 import Link from 'next/link';
 
@@ -632,7 +633,7 @@ export default function Home({
               {/* Quảng cáo chèn giữa các category - SỬ DỤNG ADWRAPPER */}
               {new Set([1]).has(index) && (
                 <AdWrapper>
-                  <AdUnit className="my-0" mobileVariant="multiplex" desktopMode="unit" />
+                  <Adsterra300x250 />
                 </AdWrapper>
               )}
             </Fragment>
