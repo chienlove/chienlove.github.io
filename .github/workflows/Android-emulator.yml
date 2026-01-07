@@ -1,4 +1,4 @@
-name: Manual Android Install (Fix)
+name: Android Fix (Force Intel)
 
 on:
   workflow_dispatch:
@@ -9,9 +9,11 @@ on:
         default: 'https://github.com/files-community/Files/releases/download/v3.1.0/Files-v3.1.0.apk'
 
 jobs:
-  fix-and-run:
-    runs-on: macos-latest
-    timeout-minutes: 15 # Tự động hủy nếu treo quá 15 phút
+  run-stable:
+    # QUAN TRỌNG: Sử dụng macos-13 để đảm bảo là chip Intel (tương thích x86_64)
+    # Không dùng macos-latest vì có thể trúng runner M1 gây lỗi crash
+    runs-on: macos-13
+    timeout-minutes: 15
 
     steps:
       - name: Checkout code
@@ -27,31 +29,36 @@ jobs:
         run: |
           curl -L -o my-app.apk "${{ inputs.apk_url }}"
 
-      - name: Boot Emulator & Install APK
+      - name: Boot Emulator & Install
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          # THAY ĐỔI QUAN TRỌNG TẠI ĐÂY
-          api-level: 28                # Xuống Android 9 cho cực kỳ ổn định
-          target: google_apis          # Dùng bản có Google APIs (chuẩn hơn default)
+          # Cấu hình "nồi đồng cối đá" nhất có thể
+          api-level: 29
+          target: default              # Bản default nhẹ hơn bản google_apis rất nhiều (tránh crash)
           arch: x86_64
-          profile: Nexus One           # Thiết bị màn hình nhỏ, tốn ít RAM hơn
-          ram-size: 1024M              # RAM vừa đủ
+          profile: Nexus 5X            # Thiết bị cũ, độ phân giải thấp giúp chạy nhanh
+          ram-size: 1536M
+          heap-size: 512M
           
-          # Xóa bỏ các tham số GPU phức tạp gây lỗi
-          emulator-options: -no-window -no-snapshot -noaudio -no-boot-anim
+          # Force tắt tăng tốc phần cứng (-no-accel) để đảm bảo không bị lỗi Driver GPU
+          # Dùng swiftshader_indirect để render giao diện bằng CPU
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
           
-          # Script kiểm tra và cài đặt
+          # Script chạy
           script: |
-            echo "--- Đợi máy ảo ổn định (10s) ---"
-            sleep 10
+            echo "--- 1. Đợi máy ảo khởi động (chờ lâu hơn chút cho chắc) ---"
+            # Loop chờ thiết bị thực sự online
+            adb wait-for-device shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 1; done;'
             
-            echo "--- Kiểm tra kết nối ADB ---"
+            echo "--- 2. Kiểm tra thông tin thiết bị ---"
             adb devices -l
+            adb shell getprop ro.build.version.release
             
-            echo "--- Cài đặt APK ---"
-            adb install -r my-app.apk
+            echo "--- 3. Cài đặt App ---"
+            # Thêm flag -g để cấp quyền (grant permissions) luôn khi cài
+            adb install -g -r my-app.apk
             
-            echo "--- Kiểm tra App đã cài ---"
-            adb shell pm list packages -3
+            echo "--- 4. Kiểm tra App đã cài ---"
+            adb shell pm list packages -3 | grep -v "android"
             
             echo "--- THÀNH CÔNG ---"
