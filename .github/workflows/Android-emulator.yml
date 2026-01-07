@@ -1,0 +1,59 @@
+name: Manual Android Install
+
+# CHỈ chạy khi bấm thủ công
+on:
+  workflow_dispatch:
+    inputs:
+      apk_url:
+        description: 'Dán Link tải trực tiếp file APK vào đây'
+        required: true
+        # Link mặc định là app mẫu để test (bạn có thể thay bằng link của bạn khi chạy)
+        default: 'https://github.com/files-community/Files/releases/download/v3.1.0/Files-v3.1.0.apk'
+
+jobs:
+  install-and-test:
+    runs-on: macos-latest # Bắt buộc dùng macOS để chạy mượt
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      # Bước 1: Tải file APK từ link bạn nhập vào về máy ảo runner
+      - name: Download APK
+        run: |
+          echo "Đang tải APK từ: ${{ inputs.apk_url }}"
+          curl -L -o my-app.apk "${{ inputs.apk_url }}"
+          ls -lh my-app.apk # Kiểm tra xem file đã tải về chưa
+
+      # Bước 2: Bật máy ảo và Cài đặt
+      - name: Boot Emulator & Install APK
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 29                # Android 10 (Nhẹ, ổn định)
+          target: default              # Dùng 'google_apis' nếu app cần Google Play Services
+          arch: x86_64
+          profile: Nexus 6
+          ram-size: 2048M              # Cấp 2GB RAM cho máy ảo
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          
+          script: |
+            echo "--- 1. KIỂM TRA MÁY ẢO ---"
+            adb devices
+            
+            echo "--- 2. BẮT ĐẦU CÀI APP ---"
+            # Lệnh cài đặt file APK đã tải ở bước trên
+            adb install -r my-app.apk
+            
+            echo "--- 3. KIỂM TRA KẾT QUẢ ---"
+            # Liệt kê các app đã cài để chứng minh app của bạn đã vào
+            # Lọc kết quả để tìm file app vừa cài (thường app mẫu sẽ hiện ở đây)
+            adb shell pm list packages -3
+            
+            echo "--- HOÀN TẤT ---"
