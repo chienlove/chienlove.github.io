@@ -1,12 +1,6 @@
-import React from "react";
-
 export default function Adsterra300x250() {
- Adsterra (tránh useEffect với document.write)
   return (
-    <div
-      className="w-full flex justify-center"
-      suppressHydrationWarning
-    >
+    <div className="w-full flex justify-center" suppressHydrationWarning>
       <script
         dangerouslySetInnerHTML={{
           __html: `
