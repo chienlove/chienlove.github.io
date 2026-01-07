@@ -1,19 +1,18 @@
-name: Manual Android Install
+name: Manual Android Install (Fix)
 
-# CHỈ chạy khi bấm thủ công
 on:
   workflow_dispatch:
     inputs:
       apk_url:
-        description: 'Dán Link tải trực tiếp file APK vào đây'
+        description: 'Link tải file APK'
         required: true
-        # Link mặc định là app mẫu để test (bạn có thể thay bằng link của bạn khi chạy)
         default: 'https://github.com/files-community/Files/releases/download/v3.1.0/Files-v3.1.0.apk'
 
 jobs:
-  install-and-test:
-    runs-on: macos-latest # Bắt buộc dùng macOS để chạy mượt
-    
+  fix-and-run:
+    runs-on: macos-latest
+    timeout-minutes: 15 # Tự động hủy nếu treo quá 15 phút
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -24,36 +23,35 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      # Bước 1: Tải file APK từ link bạn nhập vào về máy ảo runner
       - name: Download APK
         run: |
-          echo "Đang tải APK từ: ${{ inputs.apk_url }}"
           curl -L -o my-app.apk "${{ inputs.apk_url }}"
-          ls -lh my-app.apk # Kiểm tra xem file đã tải về chưa
 
-      # Bước 2: Bật máy ảo và Cài đặt
       - name: Boot Emulator & Install APK
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          api-level: 29                # Android 10 (Nhẹ, ổn định)
-          target: default              # Dùng 'google_apis' nếu app cần Google Play Services
+          # THAY ĐỔI QUAN TRỌNG TẠI ĐÂY
+          api-level: 28                # Xuống Android 9 cho cực kỳ ổn định
+          target: google_apis          # Dùng bản có Google APIs (chuẩn hơn default)
           arch: x86_64
-          profile: Nexus 6
-          ram-size: 2048M              # Cấp 2GB RAM cho máy ảo
-          disable-animations: true
-          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          profile: Nexus One           # Thiết bị màn hình nhỏ, tốn ít RAM hơn
+          ram-size: 1024M              # RAM vừa đủ
           
+          # Xóa bỏ các tham số GPU phức tạp gây lỗi
+          emulator-options: -no-window -no-snapshot -noaudio -no-boot-anim
+          
+          # Script kiểm tra và cài đặt
           script: |
-            echo "--- 1. KIỂM TRA MÁY ẢO ---"
-            adb devices
+            echo "--- Đợi máy ảo ổn định (10s) ---"
+            sleep 10
             
-            echo "--- 2. BẮT ĐẦU CÀI APP ---"
-            # Lệnh cài đặt file APK đã tải ở bước trên
+            echo "--- Kiểm tra kết nối ADB ---"
+            adb devices -l
+            
+            echo "--- Cài đặt APK ---"
             adb install -r my-app.apk
             
-            echo "--- 3. KIỂM TRA KẾT QUẢ ---"
-            # Liệt kê các app đã cài để chứng minh app của bạn đã vào
-            # Lọc kết quả để tìm file app vừa cài (thường app mẫu sẽ hiện ở đây)
+            echo "--- Kiểm tra App đã cài ---"
             adb shell pm list packages -3
             
-            echo "--- HOÀN TẤT ---"
+            echo "--- THÀNH CÔNG ---"
