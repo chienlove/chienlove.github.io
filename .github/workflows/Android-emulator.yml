@@ -1,4 +1,4 @@
-name: Android Fix (Force Intel)
+name: Android ARM64 Final
 
 on:
   workflow_dispatch:
@@ -9,10 +9,9 @@ on:
         default: 'https://github.com/files-community/Files/releases/download/v3.1.0/Files-v3.1.0.apk'
 
 jobs:
-  run-stable:
-    # QUAN TRỌNG: Sử dụng macos-13 để đảm bảo là chip Intel (tương thích x86_64)
-    # Không dùng macos-latest vì có thể trúng runner M1 gây lỗi crash
-    runs-on: macos-13
+  run-on-m1:
+    # QUAN TRỌNG: Sử dụng macos-14 (Chạy chip Apple M1)
+    runs-on: macos-14
     timeout-minutes: 15
 
     steps:
@@ -27,38 +26,38 @@ jobs:
 
       - name: Download APK
         run: |
+          echo "Đang tải APK..."
           curl -L -o my-app.apk "${{ inputs.apk_url }}"
 
-      - name: Boot Emulator & Install
+      - name: Boot ARM64 Emulator & Install
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          # Cấu hình "nồi đồng cối đá" nhất có thể
-          api-level: 29
-          target: default              # Bản default nhẹ hơn bản google_apis rất nhiều (tránh crash)
-          arch: x86_64
-          profile: Nexus 5X            # Thiết bị cũ, độ phân giải thấp giúp chạy nhanh
-          ram-size: 1536M
-          heap-size: 512M
+          # CẤU HÌNH CHO CHIP APPLE M1/M2 (QUAN TRỌNG NHẤT)
+          api-level: 30                # Android 11 (Bản ổn định nhất cho ARM64 image)
+          target: google_apis          # Image hỗ trợ Google APIs
+          arch: arm64-v8a              # BẮT BUỘC: Dùng kiến trúc ARM64 để khớp với chip M1
           
-          # Force tắt tăng tốc phần cứng (-no-accel) để đảm bảo không bị lỗi Driver GPU
-          # Dùng swiftshader_indirect để render giao diện bằng CPU
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
+          # Cấu hình phần cứng máy ảo
+          profile: pixel               # Dùng profile Pixel chuẩn
+          ram-size: 2048M
           
-          # Script chạy
+          # Tắt window, dùng gpu host (tận dụng GPU M1)
+          emulator-options: -no-window -gpu host -noaudio -no-boot-anim -camera-back none
+          
+          # Script kiểm tra thông minh
           script: |
-            echo "--- 1. Đợi máy ảo khởi động (chờ lâu hơn chút cho chắc) ---"
-            # Loop chờ thiết bị thực sự online
+            echo "--- 1. Đợi máy ảo khởi động ---"
+            # Vòng lặp đợi boot_completed chắc chắn nhất
             adb wait-for-device shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 1; done;'
             
-            echo "--- 2. Kiểm tra thông tin thiết bị ---"
-            adb devices -l
-            adb shell getprop ro.build.version.release
+            echo "--- 2. Kiểm tra kiến trúc CPU ---"
+            # Lệnh này sẽ in ra "arm64-v8a" để chứng minh đang chạy đúng
+            adb shell getprop ro.product.cpu.abi
             
             echo "--- 3. Cài đặt App ---"
-            # Thêm flag -g để cấp quyền (grant permissions) luôn khi cài
             adb install -g -r my-app.apk
             
-            echo "--- 4. Kiểm tra App đã cài ---"
+            echo "--- 4. Danh sách App đã cài ---"
             adb shell pm list packages -3 | grep -v "android"
             
-            echo "--- THÀNH CÔNG ---"
+            echo "--- THÀNH CÔNG RỰC RỠ ---"
