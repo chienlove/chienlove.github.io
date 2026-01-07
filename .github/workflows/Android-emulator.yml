@@ -1,4 +1,4 @@
-name: Android ARM64 Final
+name: Android ARM64 Stable (Fix VRAM)
 
 on:
   workflow_dispatch:
@@ -9,8 +9,7 @@ on:
         default: 'https://github.com/files-community/Files/releases/download/v3.1.0/Files-v3.1.0.apk'
 
 jobs:
-  run-on-m1:
-    # QUAN TRỌNG: Sử dụng macos-14 (Chạy chip Apple M1)
+  run-stable-m1:
     runs-on: macos-14
     timeout-minutes: 15
 
@@ -26,38 +25,44 @@ jobs:
 
       - name: Download APK
         run: |
-          echo "Đang tải APK..."
           curl -L -o my-app.apk "${{ inputs.apk_url }}"
 
-      - name: Boot ARM64 Emulator & Install
+      - name: Boot Emulator & Install
         uses: reactivecircus/android-emulator-runner@v2
         with:
-          # CẤU HÌNH CHO CHIP APPLE M1/M2 (QUAN TRỌNG NHẤT)
-          api-level: 30                # Android 11 (Bản ổn định nhất cho ARM64 image)
-          target: google_apis          # Image hỗ trợ Google APIs
-          arch: arm64-v8a              # BẮT BUỘC: Dùng kiến trúc ARM64 để khớp với chip M1
+          # CẤU HÌNH PHẦN CỨNG
+          api-level: 30                # Android 11 (ARM64)
+          target: google_apis
+          arch: arm64-v8a              # Chạy native trên chip M1
           
-          # Cấu hình phần cứng máy ảo
-          profile: pixel               # Dùng profile Pixel chuẩn
+          # Cấu hình thiết bị tối giản để tiết kiệm RAM
+          profile: pixel
           ram-size: 2048M
           
-          # Tắt window, dùng gpu host (tận dụng GPU M1)
-          emulator-options: -no-window -gpu host -noaudio -no-boot-anim -camera-back none
+          # --- KHẮC PHỤC LỖI TẠI ĐÂY ---
+          # 1. -gpu swiftshader_indirect: Dùng CPU để vẽ, tránh lỗi hết bộ nhớ VRAM
+          # 2. -no-metrics: Tắt cảnh báo gửi dữ liệu
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none -no-metrics
           
-          # Script kiểm tra thông minh
+          # Script chạy
           script: |
-            echo "--- 1. Đợi máy ảo khởi động ---"
-            # Vòng lặp đợi boot_completed chắc chắn nhất
+            echo "--- 1. Khởi động lại ADB Daemon ---"
+            adb kill-server
+            adb start-server
+            
+            echo "--- 2. Đợi máy ảo khởi động (Chế độ CPU Render) ---"
+            # Swiftshader boot chậm hơn 1 xíu, nên kiên nhẫn đợi
             adb wait-for-device shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 1; done;'
             
-            echo "--- 2. Kiểm tra kiến trúc CPU ---"
-            # Lệnh này sẽ in ra "arm64-v8a" để chứng minh đang chạy đúng
+            echo "--- 3. Kiểm tra thông số ---"
+            adb devices -l
+            # Kiểm tra xem có đang chạy ARM64 không
             adb shell getprop ro.product.cpu.abi
             
-            echo "--- 3. Cài đặt App ---"
+            echo "--- 4. Cài đặt App ---"
             adb install -g -r my-app.apk
             
-            echo "--- 4. Danh sách App đã cài ---"
+            echo "--- 5. Kiểm tra kết quả ---"
             adb shell pm list packages -3 | grep -v "android"
             
-            echo "--- THÀNH CÔNG RỰC RỠ ---"
+            echo "--- THÀNH CÔNG ---"
