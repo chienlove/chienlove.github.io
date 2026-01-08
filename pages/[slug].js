@@ -265,7 +265,7 @@ function NewBreadcrumb({ category, appName }) {
 const InfoRow = ({ label, value, expandable, expanded, onToggle }) => {
   return (
     <div className="px-4 py-3">
-      <div className="flex justify-between items-start gap-4 pb-3 border-b border-dashed border-slate-300 dark:border-zinc-700 last:pb-0 last:border-b-0">
+      <div className="flex justify-between items-start gap-4 pb-3 border-b border-dashed border-slate-300 dark:border-zinc-700">
         <span className="font-semibold text-slate-500 dark:text-zinc-500">
           {label}
         </span>
@@ -1046,7 +1046,7 @@ export default function Detail({ serverApp, serverRelated }) {
     <FontAwesomeIcon icon={faCircleInfo} className="text-blue-600 dark:text-blue-400" />
     Thông tin
   </h2>
-  <div className="mt-3">
+  <div className="mt-3 [&>:last-child>div]:border-b-0 [&>:last-child>div]:pb-0">
     <InfoRow label="Nhà phát triển" value={app.author || 'Không rõ'} />
     <InfoRow label="Phiên bản" value={app.version || 'Không rõ'} />
     <InfoRow label="Dung lượng" value={displaySize} />
