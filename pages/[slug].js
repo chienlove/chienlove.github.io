@@ -264,22 +264,24 @@ function NewBreadcrumb({ category, appName }) {
 /* ===================== InfoRow ===================== */
 const InfoRow = ({ label, value, expandable, expanded, onToggle }) => {
   return (
-    <div className="px-4 py-3 flex justify-between items-start gap-4">
-      <span className="font-semibold text-slate-500 dark:text-zinc-500 min-w-fit">
-        {label}
-      </span>
-      <div className="text-right flex-1">
-        <span className="font-bold text-slate-900 dark:text-zinc-100">
-          {value}
+    <div className="px-4 py-3">
+      <div className="flex justify-between items-start gap-4 pb-3 border-b border-dashed border-slate-300 dark:border-zinc-700 last:border-b-0 last:pb-0">
+        <span className="font-semibold text-slate-500 dark:text-zinc-500">
+          {label}
         </span>
-        {expandable && (
-          <button
-            onClick={onToggle}
-            className="ml-2 text-blue-600 dark:text-blue-400 text-sm"
-          >
-            {expanded ? 'Thu gọn' : 'Xem thêm'}
-          </button>
-        )}
+        <div className="flex flex-col items-end text-right">
+          <span className="font-bold text-slate-900 dark:text-zinc-100">
+            {value}
+          </span>
+          {expandable && (
+            <button
+              onClick={onToggle}
+              className="mt-1 text-blue-600 dark:text-blue-400 text-sm"
+            >
+              {expanded ? 'Thu gọn' : 'Xem thêm'}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -1044,7 +1046,7 @@ export default function Detail({ serverApp, serverRelated }) {
     <FontAwesomeIcon icon={faCircleInfo} className="text-blue-600 dark:text-blue-400" />
     Thông tin
   </h2>
-  <div className="mt-3 divide-y divide-dashed divide-slate-300 dark:divide-zinc-700">
+  <div className="mt-3">
     <InfoRow label="Nhà phát triển" value={app.author || 'Không rõ'} />
     <InfoRow label="Phiên bản" value={app.version || 'Không rõ'} />
     <InfoRow label="Dung lượng" value={displaySize} />
