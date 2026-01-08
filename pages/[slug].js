@@ -23,6 +23,9 @@ import {
   faChevronUp,
   faFileArrowDown,
   faHouse,
+  faCircleInfo,
+  faListOl,
+  faClock,
 } from '@fortawesome/free-solid-svg-icons';
 
 // Lazy-load Comments
@@ -630,10 +633,10 @@ export default function Detail({ serverApp, serverRelated }) {
     setTimeout(() => setIsFetchingIpa(false), 500);
   };
 
-  // CTA mềm: cuộn xuống nút tải thật
-  const scrollToRealActions = () => {
+  // Cuộn tới khu vực "Cài đặt & tải xuống" (card dưới mô tả)
+  const scrollToInstallGuide = () => {
     try {
-      const el = document.getElementById('real-actions');
+      const el = document.getElementById('install-guide');
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     } catch {}
   };
@@ -805,7 +808,7 @@ export default function Detail({ serverApp, serverRelated }) {
                   </p>
                 )}
 
-                {/* TestFlight buttons giữ nguyên logic (không đụng) */}
+                {/* Buttons */}
                 <div className="mt-4 flex flex-wrap justify-center gap-2">
                   {isTestflight && app.testflight_url && (
                     <>
@@ -839,6 +842,17 @@ export default function Detail({ serverApp, serverRelated }) {
                         </span>
                       )}
                     </>
+                  )}
+
+                  {!isTestflight && (
+                    <button
+                      type="button"
+                      onClick={scrollToInstallGuide}
+                      className="inline-flex items-center justify-center px-4 py-2 rounded-full text-sm font-semibold border border-blue-500 text-blue-700 dark:text-blue-400 dark:border-blue-400/60 hover:bg-blue-100 dark:hover:bg-blue-400/10 transition active:scale-95"
+                    >
+                      <FontAwesomeIcon icon={faChevronDown} className="mr-2" />
+                      Cài đặt & tải xuống
+                    </button>
                   )}
                 </div>
               </div>
@@ -921,23 +935,6 @@ export default function Detail({ serverApp, serverRelated }) {
             </div>
           </div>
 
-          {/* CTA mềm dưới Info card (KHÔNG tải thật) */}
-          {!isTestflight && (
-            <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow text-center">
-              <button
-                type="button"
-                onClick={scrollToRealActions}
-                className="inline-flex items-center justify-center border border-blue-500 text-blue-700 dark:text-blue-400 dark:border-blue-400/60 hover:bg-blue-100 dark:hover:bg-blue-400/10 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95"
-              >
-                <FontAwesomeIcon icon={faChevronDown} className="mr-2" />
-                Xem cách cài & tải
-              </button>
-              <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                Cuộn xuống dưới mô tả để thao tác cài đặt hoặc tải IPA.
-              </p>
-            </div>
-          )}
-
           {/* Mô tả */}
           <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
             <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-3">Mô tả</h2>
@@ -997,54 +994,125 @@ export default function Detail({ serverApp, serverRelated }) {
             )}
           </div>
 
-          {/* CTA thật (dưới mô tả) */}
+          {/* Divider dashed (giống demo) + Card cài đặt (dưới mô tả) */}
           {!isTestflight && (
-            <div id="real-actions" className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
-              <div className="flex flex-wrap justify-center gap-2">
-                <button
-                  onClick={handleInstall}
-                  disabled={isInstalling}
-                  className={`inline-flex items-center border border-green-500 text-green-700 dark:text-green-400 dark:border-green-400/60 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-green-200 dark:active:bg-green-400/10 active:shadow-inner active:ring-2 active:ring-green-500 ${isInstalling ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-100 dark:hover:bg-green-400/10'}`}
-                >
-                  {isInstalling ? (
-                    <>
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 01 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Đang xử lý…
-                    </>
-                  ) : (
-                    <>
-                      <FontAwesomeIcon icon={faDownload} className="mr-2" />
-                      Cài đặt
-                    </>
-                  )}
-                </button>
+            <>
+              <div className="my-5 border-t-2 border-dashed border-gray-300 dark:border-zinc-700" />
 
-                <button
-                  onClick={handleDownloadIpa}
-                  disabled={isFetchingIpa}
-                  className={`inline-flex items-center border border-blue-500 text-blue-700 dark:text-blue-400 dark:border-blue-400/60 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-blue-200 dark:active:bg-blue-400/10 active:shadow-inner active:ring-2 active:ring-blue-500 ${isFetchingIpa ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-100 dark:hover:bg-blue-400/10'}`}
-                  title="Tải file IPA (ẩn nguồn tải)"
-                >
-                  {isFetchingIpa ? (
-                    <>
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 01 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Đang tạo…
-                    </>
-                  ) : (
-                    <>
-                      <FontAwesomeIcon icon={faFileArrowDown} className="mr-2" />
-                      Tải IPA
-                    </>
-                  )}
-                </button>
+              <div id="install-guide" className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-300 border border-blue-200 dark:border-blue-400/20 flex-shrink-0">
+                    <FontAwesomeIcon icon={faCircleInfo} className="w-4 h-4" />
+                  </div>
+
+                  <div className="min-w-0">
+                    <h2 className="text-lg font-extrabold text-gray-900 dark:text-gray-100 leading-snug">
+                      Cài đặt & tải xuống {app?.name}
+                    </h2>
+                    <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
+                      Bấm nút bên dưới để chuyển sang <b>trang cài đặt</b>. Tại đó hệ thống sẽ <b>đếm ngược 10 giây</b>,
+                      sau đó liên kết <b>cài đặt</b> hoặc <b>tải IPA</b> mới xuất hiện.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-4 space-y-2">
+                  <div className="flex gap-3 p-3 rounded-xl border border-gray-200 dark:border-zinc-800 bg-gray-50 dark:bg-white/5">
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center font-extrabold text-xs bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 flex-shrink-0">
+                      1
+                    </div>
+                    <div className="text-sm text-gray-700 dark:text-gray-200">
+                      Chọn <b>Cài đặt</b> (cài trực tiếp) hoặc <b>Tải IPA</b> (tải file IPA).
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 p-3 rounded-xl border border-gray-200 dark:border-zinc-800 bg-gray-50 dark:bg-white/5">
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center font-extrabold text-xs bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 flex-shrink-0">
+                      2
+                    </div>
+                    <div className="text-sm text-gray-700 dark:text-gray-200">
+                      Bạn sẽ được chuyển sang <b>trang cài đặt riêng</b> của StoreiOS.
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 p-3 rounded-xl border border-gray-200 dark:border-zinc-800 bg-gray-50 dark:bg-white/5">
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center font-extrabold text-xs bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 flex-shrink-0">
+                      3
+                    </div>
+                    <div className="text-sm text-gray-700 dark:text-gray-200">
+                      Chờ <b>đếm ngược 10 giây</b> để hệ thống chuẩn bị liên kết.
+                      <span className="ml-2 inline-flex items-center text-xs text-gray-500 dark:text-gray-400">
+                        <FontAwesomeIcon icon={faClock} className="mr-1 h-3 w-3" />
+                        10s
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 p-3 rounded-xl border border-gray-200 dark:border-zinc-800 bg-gray-50 dark:bg-white/5">
+                    <div className="w-7 h-7 rounded-lg flex items-center justify-center font-extrabold text-xs bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 flex-shrink-0">
+                      4
+                    </div>
+                    <div className="text-sm text-gray-700 dark:text-gray-200">
+                      Khi liên kết xuất hiện, bấm để <b>cài đặt</b> hoặc <b>tải IPA</b> và hoàn tất.
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-4 p-3 rounded-xl border border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/10 text-amber-900 dark:text-amber-100 text-sm">
+                  <FontAwesomeIcon icon={faListOl} className="mr-2" />
+                  <b>Lưu ý:</b> Với <b>Tải IPA</b>, bạn có thể cần <b>đăng nhập</b> và <b>xác minh email</b>.
+                </div>
+
+                <div className="mt-4 grid grid-cols-1 gap-3">
+                  <button
+                    onClick={handleInstall}
+                    disabled={isInstalling}
+                    className={`w-full inline-flex items-center justify-center px-4 py-3 rounded-full text-sm font-extrabold text-white bg-gradient-to-b from-green-500 to-green-600 shadow-md hover:brightness-105 active:scale-[0.99] transition ${
+                      isInstalling ? 'opacity-60 cursor-not-allowed' : ''
+                    }`}
+                  >
+                    {isInstalling ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 01 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Đang chuyển…
+                      </>
+                    ) : (
+                      <>
+                        <FontAwesomeIcon icon={faDownload} className="mr-2" />
+                        Cài đặt
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    onClick={handleDownloadIpa}
+                    disabled={isFetchingIpa || !isInstallable}
+                    className={`w-full inline-flex items-center justify-center px-4 py-3 rounded-full text-sm font-extrabold text-white bg-gradient-to-b from-blue-500 to-blue-600 shadow-md hover:brightness-105 active:scale-[0.99] transition ${
+                      (isFetchingIpa || !isInstallable) ? 'opacity-60 cursor-not-allowed' : ''
+                    }`}
+                    title={isInstallable ? 'Tải file IPA (ẩn nguồn tải)' : 'Mục này không hỗ trợ tải IPA'}
+                  >
+                    {isFetchingIpa ? (
+                      <>
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 01 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Đang tạo…
+                      </>
+                    ) : (
+                      <>
+                        <FontAwesomeIcon icon={faFileArrowDown} className="mr-2" />
+                        Tải IPA
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
-            </div>
+            </>
           )}
 
           {/* Quảng cáo (between sections) */}
