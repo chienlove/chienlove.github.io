@@ -194,17 +194,16 @@ function normalizeDescription(raw = '') {
 function PrettyBlockquote({ children }) {
   return (
     <blockquote className="relative my-4 rounded-xl overflow-hidden">
-  <div 
-    className="absolute inset-0 bg-gradient-to-r from-emerald-500 via-emerald-500 to-emerald-500" 
-    style={{clipPath: 'polygon(0 0, 70% 0, 60% 100%, 0 100%)'}} 
-  />
-  <div className="relative bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm p-6 ml-2 rounded-lg">
-    <div className="text-slate-700 dark:text-slate-200 leading-relaxed">
-      {children}
-    </div>
-  </div>
-</blockquote>
-
+      <div
+        className="absolute inset-0 bg-gradient-to-r from-emerald-500 via-emerald-500 to-emerald-500"
+        style={{ clipPath: 'polygon(0 0, 70% 0, 60% 100%, 0 100%)' }}
+      />
+      <div className="relative bg-white/95 dark:bg-slate-800/95 backdrop-blur-sm p-6 ml-2 rounded-lg">
+        <div className="text-slate-700 dark:text-slate-200 leading-relaxed">
+          {children}
+        </div>
+      </div>
+    </blockquote>
   );
 }
 
@@ -348,7 +347,7 @@ export default function Detail({ serverApp, serverRelated }) {
 
   // ===== languages/devices =====
   const languagesArray = useMemo(() => parseList(app?.languages), [app?.languages]);
-  const devicesArray   = useMemo(() => parseList(app?.supported_devices), [app?.supported_devices]);
+  const devicesArray = useMemo(() => parseList(app?.supported_devices), [app?.supported_devices]);
 
   const languagesShort = useMemo(() => {
     const list = languagesArray.slice(0, 6);
@@ -374,11 +373,11 @@ export default function Detail({ serverApp, serverRelated }) {
   const dynamicMetaTags = useMemo(() => {
     if (!app) return null;
 
-    const appName     = app.name || '';
-    const version     = app.version ? ` ${app.version}` : '';
-    const author      = app.author || '';
+    const appName = app.name || '';
+    const version = app.version ? ` ${app.version}` : '';
+    const author = app.author || '';
     const currentYear = String(new Date().getFullYear());
-    const os          = app.minimum_os_version ? `iOS ${app.minimum_os_version}+` : 'iOS';
+    const os = app.minimum_os_version ? `iOS ${app.minimum_os_version}+` : 'iOS';
 
     const generateTitle = () => {
       const baseTitle = `Tải ${appName}${version} cho ${os} | ${currentYear} | StoreiOS`;
@@ -395,9 +394,9 @@ export default function Detail({ serverApp, serverRelated }) {
     };
 
     const generateDescription = () => {
-      const sizeText   = displaySize !== 'Không rõ' ? ` • Dung lượng ${displaySize}` : '';
+      const sizeText = displaySize !== 'Không rõ' ? ` • Dung lượng ${displaySize}` : '';
       const authorText = author ? ` • Nhà phát triển ${author}` : '';
-      const catName    = app.category?.name ? ` (${app.category.name})` : '';
+      const catName = app.category?.name ? ` (${app.category.name})` : '';
 
       if (isTestflight) {
         return `${appName}${version}${catName} - Bản thử nghiệm TestFlight. Kiểm tra slot và tham gia ngay. Cập nhật ${currentYear}.`;
@@ -631,6 +630,14 @@ export default function Detail({ serverApp, serverRelated }) {
     setTimeout(() => setIsFetchingIpa(false), 500);
   };
 
+  // CTA mềm: cuộn xuống nút tải thật
+  const scrollToRealActions = () => {
+    try {
+      const el = document.getElementById('real-actions');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch {}
+  };
+
   // Cuộn tới bình luận
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -777,12 +784,12 @@ export default function Detail({ serverApp, serverRelated }) {
               <div className="pt-10 text-center px-4">
                 <div className="w-24 h-24 mx-auto overflow-hidden border-4 border-white rounded-2xl relative">
                   <img
-  src={absIcon}
-  alt={`Icon của ứng dụng ${app.name}`}
-  loading="eager"
-  onError={() => setIconError(true)}
-  className="absolute inset-0 w-full h-full object-cover"
-/>
+                    src={absIcon}
+                    alt={`Icon của ứng dụng ${app.name}`}
+                    loading="eager"
+                    onError={() => setIconError(true)}
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
                 </div>
 
                 {/* Title */}
@@ -798,7 +805,7 @@ export default function Detail({ serverApp, serverRelated }) {
                   </p>
                 )}
 
-                {/* Buttons */}
+                {/* TestFlight buttons giữ nguyên logic (không đụng) */}
                 <div className="mt-4 flex flex-wrap justify-center gap-2">
                   {isTestflight && app.testflight_url && (
                     <>
@@ -831,53 +838,6 @@ export default function Detail({ serverApp, serverRelated }) {
                           Ngừng nhận
                         </span>
                       )}
-                    </>
-                  )}
-
-                  {!isTestflight && (
-                    <>
-                      <button
-                        onClick={handleInstall}
-                        disabled={isInstalling}
-                        className={`inline-flex items-center border border-green-500 text-green-700 dark:text-green-400 dark:border-green-400/60 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-green-200 dark:active:bg-green-400/10 active:shadow-inner active:ring-2 active:ring-green-500 ${isInstalling ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-100 dark:hover:bg-green-400/10'}`}
-                      >
-                        {isInstalling ? (
-                          <>
-                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 01 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Đang xử lý…
-                          </>
-                        ) : (
-                          <>
-                            <FontAwesomeIcon icon={faDownload} className="mr-2" />
-                            Cài đặt
-                          </>
-                        )}
-                      </button>
-
-                      <button
-                        onClick={handleDownloadIpa}
-                        disabled={isFetchingIpa}
-                        className={`inline-flex items-center border border-blue-500 text-blue-700 dark:text-blue-400 dark:border-blue-400/60 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-blue-200 dark:active:bg-blue-400/10 active:shadow-inner active:ring-2 active:ring-blue-500 ${isFetchingIpa ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-100 dark:hover:bg-blue-400/10'}`}
-                        title="Tải file IPA (ẩn nguồn tải)"
-                      >
-                        {isFetchingIpa ? (
-                          <>
-                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 01 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            Đang tạo…
-                          </>
-                        ) : (
-                          <>
-                            <FontAwesomeIcon icon={faFileArrowDown} className="mr-2" />
-                            Tải IPA
-                          </>
-                        )}
-                      </button>
                     </>
                   )}
                 </div>
@@ -961,47 +921,64 @@ export default function Detail({ serverApp, serverRelated }) {
             </div>
           </div>
 
+          {/* CTA mềm dưới Info card (KHÔNG tải thật) */}
+          {!isTestflight && (
+            <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow text-center">
+              <button
+                type="button"
+                onClick={scrollToRealActions}
+                className="inline-flex items-center justify-center border border-blue-500 text-blue-700 dark:text-blue-400 dark:border-blue-400/60 hover:bg-blue-100 dark:hover:bg-blue-400/10 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95"
+              >
+                <FontAwesomeIcon icon={faChevronDown} className="mr-2" />
+                Xem cách cài & tải
+              </button>
+              <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                Cuộn xuống dưới mô tả để thao tác cài đặt hoặc tải IPA.
+              </p>
+            </div>
+          )}
+
           {/* Mô tả */}
           <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
             <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-3">Mô tả</h2>
             <div className={`relative overflow-hidden transition-all duration-300 ${showFullDescription ? '' : 'max-h-72'}`}>
               <div className={`${showFullDescription ? '' : 'mask-gradient-bottom'}`}>
                 {ReactMarkdown && remarkGfm ? (
-  <ReactMarkdown
-    remarkPlugins={[remarkGfm]}
-    components={{
-      h1: ({...props}) => <h3 className="text-xl font-bold mt-3 mb-2 text-gray-900 dark:text-gray-100" {...props} />,
-      h2: ({...props}) => <h4 className="text-lg font-bold mt-3 mb-2 text-gray-900 dark:text-gray-100" {...props} />,
-      h3: ({...props}) => <h5 className="text-base font-bold mt-3 mb-2 text-gray-900 dark:text-gray-100" {...props} />,
-      p: ({...props}) => <p className="text-gray-700 dark:text-gray-200 leading-7 mb-3 break-words" {...props} />,
-      ul: ({...props}) => <ul className="list-disc pl-5 space-y-1 mb-3 text-gray-700 dark:text-gray-200" {...props} />,
-      ol: ({...props}) => <ol className="list-decimal pl-5 space-y-1 mb-3 text-gray-700 dark:text-gray-200" {...props} />,
-      li: ({...props}) => <li className="marker:text-gray-500 dark:marker:text-gray-200" {...props} />,
-      a: ({...props}) => <a className="text-blue-600 dark:text-blue-400 hover:underline break-all" target="_blank" rel="noopener noreferrer" {...props} />,
-      code: ({inline, ...props}) =>
-        inline ? (
-          <code className="px-1 py-0.5 rounded bg-gray-100 dark:bg-zinc-800 text-pink-700 dark:text-pink-300" {...props} />
-        ) : (
-          <pre className="p-3 rounded bg-gray-900 text-gray-100 overflow-auto mb-3"><code {...props} /></pre>
-        ),
-      blockquote: ({...props}) => <PrettyBlockquote {...props} />,
-      hr: () => <hr className="my-4 border-gray-200 dark:border-zinc-800" />,
-      table: ({children, ...props}) => (
-        <div className="overflow-x-auto my-4 border border-gray-200 dark:border-zinc-700 rounded-lg">
-          <table className="min-w-full divide-y divide-gray-200 dark:divide-zinc-700 text-sm" {...props}>
-            {children}
-          </table>
-        </div>
-      ),
-      thead: ({children, ...props}) => <thead className="bg-gray-50 dark:bg-zinc-800/50" {...props}>{children}</thead>,
-      tbody: ({children, ...props}) => <tbody className="divide-y divide-gray-200 dark:divide-zinc-700 bg-white dark:bg-zinc-900" {...props}>{children}</tbody>,
-      tr: ({children, ...props}) => <tr className="transition-colors hover:bg-gray-50 dark:hover:bg-white/5" {...props}>{children}</tr>,
-      th: ({children, ...props}) => <th className="px-4 py-3 text-left font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap border-r border-gray-200 dark:border-zinc-700 first:border-l-0 last:border-r-0" {...props}>{children}</th>,
-      td: ({children, ...props}) => <td className="px-4 py-3 text-gray-700 dark:text-gray-300 whitespace-normal align-top border-r border-gray-200 dark:border-zinc-700 first:border-l-0 last:border-r-0" {...props}>{children}</td>,
-    }}
-  >
-    {mdDescription}
-  </ReactMarkdown>
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      h1: ({ ...props }) => <h3 className="text-xl font-bold mt-3 mb-2 text-gray-900 dark:text-gray-100" {...props} />,
+                      h2: ({ ...props }) => <h4 className="text-lg font-bold mt-3 mb-2 text-gray-900 dark:text-gray-100" {...props} />,
+                      h3: ({ ...props }) => <h5 className="text-base font-bold mt-3 mb-2 text-gray-900 dark:text-gray-100" {...props} />,
+                      p: ({ ...props }) => <p className="text-gray-700 dark:text-gray-200 leading-7 mb-3 break-words" {...props} />,
+                      ul: ({ ...props }) => <ul className="list-disc pl-5 space-y-1 mb-3 text-gray-700 dark:text-gray-200" {...props} />,
+                      ol: ({ ...props }) => <ol className="list-decimal pl-5 space-y-1 mb-3 text-gray-700 dark:text-gray-200" {...props} />,
+                      li: ({ ...props }) => <li className="marker:text-gray-500 dark:marker:text-gray-200" {...props} />,
+                      a: ({ ...props }) => <a className="text-blue-600 dark:text-blue-400 hover:underline break-all" target="_blank" rel="noopener noreferrer" {...props} />,
+                      code: ({ inline, ...props }) =>
+                        inline ? (
+                          <code className="px-1 py-0.5 rounded bg-gray-100 dark:bg-zinc-800 text-pink-700 dark:text-pink-300" {...props} />
+                        ) : (
+                          <pre className="p-3 rounded bg-gray-900 text-gray-100 overflow-auto mb-3"><code {...props} /></pre>
+                        ),
+                      blockquote: ({ ...props }) => <PrettyBlockquote {...props} />,
+                      hr: () => <hr className="my-4 border-gray-200 dark:border-zinc-800" />,
+                      table: ({ children, ...props }) => (
+                        <div className="overflow-x-auto my-4 border border-gray-200 dark:border-zinc-700 rounded-lg">
+                          <table className="min-w-full divide-y divide-gray-200 dark:divide-zinc-700 text-sm" {...props}>
+                            {children}
+                          </table>
+                        </div>
+                      ),
+                      thead: ({ children, ...props }) => <thead className="bg-gray-50 dark:bg-zinc-800/50" {...props}>{children}</thead>,
+                      tbody: ({ children, ...props }) => <tbody className="divide-y divide-gray-200 dark:divide-zinc-700 bg-white dark:bg-zinc-900" {...props}>{children}</tbody>,
+                      tr: ({ children, ...props }) => <tr className="transition-colors hover:bg-gray-50 dark:hover:bg-white/5" {...props}>{children}</tr>,
+                      th: ({ children, ...props }) => <th className="px-4 py-3 text-left font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap border-r border-gray-200 dark:border-zinc-700 first:border-l-0 last:border-r-0" {...props}>{children}</th>,
+                      td: ({ children, ...props }) => <td className="px-4 py-3 text-gray-700 dark:text-gray-300 whitespace-normal align-top border-r border-gray-200 dark:border-zinc-700 first:border-l-0 last:border-r-0" {...props}>{children}</td>,
+                    }}
+                  >
+                    {mdDescription}
+                  </ReactMarkdown>
                 ) : (
                   <p className="text-gray-700 dark:text-gray-200 leading-7 mb-3 whitespace-pre-wrap break-words">{mdDescription}</p>
                 )}
@@ -1020,6 +997,60 @@ export default function Detail({ serverApp, serverRelated }) {
             )}
           </div>
 
+          {/* CTA thật (dưới mô tả) */}
+          {!isTestflight && (
+            <div id="real-actions" className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
+              <div className="flex flex-wrap justify-center gap-2">
+                <button
+                  onClick={handleInstall}
+                  disabled={isInstalling}
+                  className={`inline-flex items-center border border-green-500 text-green-700 dark:text-green-400 dark:border-green-400/60 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-green-200 dark:active:bg-green-400/10 active:shadow-inner active:ring-2 active:ring-green-500 ${isInstalling ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-100 dark:hover:bg-green-400/10'}`}
+                >
+                  {isInstalling ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 01 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Đang xử lý…
+                    </>
+                  ) : (
+                    <>
+                      <FontAwesomeIcon icon={faDownload} className="mr-2" />
+                      Cài đặt
+                    </>
+                  )}
+                </button>
+
+                <button
+                  onClick={handleDownloadIpa}
+                  disabled={isFetchingIpa}
+                  className={`inline-flex items-center border border-blue-500 text-blue-700 dark:text-blue-400 dark:border-blue-400/60 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95 active:bg-blue-200 dark:active:bg-blue-400/10 active:shadow-inner active:ring-2 active:ring-blue-500 ${isFetchingIpa ? 'opacity-50 cursor-not-allowed' : 'hover:bg-blue-100 dark:hover:bg-blue-400/10'}`}
+                  title="Tải file IPA (ẩn nguồn tải)"
+                >
+                  {isFetchingIpa ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 01 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Đang tạo…
+                    </>
+                  ) : (
+                    <>
+                      <FontAwesomeIcon icon={faFileArrowDown} className="mr-2" />
+                      Tải IPA
+                    </>
+                  )}
+                </button>
+              </div>
+
+              <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 text-center">
+                Mẹo: Nếu bạn dùng Offerwall, hãy kích hoạt ở bước này để tránh cản người dùng quá sớm.
+              </p>
+            </div>
+          )}
+
           {/* Quảng cáo (between sections) */}
           <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
             <div className="text-[11px] uppercase tracking-wider text-gray-400 mb-2 text-center">Quảng cáo</div>
@@ -1034,13 +1065,13 @@ export default function Detail({ serverApp, serverRelated }) {
                 {app.screenshots.map((url, i) => (
                   <div key={i} className="flex-shrink-0 w-48 md:w-56 rounded-xl overflow-hidden border border-gray-200 dark:border-zinc-800 relative">
                     <img
-  src={toAbs(url)}
-  alt={`Ảnh chụp màn hình ${i + 1} của ứng dụng ${app.name}`}
-  loading="lazy"
-  width="224"
-  height="400"
-  className="object-cover w-full h-auto"
-/>
+                      src={toAbs(url)}
+                      alt={`Ảnh chụp màn hình ${i + 1} của ứng dụng ${app.name}`}
+                      loading="lazy"
+                      width="224"
+                      height="400"
+                      className="object-cover w-full h-auto"
+                    />
                   </div>
                 ))}
               </div>
@@ -1103,14 +1134,14 @@ export default function Detail({ serverApp, serverRelated }) {
                   >
                     <div className="flex items-center gap-4 min-w-0">
                       <div className="w-14 h-14 rounded-xl overflow-hidden shadow-sm relative flex-shrink-0 border border-gray-200 dark:border-zinc-800">
-                       <img
-  src={toAbs(item.icon_url || '/placeholder-icon.png')}
-  alt={`Icon của ứng dụng liên quan ${item.name}`}
-  width="56"
-  height="56"
-  loading="lazy"
-  className="object-cover w-full h-full"
-/>
+                        <img
+                          src={toAbs(item.icon_url || '/placeholder-icon.png')}
+                          alt={`Icon của ứng dụng liên quan ${item.name}`}
+                          width="56"
+                          height="56"
+                          loading="lazy"
+                          className="object-cover w-full h-full"
+                        />
                       </div>
                       <div className="flex flex-col min-w-0">
                         <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate" title={item.name}>{item.name}</p>
