@@ -23,15 +23,22 @@ import {
   faChevronUp,
   faFileArrowDown,
   faHouse,
+
+  // ✅ NEW: section + guide icons (FA)
+  faAlignLeft,
+  faImages,
   faCircleInfo,
-  faListOl,
+  faListCheck,
   faClock,
+  faLink as faLinkIcon,
+  faShieldHalved,
+  faCommentDots,
 } from '@fortawesome/free-solid-svg-icons';
 
 // Lazy-load Comments
 const Comments = dynamic(() => import('../components/Comments'), {
   ssr: false,
-  loading: () => <div className="text-sm text-gray-500 dark:text-gray-400">Đang tải bình luận…</div>,
+  loading: () => <div className="text-sm text-slate-500 dark:text-slate-400">Đang tải bình luận…</div>,
 });
 
 /* ===================== SSR ===================== */
@@ -177,7 +184,7 @@ function bbcodeToMarkdownLite(input = '') {
   });
 
   // [code]
-  s = s.replace(new RegExp('\\[code\\]\\s*([\\s\\S]*?)\\s*\\[/code\\]', 'gi'), (_m, g1) => {
+  s = s.replace(new RegExp('\\[code\\]\\s*([\\s\\S]*?)\\[/code\\]', 'gi'), (_m, g1) => {
     const body = String(g1).replace(/```/g, '``');
     return `\n\`\`\`\n${body}\n\`\`\`\n`;
   });
@@ -258,14 +265,14 @@ function NewBreadcrumb({ category, appName }) {
 const InfoRow = memo(({ label, value, expandable = false, expanded = false, onToggle }) => {
   return (
     <div className="px-4 py-3 flex items-start">
-      <div className="w-40 min-w-[9rem] text-sm text-gray-500 dark:text-gray-400">{label}</div>
-      <div className="flex-1 text-sm text-gray-800 dark:text-gray-100 min-w-0">
+      <div className="w-40 min-w-[9rem] text-sm text-slate-500 dark:text-slate-400">{label}</div>
+      <div className="flex-1 text-sm text-slate-800 dark:text-slate-100 min-w-0">
         <span className="align-top break-words">{value}</span>
         {expandable && (
           <button
             type="button"
             onClick={onToggle}
-            className="ml-2 inline-flex items-center text-blue-600 dark:text-blue-400 hover:underline"
+            className="ml-2 inline-flex items-center text-blue-600 dark:text-blue-400 hover:underline font-semibold"
           >
             {expanded ? (
               <>
@@ -633,10 +640,10 @@ export default function Detail({ serverApp, serverRelated }) {
     setTimeout(() => setIsFetchingIpa(false), 500);
   };
 
-  // Cuộn tới khu vực "Cài đặt & tải xuống" (card dưới mô tả)
-  const scrollToInstallGuide = () => {
+  // CTA mềm: cuộn xuống nút tải thật
+  const scrollToRealActions = () => {
     try {
-      const el = document.getElementById('install-guide');
+      const el = document.getElementById('real-actions');
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     } catch {}
   };
@@ -795,20 +802,20 @@ export default function Detail({ serverApp, serverRelated }) {
                   />
                 </div>
 
-                {/* Title */}
+                {/* ✅ H1 màu tươi (không đen) */}
                 <h1
-                  className="mt-4 text-2xl font-bold text-gray-900 dark:text-gray-100 drop-shadow truncate mx-auto max-w-[92vw] sm:max-w-[80vw]"
+                  className="mt-4 text-2xl font-extrabold text-blue-700 dark:text-blue-400 drop-shadow truncate mx-auto max-w-[92vw] sm:max-w-[80vw]"
                   title={app.name}
                 >
                   {app.name}
                 </h1>
                 {app.author && (
-                  <p className="text-gray-700 dark:text-gray-300 text-sm truncate mx-auto max-w-[80vw]" title={app.author}>
+                  <p className="text-slate-600 dark:text-slate-300 text-sm truncate mx-auto max-w-[80vw]" title={app.author}>
                     {app.author}
                   </p>
                 )}
 
-                {/* Buttons */}
+                {/* TestFlight buttons giữ nguyên logic (không đụng) */}
                 <div className="mt-4 flex flex-wrap justify-center gap-2">
                   {isTestflight && app.testflight_url && (
                     <>
@@ -843,17 +850,6 @@ export default function Detail({ serverApp, serverRelated }) {
                       )}
                     </>
                   )}
-
-                  {!isTestflight && (
-                    <button
-                      type="button"
-                      onClick={scrollToInstallGuide}
-                      className="inline-flex items-center justify-center px-4 py-2 rounded-full text-sm font-semibold border border-blue-500 text-blue-700 dark:text-blue-400 dark:border-blue-400/60 hover:bg-blue-100 dark:hover:bg-blue-400/10 transition active:scale-95"
-                    >
-                      <FontAwesomeIcon icon={faChevronDown} className="mr-2" />
-                      Cài đặt & tải xuống
-                    </button>
-                  )}
                 </div>
               </div>
             </div>
@@ -869,7 +865,7 @@ export default function Detail({ serverApp, serverRelated }) {
             <AdUnit desktopMode="unit" mobileVariant="compact" />
           </div>
 
-          {/* Info cards */}
+          {/* ✅ Info cards GIỮ NGUYÊN (theo yêu cầu) */}
           <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow text-center">
             <div className="-mx-2 overflow-x-auto sm:overflow-visible px-2">
               <div className="flex sm:grid sm:grid-cols-5 divide-x divide-gray-200 dark:divide-zinc-700 snap-x snap-mandatory">
@@ -935,64 +931,222 @@ export default function Detail({ serverApp, serverRelated }) {
             </div>
           </div>
 
-          {/* Mô tả */}
+          {/* CTA mềm dưới Info card (KHÔNG tải thật) */}
+          {!isTestflight && (
+            <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow text-center">
+              <button
+                type="button"
+                onClick={scrollToRealActions}
+                className="inline-flex items-center justify-center border border-blue-500 text-blue-700 dark:text-blue-400 dark:border-blue-400/60 hover:bg-blue-100 dark:hover:bg-blue-400/10 transition px-4 py-2 rounded-full text-sm font-semibold active:scale-95"
+              >
+                <FontAwesomeIcon icon={faChevronDown} className="mr-2" />
+                Cài đặt & tải xuống
+              </button>
+              <p className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                Cuộn xuống dưới mô tả để thao tác cài đặt hoặc tải IPA.
+              </p>
+            </div>
+          )}
+
+          {/* ===================== MÔ TẢ (màu theo demo + icon) ===================== */}
           <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
-            <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-3">Mô tả</h2>
+            <h2 className="text-lg font-extrabold text-blue-800 dark:text-blue-400 mb-3 flex items-center gap-2">
+              <FontAwesomeIcon icon={faAlignLeft} className="text-blue-600 dark:text-blue-400" />
+              Mô tả
+            </h2>
+
             <div className={`relative overflow-hidden transition-all duration-300 ${showFullDescription ? '' : 'max-h-72'}`}>
               <div className={`${showFullDescription ? '' : 'mask-gradient-bottom'}`}>
                 {ReactMarkdown && remarkGfm ? (
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={{
-                      h1: ({ ...props }) => <h3 className="text-xl font-bold mt-3 mb-2 text-gray-900 dark:text-gray-100" {...props} />,
-                      h2: ({ ...props }) => <h4 className="text-lg font-bold mt-3 mb-2 text-gray-900 dark:text-gray-100" {...props} />,
-                      h3: ({ ...props }) => <h5 className="text-base font-bold mt-3 mb-2 text-gray-900 dark:text-gray-100" {...props} />,
-                      p: ({ ...props }) => <p className="text-gray-700 dark:text-gray-200 leading-7 mb-3 break-words" {...props} />,
-                      ul: ({ ...props }) => <ul className="list-disc pl-5 space-y-1 mb-3 text-gray-700 dark:text-gray-200" {...props} />,
-                      ol: ({ ...props }) => <ol className="list-decimal pl-5 space-y-1 mb-3 text-gray-700 dark:text-gray-200" {...props} />,
-                      li: ({ ...props }) => <li className="marker:text-gray-500 dark:marker:text-gray-200" {...props} />,
-                      a: ({ ...props }) => <a className="text-blue-600 dark:text-blue-400 hover:underline break-all" target="_blank" rel="noopener noreferrer" {...props} />,
+                      h1: ({ ...props }) => <h3 className="text-xl font-extrabold mt-3 mb-2 text-slate-900 dark:text-slate-100" {...props} />,
+                      h2: ({ ...props }) => <h4 className="text-lg font-extrabold mt-3 mb-2 text-slate-900 dark:text-slate-100" {...props} />,
+                      h3: ({ ...props }) => <h5 className="text-base font-extrabold mt-3 mb-2 text-slate-900 dark:text-slate-100" {...props} />,
+                      p: ({ ...props }) => <p className="text-slate-700 dark:text-slate-200 leading-7 mb-3 break-words" {...props} />,
+                      ul: ({ ...props }) => <ul className="list-disc pl-5 space-y-1 mb-3 text-slate-700 dark:text-slate-200" {...props} />,
+                      ol: ({ ...props }) => <ol className="list-decimal pl-5 space-y-1 mb-3 text-slate-700 dark:text-slate-200" {...props} />,
+                      li: ({ ...props }) => <li className="marker:text-slate-500 dark:marker:text-slate-200" {...props} />,
+                      a: ({ ...props }) => <a className="text-blue-600 dark:text-blue-400 hover:underline font-semibold break-all" target="_blank" rel="noopener noreferrer" {...props} />,
                       code: ({ inline, ...props }) =>
                         inline ? (
-                          <code className="px-1 py-0.5 rounded bg-gray-100 dark:bg-zinc-800 text-pink-700 dark:text-pink-300" {...props} />
+                          <code className="px-1 py-0.5 rounded bg-slate-100 dark:bg-zinc-800 text-pink-700 dark:text-pink-300" {...props} />
                         ) : (
                           <pre className="p-3 rounded bg-gray-900 text-gray-100 overflow-auto mb-3"><code {...props} /></pre>
                         ),
                       blockquote: ({ ...props }) => <PrettyBlockquote {...props} />,
-                      hr: () => <hr className="my-4 border-gray-200 dark:border-zinc-800" />,
+                      hr: () => <hr className="my-4 border-slate-200 dark:border-zinc-800" />,
                       table: ({ children, ...props }) => (
-                        <div className="overflow-x-auto my-4 border border-gray-200 dark:border-zinc-700 rounded-lg">
-                          <table className="min-w-full divide-y divide-gray-200 dark:divide-zinc-700 text-sm" {...props}>
+                        <div className="overflow-x-auto my-4 border border-slate-200 dark:border-zinc-700 rounded-lg">
+                          <table className="min-w-full divide-y divide-slate-200 dark:divide-zinc-700 text-sm" {...props}>
                             {children}
                           </table>
                         </div>
                       ),
-                      thead: ({ children, ...props }) => <thead className="bg-gray-50 dark:bg-zinc-800/50" {...props}>{children}</thead>,
-                      tbody: ({ children, ...props }) => <tbody className="divide-y divide-gray-200 dark:divide-zinc-700 bg-white dark:bg-zinc-900" {...props}>{children}</tbody>,
-                      tr: ({ children, ...props }) => <tr className="transition-colors hover:bg-gray-50 dark:hover:bg-white/5" {...props}>{children}</tr>,
-                      th: ({ children, ...props }) => <th className="px-4 py-3 text-left font-semibold text-gray-900 dark:text-gray-100 whitespace-nowrap border-r border-gray-200 dark:border-zinc-700 first:border-l-0 last:border-r-0" {...props}>{children}</th>,
-                      td: ({ children, ...props }) => <td className="px-4 py-3 text-gray-700 dark:text-gray-300 whitespace-normal align-top border-r border-gray-200 dark:border-zinc-700 first:border-l-0 last:border-r-0" {...props}>{children}</td>,
+                      thead: ({ children, ...props }) => <thead className="bg-slate-50 dark:bg-zinc-800/50" {...props}>{children}</thead>,
+                      tbody: ({ children, ...props }) => <tbody className="divide-y divide-slate-200 dark:divide-zinc-700 bg-white dark:bg-zinc-900" {...props}>{children}</tbody>,
+                      tr: ({ children, ...props }) => <tr className="transition-colors hover:bg-slate-50 dark:hover:bg-white/5" {...props}>{children}</tr>,
+                      th: ({ children, ...props }) => <th className="px-4 py-3 text-left font-semibold text-slate-900 dark:text-slate-100 whitespace-nowrap border-r border-slate-200 dark:border-zinc-700 first:border-l-0 last:border-r-0" {...props}>{children}</th>,
+                      td: ({ children, ...props }) => <td className="px-4 py-3 text-slate-700 dark:text-slate-300 whitespace-normal align-top border-r border-slate-200 dark:border-zinc-700 first:border-l-0 last:border-r-0" {...props}>{children}</td>,
                     }}
                   >
                     {mdDescription}
                   </ReactMarkdown>
                 ) : (
-                  <p className="text-gray-700 dark:text-gray-200 leading-7 mb-3 whitespace-pre-wrap break-words">{mdDescription}</p>
+                  <p className="text-slate-700 dark:text-slate-200 leading-7 mb-3 whitespace-pre-wrap break-words">{mdDescription}</p>
                 )}
               </div>
+
               {!showFullDescription && (
                 <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white via-white to-transparent dark:from-zinc-900 dark:via-zinc-900 dark:to-transparent" />
               )}
             </div>
+
             {app?.description && app.description.length > 300 && (
               <button
                 onClick={() => setShowFullDescription(v => !v)}
-                className="mt-3 text-sm text-blue-600 dark:text-blue-400 hover:underline font-bold"
+                className="mt-3 text-sm text-blue-600 dark:text-blue-400 hover:underline font-extrabold"
               >
                 {showFullDescription ? 'Thu gọn' : 'Xem thêm...'}
               </button>
             )}
           </div>
+
+          {/* CTA thật (dưới mô tả) - đổi style theo demo: nền xanh nhạt + nút full width + steps tươi */}
+          {!isTestflight && (
+            <div id="real-actions" className="bg-blue-50 dark:bg-blue-500/10 rounded-xl p-4 shadow border border-blue-200 dark:border-blue-400/20">
+              <div className="flex items-start justify-between gap-3">
+                <h2 className="text-lg font-extrabold text-blue-900 dark:text-blue-300 flex items-center gap-2">
+                  <FontAwesomeIcon icon={faDownload} className="text-blue-600 dark:text-blue-400" />
+                  Cài đặt & tải xuống {app?.name}
+                </h2>
+              </div>
+
+              <p className="mt-1 text-xs text-slate-600 dark:text-slate-300">
+                Trang cài đặt sẽ <b>đếm ngược 10 giây</b> trước khi hiện liên kết cài đặt/tải xuống.
+              </p>
+
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                <button
+                  onClick={handleInstall}
+                  disabled={isInstalling}
+                  className={`w-full inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 font-extrabold shadow-sm transition active:scale-[0.99]
+                  ${isInstalling ? 'opacity-60 cursor-not-allowed' : 'hover:brightness-[1.02]'}
+                  bg-gradient-to-r from-green-400 to-green-600 text-emerald-950`}
+                >
+                  {isInstalling ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-1 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 01 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Đang xử lý…
+                    </>
+                  ) : (
+                    <>
+                      <FontAwesomeIcon icon={faDownload} />
+                      Cài đặt
+                    </>
+                  )}
+                </button>
+
+                <button
+                  onClick={handleDownloadIpa}
+                  disabled={isFetchingIpa}
+                  className={`w-full inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 font-extrabold shadow-sm transition active:scale-[0.99]
+                  ${isFetchingIpa ? 'opacity-60 cursor-not-allowed' : 'hover:brightness-[1.02]'}
+                  bg-gradient-to-r from-blue-300 to-blue-600 text-slate-950`}
+                  title="Tải file IPA (ẩn nguồn tải)"
+                >
+                  {isFetchingIpa ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-1 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 01 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Đang tạo…
+                    </>
+                  ) : (
+                    <>
+                      <FontAwesomeIcon icon={faFileArrowDown} />
+                      Tải IPA
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* dashed divider như demo */}
+              <div className="my-4 border-t-2 border-dashed border-blue-200 dark:border-blue-400/20" />
+
+              {/* Hướng dẫn cài đặt (steps 1-4) */}
+              <div>
+                <div className="flex items-center gap-2 text-blue-900 dark:text-blue-300 font-extrabold">
+                  <FontAwesomeIcon icon={faListCheck} className="text-blue-600 dark:text-blue-400" />
+                  Hướng dẫn cài đặt
+                </div>
+
+                <div className="mt-3 grid grid-cols-1 gap-2">
+                  <div className="bg-white/80 dark:bg-zinc-900/50 border border-blue-200/70 dark:border-blue-400/10 rounded-2xl p-3 flex gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-gradient-to-b from-blue-400 to-blue-600 text-white font-extrabold flex items-center justify-center flex-none">1</div>
+                    <div className="min-w-0">
+                      <div className="font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                        <FontAwesomeIcon icon={faDownload} className="text-blue-600 dark:text-blue-400" />
+                        Nhấn Cài đặt
+                      </div>
+                      <div className="text-sm text-slate-700 dark:text-slate-200">
+                        Bấm nút <b>Cài đặt</b> để mở trang cài đặt cho {app?.name}.
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white/80 dark:bg-zinc-900/50 border border-green-200/70 dark:border-green-400/10 rounded-2xl p-3 flex gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-gradient-to-b from-green-400 to-green-600 text-white font-extrabold flex items-center justify-center flex-none">2</div>
+                    <div className="min-w-0">
+                      <div className="font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                        <FontAwesomeIcon icon={faClock} className="text-green-600 dark:text-green-400" />
+                        Chờ 10 giây
+                      </div>
+                      <div className="text-sm text-slate-700 dark:text-slate-200">
+                        Trên trang cài đặt sẽ có <b>đếm ngược 10 giây</b> (đã có sẵn).
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white/80 dark:bg-zinc-900/50 border border-amber-200/70 dark:border-amber-400/10 rounded-2xl p-3 flex gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-gradient-to-b from-amber-300 to-amber-500 text-amber-950 font-extrabold flex items-center justify-center flex-none">3</div>
+                    <div className="min-w-0">
+                      <div className="font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                        <FontAwesomeIcon icon={faLinkIcon} className="text-amber-600 dark:text-amber-400" />
+                        Bấm liên kết xuất hiện
+                      </div>
+                      <div className="text-sm text-slate-700 dark:text-slate-200">
+                        Hết thời gian, liên kết <b>Cài đặt / Tải xuống</b> sẽ xuất hiện để bạn thao tác.
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-white/80 dark:bg-zinc-900/50 border border-purple-200/70 dark:border-purple-400/10 rounded-2xl p-3 flex gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-gradient-to-b from-purple-400 to-purple-600 text-white font-extrabold flex items-center justify-center flex-none">4</div>
+                    <div className="min-w-0">
+                      <div className="font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                        <FontAwesomeIcon icon={faShieldHalved} className="text-purple-600 dark:text-purple-400" />
+                        Nếu bị chặn / lỗi chứng chỉ
+                      </div>
+                      <div className="text-sm text-slate-700 dark:text-slate-200">
+                        Làm theo hướng dẫn tin cậy chứng chỉ trên trang cài đặt (nếu hệ thống iOS yêu cầu).
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="mt-3 text-xs text-slate-600 dark:text-slate-300">
+                  <FontAwesomeIcon icon={faExclamationTriangle} className="mr-2 text-amber-500" />
+                  Lưu ý: Tải IPA yêu cầu <b>đăng nhập</b> và <b>xác minh email</b>.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Quảng cáo (between sections) */}
           <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
@@ -1000,13 +1154,16 @@ export default function Detail({ serverApp, serverRelated }) {
             <AdUnit desktopMode="unit" isArticleAd />
           </div>
 
-          {/* Screenshots */}
+          {/* ===================== Screenshots (màu + icon) ===================== */}
           {Array.isArray(app.screenshots) && app.screenshots.length > 0 && (
             <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
-              <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-3">Ảnh màn hình</h2>
+              <h2 className="text-lg font-extrabold text-blue-800 dark:text-blue-400 mb-3 flex items-center gap-2">
+                <FontAwesomeIcon icon={faImages} className="text-blue-600 dark:text-blue-400" />
+                Ảnh màn hình
+              </h2>
               <div className="flex gap-3 overflow-x-auto pb-1">
                 {app.screenshots.map((url, i) => (
-                  <div key={i} className="flex-shrink-0 w-48 md:w-56 rounded-xl overflow-hidden border border-gray-200 dark:border-zinc-800 relative">
+                  <div key={i} className="flex-shrink-0 w-48 md:w-56 rounded-xl overflow-hidden border border-slate-200 dark:border-zinc-800 relative">
                     <img
                       src={toAbs(url)}
                       alt={`Ảnh chụp màn hình ${i + 1} của ứng dụng ${app.name}`}
@@ -1021,10 +1178,13 @@ export default function Detail({ serverApp, serverRelated }) {
             </div>
           )}
 
-          {/* Thông tin */}
+          {/* ===================== Thông tin (giữ layout/logic, đổi style theo demo + icon) ===================== */}
           <div className="bg-white dark:bg-zinc-900 rounded-xl shadow overflow-hidden">
-            <h2 className="px-4 pt-4 text-lg font-bold text-gray-800 dark:text-gray-100">Thông tin</h2>
-            <div className="mt-3 divide-y divide-gray-200 dark:divide-zinc-800">
+            <h2 className="px-4 pt-4 text-lg font-extrabold text-blue-800 dark:text-blue-400 flex items-center gap-2">
+              <FontAwesomeIcon icon={faCircleInfo} className="text-blue-600 dark:text-blue-400" />
+              Thông tin
+            </h2>
+            <div className="mt-3 divide-y divide-slate-200 dark:divide-zinc-800">
               <InfoRow label="Nhà phát triển" value={app.author || 'Không rõ'} />
               <InfoRow label="Phiên bản" value={app.version || 'Không rõ'} />
               <InfoRow label="Dung lượng" value={displaySize} />
@@ -1062,142 +1222,24 @@ export default function Detail({ serverApp, serverRelated }) {
               <InfoRow label="Xếp hạng tuổi" value={app.age_rating || 'Không rõ'} />
             </div>
           </div>
-          
-          {/* Divider dashed (giống demo) + Card cài đặt (dưới mô tả) */}
-          {!isTestflight && (
-            <>
-              <div className="my-5 border-t-2 border-dashed border-gray-300 dark:border-zinc-700" />
-
-              <div id="install-guide" className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-300 border border-blue-200 dark:border-blue-400/20 flex-shrink-0">
-                    <FontAwesomeIcon icon={faCircleInfo} className="w-4 h-4" />
-                  </div>
-
-                  <div className="min-w-0">
-                    <h2 className="text-lg font-extrabold text-gray-900 dark:text-gray-100 leading-snug">
-                      Cài đặt & tải xuống {app?.name}
-                    </h2>
-                    <p className="mt-1 text-sm text-gray-600 dark:text-gray-300">
-                      Bấm nút bên dưới để chuyển sang <b>trang cài đặt</b>. Tại đó hệ thống sẽ <b>đếm ngược 10 giây</b>,
-                      sau đó liên kết <b>cài đặt</b> hoặc <b>tải IPA</b> mới xuất hiện.
-                    </p>
-                  </div>
-                </div>
-
-                <div className="mt-4 space-y-2">
-                  <div className="flex gap-3 p-3 rounded-xl border border-gray-200 dark:border-zinc-800 bg-gray-50 dark:bg-white/5">
-                    <div className="w-7 h-7 rounded-lg flex items-center justify-center font-extrabold text-xs bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 flex-shrink-0">
-                      1
-                    </div>
-                    <div className="text-sm text-gray-700 dark:text-gray-200">
-                      Chọn <b>Cài đặt</b> (cài trực tiếp) hoặc <b>Tải IPA</b> (tải file IPA).
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3 p-3 rounded-xl border border-gray-200 dark:border-zinc-800 bg-gray-50 dark:bg-white/5">
-                    <div className="w-7 h-7 rounded-lg flex items-center justify-center font-extrabold text-xs bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 flex-shrink-0">
-                      2
-                    </div>
-                    <div className="text-sm text-gray-700 dark:text-gray-200">
-                      Bạn sẽ được chuyển sang <b>trang cài đặt riêng</b> của StoreiOS.
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3 p-3 rounded-xl border border-gray-200 dark:border-zinc-800 bg-gray-50 dark:bg-white/5">
-                    <div className="w-7 h-7 rounded-lg flex items-center justify-center font-extrabold text-xs bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 flex-shrink-0">
-                      3
-                    </div>
-                    <div className="text-sm text-gray-700 dark:text-gray-200">
-                      Chờ <b>đếm ngược 10 giây</b> để hệ thống chuẩn bị liên kết.
-                      <span className="ml-2 inline-flex items-center text-xs text-gray-500 dark:text-gray-400">
-                        <FontAwesomeIcon icon={faClock} className="mr-1 h-3 w-3" />
-                        10s
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3 p-3 rounded-xl border border-gray-200 dark:border-zinc-800 bg-gray-50 dark:bg-white/5">
-                    <div className="w-7 h-7 rounded-lg flex items-center justify-center font-extrabold text-xs bg-indigo-100 dark:bg-indigo-500/20 text-indigo-700 dark:text-indigo-300 flex-shrink-0">
-                      4
-                    </div>
-                    <div className="text-sm text-gray-700 dark:text-gray-200">
-                      Khi liên kết xuất hiện, bấm để <b>cài đặt</b> hoặc <b>tải IPA</b> và hoàn tất.
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-4 p-3 rounded-xl border border-amber-200 dark:border-amber-500/20 bg-amber-50 dark:bg-amber-500/10 text-amber-900 dark:text-amber-100 text-sm">
-                  <FontAwesomeIcon icon={faListOl} className="mr-2" />
-                  <b>Lưu ý:</b> Với <b>Tải IPA</b>, bạn có thể cần <b>đăng nhập</b> và <b>xác minh email</b>.
-                </div>
-
-                <div className="mt-4 grid grid-cols-1 gap-3">
-                  <button
-                    onClick={handleInstall}
-                    disabled={isInstalling}
-                    className={`w-full inline-flex items-center justify-center px-4 py-3 rounded-full text-sm font-extrabold text-white bg-gradient-to-b from-green-500 to-green-600 shadow-md hover:brightness-105 active:scale-[0.99] transition ${
-                      isInstalling ? 'opacity-60 cursor-not-allowed' : ''
-                    }`}
-                  >
-                    {isInstalling ? (
-                      <>
-                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 01 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Đang chuyển…
-                      </>
-                    ) : (
-                      <>
-                        <FontAwesomeIcon icon={faDownload} className="mr-2" />
-                        Cài đặt
-                      </>
-                    )}
-                  </button>
-
-                  <button
-                    onClick={handleDownloadIpa}
-                    disabled={isFetchingIpa || !isInstallable}
-                    className={`w-full inline-flex items-center justify-center px-4 py-3 rounded-full text-sm font-extrabold text-white bg-gradient-to-b from-blue-500 to-blue-600 shadow-md hover:brightness-105 active:scale-[0.99] transition ${
-                      (isFetchingIpa || !isInstallable) ? 'opacity-60 cursor-not-allowed' : ''
-                    }`}
-                    title={isInstallable ? 'Tải file IPA (ẩn nguồn tải)' : 'Mục này không hỗ trợ tải IPA'}
-                  >
-                    {isFetchingIpa ? (
-                      <>
-                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 01 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Đang tạo…
-                      </>
-                    ) : (
-                      <>
-                        <FontAwesomeIcon icon={faFileArrowDown} className="mr-2" />
-                        Tải IPA
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </>
-          )}
 
           {/* Related */}
           {related.length > 0 && (
             <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
-              <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4">Ứng dụng cùng chuyên mục</h2>
+              <h2 className="text-lg font-extrabold text-blue-800 dark:text-blue-400 mb-4 flex items-center gap-2">
+                <FontAwesomeIcon icon={faCircleInfo} className="text-blue-600 dark:text-blue-400" />
+                Ứng dụng cùng chuyên mục
+              </h2>
 
-              <div className="divide-y divide-gray-200 dark:divide-zinc-800">
+              <div className="divide-y divide-slate-200 dark:divide-zinc-800">
                 {relatedSlice.map((item) => (
                   <Link
                     href={`/${item.slug}`}
                     key={item.id}
-                    className="flex items-center justify-between py-4 hover:bg-gray-50 dark:hover:bg-white/5 px-2 rounded-lg transition"
+                    className="flex items-center justify-between py-4 hover:bg-slate-50 dark:hover:bg-white/5 px-2 rounded-lg transition"
                   >
                     <div className="flex items-center gap-4 min-w-0">
-                      <div className="w-14 h-14 rounded-xl overflow-hidden shadow-sm relative flex-shrink-0 border border-gray-200 dark:border-zinc-800">
+                      <div className="w-14 h-14 rounded-xl overflow-hidden shadow-sm relative flex-shrink-0 border border-slate-200 dark:border-zinc-800">
                         <img
                           src={toAbs(item.icon_url || '/placeholder-icon.png')}
                           alt={`Icon của ứng dụng liên quan ${item.name}`}
@@ -1208,18 +1250,18 @@ export default function Detail({ serverApp, serverRelated }) {
                         />
                       </div>
                       <div className="flex flex-col min-w-0">
-                        <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 truncate" title={item.name}>{item.name}</p>
-                        <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 min-w-0">
+                        <p className="text-sm font-extrabold text-slate-900 dark:text-slate-100 truncate" title={item.name}>{item.name}</p>
+                        <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 min-w-0">
                           {item.author && <span className="truncate" title={item.author}>{item.author}</span>}
                           {item.version && (
-                            <span className="bg-gray-200 dark:bg-zinc-800 text-gray-800 dark:text-gray-100 px-2 py-0.5 rounded text-xs font-medium flex-shrink-0">
+                            <span className="bg-slate-200 dark:bg-zinc-800 text-slate-800 dark:text-slate-100 px-2 py-0.5 rounded text-xs font-semibold flex-shrink-0">
                               {item.version}
                             </span>
                           )}
                         </div>
                       </div>
                     </div>
-                    <FontAwesomeIcon icon={faDownload} className="text-blue-500 dark:text-blue-400 text-lg flex-shrink-0" />
+                    <FontAwesomeIcon icon={faDownload} className="text-blue-600 dark:text-blue-400 text-lg flex-shrink-0" />
                   </Link>
                 ))}
               </div>
@@ -1229,15 +1271,15 @@ export default function Detail({ serverApp, serverRelated }) {
                 <button
                   onClick={() => setRelPage(p => Math.max(1, p - 1))}
                   disabled={relPage === 1}
-                  className="px-3 py-2 rounded border text-sm disabled:opacity-50 border-gray-200 dark:border-zinc-800 text-gray-700 dark:text-gray-100"
+                  className="px-3 py-2 rounded border text-sm disabled:opacity-50 border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-slate-100"
                 >
                   Trang trước
                 </button>
-                <div className="text-sm text-gray-600 dark:text-gray-300">Trang {relPage}/{relTotalPages}</div>
+                <div className="text-sm text-slate-600 dark:text-slate-300">Trang {relPage}/{relTotalPages}</div>
                 <button
                   onClick={() => setRelPage(p => Math.min(relTotalPages, p + 1))}
                   disabled={relTotalPages === relPage}
-                  className="px-3 py-2 rounded border text-sm disabled:opacity-50 border-gray-200 dark:border-zinc-800 text-gray-700 dark:text-gray-100"
+                  className="px-3 py-2 rounded border text-sm disabled:opacity-50 border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-slate-100"
                 >
                   Trang sau
                 </button>
@@ -1251,8 +1293,25 @@ export default function Detail({ serverApp, serverRelated }) {
             <AdUnit desktopMode="unit" mobileVariant="multiplex" />
           </div>
 
-          {/* Bình luận */}
-          <Comments postId={app.slug} postTitle={app.name} />
+          {/* ===================== Bình luận (chỉnh màu "hợp toàn site") ===================== */}
+          <div
+            className="
+              bg-white dark:bg-zinc-900 rounded-xl p-4 shadow
+              text-slate-700 dark:text-slate-200
+              [&_a]:text-blue-600 [&_a:hover]:underline [&_a:hover]:text-blue-700
+              [&_h1]:text-slate-900 [&_h2]:text-slate-900 [&_h3]:text-slate-900
+              [&_h1]:font-extrabold [&_h2]:font-extrabold [&_h3]:font-extrabold
+              [&_p]:text-slate-700 [&_p]:dark:text-slate-200
+              [&_input]:border-slate-200 [&_textarea]:border-slate-200
+              [&_button]:font-semibold
+            "
+          >
+            <div className="flex items-center gap-2 mb-3 text-blue-800 dark:text-blue-400 font-extrabold">
+              <FontAwesomeIcon icon={faCommentDots} className="text-blue-600 dark:text-blue-400" />
+              Bình luận
+            </div>
+            <Comments postId={app.slug} postTitle={app.name} />
+          </div>
         </div>
       </div>
     </Layout>
