@@ -1044,10 +1044,6 @@ export default function Detail({ serverApp, serverRelated }) {
                   )}
                 </button>
               </div>
-
-              <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 text-center">
-                Mẹo: Nếu bạn dùng Offerwall, hãy kích hoạt ở bước này để tránh cản người dùng quá sớm.
-              </p>
             </div>
           )}
 
