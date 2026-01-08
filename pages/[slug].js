@@ -994,6 +994,75 @@ export default function Detail({ serverApp, serverRelated }) {
             )}
           </div>
 
+          {/* Quảng cáo (between sections) */}
+          <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
+            <div className="text-[11px] uppercase tracking-wider text-gray-400 mb-2 text-center">Quảng cáo</div>
+            <AdUnit desktopMode="unit" isArticleAd />
+          </div>
+
+          {/* Screenshots */}
+          {Array.isArray(app.screenshots) && app.screenshots.length > 0 && (
+            <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
+              <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-3">Ảnh màn hình</h2>
+              <div className="flex gap-3 overflow-x-auto pb-1">
+                {app.screenshots.map((url, i) => (
+                  <div key={i} className="flex-shrink-0 w-48 md:w-56 rounded-xl overflow-hidden border border-gray-200 dark:border-zinc-800 relative">
+                    <img
+                      src={toAbs(url)}
+                      alt={`Ảnh chụp màn hình ${i + 1} của ứng dụng ${app.name}`}
+                      loading="lazy"
+                      width="224"
+                      height="400"
+                      className="object-cover w-full h-auto"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Thông tin */}
+          <div className="bg-white dark:bg-zinc-900 rounded-xl shadow overflow-hidden">
+            <h2 className="px-4 pt-4 text-lg font-bold text-gray-800 dark:text-gray-100">Thông tin</h2>
+            <div className="mt-3 divide-y divide-gray-200 dark:divide-zinc-800">
+              <InfoRow label="Nhà phát triển" value={app.author || 'Không rõ'} />
+              <InfoRow label="Phiên bản" value={app.version || 'Không rõ'} />
+              <InfoRow label="Dung lượng" value={displaySize} />
+              <InfoRow
+                label="Thiết bị hỗ trợ"
+                value={
+                  devicesArray.length
+                    ? showAllDevices
+                      ? devicesArray.join(', ')
+                      : `${devicesShort.list.join(', ')}${devicesShort.remain ? `, +${devicesShort.remain}` : ''}`
+                    : 'Không rõ'
+                }
+                expandable={devicesArray.length > devicesShort.list.length}
+                expanded={showAllDevices}
+                onToggle={() => setShowAllDevices(v => !v)}
+              />
+              <InfoRow
+                label="Ngôn ngữ"
+                value={
+                  languagesArray.length
+                    ? showAllLanguages
+                      ? languagesArray.join(', ')
+                      : `${languagesShort.list.join(', ')}${languagesShort.remain ? `, +${languagesShort.remain}` : ''}`
+                    : 'Không rõ'
+                }
+                expandable={languagesArray.length > languagesShort.list.length}
+                expanded={showAllLanguages}
+                onToggle={() => setShowAllLanguages(v => !v)}
+              />
+              <InfoRow label="Yêu cầu iOS" value={app.minimum_os_version ? `iOS ${app.minimum_os_version}+` : 'Không rõ'} />
+              <InfoRow
+                label="Ngày phát hành"
+                value={app.release_date ? new Date(app.release_date).toLocaleDateString('vi-VN') : 'Không rõ'}
+              />
+              <InfoRow label="Xếp hạng tuổi" value={app.age_rating || 'Không rõ'} />
+            </div>
+          </div>
+          
           {/* Divider dashed (giống demo) + Card cài đặt (dưới mô tả) */}
           {!isTestflight && (
             <>
@@ -1114,75 +1183,6 @@ export default function Detail({ serverApp, serverRelated }) {
               </div>
             </>
           )}
-
-          {/* Quảng cáo (between sections) */}
-          <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
-            <div className="text-[11px] uppercase tracking-wider text-gray-400 mb-2 text-center">Quảng cáo</div>
-            <AdUnit desktopMode="unit" isArticleAd />
-          </div>
-
-          {/* Screenshots */}
-          {Array.isArray(app.screenshots) && app.screenshots.length > 0 && (
-            <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
-              <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100 mb-3">Ảnh màn hình</h2>
-              <div className="flex gap-3 overflow-x-auto pb-1">
-                {app.screenshots.map((url, i) => (
-                  <div key={i} className="flex-shrink-0 w-48 md:w-56 rounded-xl overflow-hidden border border-gray-200 dark:border-zinc-800 relative">
-                    <img
-                      src={toAbs(url)}
-                      alt={`Ảnh chụp màn hình ${i + 1} của ứng dụng ${app.name}`}
-                      loading="lazy"
-                      width="224"
-                      height="400"
-                      className="object-cover w-full h-auto"
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Thông tin */}
-          <div className="bg-white dark:bg-zinc-900 rounded-xl shadow overflow-hidden">
-            <h2 className="px-4 pt-4 text-lg font-bold text-gray-800 dark:text-gray-100">Thông tin</h2>
-            <div className="mt-3 divide-y divide-gray-200 dark:divide-zinc-800">
-              <InfoRow label="Nhà phát triển" value={app.author || 'Không rõ'} />
-              <InfoRow label="Phiên bản" value={app.version || 'Không rõ'} />
-              <InfoRow label="Dung lượng" value={displaySize} />
-              <InfoRow
-                label="Thiết bị hỗ trợ"
-                value={
-                  devicesArray.length
-                    ? showAllDevices
-                      ? devicesArray.join(', ')
-                      : `${devicesShort.list.join(', ')}${devicesShort.remain ? `, +${devicesShort.remain}` : ''}`
-                    : 'Không rõ'
-                }
-                expandable={devicesArray.length > devicesShort.list.length}
-                expanded={showAllDevices}
-                onToggle={() => setShowAllDevices(v => !v)}
-              />
-              <InfoRow
-                label="Ngôn ngữ"
-                value={
-                  languagesArray.length
-                    ? showAllLanguages
-                      ? languagesArray.join(', ')
-                      : `${languagesShort.list.join(', ')}${languagesShort.remain ? `, +${languagesShort.remain}` : ''}`
-                    : 'Không rõ'
-                }
-                expandable={languagesArray.length > languagesShort.list.length}
-                expanded={showAllLanguages}
-                onToggle={() => setShowAllLanguages(v => !v)}
-              />
-              <InfoRow label="Yêu cầu iOS" value={app.minimum_os_version ? `iOS ${app.minimum_os_version}+` : 'Không rõ'} />
-              <InfoRow
-                label="Ngày phát hành"
-                value={app.release_date ? new Date(app.release_date).toLocaleDateString('vi-VN') : 'Không rõ'}
-              />
-              <InfoRow label="Xếp hạng tuổi" value={app.age_rating || 'Không rõ'} />
-            </div>
-          </div>
 
           {/* Related */}
           {related.length > 0 && (
