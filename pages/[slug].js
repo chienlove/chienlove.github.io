@@ -262,33 +262,28 @@ function NewBreadcrumb({ category, appName }) {
 }
 
 /* ===================== InfoRow ===================== */
-const InfoRow = memo(({ label, value, expandable = false, expanded = false, onToggle }) => {
+const InfoRow = ({ label, value, expandable, expanded, onToggle }) => {
   return (
-    <div className="px-4 py-3 flex items-start">
-      <div className="w-40 min-w-[9rem] text-sm text-slate-500 dark:text-slate-400">{label}</div>
-      <div className="flex-1 text-sm text-slate-800 dark:text-slate-100 min-w-0">
-        <span className="align-top break-words">{value}</span>
+    <div className="px-4 py-3 flex justify-between items-start gap-4">
+      <span className="font-semibold text-slate-500 dark:text-zinc-500 min-w-fit">
+        {label}
+      </span>
+      <div className="text-right flex-1">
+        <span className="font-bold text-slate-900 dark:text-zinc-100">
+          {value}
+        </span>
         {expandable && (
           <button
-            type="button"
             onClick={onToggle}
-            className="ml-2 inline-flex items-center text-blue-600 dark:text-blue-400 hover:underline font-semibold"
+            className="ml-2 text-blue-600 dark:text-blue-400 text-sm"
           >
-            {expanded ? (
-              <>
-                Thu gọn <FontAwesomeIcon icon={faChevronUp} className="ml-1 h-3" />
-              </>
-            ) : (
-              <>
-                Xem thêm <FontAwesomeIcon icon={faChevronDown} className="ml-1 h-3" />
-              </>
-            )}
+            {expanded ? 'Thu gọn' : 'Xem thêm'}
           </button>
         )}
       </div>
     </div>
   );
-});
+};
 InfoRow.displayName = 'InfoRow';
 
 /* ===================== Page ===================== */
@@ -1013,6 +1008,82 @@ export default function Detail({ serverApp, serverRelated }) {
             )}
           </div>
 
+          {/* Quảng cáo (between sections) */}
+          <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
+            <div className="text-[11px] uppercase tracking-wider text-gray-400 mb-2 text-center">Quảng cáo</div>
+            <AdUnit desktopMode="unit" isArticleAd />
+          </div>
+
+          {/* ===================== Screenshots (màu + icon) ===================== */}
+          {Array.isArray(app.screenshots) && app.screenshots.length > 0 && (
+            <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
+              <h2 className="text-lg font-extrabold text-blue-800 dark:text-blue-400 mb-3 flex items-center gap-2">
+                <FontAwesomeIcon icon={faImages} className="text-blue-600 dark:text-blue-400" />
+                Ảnh màn hình
+              </h2>
+              <div className="flex gap-3 overflow-x-auto pb-1">
+                {app.screenshots.map((url, i) => (
+                  <div key={i} className="flex-shrink-0 w-48 md:w-56 rounded-xl overflow-hidden border border-slate-200 dark:border-zinc-800 relative">
+                    <img
+                      src={toAbs(url)}
+                      alt={`Ảnh chụp màn hình ${i + 1} của ứng dụng ${app.name}`}
+                      loading="lazy"
+                      width="224"
+                      height="400"
+                      className="object-cover w-full h-auto"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* ===================== Thông tin (giữ layout/logic, đổi style theo demo + icon) ===================== */}
+          <div className="bg-white dark:bg-zinc-900 rounded-xl shadow overflow-hidden">
+  <h2 className="px-4 pt-4 text-lg font-extrabold text-blue-800 dark:text-blue-400 flex items-center gap-2">
+    <FontAwesomeIcon icon={faCircleInfo} className="text-blue-600 dark:text-blue-400" />
+    Thông tin
+  </h2>
+  <div className="mt-3 divide-y divide-dashed divide-slate-300 dark:divide-zinc-700">
+    <InfoRow label="Nhà phát triển" value={app.author || 'Không rõ'} />
+    <InfoRow label="Phiên bản" value={app.version || 'Không rõ'} />
+    <InfoRow label="Dung lượng" value={displaySize} />
+    <InfoRow
+      label="Thiết bị hỗ trợ"
+      value={
+        devicesArray.length
+          ? showAllDevices
+            ? devicesArray.join(', ')
+            : `${devicesShort.list.join(', ')}${devicesShort.remain ? `, +${devicesShort.remain}` : ''}`
+          : 'Không rõ'
+      }
+      expandable={devicesArray.length > devicesShort.list.length}
+      expanded={showAllDevices}
+      onToggle={() => setShowAllDevices(v => !v)}
+    />
+    <InfoRow
+      label="Ngôn ngữ"
+      value={
+        languagesArray.length
+          ? showAllLanguages
+            ? languagesArray.join(', ')
+            : `${languagesShort.list.join(', ')}${languagesShort.remain ? `, +${languagesShort.remain}` : ''}`
+          : 'Không rõ'
+      }
+      expandable={languagesArray.length > languagesShort.list.length}
+      expanded={showAllLanguages}
+      onToggle={() => setShowAllLanguages(v => !v)}
+    />
+    <InfoRow label="Yêu cầu iOS" value={app.minimum_os_version ? `iOS ${app.minimum_os_version}+` : 'Không rõ'} />
+    <InfoRow
+      label="Ngày phát hành"
+      value={app.release_date ? new Date(app.release_date).toLocaleDateString('vi-VN') : 'Không rõ'}
+    />
+    <InfoRow label="Xếp hạng tuổi" value={app.age_rating || 'Không rõ'} />
+  </div>
+</div>
+
+          
           {/* CTA thật (dưới mô tả) - đổi style theo demo: nền xanh nhạt + nút full width + steps tươi */}
           {!isTestflight && (
             <div id="real-actions" className="bg-blue-50 dark:bg-blue-500/10 rounded-xl p-4 shadow border border-blue-200 dark:border-blue-400/20">
@@ -1108,7 +1179,7 @@ export default function Detail({ serverApp, serverRelated }) {
                         Chờ 10 giây
                       </div>
                       <div className="text-sm text-slate-700 dark:text-slate-200">
-                        Trên trang cài đặt sẽ có <b>đếm ngược 10 giây</b> (đã có sẵn).
+                        Trên trang cài đặt sẽ có <b>đếm ngược 10 giây</b>
                       </div>
                     </div>
                   </div>
@@ -1147,81 +1218,6 @@ export default function Detail({ serverApp, serverRelated }) {
               </div>
             </div>
           )}
-
-          {/* Quảng cáo (between sections) */}
-          <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
-            <div className="text-[11px] uppercase tracking-wider text-gray-400 mb-2 text-center">Quảng cáo</div>
-            <AdUnit desktopMode="unit" isArticleAd />
-          </div>
-
-          {/* ===================== Screenshots (màu + icon) ===================== */}
-          {Array.isArray(app.screenshots) && app.screenshots.length > 0 && (
-            <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
-              <h2 className="text-lg font-extrabold text-blue-800 dark:text-blue-400 mb-3 flex items-center gap-2">
-                <FontAwesomeIcon icon={faImages} className="text-blue-600 dark:text-blue-400" />
-                Ảnh màn hình
-              </h2>
-              <div className="flex gap-3 overflow-x-auto pb-1">
-                {app.screenshots.map((url, i) => (
-                  <div key={i} className="flex-shrink-0 w-48 md:w-56 rounded-xl overflow-hidden border border-slate-200 dark:border-zinc-800 relative">
-                    <img
-                      src={toAbs(url)}
-                      alt={`Ảnh chụp màn hình ${i + 1} của ứng dụng ${app.name}`}
-                      loading="lazy"
-                      width="224"
-                      height="400"
-                      className="object-cover w-full h-auto"
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* ===================== Thông tin (giữ layout/logic, đổi style theo demo + icon) ===================== */}
-          <div className="bg-white dark:bg-zinc-900 rounded-xl shadow overflow-hidden">
-            <h2 className="px-4 pt-4 text-lg font-extrabold text-blue-800 dark:text-blue-400 flex items-center gap-2">
-              <FontAwesomeIcon icon={faCircleInfo} className="text-blue-600 dark:text-blue-400" />
-              Thông tin
-            </h2>
-            <div className="mt-3 divide-y divide-slate-200 dark:divide-zinc-800">
-              <InfoRow label="Nhà phát triển" value={app.author || 'Không rõ'} />
-              <InfoRow label="Phiên bản" value={app.version || 'Không rõ'} />
-              <InfoRow label="Dung lượng" value={displaySize} />
-              <InfoRow
-                label="Thiết bị hỗ trợ"
-                value={
-                  devicesArray.length
-                    ? showAllDevices
-                      ? devicesArray.join(', ')
-                      : `${devicesShort.list.join(', ')}${devicesShort.remain ? `, +${devicesShort.remain}` : ''}`
-                    : 'Không rõ'
-                }
-                expandable={devicesArray.length > devicesShort.list.length}
-                expanded={showAllDevices}
-                onToggle={() => setShowAllDevices(v => !v)}
-              />
-              <InfoRow
-                label="Ngôn ngữ"
-                value={
-                  languagesArray.length
-                    ? showAllLanguages
-                      ? languagesArray.join(', ')
-                      : `${languagesShort.list.join(', ')}${languagesShort.remain ? `, +${languagesShort.remain}` : ''}`
-                    : 'Không rõ'
-                }
-                expandable={languagesArray.length > languagesShort.list.length}
-                expanded={showAllLanguages}
-                onToggle={() => setShowAllLanguages(v => !v)}
-              />
-              <InfoRow label="Yêu cầu iOS" value={app.minimum_os_version ? `iOS ${app.minimum_os_version}+` : 'Không rõ'} />
-              <InfoRow
-                label="Ngày phát hành"
-                value={app.release_date ? new Date(app.release_date).toLocaleDateString('vi-VN') : 'Không rõ'}
-              />
-              <InfoRow label="Xếp hạng tuổi" value={app.age_rating || 'Không rõ'} />
-            </div>
-          </div>
 
           {/* Related */}
           {related.length > 0 && (
@@ -1293,25 +1289,8 @@ export default function Detail({ serverApp, serverRelated }) {
             <AdUnit desktopMode="unit" mobileVariant="multiplex" />
           </div>
 
-          {/* ===================== Bình luận (chỉnh màu "hợp toàn site") ===================== */}
-          <div
-            className="
-              bg-white dark:bg-zinc-900 rounded-xl p-4 shadow
-              text-slate-700 dark:text-slate-200
-              [&_a]:text-blue-600 [&_a:hover]:underline [&_a:hover]:text-blue-700
-              [&_h1]:text-slate-900 [&_h2]:text-slate-900 [&_h3]:text-slate-900
-              [&_h1]:font-extrabold [&_h2]:font-extrabold [&_h3]:font-extrabold
-              [&_p]:text-slate-700 [&_p]:dark:text-slate-200
-              [&_input]:border-slate-200 [&_textarea]:border-slate-200
-              [&_button]:font-semibold
-            "
-          >
-            <div className="flex items-center gap-2 mb-3 text-blue-800 dark:text-blue-400 font-extrabold">
-              <FontAwesomeIcon icon={faCommentDots} className="text-blue-600 dark:text-blue-400" />
-              Bình luận
-            </div>
-            <Comments postId={app.slug} postTitle={app.name} />
-          </div>
+          {/* Bình luận */}
+          <Comments postId={app.slug} postTitle={app.name} />
         </div>
       </div>
     </Layout>
