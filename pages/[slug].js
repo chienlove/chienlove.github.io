@@ -1019,7 +1019,7 @@ export default function Detail({ serverApp, serverRelated }) {
   {/* English CPC context - keep it close to the ad */}
   <div className="bg-slate-50 dark:bg-zinc-800/40 border border-slate-200 dark:border-zinc-700 rounded-xl p-4 mb-3">
     <h3 className="text-sm font-extrabold text-slate-900 dark:text-slate-100 mb-2">
-      iOS Enterprise Certificate & Installation Guide
+      iOS Installation & Security Notes
     </h3>
     <p className="text-sm text-slate-700 dark:text-slate-300 leading-6">
       Installing iOS apps outside the App Store requires understanding Apple’s certificate system and iOS security restrictions.
