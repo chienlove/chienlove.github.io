@@ -1046,7 +1046,7 @@ export default function Detail({ serverApp, serverRelated }) {
     <FontAwesomeIcon icon={faCircleInfo} className="text-blue-600 dark:text-blue-400" />
     Thông tin
   </h2>
-  <div className="mt-3 [&>:last-child>div]:border-b-0 [&>:last-child>div]:pb-0">
+  <div className="mt-3 [&>:last-child>div]:border-b-0 [&>:last-child>div]:pb-0 text-sm">
     <InfoRow label="Nhà phát triển" value={app.author || 'Không rõ'} />
     <InfoRow label="Phiên bản" value={app.version || 'Không rõ'} />
     <InfoRow label="Dung lượng" value={displaySize} />
