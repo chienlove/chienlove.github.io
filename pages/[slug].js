@@ -947,68 +947,76 @@ export default function Detail({ serverApp, serverRelated }) {
 
           {/* ===================== MÔ TẢ (màu theo demo + icon) ===================== */}
           <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
-            <h2 className="text-lg font-extrabold text-blue-800 dark:text-blue-400 mb-3 flex items-center gap-2">
-              <FontAwesomeIcon icon={faAlignLeft} className="text-blue-600 dark:text-blue-400" />
-              Mô tả
-            </h2>
+  <h2 className="text-lg font-extrabold text-blue-800 dark:text-blue-400 mb-3 flex items-center gap-2">
+    <FontAwesomeIcon icon={faAlignLeft} className="text-blue-600 dark:text-blue-400" />
+    Mô tả
+  </h2>
 
-            <div className={`relative overflow-hidden transition-all duration-300 ${showFullDescription ? '' : 'max-h-72'}`}>
-              <div className={`${showFullDescription ? '' : 'mask-gradient-bottom'}`}>
-                {ReactMarkdown && remarkGfm ? (
-                  <ReactMarkdown
-                    remarkPlugins={[remarkGfm]}
-                    components={{
-                      h1: ({ ...props }) => <h3 className="text-xl font-extrabold mt-3 mb-2 text-slate-900 dark:text-slate-100" {...props} />,
-                      h2: ({ ...props }) => <h4 className="text-lg font-extrabold mt-3 mb-2 text-slate-900 dark:text-slate-100" {...props} />,
-                      h3: ({ ...props }) => <h5 className="text-base font-extrabold mt-3 mb-2 text-slate-900 dark:text-slate-100" {...props} />,
-                      p: ({ ...props }) => <p className="text-slate-700 dark:text-slate-200 leading-7 mb-3 break-words" {...props} />,
-                      ul: ({ ...props }) => <ul className="list-disc pl-5 space-y-1 mb-3 text-slate-700 dark:text-slate-200" {...props} />,
-                      ol: ({ ...props }) => <ol className="list-decimal pl-5 space-y-1 mb-3 text-slate-700 dark:text-slate-200" {...props} />,
-                      li: ({ ...props }) => <li className="marker:text-slate-500 dark:marker:text-slate-200" {...props} />,
-                      a: ({ ...props }) => <a className="text-blue-600 dark:text-blue-400 hover:underline font-semibold break-all" target="_blank" rel="noopener noreferrer" {...props} />,
-                      code: ({ inline, ...props }) =>
-                        inline ? (
-                          <code className="px-1 py-0.5 rounded bg-slate-100 dark:bg-zinc-800 text-pink-700 dark:text-pink-300" {...props} />
-                        ) : (
-                          <pre className="p-3 rounded bg-gray-900 text-gray-100 overflow-auto mb-3"><code {...props} /></pre>
-                        ),
-                      blockquote: ({ ...props }) => <PrettyBlockquote {...props} />,
-                      hr: () => <hr className="my-4 border-slate-200 dark:border-zinc-800" />,
-                      table: ({ children, ...props }) => (
-                        <div className="overflow-x-auto my-4 border border-slate-200 dark:border-zinc-700 rounded-lg">
-                          <table className="min-w-full divide-y divide-slate-200 dark:divide-zinc-700 text-sm" {...props}>
-                            {children}
-                          </table>
-                        </div>
-                      ),
-                      thead: ({ children, ...props }) => <thead className="bg-slate-50 dark:bg-zinc-800/50" {...props}>{children}</thead>,
-                      tbody: ({ children, ...props }) => <tbody className="divide-y divide-slate-200 dark:divide-zinc-700 bg-white dark:bg-zinc-900" {...props}>{children}</tbody>,
-                      tr: ({ children, ...props }) => <tr className="transition-colors hover:bg-slate-50 dark:hover:bg-white/5" {...props}>{children}</tr>,
-                      th: ({ children, ...props }) => <th className="px-4 py-3 text-left font-semibold text-slate-900 dark:text-slate-100 whitespace-nowrap border-r border-slate-200 dark:border-zinc-700 first:border-l-0 last:border-r-0" {...props}>{children}</th>,
-                      td: ({ children, ...props }) => <td className="px-4 py-3 text-slate-700 dark:text-slate-300 whitespace-normal align-top border-r border-slate-200 dark:border-zinc-700 first:border-l-0 last:border-r-0" {...props}>{children}</td>,
-                    }}
-                  >
-                    {mdDescription}
-                  </ReactMarkdown>
-                ) : (
-                  <p className="text-slate-700 dark:text-slate-200 leading-7 mb-3 whitespace-pre-wrap break-words">{mdDescription}</p>
-                )}
-              </div>
-
-              {!showFullDescription && (
-                <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white via-white to-transparent dark:from-zinc-900 dark:via-zinc-900 dark:to-transparent" />
-              )}
-            </div>
-
-            {app?.description && app.description.length > 300 && (
-              <button
-                onClick={() => setShowFullDescription(v => !v)}
-                className="mt-3 text-sm text-blue-600 dark:text-blue-400 hover:underline font-extrabold"
+  {(() => {
+    const isLong = (app?.description?.length || 0) > 300;
+    return (
+      <>
+        <div className={`relative overflow-hidden transition-all duration-300 ${showFullDescription || !isLong ? '' : 'max-h-72'}`}>
+          <div className={`${showFullDescription || !isLong ? '' : 'mask-gradient-bottom'}`}>
+            {ReactMarkdown && remarkGfm ? (
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  h1: ({ ...props }) => <h3 className="text-xl font-extrabold mt-3 mb-2 text-slate-900 dark:text-slate-100" {...props} />,
+                  h2: ({ ...props }) => <h4 className="text-lg font-extrabold mt-3 mb-2 text-slate-900 dark:text-slate-100" {...props} />,
+                  h3: ({ ...props }) => <h5 className="text-base font-extrabold mt-3 mb-2 text-slate-900 dark:text-slate-100" {...props} />,
+                  p: ({ ...props }) => <p className="text-slate-700 dark:text-slate-200 leading-7 mb-3 break-words" {...props} />,
+                  ul: ({ ...props }) => <ul className="list-disc pl-5 space-y-1 mb-3 text-slate-700 dark:text-slate-200" {...props} />,
+                  ol: ({ ...props }) => <ol className="list-decimal pl-5 space-y-1 mb-3 text-slate-700 dark:text-slate-200" {...props} />,
+                  li: ({ ...props }) => <li className="marker:text-slate-500 dark:marker:text-slate-200" {...props} />,
+                  a: ({ ...props }) => <a className="text-blue-600 dark:text-blue-400 hover:underline font-semibold break-all" target="_blank" rel="noopener noreferrer" {...props} />,
+                  code: ({ inline, ...props }) =>
+                    inline ? (
+                      <code className="px-1 py-0.5 rounded bg-slate-100 dark:bg-zinc-800 text-pink-700 dark:text-pink-300" {...props} />
+                    ) : (
+                      <pre className="p-3 rounded bg-gray-900 text-gray-100 overflow-auto mb-3"><code {...props} /></pre>
+                    ),
+                  blockquote: ({ ...props }) => <PrettyBlockquote {...props} />,
+                  hr: () => <hr className="my-4 border-slate-200 dark:border-zinc-800" />,
+                  table: ({ children, ...props }) => (
+                    <div className="overflow-x-auto my-4 border border-slate-200 dark:border-zinc-700 rounded-lg">
+                      <table className="min-w-full divide-y divide-slate-200 dark:divide-zinc-700 text-sm" {...props}>
+                        {children}
+                      </table>
+                    </div>
+                  ),
+                  thead: ({ children, ...props }) => <thead className="bg-slate-50 dark:bg-zinc-800/50" {...props}>{children}</thead>,
+                  tbody: ({ children, ...props }) => <tbody className="divide-y divide-slate-200 dark:divide-zinc-700 bg-white dark:bg-zinc-900" {...props}>{children}</tbody>,
+                  tr: ({ children, ...props }) => <tr className="transition-colors hover:bg-slate-50 dark:hover:bg-white/5" {...props}>{children}</tr>,
+                  th: ({ children, ...props }) => <th className="px-4 py-3 text-left font-semibold text-slate-900 dark:text-slate-100 whitespace-nowrap border-r border-slate-200 dark:border-zinc-700 first:border-l-0 last:border-r-0" {...props}>{children}</th>,
+                  td: ({ children, ...props }) => <td className="px-4 py-3 text-slate-700 dark:text-slate-300 whitespace-normal align-top border-r border-slate-200 dark:border-zinc-700 first:border-l-0 last:border-r-0" {...props}>{children}</td>,
+                }}
               >
-                {showFullDescription ? 'Thu gọn' : 'Xem thêm...'}
-              </button>
+                {mdDescription}
+              </ReactMarkdown>
+            ) : (
+              <p className="text-slate-700 dark:text-slate-200 leading-7 mb-3 whitespace-pre-wrap break-words">{mdDescription}</p>
             )}
           </div>
+
+          {!showFullDescription && isLong && (
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white via-white to-transparent dark:from-zinc-900 dark:via-zinc-900 dark:to-transparent" />
+          )}
+        </div>
+
+        {isLong && (
+          <button
+            onClick={() => setShowFullDescription(v => !v)}
+            className="mt-3 text-sm text-blue-600 dark:text-blue-400 hover:underline font-extrabold"
+          >
+            {showFullDescription ? 'Thu gọn' : 'Xem thêm...'}
+          </button>
+        )}
+      </>
+    );
+  })()}
+</div>
+
           
           {/* ===== In-article Ad + English CPC context (US intent) ===== */}
 <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
