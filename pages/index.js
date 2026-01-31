@@ -1,10 +1,9 @@
-// pages/index.js (ĐÃ SỬA)
+// pages/index.js
 import { useMemo, useEffect, useState, Fragment, useRef } from 'react';
 import Head from 'next/head';
 import Layout from '../components/Layout';
 import AppCard from '../components/AppCard';
 import AdUnit from '../components/Ads';
-import Adsterra300x250 from "../components/Adsterra300x250";
 import { createSupabaseServer } from '../lib/supabase';
 import Link from 'next/link';
 
@@ -633,7 +632,7 @@ export default function Home({
               {/* Quảng cáo chèn giữa các category - SỬ DỤNG ADWRAPPER */}
               {new Set([1]).has(index) && (
                 <AdWrapper>
-                  <Adsterra300x250 />
+                  <AdUnit className="my-0" mobileVariant="multiplex" desktopMode="unit" />
                 </AdWrapper>
               )}
             </Fragment>
