@@ -709,7 +709,7 @@ export async function getServerSideProps(ctx) {
   const supabase = createSupabaseServer(ctx);
 
   // CDN caching ngắn hạn
-  ctx.res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=300');
+  ctx.res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=3600');
 
   const { category: categorySlug, page: pageQuery } = ctx.query;
   const activeSlug = typeof categorySlug === 'string' ? categorySlug.toLowerCase() : null;
