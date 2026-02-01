@@ -13,7 +13,7 @@ import {
   faCheckCircle,
   faExclamationCircle,
   faFire,
-  faChevronLeft, // Đã sửa
+  faChevronLeft,
   faChevronRight,
   faEye,
   faDownload,
@@ -28,7 +28,7 @@ import affiliateApps from '../lib/appads';
    ========================= */
 const SITE = {
   name: 'StoreiOS',
-  url: 'https://storeios.net',
+  url: '[https://storeios.net](https://storeios.net)',
   twitter: '@storeios',
 };
 
@@ -64,7 +64,6 @@ const CATEGORY_SEO = {
     description:
       'App Clone (nhân bản) cho iOS: cài song song nhiều tài khoản, tối ưu cho mạng xã hội và công việc. Đã ký sẵn, dễ cài đặt.',
   },
-  // ✅ SEO cho chuyên mục mới
   'app-removed': {
     title: 'StoreiOS – Ứng dụng đã gỡ khỏi App Store (Signed IPA)',
     description:
@@ -119,7 +118,7 @@ function SEOIndexMeta({ meta }) {
 
   // JSON-LD
   const jsonLdWebsite = {
-    '@context': 'https://schema.org',
+    '@context': '[https://schema.org](https://schema.org)',
     '@type': 'WebSite',
     name: SITE.name,
     url: SITE.url,
@@ -132,7 +131,7 @@ function SEOIndexMeta({ meta }) {
 
   const jsonLdBreadcrumb = slug
     ? {
-        '@context': 'https://schema.org',
+        '@context': '[https://schema.org](https://schema.org)',
         '@type': 'BreadcrumbList',
         itemListElement: [
           { '@type': 'ListItem', position: 1, name: 'Trang chủ', item: SITE.url },
@@ -151,7 +150,7 @@ function SEOIndexMeta({ meta }) {
 
   const jsonLdCollection = slug
     ? {
-        '@context': 'https://schema.org',
+        '@context': '[https://schema.org](https://schema.org)',
         '@type': 'CollectionPage',
         name: titleBase,
         description: desc,
@@ -196,8 +195,8 @@ function SEOIndexMeta({ meta }) {
       {/* Performance */}
       {supabaseOrigin && <link rel="dns-prefetch" href={supabaseOrigin} />}
       {supabaseOrigin && <link rel="preconnect" href={supabaseOrigin} crossOrigin="" />}
-      <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
-      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+      <link rel="dns-prefetch" href="[https://fonts.googleapis.com](https://fonts.googleapis.com)" />
+      <link rel="preconnect" href="[https://fonts.gstatic.com](https://fonts.gstatic.com)" crossOrigin="" />
 
       {/* JSON-LD */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdWebsite) }} />
@@ -440,11 +439,12 @@ export default function Home({
     </div>
   );
 
-  // Wrapper cho block quảng cáo (Đã loại bỏ mt-6 để không xung đột với space-y-10)
+  // ✅ OPTIMIZED: Wrapper cho block quảng cáo
+  // Thêm padding top (pt-6) để nội dung không bị dính vào Label, giảm Click nhầm
   const AdWrapper = ({ children }) => (
-    <div className="relative">
+    <div className="relative my-8">
       <AdLabel />
-      <div className={`${adCard} pt-4`}>{children}</div>
+      <div className={`${adCard} pt-6 pb-4`}>{children}</div>
     </div>
   );
 

@@ -23,8 +23,6 @@ import {
   faChevronUp,
   faFileArrowDown,
   faHouse,
-
-  // ✅ NEW: section + guide icons (FA)
   faAlignLeft,
   faImages,
   faCircleInfo,
@@ -438,7 +436,7 @@ export default function Detail({ serverApp, serverRelated }) {
     if (!app) return null;
 
     const data = {
-      "@context": "https://schema.org",
+      "@context": "[https://schema.org](https://schema.org)",
       "@type": "SoftwareApplication",
       "name": app.name,
       "applicationCategory": "SoftwareApplication",
@@ -468,7 +466,7 @@ export default function Detail({ serverApp, serverRelated }) {
     if (!app) return null;
 
     const itemListElement = [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://storeios.net" }
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "[https://storeios.net](https://storeios.net)" }
     ];
 
     if (app.category?.slug) {
@@ -488,7 +486,7 @@ export default function Detail({ serverApp, serverRelated }) {
     });
 
     return {
-      "@context": "https://schema.org",
+      "@context": "[https://schema.org](https://schema.org)",
       "@type": "BreadcrumbList",
       "itemListElement": itemListElement
     };
@@ -799,7 +797,6 @@ export default function Detail({ serverApp, serverRelated }) {
                   />
                 </div>
 
-                {/* ✅ H1 màu tươi (không đen) */}
                 <h1
                   className="mt-4 text-2xl font-extrabold text-blue-700 dark:text-blue-400 drop-shadow truncate mx-auto max-w-[92vw] sm:max-w-[80vw]"
                   title={app.name}
@@ -812,7 +809,7 @@ export default function Detail({ serverApp, serverRelated }) {
                   </p>
                 )}
 
-                {/* TestFlight buttons giữ nguyên logic (không đụng) */}
+                {/* TestFlight buttons */}
                 <div className="mt-4 flex flex-wrap justify-center gap-2">
                   {isTestflight && app.testflight_url && (
                     <>
@@ -856,13 +853,13 @@ export default function Detail({ serverApp, serverRelated }) {
         {/* Nội dung dưới */}
         <div className="max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 mt-6 space-y-6 overflow-x-hidden">
 
-          {/* Quảng cáo (top) */}
-          <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
-            <div className="text-[11px] uppercase tracking-wider text-gray-400 mb-2 text-center">Quảng cáo</div>
+          {/* Quảng cáo (top) - ✅ TỐI ƯU CPC: Thêm margin lớn hơn */}
+          <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow mb-6">
+            <div className="text-[11px] uppercase tracking-wider text-gray-400 mb-2 text-center">Quảng cáo / Advertisement</div>
             <AdUnit desktopMode="unit" mobileVariant="compact" />
           </div>
 
-          {/* ✅ Info cards GIỮ NGUYÊN (theo yêu cầu) */}
+          {/* Info cards */}
           <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow text-center">
             <div className="-mx-2 overflow-x-auto sm:overflow-visible px-2">
               <div className="flex sm:grid sm:grid-cols-5 divide-x divide-gray-200 dark:divide-zinc-700 snap-x snap-mandatory">
@@ -928,7 +925,7 @@ export default function Detail({ serverApp, serverRelated }) {
             </div>
           </div>
 
-          {/* CTA mềm dưới Info card (KHÔNG tải thật) */}
+          {/* CTA mềm */}
           {!isTestflight && (
             <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow text-center">
               <button
@@ -945,102 +942,103 @@ export default function Detail({ serverApp, serverRelated }) {
             </div>
           )}
 
-          {/* ===================== MÔ TẢ (màu theo demo + icon) ===================== */}
+          {/* ===================== MÔ TẢ ===================== */}
           <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
-  <h2 className="text-lg font-extrabold text-blue-800 dark:text-blue-400 mb-3 flex items-center gap-2">
-    <FontAwesomeIcon icon={faAlignLeft} className="text-blue-600 dark:text-blue-400" />
-    Mô tả
-  </h2>
+            <h2 className="text-lg font-extrabold text-blue-800 dark:text-blue-400 mb-3 flex items-center gap-2">
+              <FontAwesomeIcon icon={faAlignLeft} className="text-blue-600 dark:text-blue-400" />
+              Mô tả
+            </h2>
 
-  {(() => {
-    const isLong = (app?.description?.length || 0) > 300;
-    return (
-      <>
-        <div className={`relative overflow-hidden transition-all duration-300 ${showFullDescription || !isLong ? '' : 'max-h-72'}`}>
-          <div className={`${showFullDescription || !isLong ? '' : 'mask-gradient-bottom'}`}>
-            {ReactMarkdown && remarkGfm ? (
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                components={{
-                  h1: ({ ...props }) => <h3 className="text-xl font-extrabold mt-3 mb-2 text-slate-900 dark:text-slate-100" {...props} />,
-                  h2: ({ ...props }) => <h4 className="text-lg font-extrabold mt-3 mb-2 text-slate-900 dark:text-slate-100" {...props} />,
-                  h3: ({ ...props }) => <h5 className="text-base font-extrabold mt-3 mb-2 text-slate-900 dark:text-slate-100" {...props} />,
-                  p: ({ ...props }) => <p className="text-slate-700 dark:text-slate-200 leading-7 mb-3 break-words" {...props} />,
-                  ul: ({ ...props }) => <ul className="list-disc pl-5 space-y-1 mb-3 text-slate-700 dark:text-slate-200" {...props} />,
-                  ol: ({ ...props }) => <ol className="list-decimal pl-5 space-y-1 mb-3 text-slate-700 dark:text-slate-200" {...props} />,
-                  li: ({ ...props }) => <li className="marker:text-slate-500 dark:marker:text-slate-200" {...props} />,
-                  a: ({ ...props }) => <a className="text-blue-600 dark:text-blue-400 hover:underline font-semibold break-all" target="_blank" rel="noopener noreferrer" {...props} />,
-                  code: ({ inline, ...props }) =>
-                    inline ? (
-                      <code className="px-1 py-0.5 rounded bg-slate-100 dark:bg-zinc-800 text-pink-700 dark:text-pink-300" {...props} />
-                    ) : (
-                      <pre className="p-3 rounded bg-gray-900 text-gray-100 overflow-auto mb-3"><code {...props} /></pre>
-                    ),
-                  blockquote: ({ ...props }) => <PrettyBlockquote {...props} />,
-                  hr: () => <hr className="my-4 border-slate-200 dark:border-zinc-800" />,
-                  table: ({ children, ...props }) => (
-                    <div className="overflow-x-auto my-4 border border-slate-200 dark:border-zinc-700 rounded-lg">
-                      <table className="min-w-full divide-y divide-slate-200 dark:divide-zinc-700 text-sm" {...props}>
-                        {children}
-                      </table>
+            {(() => {
+              const isLong = (app?.description?.length || 0) > 300;
+              return (
+                <>
+                  <div className={`relative overflow-hidden transition-all duration-300 ${showFullDescription || !isLong ? '' : 'max-h-72'}`}>
+                    <div className={`${showFullDescription || !isLong ? '' : 'mask-gradient-bottom'}`}>
+                      {ReactMarkdown && remarkGfm ? (
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm]}
+                          components={{
+                            h1: ({ ...props }) => <h3 className="text-xl font-extrabold mt-3 mb-2 text-slate-900 dark:text-slate-100" {...props} />,
+                            h2: ({ ...props }) => <h4 className="text-lg font-extrabold mt-3 mb-2 text-slate-900 dark:text-slate-100" {...props} />,
+                            h3: ({ ...props }) => <h5 className="text-base font-extrabold mt-3 mb-2 text-slate-900 dark:text-slate-100" {...props} />,
+                            p: ({ ...props }) => <p className="text-slate-700 dark:text-slate-200 leading-7 mb-3 break-words" {...props} />,
+                            ul: ({ ...props }) => <ul className="list-disc pl-5 space-y-1 mb-3 text-slate-700 dark:text-slate-200" {...props} />,
+                            ol: ({ ...props }) => <ol className="list-decimal pl-5 space-y-1 mb-3 text-slate-700 dark:text-slate-200" {...props} />,
+                            li: ({ ...props }) => <li className="marker:text-slate-500 dark:marker:text-slate-200" {...props} />,
+                            a: ({ ...props }) => <a className="text-blue-600 dark:text-blue-400 hover:underline font-semibold break-all" target="_blank" rel="noopener noreferrer" {...props} />,
+                            code: ({ inline, ...props }) =>
+                              inline ? (
+                                <code className="px-1 py-0.5 rounded bg-slate-100 dark:bg-zinc-800 text-pink-700 dark:text-pink-300" {...props} />
+                              ) : (
+                                <pre className="p-3 rounded bg-gray-900 text-gray-100 overflow-auto mb-3"><code {...props} /></pre>
+                              ),
+                            blockquote: ({ ...props }) => <PrettyBlockquote {...props} />,
+                            hr: () => <hr className="my-4 border-slate-200 dark:border-zinc-800" />,
+                            table: ({ children, ...props }) => (
+                              <div className="overflow-x-auto my-4 border border-slate-200 dark:border-zinc-700 rounded-lg">
+                                <table className="min-w-full divide-y divide-slate-200 dark:divide-zinc-700 text-sm" {...props}>
+                                  {children}
+                                </table>
+                              </div>
+                            ),
+                            thead: ({ children, ...props }) => <thead className="bg-slate-50 dark:bg-zinc-800/50" {...props}>{children}</thead>,
+                            tbody: ({ children, ...props }) => <tbody className="divide-y divide-slate-200 dark:divide-zinc-700 bg-white dark:bg-zinc-900" {...props}>{children}</tbody>,
+                            tr: ({ children, ...props }) => <tr className="transition-colors hover:bg-slate-50 dark:hover:bg-white/5" {...props}>{children}</tr>,
+                            th: ({ children, ...props }) => <th className="px-4 py-3 text-left font-semibold text-slate-900 dark:text-slate-100 whitespace-nowrap border-r border-slate-200 dark:border-zinc-700 first:border-l-0 last:border-r-0" {...props}>{children}</th>,
+                            td: ({ children, ...props }) => <td className="px-4 py-3 text-slate-700 dark:text-slate-300 whitespace-normal align-top border-r border-slate-200 dark:border-zinc-700 first:border-l-0 last:border-r-0" {...props}>{children}</td>,
+                          }}
+                        >
+                          {mdDescription}
+                        </ReactMarkdown>
+                      ) : (
+                        <p className="text-slate-700 dark:text-slate-200 leading-7 mb-3 whitespace-pre-wrap break-words">{mdDescription}</p>
+                      )}
                     </div>
-                  ),
-                  thead: ({ children, ...props }) => <thead className="bg-slate-50 dark:bg-zinc-800/50" {...props}>{children}</thead>,
-                  tbody: ({ children, ...props }) => <tbody className="divide-y divide-slate-200 dark:divide-zinc-700 bg-white dark:bg-zinc-900" {...props}>{children}</tbody>,
-                  tr: ({ children, ...props }) => <tr className="transition-colors hover:bg-slate-50 dark:hover:bg-white/5" {...props}>{children}</tr>,
-                  th: ({ children, ...props }) => <th className="px-4 py-3 text-left font-semibold text-slate-900 dark:text-slate-100 whitespace-nowrap border-r border-slate-200 dark:border-zinc-700 first:border-l-0 last:border-r-0" {...props}>{children}</th>,
-                  td: ({ children, ...props }) => <td className="px-4 py-3 text-slate-700 dark:text-slate-300 whitespace-normal align-top border-r border-slate-200 dark:border-zinc-700 first:border-l-0 last:border-r-0" {...props}>{children}</td>,
-                }}
-              >
-                {mdDescription}
-              </ReactMarkdown>
-            ) : (
-              <p className="text-slate-700 dark:text-slate-200 leading-7 mb-3 whitespace-pre-wrap break-words">{mdDescription}</p>
-            )}
+
+                    {!showFullDescription && isLong && (
+                      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white via-white to-transparent dark:from-zinc-900 dark:via-zinc-900 dark:to-transparent" />
+                    )}
+                  </div>
+
+                  {isLong && (
+                    <button
+                      onClick={() => setShowFullDescription(v => !v)}
+                      className="mt-3 text-sm text-blue-600 dark:text-blue-400 hover:underline font-extrabold"
+                    >
+                      {showFullDescription ? 'Thu gọn' : 'Xem thêm...'}
+                    </button>
+                  )}
+                </>
+              );
+            })()}
           </div>
 
-          {!showFullDescription && isLong && (
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white via-white to-transparent dark:from-zinc-900 dark:via-zinc-900 dark:to-transparent" />
-          )}
-        </div>
+          {/* ===== ✅ OPTIMIZED: In-article Ad + High Value Keywords Context ===== */}
+          <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow border border-dashed border-gray-300 dark:border-zinc-700 my-8">
+            <div className="text-[11px] uppercase tracking-wider text-gray-400 mb-3 text-center font-bold">
+              Advertisement / Quảng cáo
+            </div>
 
-        {isLong && (
-          <button
-            onClick={() => setShowFullDescription(v => !v)}
-            className="mt-3 text-sm text-blue-600 dark:text-blue-400 hover:underline font-extrabold"
-          >
-            {showFullDescription ? 'Thu gọn' : 'Xem thêm...'}
-          </button>
-        )}
-      </>
-    );
-  })()}
-</div>
+            {/* ✅ High Paying Keywords Context Injection: Security, Enterprise, Cloud, VPN */}
+            <div className="bg-slate-50 dark:bg-zinc-800/40 border border-slate-200 dark:border-zinc-700 rounded-xl p-4 mb-4">
+              <h3 className="text-sm font-extrabold text-slate-900 dark:text-slate-100 mb-2">
+                Enterprise Security & Mobile Infrastructure
+              </h3>
+              <p className="text-xs text-slate-600 dark:text-slate-400 leading-5">
+                Developers deploying iOS solutions should prioritize <strong>data privacy</strong> and secure <strong>cloud hosting</strong> infrastructure.
+                When managing enterprise distribution, ensure your network is protected by <strong>business VPN</strong> services and robust <strong>firewall security</strong>.
+                Review <strong>cybersecurity protocols</strong> before integrating external software packages.
+              </p>
+            </div>
 
-          
-          {/* ===== In-article Ad + English CPC context (US intent) ===== */}
-<div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
-  <div className="text-[11px] uppercase tracking-wider text-gray-400 mb-3 text-center">
-    Advertisement
-  </div>
+            {/* In-article ad with extra padding */}
+            <div className="min-h-[250px] flex items-center justify-center bg-gray-50 dark:bg-zinc-950 rounded-lg">
+               <AdUnit desktopMode="unit" isArticleAd />
+            </div>
+          </div>
 
-  {/* English CPC context - keep it close to the ad */}
-  <div className="bg-slate-50 dark:bg-zinc-800/40 border border-slate-200 dark:border-zinc-700 rounded-xl p-4 mb-3">
-    <h3 className="text-sm font-extrabold text-slate-900 dark:text-slate-100 mb-2">
-      iOS Installation & Security Notes
-    </h3>
-    <p className="text-sm text-slate-700 dark:text-slate-300 leading-6">
-      Installing iOS apps outside the App Store requires understanding Apple’s certificate system and iOS security restrictions.
-      This page explains how enterprise-signed IPA files work, why apps may fail to install, and how to fix common issues safely
-      on iOS 17 and iOS 18 devices.
-    </p>
-  </div>
-
-  {/* In-article ad */}
-  <AdUnit desktopMode="unit" isArticleAd />
-</div>
-
-          {/* ===================== Screenshots (màu + icon) ===================== */}
+          {/* ===================== Screenshots ===================== */}
           {Array.isArray(app.screenshots) && app.screenshots.length > 0 && (
             <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
               <h2 className="text-lg font-extrabold text-blue-800 dark:text-blue-400 mb-3 flex items-center gap-2">
@@ -1064,53 +1062,53 @@ export default function Detail({ serverApp, serverRelated }) {
             </div>
           )}
 
-          {/* ===================== Thông tin (giữ layout/logic, đổi style theo demo + icon) ===================== */}
+          {/* ===================== Thông tin ===================== */}
           <div className="bg-white dark:bg-zinc-900 rounded-xl shadow overflow-hidden">
-  <h2 className="px-4 pt-4 text-lg font-extrabold text-blue-800 dark:text-blue-400 flex items-center gap-2">
-    <FontAwesomeIcon icon={faCircleInfo} className="text-blue-600 dark:text-blue-400" />
-    Thông tin
-  </h2>
-  <div className="mt-3 [&>:last-child>div]:border-b-0 [&>:last-child>div]:pb-0 text-xs">
-    <InfoRow label="Nhà phát triển" value={app.author || 'Không rõ'} />
-    <InfoRow label="Phiên bản" value={app.version || 'Không rõ'} />
-    <InfoRow label="Dung lượng" value={displaySize} />
-    <InfoRow
-      label="Thiết bị hỗ trợ"
-      value={
-        devicesArray.length
-          ? showAllDevices
-            ? devicesArray.join(', ')
-            : `${devicesShort.list.join(', ')}${devicesShort.remain ? `, +${devicesShort.remain}` : ''}`
-          : 'Không rõ'
-      }
-      expandable={devicesArray.length > devicesShort.list.length}
-      expanded={showAllDevices}
-      onToggle={() => setShowAllDevices(v => !v)}
-    />
-    <InfoRow
-      label="Ngôn ngữ"
-      value={
-        languagesArray.length
-          ? showAllLanguages
-            ? languagesArray.join(', ')
-            : `${languagesShort.list.join(', ')}${languagesShort.remain ? `, +${languagesShort.remain}` : ''}`
-          : 'Không rõ'
-      }
-      expandable={languagesArray.length > languagesShort.list.length}
-      expanded={showAllLanguages}
-      onToggle={() => setShowAllLanguages(v => !v)}
-    />
-    <InfoRow label="Yêu cầu iOS" value={app.minimum_os_version ? `iOS ${app.minimum_os_version}+` : 'Không rõ'} />
-    <InfoRow
-      label="Ngày phát hành"
-      value={app.release_date ? new Date(app.release_date).toLocaleDateString('vi-VN') : 'Không rõ'}
-    />
-    <InfoRow label="Xếp hạng tuổi" value={app.age_rating || 'Không rõ'} />
-  </div>
-</div>
+            <h2 className="px-4 pt-4 text-lg font-extrabold text-blue-800 dark:text-blue-400 flex items-center gap-2">
+              <FontAwesomeIcon icon={faCircleInfo} className="text-blue-600 dark:text-blue-400" />
+              Thông tin
+            </h2>
+            <div className="mt-3 [&>:last-child>div]:border-b-0 [&>:last-child>div]:pb-0 text-xs">
+              <InfoRow label="Nhà phát triển" value={app.author || 'Không rõ'} />
+              <InfoRow label="Phiên bản" value={app.version || 'Không rõ'} />
+              <InfoRow label="Dung lượng" value={displaySize} />
+              <InfoRow
+                label="Thiết bị hỗ trợ"
+                value={
+                  devicesArray.length
+                    ? showAllDevices
+                      ? devicesArray.join(', ')
+                      : `${devicesShort.list.join(', ')}${devicesShort.remain ? `, +${devicesShort.remain}` : ''}`
+                    : 'Không rõ'
+                }
+                expandable={devicesArray.length > devicesShort.list.length}
+                expanded={showAllDevices}
+                onToggle={() => setShowAllDevices(v => !v)}
+              />
+              <InfoRow
+                label="Ngôn ngữ"
+                value={
+                  languagesArray.length
+                    ? showAllLanguages
+                      ? languagesArray.join(', ')
+                      : `${languagesShort.list.join(', ')}${languagesShort.remain ? `, +${languagesShort.remain}` : ''}`
+                    : 'Không rõ'
+                }
+                expandable={languagesArray.length > languagesShort.list.length}
+                expanded={showAllLanguages}
+                onToggle={() => setShowAllLanguages(v => !v)}
+              />
+              <InfoRow label="Yêu cầu iOS" value={app.minimum_os_version ? `iOS ${app.minimum_os_version}+` : 'Không rõ'} />
+              <InfoRow
+                label="Ngày phát hành"
+                value={app.release_date ? new Date(app.release_date).toLocaleDateString('vi-VN') : 'Không rõ'}
+              />
+              <InfoRow label="Xếp hạng tuổi" value={app.age_rating || 'Không rõ'} />
+            </div>
+          </div>
 
           
-          {/* CTA thật (dưới mô tả) - đổi style theo demo: nền xanh nhạt + nút full width + steps tươi */}
+          {/* CTA thật - ✅ TỐI ƯU CPC: Đã tách biệt với quảng cáo phía trên nhờ component Thông tin */}
           {!isTestflight && (
             <div id="real-actions" className="bg-blue-50 dark:bg-blue-500/10 rounded-xl p-4 shadow border border-blue-200 dark:border-blue-400/20">
               <div className="flex items-start justify-between gap-3">
@@ -1134,7 +1132,7 @@ export default function Detail({ serverApp, serverRelated }) {
                 >
                   {isInstalling ? (
                     <>
-                      <svg className="animate-spin -ml-1 mr-1 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <svg className="animate-spin -ml-1 mr-1 h-4 w-4" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 01 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
@@ -1158,7 +1156,7 @@ export default function Detail({ serverApp, serverRelated }) {
                 >
                   {isFetchingIpa ? (
                     <>
-                      <svg className="animate-spin -ml-1 mr-1 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <svg className="animate-spin -ml-1 mr-1 h-4 w-4" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)" fill="none" viewBox="0 0 24 24">
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 01 4 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
@@ -1173,7 +1171,7 @@ export default function Detail({ serverApp, serverRelated }) {
                 </button>
               </div>
 
-              {/* dashed divider như demo */}
+              {/* dashed divider */}
               <div className="my-4 border-t-2 border-dashed border-blue-200 dark:border-blue-400/20" />
 
               {/* Hướng dẫn cài đặt (steps 1-4) */}
@@ -1309,9 +1307,9 @@ export default function Detail({ serverApp, serverRelated }) {
             </div>
           )}
 
-          {/* Quảng cáo */}
-          <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow">
-            <div className="text-[11px] uppercase tracking-wider text-gray-400 mb-2 text-center">Quảng cáo</div>
+          {/* Quảng cáo (Bottom) - ✅ TỐI ƯU CPC: Thêm margin lớn */}
+          <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow mt-8">
+            <div className="text-[11px] uppercase tracking-wider text-gray-400 mb-2 text-center">Quảng cáo / Advertisement</div>
             <AdUnit desktopMode="unit" mobileVariant="multiplex" />
           </div>
 
