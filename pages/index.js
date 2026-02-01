@@ -716,11 +716,6 @@ export async function getServerSideProps(ctx) {
   const currentPage = parseInt(pageQuery || '1', 10);
   const APPS_PER_PAGE = 10;
 
-  // Chuẩn bị URL nội bộ để gọi API check-revocation ở server (ẩn khỏi Network của trình duyệt)
-  const protocol = ctx.req.headers['x-forwarded-proto'] || 'https';
-  const host = ctx.req.headers['x-forwarded-host'] || ctx.req.headers.host;
-  const baseUrl = `${protocol}://${host}`;
-
   // Giới hạn thời gian chờ để không làm chậm TTFB index
   const withTimeout = (promise, ms) =>
     Promise.race([
@@ -732,7 +727,7 @@ export async function getServerSideProps(ctx) {
     withTimeout(
       (async () => {
         try {
-          const res = await fetch(`${baseUrl}/api/check-revocation`);
+          const res = await fetch(`https://ipadl.storeios.net/api/check-revocation`);
           if (!res.ok) throw new Error('Bad status');
           return await res.json();
         } catch (e) {
