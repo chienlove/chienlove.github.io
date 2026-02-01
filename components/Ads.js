@@ -56,6 +56,10 @@ export default function AdUnit({
     };
 
     detect();
+    
+    // Thêm listener resize để cập nhật layout khi xoay màn hình
+    window.addEventListener('resize', detect);
+    return () => window.removeEventListener('resize', detect);
   }, [desktopMode]);
 
   useEffect(() => {
@@ -120,51 +124,54 @@ export default function AdUnit({
 
   // ======================= JSX Rendering =======================
 
+  // Class chung: Thêm overflow-hidden để cắt phần thừa nếu Adsense cố tình render lố
+  const containerClass = `w-full overflow-hidden ${className}`;
+
   if (isArticleAd) {
     return (
-      <div ref={wrapperRef} className={`w-full ${className}`}>
+      <div ref={wrapperRef} className={containerClass}>
         <ins
           className="adsbygoogle"
-          style={{ display: 'block', textAlign: 'center' }}
+          style={{ display: 'block', textAlign: 'center', width: '100%' }}
           data-ad-client="ca-pub-3905625903416797"
           data-ad-slot={inArticleSlot}
           data-ad-format="auto"
-          data-full-width-responsive="true"
+          data-full-width-responsive="false" 
         />
       </div>
     );
   }
 
   if (layout === 'unknown') {
-    return <div ref={wrapperRef} className={`w-full ${className}`} />;
+    return <div ref={wrapperRef} className={containerClass} />;
   }
 
   return (
-    <div ref={wrapperRef} className={`w-full ${className}`}>
+    <div ref={wrapperRef} className={containerClass}>
       {/* MOBILE ONLY */}
       {layout === 'mobile' && (
         <div className="w-full">
           {mobileVariant === 'compact' ? (
             <div className="w-full flex justify-center">
-              {/* ✅ ĐÃ SỬA: Chuyển sang Responsive, bỏ width/height cứng */}
+              {/* ✅ ĐÃ SỬA: data-full-width-responsive="false" để tôn trọng padding của Card */}
               <ins
                 className="adsbygoogle"
                 style={{ display: 'block', width: '100%' }} 
                 data-ad-client="ca-pub-3905625903416797"
                 data-ad-slot={mobileSlot1}
                 data-ad-format="auto" 
-                data-full-width-responsive="true"
+                data-full-width-responsive="false"
               />
             </div>
           ) : (
             <div className="w-full">
               <ins
                 className="adsbygoogle"
-                style={{ display: 'block' }}
+                style={{ display: 'block', width: '100%' }}
                 data-ad-client="ca-pub-3905625903416797"
                 data-ad-slot={mobileSlot2}
                 data-ad-format="auto"
-                data-full-width-responsive="true"
+                data-full-width-responsive="false"
               />
             </div>
           )}
@@ -176,12 +183,13 @@ export default function AdUnit({
         <div className="w-full">
           <ins
             className="adsbygoogle"
-            style={{ display: 'block' }}
+            style={{ display: 'block', width: '100%' }}
             data-ad-client="ca-pub-3905625903416797"
             data-ad-slot={desktopSlot}
             data-ad-format="auto"
-            data-full-width-responsive="true"
+            data-full-width-responsive="true" 
           />
+          {/* Desktop có thể để true vì không gian rộng, nhưng nếu vẫn bị tràn thì sửa thành false */}
         </div>
       )}
 
@@ -190,7 +198,7 @@ export default function AdUnit({
         <div className="w-full">
           <ins
             className="adsbygoogle"
-            style={{ display: 'block' }}
+            style={{ display: 'block', width: '100%' }}
             data-ad-client="ca-pub-3905625903416797"
             data-ad-slot={mobileSlot2}
             data-ad-format="auto"
