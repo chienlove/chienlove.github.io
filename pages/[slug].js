@@ -41,6 +41,10 @@ const Comments = dynamic(() => import('../components/Comments'), {
 
 /* ===================== SSR ===================== */
 export async function getServerSideProps(context) {
+  context.res.setHeader(
+    'Cache-Control',
+    'public, s-maxage=3600, stale-while-revalidate=86400'
+  );
   const slug = context.params.slug?.toLowerCase();
 
   // 1) Tìm kiếm chính
