@@ -1,9 +1,8 @@
-// components/Ads.js
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/router';
 
-// Hàm helper để gọi window.adsbygoogle.push({})
 function pushAdsense() {
   try {
     const w = window;
@@ -13,12 +12,10 @@ function pushAdsense() {
   } catch (e) {
     const msg = e && typeof e.message === 'string' ? e.message : '';
 
-    // 1) Bỏ qua lỗi "No slot size for availableWidth=0"
     if (msg.includes('No slot size for availableWidth=0')) {
       return;
     }
 
-    // 2) Bỏ qua lỗi khi tất cả ins.adsbygoogle đã có quảng cáo
     if (msg.includes("All 'ins' elements in the DOM with class=adsbygoogle already have ads in them.")) {
       return;
     }
@@ -29,20 +26,18 @@ function pushAdsense() {
 
 export default function AdUnit({
   className = '',
-  mobileVariant = 'compact',        // 'compact' | 'multiplex'
-  mobileSlot1 = '5160182988',       // 300x250 (Main Site Global)
-  mobileSlot2 = '7109430646',       // Multiplex
-  desktopMode = 'auto',             // 'auto' | 'unit'
-  desktopSlot = '4575220124',       // Ads Desktop
-
-  // In-article
+  mobileVariant = 'compact',
+  mobileSlot1 = '5160182988',
+  mobileSlot2 = '7109430646',
+  desktopMode = 'auto',
+  desktopSlot = '4575220124',
   inArticleSlot = '4276741180',
   isArticleAd = false,
 }) {
   const wrapperRef = useRef(null);
   const [layout, setLayout] = useState('unknown');
+  const router = useRouter();
 
-  // Xác định layout (client-side only)
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
@@ -57,7 +52,6 @@ export default function AdUnit({
 
     detect();
     
-    // Thêm listener resize để cập nhật layout khi xoay màn hình
     window.addEventListener('resize', detect);
     return () => window.removeEventListener('resize', detect);
   }, [desktopMode]);
@@ -120,16 +114,13 @@ export default function AdUnit({
         delete ins.dataset.adLoaded;
       });
     };
-  }, [mobileVariant, mobileSlot1, mobileSlot2, desktopMode, desktopSlot, inArticleSlot, isArticleAd, layout]);
+  }, [mobileVariant, mobileSlot1, mobileSlot2, desktopMode, desktopSlot, inArticleSlot, isArticleAd, layout, router.asPath]);
 
-  // ======================= JSX Rendering =======================
-
-  // Class chung: Thêm overflow-hidden để cắt phần thừa nếu Adsense cố tình render lố
   const containerClass = `w-full overflow-hidden ${className}`;
 
   if (isArticleAd) {
     return (
-      <div ref={wrapperRef} className={containerClass}>
+      <div ref={wrapperRef} className={containerClass} key={router.asPath}>
         <ins
           className="adsbygoogle"
           style={{ display: 'block', textAlign: 'center', width: '100%' }}
@@ -143,17 +134,15 @@ export default function AdUnit({
   }
 
   if (layout === 'unknown') {
-    return <div ref={wrapperRef} className={containerClass} />;
+    return <div ref={wrapperRef} className={containerClass} key={router.asPath} />;
   }
 
   return (
-    <div ref={wrapperRef} className={containerClass}>
-      {/* MOBILE ONLY */}
+    <div ref={wrapperRef} className={containerClass} key={router.asPath}>
       {layout === 'mobile' && (
         <div className="w-full">
           {mobileVariant === 'compact' ? (
             <div className="w-full flex justify-center">
-              {/* ✅ ĐÃ SỬA: data-full-width-responsive="false" để tôn trọng padding của Card */}
               <ins
                 className="adsbygoogle"
                 style={{ display: 'block', width: '100%' }} 
@@ -178,7 +167,6 @@ export default function AdUnit({
         </div>
       )}
 
-      {/* DESKTOP ONLY */}
       {layout === 'desktop' && desktopMode === 'unit' && (
         <div className="w-full">
           <ins
@@ -189,11 +177,9 @@ export default function AdUnit({
             data-ad-format="auto"
             data-full-width-responsive="true" 
           />
-          {/* Desktop có thể để true vì không gian rộng, nhưng nếu vẫn bị tràn thì sửa thành false */}
         </div>
       )}
 
-      {/* Desktop Auto (Multiplex fallback) */}
       {layout === 'desktop' && desktopMode === 'auto' && (
         <div className="w-full">
           <ins
