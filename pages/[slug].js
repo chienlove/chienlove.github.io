@@ -39,12 +39,18 @@ const Comments = dynamic(() => import('../components/Comments'), {
   loading: () => <div className="text-sm text-slate-500 dark:text-slate-400">Đang tải bình luận…</div>,
 });
 
-/* ===================== SSR ===================== */
-export async function getServerSideProps(context) {
-  context.res.setHeader(
-    'Cache-Control',
-    'public, s-maxage=3600, stale-while-revalidate=86400'
-  );
+/* ===================== ISR (Static + Revalidate) ===================== */
+
+// 1. Khai báo paths (Lazy: không build trước, khách vào mới build)
+export async function getStaticPaths() {
+  return {
+    paths: [],
+    fallback: 'blocking', // Khách đầu tiên chờ server render, khách sau có HTML ngay
+  };
+}
+
+// 2. Chuyển logic từ getServerSideProps sang getStaticProps
+export async function getStaticProps(context) {
   const slug = context.params.slug?.toLowerCase();
 
   // 1) Tìm kiếm chính
@@ -88,6 +94,9 @@ export async function getServerSideProps(context) {
       serverApp: appData,
       serverRelated: relatedApps ?? [],
     },
+    // Quan trọng: Cache trang này trong 1 giờ (3600 giây).
+    // Giúp giảm tải CPU Vercel về mức tối thiểu.
+    revalidate: 3600,
   };
 }
 
