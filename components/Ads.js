@@ -6,9 +6,8 @@ import { useRouter } from 'next/router';
 function pushAdsense() {
   try {
     const w = window;
-    if (w.adsbygoogle && w.adsbygoogle.push) {
-      w.adsbygoogle.push({});
-    }
+    w.adsbygoogle = w.adsbygoogle || [];
+    w.adsbygoogle.push({});
   } catch (e) {
     const msg = e && typeof e.message === 'string' ? e.message : '';
 
