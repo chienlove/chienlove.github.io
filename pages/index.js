@@ -28,7 +28,7 @@ import affiliateApps from '../lib/appads';
    ========================= */
 const SITE = {
   name: 'StoreiOS',
-  url: '[https://storeios.net](https://storeios.net)',
+  url: 'https://storeios.net',
   twitter: '@storeios',
 };
 
@@ -118,7 +118,7 @@ function SEOIndexMeta({ meta }) {
 
   // JSON-LD
   const jsonLdWebsite = {
-    '@context': '[https://schema.org](https://schema.org)',
+    '@context': 'https://schema.org',
     '@type': 'WebSite',
     name: SITE.name,
     url: SITE.url,
@@ -131,7 +131,7 @@ function SEOIndexMeta({ meta }) {
 
   const jsonLdBreadcrumb = slug
     ? {
-        '@context': '[https://schema.org](https://schema.org)',
+        '@context': 'https://schema.org',
         '@type': 'BreadcrumbList',
         itemListElement: [
           { '@type': 'ListItem', position: 1, name: 'Trang chủ', item: SITE.url },
@@ -150,7 +150,7 @@ function SEOIndexMeta({ meta }) {
 
   const jsonLdCollection = slug
     ? {
-        '@context': '[https://schema.org](https://schema.org)',
+        '@context': 'https://schema.org',
         '@type': 'CollectionPage',
         name: titleBase,
         description: desc,
@@ -195,8 +195,8 @@ function SEOIndexMeta({ meta }) {
       {/* Performance */}
       {supabaseOrigin && <link rel="dns-prefetch" href={supabaseOrigin} />}
       {supabaseOrigin && <link rel="preconnect" href={supabaseOrigin} crossOrigin="" />}
-      <link rel="dns-prefetch" href="[https://fonts.googleapis.com](https://fonts.googleapis.com)" />
-      <link rel="preconnect" href="[https://fonts.gstatic.com](https://fonts.gstatic.com)" crossOrigin="" />
+      <link rel="dns-prefetch" href="https://fonts.googleapis.com" />
+      <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
 
       {/* JSON-LD */}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdWebsite) }} />
@@ -407,11 +407,30 @@ export default function Home({
   hotByViews,
   paginationData,
   metaSEO,
-  certStatus,
 }) {
   const INSTALLABLE_SLUGS = new Set(['jailbreak', 'app-clone', 'app-removed']);
 
-  // Trạng thái certificate (nhận từ server qua props certStatus)
+  // 1. TẠO STATE & EFFECT ĐỂ CHECK CERT (Client-side)
+  // Mặc định null để chưa hiện gì. Sau khi load xong sẽ gọi API qua proxy.
+  const [certStatus, setCertStatus] = useState(null);
+
+  useEffect(() => {
+    const fetchCert = async () => {
+      try {
+        const res = await fetch('/api/check-cert');
+        if (res.ok) {
+          const data = await res.json();
+          setCertStatus(data);
+        } else {
+          setCertStatus({ ocspStatus: 'error' });
+        }
+      } catch (e) {
+        setCertStatus({ ocspStatus: 'error' });
+      }
+    };
+    fetchCert();
+  }, []);
+
   // Chế độ App hot: installs | views
   const [hotMode, setHotMode] = useState('installs');
   const [hotMenuOpen, setHotMenuOpen] = useState(false);
@@ -430,18 +449,15 @@ export default function Home({
     'bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4';
   const adCard = contentCard;
 
-  // Label quảng cáo nằm chính giữa đường viền trên của card
   const AdLabel = () => (
     <div
       className="absolute -top-3 left-1/2 -translate-x-1/2 px-2 text-xs md:text-sm text-gray-500 dark:text-gray-400 font-semibold bg-white dark:bg-gray-800"
-      style={{ zIndex: 1 }} // Đảm bảo label nằm trên border của card
+      style={{ zIndex: 1 }} 
     >
       Quảng cáo
     </div>
   );
 
-  // ✅ OPTIMIZED: Wrapper cho block quảng cáo
-  // Thêm padding top (pt-6) để nội dung không bị dính vào Label, giảm Click nhầm
   const AdWrapper = ({ children }) => (
     <div className="relative my-8">
       <AdLabel />
@@ -456,12 +472,11 @@ export default function Home({
   const hotApps = hotMode === 'views' ? hotByViews : hotByInstalls;
 
   return (
-    <Layout  hotApps={hotByInstalls}
-             categories={categoriesList}>
+    <Layout hotApps={hotByInstalls} categories={categoriesList}>
       <SEOIndexMeta meta={seoData} />
 
       <div className="container mx-auto px-1 md:px-2 py-6 space-y-10">
-        {/* Banner Ad - SỬ DỤNG ADWRAPPER */}
+        {/* Banner Ad */}
         <AdWrapper>
           <AdUnit className="my-0" mobileVariant="compact" desktopMode="unit" />
         </AdWrapper>
@@ -477,7 +492,7 @@ export default function Home({
                 <FontAwesomeIcon icon={faFire} className="text-xl text-red-500" />
               </div>
 
-              {/* ✅ Nút đơn + mũi tên để mở menu chọn chế độ */}
+              {/* Nút đơn + mũi tên để mở menu chọn chế độ */}
               <div className="relative" ref={hotMenuRef}>
                 <button
                   className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-semibold rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
@@ -557,8 +572,8 @@ export default function Home({
                     {category.name}
                   </h2>
 
-                  {/* Badge trạng thái cert – jailbreak/app-clone/app-removed */}
-                  {new Set(['jailbreak', 'app-clone', 'app-removed']).has((category.slug || '').toLowerCase()) &&
+                  {/* Badge trạng thái cert */}
+                  {INSTALLABLE_SLUGS.has((category.slug || '').toLowerCase()) &&
                     certStatus && (
                       <span
                         className="flex items-center gap-1 text-sm text-gray-700 dark:text-gray-300"
@@ -592,7 +607,6 @@ export default function Home({
                     )}
                 </div>
 
-                {/* Thông tin trang (nếu có) */}
                 {hasFullPager && (
                   <div className="text-[12px] text-gray-500 dark:text-gray-400 mb-2">
                     Trang {pageInfo.currentPage} / {pageInfo.totalPages} ({pageInfo.totalApps} ứng dụng)
@@ -610,7 +624,6 @@ export default function Home({
                         />
                       );
                     }
-                    // ✅ Bọc AppCard trong relative & chèn Metric absolute (ngay dưới icon tải)
                     return (
                       <div key={item.id} className="relative">
                         <AppCard app={item} mode="list" />
@@ -620,7 +633,6 @@ export default function Home({
                   })}
                 </div>
 
-                {/* Phân trang */}
                 {hasFullPager && (
                   <PaginationFull
                     categorySlug={category.slug}
@@ -631,7 +643,6 @@ export default function Home({
                 {hasLitePager && <PaginationLite categorySlug={category.slug} hasNext={true} />}
               </div>
 
-              {/* Quảng cáo chèn giữa các category - SỬ DỤNG ADWRAPPER */}
               {new Set([1]).has(index) && (
                 <AdWrapper>
                   <AdUnit className="my-0" mobileVariant="multiplex" desktopMode="unit" />
@@ -641,7 +652,6 @@ export default function Home({
           );
         })}
 
-        {/* Footer Ad - SỬ DỤNG ADWRAPPER */}
         <AdWrapper>
           <AdUnit className="my-0" mobileVariant="compact" desktopMode="unit" />
         </AdWrapper>
@@ -718,29 +728,11 @@ export async function getServerSideProps(ctx) {
   const currentPage = parseInt(pageQuery || '1', 10);
   const APPS_PER_PAGE = 10;
 
-  // Giới hạn thời gian chờ để không làm chậm TTFB index
-  const withTimeout = (promise, ms) =>
-    Promise.race([
-      promise,
-      new Promise((resolve) => setTimeout(() => resolve({ ocspStatus: 'error' }), ms)),
-    ]);
+  // ĐÃ XÓA: checkRevocation() server-side để tránh làm chậm trang
 
-  const checkRevocation = () =>
-    withTimeout(
-      (async () => {
-        try {
-          const res = await fetch(`https://ipadl.storeios.net/api/check-revocation`);
-          if (!res.ok) throw new Error('Bad status');
-          return await res.json();
-        } catch (e) {
-          return { ocspStatus: 'error' };
-        }
-      })(),
-      800
-    );
-
-  // Song song: categories + hot by views + hot by installs + check-revocation
-  const [categoriesData, hotByViewsData, hotByInstallsData, certStatus] = await Promise.all([
+  // Song song: categories + hot by views + hot by installs
+  // (Đã xóa checkRevocation khỏi đây)
+  const [categoriesData, hotByViewsData, hotByInstallsData] = await Promise.all([
     supabase.from('categories').select('id, name, slug'),
     supabase
       .from('apps')
@@ -752,7 +744,6 @@ export async function getServerSideProps(ctx) {
       .select(APP_FIELDS)
       .order('installs', { ascending: false, nullsLast: true })
       .limit(5),
-    checkRevocation(),
   ]);
 
   const categories = categoriesData.data || [];
@@ -829,7 +820,7 @@ export async function getServerSideProps(ctx) {
   const hotByViews = (hotByViewsData.data || []).slice(0, 5);
   const hotByInstalls = (hotByInstallsData.data || []).slice(0, 5);
 
-  // ====== SEO động: luôn truyền slug + name của chuyên mục active (nếu có) ======
+  // ====== SEO động ======
   let metaSEO = {
     page: 1,
     totalPages: 1,
@@ -861,7 +852,6 @@ export async function getServerSideProps(ctx) {
       hotByViews,
       paginationData,
       metaSEO,
-      certStatus,
     },
   };
 }

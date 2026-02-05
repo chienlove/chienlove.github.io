@@ -1,4 +1,5 @@
 module.exports = {
+  reactStrictMode: true,
   images: {
     domains: [
       'storeios.net',
@@ -15,6 +16,14 @@ module.exports = {
         source: '/ads.txt',
         destination: 'https://srv.adstxtmanager.com/19390/storeios.net',
         permanent: true
+      }
+    ];
+  },
+  async rewrites() {
+    return [
+      {
+        source: '/api/check-cert',
+        destination: 'https://ipadl.storeios.net/api/check-revocation'
       }
     ];
   }
