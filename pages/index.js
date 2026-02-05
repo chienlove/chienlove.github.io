@@ -401,6 +401,7 @@ const AffiliateInlineCard = ({ item, isFirst = false }) => {
    Home
    ========================= */
 export default function Home({
+  categoriesList,
   categoriesWithApps,
   hotByInstalls,
   hotByViews,
@@ -455,7 +456,8 @@ export default function Home({
   const hotApps = hotMode === 'views' ? hotByViews : hotByInstalls;
 
   return (
-    <Layout hotApps={hotByInstalls /* giữ nguyên nếu header cần */}>
+    <Layout  hotApps={hotByInstalls}
+             categories={categoriesList}>
       <SEOIndexMeta meta={seoData} />
 
       <div className="container mx-auto px-1 md:px-2 py-6 space-y-10">
@@ -853,6 +855,7 @@ export async function getServerSideProps(ctx) {
 
   return {
     props: {
+      categoriesList: categories,
       categoriesWithApps,
       hotByInstalls,
       hotByViews,

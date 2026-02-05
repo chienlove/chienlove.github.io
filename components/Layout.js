@@ -1,4 +1,3 @@
-// components/Layout.js
 import { useEffect, useState, useRef } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
@@ -24,7 +23,7 @@ import {
   faShieldAlt,
 } from '@fortawesome/free-solid-svg-icons';
 
-export default function Layout({ children, fullWidth = false, hotApps }) {
+export default function Layout({ children, fullWidth = false, hotApps, categories = [] }) {
   const [darkMode, setDarkMode] = useState(false);
   const [user, setUser] = useState(null);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -33,7 +32,6 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
   const [sortBy, setSortBy] = useState('created_at');
   const [q, setQ] = useState('');
   const [apps, setApps] = useState([]);
-  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
 
   const [notifOpen, setNotifOpen] = useState(false);
@@ -104,16 +102,6 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
     document.documentElement.classList.toggle('dark', darkMode);
     if (typeof window !== 'undefined') localStorage.setItem('darkMode', darkMode);
   }, [darkMode]);
-
-  useEffect(() => {
-    (async () => {
-      const { data } = await supabase
-        .from('categories')
-        .select('id, name, slug')
-        .order('name', { ascending: true });
-      setCategories(data || []);
-    })();
-  }, []);
 
   const runSearch = async () => {
     if (!searchOpen) return;
@@ -217,7 +205,6 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
               <FontAwesomeIcon icon={faSearch} className="w-4 h-4" />
             </button>
 
-            {/* Notifications */}
             <div className="relative">
               <button
                 onClick={() => setNotifOpen((v) => !v)}
@@ -247,7 +234,6 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
         </div>
       </header>
 
-      {/* MOBILE DRAWER */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 flex">
           <div ref={drawerRef} className="w-80 max-w-[85%] bg-white dark:bg-gray-900 h-full p-6 shadow-2xl overflow-y-auto">
@@ -269,7 +255,6 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
               Tìm kiếm…
             </button>
 
-            {/* ADMIN AREA */}
             {!adminLoading && isAdmin && (
               <div className="mt-6 mb-4 pb-4 border-b border-emerald-200 dark:border-emerald-800">
                 <div className="flex items-center gap-2 text-sm font-semibold mb-2 text-emerald-600 dark:text-emerald-400">
@@ -290,7 +275,6 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
               </div>
             )}
 
-            {/* CATEGORIES */}
             <div className="mt-6">
               <div className="flex items-center gap-2 text-sm font-semibold mb-2">
                 <FontAwesomeIcon icon={faLayerGroup} className="w-4 h-4" />
@@ -313,7 +297,6 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
               </div>
             </div>
 
-            {/* LEGAL LINKS */}
             <div className="mt-6 border-t border-gray-200 dark:border-gray-800 pt-4 space-y-2">
               <Link href="/about" onClick={() => setMobileMenuOpen(false)} className="block px-2 py-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800">
                 Giới thiệu
@@ -331,7 +314,6 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
         </div>
       )}
 
-      {/* SEARCH MODAL */}
       <SearchModal
         q={q}
         setQ={setQ}
@@ -347,12 +329,10 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
         hotApps={hotApps}
       />
 
-      {/* MAIN CONTENT */}
       <main className={`${fullWidth ? '' : 'w-full max-w-screen-2xl mx-auto px-4 py-6'}`}>
         {children}
       </main>
 
-      {/* FOOTER */}
       <footer className="mt-16 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900">
         <div className="max-w-screen-2xl mx-auto px-4 py-10">
 
@@ -391,7 +371,6 @@ export default function Layout({ children, fullWidth = false, hotApps }) {
                 Liên hệ
               </a>
 
-              {/* APPINFO + IPADL ONLY IN FOOTER */}
               <a
                 href="https://appinfo.storeios.net"
                 target="_blank"
