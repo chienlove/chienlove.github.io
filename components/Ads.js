@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, memo } from 'react';
 import { useRouter } from 'next/router';
 
 function pushAdsense() {
@@ -12,7 +12,7 @@ function pushAdsense() {
   }
 }
 
-export default function AdUnit({
+const AdUnit = ({
   className = '',
   mobileVariant = 'compact',
   mobileSlot1 = '5160182988',
@@ -21,7 +21,7 @@ export default function AdUnit({
   desktopSlot = '4575220124',
   inArticleSlot = '4276741180',
   isArticleAd = false,
-}) {
+}) => {
   const wrapperRef = useRef(null);
   const [layout, setLayout] = useState('unknown');
   const [shouldRender, setShouldRender] = useState(false);
@@ -36,17 +36,15 @@ export default function AdUnit({
     };
 
     detect();
-    window.addEventListener('resize', detect);
     
     const timer = setTimeout(() => {
       setShouldRender(true);
-    }, 100);
+    }, 150);
 
     return () => {
-      window.removeEventListener('resize', detect);
       clearTimeout(timer);
     };
-  }, [desktopMode]);
+  }, []);
 
   useEffect(() => {
     if (!shouldRender || layout === 'unknown') return;
@@ -62,7 +60,7 @@ export default function AdUnit({
       const ins = root.querySelector('ins.adsbygoogle');
       if (!ins) return;
 
-      if (ins.offsetWidth > 0 && ins.offsetHeight > 0) {
+      if (ins.offsetWidth > 0) {
         if (ins.getAttribute('data-load-status') === 'done') return;
         if (ins.innerHTML.trim() !== '') return;
 
@@ -80,7 +78,7 @@ export default function AdUnit({
       observer.observe(root);
     }
 
-    const t = setTimeout(tryPush, 200);
+    const t = setTimeout(tryPush, 300);
 
     return () => {
       if (observer) observer.disconnect();
@@ -88,43 +86,40 @@ export default function AdUnit({
     };
   }, [shouldRender, layout, router.asPath, mobileVariant, mobileSlot1, mobileSlot2, desktopMode, desktopSlot, inArticleSlot, isArticleAd]);
 
-  const containerClass = `w-full overflow-hidden flex justify-center items-center ${className}`;
-  const adStyle = { display: 'block', width: '100%', minHeight: '50px', minWidth: '200px' };
+  const containerClass = `w-full overflow-hidden text-center my-4 ${className}`;
+  const adStyle = { display: 'block', width: '100%', minHeight: '280px' };
+  const articleStyle = { display: 'block', textAlign: 'center', width: '100%', minHeight: '280px' };
 
   if (isArticleAd) {
     return (
-      <div ref={wrapperRef} className={containerClass} key={router.asPath + '-art'}>
+      <div ref={wrapperRef} className={containerClass} key={router.asPath + '-art'} style={{ minHeight: '280px' }}>
         {shouldRender && (
           <ins
             className="adsbygoogle"
-            style={{ ...adStyle, textAlign: 'center' }}
+            style={articleStyle}
             data-ad-client="ca-pub-3905625903416797"
             data-ad-slot={inArticleSlot}
             data-ad-format="auto"
-            data-full-width-responsive="false" 
+            data-full-width-responsive="true" 
           />
         )}
       </div>
     );
   }
 
-  if (layout === 'unknown') {
-    return <div ref={wrapperRef} className={containerClass} style={{ minHeight: '50px' }} />;
-  }
-
   return (
-    <div ref={wrapperRef} className={containerClass} key={router.asPath + '-main'}>
-      {shouldRender && (
+    <div ref={wrapperRef} className={containerClass} key={router.asPath + '-main'} style={{ minHeight: '280px' }}>
+      {shouldRender && layout !== 'unknown' && (
         <>
           {layout === 'mobile' && (
-            <div className="w-full flex justify-center">
+            <div className="w-full">
               <ins
                 className="adsbygoogle"
                 style={adStyle} 
                 data-ad-client="ca-pub-3905625903416797"
                 data-ad-slot={mobileVariant === 'compact' ? mobileSlot1 : mobileSlot2}
                 data-ad-format="auto" 
-                data-full-width-responsive="false"
+                data-full-width-responsive="true"
               />
             </div>
           )}
@@ -146,3 +141,5 @@ export default function AdUnit({
     </div>
   );
 }
+
+export default memo(AdUnit);
