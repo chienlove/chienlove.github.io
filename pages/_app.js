@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import Script from 'next/script';
+import Head from 'next/head';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import '../styles/globals.css';
@@ -12,7 +12,27 @@ config.autoAddCss = false;
 function MyApp({ Component, pageProps }) {
   const [darkMode, setDarkMode] = useState(false);
   const router = useRouter();
+  
   const isAdminPage = router.pathname.startsWith('/admin');
+
+  useEffect(() => {
+    const handleRouteChange = () => {
+      const adOverlays = document.querySelectorAll('.adsbygoogle-noablate, .ins-outline, .google-auto-placed');
+      
+      adOverlays.forEach(el => {
+        el.remove();
+      });
+      
+      document.body.style.overflow = 'auto';
+      document.documentElement.style.overflow = 'auto';
+    };
+
+    router.events.on('routeChangeStart', handleRouteChange);
+
+    return () => {
+      router.events.off('routeChangeStart', handleRouteChange);
+    };
+  }, [router]);
 
   useEffect(() => {
     const savedMode = localStorage.getItem('darkMode') === 'true';
@@ -24,7 +44,6 @@ function MyApp({ Component, pageProps }) {
     if (process.env.NODE_ENV !== 'production') return;
 
     let isLeavingPage = false;
-
     const shouldIgnore = (message = '') => {
       const msg = String(message).toLowerCase();
       if (msg.includes('load failed')) return true;
@@ -51,10 +70,8 @@ function MyApp({ Component, pageProps }) {
     const onError = (event) => {
       if (isLeavingPage) return;
       if (!event) return;
-
       const msg = event?.message || event?.error?.message;
       if (shouldIgnore(msg)) return;
-
       sendLogOnce({
         url: window.location.href,
         userAgent: navigator.userAgent,
@@ -66,10 +83,8 @@ function MyApp({ Component, pageProps }) {
     const onUnhandled = (event) => {
       if (isLeavingPage) return;
       if (!event) return;
-
       const msg = event?.reason?.message || event?.reason;
       if (shouldIgnore(msg)) return;
-
       sendLogOnce({
         url: window.location.href,
         userAgent: navigator.userAgent,
@@ -129,17 +144,18 @@ function MyApp({ Component, pageProps }) {
 
   return (
     <>
-      {!isAdminPage && (
-        <Script
-          id="adsbygoogle-init"
-          strategy="afterInteractive"
-          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797"
-          crossOrigin="anonymous"
-        />
-      )}
-      
+      <Head>
+        {!isAdminPage && (
+          <script
+            async
+            src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797"
+            crossOrigin="anonymous"
+          />
+        )}
+      </Head>
+
       <Component {...pageProps} />
-      
+
       <ToastContainer
         position="top-center"
         autoClose={4000}
