@@ -22,3 +22,16 @@
 .animate-pulse {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
+
+.ins-outline,
+.adsbygoogle-noablate,
+#aswift_0_host,
+#aswift_1_host,
+iframe[id^="aswift"] {
+  z-index: 2147483647 !important;
+}
+
+html, body {
+  overflow-x: hidden;
+  width: 100%;
+}

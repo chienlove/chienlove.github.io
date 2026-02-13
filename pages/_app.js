@@ -1,15 +1,18 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
+import Script from 'next/script';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import '../styles/globals.css';
 import { config } from '@fortawesome/fontawesome-svg-core';
 import '@fortawesome/fontawesome-svg-core/styles.css';
+
 config.autoAddCss = false;
 
 function MyApp({ Component, pageProps }) {
   const [darkMode, setDarkMode] = useState(false);
   const router = useRouter();
+  const isAdminPage = router.pathname.startsWith('/admin');
 
   useEffect(() => {
     const savedMode = localStorage.getItem('darkMode') === 'true';
@@ -18,82 +21,77 @@ function MyApp({ Component, pageProps }) {
   }, []);
 
   useEffect(() => {
-  if (process.env.NODE_ENV !== 'production') return;
+    if (process.env.NODE_ENV !== 'production') return;
 
-  let isLeavingPage = false;
+    let isLeavingPage = false;
 
-  const shouldIgnore = (message = '') => {
-    const msg = String(message).toLowerCase();
-
-    // Safari / iOS spam khi redirect download
-    if (msg.includes('load failed')) return true;
-
-    // Abort do navigation
-    if (msg.includes('abort')) return true;
-
-    return false;
-  };
-
-  const sendLogOnce = (() => {
-    const seen = new Set();
-    return (payload) => {
-      const key = `${payload.error}|${payload.url}`;
-      if (seen.has(key)) return;
-      seen.add(key);
-
-      fetch('/api/log-client-error', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-        keepalive: true, // an toàn khi page unload
-      }).catch(() => {});
+    const shouldIgnore = (message = '') => {
+      const msg = String(message).toLowerCase();
+      if (msg.includes('load failed')) return true;
+      if (msg.includes('abort')) return true;
+      return false;
     };
-  })();
 
-  const onError = (event) => {
-    if (isLeavingPage) return;
-    if (!event) return;
+    const sendLogOnce = (() => {
+      const seen = new Set();
+      return (payload) => {
+        const key = `${payload.error}|${payload.url}`;
+        if (seen.has(key)) return;
+        seen.add(key);
 
-    const msg = event?.message || event?.error?.message;
-    if (shouldIgnore(msg)) return;
+        fetch('/api/log-client-error', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          keepalive: true,
+        }).catch(() => {});
+      };
+    })();
 
-    sendLogOnce({
-      url: window.location.href,
-      userAgent: navigator.userAgent,
-      error: String(msg || 'Unknown error'),
-      stack: String(event?.error?.stack || 'no stack'),
-    });
-  };
+    const onError = (event) => {
+      if (isLeavingPage) return;
+      if (!event) return;
 
-  const onUnhandled = (event) => {
-    if (isLeavingPage) return;
-    if (!event) return;
+      const msg = event?.message || event?.error?.message;
+      if (shouldIgnore(msg)) return;
 
-    const msg = event?.reason?.message || event?.reason;
-    if (shouldIgnore(msg)) return;
+      sendLogOnce({
+        url: window.location.href,
+        userAgent: navigator.userAgent,
+        error: String(msg || 'Unknown error'),
+        stack: String(event?.error?.stack || 'no stack'),
+      });
+    };
 
-    sendLogOnce({
-      url: window.location.href,
-      userAgent: navigator.userAgent,
-      error: String(msg || 'Unhandled rejection'),
-      stack: String(event?.reason?.stack || 'no stack'),
-    });
-  };
+    const onUnhandled = (event) => {
+      if (isLeavingPage) return;
+      if (!event) return;
 
-  const onPageHide = () => {
-    isLeavingPage = true;
-  };
+      const msg = event?.reason?.message || event?.reason;
+      if (shouldIgnore(msg)) return;
 
-  window.addEventListener('error', onError);
-  window.addEventListener('unhandledrejection', onUnhandled);
-  window.addEventListener('pagehide', onPageHide);
+      sendLogOnce({
+        url: window.location.href,
+        userAgent: navigator.userAgent,
+        error: String(msg || 'Unhandled rejection'),
+        stack: String(event?.reason?.stack || 'no stack'),
+      });
+    };
 
-  return () => {
-    window.removeEventListener('error', onError);
-    window.removeEventListener('unhandledrejection', onUnhandled);
-    window.removeEventListener('pagehide', onPageHide);
-  };
-}, []);
+    const onPageHide = () => {
+      isLeavingPage = true;
+    };
+
+    window.addEventListener('error', onError);
+    window.addEventListener('unhandledrejection', onUnhandled);
+    window.addEventListener('pagehide', onPageHide);
+
+    return () => {
+      window.removeEventListener('error', onError);
+      window.removeEventListener('unhandledrejection', onUnhandled);
+      window.removeEventListener('pagehide', onPageHide);
+    };
+  }, []);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -131,7 +129,17 @@ function MyApp({ Component, pageProps }) {
 
   return (
     <>
+      {!isAdminPage && (
+        <Script
+          id="adsbygoogle-init"
+          strategy="afterInteractive"
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-3905625903416797"
+          crossOrigin="anonymous"
+        />
+      )}
+      
       <Component {...pageProps} />
+      
       <ToastContainer
         position="top-center"
         autoClose={4000}
