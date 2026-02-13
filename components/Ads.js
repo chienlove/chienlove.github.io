@@ -9,17 +9,6 @@ function pushAdsense() {
     w.adsbygoogle = w.adsbygoogle || [];
     w.adsbygoogle.push({});
   } catch (e) {
-    const msg = e && typeof e.message === 'string' ? e.message : '';
-
-    if (msg.includes('No slot size for availableWidth=0')) {
-      return;
-    }
-
-    if (msg.includes("All 'ins' elements in the DOM with class=adsbygoogle already have ads in them.")) {
-      return;
-    }
-
-    console.error('Adsense push error (global):', e ? e : 'Unknown AdSense push error');
   }
 }
 
@@ -35,6 +24,7 @@ export default function AdUnit({
 }) {
   const wrapperRef = useRef(null);
   const [layout, setLayout] = useState('unknown');
+  const [shouldRender, setShouldRender] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -42,154 +32,116 @@ export default function AdUnit({
 
     const detect = () => {
       const w = window.innerWidth || document.documentElement.clientWidth || document.body.clientWidth || 0;
-      if (desktopMode === 'unit' && w >= 768) {
-        setLayout('desktop');
-      } else {
-        setLayout('mobile');
-      }
+      setLayout(w >= 768 ? 'desktop' : 'mobile');
     };
 
     detect();
-    
     window.addEventListener('resize', detect);
-    return () => window.removeEventListener('resize', detect);
+    
+    const timer = setTimeout(() => {
+      setShouldRender(true);
+    }, 100);
+
+    return () => {
+      window.removeEventListener('resize', detect);
+      clearTimeout(timer);
+    };
   }, [desktopMode]);
 
   useEffect(() => {
+    if (!shouldRender || layout === 'unknown') return;
     const root = wrapperRef.current;
     if (!root) return;
 
-    let disposed = false;
     let observer = null;
+    let pushed = false;
 
-    const pushIfNeeded = () => {
-      if (disposed) return;
-      if (typeof window === 'undefined') return;
+    const tryPush = () => {
+      if (pushed) return;
+      
+      const ins = root.querySelector('ins.adsbygoogle');
+      if (!ins) return;
 
-      const list = Array.from(root.querySelectorAll('ins.adsbygoogle'));
-      if (!list.length) return;
+      if (ins.offsetWidth > 0 && ins.offsetHeight > 0) {
+        if (ins.getAttribute('data-load-status') === 'done') return;
+        if (ins.innerHTML.trim() !== '') return;
 
-      const visible = list.filter((ins) => {
-        const status = ins.getAttribute('data-adsbygoogle-status');
-        return (
-          ins.offsetParent !== null &&
-          ins.dataset.adLoaded !== '1' &&
-          status !== 'done'
-        );
-      });
-
-      if (!visible.length) return;
-
-      const ready = visible.filter((ins) => {
-        if (!ins.getBoundingClientRect) return false;
-        const rect = ins.getBoundingClientRect();
-        return rect.width > 0;
-      });
-
-      if (!ready.length) return;
-
-      ready.forEach((ins) => {
-        ins.dataset.adLoaded = '1';
-      });
-
-      pushAdsense();
+        ins.setAttribute('data-load-status', 'done');
+        pushAdsense();
+        pushed = true;
+        if (observer) observer.disconnect();
+      }
     };
 
     if (typeof window !== 'undefined' && 'ResizeObserver' in window) {
       observer = new ResizeObserver(() => {
-        pushIfNeeded();
+        tryPush();
       });
-      const insElements = root.querySelectorAll('ins.adsbygoogle');
-      insElements.forEach((ins) => observer.observe(ins));
+      observer.observe(root);
     }
 
-    pushIfNeeded();
+    const t = setTimeout(tryPush, 200);
 
     return () => {
-      disposed = true;
       if (observer) observer.disconnect();
-      const insElements = root.querySelectorAll('ins.adsbygoogle');
-      insElements.forEach((ins) => {
-        delete ins.dataset.adLoaded;
-      });
+      clearTimeout(t);
     };
-  }, [mobileVariant, mobileSlot1, mobileSlot2, desktopMode, desktopSlot, inArticleSlot, isArticleAd, layout, router.asPath]);
+  }, [shouldRender, layout, router.asPath, mobileVariant, mobileSlot1, mobileSlot2, desktopMode, desktopSlot, inArticleSlot, isArticleAd]);
 
-  const containerClass = `w-full overflow-hidden ${className}`;
+  const containerClass = `w-full overflow-hidden flex justify-center items-center ${className}`;
+  const adStyle = { display: 'block', width: '100%', minHeight: '50px', minWidth: '200px' };
 
   if (isArticleAd) {
     return (
-      <div ref={wrapperRef} className={containerClass} key={router.asPath}>
-        <ins
-          className="adsbygoogle"
-          style={{ display: 'block', textAlign: 'center', width: '100%' }}
-          data-ad-client="ca-pub-3905625903416797"
-          data-ad-slot={inArticleSlot}
-          data-ad-format="auto"
-          data-full-width-responsive="false" 
-        />
+      <div ref={wrapperRef} className={containerClass} key={router.asPath + '-art'}>
+        {shouldRender && (
+          <ins
+            className="adsbygoogle"
+            style={{ ...adStyle, textAlign: 'center' }}
+            data-ad-client="ca-pub-3905625903416797"
+            data-ad-slot={inArticleSlot}
+            data-ad-format="auto"
+            data-full-width-responsive="false" 
+          />
+        )}
       </div>
     );
   }
 
   if (layout === 'unknown') {
-    return <div ref={wrapperRef} className={containerClass} key={router.asPath} />;
+    return <div ref={wrapperRef} className={containerClass} style={{ minHeight: '50px' }} />;
   }
 
   return (
-    <div ref={wrapperRef} className={containerClass} key={router.asPath}>
-      {layout === 'mobile' && (
-        <div className="w-full">
-          {mobileVariant === 'compact' ? (
+    <div ref={wrapperRef} className={containerClass} key={router.asPath + '-main'}>
+      {shouldRender && (
+        <>
+          {layout === 'mobile' && (
             <div className="w-full flex justify-center">
               <ins
                 className="adsbygoogle"
-                style={{ display: 'block', width: '100%' }} 
+                style={adStyle} 
                 data-ad-client="ca-pub-3905625903416797"
-                data-ad-slot={mobileSlot1}
+                data-ad-slot={mobileVariant === 'compact' ? mobileSlot1 : mobileSlot2}
                 data-ad-format="auto" 
                 data-full-width-responsive="false"
               />
             </div>
-          ) : (
+          )}
+
+          {layout === 'desktop' && (
             <div className="w-full">
               <ins
                 className="adsbygoogle"
-                style={{ display: 'block', width: '100%' }}
+                style={adStyle}
                 data-ad-client="ca-pub-3905625903416797"
-                data-ad-slot={mobileSlot2}
+                data-ad-slot={desktopMode === 'unit' ? desktopSlot : mobileSlot2}
                 data-ad-format="auto"
-                data-full-width-responsive="false"
+                data-full-width-responsive="true" 
               />
             </div>
           )}
-        </div>
-      )}
-
-      {layout === 'desktop' && desktopMode === 'unit' && (
-        <div className="w-full">
-          <ins
-            className="adsbygoogle"
-            style={{ display: 'block', width: '100%' }}
-            data-ad-client="ca-pub-3905625903416797"
-            data-ad-slot={desktopSlot}
-            data-ad-format="auto"
-            data-full-width-responsive="true" 
-          />
-        </div>
-      )}
-
-      {layout === 'desktop' && desktopMode === 'auto' && (
-        <div className="w-full">
-          <ins
-            className="adsbygoogle"
-            style={{ display: 'block', width: '100%' }}
-            data-ad-client="ca-pub-3905625903416797"
-            data-ad-slot={mobileSlot2}
-            data-ad-format="auto"
-            data-full-width-responsive="true"
-          />
-        </div>
+        </>
       )}
     </div>
   );
