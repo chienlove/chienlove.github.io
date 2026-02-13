@@ -23,15 +23,35 @@
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+/* --- FIX LỖI MÀN HÌNH TRẮNG MOBILE / DỌC --- */
+
+/* 1. Cưỡng chế mở khóa cuộn trang */
+html, body {
+  overflow-x: hidden;
+  overflow-y: auto !important;
+  height: auto !important;
+  position: static !important; /* Ngăn Google set fixed */
+}
+
+/* 2. Ép lớp phủ quảng cáo thành trong suốt (nếu bị kẹt) */
 .ins-outline,
 .adsbygoogle-noablate,
 #aswift_0_host,
 #aswift_1_host,
+#aswift_2_host,
 iframe[id^="aswift"] {
-  z-index: 2147483647 !important;
+  background-color: transparent !important;
+  background: transparent !important;
+  z-index: 2147483647 !important; /* Luôn nổi lên trên để dễ xóa */
 }
 
-html, body {
-  overflow-x: hidden;
-  width: 100%;
+/* 3. Ẩn container nếu quảng cáo chưa load hoặc bị lỗi height=0 */
+ins.adsbygoogle[data-ad-status="unfilled"],
+ins.adsbygoogle[style*="height: 0px"] {
+  display: none !important;
+}
+
+/* 4. Mở khóa scroll cho thẻ HTML khi Google gán class */
+html.adsbygoogle-noablate {
+   overflow: auto !important;
 }

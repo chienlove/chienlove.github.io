@@ -12,34 +12,59 @@ config.autoAddCss = false;
 function MyApp({ Component, pageProps }) {
   const [darkMode, setDarkMode] = useState(false);
   const router = useRouter();
-  
   const isAdminPage = router.pathname.startsWith('/admin');
 
+  // --- LOGIC 1: Dọn dẹp quảng cáo bị kẹt (Fix lỗi màn hình trắng mobile) ---
   useEffect(() => {
-    const handleRouteChange = () => {
-      const adOverlays = document.querySelectorAll('.adsbygoogle-noablate, .ins-outline, .google-auto-placed');
+    const cleanUpAds = () => {
+      // Xóa các lớp phủ Vignette bị kẹt
+      const overlays = document.querySelectorAll('.ins-outline, .adsbygoogle-noablate, .google-auto-placed');
+      overlays.forEach(el => el.remove());
       
-      adOverlays.forEach(el => {
-        el.remove();
-      });
-      
+      // Mở khóa cuộn trang
       document.body.style.overflow = 'auto';
+      document.body.style.position = '';
+      document.body.style.height = 'auto';
       document.documentElement.style.overflow = 'auto';
     };
 
+    // 1. Chạy ngay khi mở trang (Fix lỗi reload)
+    cleanUpAds();
+    // Chạy lại vài lần để đảm bảo Google không chèn lại sau khi code chạy
+    const timer1 = setTimeout(cleanUpAds, 500);
+    const timer2 = setTimeout(cleanUpAds, 1500);
+
+    // 2. Chạy khi chuyển trang
+    const handleRouteChange = () => {
+      cleanUpAds();
+    };
+
+    // 3. Chạy khi back/forward trên mobile (Safari Cache)
+    const handlePageShow = (e) => {
+      if (e.persisted) {
+        cleanUpAds();
+      }
+    };
+
     router.events.on('routeChangeStart', handleRouteChange);
+    window.addEventListener('pageshow', handlePageShow);
 
     return () => {
+      clearTimeout(timer1);
+      clearTimeout(timer2);
       router.events.off('routeChangeStart', handleRouteChange);
+      window.removeEventListener('pageshow', handlePageShow);
     };
   }, [router]);
 
+  // --- LOGIC 2: Dark Mode ---
   useEffect(() => {
     const savedMode = localStorage.getItem('darkMode') === 'true';
     setDarkMode(savedMode);
     document.documentElement.classList.toggle('dark', savedMode);
   }, []);
 
+  // --- LOGIC 3: Error Logging (Client Side) ---
   useEffect(() => {
     if (process.env.NODE_ENV !== 'production') return;
 
@@ -108,6 +133,7 @@ function MyApp({ Component, pageProps }) {
     };
   }, []);
 
+  // --- LOGIC 4: Safari Refresh Fix ---
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const ua = navigator.userAgent || '';
@@ -127,6 +153,7 @@ function MyApp({ Component, pageProps }) {
     };
   }, []);
 
+  // --- LOGIC 5: Protect Admin Route ---
   useEffect(() => {
     const isAdminPath = (p) => typeof p === 'string' && p.startsWith('/admin');
     const handler = ({ url, as }) => {
