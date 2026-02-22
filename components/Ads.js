@@ -86,9 +86,24 @@ const AdUnit = ({
     };
   }, [shouldRender, layout, router.asPath, mobileVariant, mobileSlot1, mobileSlot2, desktopMode, desktopSlot, inArticleSlot, isArticleAd]);
 
-  const containerClass = `w-full overflow-hidden text-center my-4 ${className}`;
-  const adStyle = { display: 'block', width: '100%', minHeight: '280px' };
-  const articleStyle = { display: 'block', textAlign: 'center', width: '100%', minHeight: '280px' };
+  // FIX 1: Thêm flex center vào container để căn giữa quảng cáo
+  const containerClass = `w-full overflow-hidden flex justify-center items-center my-4 ${className}`;
+  
+  // FIX 2: Thêm maxWidth: '100%' để quảng cáo không bao giờ to hơn container
+  const adStyle = { 
+    display: 'block', 
+    width: '100%', 
+    maxWidth: '100%',  
+    minHeight: '280px' 
+  };
+  
+  const articleStyle = { 
+    display: 'block', 
+    textAlign: 'center', 
+    width: '100%', 
+    maxWidth: '100%', 
+    minHeight: '280px' 
+  };
 
   if (isArticleAd) {
     return (
@@ -100,7 +115,7 @@ const AdUnit = ({
             data-ad-client="ca-pub-3905625903416797"
             data-ad-slot={inArticleSlot}
             data-ad-format="auto"
-            data-full-width-responsive="true" 
+            data-full-width-responsive="false" 
           />
         )}
       </div>
@@ -112,20 +127,21 @@ const AdUnit = ({
       {shouldRender && layout !== 'unknown' && (
         <>
           {layout === 'mobile' && (
-            <div className="w-full">
+            <div className="w-full flex justify-center">
               <ins
                 className="adsbygoogle"
                 style={adStyle} 
                 data-ad-client="ca-pub-3905625903416797"
                 data-ad-slot={mobileVariant === 'compact' ? mobileSlot1 : mobileSlot2}
                 data-ad-format="auto" 
-                data-full-width-responsive="true"
+                // FIX 3: Đổi thành 'false' để quảng cáo nằm gọn trong card (quan trọng nhất)
+                data-full-width-responsive="false"
               />
             </div>
           )}
 
           {layout === 'desktop' && (
-            <div className="w-full">
+            <div className="w-full flex justify-center">
               <ins
                 className="adsbygoogle"
                 style={adStyle}
