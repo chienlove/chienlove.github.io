@@ -86,37 +86,21 @@ const AdUnit = ({
     };
   }, [shouldRender, layout, router.asPath, mobileVariant, mobileSlot1, mobileSlot2, desktopMode, desktopSlot, inArticleSlot, isArticleAd]);
 
-  const containerClass = `w-full my-4 ad-strict-container ${className}`;
+  const containerClass = `w-full text-center my-4 ${className}`;
   const adStyle = { display: 'block', width: '100%', minHeight: '280px' };
-
-  const styleTag = (
-    <style dangerouslySetInnerHTML={{__html: `
-      .ad-strict-container {
-        max-width: 100%;
-        overflow: hidden !important;
-        box-sizing: border-box;
-      }
-      .ad-strict-container ins.adsbygoogle,
-      .ad-strict-container ins.adsbygoogle iframe {
-        max-width: 100% !important;
-        margin: 0 !important;
-        padding: 0 !important;
-      }
-    `}} />
-  );
 
   if (isArticleAd) {
     return (
       <div ref={wrapperRef} className={containerClass} key={router.asPath + '-art'} style={{ minHeight: '280px' }}>
-        {styleTag}
         {shouldRender && (
           <ins
             className="adsbygoogle"
             style={adStyle}
             data-ad-client="ca-pub-3905625903416797"
             data-ad-slot={inArticleSlot}
-            data-ad-format="auto"
-            data-full-width-responsive="true" 
+            data-ad-format="fluid"
+            data-layout="in-article"
+            data-full-width-responsive="false" 
           />
         )}
       </div>
@@ -125,7 +109,6 @@ const AdUnit = ({
 
   return (
     <div ref={wrapperRef} className={containerClass} key={router.asPath + '-main'} style={{ minHeight: '280px' }}>
-      {styleTag}
       {shouldRender && layout !== 'unknown' && (
         <>
           {layout === 'mobile' && (
@@ -136,7 +119,7 @@ const AdUnit = ({
                 data-ad-client="ca-pub-3905625903416797"
                 data-ad-slot={mobileVariant === 'compact' ? mobileSlot1 : mobileSlot2}
                 data-ad-format="auto" 
-                data-full-width-responsive="true"
+                data-full-width-responsive="false"
               />
             </div>
           )}
@@ -149,7 +132,7 @@ const AdUnit = ({
                 data-ad-client="ca-pub-3905625903416797"
                 data-ad-slot={desktopMode === 'unit' ? desktopSlot : mobileSlot2}
                 data-ad-format="auto"
-                data-full-width-responsive="true" 
+                data-full-width-responsive="false" 
               />
             </div>
           )}
