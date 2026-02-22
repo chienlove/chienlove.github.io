@@ -88,7 +88,6 @@ const AdUnit = ({
 
   const containerClass = `w-full text-center my-4 ${className}`;
   const adStyle = { display: 'block', width: '100%', minHeight: '280px' };
-  const articleStyle = { display: 'block', textAlign: 'center', width: '100%', minHeight: '280px' };
 
   if (isArticleAd) {
     return (
@@ -96,10 +95,11 @@ const AdUnit = ({
         {shouldRender && (
           <ins
             className="adsbygoogle"
-            style={articleStyle}
+            style={adStyle}
             data-ad-client="ca-pub-3905625903416797"
             data-ad-slot={inArticleSlot}
-            data-ad-format="auto"
+            data-ad-format="fluid"
+            data-layout="in-article"
             data-full-width-responsive="false" 
           />
         )}
@@ -118,7 +118,7 @@ const AdUnit = ({
                 style={adStyle} 
                 data-ad-client="ca-pub-3905625903416797"
                 data-ad-slot={mobileVariant === 'compact' ? mobileSlot1 : mobileSlot2}
-                data-ad-format="auto" 
+                data-ad-format="rectangle" 
                 data-full-width-responsive="false"
               />
             </div>
@@ -131,7 +131,7 @@ const AdUnit = ({
                 style={adStyle}
                 data-ad-client="ca-pub-3905625903416797"
                 data-ad-slot={desktopMode === 'unit' ? desktopSlot : mobileSlot2}
-                data-ad-format="auto"
+                data-ad-format="rectangle"
                 data-full-width-responsive="false" 
               />
             </div>
