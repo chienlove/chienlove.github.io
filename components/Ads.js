@@ -37,9 +37,10 @@ const AdUnit = ({
 
     detect();
     
+    // Tăng nhẹ thời gian chờ để layout ổn định trước khi render ads
     const timer = setTimeout(() => {
       setShouldRender(true);
-    }, 150);
+    }, 200);
 
     return () => {
       clearTimeout(timer);
@@ -51,20 +52,23 @@ const AdUnit = ({
     const root = wrapperRef.current;
     if (!root) return;
 
+    // Reset previous ads if content changed drastically (optional safety)
+    const ins = root.querySelector('ins.adsbygoogle');
+    if (ins && ins.getAttribute('data-load-status') === 'done') return;
+
     let observer = null;
     let pushed = false;
 
     const tryPush = () => {
       if (pushed) return;
-      
-      const ins = root.querySelector('ins.adsbygoogle');
-      if (!ins) return;
+      const insNode = root.querySelector('ins.adsbygoogle');
+      if (!insNode) return;
 
-      if (ins.offsetWidth > 0) {
-        if (ins.getAttribute('data-load-status') === 'done') return;
-        if (ins.innerHTML.trim() !== '') return;
+      // Đảm bảo container đã có width thì mới push ad
+      if (insNode.offsetWidth > 0) {
+        if (insNode.innerHTML.trim() !== '') return;
 
-        ins.setAttribute('data-load-status', 'done');
+        insNode.setAttribute('data-load-status', 'done');
         pushAdsense();
         pushed = true;
         if (observer) observer.disconnect();
@@ -78,31 +82,28 @@ const AdUnit = ({
       observer.observe(root);
     }
 
-    const t = setTimeout(tryPush, 300);
+    const t = setTimeout(tryPush, 500);
 
     return () => {
       if (observer) observer.disconnect();
       clearTimeout(t);
     };
-  }, [shouldRender, layout, router.asPath, mobileVariant, mobileSlot1, mobileSlot2, desktopMode, desktopSlot, inArticleSlot, isArticleAd]);
+  }, [shouldRender, layout, router.asPath]);
 
-  // FIX 1: Thêm flex center vào container để căn giữa quảng cáo
-  const containerClass = `w-full overflow-hidden flex justify-center items-center my-4 ${className}`;
+  // Style container: flex center để quảng cáo luôn nằm giữa
+  const containerClass = `w-full flex justify-center items-center my-4 overflow-hidden ${className}`;
   
-  // FIX 2: Thêm maxWidth: '100%' để quảng cáo không bao giờ to hơn container
-  const adStyle = { 
-    display: 'block', 
-    width: '100%', 
-    maxWidth: '100%',  
-    minHeight: '280px' 
+  // Style cho thẻ ins: quan trọng display block
+  const adStyle = {
+    display: 'block',
+    width: '100%',
+    textAlign: 'center'
   };
-  
-  const articleStyle = { 
-    display: 'block', 
-    textAlign: 'center', 
-    width: '100%', 
-    maxWidth: '100%', 
-    minHeight: '280px' 
+
+  const articleStyle = {
+    display: 'block',
+    textAlign: 'center',
+    width: '100%'
   };
 
   if (isArticleAd) {
@@ -114,8 +115,8 @@ const AdUnit = ({
             style={articleStyle}
             data-ad-client="ca-pub-3905625903416797"
             data-ad-slot={inArticleSlot}
-            data-ad-format="auto"
-            data-full-width-responsive="false" 
+            data-ad-format="fluid"
+            data-ad-layout="in-article"
           />
         )}
       </div>
@@ -127,15 +128,19 @@ const AdUnit = ({
       {shouldRender && layout !== 'unknown' && (
         <>
           {layout === 'mobile' && (
-            <div className="w-full flex justify-center">
+            <div className="w-full flex justify-center" style={{ maxWidth: '100%' }}>
               <ins
                 className="adsbygoogle"
-                style={adStyle} 
+                style={adStyle}
                 data-ad-client="ca-pub-3905625903416797"
                 data-ad-slot={mobileVariant === 'compact' ? mobileSlot1 : mobileSlot2}
-                data-ad-format="auto" 
-                // FIX 3: Đổi thành 'false' để quảng cáo nằm gọn trong card (quan trọng nhất)
-                data-full-width-responsive="false"
+                // QUAN TRỌNG: Đổi 'auto' thành 'rectangle, horizontal'
+                // Lý do: 'auto' trên mobile sẽ cố gắng tràn viền (gây lệch).
+                // 'rectangle' sẽ ép quảng cáo thành hình khối nằm gọn trong card.
+                data-ad-format="rectangle, horizontal" 
+                
+                // QUAN TRỌNG: Bật lại true để đảm bảo logic responsive của Google hoạt động -> Có quảng cáo
+                data-full-width-responsive="true"
               />
             </div>
           )}
@@ -147,7 +152,7 @@ const AdUnit = ({
                 style={adStyle}
                 data-ad-client="ca-pub-3905625903416797"
                 data-ad-slot={desktopMode === 'unit' ? desktopSlot : mobileSlot2}
-                data-ad-format="auto"
+                data-ad-format="auto" // Desktop màn hình rộng, để auto thường an toàn hơn
                 data-full-width-responsive="true" 
               />
             </div>
