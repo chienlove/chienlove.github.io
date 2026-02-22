@@ -86,8 +86,9 @@ const AdUnit = ({
     };
   }, [shouldRender, layout, router.asPath, mobileVariant, mobileSlot1, mobileSlot2, desktopMode, desktopSlot, inArticleSlot, isArticleAd]);
 
-  const containerClass = `w-full text-center my-4 ${className}`;
+  const containerClass = `w-full overflow-hidden text-center my-4 ${className}`;
   const adStyle = { display: 'block', width: '100%', minHeight: '280px' };
+  const articleStyle = { display: 'block', textAlign: 'center', width: '100%', minHeight: '280px' };
 
   if (isArticleAd) {
     return (
@@ -95,12 +96,11 @@ const AdUnit = ({
         {shouldRender && (
           <ins
             className="adsbygoogle"
-            style={adStyle}
+            style={articleStyle}
             data-ad-client="ca-pub-3905625903416797"
             data-ad-slot={inArticleSlot}
-            data-ad-format="fluid"
-            data-layout="in-article"
-            data-full-width-responsive="false" 
+            data-ad-format="auto"
+            data-full-width-responsive="true" 
           />
         )}
       </div>
@@ -119,7 +119,7 @@ const AdUnit = ({
                 data-ad-client="ca-pub-3905625903416797"
                 data-ad-slot={mobileVariant === 'compact' ? mobileSlot1 : mobileSlot2}
                 data-ad-format="auto" 
-                data-full-width-responsive="false"
+                data-full-width-responsive="true"
               />
             </div>
           )}
@@ -132,7 +132,7 @@ const AdUnit = ({
                 data-ad-client="ca-pub-3905625903416797"
                 data-ad-slot={desktopMode === 'unit' ? desktopSlot : mobileSlot2}
                 data-ad-format="auto"
-                data-full-width-responsive="false" 
+                data-full-width-responsive="true" 
               />
             </div>
           )}
