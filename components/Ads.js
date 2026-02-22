@@ -112,7 +112,7 @@ const AdUnit = ({
       {shouldRender && layout !== 'unknown' && (
         <>
           {layout === 'mobile' && (
-            <div className="w-full flex justify-center">
+            <div className="w-full">
               <ins
                 className="adsbygoogle"
                 style={adStyle} 
@@ -125,7 +125,7 @@ const AdUnit = ({
           )}
 
           {layout === 'desktop' && (
-            <div className="w-full flex justify-center">
+            <div className="w-full">
               <ins
                 className="adsbygoogle"
                 style={adStyle}
