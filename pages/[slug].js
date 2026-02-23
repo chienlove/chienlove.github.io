@@ -474,7 +474,7 @@ export default function Detail({ serverApp, serverRelated }) {
     return data;
   }, [app, dynamicMetaTags, displaySize, absOg]);
 
-  // ===================== BREADCRUMB STRUCTURED DATA (FIX LAST ITEM URL) =====================
+  // ===================== BREADCRUMB STRUCTURED DATA =====================
   const breadcrumbStructuredData = useMemo(() => {
     if (!app) return null;
 
@@ -866,7 +866,7 @@ export default function Detail({ serverApp, serverRelated }) {
         {/* Nội dung dưới */}
         <div className="max-w-screen-2xl mx-auto px-2 sm:px-4 md:px-6 mt-6 space-y-6 overflow-x-hidden">
 
-          {/* Quảng cáo (top) - ✅ TỐI ƯU CPC: Thêm margin lớn hơn */}
+          {/* Quảng cáo (top) */}
           <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow mb-6">
             <div className="text-[11px] uppercase tracking-wider text-gray-400 mb-2 text-center">Quảng cáo / Advertisement</div>
             <AdUnit desktopMode="unit" mobileVariant="compact" />
@@ -1027,26 +1027,14 @@ export default function Detail({ serverApp, serverRelated }) {
             })()}
           </div>
 
-          {/* ===== ✅ OPTIMIZED: In-article Ad + High Value Keywords Context ===== */}
+          {/* ===== QUẢNG CÁO TRONG BÀI VIẾT (Đã dọn dẹp nội dung rác) ===== */}
           <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow border border-dashed border-gray-300 dark:border-zinc-700 my-8">
             <div className="text-[11px] uppercase tracking-wider text-gray-400 mb-3 text-center font-bold">
               Advertisement / Quảng cáo
             </div>
 
-            {/* ✅ High Paying Keywords Context Injection: Security, Enterprise, Cloud, VPN */}
-            <div className="bg-slate-50 dark:bg-zinc-800/40 border border-slate-200 dark:border-zinc-700 rounded-xl p-4 mb-4">
-              <h3 className="text-sm font-extrabold text-slate-900 dark:text-slate-100 mb-2">
-                Enterprise Security & Mobile Infrastructure
-              </h3>
-              <p className="text-xs text-slate-600 dark:text-slate-400 leading-5">
-                Developers deploying iOS solutions should prioritize <strong>data privacy</strong> and secure <strong>cloud hosting</strong> infrastructure.
-                When managing enterprise distribution, ensure your network is protected by <strong>business VPN</strong> services and robust <strong>firewall security</strong>.
-                Review <strong>cybersecurity protocols</strong> before integrating external software packages.
-              </p>
-            </div>
-
-            {/* In-article ad with extra padding */}
-            <div className="min-h-[250px] flex items-center justify-center bg-gray-50 dark:bg-zinc-950 rounded-lg">
+            {/* In-article ad với margin an toàn */}
+            <div className="py-4 flex items-center justify-center rounded-lg">
                <AdUnit desktopMode="unit" isArticleAd />
             </div>
           </div>
@@ -1121,7 +1109,7 @@ export default function Detail({ serverApp, serverRelated }) {
           </div>
 
           
-          {/* CTA thật - ✅ TỐI ƯU CPC: Đã tách biệt với quảng cáo phía trên nhờ component Thông tin */}
+          {/* CTA thật */}
           {!isTestflight && (
             <div id="real-actions" className="bg-blue-50 dark:bg-blue-500/10 rounded-xl p-4 shadow border border-blue-200 dark:border-blue-400/20">
               <div className="flex items-start justify-between gap-3">
@@ -1320,7 +1308,7 @@ export default function Detail({ serverApp, serverRelated }) {
             </div>
           )}
 
-          {/* Quảng cáo (Bottom) - ✅ TỐI ƯU CPC: Thêm margin lớn */}
+          {/* Quảng cáo (Bottom) */}
           <div className="bg-white dark:bg-zinc-900 rounded-xl p-4 shadow mt-8">
             <div className="text-[11px] uppercase tracking-wider text-gray-400 mb-2 text-center">Quảng cáo / Advertisement</div>
             <AdUnit desktopMode="unit" mobileVariant="multiplex" />
