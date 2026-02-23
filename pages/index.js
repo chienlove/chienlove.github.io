@@ -444,6 +444,9 @@ export default function Home({
     document.addEventListener('mousedown', onDocClick);
     return () => document.removeEventListener('mousedown', onDocClick);
   }, []);
+  
+    const contentCard =
+    'bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4';
 
     const AdWrapper = ({ children }) => (
     <div className="w-full my-8 flex flex-col items-center justify-center overflow-hidden">
