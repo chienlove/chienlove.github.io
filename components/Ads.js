@@ -94,5 +94,5 @@ const AdUnit = ({
       />
     </div>
   );
-
+};
 export default AdUnit;
