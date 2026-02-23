@@ -445,25 +445,17 @@ export default function Home({
     return () => document.removeEventListener('mousedown', onDocClick);
   }, []);
 
-  const contentCard =
-    'bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4';
-  const adCard = contentCard;
-
-  const AdLabel = () => (
-    <div
-      className="absolute -top-3 left-1/2 -translate-x-1/2 px-2 text-xs md:text-sm text-gray-500 dark:text-gray-400 font-semibold bg-white dark:bg-gray-800"
-      style={{ zIndex: 1 }} 
-    >
-      Quảng cáo
+    const AdWrapper = ({ children }) => (
+    <div className="w-full my-8 flex flex-col items-center justify-center overflow-hidden">
+      <span className="text-[11px] text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 font-medium">
+        Quảng cáo / Advertisement
+      </span>
+      <div className="w-full flex justify-center items-center">
+        {children}
+      </div>
     </div>
   );
 
-  const AdWrapper = ({ children }) => (
-    <div className="relative my-8">
-      <AdLabel />
-      <div className={`${adCard} pt-6 pb-4`}>{children}</div>
-    </div>
-  );
 
   // ===== SEO =====
   const seoData = useMemo(() => metaSEO || {}, [metaSEO]);

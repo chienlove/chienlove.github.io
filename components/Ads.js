@@ -80,8 +80,6 @@ const AdUnit = ({
     );
   }
 
-  // 3. QUẢNG CÁO CHUNG (Responsive cho cả Desktop & Mobile)
-  // Loại bỏ hoàn toàn width/height cứng. Để Auto, Google sẽ tự tính toán 728x90 cho PC và 300x250/320x100 cho Mobile.
   return (
     <div className={`w-full overflow-hidden flex justify-center min-h-[100px] ${className}`}>
       <ins
@@ -90,8 +88,8 @@ const AdUnit = ({
         style={{ display: 'block', width: '100%' }}
         data-ad-client="ca-pub-3905625903416797"
         data-ad-slot={desktopMode === 'unit' ? desktopSlot : mobileSlot1}
-        data-ad-format={mobileVariant === 'compact' ? 'horizontal' : 'auto'}
-        data-full-width-responsive="true"
+        data-ad-format="rectangle, horizontal" 
+        data-full-width-responsive="false" 
       />
     </div>
   );
