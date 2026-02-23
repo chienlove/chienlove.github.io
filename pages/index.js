@@ -445,15 +445,12 @@ export default function Home({
     return () => document.removeEventListener('mousedown', onDocClick);
   }, []);
   
-    const contentCard =
-    'bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4';
-
-    const AdWrapper = ({ children }) => (
-    <div className="w-full my-8 flex flex-col items-center justify-center overflow-hidden">
-      <span className="text-[11px] text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-2 font-medium">
+      const AdWrapper = ({ children }) => (
+    <div className="w-full my-8 text-center overflow-hidden">
+      <span className="text-[11px] text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 font-medium block">
         Quảng cáo / Advertisement
       </span>
-      <div className="w-full flex justify-center items-center">
+      <div className="w-full block mx-auto">
         {children}
       </div>
     </div>
