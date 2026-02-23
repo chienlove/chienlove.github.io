@@ -31,9 +31,7 @@ const AdUnit = ({
   useEffect(() => {
     if (typeof window === 'undefined') return;
     
-    // Xác định thiết bị
     setLayout(window.innerWidth >= 768 ? 'desktop' : 'mobile');
-    
     const timer = setTimeout(() => setShouldRender(true), 150);
     return () => clearTimeout(timer);
   }, []);
@@ -60,44 +58,73 @@ const AdUnit = ({
     return () => clearTimeout(t);
   }, [shouldRender, layout, router.asPath]);
 
-  // CẤU HÌNH ĐỊNH DẠNG CHUẨN API GOOGLE
-  let adSlot, adFormat;
-
-  if (isArticleAd) {
-    // Trong bài viết: Cho phép hình chữ nhật để lấp đầy không gian nội dung
-    adSlot = inArticleSlot;
-    adFormat = "rectangle";
-  } else if (layout === 'desktop') {
-    // MÁY TÍNH: Lệnh bắt buộc hiển thị dải ngang (vd: 728x90) -> Sửa lỗi hình vuông
-    adSlot = desktopSlot;
-    adFormat = "horizontal";
-  } else {
-    // ĐIỆN THOẠI
-    if (mobileVariant === 'compact') {
-      // Vị trí nhạy cảm dễ click nhầm: Lệnh bắt buộc hiển thị dải ngang mỏng (vd: 320x50, 320x100)
-      adSlot = mobileSlot1;
-      adFormat = "horizontal";
-    } else {
-      // Vị trí cuối trang an toàn: Hiển thị hình chữ nhật
-      adSlot = mobileSlot2;
-      adFormat = "rectangle";
-    }
+  // --- CẤU HÌNH HIỂN THỊ QUẢNG CÁO TỐI ƯU ---
+  if (!shouldRender || layout === 'unknown') {
+    return <div className={`w-full min-h-[100px] ${className}`} />;
   }
 
-  return (
-    <div ref={wrapperRef} className={`ad-wrapper flex justify-center w-full overflow-hidden ${className}`}>
-      {shouldRender && layout !== 'unknown' && (
+  // 1. QUẢNG CÁO TRONG BÀI VIẾT (Giữ nguyên dạng hình chữ nhật đẹp như ảnh bạn chụp)
+  if (isArticleAd) {
+    return (
+      <div ref={wrapperRef} className={`flex justify-center w-full overflow-hidden ${className}`}>
         <ins
           className="adsbygoogle"
-          style={{ display: 'block', width: '100%' }}
+          style={{ display: 'block', width: '100%', minHeight: '250px' }}
           data-ad-client="ca-pub-3905625903416797"
-          data-ad-slot={adSlot}
-          data-ad-format={adFormat}
+          data-ad-slot={inArticleSlot}
+          data-ad-format="rectangle"
           data-full-width-responsive="false"
         />
-      )}
-    </div>
-  );
+      </div>
+    );
+  }
+
+  // 2. MÁY TÍNH (Desktop)
+  if (layout === 'desktop') {
+    // Ép cứng kích thước 728x90 (Leaderboard banner)
+    // Sẽ hiện một banner ảnh/video lớn nằm ngang, không bao giờ hiện text link
+    return (
+      <div ref={wrapperRef} className={`flex justify-center w-full overflow-hidden ${className}`}>
+        <ins
+          className="adsbygoogle"
+          style={{ display: 'inline-block', width: '728px', height: '90px' }}
+          data-ad-client="ca-pub-3905625903416797"
+          data-ad-slot={desktopMode === 'unit' ? desktopSlot : mobileSlot2}
+        />
+      </div>
+    );
+  }
+
+  // 3. ĐIỆN THOẠI (Mobile)
+  if (mobileVariant === 'compact') {
+    // Vị trí dễ click nhầm (Trang chủ / Top)
+    // Ép cứng kích thước 320x100 (Large Mobile Banner)
+    // Kích thước này đủ to để hiển thị ảnh đẹp, nhưng chiều cao 100px rất khó để cuộn nhầm.
+    return (
+      <div ref={wrapperRef} className={`flex justify-center w-full overflow-hidden ${className}`}>
+        <ins
+          className="adsbygoogle"
+          style={{ display: 'inline-block', width: '320px', height: '100px' }}
+          data-ad-client="ca-pub-3905625903416797"
+          data-ad-slot={mobileSlot1}
+        />
+      </div>
+    );
+  } else {
+    // Vị trí Multiplex cuối trang (Ít nguy hiểm)
+    return (
+      <div ref={wrapperRef} className={`flex justify-center w-full overflow-hidden ${className}`}>
+         <ins
+          className="adsbygoogle"
+          style={{ display: 'block', width: '100%', minHeight: '250px' }}
+          data-ad-client="ca-pub-3905625903416797"
+          data-ad-slot={mobileSlot2}
+          data-ad-format="rectangle"
+          data-full-width-responsive="false"
+        />
+      </div>
+    );
+  }
 }
 
 export default memo(AdUnit);
