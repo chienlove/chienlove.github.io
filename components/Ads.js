@@ -30,12 +30,10 @@ const AdUnit = ({
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-
-    const detect = () => {
-      setLayout(window.innerWidth >= 768 ? 'desktop' : 'mobile');
-    };
-
-    detect();
+    
+    // Xác định thiết bị
+    setLayout(window.innerWidth >= 768 ? 'desktop' : 'mobile');
+    
     const timer = setTimeout(() => setShouldRender(true), 150);
     return () => clearTimeout(timer);
   }, []);
@@ -51,7 +49,6 @@ const AdUnit = ({
       const ins = root.querySelector('ins.adsbygoogle');
       if (!ins) return;
 
-      // Kiểm tra xem quảng cáo đã được push chưa để tránh push trùng
       if (ins.innerHTML.trim() === '' && ins.getAttribute('data-load-status') !== 'done') {
         ins.setAttribute('data-load-status', 'done');
         pushAdsense();
@@ -63,65 +60,41 @@ const AdUnit = ({
     return () => clearTimeout(t);
   }, [shouldRender, layout, router.asPath]);
 
-  // 1. CHỐT KÍCH THƯỚC CỐ ĐỊNH CHO TỪNG LOẠI THIẾT BỊ VÀ VỊ TRÍ
-  let adWidth, adHeight, adSlot;
+  // CẤU HÌNH ĐỊNH DẠNG CHUẨN API GOOGLE
+  let adSlot, adFormat;
 
   if (isArticleAd) {
-    // Trong bài viết: Dùng hình chữ nhật trung bình
-    adWidth = 300;
-    adHeight = 250;
+    // Trong bài viết: Cho phép hình chữ nhật để lấp đầy không gian nội dung
     adSlot = inArticleSlot;
+    adFormat = "rectangle";
   } else if (layout === 'desktop') {
-    // Máy tính: Dùng hình chữ nhật lớn
-    adWidth = 336; 
-    adHeight = 280;
-    adSlot = desktopMode === 'unit' ? desktopSlot : mobileSlot2;
+    // MÁY TÍNH: Lệnh bắt buộc hiển thị dải ngang (vd: 728x90) -> Sửa lỗi hình vuông
+    adSlot = desktopSlot;
+    adFormat = "horizontal";
   } else {
-    // Điện thoại: ĐÂY LÀ CHỖ QUAN TRỌNG NHẤT
+    // ĐIỆN THOẠI
     if (mobileVariant === 'compact') {
-      // Dùng Banner 320x100: Đủ to để thấy, nhưng đủ dẹt để KHÔNG BỊ CLICK NHẦM khi cuộn
-      adWidth = 320; 
-      adHeight = 100;
+      // Vị trí nhạy cảm dễ click nhầm: Lệnh bắt buộc hiển thị dải ngang mỏng (vd: 320x50, 320x100)
       adSlot = mobileSlot1;
+      adFormat = "horizontal";
     } else {
-      // Các vị trí cuối trang (không nguy hiểm) dùng 300x250
-      adWidth = 300; 
-      adHeight = 250;
+      // Vị trí cuối trang an toàn: Hiển thị hình chữ nhật
       adSlot = mobileSlot2;
+      adFormat = "rectangle";
     }
   }
 
-  // 2. ÉP KHUNG CONTAINER BÊN NGOÀI
-  // Khóa cứng không gian ngay từ đầu, loại bỏ hiện tượng giật cục trang web
-  const containerStyle = {
-    width: `${adWidth}px`,
-    height: `${adHeight}px`,
-    margin: '0 auto',
-    overflow: 'hidden',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  };
-
-  // 3. ÉP KÍCH THƯỚC THẺ INS CỦA GOOGLE
-  const insStyle = {
-    display: 'inline-block',
-    width: `${adWidth}px`,
-    height: `${adHeight}px`,
-  };
-
   return (
-    <div ref={wrapperRef} className={`ad-wrapper flex justify-center w-full ${className}`}>
+    <div ref={wrapperRef} className={`ad-wrapper flex justify-center w-full overflow-hidden ${className}`}>
       {shouldRender && layout !== 'unknown' && (
-        <div style={containerStyle}>
-          <ins
-            className="adsbygoogle"
-            style={insStyle}
-            data-ad-client="ca-pub-3905625903416797"
-            data-ad-slot={adSlot}
-            // ĐÃ XÓA HOÀN TOÀN: data-ad-format="auto" và data-full-width-responsive="true"
-          />
-        </div>
+        <ins
+          className="adsbygoogle"
+          style={{ display: 'block', width: '100%' }}
+          data-ad-client="ca-pub-3905625903416797"
+          data-ad-slot={adSlot}
+          data-ad-format={adFormat}
+          data-full-width-responsive="false"
+        />
       )}
     </div>
   );
