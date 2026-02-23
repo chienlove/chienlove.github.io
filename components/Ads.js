@@ -80,17 +80,17 @@ const AdUnit = ({
     );
   }
 
-    // 3. QUẢNG CÁO CHUNG (Responsive cho cả Desktop & Mobile)
+      // 3. QUẢNG CÁO CHUNG (Responsive cho cả Desktop & Mobile)
   return (
-    <div className={`w-full overflow-hidden block text-center min-h-[100px] ${className}`}>
+    <div className={`w-full flex justify-center overflow-hidden ${className}`}>
       <ins
         ref={insRef}
         className="adsbygoogle"
-        style={{ display: 'block', margin: '0 auto', width: '100%' }}
+        style={{ display: 'block' }} 
         data-ad-client="ca-pub-3905625903416797"
         data-ad-slot={desktopMode === 'unit' ? desktopSlot : mobileSlot1}
         data-ad-format="rectangle, horizontal" 
-        data-full-width-responsive="false" 
+        data-full-width-responsive="true" 
       />
     </div>
   );
