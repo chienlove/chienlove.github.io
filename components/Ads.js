@@ -30,9 +30,8 @@ const AdUnit = ({
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    
     setLayout(window.innerWidth >= 768 ? 'desktop' : 'mobile');
-    const timer = setTimeout(() => setShouldRender(true), 150);
+    const timer = setTimeout(() => setShouldRender(true), 200);
     return () => clearTimeout(timer);
   }, []);
 
@@ -58,73 +57,46 @@ const AdUnit = ({
     return () => clearTimeout(t);
   }, [shouldRender, layout, router.asPath]);
 
-  // --- CẤU HÌNH HIỂN THỊ QUẢNG CÁO TỐI ƯU ---
+  // Nếu chưa render xong môi trường, tạo một bộ khung trống giữ chỗ để không giật layout
   if (!shouldRender || layout === 'unknown') {
     return <div className={`w-full min-h-[100px] ${className}`} />;
   }
 
-  // 1. QUẢNG CÁO TRONG BÀI VIẾT (Giữ nguyên dạng hình chữ nhật đẹp như ảnh bạn chụp)
+  // --- THIẾT LẬP SLOT VÀ ĐỊNH DẠNG ---
+  let adSlot = mobileSlot2;
+  let adFormat = "auto";
+  let adStyle = { display: 'block', width: '100%', minHeight: '250px' };
+
   if (isArticleAd) {
-    return (
-      <div ref={wrapperRef} className={`flex justify-center w-full overflow-hidden ${className}`}>
-        <ins
-          className="adsbygoogle"
-          style={{ display: 'block', width: '100%', minHeight: '250px' }}
-          data-ad-client="ca-pub-3905625903416797"
-          data-ad-slot={inArticleSlot}
-          data-ad-format="rectangle"
-          data-full-width-responsive="false"
-        />
-      </div>
-    );
-  }
-
-  // 2. MÁY TÍNH (Desktop)
-  if (layout === 'desktop') {
-    // Ép cứng kích thước 728x90 (Leaderboard banner)
-    // Sẽ hiện một banner ảnh/video lớn nằm ngang, không bao giờ hiện text link
-    return (
-      <div ref={wrapperRef} className={`flex justify-center w-full overflow-hidden ${className}`}>
-        <ins
-          className="adsbygoogle"
-          style={{ display: 'inline-block', width: '728px', height: '90px' }}
-          data-ad-client="ca-pub-3905625903416797"
-          data-ad-slot={desktopMode === 'unit' ? desktopSlot : mobileSlot2}
-        />
-      </div>
-    );
-  }
-
-  // 3. ĐIỆN THOẠI (Mobile)
-  if (mobileVariant === 'compact') {
-    // Vị trí dễ click nhầm (Trang chủ / Top)
-    // Ép cứng kích thước 320x100 (Large Mobile Banner)
-    // Kích thước này đủ to để hiển thị ảnh đẹp, nhưng chiều cao 100px rất khó để cuộn nhầm.
-    return (
-      <div ref={wrapperRef} className={`flex justify-center w-full overflow-hidden ${className}`}>
-        <ins
-          className="adsbygoogle"
-          style={{ display: 'inline-block', width: '320px', height: '100px' }}
-          data-ad-client="ca-pub-3905625903416797"
-          data-ad-slot={mobileSlot1}
-        />
-      </div>
-    );
+    // 1. Trong bài viết (Mobile & PC)
+    adSlot = inArticleSlot;
+    adFormat = "rectangle"; // Ép hình chữ nhật để hiện ảnh/video to đẹp
+  } else if (layout === 'desktop') {
+    // 2. Màn hình Máy tính (Sửa lỗi trắng banner)
+    adSlot = desktopSlot;
+    adFormat = "auto"; // Để auto, Google sẽ tự tính toán chiều ngang không gây crash
+    adStyle = { display: 'block', width: '100%' }; // Thả tự do chiều cao, không ép minHeight để chống xung đột
   } else {
-    // Vị trí Multiplex cuối trang (Ít nguy hiểm)
-    return (
-      <div ref={wrapperRef} className={`flex justify-center w-full overflow-hidden ${className}`}>
-         <ins
-          className="adsbygoogle"
-          style={{ display: 'block', width: '100%', minHeight: '250px' }}
-          data-ad-client="ca-pub-3905625903416797"
-          data-ad-slot={mobileSlot2}
-          data-ad-format="rectangle"
-          data-full-width-responsive="false"
-        />
-      </div>
-    );
+    // 3. Màn hình Điện thoại (Trang chủ và Top)
+    adSlot = mobileVariant === 'compact' ? mobileSlot1 : mobileSlot2;
+    // QUAN TRỌNG: Ép rectangle trên toàn bộ mobile để triệt tiêu vĩnh viễn quảng cáo Text lèo tèo "Khám phá thêm"
+    adFormat = "rectangle"; 
+    adStyle = { display: 'block', width: '100%', minHeight: '250px' }; // Khóa cứng 250px giữ chỗ chống click nhầm
   }
+
+  // Đã gỡ bỏ class "overflow-hidden" ở div ngoài cùng để Google không bị lỗi tính toán kích thước
+  return (
+    <div ref={wrapperRef} className={`w-full flex justify-center ${className}`}>
+       <ins
+        className="adsbygoogle"
+        style={adStyle}
+        data-ad-client="ca-pub-3905625903416797"
+        data-ad-slot={adSlot}
+        data-ad-format={adFormat}
+        data-full-width-responsive="true"
+      />
+    </div>
+  );
 }
 
 export default memo(AdUnit);
