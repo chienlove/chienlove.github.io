@@ -90,7 +90,7 @@ const AdUnit = ({
         data-ad-client="ca-pub-3905625903416797"
         data-ad-slot={desktopMode === 'unit' ? desktopSlot : mobileSlot1}
         data-ad-format="rectangle, horizontal" 
-        data-full-width-responsive="true" 
+        data-full-width-responsive="false" 
       />
     </div>
   );
