@@ -5,7 +5,7 @@ import { useRouter } from 'next/router';
 
 const AdUnit = ({
   className = '',
-  mobileVariant = 'auto',
+  mobileVariant = 'auto', 
   mobileSlot1 = '5160182988',
   mobileSlot2 = '7109430646',
   desktopMode = 'unit',
@@ -14,66 +14,88 @@ const AdUnit = ({
   isArticleAd = false,
   isMultiplex = false,
 }) => {
-  const containerRef = useRef(null);
+  const insRef = useRef(null);
   const router = useRouter();
 
   useEffect(() => {
-    // Chỉ chạy trên client và khi container đã sẵn sàng
-    if (typeof window === 'undefined' || !containerRef.current) return;
+    if (typeof window === 'undefined' || !insRef.current) return;
 
-    // 1. XÓA SẠCH NỘI DUNG CŨ: Đảm bảo không bị trùng lặp DOM khi chuyển trang
-    containerRef.current.innerHTML = '';
+    const ins = insRef.current;
 
-    // 2. TẠO THẺ <ins> BẰNG JS THUẦN: Cách ly hoàn toàn khỏi sự dòm ngó của React
-    const ins = document.createElement('ins');
-    ins.className = 'adsbygoogle';
-    ins.setAttribute('data-ad-client', 'ca-pub-3905625903416797');
+    const pushAd = () => {
+      try {
+        // 1. SỬA LỖI availableWidth=0: Nếu DOM chưa kịp load CSS (width = 0), chờ thêm 100ms
+        if (ins.offsetWidth === 0) {
+          setTimeout(pushAd, 100);
+          return;
+        }
 
-    if (isArticleAd) {
-      ins.style.display = 'block';
-      ins.style.textAlign = 'center';
-      ins.setAttribute('data-ad-layout', 'in-article');
-      ins.setAttribute('data-ad-format', 'fluid');
-      ins.setAttribute('data-ad-slot', inArticleSlot);
-    } else if (isMultiplex) {
-      ins.style.display = 'block';
-      ins.setAttribute('data-ad-format', 'autorelaxed');
-      ins.setAttribute('data-ad-slot', mobileSlot2);
-    } else {
-      // 3. GIẢI QUYẾT CTR CAO & QUẢNG CÁO QUÁ TO:
-      ins.style.display = 'block';
-      ins.style.margin = '0 auto';
-      ins.style.width = '100%';
-      ins.style.maxHeight = '100px'; // KHÓA CỨNG chiều cao tối đa (tránh qc hình vuông/chữ nhật lớn)
-      
-      // Ép Google chỉ hiển thị quảng cáo ngang (banner)
-      ins.setAttribute('data-ad-format', 'horizontal'); 
-      // Tắt tính năng tự động tràn viền màn hình di động của Google
-      ins.setAttribute('data-full-width-responsive', 'false'); 
-      ins.setAttribute('data-ad-slot', desktopMode === 'unit' ? desktopSlot : mobileSlot1);
-    }
+        // 2. Chặn việc push trùng lặp
+        if (ins.getAttribute('data-adsbygoogle-status') === 'done' || ins.innerHTML.trim() !== '') {
+          return;
+        }
 
-    // Gắn thẻ <ins> vào DOM
-    containerRef.current.appendChild(ins);
+        // Đánh dấu và gọi AdSense
+        ins.setAttribute('data-load-status', 'loading');
+        const w = window;
+        w.adsbygoogle = w.adsbygoogle || [];
+        w.adsbygoogle.push({});
+      } catch (e) {
+        console.error("AdSense push error:", e);
+      }
+    };
 
-    // Kích hoạt AdSense
-    try {
-      const w = window;
-      w.adsbygoogle = w.adsbygoogle || [];
-      w.adsbygoogle.push({});
-    } catch (e) {
-      console.error('AdSense push error:', e);
-    }
+    // Khởi động hàm pushAd sau một khoảng trễ nhỏ
+    const timer = setTimeout(pushAd, 150);
 
-  }, [router.asPath, isArticleAd, isMultiplex, desktopMode]); 
-  // Dependency array chỉ theo dõi router, không bị ảnh hưởng bởi các state khác trong file index.js
+    return () => clearTimeout(timer);
+  }, [router.asPath]); // Chỉ chạy lại khi đổi URL trang
 
+  // 1. QUẢNG CÁO TRONG BÀI VIẾT
+  if (isArticleAd) {
+    return (
+      <div className={`w-full overflow-hidden text-center my-4 ${className}`}>
+        <ins
+          ref={insRef}
+          className="adsbygoogle block"
+          data-ad-layout="in-article"
+          data-ad-format="fluid"
+          data-ad-client="ca-pub-3905625903416797"
+          data-ad-slot={inArticleSlot}
+        />
+      </div>
+    );
+  }
+
+  // 2. QUẢNG CÁO MULTIPLEX
+  if (isMultiplex) {
+    return (
+      <div className={`w-full overflow-hidden ${className}`}>
+        <ins
+          ref={insRef}
+          className="adsbygoogle block"
+          data-ad-format="autorelaxed"
+          data-ad-client="ca-pub-3905625903416797"
+          data-ad-slot={mobileSlot2}
+        />
+      </div>
+    );
+  }
+
+  // 3. QUẢNG CÁO CHUNG (Responsive) - SỬA LỖI MẤT TRÊN DESKTOP & QUÁ TO TRÊN MOBILE
   return (
-    // React chỉ nhìn thấy một thẻ div trống rỗng và sẽ để yên cho nó
-    <div 
-      ref={containerRef} 
-      className={`w-full overflow-hidden text-center min-h-[90px] flex justify-center items-center ${className}`} 
-    />
+    <div className={`w-full overflow-hidden block text-center min-h-[90px] ${className}`}>
+      <ins
+        ref={insRef}
+        // Loại bỏ hoàn toàn style={{...}}, chỉ dùng class Tailwind để React không dọn dẹp DOM của AdSense
+        className="adsbygoogle block mx-auto w-full max-h-[100px]"
+        data-ad-client="ca-pub-3905625903416797"
+        data-ad-slot={desktopMode === 'unit' ? desktopSlot : mobileSlot1}
+        // Ép quảng cáo dạng ngang để tránh hiển thị hình chữ nhật lớn chiếm màn hình
+        data-ad-format="horizontal" 
+        data-full-width-responsive="false" 
+      />
+    </div>
   );
 };
 
