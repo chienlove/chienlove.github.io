@@ -54,7 +54,7 @@ const AdUnit = ({
         <ins
           ref={insRef}
           className="adsbygoogle"
-          style={{ display: 'block', textAlig: 'center' }}
+          style={{ display: 'block', textAlign: 'center' }}
           data-ad-layout="in-article"
           data-ad-format="fluid"
           data-ad-client="ca-pub-3905625903416797"
