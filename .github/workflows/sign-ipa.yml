@@ -102,6 +102,7 @@ jobs:
         run: |
           brew install pkg-config openssl minizip
           git clone https://github.com/zhlynn/zsign.git
+          export CPATH="$(brew --prefix minizip)/include/minizip:$CPATH"
           cd zsign/build/macos && make clean && make
           sudo cp ../../bin/zsign /usr/local/bin/
 
