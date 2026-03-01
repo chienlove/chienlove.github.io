@@ -50,7 +50,7 @@ const AdUnit = ({
   // 1. QUẢNG CÁO TRONG BÀI VIẾT (Giữ nguyên, tối ưu tốt)
   if (isArticleAd) {
     return (
-      <div className={`w-full overflow-hidden text-center my-4 ${className}`}>
+      <div className={`relative z-0 w-full overflow-hidden text-center my-4 ${className}`}>
         <ins
           ref={insRef}
           className="adsbygoogle"
@@ -67,7 +67,7 @@ const AdUnit = ({
   // 2. QUẢNG CÁO MULTIPLEX (Dành cho cuối bài viết/cuối trang)
   if (isMultiplex) {
     return (
-      <div className={`w-full overflow-hidden ${className}`}>
+      <div className={`relative z-0 w-full overflow-hidden ${className}`}>
         <ins
           ref={insRef}
           className="adsbygoogle"
@@ -82,7 +82,7 @@ const AdUnit = ({
 
     // 3. QUẢNG CÁO CHUNG (Responsive cho cả Desktop & Mobile)
   return (
-    <div className={`w-full overflow-hidden block text-center min-h-[100px] ${className}`}>
+    <div className={`relative z-0 w-full overflow-hidden block text-center min-h-[100px] ${className}`}>
       <ins
         ref={insRef}
         className="adsbygoogle"
