@@ -10,15 +10,6 @@ module.exports = {
       'is5-ssl.mzstatic.com'
     ]
   },
-  async redirects() {
-    return [
-      {
-        source: '/ads.txt',
-        destination: 'https://srv.adstxtmanager.com/19390/storeios.net',
-        permanent: true
-      }
-    ];
-  },
   async rewrites() {
     return [
       {
