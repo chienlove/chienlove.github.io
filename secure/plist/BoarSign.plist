@@ -14,7 +14,7 @@
       </dict>
     </array>
     <key>metadata</key><dict>
-      <key>bundle-identifier</key><string>JK.AtWillSign-storeios.net-d5ba5b</string>
+      <key>bundle-identifier</key><string>JK.AtWillSign</string>
       <key>bundle-version</key><string>1.2</string>
       <key>kind</key><string>software</string>
       <key>title</key><string>BoarSign</string>
