@@ -14,8 +14,8 @@
       </dict>
     </array>
     <key>metadata</key><dict>
-      <key>bundle-identifier</key><string>com.stremio.one-storeios.net-b18223</string>
-      <key>bundle-version</key><string>1.3.4</string>
+      <key>bundle-identifier</key><string>com.stremio.ios-storeios.net-83e12b</string>
+      <key>bundle-version</key><string>1.3.6</string>
       <key>kind</key><string>software</string>
       <key>title</key><string>Stremio</string>
     </dict>
