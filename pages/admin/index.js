@@ -1534,13 +1534,13 @@ export default function Admin() {
               </button>
               <button
                 onClick={() => doDelete(confirmDeleteId)}
-                disabled={busyAction === \"deleting\"}
+                disabled={busyAction === "deleting"}
                 className="px-3 py-1.5 text-sm font-semibold rounded bg-red-500 text-white hover:bg-red-600 disabled:opacity-60"
               >
-                {busyAction === \"deleting\" ? (
+                {busyAction === "deleting" ? (
                   <FontAwesomeIcon icon={faSpinner} spin />
                 ) : (
-                  \"Xoá\"
+                  "Xoá"
                 )}
               </button>
             </div>
@@ -1572,13 +1572,13 @@ export default function Admin() {
               </button>
               <button
                 onClick={doBulkDelete}
-                disabled={busyAction === \"bulk-deleting\"}
+                disabled={busyAction === "bulk-deleting"}
                 className="px-3 py-1.5 text-sm font-semibold rounded bg-red-500 text-white hover:bg-red-600 disabled:opacity-60"
               >
-                {busyAction === \"bulk-deleting\" ? (
+                {busyAction === "bulk-deleting" ? (
                   <FontAwesomeIcon icon={faSpinner} spin />
                 ) : (
-                  \"Xoá\"
+                  "Xoá"
                 )}
               </button>
             </div>
@@ -1603,7 +1603,7 @@ export default function Admin() {
               onChange={(e) => setMoveTargetCategory(e.target.value)}
               className="w-full mb-4 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700"
             >
-              <option value=\"\">-- Chọn chuyên mục --</option>
+              <option value="">-- Chọn chuyên mục --</option>
               {categories.map((cat) => (
                 <option key={cat.id} value={cat.id}>
                   {cat.name}
@@ -1619,13 +1619,13 @@ export default function Admin() {
               </button>
               <button
                 onClick={doMoveCategory}
-                disabled={busyAction === \"moving\" || !moveTargetCategory}
+                disabled={busyAction === "moving" || !moveTargetCategory}
                 className="px-3 py-1.5 text-sm font-semibold rounded bg-green-600 text-white hover:bg-green-700 disabled:opacity-60"
               >
-                {busyAction === \"moving\" ? (
+                {busyAction === "moving" ? (
                   <FontAwesomeIcon icon={faSpinner} spin />
                 ) : (
-                  \"Chuyển\"
+                  "Chuyển"
                 )}
               </button>
             </div>
