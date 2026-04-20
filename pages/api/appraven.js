@@ -57,41 +57,37 @@ async function scrapeAppRaven(keyword) {
         };
 
     } catch (error) {
-        // Bắt chính xác lỗi HTTP (ví dụ: 403, 404) để trả về thay vì sập server
         const errorMsg = error.response ? `HTTP ${error.response.status}` : error.message;
         console.error('❌ Lỗi trong lúc scrape:', errorMsg);
         throw new Error(`Lỗi khi lấy dữ liệu: ${errorMsg}`);
     }
 }
 
-module.exports = async (req, res) => {
-    // 1. Cấu hình CORS để có thể gọi API từ bất kỳ domain frontend nào
+// Sửa lại thành export default theo đúng chuẩn của Next.js API Routes
+export default async function handler(req, res) {
+    // Cấu hình CORS
     res.setHeader('Access-Control-Allow-Credentials', true);
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
-    // Xử lý preflight request của trình duyệt
     if (req.method === 'OPTIONS') {
         return res.status(200).end();
     }
 
-    // 2. Chỉ chấp nhận method GET
     if (req.method !== 'GET') {
         return res.status(405).json({ success: false, error: 'Chỉ hỗ trợ method GET' });
     }
 
-    // 3. Lấy tham số id từ URL
     const appId = req.query.id;
     
     if (!appId) {
         return res.status(400).json({ 
             success: false, 
-            message: 'Vui lòng cung cấp App ID. Ví dụ: /api/raven?id=284882215' 
+            message: 'Vui lòng cung cấp App ID. Ví dụ: /api/appraven?id=284882215' 
         });
     }
 
-    // 4. Xử lý logic
     try {
         const data = await scrapeAppRaven(appId);
         
@@ -107,10 +103,9 @@ module.exports = async (req, res) => {
             });
         }
     } catch (error) {
-        // Nếu có lỗi, in thẳng thông báo lỗi ra màn hình cho bạn xem
         return res.status(500).json({ 
             success: false, 
             error: error.message 
         });
     }
-};
+}
