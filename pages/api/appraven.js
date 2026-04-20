@@ -38,6 +38,7 @@ const GRAPHQL_DETAIL_QUERY = `query GetAppDetail($id: ID!) {
     developer { name }
     size
     ageRating
+    devices
     releaseDate
     minimumOSVersion
   }
@@ -128,6 +129,8 @@ async function fetchFromAppRaven(input) {
             minimumOSVersion: appData.minimumOSVersion || '',
             sizeMB: appData.size ? (appData.size / (1024 * 1024)).toFixed(2) : '0',
             description: appData.description || '',
+            ageRating: appData.ageRating || '',
+            devices: appData.devices || [],
             screenshots: screenshots,
             videos: videos
         };
