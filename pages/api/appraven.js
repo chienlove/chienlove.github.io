@@ -1,7 +1,18 @@
 const axios = require('axios');
 
-// Cục Query GraphQL siêu to khổng lồ mà bạn vừa lấy được
-const GRAPHQL_QUERY_STRING = `query GetAppDetail($id: ID!) {
+// --- 1. CÂU LỆNH TÌM KIẾM APP ---
+const GRAPHQL_SEARCH_QUERY = `query SearchApps($searchText: String!) {
+  apps(query: $searchText, page: 0) {
+    content {
+      id
+      ITunesId
+      title
+    }
+  }
+}`;
+
+// --- 2. CÂU LỆNH LẤY CHI TIẾT APP ---
+const GRAPHQL_DETAIL_QUERY = `query GetAppDetail($id: ID!) {
   app(id: $id) {
     id
     ITunesId
@@ -31,58 +42,52 @@ const GRAPHQL_QUERY_STRING = `query GetAppDetail($id: ID!) {
   }
 }`;
 
-// Hàm tiện ích biến đổi link ảnh gốc của Apple thành chất lượng cao
+// Hàm làm nét ảnh 
 function formatAppleUrl(rawUrl, isIcon = false) {
     if (!rawUrl) return null;
-    // Icon thường dùng đuôi png, ảnh màn hình dùng jpg. 'bb' là mã giữ nguyên tỉ lệ ảnh (bounding box)
     const replacement = isIcon ? '1024x1024bb.png' : '1920x1920bb.jpg';
     return rawUrl.replace('{w}x{h}{c}.{f}', replacement);
 }
 
+// Hàm gọi GraphQL dùng chung
+async function callAppRavenGraphQL(operationName, variables, query) {
+    const payload = { operationName, variables, query };
+    const response = await axios.post('https://appraven.net/appraven/graphql', payload, {
+        headers: { 
+            'Content-Type': 'application/json',
+            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1',
+            'Origin': 'https://appraven.net',
+            'Referer': 'https://appraven.net/'
+        }
+    });
+    return response.data;
+}
+
+// Logic chính
 async function fetchFromAppRaven(appleIdOrKeyword) {
     try {
-        console.log(`[1] Đang tìm ID nội bộ của AppRaven...`);
+        console.log(`[1] Đang tìm kiếm App bằng Apple ID: ${appleIdOrKeyword}...`);
         
-        // 1. Tìm ID nội bộ thông qua DuckDuckGo
-        const searchUrl = `https://html.duckduckgo.com/html/?q=site:appraven.net/app/+${encodeURIComponent(appleIdOrKeyword)}`;
-        const ddgResponse = await axios.get(searchUrl, {
-            headers: { 
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-            }
-        });
+        // BƯỚC 1: Gọi API Search để lấy ID nội bộ
+        const searchData = await callAppRavenGraphQL("SearchApps", { searchText: String(appleIdOrKeyword) }, GRAPHQL_SEARCH_QUERY);
+        const searchResults = searchData?.data?.apps?.content || [];
 
-        // Trích xuất ID nội bộ (ví dụ: lấy số 6083004 từ link appraven.net/app/6083004)
-        const linkMatch = ddgResponse.data.match(/appraven\.net\/app\/(\d+)/i);
-        
-        if (!linkMatch) {
-            return null; // Không tìm thấy trên hệ thống
+        if (searchResults.length === 0) {
+            return null; // Không tìm thấy app nào khớp với ID này
         }
 
-        const internalRavenId = linkMatch[1];
+        // Lấy app đầu tiên trong kết quả tìm kiếm (Vì tìm bằng ID nên kết quả đầu tiên chắc chắn là nó)
+        const internalRavenId = searchResults[0].id;
         console.log(`✅ Tìm thấy ID nội bộ AppRaven: ${internalRavenId}`);
-        console.log(`[2] Đang gọi GraphQL API...`);
+        console.log(`[2] Đang tải chi tiết dữ liệu...`);
 
-        // 2. Gửi Request GraphQL để lấy data xịn
-        const graphqlPayload = {
-            operationName: "GetAppDetail",
-            variables: { id: internalRavenId },
-            query: GRAPHQL_QUERY_STRING
-        };
-
-        const detailResponse = await axios.post('https://appraven.net/appraven/graphql', graphqlPayload, {
-            headers: { 
-                'Content-Type': 'application/json',
-                'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1',
-                'Origin': 'https://appraven.net',
-                'Referer': `https://appraven.net/app/${internalRavenId}`
-            }
-        });
-
-        const appData = detailResponse.data?.data?.app;
+        // BƯỚC 2: Gọi API Detail để lấy full thông tin
+        const detailData = await callAppRavenGraphQL("GetAppDetail", { id: internalRavenId }, GRAPHQL_DETAIL_QUERY);
+        const appData = detailData?.data?.app;
         
         if (!appData) return null;
 
-        // 3. Phân loại và làm đẹp dữ liệu trả về
+        // BƯỚC 3: Phân loại Screenshots và Videos
         const screenshots = [];
         const videos = [];
 
@@ -91,13 +96,13 @@ async function fetchFromAppRaven(appleIdOrKeyword) {
                 if (asset.type === 'SCREENSHOT') {
                     screenshots.push(formatAppleUrl(asset.url, false));
                 } else if (asset.type === 'VIDEO') {
-                    videos.push(asset.url); // Giữ nguyên link .m3u8 của video
+                    videos.push(asset.url);
                 }
             });
         }
 
         return {
-            source: 'AppRaven GraphQL',
+            source: 'AppRaven GraphQL Native',
             appRavenId: internalRavenId,
             appleId: appData.ITunesId ? String(appData.ITunesId) : appleIdOrKeyword,
             appName: appData.title || 'Không rõ',
@@ -115,12 +120,12 @@ async function fetchFromAppRaven(appleIdOrKeyword) {
 
     } catch (error) {
         const errorMsg = error.response ? `HTTP ${error.response.status}` : error.message;
-        console.error('❌ Lỗi:', errorMsg);
-        throw new Error(`Lỗi gọi GraphQL: ${errorMsg}`);
+        console.error('❌ Lỗi API:', errorMsg);
+        throw new Error(`Lỗi kết nối AppRaven: ${errorMsg}`);
     }
 }
 
-// --- HANDLER CHUẨN CỦA NEXT.JS ---
+// --- HANDLER NEXT.JS ---
 export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Credentials', true);
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -146,7 +151,7 @@ export default async function handler(req, res) {
         } else {
             return res.status(404).json({
                 success: false,
-                message: 'Không tìm thấy. AppRaven có thể có, nhưng bọ tìm kiếm chưa kịp Index ID này.'
+                message: 'Không tìm thấy ứng dụng này trên kho AppRaven.'
             });
         }
     } catch (error) {
