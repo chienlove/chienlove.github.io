@@ -19,6 +19,7 @@ const GRAPHQL_DETAIL_QUERY = `query GetAppDetail($id: ID!) {
   app(id: $id) {
     id
     ITunesId
+    bundleIdentifier
     title
     artworkUrl
     assets {
