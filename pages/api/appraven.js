@@ -1,25 +1,22 @@
 const axios = require('axios');
 
-// --- CÂU LỆNH TÌM KIẾM ---
+// --- 1. CÂU LỆNH TÌM KIẾM ---
 const GRAPHQL_SEARCH_QUERY = `query SearchApps($searchText: String!, $page: Int!) {
   searchApps(searchText: $searchText, page: $page) {
     content {
       id
       title
       artworkUrl
-      lastActivity {
-        ... on AppActivityUpdate { versionTo }
-      }
     }
   }
 }`;
 
-// --- CÂU LỆNH LẤY CHI TIẾT APP ---
+// --- 2. CÂU LỆNH LẤY CHI TIẾT APP (Đã thêm Bundle ID) ---
 const GRAPHQL_DETAIL_QUERY = `query GetAppDetail($id: ID!) {
   app(id: $id) {
     id
     ITunesId
-    bundleIdentifier
+    bundleIdentifier  # <-- Thêm trường này để lấy Bundle ID
     title
     artworkUrl
     assets {
@@ -45,60 +42,51 @@ const GRAPHQL_DETAIL_QUERY = `query GetAppDetail($id: ID!) {
   }
 }`;
 
-// Hàm làm nét ảnh chuẩn Apple
+// Hàm làm nét ảnh chuẩn Apple CDN
 function formatAppleUrl(rawUrl, isIcon = false) {
     if (!rawUrl) return null;
     const replacement = isIcon ? '1024x1024bb.png' : '1920x1920bb.jpg';
     return rawUrl.replace('{w}x{h}{c}.{f}', replacement);
 }
 
-// Hàm gọi GraphQL dùng chung
+// Hàm gọi GraphQL nội bộ AppRaven
 async function callAppRavenGraphQL(operationName, variables, query) {
     const payload = { operationName, variables, query };
     const response = await axios.post('https://appraven.net/appraven/graphql', payload, {
         headers: { 
             'Content-Type': 'application/json',
-            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1',
+            'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1',
             'Origin': 'https://appraven.net'
         }
     });
     return response.data;
 }
 
-// Hàm lấy dữ liệu chuẩn
+// Hàm xử lý lấy dữ liệu chính
 async function fetchFromAppRaven(input) {
     try {
         let internalRavenId = String(input).trim();
         
-        // NẾU INPUT LÀ APPLE ID (Apple ID thường > 8 số)
+        // Nếu người dùng nhập Apple ID (thường >= 9 số)
         if (internalRavenId.length >= 9) {
-            console.log(`[1] Đang tìm kiếm ứng dụng mang Apple ID: ${internalRavenId}...`);
-            
-            // Lấy thông tin cơ bản từ Apple trước để có "Tên Ứng Dụng" (Dùng Tên tìm trên AppRaven sẽ chuẩn nhất)
-            let appNameForSearch = internalRavenId; // Mặc định thử tìm bằng ID luôn
+            let appNameForSearch = internalRavenId;
             try {
                  const appleLookup = await axios.get(`https://itunes.apple.com/lookup?id=${internalRavenId}`);
                  if (appleLookup.data.resultCount > 0) {
                      appNameForSearch = appleLookup.data.results[0].trackName;
-                     console.log(`- Tìm thấy tên trên App Store: ${appNameForSearch}`);
                  }
             } catch (e) {
-                 console.log(`- App đã bị xóa khỏi Apple, thử tìm kiếm thẳng bằng ID.`);
+                 // Nếu không tìm thấy trên Apple (app đã bị xóa), tìm thẳng trên AppRaven bằng ID
             }
 
-            // Gọi API Search của AppRaven
             const searchData = await callAppRavenGraphQL("SearchApps", { searchText: appNameForSearch, page: 0 }, GRAPHQL_SEARCH_QUERY);
             const searchResults = searchData?.data?.searchApps?.content || [];
 
             if (searchResults.length === 0) return null;
-
-            // Lấy thẳng kết quả đầu tiên (Vì tìm bằng Tên chính xác, kết quả số 1 luôn đúng)
             internalRavenId = searchResults[0].id;
         }
 
-        console.log(`[2] Gọi GetAppDetail với ID nội bộ AppRaven: ${internalRavenId}`);
-        
-        // GỌI API DETAIL LẤY FULL THÔNG TIN
+        // Gọi API lấy thông tin chi tiết
         const detailData = await callAppRavenGraphQL("GetAppDetail", { id: internalRavenId }, GRAPHQL_DETAIL_QUERY);
         const appData = detailData?.data?.app;
         
@@ -121,6 +109,7 @@ async function fetchFromAppRaven(input) {
             source: 'AppRaven GraphQL',
             appRavenId: internalRavenId,
             appleId: appData.ITunesId ? String(appData.ITunesId) : String(input),
+            bundleId: appData.bundleIdentifier || '', // <-- Trả về Bundle ID cho Admin
             appName: appData.title || 'Không rõ',
             developer: appData.developer?.name || '',
             icon: formatAppleUrl(appData.artworkUrl, true),
@@ -142,8 +131,9 @@ async function fetchFromAppRaven(input) {
     }
 }
 
-// --- HANDLER NEXT.JS ---
+// --- HANDLER NEXT.JS (Vercel) ---
 export default async function handler(req, res) {
+    // Cấu hình CORS
     res.setHeader('Access-Control-Allow-Credentials', true);
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS');
@@ -158,9 +148,15 @@ export default async function handler(req, res) {
     try {
         const data = await fetchFromAppRaven(appId);
         if (data) {
-            return res.status(200).json({ success: true, data: data });
+            return res.status(200).json({
+                success: true,
+                data: data
+            });
         } else {
-            return res.status(404).json({ success: false, message: 'Không tìm thấy ứng dụng trên AppRaven.' });
+            return res.status(404).json({
+                success: false,
+                message: 'Không tìm thấy ứng dụng trên AppRaven.'
+            });
         }
     } catch (error) {
         return res.status(500).json({ success: false, error: error.message });
