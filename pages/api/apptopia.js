@@ -1,6 +1,6 @@
 const axios = require('axios');
 
-// Hàm core xử lý cào HTML từ Apptopia
+// Hàm xử lý cào HTML từ Apptopia độc lập
 async function getBundleIdFromApptopia(itunesId) {
     if (!itunesId) return null;
 
@@ -10,15 +10,15 @@ async function getBundleIdFromApptopia(itunesId) {
         const response = await axios.get(apptopiaUrl, {
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-                'Accept-Encoding': 'gzip, deflate, br', // Rất quan trọng để tối ưu tốc độ trên Vercel
+                'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                'Accept-Encoding': 'gzip, deflate, br', // Ép nén giảm dung lượng
                 'Sec-Fetch-Dest': 'document',
                 'Sec-Fetch-Mode': 'navigate',
                 'Sec-Fetch-Site': 'none',
                 'Cache-Control': 'no-cache'
             },
             decompress: true, 
-            timeout: 5000 // Serverless function trên Vercel (bản free) có limit 10s, ta set 5s cho an toàn
+            timeout: 5000 // Timeout an toàn 5s cho Vercel
         });
 
         // Bóc tách JSON
@@ -33,50 +33,48 @@ async function getBundleIdFromApptopia(itunesId) {
         }
 
     } catch (error) {
-        console.error(`[Lỗi cào dữ liệu ID ${itunesId}]:`, error.message);
+        console.error(`[Lỗi cào Apptopia ID ${itunesId}]:`, error.message);
     }
     
     return null;
 }
 
-// Hàm Handler chuẩn của Vercel Serverless
-module.exports = async function handler(req, res) {
-    // Cấu hình CORS
+// --- HANDLER NEXT.JS ĐỘC LẬP CHỈ ĐỂ TEST ---
+export default async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     
-    if (req.method === 'OPTIONS') {
-        return res.status(200).end();
-    }
+    if (req.method === 'OPTIONS') return res.status(200).end();
+    if (req.method !== 'GET') return res.status(405).json({ success: false, error: 'Chỉ hỗ trợ GET' });
 
-    const { id } = req.query;
+    const itunesId = req.query.id;
 
-    if (!id) {
+    if (!itunesId) {
         return res.status(400).json({ 
             success: false, 
-            message: 'Thiếu tham số ID. Vui lòng truy cập theo dạng: /api/test-bundle?id=6741710156' 
+            message: 'Thiếu tham số ID. Thử lại với: /api/test-apptopia?id=6741710156' 
         });
     }
 
     const startTime = Date.now();
-    const bundleId = await getBundleIdFromApptopia(id);
+    const bundleId = await getBundleIdFromApptopia(itunesId);
     const executionTime = Date.now() - startTime;
 
     if (bundleId) {
         return res.status(200).json({
             success: true,
-            itunesId: id,
+            itunesId: itunesId,
             bundleId: bundleId,
             timeTaken: `${executionTime}ms`
         });
     } else {
         return res.status(404).json({
             success: false,
-            itunesId: id,
+            itunesId: itunesId,
             bundleId: null,
             timeTaken: `${executionTime}ms`,
-            message: 'Không lấy được Bundle ID (Có thể do app không tồn tại hoặc bot bị chặn).'
+            message: 'Không lấy được Bundle ID (Có thể do app không tồn tại hoặc Apptopia chặn IP Vercel).'
         });
     }
-};
+}
