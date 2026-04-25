@@ -1,62 +1,61 @@
-const express = require('express');
 const axios = require('axios');
 
-const app = express();
-const PORT = 3000;
-
-// Hàm core xử lý cào HTML từ Apptopia bằng Regex
+// Hàm core xử lý cào HTML từ Apptopia
 async function getBundleIdFromApptopia(itunesId) {
     if (!itunesId) return null;
 
     try {
-        console.log(`[Đang xử lý] Đang cào dữ liệu từ Apptopia cho ID: ${itunesId}...`);
         const apptopiaUrl = `https://apptopia.com/ios/app/${itunesId}/about`;
         
         const response = await axios.get(apptopiaUrl, {
             headers: {
-                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
-                'Accept-Encoding': 'gzip, deflate, br', // Ép nén để giảm dung lượng tải
+                'Accept-Encoding': 'gzip, deflate, br', // Rất quan trọng để tối ưu tốc độ trên Vercel
                 'Sec-Fetch-Dest': 'document',
                 'Sec-Fetch-Mode': 'navigate',
                 'Sec-Fetch-Site': 'none',
-                'Cache-Control': 'no-cache' // Chống bị dính cache cũ
+                'Cache-Control': 'no-cache'
             },
             decompress: true, 
-            timeout: 5000 // Giới hạn 5 giây
+            timeout: 5000 // Serverless function trên Vercel (bản free) có limit 10s, ta set 5s cho an toàn
         });
 
-        // Tìm chuỗi JSON nằm trong thuộc tính data-about-page-data
+        // Bóc tách JSON
         const match = response.data.match(/data-about-page-data="([^"]+)"/);
         
         if (match && match[1]) {
             const jsonString = match[1].replace(/&quot;/g, '"');
             const data = JSON.parse(jsonString);
             
-            // Moi Bundle ID ra từ Object
             const bundleId = data?.assets?.app_about?.other_data?.bundle_id;
             return bundleId || null;
         }
 
     } catch (error) {
-        // Bắt lỗi nếu bị chặn (403) hoặc quá thời gian (Timeout)
-        console.error(`[Lỗi] Quá trình cào ID ${itunesId} thất bại: ${error.message}`);
+        console.error(`[Lỗi cào dữ liệu ID ${itunesId}]:`, error.message);
     }
     
     return null;
 }
 
-// Khởi tạo Endpoint API GET
-app.get('/api/bundle', async (req, res) => {
-    // Set Header để trình duyệt hiển thị JSON đẹp hơn
-    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+// Hàm Handler chuẩn của Vercel Serverless
+module.exports = async function handler(req, res) {
+    // Cấu hình CORS
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
     
+    if (req.method === 'OPTIONS') {
+        return res.status(200).end();
+    }
+
     const { id } = req.query;
 
     if (!id) {
         return res.status(400).json({ 
             success: false, 
-            message: 'Thiếu tham số ID. Vui lòng thử lại với /api/bundle?id=6741710156' 
+            message: 'Thiếu tham số ID. Vui lòng truy cập theo dạng: /api/test-bundle?id=6741710156' 
         });
     }
 
@@ -69,8 +68,7 @@ app.get('/api/bundle', async (req, res) => {
             success: true,
             itunesId: id,
             bundleId: bundleId,
-            timeTaken: `${executionTime}ms`,
-            message: 'Lấy Bundle ID thành công!'
+            timeTaken: `${executionTime}ms`
         });
     } else {
         return res.status(404).json({
@@ -78,16 +76,7 @@ app.get('/api/bundle', async (req, res) => {
             itunesId: id,
             bundleId: null,
             timeTaken: `${executionTime}ms`,
-            message: 'Không lấy được Bundle ID (Có thể do app không tồn tại hoặc Apptopia chặn bot).'
+            message: 'Không lấy được Bundle ID (Có thể do app không tồn tại hoặc bot bị chặn).'
         });
     }
-});
-
-// Chạy Server
-app.listen(PORT, () => {
-    console.log(`=========================================`);
-    console.log(`🚀 API Test Server đang chạy tại PORT ${PORT}`);
-    console.log(`👉 Hãy mở trình duyệt và truy cập link sau:`);
-    console.log(`   http://localhost:${PORT}/api/bundle?id=6741710156`);
-    console.log(`=========================================`);
-});
+};
