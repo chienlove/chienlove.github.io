@@ -10,7 +10,7 @@ on:
         description: "(Tùy chọn) Bundle Identifier mới"
         required: false
       selectedIpa:
-        description: "(Tùy chọn) Tên file IPA cụ thể cần ký"
+        description: "(Tùy chọn) Danh sách file IPA cụ thể cần ký (cách nhau bằng dấu phẩy)"
         required: false
       displayName:
         description: "(Tùy chọn) Tên hiển thị mới cho ứng dụng"
@@ -85,8 +85,16 @@ jobs:
       - name: Download IPA file(s)
         run: |
           if [ -n "$SELECTED_IPA" ]; then
-            echo "⬇️ Downloading selected IPA: $SELECTED_IPA"
-            gh release download "$TAG" --repo "$REPO" --pattern "$SELECTED_IPA" --clobber
+            echo "⬇️ Downloading selected IPAs: $SELECTED_IPA"
+            # Tách chuỗi chứa nhiều file bằng dấu phẩy và tải từng file
+            IFS=',' read -ra IPA_ARRAY <<< "$SELECTED_IPA"
+            for FILE in "${IPA_ARRAY[@]}"; do
+              FILE=$(echo "$FILE" | xargs) # Lọc khoảng trắng
+              if [ -n "$FILE" ]; then
+                echo "Downloading: $FILE"
+                gh release download "$TAG" --repo "$REPO" --pattern "$FILE" --clobber
+              fi
+            done
           else
             echo "⬇️ Downloading all IPA files"
             gh release download "$TAG" --repo "$REPO" --pattern "*.ipa" --clobber
@@ -106,15 +114,26 @@ jobs:
           cd zsign/build/macos && make clean && make
           sudo cp ../../bin/zsign /usr/local/bin/
 
-
       - name: Patch Info.plist & Binary
         run: |
           > id_map.txt
           for IPA in *.ipa; do
-            # Skip if this is not the selected IPA (when SELECTED_IPA is specified)
-            if [ -n "$SELECTED_IPA" ] && [ "$IPA" != "$SELECTED_IPA" ]; then
-              echo "⏩ Skipping $IPA (not selected)"
-              continue
+            # Kiểm tra xem file IPA hiện tại có nằm trong danh sách được chọn không
+            if [ -n "$SELECTED_IPA" ]; then
+              MATCH=0
+              IFS=',' read -ra IPA_ARRAY <<< "$SELECTED_IPA"
+              for FILE in "${IPA_ARRAY[@]}"; do
+                FILE=$(echo "$FILE" | xargs)
+                if [ "$IPA" == "$FILE" ]; then
+                  MATCH=1
+                  break
+                fi
+              done
+              
+              if [ "$MATCH" -eq 0 ]; then
+                echo "⏩ Skipping $IPA (not selected)"
+                continue
+              fi
             fi
 
             echo "📦 Patching $IPA..."

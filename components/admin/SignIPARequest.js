@@ -17,8 +17,8 @@ export default function SignIPARequest() {
     certName: "", 
     tag: "", 
     identifier: "",
-    selectedIpa: "", // Thêm trường chọn IPA
-    displayName: "" // Thêm trường display name
+    selectedIpas: [], // SỬA: Đổi thành mảng (array) thay vì string
+    displayName: "" 
   });
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
@@ -35,8 +35,8 @@ export default function SignIPARequest() {
     if (!form.tag) return;
     axios.get(`/api/admin/ipas-in-tag?tag=${form.tag}`).then((res) => {
       setIpas(res.data.ipas || []);
-      // Reset selected IPA khi tag thay đổi
-      setForm(prev => ({ ...prev, selectedIpa: "" }));
+      // Reset selectedIpas về mảng rỗng khi đổi tag
+      setForm(prev => ({ ...prev, selectedIpas: [], identifier: "", displayName: "" }));
     });
   }, [form.tag]);
 
@@ -79,9 +79,9 @@ export default function SignIPARequest() {
       await axios.post("/api/admin/use-certs", {
         name: form.certName,
         tag: form.tag,
-        identifier: form.identifier,
-        selectedIpa: form.selectedIpa, // Thêm thông tin IPA được chọn
-        displayName: form.displayName // Thêm display name
+        identifier: form.selectedIpas.length <= 1 ? form.identifier : "", // Bỏ identifier nếu ký nhiều
+        selectedIpa: form.selectedIpas.join(","), // SỬA: Nối mảng thành chuỗi cách nhau bằng dấu phẩy
+        displayName: form.selectedIpas.length <= 1 ? form.displayName : "" // Bỏ display name nếu ký nhiều
       });
 
       setMessage("✅ Đã gửi yêu cầu ký IPA thành công!");
@@ -137,25 +137,43 @@ export default function SignIPARequest() {
         {ipas.length > 0 && (
           <>
             <div>
-              <label className="block font-medium">📦 Chọn file IPA:</label>
-              <div className="space-y-2">
-                <label className="flex items-center gap-2">
+              <label className="block font-medium">📦 Chọn file IPA (Có thể chọn nhiều):</label>
+              <div className="space-y-2 mt-2 p-3 border rounded bg-gray-50 dark:bg-gray-700/30">
+                {/* Nút Chọn tất cả */}
+                <label className="flex items-center gap-2 font-semibold text-blue-600 dark:text-blue-400 border-b pb-2 mb-2">
                   <input
-                    type="radio"
-                    name="ipaSelection"
-                    checked={form.selectedIpa === ""}
-                    onChange={() => setForm({ ...form, selectedIpa: "" })}
+                    type="checkbox"
+                    className="w-4 h-4"
+                    checked={form.selectedIpas.length === ipas.length && ipas.length > 0}
+                    onChange={(e) => {
+                      if (e.target.checked) {
+                        setForm({ ...form, selectedIpas: [...ipas] });
+                      } else {
+                        setForm({ ...form, selectedIpas: [] });
+                      }
+                    }}
                   />
-                  <span>Ký tất cả ({ipas.length} file)</span>
+                  <span>Chọn tất cả ({ipas.length} file)</span>
                 </label>
                 
+                {/* Danh sách các file dạng Checkbox */}
                 {ipas.map((file, i) => (
                   <label key={i} className="flex items-center gap-2">
                     <input
-                      type="radio"
-                      name="ipaSelection"
-                      checked={form.selectedIpa === file}
-                      onChange={() => setForm({ ...form, selectedIpa: file })}
+                      type="checkbox"
+                      className="w-4 h-4"
+                      checked={form.selectedIpas.includes(file)}
+                      onChange={(e) => {
+                        const isChecked = e.target.checked;
+                        setForm((prev) => {
+                          const currentSelected = prev.selectedIpas;
+                          if (isChecked) {
+                            return { ...prev, selectedIpas: [...currentSelected, file] };
+                          } else {
+                            return { ...prev, selectedIpas: currentSelected.filter(f => f !== file) };
+                          }
+                        });
+                      }}
                     />
                     <span>{file}</span>
                   </label>
@@ -163,36 +181,42 @@ export default function SignIPARequest() {
               </div>
             </div>
 
-            {form.selectedIpa && (
-              <div>
-                <label className="block font-medium">🆔 Tên hiển thị (Display Name)</label>
-                <input
-                  type="text"
-                  className="w-full p-2 border rounded"
-                  placeholder="(Tùy chọn) Để trống sẽ giữ nguyên tên gốc"
-                  value={form.displayName}
-                  onChange={(e) => setForm({ ...form, displayName: e.target.value })}
-                />
+            {/* Chỉ hiện Tên và Bundle ID khi chọn ĐÚNG 1 file hoặc 0 file (tức là muốn ký hết với 1 ID - dù hơi rủi ro) */}
+            {form.selectedIpas.length <= 1 ? (
+              <>
+                <div>
+                  <label className="block font-medium">🆔 Tên hiển thị (Display Name)</label>
+                  <input
+                    type="text"
+                    className="w-full p-2 border rounded"
+                    placeholder="(Tùy chọn) Để trống sẽ giữ nguyên tên gốc"
+                    value={form.displayName}
+                    onChange={(e) => setForm({ ...form, displayName: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label className="block font-medium">🆔 Bundle Identifier mới</label>
+                  <input
+                    type="text"
+                    className="w-full p-2 border rounded"
+                    placeholder="(Không bắt buộc) Nếu để trống sẽ tự sinh"
+                    value={form.identifier}
+                    onChange={(e) => setForm({ ...form, identifier: e.target.value })}
+                  />
+                </div>
+              </>
+            ) : (
+              <div className="p-3 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-700 rounded text-yellow-800 dark:text-yellow-200 text-sm">
+                ⚠️ <strong>Lưu ý:</strong> Bạn đang chọn ký nhiều file cùng lúc. Các tùy chọn "Tên hiển thị" và "Bundle Identifier" đã được ẩn để tránh việc các ứng dụng bị trùng ID và đè lên nhau trên điện thoại. Hệ thống sẽ tự động cấp ID riêng biệt cho từng app.
               </div>
             )}
           </>
         )}
 
-        <div>
-          <label className="block font-medium">🆔 Bundle Identifier mới</label>
-          <input
-            type="text"
-            className="w-full p-2 border rounded"
-            placeholder="(Không bắt buộc) Nếu để trống sẽ tự sinh"
-            value={form.identifier}
-            onChange={(e) => setForm({ ...form, identifier: e.target.value })}
-          />
-        </div>
-
         <button
           type="submit"
-          disabled={loading}
-          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 font-bold"
+          disabled={loading || (ipas.length > 0 && form.selectedIpas.length === 0)}
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 font-bold disabled:bg-gray-400 disabled:cursor-not-allowed"
         >
           {loading ? "⏳ Đang gửi..." : "🚀 Gửi yêu cầu ký IPA"}
         </button>
