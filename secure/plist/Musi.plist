@@ -15,7 +15,7 @@
     </array>
     <key>metadata</key><dict>
       <key>bundle-identifier</key><string>com.feelthemusi.musi</string>
-      <key>bundle-version</key><string>6.2.40</string>
+      <key>bundle-version</key><string>6.2.41</string>
       <key>kind</key><string>software</string>
       <key>title</key><string>Musi</string>
     </dict>
