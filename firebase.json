@@ -1,6 +1,0 @@
-{
-  "functions": {
-    "runtime": "nodejs18",
-    "source": "functions"
-  }
-}
