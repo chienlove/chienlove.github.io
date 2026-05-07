@@ -1,0 +1,71 @@
+name: Android Ubuntu Stable (Final)
+
+on:
+  workflow_dispatch:
+    inputs:
+      apk_url:
+        description: 'Link tải file APK'
+        required: true
+        default: 'https://github.com/files-community/Files/releases/download/v3.1.0/Files-v3.1.0.apk'
+
+jobs:
+  run-on-linux:
+    runs-on: ubuntu-latest # Chuyển sang Linux (Ổn định & Miễn phí)
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      # BƯỚC QUAN TRỌNG: Bật quyền KVM (Hardware Acceleration) trên Linux
+      # Bước này giúp máy ảo chạy nhanh và không bị crash như bên macOS
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm # Kiểm tra xem đã có KVM chưa
+
+      - name: Download APK
+        run: |
+          curl -L -o my-app.apk "${{ inputs.apk_url }}"
+
+      - name: Boot Emulator & Install
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          # Cấu hình chuẩn cho Linux
+          api-level: 29                # Android 10 (Cực kỳ ổn định trên Linux CI)
+          target: default              # Bản nhẹ nhất (AOSP), boot siêu nhanh
+          arch: x86_64                 # Kiến trúc Intel chuẩn
+          
+          # Cấu hình phần cứng
+          profile: Nexus 5X
+          ram-size: 1536M
+          heap-size: 512M
+          
+          # Tắt Hardware Audio/Video, dùng CPU để render đồ họa (Swiftshader)
+          # Đây là cấu hình "bất tử" trên Linux, không bao giờ lỗi VRAM hay HVF
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          
+          # Script
+          script: |
+            echo "--- 1. Kiểm tra ADB ---"
+            adb devices -l
+            
+            echo "--- 2. Đợi hệ thống boot xong ---"
+            adb wait-for-device shell 'while [[ -z $(getprop sys.boot_completed) ]]; do sleep 1; done;'
+            
+            echo "--- 3. Cài đặt App ---"
+            # Thêm timeout 60s để tránh treo nếu mạng chậm
+            adb install -g -r my-app.apk
+            
+            echo "--- 4. Kiểm tra kết quả ---"
+            adb shell pm list packages -3 | grep -v "android"
+            
+            echo "--- THÀNH CÔNG ---"
