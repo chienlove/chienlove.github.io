@@ -79,12 +79,8 @@ export default function Admin() {
   const createSlug = (name = "") =>
     name
       .toLowerCase()
-      .normalize("NFD") // Tách các dấu khỏi ký tự gốc
-      .replace(/[\u0300-\u036f]/g, "") // Loại bỏ các ký tự dấu
-      .replace(/[đĐ]/g, "d") // Xử lý chữ đ
-      .replace(/[^\w\s-]/g, "") // Loại bỏ ký tự đặc biệt
-      .replace(/\s+/g, "-") // Thay khoảng trắng bằng dấu gạch ngang
-      .replace(/-+/g, "-") // Tránh lặp lại dấu gạch ngang
+      .replace(/[^\w\s-]/g, "")
+      .replace(/\s+/g, "-")
       .trim();
 
   const canFetchFromAppStore =
@@ -376,7 +372,11 @@ export default function Admin() {
   // --- actions (App Store autofill) ---
   const fetchAppStoreInfo = async () => {
     if (!appStoreUrl.trim()) {
-      setErrorMessage("Vui lòng nhập URL AppStore hoặc App ID");
+      setErrorMessage("Vui lòng nhập URL AppStore");
+      return;
+    }
+    if (!appStoreUrl.includes("apps.apple.com")) {
+      setErrorMessage("URL phải là từ App Store (apps.apple.com)");
       return;
     }
 
@@ -384,38 +384,47 @@ export default function Admin() {
     setErrorMessage("");
 
     try {
-      // Bóc tách ID từ link hoặc lấy trực tiếp nếu là số
-      const match = appStoreUrl.match(/\/id(\d+)/i);
-      const appId = match ? match[1] : appStoreUrl.trim().replace(/\D/g, ''); 
+      const res = await fetch("/api/admin/appstore-info", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: appStoreUrl.trim() }),
+      });
 
-      if (!appId) {
-        throw new Error("Không tìm thấy App ID hợp lệ.");
+      const text = await res.text();
+      if (!text.trim()) throw new Error("Server trả về phản hồi rỗng");
+
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        throw new Error(
+          `Phản hồi từ server không phải JSON hợp lệ: ${text.slice(0, 100)}...`
+        );
       }
 
-      // Gọi sang API AppRaven mới
-      const res = await fetch(`/api/appraven?id=${appId}`);
-      const json = await res.json();
-
-      if (!res.ok || !json.success) {
-        throw new Error(json.message || "Lỗi khi lấy dữ liệu từ AppRaven");
+      if (!res.ok) {
+        throw new Error(data?.error || `HTTP ${res.status}: ${res.statusText}`);
       }
-
-      const data = json.data;
+      if (!data?.name) throw new Error("Dữ liệu ứng dụng không đầy đủ (thiếu tên)");
 
       const mapped = {
-        name: data.appName || "",
-        author: data.developer || "",
-        size: data.sizeMB ? `${data.sizeMB} MB` : "",
+        name: data.name || "",
+        author: data.author || "",
+        size: data.size || "",
         description: data.description || "",
         version: data.version || "",
         icon_url: data.icon || "",
-        minimum_os_version: data.minimumOSVersion || "",
-        age_rating: data.ageRating ? `${data.ageRating}+` : "",
-        release_date: data.releaseDate ? new Date(data.releaseDate).toISOString().split("T")[0] : "",
-        supported_devices: Array.isArray(data.devices) 
-          ? data.devices.map(d => d.charAt(0).toUpperCase() + d.slice(1).toLowerCase()).join(", ") 
+        minimum_os_version: data.minimumOsVersion || "",
+        age_rating: data.ageRating || "",
+        release_date: data.releaseDate
+          ? new Date(data.releaseDate).toISOString().split("T")[0]
           : "",
-        languages: "", // API GraphQL không trả về trường này
+        supported_devices: Array.isArray(data.supportedDevices)
+          ? data.supportedDevices.join(", ")
+          : "",
+        languages: Array.isArray(data.languages)
+          ? data.languages.join(", ")
+          : "",
         screenshots: Array.isArray(data.screenshots) ? data.screenshots : [],
       };
 
@@ -425,10 +434,17 @@ export default function Admin() {
       }
 
       setAppStoreUrl("");
-      toast.success("Đã lấy thông tin từ AppRaven!");
+      toast.success("Đã lấy thông tin từ App Store!");
     } catch (err) {
-      setErrorMessage(err.message);
-      toast.error(err.message);
+      let msg = "Lỗi khi lấy thông tin từ AppStore";
+      if (err.name === "TypeError" && String(err.message).includes("fetch"))
+        msg = "Lỗi kết nối mạng. Vui lòng kiểm tra kết nối internet.";
+      else if (String(err.message).includes("JSON"))
+        msg = "Lỗi xử lý dữ liệu từ server.";
+      else if (err.message) msg = err.message;
+
+      setErrorMessage(msg);
+      toast.error(msg);
     } finally {
       setLoadingAppStoreInfo(false);
     }
@@ -852,10 +868,12 @@ export default function Admin() {
                     </h3>
                     <div className="flex gap-2">
                       <input
-                        type="text"
+                        type="url"
+                        inputMode="url"
+                        pattern="https?://.*"
                         value={appStoreUrl}
                         onChange={(e) => setAppStoreUrl(e.target.value)}
-                        placeholder="Nhập App ID hoặc URL App Store..."
+                        placeholder="Nhập URL App Store..."
                         className="flex-1 px-3 py-2 text-base border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         disabled={loadingAppStoreInfo}
                       />
@@ -880,7 +898,7 @@ export default function Admin() {
                       </button>
                     </div>
                     <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
-                      Tự động điền thông tin từ kho App Store và AppRaven.
+                      Tự động điền thông tin ứng dụng vào các trường bên dưới.
                     </p>
                   </div>
                 )}
@@ -1226,10 +1244,32 @@ export default function Admin() {
                           <span className="font-medium">{catName}</span>
                         </div>
                         <div className="mt-3 grid grid-cols-3 gap-2">
+                          {/* Desktop buttons hidden on mobile */}
                           <Link
                             href={`/${slug}`}
                             target="_blank"
-                            className="text-green-500 hover:text-green-600 text-base p-2 flex items-center justify-center"
+                            className="hidden md:flex text-center px-2.5 py-1 text-xs font-semibold rounded bg-green-600 text-white hover:bg-green-700 items-center gap-1"
+                          >
+                            <FontAwesomeIcon icon={faEye} /> <span>Xem</span>
+                          </Link>
+                          <button
+                            onClick={() => handleEdit(app)}
+                            className="hidden md:flex text-center px-2.5 py-1 text-xs font-semibold rounded bg-yellow-500 text-white hover:bg-yellow-600 items-center gap-1"
+                          >
+                            <FontAwesomeIcon icon={faEdit} /> <span>Sửa</span>
+                          </button>
+                          <button
+                            onClick={() => askDelete(app.id)}
+                            className="hidden md:flex text-center px-2.5 py-1 text-xs font-semibold rounded bg-red-500 text-white hover:bg-red-600 items-center gap-1"
+                          >
+                            <FontAwesomeIcon icon={faTrash} /> <span>Xoá</span>
+                          </button>
+
+                          {/* Mobile icons */}
+                          <Link
+                            href={`/${slug}`}
+                            target="_blank"
+                            className="md:hidden text-green-500 hover:text-green-600 text-base p-2 flex items-center justify-center"
                             aria-label="Xem"
                           >
                             <FontAwesomeIcon icon={faEye} />
@@ -1237,7 +1277,7 @@ export default function Admin() {
 
                           <button
                             onClick={() => handleEdit(app)}
-                            className="text-yellow-500 hover:text-yellow-600 text-base p-2 flex items-center justify-center"
+                            className="md:hidden text-yellow-500 hover:text-yellow-600 text-base p-2 flex items-center justify-center"
                             aria-label="Sửa"
                           >
                             <FontAwesomeIcon icon={faEdit} />
@@ -1245,7 +1285,7 @@ export default function Admin() {
 
                           <button
                             onClick={() => askDelete(app.id)}
-                            className="text-red-500 hover:text-red-600 text-base p-2 flex items-center justify-center"
+                            className="md:hidden text-red-500 hover:text-red-600 text-base p-2 flex items-center justify-center"
                             aria-label="Xoá"
                           >
                             <FontAwesomeIcon icon={faTrash} />
