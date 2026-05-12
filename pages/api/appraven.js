@@ -44,7 +44,6 @@ const GRAPHQL_DETAIL_QUERY = `query GetAppDetail($id: ID!) {
     devices
     releaseDate
     minimumOSVersion
-    languages
   }
 }`;
 
@@ -159,9 +158,6 @@ async function fetchFromAppRaven(input) {
             
             // Cứu cánh cuối cùng: nếu sau 4 lần retry vẫn rỗng thì lấy releaseNotes hoặc chuỗi mặc định
             description: appData.description || appData.releaseNotes || 'Không có mô tả',
-            
-            // Trả về mảng languages cho Frontend xử lý
-            languages: appData.languages || [],
             
             ageRating: appData.ageRating || '',
             devices: appData.devices || [],
