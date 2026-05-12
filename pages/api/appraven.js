@@ -1,5 +1,8 @@
 const axios = require('axios');
 
+// Hàm tạo độ trễ (chờ đợi) tính bằng mili-giây
+const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
 // --- CÂU LỆNH TÌM KIẾM ---
 const GRAPHQL_SEARCH_QUERY = `query SearchApps($searchText: String!, $page: Int!) {
   searchApps(searchText: $searchText, page: $page) {
@@ -41,6 +44,7 @@ const GRAPHQL_DETAIL_QUERY = `query GetAppDetail($id: ID!) {
     devices
     releaseDate
     minimumOSVersion
+    languages
   }
 }`;
 
@@ -97,9 +101,33 @@ async function fetchFromAppRaven(input) {
 
         console.log(`[2] Gọi GetAppDetail với ID nội bộ AppRaven: ${internalRavenId}`);
         
-        // GỌI API DETAIL LẤY FULL THÔNG TIN
-        const detailData = await callAppRavenGraphQL("GetAppDetail", { id: internalRavenId }, GRAPHQL_DETAIL_QUERY);
-        const appData = detailData?.data?.app;
+        // ==========================================================
+        // CƠ CHẾ RETRY: Thử lại nhiều lần để ép AppRaven nhả mô tả
+        // ==========================================================
+        let detailData = null;
+        let appData = null;
+        let retryCount = 0;
+        const maxRetries = 4; // Tối đa 4 lần thử (1 lần đầu + 3 lần thử lại)
+
+        while (retryCount < maxRetries) {
+            detailData = await callAppRavenGraphQL("GetAppDetail", { id: internalRavenId }, GRAPHQL_DETAIL_QUERY);
+            appData = detailData?.data?.app;
+            
+            // Nếu không lấy được data app thì thoát luôn để báo lỗi
+            if (!appData) break; 
+
+            // Nếu ĐÃ CÓ description thì thoát vòng lặp ngay lập tức
+            if (appData.description) {
+                if (retryCount > 0) console.log(`[Thành công] Đã lấy được mô tả ở lần thử thứ ${retryCount + 1}`);
+                break; 
+            }
+
+            // Nếu mô tả vẫn null, tăng biến đếm và đợi 1.5 giây rồi thử lại
+            console.log(`[Retry] Lần ${retryCount + 1}: Mô tả chưa tải kịp, đợi 1.5s để thử lại...`);
+            await delay(1500); 
+            retryCount++;
+        }
+        // ==========================================================
         
         if (!appData) return null;
 
@@ -128,7 +156,13 @@ async function fetchFromAppRaven(input) {
             lastUpdateDate: appData.lastUpdateDate || '',
             minimumOSVersion: appData.minimumOSVersion || '',
             sizeMB: appData.size ? (appData.size / (1024 * 1024)).toFixed(2) : '0',
-            description: appData.description || '',
+            
+            // Cứu cánh cuối cùng: nếu sau 4 lần retry vẫn rỗng thì lấy releaseNotes hoặc chuỗi mặc định
+            description: appData.description || appData.releaseNotes || 'Không có mô tả',
+            
+            // Trả về mảng languages cho Frontend xử lý
+            languages: appData.languages || [],
+            
             ageRating: appData.ageRating || '',
             devices: appData.devices || [],
             screenshots: screenshots,
