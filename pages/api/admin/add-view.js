@@ -1,4 +1,5 @@
-import { supabase } from '../../../lib/supabase';
+// File: pages/api/admin/add-view.js
+import { supabaseAdmin } from '../../../lib/supabase-admin'; // Đảm bảo đúng đường dẫn tới file supabase-admin của bạn
 
 export default async function handler(req, res) {
   // Chỉ cho phép POST request
@@ -19,29 +20,29 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Cách 1: Dùng RPC function (nếu đã tạo trong Supabase)
-    const { error } = await supabase
-      .rpc('increment_views', { 
-        app_id: id 
-      });
+    // Bước 1: Lấy số lượng view hiện tại bằng supabaseAdmin (bỏ qua RLS)
+    const { data: currentApp, error: selectError } = await supabaseAdmin
+      .from('apps')
+      .select('views')
+      .eq('id', id)
+      .single();
 
-    // Cách 2: Hoặc update trực tiếp
-    // const { data: currentApp } = await supabase
-    //   .from('apps')
-    //   .select('views')
-    //   .eq('id', id)
-    //   .single();
-    //
-    // const { error } = await supabase
-    //   .from('apps')
-    //   .update({ 
-    //     views: (currentApp?.views || 0) + 1 
-    //   })
-    //   .eq('id', id);
+    if (selectError) {
+      console.error('Supabase select error:', selectError);
+      throw selectError;
+    }
 
-    if (error) {
-      console.error('Supabase error:', error);
-      throw error;
+    // Bước 2: Cộng dồn và cập nhật trực tiếp vào DB bằng quyền Admin
+    const { error: updateError } = await supabaseAdmin
+      .from('apps')
+      .update({ 
+        views: (currentApp?.views || 0) + 1 
+      })
+      .eq('id', id);
+
+    if (updateError) {
+      console.error('Supabase update error:', updateError);
+      throw updateError;
     }
 
     return res.status(200).json({ 
