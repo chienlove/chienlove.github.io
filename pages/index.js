@@ -4,7 +4,7 @@ import Head from 'next/head';
 import Layout from '../components/Layout';
 import AppCard from '../components/AppCard';
 import AdUnit from '../components/Ads';
-import { createSupabaseServer } from '../lib/supabase';
+import { createSupabaseServer, supabase } from '../lib/supabase'; // 💡 Thêm import đối tượng supabase công khai ở client
 import Link from 'next/link';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
@@ -410,6 +410,59 @@ export default function Home({
 }) {
   const INSTALLABLE_SLUGS = new Set(['jailbreak', 'app-clone', 'app-removed']);
 
+  // 💡 Cấu hình cổng State trung gian để ghi đè số liệu hiển thị thực tế từ Client-side
+  const [liveHotByInstalls, setLiveHotByInstalls] = useState(hotByInstalls);
+  const [liveHotByViews, setLiveHotByViews] = useState(hotByViews);
+  const [liveCategoriesWithApps, setLiveCategoriesWithApps] = useState(categoriesWithApps);
+
+  // Đồng bộ lại dữ liệu state mỗi khi props nhận chỉ thị phân trang mới từ phía server
+  useEffect(() => {
+    setLiveHotByInstalls(hotByInstalls);
+    setLiveHotByViews(hotByViews);
+    setLiveCategoriesWithApps(categoriesWithApps);
+  }, [hotByInstalls, hotByViews, categoriesWithApps]);
+
+  // 💡 Đúng 1 câu truy vấn gom nhóm lấy số liệu Real-time đồng bộ đè lên bản dữ liệu Vercel CDN Cache
+  useEffect(() => {
+    const fetchLiveMetrics = async () => {
+      try {
+        const ids = Array.from(new Set([
+          ...(hotByInstalls || []).map(a => a.id),
+          ...(hotByViews || []).map(a => a.id),
+          ...(categoriesWithApps || []).flatMap(c => 
+            (c.appsRendered || []).filter(a => !a.__isAffiliate).map(a => a.id)
+          )
+        ])).filter(Boolean);
+
+        if (ids.length === 0) return;
+
+        const { data, error } = await supabase
+          .from('apps')
+          .select('id, views, installs')
+          .in('id', ids);
+
+        if (data && !error) {
+          const metricsMap = {};
+          data.forEach(item => {
+            metricsMap[item.id] = item;
+          });
+
+          setLiveHotByInstalls(prev => prev.map(a => metricsMap[a.id] ? { ...a, ...metricsMap[a.id] } : a));
+          setLiveHotByViews(prev => prev.map(a => metricsMap[a.id] ? { ...a, ...metricsMap[a.id] } : a));
+          setLiveCategoriesWithApps(prev => prev.map(c => ({
+            ...c,
+            apps: (c.apps || []).map(a => metricsMap[a.id] ? { ...a, ...metricsMap[a.id] } : a),
+            appsRendered: (c.appsRendered || []).map(a => a.__isAffiliate ? a : (metricsMap[a.id] ? { ...a, ...metricsMap[a.id] } : a))
+          })));
+        }
+      } catch (err) {
+        console.error('Lỗi tải dữ liệu real-time:', err);
+      }
+    };
+
+    fetchLiveMetrics();
+  }, [hotByInstalls, hotByViews, categoriesWithApps]);
+
   // 1. TẠO STATE & EFFECT ĐỂ CHECK CERT (Client-side)
   // Mặc định null để chưa hiện gì. Sau khi load xong sẽ gọi API qua proxy.
   const [certStatus, setCertStatus] = useState(null);
@@ -445,10 +498,10 @@ export default function Home({
     return () => document.removeEventListener('mousedown', onDocClick);
   }, []);
   
-      const contentCard =
+  const contentCard =
     'bg-white dark:bg-gray-800 rounded-xl shadow-md border border-gray-200 dark:border-gray-700 px-4 md:px-6 py-4';
   
-      const AdWrapper = ({ children }) => (
+  const AdWrapper = ({ children }) => (
     <div className="w-full my-8 text-center overflow-hidden">
       <span className="text-[11px] text-gray-400 dark:text-gray-500 uppercase tracking-widest mb-3 font-medium block">
         Quảng cáo / Advertisement
@@ -463,11 +516,11 @@ export default function Home({
   // ===== SEO =====
   const seoData = useMemo(() => metaSEO || {}, [metaSEO]);
 
-  // Danh sách hot theo chế độ
-  const hotApps = hotMode === 'views' ? hotByViews : hotByInstalls;
+  // Danh sách hot theo chế độ sử dụng biến State đã được cập nhật real-time
+  const hotApps = hotMode === 'views' ? liveHotByViews : liveHotByInstalls;
 
   return (
-    <Layout hotApps={hotByInstalls} categories={categoriesList}>
+    <Layout hotApps={liveHotByInstalls} categories={categoriesList}>
       <SEOIndexMeta meta={seoData} />
 
       <div className="container mx-auto px-1 md:px-2 py-6 space-y-10">
@@ -491,7 +544,7 @@ export default function Home({
               <div className="relative" ref={hotMenuRef}>
                 <button
                   className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-semibold rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700"
-                  onClick={() => setHotMenuOpen((v) => !v)}
+                  onClick={() => setHotModeOpen((v) => !v)}
                   aria-haspopup="menu"
                   aria-expanded={hotMenuOpen}
                 >
@@ -554,7 +607,7 @@ export default function Home({
         )}
 
         {/* Categories */}
-        {categoriesWithApps.map((category, index) => {
+        {liveCategoriesWithApps.map((category, index) => {
           const pageInfo = paginationData?.[category.id];
           const hasFullPager = !!pageInfo?.totalPages && pageInfo.totalPages > 1 && pageInfo.mode === 'full';
           const hasLitePager = pageInfo?.mode === 'lite' && pageInfo?.hasNext === true;
