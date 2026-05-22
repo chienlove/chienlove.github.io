@@ -20,7 +20,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    // Bước 1: Lấy số lượng view hiện tại bằng supabaseAdmin (bỏ qua RLS)
+    // Bước 1: Lấy số lượng view hiện tại từ Database bằng quyền Admin
     const { data: currentApp, error: selectError } = await supabaseAdmin
       .from('apps')
       .select('views')
@@ -32,21 +32,25 @@ export default async function handler(req, res) {
       throw selectError;
     }
 
-    // Bước 2: Cộng dồn và cập nhật trực tiếp vào DB bằng quyền Admin
-    const { error: updateError } = await supabaseAdmin
+    // Bước 2: Cộng dồn và ép Supabase trả về giá trị mới ngay lập tức sau khi cập nhật
+    const { data: updatedApp, error: updateError } = await supabaseAdmin
       .from('apps')
       .update({ 
         views: (currentApp?.views || 0) + 1 
       })
-      .eq('id', id);
+      .eq('id', id)
+      .select('views') // 💡 Lấy ra trường views sau khi update
+      .single();       // 💡 Đảm bảo trả về 1 đối tượng duy nhất thay vì mảng
 
     if (updateError) {
       console.error('Supabase update error:', updateError);
       throw updateError;
     }
 
+    // Bước 3: Trả về kết quả kèm theo con số view real-time chính xác nhất
     return res.status(200).json({ 
-      success: true 
+      success: true,
+      views: updatedApp?.views ?? 0
     });
 
   } catch (error) {

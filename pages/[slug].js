@@ -522,24 +522,23 @@ export default function Detail({ serverApp, serverRelated }) {
   }, []);
 
   // View/TestFlight + màu nền
-  useEffect(() => {
-    if (!app?.id) return;
+useEffect(() => {
+  if (!app?.id) return;
 
-    if (isTestflight) {
-      fetch('/api/admin/add-view', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: app.id }),
-      })
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success) {
-          // 💡 Optimistic Update: Tự cộng 1 đơn vị trên Client để hiện view real-time không tốn quota
-          setLiveViews((prev) => prev + 1);
-        }
-      })
-      .catch(console.error);
-    }
+  if (isTestflight) {
+    fetch('/api/admin/add-view', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: app.id }),
+    })
+    .then((res) => res.json())
+    .then((data) => {
+      if (data.success && data.views !== undefined) {
+        setLiveViews(data.views);
+      }
+    })
+    .catch(console.error);
+  }
 
     if (isTestflight && app.testflight_url) {
       setStatusLoading(true);
