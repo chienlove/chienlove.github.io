@@ -1,5 +1,5 @@
 // File: pages/api/admin/add-view.js
-import { supabaseAdmin } from '../../../lib/supabase-admin'; // Đảm bảo đúng đường dẫn tới file supabase-admin của bạn
+import { supabaseAdmin } from '../../../lib/supabase-admin';
 
 export default async function handler(req, res) {
   // Chỉ cho phép POST request

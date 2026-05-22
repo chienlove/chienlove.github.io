@@ -315,6 +315,9 @@ export default function Detail({ serverApp, serverRelated }) {
   const [showAllDevices, setShowAllDevices] = useState(false);
   const [showAllLanguages, setShowAllLanguages] = useState(false);
 
+  // State quản lý số lượt xem real-time phục vụ tối ưu hóa cache/quota
+  const [liveViews, setLiveViews] = useState(app?.views ?? 0);
+
   // Fallback ảnh với next/image
   const [iconError, setIconError] = useState(false);
   const iconSrc = iconError ? '/placeholder-icon.png' : (app?.icon_url || '/placeholder-icon.png');
@@ -378,6 +381,13 @@ export default function Detail({ serverApp, serverRelated }) {
     const remain = Math.max(devicesArray.length - 5, 0);
     return { list, remain };
   }, [devicesArray]);
+
+  // Đồng bộ lại state hiển thị view nếu prop app thay đổi
+  useEffect(() => {
+    if (app?.views !== undefined) {
+      setLiveViews(app.views);
+    }
+  }, [app?.id, app?.views]);
 
   // ===================== DYNAMIC META TAGS =====================
   const displaySize = useMemo(() => {
@@ -520,7 +530,15 @@ export default function Detail({ serverApp, serverRelated }) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id: app.id }),
-      }).catch(console.error);
+      })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          // 💡 Optimistic Update: Tự cộng 1 đơn vị trên Client để hiện view real-time không tốn quota
+          setLiveViews((prev) => prev + 1);
+        }
+      })
+      .catch(console.error);
     }
 
     if (isTestflight && app.testflight_url) {
@@ -912,7 +930,7 @@ export default function Detail({ serverApp, serverRelated }) {
                   <div className="flex-none w-1/3 sm:w-auto snap-start flex flex-col items-center min-w-0 px-2 sm:px-4 col-span-2">
                     <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-1">Lượt xem</p>
                     <div className="text-xl font-bold leading-none text-gray-500 dark:text-gray-400 h-[36px] flex items-center justify-center">
-                      {new Intl.NumberFormat('vi-VN').format(app?.views ?? 0)}
+                      {new Intl.NumberFormat('vi-VN').format(liveViews)}
                     </div>
                     <p className="text-[11px] text-gray-500 dark:text-gray-500 mt-1.5">Lượt</p>
                   </div>
@@ -1204,7 +1222,7 @@ export default function Detail({ serverApp, serverRelated }) {
                         Chờ 10 giây
                       </div>
                       <div className="text-sm text-slate-700 dark:text-slate-200">
-                        Trên trang cài đặt sẽ có <b>đếm ngược 10 giây</b>
+                        On trang cài đặt sẽ có <b>đếm ngược 10 giây</b>
                       </div>
                     </div>
                   </div>
