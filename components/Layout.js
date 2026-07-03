@@ -386,7 +386,7 @@ export default function Layout({ children, fullWidth = false, hotApps, categorie
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1 text-gray-700 dark:text-gray-300 hover:text-red-600"
               >
-                IPA Downloader
+                IPATool
                 <FontAwesomeIcon icon={faArrowUpRightFromSquare} className="w-3.5 h-3.5 opacity-70" />
               </a>
             </nav>
