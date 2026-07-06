@@ -5,7 +5,7 @@ on:
 
 jobs:
   build-ios:
-    runs-on: macos-14 # Đã hạ cấp xuống macOS 13 (Xcode 14) để tương thích với RN cũ
+    runs-on: macos-14 # Quay trở lại máy ảo macos-14 mạnh nhất vì đã có script trị tận gốc Xcode 15
 
     steps:
       - name: Checkout mã nguồn từ kho gốc
@@ -22,15 +22,50 @@ jobs:
       - name: Cài đặt Dependencies của React Native
         run: npm install
 
-      - name: Cấu hình Deployment Target và Cài đặt CocoaPods
+      - name: Cấu hình Podfile (Tắt Flipper & Ép nâng iOS 13)
         run: |
           cd ios
+          # Ép nền tảng chính lên iOS 13.0
           sed -i '' "s/platform :ios, .*/platform :ios, '13.0'/g" Podfile
+          
+          # Vô hiệu hóa triệt để Flipper trong Podfile để tránh lỗi biên dịch C++ cũ
+          sed -i '' 's/use_flipper!/# use_flipper!/g' Podfile
+          sed -i '' 's/:flipper_configuration/# :flipper_configuration/g' Podfile
+          
           pod cache clean --all
           pod install
           cd ..
 
-      - name: Biên dịch ứng dụng bằng Xcode (Ép bỏ qua cảnh báo C++)
+      - name: Chạy Script Ruby sửa tận gốc mọi Target của Xcode
+        run: |
+          cat << 'EOF' > fix_targets.rb
+          require 'xcodeproj'
+
+          # Danh sách các file dự án cần can thiệp tận gốc
+          paths = ['ios/Pods/Pods.xcodeproj', 'ios/SecurityStream.xcodeproj']
+
+          paths.each do |path|
+            if Dir.exist?(path) || File.exist?(path)
+              puts "🔧 Đang dọn dẹp và cấu hình lại hệ thống: #{path}"
+              project = Xcodeproj::Project.open(path)
+              project.targets.each do |target|
+                target.build_configurations.each do |config|
+                  # 1. Ép toàn bộ thư viện con chạy iOS 13.0 (Xóa sổ hoàn toàn lỗi iOS 10.0 cũ)
+                  config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
+                  
+                  # 2. Khóa chặt cơ chế đòi chứng chỉ bảo mật ở mọi target con để build Unsigned sạch
+                  config.build_settings['CODE_SIGNING_ALLOWED'] = 'NO'
+                  config.build_settings['CODE_SIGNING_REQUIRED'] = 'NO'
+                  config.build_settings['DONT_RUN_CODE_SIGNING_ON_NON_OSX_PLATFORMS'] = 'YES'
+                end
+              end
+              project.save
+            end
+          end
+          EOF
+          ruby fix_targets.rb
+
+      - name: Biên dịch ứng dụng bằng Xcode
         run: |
           xcodebuild -workspace ios/SecurityStream.xcworkspace \
                      -scheme SecurityStream \
@@ -40,8 +75,6 @@ jobs:
                      CODE_SIGNING_ALLOWED=NO \
                      CODE_SIGNING_REQUIRED=NO \
                      GCC_TREAT_WARNINGS_AS_ERRORS=NO \
-                     OTHER_CFLAGS="-Wno-documentation" \
-                     OTHER_CPLUSPLUSFLAGS="-Wno-documentation" \
                      clean build
 
       - name: Đóng gói thành file .ipa chưa ký
@@ -50,7 +83,7 @@ jobs:
           cp -r build_output/Build/Products/Release-iphoneos/SecurityStream.app Payload/
           zip -r SecurityStream-unsigned.ipa Payload
 
-      - name: Tải file .ipa lên Artifacts
+      - name: Tải file .ipa lên Artifacts của GitHub
         uses: actions/upload-artifact@v4
         with:
           name: SecurityStream-Unsigned-IPA
