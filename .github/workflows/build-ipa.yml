@@ -5,7 +5,7 @@ on:
 
 jobs:
   build-ios:
-    runs-on: macos-13 # Đã hạ cấp xuống macOS 13 (Xcode 14) để tương thích với RN cũ
+    runs-on: macos-14 # Đã hạ cấp xuống macOS 13 (Xcode 14) để tương thích với RN cũ
 
     steps:
       - name: Checkout mã nguồn từ kho gốc
