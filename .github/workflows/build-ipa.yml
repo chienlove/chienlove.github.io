@@ -1,24 +1,23 @@
 name: Build Unsigned iOS IPA
 
 on:
-  workflow_dispatch: # Cho phép bấm nút chạy thủ công trên giao diện GitHub
+  workflow_dispatch: 
 
 jobs:
   build-ios:
-    runs-on: macos-14 # Sử dụng máy ảo macOS chip Apple Silicon giúp build nhanh hơn
+    runs-on: macos-14 
 
     steps:
       - name: Checkout mã nguồn từ kho gốc
         uses: actions/checkout@v4
         with:
-          repository: 'rak3n/SecuritySttream' # Kéo mã nguồn trực tiếp từ dự án gốc
-          ref: 'main'                         # Sử dụng nhánh chính mới nhất
+          repository: 'rak3n/SecuritySttream' 
+          ref: 'main'                         
 
       - name: Thiết lập Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 18
-          # Đã bỏ tính năng cache để không bị lỗi thiếu file lock (package-lock.json/yarn.lock)
 
       - name: Cài đặt Dependencies của React Native
         run: npm install
@@ -26,21 +25,15 @@ jobs:
       - name: Cấu hình Deployment Target và Cài đặt CocoaPods
         run: |
           cd ios
-          
-          # Tìm và ép dòng cấu hình platform trong Podfile lên iOS 13.0 để thỏa mãn thư viện react-native-webrtc
           sed -i '' "s/platform :ios, .*/platform :ios, '13.0'/g" Podfile
-          
-          # Dọn dẹp cache của CocoaPods nhằm tránh các xung đột phiên bản cũ
           pod cache clean --all
-          
-          # Tiến hành cài đặt các thư viện iOS lõi
           pod install
           cd ..
 
-      - name: Biên dịch ứng dụng bằng Xcode (Bỏ qua chữ ký)
+      - name: Biên dịch ứng dụng bằng Xcode (Đã sửa tên file 1 chữ 't')
         run: |
-          xcodebuild -workspace ios/SecuritySttream.xcworkspace \
-                     -scheme SecuritySttream \
+          xcodebuild -workspace ios/SecurityStream.xcworkspace \
+                     -scheme SecurityStream \
                      -configuration Release \
                      -sdk iphoneos \
                      -derivedDataPath build_output \
@@ -48,17 +41,16 @@ jobs:
                      CODE_SIGNING_REQUIRED=NO \
                      clean build
 
-      - name: Đóng gói thành file .ipa chưa ký (Unsigned)
+      - name: Đóng gói thành file .ipa chưa ký
         run: |
           mkdir -p Payload
-          # Sao chép tệp build .app vào thư mục Payload theo đúng cấu trúc tiêu chuẩn của iOS
-          cp -r build_output/Build/Products/Release-iphoneos/SecuritySttream.app Payload/
-          # Nén thành tệp định dạng .ipa
-          zip -r SecuritySttream-unsigned.ipa Payload
+          # Tên file .app sinh ra cũng chỉ có 1 chữ 't'
+          cp -r build_output/Build/Products/Release-iphoneos/SecurityStream.app Payload/
+          zip -r SecurityStream-unsigned.ipa Payload
 
-      - name: Tải file .ipa lên Artifacts của GitHub
+      - name: Tải file .ipa lên Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: SecuritySttream-Unsigned-IPA
-          path: SecuritySttream-unsigned.ipa
-          retention-days: 7 # Tệp tin được lưu trữ trên hệ thống GitHub trong vòng 7 ngày
+          name: SecurityStream-Unsigned-IPA
+          path: SecurityStream-unsigned.ipa
+          retention-days: 7 
