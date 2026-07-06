@@ -1,0 +1,53 @@
+name: Build Unsigned iOS IPA
+
+on:
+  workflow_dispatch: # Cho phép bạn bấm nút chạy thủ công trên giao diện GitHub
+
+jobs:
+  build-ios:
+    runs-on: macos-14
+
+    steps:
+      - name: Checkout mã nguồn
+        uses: actions/checkout@v4
+
+      - name: Thiết lập Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      - name: Cài đặt Dependencies của React Native
+        run: npm install
+
+      - name: Cài đặt CocoaPods (iOS)
+        run: |
+          cd ios
+          pod install
+          cd ..
+
+      - name: Biên dịch ứng dụng bằng Xcode (Không ký)
+        run: |
+          xcodebuild -workspace ios/SecuritySttream.xcworkspace \
+                     -scheme SecuritySttream \
+                     -configuration Release \
+                     -sdk iphoneos \
+                     -derivedDataPath build_output \
+                     CODE_SIGNING_ALLOWED=NO \
+                     CODE_SIGNING_REQUIRED=NO \
+                     clean build
+
+      - name: Đóng gói thành file .ipa chưa ký
+        run: |
+          mkdir -p Payload
+          # Di chuyển file .app vừa build vào thư mục Payload
+          cp -r build_output/Build/Products/Release-iphoneos/SecuritySttream.app Payload/
+          # Nén thành file .ipa
+          zip -r SecuritySttream-unsigned.ipa Payload
+
+      - name: Tải file .ipa lên Artifacts của GitHub
+        uses: actions/upload-artifact@v4
+        with:
+          name: SecuritySttream-Unsigned-IPA
+          path: SecuritySttream-unsigned.ipa
+          retention-days: 7 # Lưu trữ file trong 7 ngày
