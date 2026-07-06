@@ -5,7 +5,7 @@ on:
 
 jobs:
   build-ios:
-    runs-on: macos-14 
+    runs-on: macos-13 # Đã hạ cấp xuống macOS 13 (Xcode 14) để tương thích với RN cũ
 
     steps:
       - name: Checkout mã nguồn từ kho gốc
@@ -30,7 +30,7 @@ jobs:
           pod install
           cd ..
 
-      - name: Biên dịch ứng dụng bằng Xcode (Đã sửa tên file 1 chữ 't')
+      - name: Biên dịch ứng dụng bằng Xcode (Ép bỏ qua cảnh báo C++)
         run: |
           xcodebuild -workspace ios/SecurityStream.xcworkspace \
                      -scheme SecurityStream \
@@ -39,12 +39,14 @@ jobs:
                      -derivedDataPath build_output \
                      CODE_SIGNING_ALLOWED=NO \
                      CODE_SIGNING_REQUIRED=NO \
+                     GCC_TREAT_WARNINGS_AS_ERRORS=NO \
+                     OTHER_CFLAGS="-Wno-documentation" \
+                     OTHER_CPLUSPLUSFLAGS="-Wno-documentation" \
                      clean build
 
       - name: Đóng gói thành file .ipa chưa ký
         run: |
           mkdir -p Payload
-          # Tên file .app sinh ra cũng chỉ có 1 chữ 't'
           cp -r build_output/Build/Products/Release-iphoneos/SecurityStream.app Payload/
           zip -r SecurityStream-unsigned.ipa Payload
 
