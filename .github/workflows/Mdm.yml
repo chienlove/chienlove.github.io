@@ -12,7 +12,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: Dadoum/anisette-v3-server
-          ref: master
+          ref: main
           
       - name: Install Compilers & Dependencies
         run: |
