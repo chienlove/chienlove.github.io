@@ -1,0 +1,30 @@
+name: Build Anisette V3 Server
+
+on:
+  workflow_dispatch: # Cho phép bạn bấm nút chạy thủ công
+
+jobs:
+  build:
+    runs-on: ubuntu-latest # Chạy trên máy chủ Ubuntu của GitHub
+    
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+        with:
+          repository: Dadoum/anisette-v3-server
+          ref: master
+          
+      - name: Install Compilers & Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends -y ca-certificates ldc git clang dub libz-dev libssl-dev
+
+      - name: Build Binary
+        run: |
+          DC=ldc2 dub build -c "static" --build-mode allAtOnce -b release --compiler=ldc2
+          
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: anisette-v3-server-linux-amd64
+          path: anisette-v3-server
