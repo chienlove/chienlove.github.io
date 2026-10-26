@@ -1,0 +1,61 @@
+name: analyze
+on:
+  repository_dispatch:
+    types: [analyze]
+run-name: "rea ${{ github.event.client_payload.job_id }}"
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Restore Ghidra cache
+        id: ghidra-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/ghidra-dist
+          key: ghidra-dist-v1
+
+      - name: Install Ghidra
+        if: steps.ghidra-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/ghidra-dist
+          URL=$(curl -s https://api.github.com/repos/NationalSecurityAgency/ghidra/releases/latest | jq -r '.assets[] | select(.name | endswith(".zip")) | .browser_download_url' | head -1)
+          echo "Downloading $URL"
+          curl -L --fail -o /tmp/ghidra.zip "$URL"
+          unzip -q /tmp/ghidra.zip -d ~/ghidra-dist
+          mv ~/ghidra-dist/ghidra_* ~/ghidra-dist/ghidra
+          rm /tmp/ghidra.zip
+
+      - name: Download target file
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          mkdir -p work
+          curl -L --fail --retry 3 \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/octet-stream" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/assets/${{ github.event.client_payload.asset_id }}" \
+            -o work/target
+          ls -la work/target
+          echo "KIND=${{ github.event.client_payload.kind }}" >> $GITHUB_ENV
+
+      - name: Analyze
+        run: bash scripts/analyze.sh
+
+      - name: Upload result
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: result-${{ github.event.client_payload.job_id }}
+          path: work/out/
+          retention-days: 3
